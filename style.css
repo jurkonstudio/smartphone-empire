@@ -2007,3 +2007,59 @@ body {
         transition-duration: 0.01ms !important;
     }
 }
+/* ===================== PHONE MOCKUP & RADAR ===================== */
+
+.phone-mockup-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    filter: drop-shadow(0 8px 24px rgba(0,0,0,0.35));
+    animation: phoneIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.phone-mockup-wrap svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+@keyframes phoneIn {
+    from { opacity: 0; transform: translateY(8px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Animasi shake halus pada screen (subtle scan) */
+@keyframes screenGlow {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.92; }
+}
+.phone-mockup-wrap svg rect[fill^="url"] {
+    animation: screenGlow 3s ease-in-out infinite;
+}
+
+.radar-chart-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    animation: radarIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.radar-chart-wrap svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+@keyframes radarIn {
+    from { opacity: 0; transform: scale(0.9) rotate(-4deg); }
+    to   { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+/* Radar polygon subtle animate */
+@keyframes polygonPulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.85; }
+}
+.radar-chart-wrap polygon[fill] {
+    animation: polygonPulse 4s ease-in-out infinite;
+}
