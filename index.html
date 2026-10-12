@@ -1,85 +1,67 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0a0d13" />
-  <meta name="color-scheme" content="dark" />
-  <meta name="description" content="Smartphone Empire — game simulasi manajemen perusahaan smartphone." />
-  <title>Smartphone Empire</title>
-  <link rel="icon" href="data:," />
-  <link rel="stylesheet" href="./style.css" />
-
-  <!-- DEBUG: menangkap error boot & 404 script, tampil sebagai kotak merah -->
-  <script>
-    (function () {
-      function show(title, detail) {
-        try {
-          var box = document.createElement('pre');
-          box.setAttribute('data-debug-box', '1');
-          box.style.cssText =
-            'position:fixed;inset:0;z-index:2147483647;margin:0;' +
-            'background:#1a0000;color:#ffb3b3;padding:16px;' +
-            'font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;' +
-            'overflow:auto;white-space:pre-wrap;word-break:break-word';
-          box.textContent =
-            '\u26A0 ' + title + '\n\n' + detail +
-            '\n\n\u2192 Screenshot kotak ini lalu kirim untuk diagnosis.';
-          if (document.body) document.body.appendChild(box);
-          else document.addEventListener('DOMContentLoaded', function () {
-            document.body.appendChild(box);
-          });
-        } catch (_) {}
-      }
-
-      window.addEventListener('error', function (e) {
-        if (e && e.target && e.target.tagName === 'SCRIPT') {
-          show('Gagal memuat script', 'src: ' + (e.target.src || '(inline)'));
-          return;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smartphone Empire</title>
+    <style>
+        /* Reset dasar & Tema Gelap */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
-        if (e && e.message) {
-          show(
-            'JavaScript error',
-            (e.message || '') + '\n' +
-            (e.filename || '') + ':' + (e.lineno || 0) + ':' + (e.colno || 0)
-          );
+        
+        body {
+            background-color: #1a1a1a; /* Latar belakang gelap */
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden; /* Mencegah scroll yang tidak perlu */
+            width: 100vw;
+            height: 100vh;
         }
-      }, true);
 
-      window.addEventListener('unhandledrejection', function (e) {
-        var r = e && e.reason;
-        show('Unhandled promise rejection', String((r && r.stack) || r || ''));
-      });
-    })();
-  </script>
+        /* Wadah utama aplikasi */
+        #app {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Layar loading sementara */
+        #loading-screen {
+            text-align: center;
+            font-size: 16px;
+            color: #aaaaaa;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+    </style>
 </head>
 <body>
-  <noscript>
-    <div style="padding:24px;color:#e7ecf3;font-family:system-ui,sans-serif">
-      Smartphone Empire memerlukan JavaScript untuk berjalan.
+
+    <!-- Wadah utama tempat game/aplikasi akan dirender -->
+    <div id="app">
+        <div id="loading-screen">Memuat Smartphone Empire...</div>
     </div>
-  </noscript>
 
-  <div class="app-shell">
-    <aside id="sidebar" class="sidebar" aria-label="Navigasi utama"></aside>
+    <!-- 
+        PENTING: Perhatikan penggunaan "./" di depan "src/main.js".
+        Ini memastikan browser mencari file di dalam folder proyek Anda 
+        (smartphone-empire/src/main.js), bukan di root domain.
+        
+        Jika file main.js Anda berada langsung di folder utama (bukan di dalam folder src),
+        ubah menjadi: src="./main.js"
+    -->
+    <script type="module" src="./src/main.js"></script>
 
-    <div class="app-main">
-      <header id="app-header" class="app-header" role="banner"></header>
-
-      <main id="app-view" class="app-view" role="main">
-        <div class="empty">
-          <div class="empty__title">Memuat Smartphone Empire…</div>
-          <div class="empty__desc">
-            Jika pesan ini tidak hilang dalam beberapa detik, buka Console atau
-            laporkan kotak error yang muncul.
-          </div>
-        </div>
-      </main>
-
-      <nav id="mobile-nav" class="mobile-nav" aria-label="Navigasi mobile"></nav>
-    </div>
-  </div>
-
-  <script type="module" src="./src/main.js"></script>
 </body>
 </html>
