@@ -2,22 +2,35 @@
 // ============================================================
 // ToastContainer — penghubung ToastService (bus 'toast:show')
 // dengan NotificationRenderer (per era).
+// Dilengkapi guard anti-mount-ganda.
 // ============================================================
 import { bus } from '../../core/EventBus.js';
 import { renderNotification } from '../notifications/NotificationRenderer.js';
 
 let _container = null;
 let _unsubscribe = null;
+let _mounted = false;
 
 export function mountToastContainer(el) {
     if (!el) return;
-    _container = el;
 
-    // Hindari listener ganda jika boot dipanggil ulang
-    if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
+    // Guard: kalau sudah ter-mount dengan container yang sama, skip
+    if (_mounted && _container === el && _unsubscribe) {
+        console.warn('[ToastContainer] Sudah ter-mount, skip duplikasi.');
+        return;
+    }
+
+    // Bersihkan listener lama sebelum pasang baru
+    if (_unsubscribe) {
+        _unsubscribe();
+        _unsubscribe = null;
+    }
+
+    _container = el;
+    _mounted = true;
 
     _unsubscribe = bus.on('toast:show', (payload) => {
-        if (!payload) return;
+        if (!payload || !_container) return;
         try {
             renderNotification(_container, payload);
         } catch (err) {
@@ -27,6 +40,10 @@ export function mountToastContainer(el) {
 }
 
 export function unmountToastContainer() {
-    if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
+    if (_unsubscribe) {
+        _unsubscribe();
+        _unsubscribe = null;
+    }
     _container = null;
+    _mounted = false;
 }
