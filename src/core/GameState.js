@@ -3,8 +3,9 @@ import { TIME_CONFIG } from '../config/time.config.js';
 import { BALANCE } from '../data/balance.data.js';
 import { DIFFICULTY, LOG_TYPES } from '../config/constants.js';
 import { bus } from './EventBus.js';
+import { generateRandomName, rollTraits } from '../data/staff.data.js';
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 function createInitialState(difficulty = DIFFICULTY.normal) {
     const startingCash = BALANCE.startingCash[difficulty] ?? BALANCE.startingCash.normal;
@@ -15,7 +16,6 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
         companyName: 'My Tech Co',
         difficulty,
 
-        // ===== WAKTU =====
         time: {
             currentYear: TIME_CONFIG.startYear,
             currentMonth: TIME_CONFIG.startMonth,
@@ -27,7 +27,6 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
         isPaused: TIME_CONFIG.startPaused,
         gameSpeed: TIME_CONFIG.defaultSpeed,
 
-        // ===== KEUANGAN =====
         cash: startingCash,
         finance: {
             history: [],
@@ -36,10 +35,21 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             lastProcessed: null
         },
 
-        // ===== TIM =====
+        // Counter agregat — turunan dari state.staff (untuk fallback/perf)
         team: { engineers: 0, designers: 0, marketers: 0 },
 
-        // ===== RISET =====
+        // Individu staff
+        staff: [],
+
+        // Pool kandidat rekrut
+        candidates: [],
+
+        // Metadata pool
+        candidatePool: {
+            lastRefreshMinute: 0,
+            lastRefreshMonth: null
+        },
+
         research: {
             active: [],
             completed: (BALANCE.starterResearch || []).slice(),
@@ -47,7 +57,6 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             totalCompleted: (BALANCE.starterResearch || []).length
         },
 
-        // ===== OS =====
         os: {
             name: null,
             createdAt: null,
@@ -60,7 +69,6 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             licenseChoice: null
         },
 
-        // ===== PRODUK =====
         products: {
             catalog: [],
             designing: null,
@@ -68,17 +76,9 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             nextProductId: 1
         },
 
-        // ===== PEMASARAN =====
-        marketing: {
-            activeCampaigns: []
-        },
+        marketing: { activeCampaigns: [] },
+        reviews: { feed: [] },
 
-        // ===== ULASAN (dari produk) =====
-        reviews: {
-            feed: []
-        },
-
-        // ===== PASAR =====
         market: {
             share: 0,
             shareHistory: [],
@@ -89,14 +89,12 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             revenueHistory: []
         },
 
-        // ===== KOMPETITOR AI (Batch C) =====
         competitorState: {
-            entities: {},           // { [id]: { currentTier, currentShare, lastReleaseMonth, releases[], activeViralId } }
+            entities: {},
             lastLifeEventYear: 2000,
             initialized: false
         },
 
-        // ===== FEEDBACK PUBLIK (Batch C) =====
         feedback: {
             sentiment: 50,
             aspectSentiment: {
@@ -111,48 +109,94 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             competitorSentiment: {}
         },
 
-        // ===== EVENT =====
         events: {
             cooldownUntilMinute: 0,
             pending: null,
             history: []
         },
 
-        // ===== QUEST =====
         quests: { active: [], completed: [] },
 
-        // ===== LOG & MILESTONE =====
         log: [],
         milestones: [],
 
-        // ===== TUTORIAL & TIPS =====
         tutorial: { completed: false, skipped: false, currentStep: 0 },
         seenTips: [],
 
-        // ===== PENGATURAN =====
         settings: { vibrate: true, sound: false },
 
-        // ===== ERA =====
         era: 'feature_phone',
         eraStartYear: TIME_CONFIG.startYear,
 
-        // ===== STATUS AKHIR =====
         gameOver: null
     };
 }
 
-function migrateV1toV2(oldData) {
+// ---------- Migrasi v2 → v3 (counter → staff individu) ----------
+function migrateV2toV3(oldData) {
     const fresh = createInitialState(DIFFICULTY.normal);
     if (!oldData || typeof oldData !== 'object') return fresh;
 
-    if (typeof oldData.companyName === 'string') fresh.companyName = oldData.companyName;
-    if (typeof oldData.cash === 'number') fresh.cash = oldData.cash;
-    if (oldData.time && typeof oldData.time === 'object') {
-        fresh.time = { ...fresh.time, ...oldData.time };
+    // Salin semua field lama
+    Object.assign(fresh, oldData);
+
+    // Pastikan schema version baru
+    fresh.schemaVersion = SCHEMA_VERSION;
+
+    // Jika ada counter team tapi tidak ada staff → generate staff retroaktif
+    const t = oldData.team || { engineers: 0, designers: 0, marketers: 0 };
+    if (!Array.isArray(oldData.staff) || oldData.staff.length === 0) {
+        const generated = [];
+        const roleCounts = { engineer: t.engineers || 0, designer: t.designers || 0, marketer: t.marketers || 0 };
+        let idCounter = 1;
+        Object.keys(roleCounts).forEach(role => {
+            for (let i = 0; i < roleCounts[role]; i++) {
+                generated.push(_makeStaffEntry(role, 2, idCounter++, oldData.time));
+            }
+        });
+        fresh.staff = generated;
     }
-    if (typeof oldData.isPaused === 'boolean') fresh.isPaused = oldData.isPaused;
-    if (typeof oldData.gameSpeed === 'number') fresh.gameSpeed = oldData.gameSpeed;
+
+    if (!Array.isArray(fresh.candidates)) fresh.candidates = [];
+    if (!fresh.candidatePool || typeof fresh.candidatePool !== 'object') {
+        fresh.candidatePool = { lastRefreshMinute: 0, lastRefreshMonth: null };
+    }
+
     return fresh;
+}
+
+function _makeStaffEntry(role, skill, idNum, timeObj) {
+    const traitList = rollTraits();
+    const baseSalary = (BALANCE.salary && BALANCE.salary[role]) || 2500;
+    const skillDef = _skillTierDef(skill);
+    const salary = Math.round(baseSalary * (skillDef ? skillDef.salaryMult : 1));
+    return {
+        id: 'staff_' + idNum + '_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        name: generateRandomName(),
+        role: role,
+        skill: skill,
+        salary: salary,
+        morale: (BALANCE.team && BALANCE.team.moraleStart) || 75,
+        traits: traitList,
+        skillProgress: 0,
+        hireDate: timeObj ? {
+            year: timeObj.currentYear,
+            month: timeObj.currentMonth,
+            day: timeObj.currentDay
+        } : { year: 2000, month: 1, day: 1 },
+        hireGameMinute: timeObj ? (timeObj.elapsedGameMinutes || 0) : 0
+    };
+}
+
+function _skillTierDef(tier) {
+    const tiers = [
+        { tier: 1, salaryMult: 1.0 },
+        { tier: 2, salaryMult: 1.4 },
+        { tier: 3, salaryMult: 2.0 },
+        { tier: 4, salaryMult: 2.8 },
+        { tier: 5, salaryMult: 4.0 }
+    ];
+    return tiers.find(t => t.tier === tier) || tiers[0];
 }
 
 class GameState {
@@ -188,11 +232,36 @@ class GameState {
         this.setCash(this.data.cash + delta);
     }
 
-    // ============== TIM ==============
+    // ============== TIM (counter) ==============
     setTeam(team) {
         this.data.team = { ...this.data.team, ...team };
         bus.emit('team:changed', this.data.team);
         bus.emit('state:changed', this.data);
+    }
+
+    // Recompute counter dari state.staff
+    syncTeamCounters() {
+        const counts = { engineers: 0, designers: 0, marketers: 0 };
+        (this.data.staff || []).forEach(s => {
+            if (s.role === 'engineer') counts.engineers++;
+            else if (s.role === 'designer') counts.designers++;
+            else if (s.role === 'marketer') counts.marketers++;
+        });
+        this.data.team = counts;
+        bus.emit('team:changed', counts);
+        bus.emit('state:changed', this.data);
+        return counts;
+    }
+
+    // Total gaji bulanan dari staff
+    getMonthlySalary() {
+        if (Array.isArray(this.data.staff) && this.data.staff.length > 0) {
+            return (this.data.staff || []).reduce((sum, s) => sum + (s.salary || 0), 0);
+        }
+        // Fallback: counter × gaji dasar (untuk save lama)
+        const t = this.data.team;
+        const s = BALANCE.salary;
+        return (t.engineers * s.engineer) + (t.designers * s.designer) + (t.marketers * s.marketer);
     }
 
     // ============== LOG ==============
@@ -248,7 +317,7 @@ class GameState {
         this.setReputation((this.data.market.reputation || 0) + delta);
     }
 
-    // ============== SENTIMEN PUBLIK ==============
+    // ============== SENTIMEN ==============
     setSentiment(value) {
         const clamped = Math.max(0, Math.min(100, Math.round(value)));
         this.data.feedback.sentiment = clamped;
@@ -266,8 +335,18 @@ class GameState {
         if (!data || typeof data !== 'object') return false;
 
         let incoming = data;
+
+        // Migrasi
         if (!incoming.schemaVersion || incoming.schemaVersion < 2) {
-            incoming = migrateV1toV2(incoming);
+            const fresh = createInitialState(DIFFICULTY.normal);
+            if (typeof incoming.companyName === 'string') fresh.companyName = incoming.companyName;
+            if (typeof incoming.cash === 'number') fresh.cash = incoming.cash;
+            if (incoming.time) fresh.time = { ...fresh.time, ...incoming.time };
+            if (typeof incoming.isPaused === 'boolean') fresh.isPaused = incoming.isPaused;
+            if (typeof incoming.gameSpeed === 'number') fresh.gameSpeed = incoming.gameSpeed;
+            incoming = fresh;
+        } else if (incoming.schemaVersion < 3) {
+            incoming = migrateV2toV3(incoming);
         }
 
         const base = createInitialState(incoming.difficulty || DIFFICULTY.normal);
@@ -278,6 +357,9 @@ class GameState {
             time:     { ...base.time,     ...(incoming.time || {}) },
             finance:  { ...base.finance,  ...(incoming.finance || {}) },
             team:     { ...base.team,     ...(incoming.team || {}) },
+            staff:    Array.isArray(incoming.staff) ? incoming.staff : [],
+            candidates: Array.isArray(incoming.candidates) ? incoming.candidates : [],
+            candidatePool: { ...base.candidatePool, ...(incoming.candidatePool || {}) },
             research: { ...base.research, ...(incoming.research || {}) },
 
             os: {
@@ -316,7 +398,6 @@ class GameState {
                     ? incoming.market.revenueHistory : []
             },
 
-            // ===== KOMPETITOR AI =====
             competitorState: {
                 ...base.competitorState,
                 ...(incoming.competitorState || {}),
@@ -326,7 +407,6 @@ class GameState {
                 }
             },
 
-            // ===== FEEDBACK PUBLIK =====
             feedback: {
                 ...base.feedback,
                 ...(incoming.feedback || {}),
@@ -356,7 +436,7 @@ class GameState {
             settings: { ...base.settings, ...(incoming.settings || {}) }
         };
 
-        // ---- Guard untuk save lama ----
+        // Guard
         if (typeof this.data.research.totalCompleted !== 'number') {
             this.data.research.totalCompleted = this.data.research.completed.length;
         }
@@ -364,8 +444,18 @@ class GameState {
             this.data.market.trends = { ...BALANCE.market.trendsByEra.feature_phone };
         }
         if (typeof this.data.feedback.sentiment !== 'number') {
-            this.data.feedback.sentiment = BALANCE.feedback ? BALANCE.feedback.initialSentiment : 50;
+            this.data.feedback.sentiment = (BALANCE.feedback && BALANCE.feedback.initialSentiment) || 50;
         }
+
+        // Pastikan staff punya field default
+        this.data.staff.forEach(s => {
+            if (typeof s.skillProgress !== 'number') s.skillProgress = 0;
+            if (typeof s.morale !== 'number') s.morale = 75;
+            if (!Array.isArray(s.traits)) s.traits = [];
+        });
+
+        // Sync counter dari staff jika ada
+        if (this.data.staff.length > 0) this.syncTeamCounters();
 
         bus.emit('state:hydrated', this.data);
         bus.emit('state:changed', this.data);
@@ -375,13 +465,6 @@ class GameState {
     reset(difficulty = DIFFICULTY.normal) {
         this.data = createInitialState(difficulty);
         bus.emit('state:changed', this.data);
-    }
-
-    // ============== UTILITAS ==============
-    getMonthlySalary() {
-        const t = this.data.team;
-        const s = BALANCE.salary;
-        return (t.engineers * s.engineer) + (t.designers * s.designer) + (t.marketers * s.marketer);
     }
 
     getMonthlyFixedCost() {
