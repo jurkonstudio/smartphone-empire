@@ -2468,3 +2468,251 @@ body {
         animation: none !important;
     }
 }
+/* ===================== NEWS & MEDIA ===================== */
+
+/* Kartu daftar berita di Dashboard */
+.news-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.news-row {
+    padding: 10px 12px;
+    background: var(--bg-3);
+    border-radius: var(--r);
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background 0.15s, transform 0.08s, border-color 0.15s;
+}
+.news-row:hover { background: var(--bg-4); }
+.news-row:active { transform: scale(0.99); }
+.news-row.unread { border-left-color: var(--accent); }
+
+.news-row-top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    font-size: 10.5px;
+    color: var(--text-mute);
+}
+.news-flag {
+    display: inline-block;
+    background: var(--bg-4);
+    color: var(--text-secondary);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+.news-row-source {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 10.5px;
+}
+.news-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-left: auto;
+}
+.news-dot.positive { background: var(--success); }
+.news-dot.mixed    { background: var(--warn); }
+.news-dot.negative { background: var(--danger); }
+
+.news-row-headline {
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
+}
+.news-row-meta {
+    font-size: 10.5px;
+    color: var(--text-mute);
+    font-variant-numeric: tabular-nums;
+}
+
+.news-badge {
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: var(--r-pill);
+    margin-left: 4px;
+    letter-spacing: 0.3px;
+}
+
+/* ===================== ARTICLE MODAL ===================== */
+.news-article {
+    font-family: Georgia, 'Times New Roman', serif;
+}
+
+.news-masthead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border-strong);
+    margin-bottom: 14px;
+}
+.news-source {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    font-family: -apple-system, sans-serif;
+}
+.news-source-meta {
+    font-size: 10.5px;
+    color: var(--text-mute);
+    font-family: -apple-system, sans-serif;
+    text-align: right;
+}
+
+.news-headline {
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+    font-family: -apple-system, sans-serif;
+}
+
+.news-subheadline {
+    font-size: 14px;
+    font-style: italic;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    font-family: Georgia, serif;
+}
+
+.news-byline {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+    font-family: -apple-system, sans-serif;
+    letter-spacing: 0.2px;
+}
+.news-byline b { color: var(--text-primary); font-weight: 700; }
+
+.news-dateline {
+    font-size: 11px;
+    color: var(--text-mute);
+    margin-bottom: 18px;
+    font-family: -apple-system, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.news-body { color: var(--text-primary); }
+.news-para {
+    font-size: 14px;
+    line-height: 1.7;
+    margin-bottom: 14px;
+    color: var(--text-primary);
+    text-align: justify;
+}
+.news-para:first-of-type::first-letter {
+    font-size: 38px;
+    font-weight: 800;
+    float: left;
+    line-height: 0.9;
+    padding: 4px 8px 0 0;
+    color: var(--accent);
+    font-family: Georgia, serif;
+}
+
+.news-pullquote {
+    font-size: 16px;
+    font-style: italic;
+    line-height: 1.4;
+    color: var(--text-primary);
+    padding: 12px 0 12px 16px;
+    margin: 16px 0;
+    border-left: 3px solid var(--accent);
+    font-family: Georgia, serif;
+    letter-spacing: -0.005em;
+}
+
+.news-score-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: var(--bg-3);
+    border-radius: var(--r);
+    margin-top: 20px;
+    font-family: -apple-system, sans-serif;
+    border-left: 3px solid var(--accent);
+}
+.news-score-label {
+    font-size: 11px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+.news-score-value {
+    font-size: 20px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
+.news-score-sentiment {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.news-footer {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+}
+.news-footer-meta {
+    font-size: 11px;
+    color: var(--text-mute);
+    font-family: -apple-system, sans-serif;
+    text-align: center;
+    line-height: 1.5;
+}
+
+/* ===================== TOAST ACTION BUTTON ===================== */
+.notif-action-btn {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 6px 14px;
+    background: var(--accent);
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: -apple-system, sans-serif;
+    letter-spacing: 0.2px;
+    transition: background 0.15s, transform 0.08s;
+    min-height: 32px;
+}
+.notif-action-btn:hover { background: var(--accent-hover); }
+.notif-action-btn:active { transform: scale(0.96); }
+
+/* Untuk Dynamic Island — tombol action di dalam expanded */
+.notif-island .notif-action-btn {
+    background: var(--accent);
+    color: #fff;
+}
+.notif-island.expanded .notif-action-btn {
+    margin-top: 10px;
+}
