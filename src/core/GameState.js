@@ -37,11 +37,11 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
         team: { engineers: 0, designers: 0, marketers: 0 },
 
         research: {
-            active: [],
-            completed: [],
-            maxSlots: 1,
-            totalCompleted: 0
-        },
+    active: [],
+    completed: (BALANCE.starterResearch || []).slice(),
+    maxSlots: 1,
+    totalCompleted: (BALANCE.starterResearch || []).length
+},
 
         os: {
             name: null,
