@@ -2,12 +2,6 @@
 // ============================================================
 // DATA PROCESS NODE — fabrikasi chip.
 // Semakin kecil node (nm), semakin efisien & mahal.
-//
-// perfBonus   : multiplier performance
-// effBonus    : multiplier efficiency
-// costBase    : biaya dasar per unit ($)
-// fabComplexity: kompleksitas fab (kapasitas fab minimum)
-// yieldBase   : yield rate dasar (0-1) — makin kecil node, makin rendah
 // ============================================================
 
 export const CHIP_NODES = [
