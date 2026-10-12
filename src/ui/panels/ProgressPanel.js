@@ -1,10 +1,32 @@
-export function renderProgressPanel() {
+// FILE: src/ui/panels/ProgressPanel.js
+// FIX: sebelumnya 40% hardcode. Sekarang baca state.research.progress (0..1).
+// Belum ada riset aktif di Fase 1, jadi 0%.
+export function renderProgressPanel(state) {
+    const r = state.research || {};
+    const progress = typeof r.progress === 'number' ? r.progress : 0;
+    const clamped = Math.max(0, Math.min(1, progress));
+    const percent = Math.round(clamped * 100);
+
+    const hasActive = !!r.activeId;
+    const label = hasActive
+        ? 'Riset berjalan'
+        : 'Tidak ada riset aktif';
+
     return `
-        <div style="background:#222; padding:15px; border-radius:8px; margin-bottom:20px;">
-            <div style="font-size:14px; color:#fff; margin-bottom:10px;">Progres Riset</div>
-            <div style="width:100%; background:#444; height:10px; border-radius:5px;">
-                <div style="width:40%; background:#2196F3; height:100%; border-radius:5px;"></div>
+        <div class="card">
+            <div class="card-title">Progres Riset</div>
+            <div class="progress-label">
+                <span>${label}</span>
+                <span>${percent}%</span>
             </div>
+            <div class="progress">
+                <div class="progress-bar" style="width:${percent}%;"></div>
+            </div>
+            ${hasActive ? '' : `
+                <div style="font-size:11.5px;color:var(--text-mute);margin-top:10px;">
+                    Technology tree akan tersedia pada Fase 3.
+                </div>
+            `}
         </div>
     `;
 }
