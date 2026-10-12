@@ -96,14 +96,14 @@ function renderNavOnly() {
     els.nav.innerHTML = renderMobileNav({ active: activeView });
 }
 
-// ============ RENDER VIEW (defensive + keepScroll) ============
-// opts.keepScroll = true  → pertahankan posisi scroll (untuk re-render dari event)
-// opts.keepScroll = false → reset scroll ke atas (untuk pindah tab / sub-tab)
+// ============ RENDER VIEW ============
 function renderView(opts) {
     if (!els.view) return;
 
-    const keepScroll = !!(opts && opts.keepScroll);
+    const soft = !!(opts && opts.soft);
     const prevScroll = els.view.scrollTop;
+
+    if (soft) els.view.classList.add('soft-update');
 
     let html = '';
     try {
@@ -124,17 +124,18 @@ function renderView(opts) {
                '<div class="card-title" style="color:var(--danger);">⚠ Error Render</div>' +
                '<div style="font-size:13px;line-height:1.6;word-break:break-word;">' +
                '<b>View:</b> ' + activeView + '<br>' +
-               '<b>Error:</b> ' + (err && err.message ? err.message : 'Unknown') + '<br>' +
-               '<b>Stack:</b> <span style="font-family:monospace;font-size:11px;">' +
-               (err && err.stack ? err.stack.split('\n').slice(0, 3).join('<br>') : '-') +
-               '</span></div></div>';
+               '<b>Error:</b> ' + (err && err.message ? err.message : 'Unknown') + '</div></div>';
     }
     els.view.innerHTML = html;
 
-    // Restore scroll kalau keepScroll = true
-    if (keepScroll) {
+    if (soft) {
         els.view.scrollTop = prevScroll;
-        requestAnimationFrame(() => { if (els.view) els.view.scrollTop = prevScroll; });
+        requestAnimationFrame(() => {
+            if (els.view) {
+                els.view.scrollTop = prevScroll;
+                els.view.classList.remove('soft-update');
+            }
+        });
     } else {
         els.view.scrollTop = 0;
     }
@@ -160,7 +161,25 @@ function renderView(opts) {
 
 function renderAll() { renderHeaderOnly(); renderNavOnly(); renderView(); }
 
-// ============ ANIMASI UANG ============
+// ============================================================
+// TARGETED UPDATE — dipanggil saat hari berubah, tanpa re-render
+// ============================================================
+function updateDashboardLive() {
+    const data = state.get();
+    const t = data.time;
+
+    // KPI day counter
+    const dayEl = document.querySelector('[data-kpi-day]');
+    if (dayEl) dayEl.textContent = t.currentDay;
+    const monthEl = document.querySelector('[data-kpi-month]');
+    if (monthEl) monthEl.textContent = t.currentMonth;
+    const yearEl = document.querySelector('[data-kpi-year]');
+    if (yearEl) yearEl.textContent = t.currentYear;
+}
+
+// ============================================================
+// ANIMASI UANG
+// ============================================================
 let _cashRaf = null;
 function animateCash(from, to) {
     if (_cashRaf) { cancelAnimationFrame(_cashRaf); _cashRaf = null; }
@@ -464,12 +483,7 @@ function bindProgressEvents() {
         if (barEl) barEl.style.width = data.percentOverall + '%';
         if (etaEl) etaEl.textContent = 'Sisa ~' + data.remainingDays + ' hari di tahap ini';
     });
-    // === KEEP SCROLL: re-render karena hari berubah → jangan reset scroll ===
-    bus.on('time:day-changed', () => {
-        if (activeView === 'research' || activeView === 'products' || activeView === 'market' || activeView === 'team') {
-            renderView({ keepScroll: true });
-        }
-    });
+    // TIDAK ADA re-render pada day-changed — hanya targeted update.
 }
 
 // ============ TIME ============
@@ -487,19 +501,32 @@ function bindTimeEvents() {
         if (c) c.textContent = hh + ':' + mm;
         if (s) { s.textContent = t.isPaused ? 'Paused' : (t.gameSpeed + 'x'); s.classList.toggle('running', !t.isPaused); }
     });
-    // === KEEP SCROLL: hari berubah di dashboard → jangan reset scroll ===
-    bus.on('time:day-changed', function () { if (activeView === 'dashboard') renderView({ keepScroll: true }); });
+
+    // FIX: hanya targeted update, BUKAN re-render
+    bus.on('time:day-changed', function () {
+        if (activeView === 'dashboard') {
+            updateDashboardLive();
+        }
+    });
+
     bus.on('time:speed-changed', function () { renderHeaderOnly(); });
 }
 
 // ============ STATE EVENTS ============
 function bindStateEvents() {
     bus.on('state:cash-changed', function (data) { animateCash(data.prev, data.next); });
-    // === KEEP SCROLL: log & milestone update → jangan reset scroll ===
-    bus.on('state:log-changed', function () { if (activeView === 'dashboard') renderView({ keepScroll: true }); });
-    bus.on('state:milestone-added', function () { if (activeView === 'dashboard') renderView({ keepScroll: true }); });
+
+    // Log berubah → soft re-render (tanpa animasi flicker)
+    bus.on('state:log-changed', function () {
+        if (activeView === 'dashboard') renderView({ soft: true });
+    });
+    bus.on('state:milestone-added', function () {
+        if (activeView === 'dashboard') renderView({ soft: true });
+    });
     bus.on('quest:completed', function (data) { ToastService.success('Quest selesai: ' + data.title); vibrate(20); });
-    bus.on('quest:activated', function () { if (activeView === 'dashboard') renderView({ keepScroll: true }); });
+    bus.on('quest:activated', function () {
+        if (activeView === 'dashboard') renderView({ soft: true });
+    });
     bus.on('economy:warn-burnrate', function (data) {
         _burnWarn = 'Sisa ' + data.monthsLeft + ' bln';
         renderHeaderOnly();
@@ -514,12 +541,11 @@ function bindStateEvents() {
     bus.on('settings:changed', function () {});
     bus.on('tutorial:restart', function () { tutorial.restart(); });
     bus.on('era:changed', function () { renderAll(); });
-    // === KEEP SCROLL: tim berubah → jangan reset scroll ===
     bus.on('team:changed', function () {
-        if (activeView === 'dashboard' || activeView === 'team') renderView({ keepScroll: true });
+        if (activeView === 'dashboard' || activeView === 'team') renderView({ soft: true });
     });
-    bus.on('team:recruited', function () { if (activeView === 'team') renderView({ keepScroll: true }); });
-    bus.on('team:fired', function () { if (activeView === 'team') renderView({ keepScroll: true }); });
+    bus.on('team:recruited', function () { if (activeView === 'team') renderView({ soft: true }); });
+    bus.on('team:fired', function () { if (activeView === 'team') renderView({ soft: true }); });
 }
 
 // ============ BOOT ============
