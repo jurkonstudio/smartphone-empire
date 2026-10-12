@@ -1,19 +1,17 @@
 // FILE: src/core/ToastService.js
 // ============================================================
-// ToastService — antrian notifikasi dengan proteksi anti-double.
-// Setiap panggilan show() dideduplikasi dalam window DEDUPE_MS
-// agar pesan identik tidak muncul 2x berturut-turut.
+// ToastService — dengan proteksi anti-double + dukungan action button.
 // ============================================================
 import { bus } from './EventBus.js';
 
-const DEDUPE_MS = 800;
-let _nextId = 1;
-let _lastKey = null;
-let _lastTime = 0;
+var DEDUPE_MS = 800;
+var _nextId = 1;
+var _lastKey = null;
+var _lastTime = 0;
 
 function _isDuplicate(message, type) {
-    const key = type + '::' + message;
-    const now = Date.now();
+    var key = type + '::' + message;
+    var now = Date.now();
     if (key === _lastKey && (now - _lastTime) < DEDUPE_MS) {
         return true;
     }
@@ -22,16 +20,27 @@ function _isDuplicate(message, type) {
     return false;
 }
 
-export const ToastService = {
-    show(message, type = 'info', durationMs = 2800) {
+export var ToastService = {
+    /**
+     * show(message, type, durationMs, options)
+     * options: { action: { label: 'Baca', onClick: function } }
+     */
+    show: function (message, type, durationMs, options) {
         if (!message) return 0;
-        if (_isDuplicate(message, type)) return 0;
-        const id = _nextId++;
-        bus.emit('toast:show', { id, message, type, durationMs });
+        if (_isDuplicate(message, type || 'info')) return 0;
+        var id = _nextId++;
+        var payload = {
+            id: id,
+            message: message,
+            type: type || 'info',
+            durationMs: durationMs || 2800,
+            action: (options && options.action) ? options.action : null
+        };
+        bus.emit('toast:show', payload);
         return id;
     },
-    success(msg, ms) { return this.show(msg, 'success', ms); },
-    error(msg, ms)   { return this.show(msg, 'error', ms); },
-    warning(msg, ms) { return this.show(msg, 'warning', ms); },
-    info(msg, ms)    { return this.show(msg, 'info', ms); }
+    success: function (msg, ms, options) { return this.show(msg, 'success', ms, options); },
+    error:   function (msg, ms, options) { return this.show(msg, 'error',   ms, options); },
+    warning: function (msg, ms, options) { return this.show(msg, 'warning', ms, options); },
+    info:    function (msg, ms, options) { return this.show(msg, 'info',    ms, options); }
 };
