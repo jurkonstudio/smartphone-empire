@@ -1,39 +1,54 @@
 // FILE: src/ui/panels/MarketPanel.js
-// Tab Pasar: sub-tab Pangsa | Kompetitor | Tren.
+import { renderPublicOpinionPanel } from './PublicOpinionPanel.js';
+
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
-export function renderMarketPanel({ subtab, marketSystem }) {
+function _personalityLabel(p) {
+    const map = {
+        aggressive: '⚔️ Agresif Harga',
+        premium:    '💎 Premium',
+        innovator:  '💡 Inovator',
+        follower:   '🔄 Pengikut',
+        dominant:   '👑 Dominan',
+        declining:  '📉 Menurun'
+    };
+    return map[p] || p;
+}
+
+export function renderMarketPanel({ subtab, marketSystem, competitorSystem, opinionSystem }) {
     const subtabBar = `
         <div class="subtab-bar">
             <button class="subtab-btn ${subtab === 'share'       ? 'active' : ''}" data-market-subtab="share">Pangsa</button>
             <button class="subtab-btn ${subtab === 'competitors' ? 'active' : ''}" data-market-subtab="competitors">Kompetitor</button>
             <button class="subtab-btn ${subtab === 'trends'      ? 'active' : ''}" data-market-subtab="trends">Tren</button>
+            <button class="subtab-btn ${subtab === 'public'      ? 'active' : ''}" data-market-subtab="public">Publik</button>
         </div>
     `;
     let body = '';
-    if (subtab === 'competitors') body = _renderCompetitors(marketSystem);
+    if (subtab === 'competitors') body = _renderCompetitors(competitorSystem);
     else if (subtab === 'trends') body = _renderTrends(marketSystem);
+    else if (subtab === 'public') body = renderPublicOpinionPanel({ opinionSystem });
     else body = _renderShare(marketSystem);
     return subtabBar + body;
 }
 
+// ============================================================
+// SUB-TAB PANGSA
+// ============================================================
 function _renderShare(marketSystem) {
     const data = window.__game.state.get();
     const share = data.market.share || 0;
     const history = data.market.shareHistory || [];
     const competitors = data.market.competitors || [];
-
-    const lastHist = history[0];
-    const prevHist = history[1];
-    const delta = prevHist ? (lastHist.playerShare - prevHist.playerShare) : 0;
+    const delta = marketSystem.getShareDelta();
     const arrow = delta > 0.001 ? '↑' : delta < -0.001 ? '↓' : '→';
     const arrowColor = delta > 0 ? 'var(--accent)' : delta < 0 ? 'var(--danger)' : 'var(--text-mute)';
 
-    return `
+    const html = `
         <div class="card">
             <div class="card-title">Pangsa Pasar Anda</div>
             <div style="display:flex;align-items:baseline;gap:10px;">
@@ -49,11 +64,13 @@ function _renderShare(marketSystem) {
                 <span><b style="color:var(--accent);">Anda</b></span>
                 <b>${(share * 100).toFixed(1)}%</b>
             </div>
-            ${competitors.slice().sort((a,b) => b.share - a.share).map(c => `
+            ${competitors.slice().sort((a, b) => b.share - a.share).map(c => `
                 <div class="sum-row"><span>${escapeHtml(c.name)}</span><b>${(c.share * 100).toFixed(1)}%</b></div>
             `).join('')}
+            <div class="sum-row" style="color:var(--text-mute);"><span>Pemain lain</span><b>${((1 - share - competitors.reduce((s, c) => s + c.share, 0)) * 100).toFixed(1)}%</b></div>
         </div>
     `;
+    return html;
 }
 
 function _renderShareChart(history) {
@@ -91,7 +108,7 @@ export function drawShareChart(container) {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, cssW, cssH);
 
-    const padL = 30, padR = 8, padT = 10, padB = 16;
+    const padL = 32, padR = 8, padT = 10, padB = 16;
     const plotW = cssW - padL - padR;
     const plotH = cssH - padT - padB;
     const maxV = Math.max(0.1, Math.max.apply(null, history.map(h => h.playerShare)));
@@ -100,7 +117,6 @@ export function drawShareChart(container) {
     const xOf = (i) => padL + (plotW * i) / (history.length - 1);
     const yOf = (v) => padT + plotH - (v / range) * plotH;
 
-    // Grid
     ctx.strokeStyle = 'rgba(255,255,255,0.06)';
     ctx.lineWidth = 1;
     for (let i = 1; i <= 3; i++) {
@@ -108,7 +124,6 @@ export function drawShareChart(container) {
         ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(cssW - padR, y); ctx.stroke();
     }
 
-    // Line
     ctx.strokeStyle = '#4CAF50';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -118,7 +133,6 @@ export function drawShareChart(container) {
     });
     ctx.stroke();
 
-    // Label
     ctx.fillStyle = '#6a6a6a';
     ctx.font = '10px sans-serif';
     ctx.textAlign = 'right';
@@ -126,45 +140,51 @@ export function drawShareChart(container) {
     ctx.fillText('0%', padL - 4, padT + plotH - 2);
 }
 
-function _renderCompetitors(marketSystem) {
-    const competitors = marketSystem.getCompetitors();
-    if (!competitors.length) return '<div class="empty"><div class="empty-ico">🏢</div><div class="empty-title">Belum ada kompetitor</div></div>';
-    return competitors.map(c => `
-        <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
-                <div style="flex:1;">
-                    <div style="font-size:14px;font-weight:700;">${escapeHtml(c.name)}</div>
-                    <div style="font-size:11px;color:var(--text-mute);margin-top:2px;">${_personalityLabel(c.personality)}</div>
+// ============================================================
+// SUB-TAB KOMPETITOR
+// ============================================================
+function _renderCompetitors(competitorSystem) {
+    if (!competitorSystem) return '<div class="empty"><div class="empty-ico">🏢</div><div class="empty-title">Sistem kompetitor belum siap</div></div>';
+    const mode = window.__game.state.get().settings.competitorMode || 'real';
+    const ids = competitorSystem.getActiveIds();
+    if (!ids.length) return '<div class="empty"><div class="empty-ico">🏢</div><div class="empty-title">Belum ada kompetitor</div></div>';
+
+    const cards = ids.map(id => {
+        const c = competitorSystem.getCompetitorData(id, mode);
+        if (!c) return '';
+        return `
+            <div class="card comp-card" data-competitor-detail="${id}" style="border-left:3px solid ${c.color || '#333'};">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:14px;font-weight:700;">${escapeHtml(c.name)}</div>
+                        <div style="font-size:11px;color:var(--text-mute);margin-top:2px;">${escapeHtml(c.country || '')} • ${_personalityLabel(c.personality)}</div>
+                    </div>
+                    <div style="text-align:right;flex-shrink:0;">
+                        <div style="font-size:17px;font-weight:700;color:var(--info);">${((c.currentShare || 0) * 100).toFixed(1)}%</div>
+                        <div style="font-size:10px;color:var(--text-mute);">pangsa</div>
+                    </div>
                 </div>
-                <div style="text-align:right;">
-                    <div style="font-size:18px;font-weight:700;color:var(--info);">${((c.share || 0) * 100).toFixed(1)}%</div>
-                    <div style="font-size:10.5px;color:var(--text-mute);">pangsa</div>
-                </div>
+                ${c.lastRelease ? `<div style="font-size:11.5px;color:var(--text-dim);margin-top:8px;">📱 Terbaru: ${escapeHtml(c.lastRelease.name)} (${c.lastRelease.year})</div>` : ''}
+                <div style="font-size:10.5px;color:var(--text-mute);margin-top:4px;">OS: ${escapeHtml(c.osName || '-')} • Tier ${(c.currentTier || 1).toFixed(1)}</div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
+
+    return `<div class="comp-list">${cards}</div>`;
 }
 
-function _personalityLabel(p) {
-    const map = {
-        aggressive: '⚔️ Agresif Harga',
-        premium:    '💎 Premium',
-        innovator:  '💡 Inovator',
-        follower:   '🔄 Pengikut'
-    };
-    return map[p] || p;
-}
-
+// ============================================================
+// SUB-TAB TREN
+// ============================================================
 function _renderTrends(marketSystem) {
     const trends = marketSystem.getTrends();
     const labels = {
-        camera:      { name: 'Kamera',     icon: '📷' },
-        battery:     { name: 'Baterai',    icon: '🔋' },
-        screen:      { name: 'Layar',      icon: '📺' },
-        performance: { name: 'Performa',   icon: '⚡' },
-        design:      { name: 'Desain',     icon: '🎨' }
+        camera:      { name: 'Kamera',   icon: '📷' },
+        battery:     { name: 'Baterai',  icon: '🔋' },
+        screen:      { name: 'Layar',    icon: '📺' },
+        performance: { name: 'Performa', icon: '⚡' },
+        design:      { name: 'Desain',   icon: '🎨' }
     };
-    // Urutkan dari yang paling tinggi
     const sorted = Object.keys(trends).sort((a, b) => trends[b] - trends[a]);
     const top = sorted[0];
 
@@ -200,4 +220,4 @@ function _renderTrends(marketSystem) {
             </div>
         </div>
     `;
-          }
+}
