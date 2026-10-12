@@ -1,11 +1,16 @@
+// FILE: src/ui/layout/Sidebar.js
+// Sidebar hanya untuk desktop. Saat ini disembunyikan via CSS (mobile-first).
 import { NAV_ITEMS } from '../../config/constants.js';
 
 export function renderSidebar({ active }) {
     return `
-        <div style="display:flex; flex-direction:column; gap:10px; padding:15px;">
+        <div style="padding:14px 10px; display:flex; flex-direction:column; gap:6px; width:100%;">
             ${NAV_ITEMS.map(item => `
-                <button data-nav="${item.id}" style="text-align:left; padding:12px; background:${active === item.id ? '#333' : 'transparent'}; color:${active === item.id ? '#4CAF50' : '#fff'}; border:none; border-radius:5px; cursor:pointer; font-size:14px;">
-                    ${item.label}
+                <button class="nav-btn ${active === item.id ? 'active' : ''}"
+                        data-nav="${item.id}"
+                        style="flex-direction:row; justify-content:flex-start; gap:10px; padding:10px 12px; border-radius:8px; font-size:13px;">
+                    <span class="nav-ico" aria-hidden="true">${item.icon}</span>
+                    <span>${item.label}</span>
                 </button>
             `).join('')}
         </div>
