@@ -2,10 +2,9 @@
 # Dokumentasi Event — Smartphone Empire
 
 Semua komunikasi antar modul lewat `EventBus` (`src/core/EventBus.js`).
-Format: **`nama:event`** — deskripsi — payload.
 
 ## Waktu (dari TimeSystem)
-- `time:tick` — dipanggil tiap ~250ms — `{ currentYear, currentMonth, currentDay, currentHour, currentMinute, elapsedGameMinutes, isPaused, gameSpeed }`
+- `time:tick` — tiap ~250ms — snapshot waktu
 - `time:day-changed` — hari berganti — snapshot waktu
 - `time:month-changed` — bulan berganti — snapshot waktu
 - `time:year-changed` — tahun berganti — snapshot waktu
@@ -13,31 +12,53 @@ Format: **`nama:event`** — deskripsi — payload.
 
 ## State (dari GameState)
 - `state:changed` — state manapun berubah — `stateData`
-- `state:cash-changed` — uang berubah — `{ prev, next, delta }`
+- `state:cash-changed` — `{ prev, next, delta }`
 - `state:hydrated` — state dimuat dari save — `stateData`
-- `state:log-changed` — log baru ditambahkan — `{ entry }`
-- `state:milestone-added` — milestone baru — `{ milestone }`
+- `state:log-changed` — `{ entry }`
+- `state:milestone-added` — `{ milestone }`
+- `team:changed` — komposisi tim berubah — `{ engineers, designers, marketers }`
+- `tip:shown` — `{ id }`
 
 ## Ekonomi
-- `economy:month-processed` — akhir bulan diproses — `{ year, month, income, expense, net, cash, breakdown }`
-- `economy:warn-burnrate` — sisa uang < 2 bulan biaya — `{ monthsLeft }`
-- `economy:game-over` — 2 bulan berturut negatif — `{ reason, negativeMonths }`
-- `economy:loan-taken` — pinjaman diambil — `{ amount, interestRate }`
-- `economy:loan-repaid` — pinjaman lunas — `{ loanId }`
+- `economy:add-revenue` — revenue tambahan untuk bulan ini — `{ amount }`
+- `economy:month-processed` — `{ year, month, income, expense, tax, net, cash, breakdown }`
+- `economy:warn-burnrate` — `{ monthsLeft }`
+- `economy:game-over` — `{ reason, negativeMonths }`
+- `economy:loan-taken` — `{ amount, interestRate }`
+- `economy:loan-repaid` — `{ loanId }`
 
-## Tim
-- `team:recruited` — anggota baru — `{ role, count, cost }`
-- `team:changed` — komposisi berubah — `{ engineers, designers, marketers }`
+## Riset (dari ResearchSystem)
+- `research:started` — `{ nodeId, name, category, cost, durationDays }`
+- `research:progress` — `{ active: [{ nodeId, name, progressDays, durationDays, percent, remainingDays }], maxSlots }`
+- `research:completed` — `{ nodeId, name, category, effects }`
+- `research:cancelled` — `{ nodeId, refund }`
+- `research:slots-changed` — `{ maxSlots }`
+
+## OS (dari OSSystem)
+- `os:created` — `{ name }`
+- `os:version-started` — `{ versionString, features, cost, durationDays }`
+- `os:progress` — `{ versionString, progressDays, durationDays, percent, remainingDays }`
+- `os:version-released` — `{ versionString, stats, features }`
+- `os:version-cancelled` — `{ refund }`
+- `os:bug-appeared` — `{ bug }`
+- `os:bug-patching` — `{ bugId, name }`
+- `os:bug-patched` — `{ bugId, name }`
+- `os:bug-ignored` — `{ bugId, name }`
+- `os:app-released` — `{ appId, name, appealBonus }`
+- `os:updated` — `{ versionId, versionString }`
 
 ## Quest & Tutorial
 - `quest:activated` — `{ id, title }`
 - `quest:completed` — `{ id, title, rewards }`
 - `tutorial:step-changed` — `{ stepIndex, step }`
-- `tutorial:completed` — `{ skipped: boolean }`
-- `tip:shown` — `{ id }`
+- `tutorial:completed` — `{ skipped }`
+- `tutorial:action` — aksi pemain untuk tutorial — `{ id }`
+- `tutorial:skip` — pemain lewati tutorial
+- `tutorial:next` — pemain klik lanjut
+- `tutorial:restart` — minta ulang tutorial
 
 ## UI
-- `ui:modal-open` — `{ id, payload }`
+- `ui:modal-open` — `{ id }`
 - `ui:modal-close` — `{ id }`
 - `view:changed` — `{ id }`
 - `toast:show` — `{ id, message, type, durationMs }`
@@ -47,5 +68,5 @@ Format: **`nama:event`** — deskripsi — payload.
 - `save:error` — `{ error }`
 - `save:cleared` — (tanpa payload)
 
-## Era (Tahap 4)
+## Era (Batch D)
 - `era:changed` — `{ from, to, year }`
