@@ -2,14 +2,12 @@
 // Semua angka balancing di sini — ubah tanpa menyentuh logika.
 
 export const BALANCE = {
-    // ---- Modal awal per kesulitan ----
     startingCash: {
         santai: 200000,
         normal: 100000,
         sulit:   50000
     },
 
-    // ---- Riset dasar yang otomatis selesai di awal permainan ----
     starterResearch: [
         'layar_mono',
         'cam_vga',
@@ -18,53 +16,40 @@ export const BALANCE = {
         'net_gsm'
     ],
 
-    // ---- Pengali efek kesulitan ----
     difficultyMultiplier: {
         santai: { expense: 0.8, competitorAggression: 0.7, taxRate: 0.12 },
         normal: { expense: 1.0, competitorAggression: 1.0, taxRate: 0.15 },
         sulit:  { expense: 1.3, competitorAggression: 1.4, taxRate: 0.20 }
     },
 
-    // ---- Biaya tetap bulanan ----
     monthly: { rentHQ: 5000, utilities: 500, baseAdmin: 300 },
 
-    // ---- Gaji bulanan per role ----
     salary: { engineer: 3000, designer: 2800, marketer: 2500 },
 
-    // ---- Biaya rekrut awal ----
     recruitCost: { engineer: 2000, designer: 1800, marketer: 1500 },
 
-    // ---- Batas tim ----
     teamCap: { engineer: 20, designer: 20, marketer: 20 },
 
-    // ---- Pajak ----
     taxRate: 0.15,
 
-    // ---- Pinjaman ----
     loans: [
         { id: 'small',  label: 'Pinjaman Kecil',  principal:  50000, monthlyInterestRate: 0.03, termMonths: 12 },
         { id: 'medium', label: 'Pinjaman Sedang', principal: 100000, monthlyInterestRate: 0.04, termMonths: 18 },
         { id: 'large',  label: 'Pinjaman Besar',  principal: 200000, monthlyInterestRate: 0.05, termMonths: 24 }
     ],
 
-    // ---- Game over ----
     gameOverNegativeMonths: 2,
     burnRateWarnThreshold: 2,
 
-    // ---- Log ----
     maxLogEntries: 100,
     maxMilestones: 200,
 
-    // ---- Quest ----
     questRewards: {
         first_start_research: { cash: 2000, reputation: 1 },
         first_recruit:        { cash: 1500, reputation: 0 },
         first_product:        { cash: 5000, reputation: 3 }
     },
 
-    // ============================================================
-    // RISET
-    // ============================================================
     research: {
         baseSlots: 1,
         perEngineerSlots: 0.5,
@@ -75,9 +60,6 @@ export const BALANCE = {
         refundPercent: 0.5
     },
 
-    // ============================================================
-    // OS
-    // ============================================================
     os: {
         baseFeatureSlots: 3,
         perEngineerFeatureSlots: 0.33,
@@ -96,9 +78,6 @@ export const BALANCE = {
         majorVersionStart: 1
     },
 
-    // ============================================================
-    // PRODUK
-    // ============================================================
     products: {
         baseMarketDemand: {
             feature_phone:     5000,
@@ -118,12 +97,19 @@ export const BALANCE = {
         discontinueDiscountPercent: 0.6,
         reviewThresholds: { excellent: 85, good: 70, average: 50, poor: 30, bad: 0 },
         reputationPerReviewPoint: 0.4,
-        maxActiveProducts: 5
+        maxActiveProducts: 5,
+
+        // ===== AUTO-RESTOCK =====
+        autoRestock: {
+            defaultEnabled: false,
+            defaultThresholdPercent: 20,   // trigger saat stok < 20% kapasitas
+            defaultCooldownDays: 7,        // jeda minimum antar auto-order
+            maxStockMultiplier: 2.0,       // stok maksimum = 2x kapasitas awal
+            minOrderQty: 100,              // minimal order otomatis
+            warnIntervalDays: 3            // frekuensi toast peringatan uang kurang
+        }
     },
 
-    // ============================================================
-    // PASAR
-    // ============================================================
     market: {
         startingReputation: 10,
         maxReputation: 100,
@@ -139,14 +125,8 @@ export const BALANCE = {
         trendVariationPerMonth: 0.05
     },
 
-    // ============================================================
-    // PEMASARAN
-    // ============================================================
     marketing: { perMarketerBonus: 0.1, maxMarketingFactor: 2.5 },
 
-    // ============================================================
-    // ULASAN
-    // ============================================================
     reviews: {
         initialWaveDays: 7,
         followUpDays: 30,
@@ -154,32 +134,16 @@ export const BALANCE = {
         perDayChance: 0.15
     },
 
-    // ============================================================
-    // KOMPETITOR AI — ditambahkan pada Batch C
-    // ============================================================
     competitors: {
-        // Pengali efek pemain terhadap pangsa kompetitor
         playerPressureMultiplier: 0.4,
-
-        // Kecepatan riset AI dasar (per tahun, dalam tier)
         aiResearchTierPerYear: 0.3,
         aiResearchCostScale: 0.9,
-
-        // Kecepatan rilis produk AI (bulan antar rilis)
         aiReleaseIntervalMonths: 8,
-
-        // Sensitivitas reaksi AI terhadap pemain
         aiReactionSensitivity: 0.3
     },
 
-    // ============================================================
-    // FEEDBACK PUBLIK — ditambahkan pada Batch C
-    // ============================================================
     feedback: {
-        // Sentimen awal pemain (0-100)
         initialSentiment: 50,
-
-        // Bobot tiap komponen sentimen
         sentimentWeights: {
             quality:    0.25,
             price:      0.15,
@@ -187,8 +151,6 @@ export const BALANCE = {
             bugPenalty: 0.15,
             viralBoost: 0.25
         },
-
-        // Sentimen per aspek (0-100)
         aspectWeights: {
             design:      0.15,
             camera:      0.15,
@@ -199,7 +161,6 @@ export const BALANCE = {
             os:          0.10,
             support:     0.05
         },
-
         reviewsPerMonthBase: 8,
         suggestionBonus: 5,
         viralEventImpact: 0.3
