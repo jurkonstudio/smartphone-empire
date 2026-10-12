@@ -513,7 +513,7 @@ async function boot() {
     try {
         if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML utama tidak ditemukan.');
 
-        // Theme lebih dulu sebelum render apa pun
+        // Init tema lebih dulu
         ThemeService.init();
 
         mountToastContainer(els.toast);
@@ -543,6 +543,12 @@ async function boot() {
         quests.start();
         tutorial.start();
         teamSystem.start();
+
+        // ===== PATCH A: Safety refresh candidates =====
+        if (!state.get().candidates || state.get().candidates.length === 0) {
+            teamSystem.refreshCandidates();
+        }
+
         research.start();
         os.start();
         products.start();
@@ -626,7 +632,6 @@ async function boot() {
                     renderAll();
                     return { count: state.get().candidates.length };
                 },
-                // Theme cheats
                 setTheme: function (id) { ThemeService.setTheme(id); window.__game.render(); return { theme: id }; },
                 setAccent: function (id) { ThemeService.setAccent(id); window.__game.render(); return { accent: id }; },
                 toggleTheme: function () { ThemeService.toggleTheme(); window.__game.render(); return { theme: ThemeService.getTheme() }; }
