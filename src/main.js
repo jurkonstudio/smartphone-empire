@@ -6,61 +6,63 @@ import { state } from './core/GameState.js';
 import { TimeSystem } from './core/TimeSystem.js';
 import { SaveService } from './core/SaveService.js';
 import { ToastService } from './core/ToastService.js';
+import { EconomySystem } from './systems/EconomySystem.js';
+import { QuestSystem } from './systems/QuestSystem.js';
+import { TutorialSystem } from './systems/TutorialSystem.js';
 import { renderHeader } from './ui/layout/Header.js';
 import { renderMobileNav } from './ui/layout/MobileNav.js';
 import { renderDashboard } from './ui/panels/DashboardPanel.js';
 import { renderEmptyState } from './ui/panels/EmptyState.js';
+import { renderSettingsPanel, bindSettingsActions } from './ui/panels/SettingsPanel.js';
+import { renderGuidePanel } from './ui/panels/GuidePanel.js';
 import { mountToastContainer } from './ui/panels/ToastContainer.js';
+import { drawCashChart } from './ui/panels/CashChart.js';
+import { initTutorialOverlay } from './ui/panels/TutorialOverlay.js';
+import { showOnboarding } from './ui/panels/OnboardingModal.js';
+import { initMonthlySummary } from './ui/panels/MonthlySummaryModal.js';
+import { initGameOverScreen } from './ui/panels/GameOverScreen.js';
+import { Modal } from './ui/modal.js';
 
 // ============ INSTANCE ============
-const timeSystem = new TimeSystem(state);
+const timeSystem  = new TimeSystem(state);
+const economy     = new EconomySystem(state);
+const quests      = new QuestSystem(state);
+const tutorial    = new TutorialSystem(state);
+
 let activeView = 'dashboard';
+let _burnWarn  = null;      // string atau null
 
+// ============ DOM ============
 const els = {
-    header: document.getElementById('app-header'),
-    view:   document.getElementById('app-view'),
-    nav:    document.getElementById('mobile-nav'),
-    loading:document.getElementById('loading-screen'),
-    error:  document.getElementById('error-message'),
-    toast:  document.getElementById('toast-container')
+    header:  document.getElementById('app-header'),
+    view:    document.getElementById('app-view'),
+    nav:     document.getElementById('mobile-nav'),
+    loading: document.getElementById('loading-screen'),
+    error:   document.getElementById('error-message'),
+    toast:   document.getElementById('toast-container')
 };
 
-function getTimeSnapshot() { return timeSystem.snapshot(); }
+function getTime() { return timeSystem.snapshot(); }
 
-// ============ VIEW DEFINITIONS ============
+// ============ VIEW ============
 const EMPTY_VIEWS = {
-    research: {
-        icon: '🔬',
-        title: 'Riset belum aktif',
-        description: 'Technology tree dengan kategori layar, kamera, baterai, chip, dan jaringan akan dibuka pada Fase 3.',
-        hint: 'Coming in Fase 3'
-    },
-    products: {
-        icon: '📱',
-        title: 'Belum ada produk',
-        description: 'Sistem desain produk, pemilihan komponen, dan produksi massal akan dibuka pada Fase 4.',
-        hint: 'Coming in Fase 4'
-    },
-    market: {
-        icon: '📈',
-        title: 'Pasar belum aktif',
-        description: 'Analisis pasar, kompetitor AI, dan tren era akan dibuka pada Fase 5-6.',
-        hint: 'Coming in Fase 5'
-    },
-    settings: {
-        icon: '⚙️',
-        title: 'Pengaturan',
-        description: 'Save/Load manual, reset game, dan preferensi akan tersedia di update berikutnya.',
-        hint: 'Soon'
-    }
+    research: { icon: '🔬', title: 'Riset belum aktif',
+        description: 'Technology tree, OS, dan ekosistem aplikasi akan dibuka pada Tahap 2.',
+        hint: 'Coming in Tahap 2' },
+    products: { icon: '📱', title: 'Belum ada produk',
+        description: 'Desain ponsel, katalog, dan penjualan akan dibuka pada Tahap 3.',
+        hint: 'Coming in Tahap 3' },
+    market:   { icon: '📈', title: 'Pasar belum aktif',
+        description: 'Kompetitor AI dan tren pasar akan dibuka pada Tahap 4.',
+        hint: 'Coming in Tahap 4' }
 };
 
-// ============ RENDER ============
 function renderHeaderOnly() {
     if (!els.header) return;
     els.header.innerHTML = renderHeader({
         state: state.get(),
-        timeSnapshot: getTimeSnapshot()
+        timeSnapshot: getTime(),
+        warning: _burnWarn
     });
 }
 
@@ -71,15 +73,25 @@ function renderNavOnly() {
 
 function renderView() {
     if (!els.view) return;
-    if (activeView === 'dashboard') {
-        els.view.innerHTML = renderDashboard(state.get(), getTimeSnapshot());
-    } else {
-        const cfg = EMPTY_VIEWS[activeView] || {
-            icon: '❓', title: 'Halaman tidak ditemukan', description: ''
-        };
-        els.view.innerHTML = renderEmptyState(cfg);
+    let html = '';
+    switch (activeView) {
+        case 'dashboard': html = renderDashboard(state.get(), getTime()); break;
+        case 'settings':  html = renderSettingsPanel(); break;
+        case 'guide':     html = renderGuidePanel(); break;
+        default:
+            html = renderEmptyState(EMPTY_VIEWS[activeView] || { icon: '❓', title: 'Tidak ditemukan' });
     }
+    els.view.innerHTML = html;
     els.view.scrollTop = 0;
+
+    // Post-render hooks
+    if (activeView === 'dashboard') {
+        const chart = els.view.querySelector('.chart-wrap');
+        if (chart) drawCashChart(chart);
+    }
+    if (activeView === 'settings') {
+        bindSettingsActions(els.view);
+    }
 }
 
 function renderAll() {
@@ -88,165 +100,207 @@ function renderAll() {
     renderView();
 }
 
-// ============ CASH ANIMATION (count up/down) ============
+// ============ CASH ANIMATION ============
 let _cashRaf = null;
 function animateCash(from, to) {
     if (_cashRaf) { cancelAnimationFrame(_cashRaf); _cashRaf = null; }
     const targets = document.querySelectorAll('[data-cash]');
     if (!targets.length || from === to) return;
-
-    const startTs = performance.now();
-    const DURATION = 520;
-
+    const start = performance.now();
+    const DUR = 520;
     const step = (ts) => {
-        const p = Math.min(1, (ts - startTs) / DURATION);
-        const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+        const p = Math.min(1, (ts - start) / DUR);
+        const eased = 1 - Math.pow(1 - p, 3);
         const val = from + (to - from) * eased;
         const text = '$' + Math.round(val).toLocaleString('en-US');
-        targets.forEach(el => { el.textContent = text; });
+        targets.forEach(el => el.textContent = text);
         if (p < 1) _cashRaf = requestAnimationFrame(step);
         else _cashRaf = null;
     };
     _cashRaf = requestAnimationFrame(step);
 }
 
-// ============ NAVIGATION ============
+// ============ NAVIGASI ============
 function navigate(id) {
-    if (!VIEW_TITLES[id] || id === activeView) return;
+    if (id === activeView) return;
     activeView = id;
     renderAll();
-    updateDocumentTitle();
+    updateTitle();
     bus.emit('view:changed', { id });
+    // Notifikasi untuk tutorial
+    bus.emit('tutorial:action', { id: 'nav:' + id });
 }
 
-function updateDocumentTitle() {
+function updateTitle() {
     const meta = VIEW_TITLES[activeView];
     document.title = `${APP_CONFIG.name} — ${meta ? meta.title : 'Dashboard'}`;
 }
 
-// ============ VIBRATION (opsional, hemat) ============
+// ============ VIBRATE ============
 function vibrate(ms) {
+    const s = state.get();
+    if (!s.settings.vibrate) return;
     if (navigator && typeof navigator.vibrate === 'function') {
-        try { navigator.vibrate(ms); } catch (_) { /* ignore */ }
+        try { navigator.vibrate(ms); } catch (_) {}
     }
 }
 
 // ============ EVENT DELEGATION ============
-// Hanya SATU listener di <body>. Semua tombol memakai data-* attribute.
 function bindGlobalClicks() {
     document.body.addEventListener('click', (e) => {
-        // Navigasi bottom nav
         const navBtn = e.target.closest('[data-nav]');
-        if (navBtn) {
-            e.preventDefault();
-            vibrate(8);
-            navigate(navBtn.dataset.nav);
-            return;
-        }
+        if (navBtn) { e.preventDefault(); vibrate(8); navigate(navBtn.dataset.nav); return; }
 
-        // Kontrol waktu (pause & speed)
         const timeBtn = e.target.closest('[data-time-action]');
         if (timeBtn) {
-            e.preventDefault();
-            vibrate(12);
-            const action = timeBtn.dataset.timeAction;
-            if (action === 'toggle-pause') timeSystem.togglePause();
-            else if (action === 'cycle-speed') timeSystem.cycleSpeed();
+            e.preventDefault(); vibrate(12);
+            const a = timeBtn.dataset.timeAction;
+            if (a === 'toggle-pause') { timeSystem.togglePause(); bus.emit('tutorial:action', { id: 'action:toggle-pause' }); }
+            else if (a === 'cycle-speed') { timeSystem.cycleSpeed(); bus.emit('tutorial:action', { id: 'action:cycle-speed' }); }
             return;
         }
+    });
+
+    // Keyboard shortcut (desktop)
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.code === 'Space') { e.preventDefault(); timeSystem.togglePause(); }
+        if (e.key === 'f' || e.key === 'F') timeSystem.cycleSpeed();
     });
 }
 
-// ============ EVENT: TIME ============
+// ============ TIME EVENTS ============
 function bindTimeEvents() {
-    // Tick throttled: hanya update span jam di header, TIDAK re-render.
+    // Update jam/status tanpa re-render header (hemat)
     bus.on('time:tick', () => {
-        const meta = els.header && els.header.querySelector('.header-meta');
+        const meta = els.header?.querySelector('.header-meta');
         if (!meta) return;
-        const t = getTimeSnapshot();
+        const t = getTime();
         const hh = String(Math.floor(t.currentHour)).padStart(2, '0');
         const mm = String(Math.floor(t.currentMinute)).padStart(2, '0');
-        const dateEl = meta.querySelector('[data-time-date]');
-        const clockEl = meta.querySelector('[data-time-clock]');
-        const statusEl = meta.querySelector('[data-time-status]');
-        if (dateEl) dateEl.textContent = `Hari ${t.currentDay}/${t.currentMonth}/${t.currentYear}`;
-        if (clockEl) clockEl.textContent = `${hh}:${mm}`;
-        if (statusEl) {
-            statusEl.textContent = t.isPaused ? 'Paused' : (t.gameSpeed + 'x');
-            statusEl.classList.toggle('running', !t.isPaused);
+        const d = meta.querySelector('[data-time-date]');
+        const c = meta.querySelector('[data-time-clock]');
+        const s = meta.querySelector('[data-time-status]');
+        if (d) d.textContent = `Hari ${t.currentDay}/${t.currentMonth}/${t.currentYear}`;
+        if (c) c.textContent = `${hh}:${mm}`;
+        if (s) {
+            s.textContent = t.isPaused ? 'Paused' : (t.gameSpeed + 'x');
+            s.classList.toggle('running', !t.isPaused);
         }
     });
 
-    // Perubahan hari: refresh header + (jika di dashboard) view agar "Hari Ke-" akurat.
+    // Refresh view dashboard pada pergantian hari (agar KPI & chart konsisten)
     bus.on('time:day-changed', () => {
-        renderHeaderOnly();
         if (activeView === 'dashboard') renderView();
     });
 
-    bus.on('time:month-changed', () => {
-        renderHeaderOnly();
-        ToastService.info('Memasuki bulan ' + getTimeSnapshot().currentMonth);
-    });
-
-    bus.on('time:year-changed', () => {
-        renderHeaderOnly();
-        ToastService.success('Selamat tahun baru ' + getTimeSnapshot().currentYear);
-    });
-
+    // Refresh header saat speed berubah (karena ikon pause/resume)
     bus.on('time:speed-changed', () => renderHeaderOnly());
 }
 
-// ============ EVENT: STATE ============
+// ============ STATE EVENTS ============
 function bindStateEvents() {
-    bus.on('state:cash-changed', ({ prev, next }) => {
-        animateCash(prev, next);
+    bus.on('state:cash-changed', ({ prev, next }) => animateCash(prev, next));
+
+    bus.on('state:log-changed', () => {
+        if (activeView === 'dashboard') renderView();
+    });
+    bus.on('state:milestone-added', () => {
+        if (activeView === 'dashboard') renderView();
+    });
+    bus.on('quest:completed', ({ title }) => {
+        ToastService.success(`Quest selesai: ${title}`);
+        vibrate(20);
+    });
+    bus.on('quest:activated', () => {
+        if (activeView === 'dashboard') renderView();
     });
 
-    bus.on('save:error', () => {
-        ToastService.error('Gagal menyimpan progres.');
+    // Burn rate
+    bus.on('economy:warn-burnrate', ({ monthsLeft }) => {
+        _burnWarn = `Sisa ${monthsLeft} bln`;
+        renderHeaderOnly();
+        ToastService.warning(`Peringatan: sisa uang ~${monthsLeft} bulan biaya!`);
+        vibrate(30);
     });
+
+    // Loan
+    bus.on('settings:take-loan', ({ loanId }) => {
+        const res = economy.takeLoan(loanId);
+        if (!res.ok) ToastService.error(res.error);
+        else { ToastService.success('Pinjaman diterima.'); renderView(); }
+    });
+
+    // Settings toggles
+    bus.on('settings:changed', () => { /* toast sudah dari SettingsPanel */ });
+
+    // Tutorial restart
+    bus.on('tutorial:restart', () => tutorial.restart());
 }
 
 // ============ BOOT ============
-function boot() {
+async function boot() {
     try {
-        if (!els.header || !els.view || !els.nav) {
-            throw new Error('Elemen HTML utama (header/view/nav) tidak ditemukan.');
-        }
+        if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML utama tidak ditemukan.');
 
-        // Load save jika ada, jika tidak mulai baru
+        mountToastContainer(els.toast);
+        initTutorialOverlay();
+        initMonthlySummary();
+        initGameOverScreen();
+
+        // ============ Onboarding atau Load Save ============
         if (SaveService.hasSave()) {
             const saved = SaveService.load();
             if (saved) {
                 state.hydrate(saved);
                 console.info('[boot] Save dimuat.');
             }
+        } else {
+            // Tidak ada save: tanya nama + kesulitan
+            const onb = await showOnboarding();
+            // Terapkan pilihan
+            state.patch({ companyName: onb.companyName, difficulty: onb.difficulty });
+            // Sesuaikan modal awal berdasarkan kesulitan
+            const BAL = (await import('./data/balance.data.js')).BALANCE;
+            const starting = BAL.startingCash[onb.difficulty] ?? BAL.startingCash.normal;
+            state.setCash(starting);
+            state.addMilestone('founded', `Perusahaan ${onb.companyName} didirikan.`);
+            state.addLog(`Perusahaan ${onb.companyName} didirikan dengan modal $${starting.toLocaleString('en-US')}.`, 'success');
+            SaveService.save(state);
         }
 
-        // Toast system
-        mountToastContainer(els.toast);
+        // ============ Start systems ============
+        economy.start();
+        quests.start();
+        tutorial.start();
 
-        // Render awal
+        // ============ Render & bind ============
         renderAll();
         bindGlobalClicks();
         bindTimeEvents();
         bindStateEvents();
-        updateDocumentTitle();
+        updateTitle();
 
-        // Mulai jam & autosave
         timeSystem.start();
         SaveService.startAutoSave(() => state);
 
-        // Animasi uang awal (count-up dari 0)
-        const currentCash = state.get().cash;
-        if (currentCash > 0) {
-            const targets = document.querySelectorAll('[data-cash]');
-            targets.forEach(el => { el.textContent = '$0'; });
-            animateCash(0, currentCash);
+        // Animasi uang awal
+        const cash = state.get().cash;
+        if (cash > 0) {
+            document.querySelectorAll('[data-cash]').forEach(el => el.textContent = '$0');
+            animateCash(0, cash);
         }
 
-        // Handle untuk debugging via console
-        window.__game = { state, bus, timeSystem, SaveService, ToastService, navigate };
+        // Expose debugging
+        window.__game = {
+            state, bus, timeSystem, economy, quests, tutorial, SaveService, ToastService, Modal, navigate,
+            cheat: {
+                addCash(n) { state.addCash(n); },
+                fastForwardDays(n) { return timeSystem.fastForwardDays(n); },
+                skipToMonth(n) { timeSystem.fastForwardDays(n * 30); },
+                finishTutorial() { tutorial.skip(); }
+            }
+        };
 
         els.loading.style.display = 'none';
         console.info(`[${APP_CONFIG.name}] v${APP_CONFIG.version} (${APP_CONFIG.milestone}) siap.`);
