@@ -1,281 +1,147 @@
-// FILE: src/main.js
-import { APP_CONFIG } from './config/app.config.js';
-import { VIEW_TITLES } from './config/constants.js';
-import { bus } from './core/EventBus.js';
-import { state } from './core/GameState.js';
-import { TimeSystem } from './core/TimeSystem.js';
-import { SaveService } from './core/SaveService.js';
-import { ToastService } from './core/ToastService.js';
-import { EconomySystem } from './systems/EconomySystem.js';
-import { QuestSystem } from './systems/QuestSystem.js';
-import { TutorialSystem } from './systems/TutorialSystem.js';
-import { renderHeader } from './ui/layout/Header.js';
-import { renderMobileNav } from './ui/layout/MobileNav.js';
-import { renderDashboard } from './ui/panels/DashboardPanel.js';
-import { renderEmptyState } from './ui/panels/EmptyState.js';
-import { renderSettingsPanel, bindSettingsActions } from './ui/panels/SettingsPanel.js';
-import { renderGuidePanel } from './ui/panels/GuidePanel.js';
-import { mountToastContainer } from './ui/panels/ToastContainer.js';
-import { drawCashChart } from './ui/panels/CashChart.js';
-import { initTutorialOverlay } from './ui/panels/TutorialOverlay.js';
-import { showOnboarding } from './ui/panels/OnboardingModal.js';
-import { initMonthlySummary } from './ui/panels/MonthlySummaryModal.js';
-import { initGameOverScreen } from './ui/panels/GameOverScreen.js';
-import { Modal } from './ui/modal.js';
+// FILE: src/main.js — SAFE MODE
+// Menampilkan langkah boot di layar agar terlihat di mana error.
 
-// ============ INSTANCE ============
-const timeSystem = new TimeSystem(state);
-const economy = new EconomySystem(state);
-const quests = new QuestSystem(state);
-const tutorial = new TutorialSystem(state);
+const log = document.createElement('div');
+log.style.cssText = 'position:fixed;inset:0;background:#000;color:#0f0;font:12px monospace;padding:20px;padding-top:60px;z-index:99999;white-space:pre-wrap;overflow:auto;line-height:1.6;';
+log.textContent = 'MEMULAI BOOT...\n';
+document.body.appendChild(log);
 
-let activeView = 'dashboard';
-let _burnWarn = null;
+const loading = document.getElementById('loading-screen');
+if (loading) loading.style.display = 'none';
 
-// ============ DOM ============
-const els = {
-    header: document.getElementById('app-header'),
-    view: document.getElementById('app-view'),
-    nav: document.getElementById('mobile-nav'),
-    loading: document.getElementById('loading-screen'),
-    error: document.getElementById('error-message'),
-    toast: document.getElementById('toast-container')
-};
-
-function getTime() { return timeSystem.snapshot(); }
-
-// ============ VIEW ============
-const EMPTY_VIEWS = {
-    research: {
-        icon: '🔬',
-        title: 'Riset belum aktif',
-        description: 'Technology tree, OS, dan ekosistem aplikasi akan dibuka pada Tahap 2.',
-        hint: 'Coming in Tahap 2'
-    },
-    products: {
-        icon: '📱',
-        title: 'Belum ada produk',
-        description: 'Desain ponsel, katalog, dan penjualan akan dibuka pada Tahap 3.',
-        hint: 'Coming in Tahap 3'
-    },
-    market: {
-        icon: '📈',
-        title: 'Pasar belum aktif',
-        description: 'Kompetitor AI dan tren pasar akan dibuka pada Tahap 4.',
-        hint: 'Coming in Tahap 4'
-    }
-};
-
-function renderHeaderOnly() {
-    if (!els.header) return;
-    els.header.innerHTML = renderHeader({
-        state: state.get(),
-        timeSnapshot: getTime(),
-        warning: _burnWarn
-    });
+function step(msg) {
+    log.textContent += msg + '\n';
+    log.scrollTop = log.scrollHeight;
+    console.log('[SAFE]', msg);
 }
 
-function renderNavOnly() {
-    if (!els.nav) return;
-    els.nav.innerHTML = renderMobileNav({ active: activeView });
+function err(msg) {
+    log.textContent += '❌ ' + msg + '\n';
+    log.style.color = '#f44';
+    console.error('[SAFE-ERR]', msg);
+    log.scrollTop = log.scrollHeight;
 }
 
-function renderView() {
-    if (!els.view) return;
-    let html = '';
-    switch (activeView) {
-        case 'dashboard':
-            html = renderDashboard(state.get(), getTime());
-            break;
-        case 'settings':
-            html = renderSettingsPanel();
-            break;
-        case 'guide':
-            html = renderGuidePanel();
-            break;
-        default:
-            html = renderEmptyState(EMPTY_VIEWS[activeView] || { icon: '❓', title: 'Tidak ditemukan' });
-    }
-    els.view.innerHTML = html;
-    els.view.scrollTop = 0;
+// Tangkap error global
+window.addEventListener('error', function (e) {
+    err('Global error: ' + (e.message || e.error));
+});
+window.addEventListener('unhandledrejection', function (e) {
+    err('Promise reject: ' + e.reason);
+});
 
-    if (activeView === 'dashboard') {
-        const chart = els.view.querySelector('.chart-wrap');
-        if (chart) drawCashChart(chart);
-    }
-    if (activeView === 'settings') {
-        bindSettingsActions(els.view);
-    }
-}
-
-function renderAll() {
-    renderHeaderOnly();
-    renderNavOnly();
-    renderView();
-}
-
-// ============ CASH ANIMATION ============
-let _cashRaf = null;
-function animateCash(from, to) {
-    if (_cashRaf) { cancelAnimationFrame(_cashRaf); _cashRaf = null; }
-    const targets = document.querySelectorAll('[data-cash]');
-    if (!targets.length || from === to) return;
-    const start = performance.now();
-    const DUR = 520;
-    const step = function (ts) {
-        const p = Math.min(1, (ts - start) / DUR);
-        const eased = 1 - Math.pow(1 - p, 3);
-        const val = from + (to - from) * eased;
-        const text = '$' + Math.round(val).toLocaleString('en-US');
-        targets.forEach(function (el) { el.textContent = text; });
-        if (p < 1) _cashRaf = requestAnimationFrame(step);
-        else _cashRaf = null;
-    };
-    _cashRaf = requestAnimationFrame(step);
-}
-
-// ============ NAVIGASI ============
-function navigate(id) {
-    if (id === activeView) return;
-    activeView = id;
-    renderAll();
-    updateTitle();
-    bus.emit('view:changed', { id });
-    bus.emit('tutorial:action', { id: 'nav:' + id });
-}
-
-function updateTitle() {
-    const meta = VIEW_TITLES[activeView];
-    document.title = APP_CONFIG.name + ' — ' + (meta ? meta.title : 'Dashboard');
-}
-
-// ============ VIBRATE ============
-function vibrate(ms) {
-    const s = state.get();
-    if (!s.settings.vibrate) return;
-    if (navigator && typeof navigator.vibrate === 'function') {
-        try { navigator.vibrate(ms); } catch (e) {}
-    }
-}
-
-// ============ EVENT DELEGATION ============
-function bindGlobalClicks() {
-    document.body.addEventListener('click', function (e) {
-        const navBtn = e.target.closest('[data-nav]');
-        if (navBtn) {
-            e.preventDefault();
-            vibrate(8);
-            navigate(navBtn.dataset.nav);
-            return;
-        }
-
-        const timeBtn = e.target.closest('[data-time-action]');
-        if (timeBtn) {
-            e.preventDefault();
-            vibrate(12);
-            const a = timeBtn.dataset.timeAction;
-            if (a === 'toggle-pause') {
-                timeSystem.togglePause();
-                bus.emit('tutorial:action', { id: 'action:toggle-pause' });
-            } else if (a === 'cycle-speed') {
-                timeSystem.cycleSpeed();
-                bus.emit('tutorial:action', { id: 'action:cycle-speed' });
-            }
-            return;
-        }
-    });
-
-    document.addEventListener('keydown', function (e) {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-        if (e.code === 'Space') { e.preventDefault(); timeSystem.togglePause(); }
-        if (e.key === 'f' || e.key === 'F') timeSystem.cycleSpeed();
-    });
-}
-
-// ============ TIME EVENTS ============
-function bindTimeEvents() {
-    bus.on('time:tick', function () {
-        const meta = els.header && els.header.querySelector('.header-meta');
-        if (!meta) return;
-        const t = getTime();
-        const hh = String(Math.floor(t.currentHour)).padStart(2, '0');
-        const mm = String(Math.floor(t.currentMinute)).padStart(2, '0');
-        const d = meta.querySelector('[data-time-date]');
-        const c = meta.querySelector('[data-time-clock]');
-        const s = meta.querySelector('[data-time-status]');
-        if (d) d.textContent = 'Hari ' + t.currentDay + '/' + t.currentMonth + '/' + t.currentYear;
-        if (c) c.textContent = hh + ':' + mm;
-        if (s) {
-            s.textContent = t.isPaused ? 'Paused' : (t.gameSpeed + 'x');
-            s.classList.toggle('running', !t.isPaused);
-        }
-    });
-
-    bus.on('time:day-changed', function () {
-        if (activeView === 'dashboard') renderView();
-    });
-
-    bus.on('time:speed-changed', function () { renderHeaderOnly(); });
-}
-
-// ============ STATE EVENTS ============
-function bindStateEvents() {
-    bus.on('state:cash-changed', function (data) { animateCash(data.prev, data.next); });
-
-    bus.on('state:log-changed', function () {
-        if (activeView === 'dashboard') renderView();
-    });
-    bus.on('state:milestone-added', function () {
-        if (activeView === 'dashboard') renderView();
-    });
-    bus.on('quest:completed', function (data) {
-        ToastService.success('Quest selesai: ' + data.title);
-        vibrate(20);
-    });
-    bus.on('quest:activated', function () {
-        if (activeView === 'dashboard') renderView();
-    });
-
-    bus.on('economy:warn-burnrate', function (data) {
-        _burnWarn = 'Sisa ' + data.monthsLeft + ' bln';
-        renderHeaderOnly();
-        ToastService.warning('Peringatan: sisa uang ~' + data.monthsLeft + ' bulan biaya!');
-        vibrate(30);
-    });
-
-    bus.on('settings:take-loan', function (data) {
-        const res = economy.takeLoan(data.loanId);
-        if (!res.ok) ToastService.error(res.error);
-        else {
-            ToastService.success('Pinjaman diterima.');
-            renderView();
-        }
-    });
-
-    bus.on('settings:changed', function () {});
-    bus.on('tutorial:restart', function () { tutorial.restart(); });
-}
-
-// ============ BOOT ============
-async function boot() {
+(async function () {
     try {
-        if (!els.header || !els.view || !els.nav) {
-            throw new Error('Elemen HTML utama tidak ditemukan.');
-        }
+        step('1. Import config/app.config.js');
+        const { APP_CONFIG } = await import('./config/app.config.js');
+        step('   OK, nama app: ' + APP_CONFIG.name);
 
-        mountToastContainer(els.toast);
-        initTutorialOverlay();
-        initMonthlySummary();
-        initGameOverScreen();
+        step('2. Import config/constants.js');
+        const { VIEW_TITLES } = await import('./config/constants.js');
+        step('   OK');
 
+        step('3. Import core/EventBus.js');
+        const { bus } = await import('./core/EventBus.js');
+        step('   OK');
+
+        step('4. Import core/GameState.js');
+        const { state } = await import('./core/GameState.js');
+        step('   OK, cash: ' + state.get().cash);
+
+        step('5. Import core/TimeSystem.js');
+        const { TimeSystem } = await import('./core/TimeSystem.js');
+        step('   OK');
+
+        step('6. Import core/SaveService.js');
+        const { SaveService } = await import('./core/SaveService.js');
+        step('   OK');
+
+        step('7. Import core/ToastService.js');
+        const { ToastService } = await import('./core/ToastService.js');
+        step('   OK');
+
+        step('8. Import systems/EconomySystem.js');
+        const { EconomySystem } = await import('./systems/EconomySystem.js');
+        step('   OK');
+
+        step('9. Import systems/QuestSystem.js');
+        const { QuestSystem } = await import('./systems/QuestSystem.js');
+        step('   OK');
+
+        step('10. Import systems/TutorialSystem.js');
+        const { TutorialSystem } = await import('./systems/TutorialSystem.js');
+        step('   OK');
+
+        step('11. Import ui/panels/DashboardPanel.js');
+        const { renderDashboard } = await import('./ui/panels/DashboardPanel.js');
+        step('   OK');
+
+        step('12. Import ui/panels/SettingsPanel.js');
+        const { renderSettingsPanel, bindSettingsActions } = await import('./ui/panels/SettingsPanel.js');
+        step('   OK');
+
+        step('13. Import ui/panels/GuidePanel.js');
+        const { renderGuidePanel } = await import('./ui/panels/GuidePanel.js');
+        step('   OK');
+
+        step('14. Import ui/panels/ToastContainer.js');
+        const { mountToastContainer } = await import('./ui/panels/ToastContainer.js');
+        step('   OK');
+
+        step('15. Import ui/panels/CashChart.js');
+        const { drawCashChart } = await import('./ui/panels/CashChart.js');
+        step('   OK');
+
+        step('16. Import ui/panels/TutorialOverlay.js');
+        const { initTutorialOverlay } = await import('./ui/panels/TutorialOverlay.js');
+        step('   OK');
+
+        step('17. Import ui/panels/OnboardingModal.js');
+        const { showOnboarding } = await import('./ui/panels/OnboardingModal.js');
+        step('   OK');
+
+        step('18. Import ui/panels/MonthlySummaryModal.js');
+        const { initMonthlySummary } = await import('./ui/panels/MonthlySummaryModal.js');
+        step('   OK');
+
+        step('19. Import ui/panels/GameOverScreen.js');
+        const { initGameOverScreen } = await import('./ui/panels/GameOverScreen.js');
+        step('   OK');
+
+        step('20. Import ui/modal.js');
+        const { Modal } = await import('./ui/modal.js');
+        step('   OK');
+
+        step('21. Cek elemen DOM');
+        const els = {
+            header: document.getElementById('app-header'),
+            view: document.getElementById('app-view'),
+            nav: document.getElementById('mobile-nav'),
+            toast: document.getElementById('toast-container')
+        };
+        step('   header=' + !!els.header + ' view=' + !!els.view + ' nav=' + !!els.nav + ' toast=' + !!els.toast);
+        if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML tidak lengkap');
+
+        step('22. Init instances');
+        const timeSystem = new TimeSystem(state);
+        const economy = new EconomySystem(state);
+        const quests = new QuestSystem(state);
+        const tutorial = new TutorialSystem(state);
+        step('   OK');
+
+        step('23. Cek save tersimpan');
+        step('   hasSave=' + SaveService.hasSave());
         if (SaveService.hasSave()) {
             const saved = SaveService.load();
             if (saved) {
                 state.hydrate(saved);
-                console.info('[boot] Save dimuat.');
+                step('   Hydrate OK');
             }
         } else {
+            step('   Tidak ada save, akan onboarding');
+            step('24. Panggil showOnboarding() — akan muncul modal');
             const onb = await showOnboarding();
+            step('   Onboarding selesai: ' + JSON.stringify(onb));
             state.patch({ companyName: onb.companyName, difficulty: onb.difficulty });
             const mod = await import('./data/balance.data.js');
             const starting = mod.BALANCE.startingCash[onb.difficulty] || mod.BALANCE.startingCash.normal;
@@ -283,56 +149,63 @@ async function boot() {
             state.addMilestone('founded', 'Perusahaan ' + onb.companyName + ' didirikan.');
             state.addLog('Perusahaan ' + onb.companyName + ' didirikan dengan modal $' + starting.toLocaleString('en-US') + '.', 'success');
             SaveService.save(state);
+            step('   Save awal OK');
         }
 
+        step('25. Start systems');
         economy.start();
         quests.start();
         tutorial.start();
+        step('   OK');
 
-        renderAll();
-        bindGlobalClicks();
-        bindTimeEvents();
-        bindStateEvents();
-        updateTitle();
+        step('26. Toast container mount');
+        mountToastContainer(els.toast);
+        step('   OK');
 
+        step('27. Tutorial overlay');
+        initTutorialOverlay();
+        step('   OK');
+
+        step('28. Monthly summary');
+        initMonthlySummary();
+        step('   OK');
+
+        step('29. Game over screen');
+        initGameOverScreen();
+        step('   OK');
+
+        step('30. Render dashboard');
+        els.view.innerHTML = renderDashboard(state.get(), timeSystem.snapshot());
+        step('   OK');
+
+        step('31. Draw chart');
+        const chart = els.view.querySelector('.chart-wrap');
+        if (chart) drawCashChart(chart);
+        step('   OK');
+
+        step('32. Start TimeSystem');
         timeSystem.start();
+        step('   OK');
+
+        step('33. Start autosave');
         SaveService.startAutoSave(function () { return state; });
+        step('   OK');
 
-        const cash = state.get().cash;
-        if (cash > 0) {
-            document.querySelectorAll('[data-cash]').forEach(function (el) { el.textContent = '$0'; });
-            animateCash(0, cash);
-        }
+        step('✅✅✅ BOOT BERHASIL ✅✅✅');
+        step('Menghapus log dalam 3 detik...');
 
-        window.__game = {
-            state: state,
-            bus: bus,
-            timeSystem: timeSystem,
-            economy: economy,
-            quests: quests,
-            tutorial: tutorial,
-            SaveService: SaveService,
-            ToastService: ToastService,
-            Modal: Modal,
-            navigate: navigate,
-            cheat: {
-                addCash: function (n) { state.addCash(n); },
-                fastForwardDays: function (n) { return timeSystem.fastForwardDays(n); },
-                skipToMonth: function (n) { timeSystem.fastForwardDays(n * 30); },
-                finishTutorial: function () { tutorial.skip(); }
-            }
-        };
+        window.__game = { state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial, SaveService: SaveService };
 
-        els.loading.style.display = 'none';
-        console.info('[' + APP_CONFIG.name + '] v' + APP_CONFIG.version + ' (' + APP_CONFIG.milestone + ') siap.');
-    } catch (err) {
-        console.error('[boot] gagal:', err);
-        if (els.loading) els.loading.style.display = 'none';
-        if (els.error) {
-            els.error.style.display = 'block';
-            els.error.textContent = 'Boot error: ' + err.message;
-        }
+        setTimeout(function () {
+            log.remove();
+            window.location.reload(); // reload untuk memuat main.js normal
+        }, 3000);
+
+    } catch (e) {
+        err('===========================================');
+        err('BOOT GAGAL DI LANGKAH DI ATAS');
+        err('Error: ' + e.message);
+        err('Stack: ' + (e.stack || ''));
+        err('===========================================');
     }
-}
-
-boot();
+})();
