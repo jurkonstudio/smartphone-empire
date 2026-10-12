@@ -2438,3 +2438,33 @@ body {
     justify-content: center;
     align-items: center;
 }
+/* ===================== SWIPE NAVIGATION — FINAL ===================== */
+
+.app-view {
+    touch-action: pan-y;
+}
+
+@keyframes swipeInLeft {
+    from { opacity: 0; transform: translateX(28px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes swipeInRight {
+    from { opacity: 0; transform: translateX(-28px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+.app-view.swipe-in-left {
+    animation: swipeInLeft 0.24s cubic-bezier(0.25, 0.8, 0.25, 1);
+    will-change: transform, opacity;
+}
+.app-view.swipe-in-right {
+    animation: swipeInRight 0.24s cubic-bezier(0.25, 0.8, 0.25, 1);
+    will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-view.swipe-in-left,
+    .app-view.swipe-in-right {
+        animation: none !important;
+    }
+}
