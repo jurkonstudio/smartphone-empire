@@ -1,117 +1,104 @@
+// FILE: src/core/TimeSystem.js
 import { bus } from './EventBus.js';
 import { TIME_CONFIG } from '../config/time.config.js';
 
-// ============================================================
-// TimeSystem — Sumber waktu global tunggal.
-// Satu-satunya entitas yang boleh memajukan waktu simulasi.
-// Menggunakan requestAnimationFrame (otomatis berhenti di background).
-// ============================================================
+// TimeSystem — SATU-SATUNYA pemaju waktu simulasi.
+// Menggunakan requestAnimationFrame + delta time (bukan setInterval).
 export class TimeSystem {
     constructor(gameState) {
         this.state = gameState;
-        this.lastRealTimestamp = null;
-        this.rafId = null;
-        this.lastTickEmitMs = 0;
-        this._boundTick = this._tick.bind(this);
-        this._boundVisibility = this._handleVisibility.bind(this);
+        this._rafId = null;
+        this._lastTs = null;
+        this._lastTickEmit = 0;
+        this._running = false;
+        this._boundLoop = this._loop.bind(this);
+        this._boundVis = this._handleVisibility.bind(this);
     }
 
     start() {
-        if (this.rafId !== null) return;
-        document.addEventListener('visibilitychange', this._boundVisibility);
-        this.rafId = requestAnimationFrame(this._boundTick);
-        console.info('[TimeSystem] Started. Initial paused:', this.state.data.isPaused);
+        if (this._running) return;
+        this._running = true;
+        document.addEventListener('visibilitychange', this._boundVis);
+        this._rafId = requestAnimationFrame(this._boundLoop);
     }
 
     stop() {
-        if (this.rafId !== null) {
-            cancelAnimationFrame(this.rafId);
-            this.rafId = null;
-        }
-        document.removeEventListener('visibilitychange', this._boundVisibility);
+        this._running = false;
+        if (this._rafId !== null) cancelAnimationFrame(this._rafId);
+        this._rafId = null;
+        document.removeEventListener('visibilitychange', this._boundVis);
     }
 
+    // Reset timestamp saat tab kembali terlihat agar tidak ada lompatan
     _handleVisibility() {
-        // Reset timestamp agar tidak ada lompatan waktu saat tab kembali aktif
-        if (document.visibilityState === 'visible') {
-            this.lastRealTimestamp = null;
-        }
+        if (document.visibilityState === 'visible') this._lastTs = null;
     }
 
-    _tick(timestamp) {
-        if (this.lastRealTimestamp === null) {
-            this.lastRealTimestamp = timestamp;
-        }
-        let deltaSeconds = (timestamp - this.lastRealTimestamp) / 1000;
-        this.lastRealTimestamp = timestamp;
+    _loop(ts) {
+        if (!this._running) return;
+        if (this._lastTs === null) this._lastTs = ts;
 
-        // Batasi delta untuk mencegah lompatan besar (mis. tab berpindah frame)
-        if (deltaSeconds > TIME_CONFIG.maxDeltaSeconds) {
-            deltaSeconds = TIME_CONFIG.maxDeltaSeconds;
-        }
-        if (deltaSeconds < 0) deltaSeconds = 0;
+        let dt = (ts - this._lastTs) / 1000;
+        this._lastTs = ts;
 
-        const data = this.state.data;
-        if (!data.isPaused && deltaSeconds > 0) {
-            const minutesPerRealSecond =
+        // Batas aman
+        if (dt > TIME_CONFIG.maxDeltaSeconds) dt = TIME_CONFIG.maxDeltaSeconds;
+        if (dt < 0) dt = 0;
+
+        if (dt > 0 && !this.state.data.isPaused) {
+            const minutesPerSecond =
                 (TIME_CONFIG.minutesPerHour * TIME_CONFIG.hoursPerDay) /
                 TIME_CONFIG.realSecondsPerGameDay;
-            const gameMinutes = deltaSeconds * minutesPerRealSecond * data.gameSpeed;
-            this._advanceTime(gameMinutes);
+            const gameMinutes = dt * minutesPerSecond * this.state.data.gameSpeed;
+            if (gameMinutes > 0) this._advance(gameMinutes);
         }
 
-        // Emit time:tick secara throttle untuk progress bar masa depan
-        if (timestamp - this.lastTickEmitMs >= TIME_CONFIG.tickEmitIntervalMs) {
-            this.lastTickEmitMs = timestamp;
-            bus.emit('time:tick', this.getSnapshot());
+        // Emit tick throttled (untuk update jam di header)
+        if (ts - this._lastTickEmit >= TIME_CONFIG.tickEmitIntervalMs) {
+            this._lastTickEmit = ts;
+            bus.emit('time:tick', this.snapshot());
         }
 
-        this.rafId = requestAnimationFrame(this._boundTick);
+        this._rafId = requestAnimationFrame(this._boundLoop);
     }
 
-    _advanceTime(gameMinutes) {
-        if (!(gameMinutes > 0)) return;
-        const time = this.state.data.time;
-        const prevDay = time.currentDay;
-        const prevMonth = time.currentMonth;
-        const prevYear = time.currentYear;
+    _advance(gameMinutes) {
+        const t = this.state.data.time;
+        const pDay = t.currentDay, pMonth = t.currentMonth, pYear = t.currentYear;
 
-        time.elapsedGameMinutes += gameMinutes;
-        time.currentMinute += gameMinutes;
+        t.elapsedGameMinutes += gameMinutes;
+        t.currentMinute += gameMinutes;
 
-        // Cascade minute → hour → day → month → year
-        while (time.currentMinute >= TIME_CONFIG.minutesPerHour) {
-            time.currentMinute -= TIME_CONFIG.minutesPerHour;
-            time.currentHour += 1;
+        while (t.currentMinute >= TIME_CONFIG.minutesPerHour) {
+            t.currentMinute -= TIME_CONFIG.minutesPerHour;
+            t.currentHour += 1;
         }
-        while (time.currentHour >= TIME_CONFIG.hoursPerDay) {
-            time.currentHour -= TIME_CONFIG.hoursPerDay;
-            time.currentDay += 1;
+        while (t.currentHour >= TIME_CONFIG.hoursPerDay) {
+            t.currentHour -= TIME_CONFIG.hoursPerDay;
+            t.currentDay += 1;
         }
-        while (time.currentDay > TIME_CONFIG.daysPerMonth) {
-            time.currentDay -= TIME_CONFIG.daysPerMonth;
-            time.currentMonth += 1;
+        while (t.currentDay > TIME_CONFIG.daysPerMonth) {
+            t.currentDay -= TIME_CONFIG.daysPerMonth;
+            t.currentMonth += 1;
         }
-        while (time.currentMonth > TIME_CONFIG.monthsPerYear) {
-            time.currentMonth -= TIME_CONFIG.monthsPerYear;
-            time.currentYear += 1;
+        while (t.currentMonth > TIME_CONFIG.monthsPerYear) {
+            t.currentMonth -= TIME_CONFIG.monthsPerYear;
+            t.currentYear += 1;
         }
 
-        // Emit event (hanya jika benar-benar berubah)
-        if (time.currentDay !== prevDay ||
-            time.currentMonth !== prevMonth ||
-            time.currentYear !== prevYear) {
-            bus.emit('time:day-changed', this.getSnapshot());
+        // Event kalender
+        if (t.currentDay !== pDay || t.currentMonth !== pMonth || t.currentYear !== pYear) {
+            bus.emit('time:day-changed', this.snapshot());
         }
-        if (time.currentMonth !== prevMonth || time.currentYear !== prevYear) {
-            bus.emit('time:month-changed', this.getSnapshot());
+        if (t.currentMonth !== pMonth || t.currentYear !== pYear) {
+            bus.emit('time:month-changed', this.snapshot());
         }
-        if (time.currentYear !== prevYear) {
-            bus.emit('time:year-changed', this.getSnapshot());
+        if (t.currentYear !== pYear) {
+            bus.emit('time:year-changed', this.snapshot());
         }
     }
 
-    getSnapshot() {
+    snapshot() {
         const d = this.state.data;
         return {
             currentYear: d.time.currentYear,
@@ -125,39 +112,29 @@ export class TimeSystem {
         };
     }
 
-    setPaused(paused) {
-        this.state.data.isPaused = !!paused;
-        bus.emit('time:speed-changed', this.getSnapshot());
-    }
-
     togglePause() {
-        this.setPaused(!this.state.data.isPaused);
+        this.state.data.isPaused = !this.state.data.isPaused;
+        bus.emit('time:speed-changed', this.snapshot());
     }
 
     setSpeed(speed) {
-        const valid = TIME_CONFIG.speedOptions.includes(speed);
-        if (!valid) return;
+        if (!TIME_CONFIG.speedOptions.includes(speed)) return;
         this.state.data.gameSpeed = speed;
         this.state.data.isPaused = false;
-        bus.emit('time:speed-changed', this.getSnapshot());
+        bus.emit('time:speed-changed', this.snapshot());
     }
 
     cycleSpeed() {
-        const options = TIME_CONFIG.speedOptions;
-        const current = this.state.data.gameSpeed;
-        const idx = options.indexOf(current);
-        const next = options[(idx + 1) % options.length];
-        this.setSpeed(next);
+        const opts = TIME_CONFIG.speedOptions;
+        const idx = opts.indexOf(this.state.data.gameSpeed);
+        this.setSpeed(opts[(idx + 1) % opts.length]);
     }
 
-    // ============================================================
-    // Untuk keperluan tes manual dari console browser:
+    // Utilitas untuk testing manual via console:
     //   window.__game.timeSystem.fastForwardDays(30)
-    // Memajukan waktu tanpa menunggu waktu nyata.
-    // ============================================================
     fastForwardDays(days) {
-        const minutes = days * TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
-        this._advanceTime(minutes);
-        console.info(`[TimeSystem] Fast-forward ${days} hari. Sekarang:`, this.getSnapshot());
+        const mins = days * TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
+        this._advance(mins);
+        return this.snapshot();
     }
 }
