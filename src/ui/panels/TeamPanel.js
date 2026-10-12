@@ -1,6 +1,5 @@
 // FILE: src/ui/panels/TeamPanel.js
-// Tab Tim: sub-tab Tim Aktif | Rekrut | Info.
-// Versi DEFENSIVE — setiap section dibungkus try/catch agar tidak crash total.
+// Versi defensive — semua akses state & system di-guard.
 import { ROLES, getRoleById, getSkillTier, getTraitById } from '../../data/staff.data.js';
 import { BALANCE } from '../../data/balance.data.js';
 import { generateAvatar } from '../avatars/AvatarGenerator.js';
@@ -14,11 +13,8 @@ function escapeHtml(s) {
 function safe(fn, fallback) {
     try { return fn(); }
     catch (err) {
-        console.error('[TeamPanel] Section error:', err);
-        return fallback || `<div class="card" style="border-color:var(--danger);">
-            <div class="card-title" style="color:var(--danger);">⚠ Error</div>
-            <div style="font-size:12px;color:var(--text-dim);">${escapeHtml(err.message || 'Unknown error')}</div>
-        </div>`;
+        console.error('[TeamPanel] section error:', err);
+        return fallback || '<div class="card" style="border-color:var(--danger);"><div class="card-title" style="color:var(--danger);">⚠ Error</div><div style="font-size:12px;color:var(--text-dim);">' + escapeHtml(err.message || 'unknown') + '</div></div>';
     }
 }
 
@@ -35,11 +31,11 @@ export function renderTeamPanel({ subtab, teamSystem }) {
 
     let body = '';
     if (subtab === 'recruit') {
-        body = safe(() => _renderRecruit(data, teamSystem), '<div class="empty"><div class="empty-title">Gagal render Rekrut</div></div>');
+        body = safe(function() { return _renderRecruit(data, teamSystem); }, '<div class="empty"><div class="empty-title">Gagal render Rekrut</div></div>');
     } else if (subtab === 'info') {
-        body = safe(() => _renderInfo(data, teamSystem), '<div class="empty"><div class="empty-title">Gagal render Info</div></div>');
+        body = safe(function() { return _renderInfo(data, teamSystem); }, '<div class="empty"><div class="empty-title">Gagal render Info</div></div>');
     } else {
-        body = safe(() => _renderActive(data, teamSystem), '<div class="empty"><div class="empty-title">Gagal render Tim Aktif</div></div>');
+        body = safe(function() { return _renderActive(data, teamSystem); }, '<div class="empty"><div class="empty-title">Gagal render Tim Aktif</div></div>');
     }
     return subtabBar + body;
 }
@@ -49,8 +45,13 @@ export function renderTeamPanel({ subtab, teamSystem }) {
 // ============================================================
 function _renderActive(data, teamSystem) {
     const staff = Array.isArray(data.staff) ? data.staff : [];
-    const counts = teamSystem && teamSystem.getTeamCounts ? teamSystem.getTeamCounts() : { engineers: 0, designers: 0, marketers: 0 };
-    const totalSalary = teamSystem && teamSystem.getTotalSalary ? teamSystem.getTotalSalary() : 0;
+
+    let counts = { engineers: 0, designers: 0, marketers: 0 };
+    let totalSalary = 0;
+    try {
+        if (teamSystem && teamSystem.getTeamCounts) counts = teamSystem.getTeamCounts() || counts;
+        if (teamSystem && teamSystem.getTotalSalary) totalSalary = teamSystem.getTotalSalary() || 0;
+    } catch (e) { /* fallback default */ }
 
     const summary = `
         <div class="kpi-grid">
@@ -85,24 +86,24 @@ function _renderActive(data, teamSystem) {
     }
 
     const byRole = { engineer: [], designer: [], marketer: [] };
-    staff.forEach(s => {
+    staff.forEach(function(s) {
         if (s && s.role && byRole[s.role]) byRole[s.role].push(s);
     });
 
-    const roleSections = ROLES.map(role => {
+    const roleSections = ROLES.map(function(role) {
         const list = byRole[role.id] || [];
         if (!list.length) return '';
-        const rows = list.map(s => {
+        const rows = list.map(function(s) {
             try { return _renderStaffRow(s); }
             catch (err) {
-                console.error('[TeamPanel] Staff row error:', err, s);
-                return `<div class="staff-row" style="opacity:0.5;"><div style="flex:1;">Data staff korup</div></div>`;
+                console.error('[TeamPanel] staff row error:', err, s);
+                return '<div class="staff-row" style="opacity:0.5;"><div style="flex:1;">Data staff korup</div></div>';
             }
         }).join('');
         return `
             <div class="card">
-                <div class="card-title" style="color:${role.color};">
-                    ${role.icon} ${role.label.toUpperCase()} (${list.length})
+                <div class="card-title" style="color:${role.color || 'var(--text)'};">
+                    ${role.icon || ''} ${(role.label || role.id || '').toUpperCase()} (${list.length})
                 </div>
                 <div class="staff-list">${rows}</div>
             </div>
@@ -113,20 +114,26 @@ function _renderActive(data, teamSystem) {
 }
 
 function _renderStaffRow(s) {
+    if (!s) return '';
+
     const role = getRoleById(s.role) || { color: '#666', icon: '?' };
     const tier = getSkillTier(s.skill || 1) || { color: '#999' };
     const morale = (typeof s.morale === 'number') ? s.morale : 75;
     const salary = (typeof s.salary === 'number') ? s.salary : 0;
     const moraleColor = morale >= 70 ? 'var(--success)' : morale >= 40 ? 'var(--warn)' : 'var(--danger)';
 
-    const traitIcons = (Array.isArray(s.traits) ? s.traits : []).map(tid => {
+    const traitList = Array.isArray(s.traits) ? s.traits : [];
+    const traitIcons = traitList.map(function(tid) {
         const t = getTraitById(tid);
-        return t ? `<span title="${escapeHtml(t.label)}" style="color:${t.color};">●</span>` : '';
+        if (!t) return '';
+        const color = t.color || 'var(--text-mute)';
+        const label = escapeHtml(t.label || tid);
+        return '<span title="' + label + '" style="color:' + color + ';">●</span>';
     }).join('');
 
     let avatar = '';
     try { avatar = generateAvatar(s.name || 'Unknown', { size: 38 }); }
-    catch (e) { avatar = `<div class="staff-avatar" style="background:${role.color};">${role.icon}</div>`; }
+    catch (e) { avatar = '<div class="staff-avatar" style="background:' + (role.color || '#666') + ';">' + (role.icon || '?') + '</div>'; }
 
     return `
         <div class="staff-row" data-staff-detail="${s.id || ''}">
@@ -134,7 +141,7 @@ function _renderStaffRow(s) {
             <div class="staff-info">
                 <div class="staff-name-row">
                     <span class="staff-name">${escapeHtml(s.name || 'Tanpa Nama')}</span>
-                    <span class="staff-tier" style="color:${tier.color};">T${s.skill || 1}</span>
+                    <span class="staff-tier" style="color:${tier.color || '#999'};">T${s.skill || 1}</span>
                     <span class="staff-traits">${traitIcons}</span>
                 </div>
                 <div class="staff-meta-row">
@@ -186,18 +193,21 @@ function _renderRecruit(data, teamSystem) {
         `;
     }
 
-    const cards = candidates.map(c => {
+    const cards = candidates.map(function(c) {
         if (!c || !c.id) return '';
         const role = getRoleById(c.role) || { label: c.role || '?', icon: '?' };
         const tier = getSkillTier(c.skill || 1) || { label: 'Pemula' };
-        const traitChips = (Array.isArray(c.traits) ? c.traits : []).map(tid => {
+        const traitList = Array.isArray(c.traits) ? c.traits : [];
+        const traitChips = traitList.map(function(tid) {
             const t = getTraitById(tid);
-            return t ? `<span class="cand-trait" style="color:${t.color};border-color:${t.color};">${escapeHtml(t.label)}</span>` : '';
+            if (!t) return '';
+            const color = t.color || 'var(--text-mute)';
+            return '<span class="cand-trait" style="color:' + color + ';border-color:' + color + ';">' + escapeHtml(t.label || tid) + '</span>';
         }).join('');
 
         let avatar = '';
         try { avatar = generateAvatar(c.name || 'Unknown', { size: 38 }); }
-        catch (e) { avatar = `<div class="staff-avatar" style="background:#666;">?</div>`; }
+        catch (e) { avatar = '<div class="staff-avatar" style="background:#666;">?</div>'; }
 
         const salary = (typeof c.salary === 'number') ? c.salary : 0;
 
@@ -214,7 +224,7 @@ function _renderRecruit(data, teamSystem) {
                         <div style="font-size:10px;color:var(--text-mute);">/bulan</div>
                     </div>
                 </div>
-                ${traitChips ? `<div class="cand-traits">${traitChips}</div>` : ''}
+                ${traitChips ? '<div class="cand-traits">' + traitChips + '</div>' : ''}
                 <button class="btn-primary" data-team-action="hire" data-candidate-id="${c.id}" style="width:100%;margin-top:10px;font-size:13px;">
                     Rekrut
                 </button>
@@ -222,41 +232,51 @@ function _renderRecruit(data, teamSystem) {
         `;
     }).join('');
 
-    return header + `<div class="cand-list">${cards}</div>`;
+    return header + '<div class="cand-list">' + cards + '</div>';
 }
 
 // ============================================================
-// INFO BONUS
+// INFO
 // ============================================================
 function _renderInfo(data, teamSystem) {
     const staff = Array.isArray(data.staff) ? data.staff : [];
-    const TeamSystem = (window.__game && window.__game.teamSystem)
+    const TeamSystemCtor = (window.__game && window.__game.teamSystem)
         ? window.__game.teamSystem.constructor
         : null;
 
-    if (!TeamSystem) {
+    if (!TeamSystemCtor) {
         return '<div class="empty"><div class="empty-title">TeamSystem belum siap</div></div>';
     }
 
-    const engineerBonus = TeamSystem.getResearchBonusFromStaff ? TeamSystem.getResearchBonusFromStaff(staff) : { speedMult: 1, extraSlots: 0 };
-    const osBonus = TeamSystem.getOsDevBonusFromStaff ? TeamSystem.getOsDevBonusFromStaff(staff) : 1;
-    const osSlots = TeamSystem.getOsFeatureSlotsFromStaff ? TeamSystem.getOsFeatureSlotsFromStaff(staff) : 0;
-    const designerBonus = TeamSystem.getProductDevBonusFromStaff ? TeamSystem.getProductDevBonusFromStaff(staff) : { speedMult: 1, qualityBonus: 0 };
-    const marketerBonus = TeamSystem.getMarketingBonusFromStaff ? TeamSystem.getMarketingBonusFromStaff(staff) : 1;
+    function safeCall(fn, fallback) {
+        try { return fn(); } catch (e) { return fallback; }
+    }
 
-    const counts = teamSystem && teamSystem.getTeamCounts ? teamSystem.getTeamCounts() : { engineers: 0, designers: 0, marketers: 0 };
+    const engineerBonus = safeCall(function() { return TeamSystemCtor.getResearchBonusFromStaff(staff); }, { speedMult: 1, extraSlots: 0 });
+    const osBonus = safeCall(function() { return TeamSystemCtor.getOsDevBonusFromStaff(staff); }, 1);
+    const osSlots = safeCall(function() { return TeamSystemCtor.getOsFeatureSlotsFromStaff(staff); }, 0);
+    const designerBonus = safeCall(function() { return TeamSystemCtor.getProductDevBonusFromStaff(staff); }, { speedMult: 1, qualityBonus: 0 });
+    const marketerBonus = safeCall(function() { return TeamSystemCtor.getMarketingBonusFromStaff(staff); }, 1);
 
-    const section = (title, icon, color, rows) => `
-        <div class="card">
-            <div class="card-title" style="color:${color};">${icon} ${title.toUpperCase()}</div>
-            ${rows.map(r => `
-                <div class="sum-row">
-                    <span>${r.label}</span>
-                    <b style="color:${r.valueColor || 'var(--text)'};">${r.value}</b>
-                </div>
-            `).join('')}
-        </div>
-    `;
+    let counts = { engineers: 0, designers: 0, marketers: 0 };
+    let moraleAvg = 0;
+    let totalSalary = 0;
+    try {
+        if (teamSystem && teamSystem.getTeamCounts) counts = teamSystem.getTeamCounts() || counts;
+        if (teamSystem && teamSystem.getAverageMorale) moraleAvg = teamSystem.getAverageMorale() || 0;
+        if (teamSystem && teamSystem.getTotalSalary) totalSalary = teamSystem.getTotalSalary() || 0;
+    } catch (e) { /* default */ }
+
+    function section(title, icon, color, rows) {
+        return `
+            <div class="card">
+                <div class="card-title" style="color:${color};">${icon} ${title.toUpperCase()}</div>
+                ${rows.map(function(r) {
+                    return '<div class="sum-row"><span>' + r.label + '</span><b style="color:' + (r.valueColor || 'var(--text)') + ';">' + r.value + '</b></div>';
+                }).join('')}
+            </div>
+        `;
+    }
 
     const engSec = section('Engineer Bonus', '🔧', '#60a5fa', [
         { label: 'Jumlah Engineer', value: counts.engineers || 0 },
@@ -277,8 +297,6 @@ function _renderInfo(data, teamSystem) {
         { label: 'Efektivitas Kampanye', value: '× ' + (marketerBonus || 1).toFixed(2), valueColor: marketerBonus > 1 ? 'var(--success)' : 'var(--text-dim)' }
     ]);
 
-    const moraleAvg = (teamSystem && teamSystem.getAverageMorale) ? teamSystem.getAverageMorale() : 0;
-    const totalSalary = (teamSystem && teamSystem.getTotalSalary) ? teamSystem.getTotalSalary() : 0;
     const moraleColor = moraleAvg >= 70 ? 'var(--success)' : moraleAvg >= 40 ? 'var(--warn)' : 'var(--danger)';
 
     const extraSec = section('Ringkasan Tim', '📊', 'var(--accent)', [
