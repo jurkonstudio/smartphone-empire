@@ -12,6 +12,12 @@
 - `economy:add-revenue` / `economy:month-processed` / `economy:warn-burnrate` / `economy:game-over`
 - `economy:loan-taken` / `economy:loan-repaid`
 
+## Tim (Batch D)
+- `team:recruited` — `{ staff, cost }` — staff baru direkrut
+- `team:fired` — `{ staffId, name, severance }` — staff di-PHK
+- `team:skill-up` — `{ staffId, skill }` — staff naik tier
+- `team:candidates-refreshed` — `{ count }` — pool kandidat di-refresh
+
 ## Riset
 - `research:started` / `research:progress` / `research:completed` / `research:cancelled` / `research:slots-changed`
 
@@ -24,7 +30,7 @@
 - `product:development-started` / `product:development-progress` / `product:phase-changed`
 - `product:development-cancelled` / `product:released` / `product:daily-sales-processed`
 - `product:stock-out` / `product:campaign-started` / `product:discontinued`
-- **`product:auto-restocked`** — `{ productId, name, qty, cost }` — auto-restock dijalankan
+- `product:auto-restocked` — `{ productId, name, qty, cost }`
 
 ## Kompetitor
 - `competitor:activated` / `competitor:deactivated`
