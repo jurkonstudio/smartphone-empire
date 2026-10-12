@@ -1,4 +1,5 @@
 // FILE: src/ui/panels/DashboardPanel.js
+// Dashboard utama. Semua emoji diganti renderIcon (SVG).
 import { renderKpiCards } from './KpiCards.js';
 import { renderTimePanel } from './TimePanel.js';
 import { renderProgressPanel } from './ProgressPanel.js';
@@ -8,6 +9,7 @@ import { renderQuestsPanel } from './QuestsPanel.js';
 import { renderCashChart } from './CashChart.js';
 import { renderCloudStatus } from './CloudStatus.js';
 import { renderNewsListPanel } from './NewsListPanel.js';
+import { renderIcon } from '../icons/IconRenderer.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -33,7 +35,7 @@ function _renderPublicHighlight(state) {
         '<div style="font-size:16px;font-weight:700;color:' + sentColor + ';">' + sentiment + '/100</div>' +
         '</div>' +
         (viral ? '<div style="font-size:12px;color:' + (viral.type === 'positive' ? 'var(--success)' : 'var(--danger)') + ';margin-bottom:8px;">' +
-            (viral.type === 'positive' ? '✨' : '⚠') + ' ' + escapeHtml(viral.title) + '</div>' : '') +
+            (viral.type === 'positive' ? renderIcon('sparkles', 12) : renderIcon('question', 12)) + ' ' + escapeHtml(viral.title) + '</div>' : '') +
         (latest ? '<div style="font-size:11.5px;color:var(--text-mute);margin-bottom:4px;">' + escapeHtml(latest.source) + ' - ' + latest.score + '/10</div>' +
             '<div style="font-size:12.5px;color:var(--text);line-height:1.5;">"' + escapeHtml(latest.text) + '"</div>' : '') +
         '<button class="btn-secondary" data-nav="market" style="width:100%;margin-top:10px;font-size:12px;padding:8px;">Lihat Feedback Publik</button>' +
