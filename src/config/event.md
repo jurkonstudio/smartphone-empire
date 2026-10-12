@@ -9,7 +9,8 @@
 - `team:changed` / `tip:shown`
 
 ## Ekonomi
-- `economy:add-revenue` / `economy:month-processed` / `economy:warn-burnrate` / `economy:game-over` / `economy:loan-taken` / `economy:loan-repaid`
+- `economy:add-revenue` / `economy:month-processed` / `economy:warn-burnrate` / `economy:game-over`
+- `economy:loan-taken` / `economy:loan-repaid`
 
 ## Riset
 - `research:started` / `research:progress` / `research:completed` / `research:cancelled` / `research:slots-changed`
@@ -23,24 +24,20 @@
 - `product:development-started` / `product:development-progress` / `product:phase-changed`
 - `product:development-cancelled` / `product:released` / `product:daily-sales-processed`
 - `product:stock-out` / `product:campaign-started` / `product:discontinued`
+- **`product:auto-restocked`** — `{ productId, name, qty, cost }` — auto-restock dijalankan
 
-## Kompetitor (Batch C)
-- `competitor:activated` — `{ id, name }` — kompetitor mulai aktif
-- `competitor:deactivated` — `{ id, name }` — kompetitor keluar dari pasar
-- `competitor:released-product` — `{ competitorId, competitorName, productName, tier, year, month }`
-- `competitor:life-event` — `{ competitorId, competitorName, year, text, shareDelta }`
+## Kompetitor
+- `competitor:activated` / `competitor:deactivated`
+- `competitor:released-product` / `competitor:life-event`
 
 ## Pasar
-- `market:share-updated` — `{ playerShare, competitors:[{id,name,share}] }`
+- `market:share-updated`
 
-## Feedback Publik (Batch C)
-- `feedback:sentiment-changed` — `{ value }` — sentimen publik 0-100
-- `feedback:review-received` — `{ review }` — ulasan baru masuk feed
-- `feedback:viral-started` — `{ viral }` — viral event dimulai
-- `feedback:viral-ended` — `{ count }` — viral event berakhir
-- `feedback:viral-responded` — `{ viralId, responseId }`
+## Feedback Publik
+- `feedback:sentiment-changed` / `feedback:review-received`
+- `feedback:viral-started` / `feedback:viral-ended` / `feedback:viral-responded`
 
-## Ulasan (dari ProductSystem)
+## Ulasan (produk)
 - `review:received` — `{ productId, review }`
 
 ## Quest & Tutorial
@@ -53,5 +50,5 @@
 ## Save
 - `save:success` / `save:error` / `save:cleared`
 
-## Era (Batch D)
+## Era
 - `era:changed` — `{ from, to, year }`
