@@ -24,6 +24,14 @@ import { showOnboarding } from './ui/panels/OnboardingModal.js';
 import { initMonthlySummary } from './ui/panels/MonthlySummaryModal.js';
 import { initGameOverScreen } from './ui/panels/GameOverScreen.js';
 import { Modal } from './ui/modal.js';
+import {
+    renderResearchPanel,
+    setFilterCategory,
+    openNodeDetailModal,
+    openOsWizardModal,
+    openCreateOsModal,
+    openFeatureDetailModal
+} from './ui/panels/ResearchPanel.js';
 
 const timeSystem = new TimeSystem(state);
 const economy = new EconomySystem(state);
@@ -33,6 +41,7 @@ const research = new ResearchSystem(state);
 const os = new OSSystem(state);
 
 let activeView = 'dashboard';
+let activeSubtab = 'tech';
 let _burnWarn = null;
 
 const els = {
@@ -47,7 +56,6 @@ const els = {
 function getTime() { return timeSystem.snapshot(); }
 
 const EMPTY_VIEWS = {
-    research: { icon: '🔬', title: 'Riset belum aktif', description: 'UI Riset akan segera hadir.', hint: 'Batch A2' },
     products: { icon: '📱', title: 'Belum ada produk', description: 'Desain ponsel, katalog, dan penjualan akan dibuka pada Batch B.', hint: 'Coming in Batch B' },
     market:   { icon: '📈', title: 'Pasar belum aktif', description: 'Kompetitor dan tren pasar akan dibuka pada Batch C.', hint: 'Coming in Batch C' }
 };
@@ -56,11 +64,7 @@ function hideLoading() { if (els.loading) els.loading.style.display = 'none'; }
 
 function renderHeaderOnly() {
     if (!els.header) return;
-    els.header.innerHTML = renderHeader({
-        state: state.get(),
-        timeSnapshot: getTime(),
-        warning: _burnWarn
-    });
+    els.header.innerHTML = renderHeader({ state: state.get(), timeSnapshot: getTime(), warning: _burnWarn });
 }
 
 function renderNavOnly() {
@@ -72,7 +76,8 @@ function renderView() {
     if (!els.view) return;
     let html = '';
     switch (activeView) {
-        case 'dashboard': html = renderDashboard(state.get(), getTime()); break;
+        case 'dashboard': html = renderDashboard(state.get(), getTime(), research); break;
+        case 'research':  html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os }); break;
         case 'settings':  html = renderSettingsPanel(); break;
         case 'guide':     html = renderGuidePanel(); break;
         default:
@@ -89,6 +94,9 @@ function renderView() {
         bindSettingsActions(els.view);
     }
 }
+
+// Global re-render entry (dipakai modal untuk refresh setelah aksi)
+function render() { renderAll(); }
 
 function renderAll() {
     renderHeaderOnly();
@@ -137,29 +145,113 @@ function vibrate(ms) {
     }
 }
 
+// ============================================================
+// EVENT DELEGATION TUNGGAL — semua tombol di sini
+// ============================================================
 function bindGlobalClicks() {
     document.body.addEventListener('click', function (e) {
+        // 1. Navigasi bottom nav
         const navBtn = e.target.closest('[data-nav]');
-        if (navBtn) {
-            e.preventDefault();
-            vibrate(8);
-            navigate(navBtn.dataset.nav);
-            return;
-        }
+        if (navBtn) { e.preventDefault(); vibrate(8); navigate(navBtn.dataset.nav); return; }
+
+        // 2. Kontrol waktu
         const timeBtn = e.target.closest('[data-time-action]');
         if (timeBtn) {
-            e.preventDefault();
-            vibrate(12);
+            e.preventDefault(); vibrate(12);
             const a = timeBtn.dataset.timeAction;
-            if (a === 'toggle-pause') {
-                timeSystem.togglePause();
-                bus.emit('tutorial:action', { id: 'action:toggle-pause' });
-            } else if (a === 'cycle-speed') {
-                timeSystem.cycleSpeed();
-                bus.emit('tutorial:action', { id: 'action:cycle-speed' });
+            if (a === 'toggle-pause') { timeSystem.togglePause(); bus.emit('tutorial:action', { id: 'action:toggle-pause' }); }
+            else if (a === 'cycle-speed') { timeSystem.cycleSpeed(); bus.emit('tutorial:action', { id: 'action:cycle-speed' }); }
+            return;
+        }
+
+        // 3. Sub-tab Riset
+        const subBtn = e.target.closest('[data-subtab]');
+        if (subBtn) {
+            e.preventDefault(); vibrate(6);
+            activeSubtab = subBtn.dataset.subtab;
+            renderView();
+            return;
+        }
+
+        // 4. Filter kategori node riset
+        const chip = e.target.closest('[data-filter-cat]');
+        if (chip) {
+            e.preventDefault();
+            setFilterCategory(chip.dataset.filterCat);
+            renderView();
+            return;
+        }
+
+        // 5. Detail node riset (klik kartu)
+        const nodeCard = e.target.closest('[data-node-detail]');
+        if (nodeCard) {
+            e.preventDefault();
+            openNodeDetailModal({ nodeId: nodeCard.dataset.nodeDetail, researchSystem: research });
+            return;
+        }
+
+        // 6. Action di modal node detail
+        const rAction = e.target.closest('[data-research-action]');
+        if (rAction) {
+            e.preventDefault();
+            const act = rAction.dataset.researchAction;
+            const nodeId = rAction.dataset.nodeId;
+            if (act === 'start') {
+                const res = research.startResearch(nodeId);
+                if (!res.ok) ToastService.error(res.reason || 'Gagal.');
+                else { ToastService.success('Riset dimulai!'); Modal.close('node-detail', true); renderAll(); }
+            } else if (act === 'cancel') {
+                const res = research.cancelResearch(nodeId);
+                if (!res.ok) ToastService.error(res.reason || 'Gagal.');
+                else { ToastService.info('Riset dibatalkan.'); Modal.close('node-detail', true); renderAll(); }
+            }
+            return;
+        }
+
+        // 7. Aksi OS
+        const osAction = e.target.closest('[data-os-action]');
+        if (osAction) {
+            e.preventDefault();
+            const act = osAction.dataset.osAction;
+            if (act === 'create')        { openCreateOsModal({ osSystem: os }); return; }
+            if (act === 'wizard')        { openOsWizardModal({ osSystem: os }); return; }
+            if (act === 'cancel-deving') {
+                const res = os.cancelVersion();
+                if (res.ok) { ToastService.info('Pengembangan dibatalkan (refund $' + res.refund.toLocaleString('en-US') + ').'); renderAll(); }
+                else ToastService.error(res.reason);
+                return;
+            }
+            if (act === 'patch-bug') {
+                const res = os.patchBug(osAction.dataset.bugId);
+                if (!res.ok) ToastService.error(res.reason);
+                else { ToastService.success('Patch dimulai.'); renderAll(); }
+                return;
+            }
+            if (act === 'ignore-bug') {
+                const res = os.ignoreBug(osAction.dataset.bugId);
+                if (!res.ok) ToastService.error(res.reason);
+                else { ToastService.warning('Bug diabaikan.'); renderAll(); }
+                return;
+            }
+            if (act === 'start-app') {
+                const res = os.startApp(osAction.dataset.appId);
+                if (!res.ok) ToastService.error(res.reason);
+                else { ToastService.success('Aplikasi dirilis.'); renderAll(); }
+                return;
+            }
+            if (act === 'invite-devs') {
+                const res = os.inviteDevelopers();
+                if (!res.ok) ToastService.error(res.reason);
+                else { ToastService.success('+' + res.bonus + ' developer!'); renderAll(); }
+                return;
+            }
+            if (act === 'feature-detail') {
+                openFeatureDetailModal({ osSystem: os, featureId: osAction.dataset.featureId });
+                return;
             }
         }
     });
+
     document.addEventListener('keydown', function (e) {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
         if (e.code === 'Space') { e.preventDefault(); timeSystem.togglePause(); }
@@ -167,6 +259,47 @@ function bindGlobalClicks() {
     });
 }
 
+// ============================================================
+// Update progress live tanpa re-render
+// ============================================================
+function bindProgressEvents() {
+    bus.on('research:progress', (data) => {
+        if (activeView !== 'research' || activeSubtab !== 'tech') return;
+        // Update header slot count
+        const slotsEl = els.view.querySelector('[data-research-slots]');
+        if (slotsEl) slotsEl.textContent = data.active.length + '/' + data.maxSlots;
+
+        data.active.forEach(r => {
+            const pct = Math.round(r.percent * 100);
+            const bar = els.view.querySelector('[data-research-bar="' + r.nodeId + '"]');
+            if (bar) bar.style.width = pct + '%';
+            const pctEl = els.view.querySelector('[data-research-pct="' + r.nodeId + '"]');
+            if (pctEl) pctEl.textContent = pct + '%';
+            const etaEl = els.view.querySelector('[data-research-eta="' + r.nodeId + '"]');
+            if (etaEl) etaEl.textContent = 'Sisa ~' + Math.ceil(r.remainingDays) + ' hari • ' + r.progressDays.toFixed(1) + '/' + r.durationDays + ' hari';
+        });
+    });
+
+    bus.on('os:progress', (data) => {
+        if (activeView !== 'research' || activeSubtab !== 'os') return;
+        const pct = Math.round(data.percent * 100);
+        const bar = els.view.querySelector('[data-os-dev-bar]');
+        if (bar) bar.style.width = pct + '%';
+        const pctEl = els.view.querySelector('[data-os-dev-pct]');
+        if (pctEl) pctEl.textContent = pct + '%';
+        const eta = els.view.querySelector('[data-os-dev-eta]');
+        if (eta) eta.textContent = 'Sisa ~' + Math.ceil(data.remainingDays) + ' hari • ' + data.progressDays.toFixed(1) + '/' + data.durationDays + ' hari';
+    });
+
+    // Saat hari berubah & di tab Riset, re-render agar daftar bug & fitur update
+    bus.on('time:day-changed', () => {
+        if (activeView === 'research') renderView();
+    });
+}
+
+// ============================================================
+// EVENT LAMA (dipertahankan)
+// ============================================================
 function bindTimeEvents() {
     bus.on('time:tick', function () {
         const meta = els.header && els.header.querySelector('.header-meta');
@@ -214,10 +347,7 @@ function bindStateEvents() {
     bus.on('settings:take-loan', function (data) {
         const res = economy.takeLoan(data.loanId);
         if (!res.ok) ToastService.error(res.error);
-        else {
-            ToastService.success('Pinjaman diterima.');
-            renderView();
-        }
+        else { ToastService.success('Pinjaman diterima.'); renderView(); }
     });
     bus.on('settings:changed', function () {});
     bus.on('tutorial:restart', function () { tutorial.restart(); });
@@ -225,23 +355,17 @@ function bindStateEvents() {
 
 async function boot() {
     try {
-        if (!els.header || !els.view || !els.nav) {
-            throw new Error('Elemen HTML utama tidak ditemukan.');
-        }
+        if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML utama tidak ditemukan.');
 
         mountToastContainer(els.toast);
         initTutorialOverlay();
         initMonthlySummary();
         initGameOverScreen();
-
         hideLoading();
 
         if (SaveService.hasSave()) {
             const saved = SaveService.load();
-            if (saved) {
-                state.hydrate(saved);
-                console.info('[boot] Save dimuat.');
-            }
+            if (saved) { state.hydrate(saved); console.info('[boot] Save dimuat.'); }
         } else {
             const onb = await showOnboarding();
             state.patch({ companyName: onb.companyName, difficulty: onb.difficulty });
@@ -253,7 +377,6 @@ async function boot() {
             SaveService.save(state);
         }
 
-        // Start semua system
         economy.start();
         quests.start();
         tutorial.start();
@@ -264,6 +387,7 @@ async function boot() {
         bindGlobalClicks();
         bindTimeEvents();
         bindStateEvents();
+        bindProgressEvents();
         updateTitle();
 
         timeSystem.start();
@@ -275,10 +399,9 @@ async function boot() {
             animateCash(0, cash);
         }
 
-        // Cheat console (Batch A)
         window.__game = {
             state, bus, timeSystem, economy, quests, tutorial, research, os,
-            SaveService, ToastService, Modal, navigate,
+            SaveService, ToastService, Modal, navigate, render: renderAll,
             cheat: {
                 addCash: function (n) { state.addCash(n); },
                 fastForwardDays: function (n) { return timeSystem.fastForwardDays(n); },
