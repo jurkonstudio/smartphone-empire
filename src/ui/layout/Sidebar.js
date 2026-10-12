@@ -1,13 +1,13 @@
-const items = NAV_ITEMS.map((item) => {
-  const isActive = item.id === active;
-  const ariaCurrent = isActive ? ' aria-current="page"' : '';
-  return `
-    <button class="nav-item${isActive ? ' is-active' : ''}"
-            type="button"
-            data-nav="${item.id}"${ariaCurrent}>
-      <span class="nav-item__icon">${icon(item.icon, 18)}</span>
-      <span class="nav-item__label">${item.label}</span>
-      ${item.badge ? `<span class="nav-item__badge">${item.badge}</span>` : ''}
-    </button>
-  `;
-}).join('');
+import { NAV_ITEMS } from '../../config/constants.js';
+
+export function renderSidebar({ active }) {
+    return `
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            ${NAV_ITEMS.map(item => `
+                <button data-nav="${item.id}" style="text-align:left; padding:12px; background:${active === item.id ? '#333' : 'transparent'}; color:${active === item.id ? '#4CAF50' : '#fff'}; border:none; border-radius:5px; cursor:pointer; font-size:14px;">
+                    ${item.label}
+                </button>
+            `).join('')}
+        </div>
+    `;
+}
