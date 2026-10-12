@@ -1,15 +1,15 @@
 // FILE: src/ui/layout/Header.js
-// Header ringkas 2 baris + badge peringatan burn rate.
+import { getMonthName } from '../../core/TimeSystem.js';
+
 export function renderHeader({ state, timeSnapshot, warning }) {
     const t = timeSnapshot;
     const hh = String(Math.floor(t.currentHour)).padStart(2, '0');
     const mm = String(Math.floor(t.currentMinute)).padStart(2, '0');
     const status = t.isPaused ? 'Paused' : (t.gameSpeed + 'x');
     const statusCls = t.isPaused ? '' : 'running';
+    const dateStr = t.currentDay + ' ' + getMonthName(t.currentMonth, true) + ' ' + t.currentYear;
 
-    const warnBadge = warning
-        ? `<span class="header-warn" title="Sisa uang tipis">⚠ ${warning}</span>`
-        : '';
+    const warnBadge = warning ? `<span class="header-warn">⚠ ${warning}</span>` : '';
 
     return `
         <div class="header-inner">
@@ -20,21 +20,17 @@ export function renderHeader({ state, timeSnapshot, warning }) {
             </div>
             <div class="header-row">
                 <div class="header-meta">
-                    <span data-time-date>Hari ${t.currentDay}/${t.currentMonth}/${t.currentYear}</span>
+                    <span data-time-date>${dateStr}</span>
                     <span>•</span>
                     <span data-time-clock>${hh}:${mm}</span>
                     <span>•</span>
                     <span class="header-status ${statusCls}" data-time-status>${status}</span>
                 </div>
                 <div class="header-controls">
-                    <button class="btn-icon" data-time-action="toggle-pause"
-                            aria-label="${t.isPaused ? 'Mulai simulasi' : 'Jeda simulasi'}">
+                    <button class="btn-icon" data-time-action="toggle-pause" aria-label="${t.isPaused ? 'Mulai' : 'Jeda'}">
                         ${t.isPaused ? '▶' : '❚❚'}
                     </button>
-                    <button class="btn-icon" data-time-action="cycle-speed"
-                            aria-label="Ubah kecepatan simulasi">
-                        ⏩
-                    </button>
+                    <button class="btn-icon" data-time-action="cycle-speed" aria-label="Kecepatan">⏩</button>
                 </div>
             </div>
         </div>
