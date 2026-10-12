@@ -99,39 +99,50 @@ function renderNavOnly() {
 function renderView() {
     if (!els.view) return;
     let html = '';
-    switch (activeView) {
-        case 'dashboard': html = renderDashboard(state.get(), getTime(), research, teamSystem); break;
-        case 'profile':   html = renderCompanyProfilePanel({ teamSystem, marketSystem: market, competitors, opinionSystem: opinion }); break;
-        case 'team':      html = renderTeamPanel({ subtab: activeTeamSubtab, teamSystem }); break;
-        case 'research':  html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os }); break;
-        case 'products':  html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os }); break;
-        case 'market':    html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion }); break;
-        case 'settings':  html = renderSettingsPanel(); break;
-        case 'guide':     html = renderGuidePanel(); break;
-        default:          html = renderEmptyState({ icon: '❓', title: 'Tidak ditemukan' });
+    try {
+        switch (activeView) {
+            case 'dashboard': html = renderDashboard(state.get(), getTime(), research, teamSystem); break;
+            case 'profile':   html = renderCompanyProfilePanel({ teamSystem, marketSystem: market, competitors, opinionSystem: opinion }); break;
+            case 'team':      html = renderTeamPanel({ subtab: activeTeamSubtab, teamSystem }); break;
+            case 'research':  html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os }); break;
+            case 'products':  html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os }); break;
+            case 'market':    html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion }); break;
+            case 'settings':  html = renderSettingsPanel(); break;
+            case 'guide':     html = renderGuidePanel(); break;
+            default:          html = renderEmptyState({ icon: '❓', title: 'Tidak ditemukan' });
+        }
+    } catch (err) {
+        console.error('[renderView] Error di view "' + activeView + '":', err);
+        html = `<div class="card" style="border-color:var(--danger);margin-top:20px;">
+            <div class="card-title" style="color:var(--danger);">⚠ Error Render</div>
+            <div style="font-size:13px;line-height:1.6;word-break:break-word;">
+                <b>View:</b> ${activeView}<br>
+                <b>Error:</b> ${err && err.message ? err.message : 'Unknown'}<br>
+                <b>Stack:</b> <span style="font-family:monospace;font-size:11px;">${err && err.stack ? err.stack.split('\n').slice(0,3).join('<br>') : '-'}</span>
+            </div>
+        </div>`;
     }
     els.view.innerHTML = html;
     els.view.scrollTop = 0;
 
-    if (activeView === 'dashboard') {
-        const chart = els.view.querySelector('.chart-wrap');
-        if (chart) drawCashChart(chart);
+    try {
+        if (activeView === 'dashboard') {
+            const chart = els.view.querySelector('.chart-wrap');
+            if (chart) drawCashChart(chart);
+        }
+        if (activeView === 'products' && activeProdSubtab === 'sales') {
+            const sc = els.view.querySelector('.chart-wrap');
+            if (sc) drawSalesChart(sc);
+        }
+        if (activeView === 'market' && activeMarketSubtab === 'share') {
+            const sc = els.view.querySelector('.chart-wrap');
+            if (sc) drawShareChart(sc);
+        }
+        if (activeView === 'settings') bindSettingsActions(els.view);
+    } catch (err) {
+        console.error('[renderView] Post-render error:', err);
     }
-    if (activeView === 'products' && activeProdSubtab === 'sales') {
-        const sc = els.view.querySelector('.chart-wrap');
-        if (sc) drawSalesChart(sc);
-    }
-    if (activeView === 'market' && activeMarketSubtab === 'share') {
-        const sc = els.view.querySelector('.chart-wrap');
-        if (sc) drawShareChart(sc);
-    }
-    if (activeView === 'settings') bindSettingsActions(els.view);
-}
-
-function render() { renderAll(); }
-function renderAll() { renderHeaderOnly(); renderNavOnly(); renderView(); }
-
-// ============ ANIMASI UANG ============
+}// ============ ANIMASI UANG ============
 let _cashRaf = null;
 function animateCash(from, to) {
     if (_cashRaf) { cancelAnimationFrame(_cashRaf); _cashRaf = null; }
