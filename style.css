@@ -999,3 +999,122 @@ body {
 }
 .wiz-name { font-size: 12.5px; font-weight: 600; }
 .wiz-meta { font-size: 11px; color: var(--text-mute); margin-top: 2px; }
+/* ===================== BATCH B — UI PRODUK & PASAR ===================== */
+
+/* Kartu produk */
+.prod-list { display: flex; flex-direction: column; gap: 8px; }
+.prod-card { cursor: pointer; }
+.prod-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+.prod-badge.selling { background: rgba(76,175,80,0.15); color: var(--accent); }
+.prod-badge.disc { background: rgba(255,255,255,0.05); color: var(--text-mute); }
+.prod-stats-mini {
+    display: flex;
+    gap: 12px;
+    font-size: 11.5px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+/* Wizard desain */
+.wiz-step-indicator {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin: 8px 0 4px;
+}
+.wiz-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #333;
+    transition: background 0.2s;
+}
+.wiz-dot.active { background: var(--accent); transform: scale(1.3); }
+.wiz-dot.done { background: var(--accent-dim); }
+
+.wiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.wiz-options-row {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scrollbar-width: none;
+}
+.wiz-options-row::-webkit-scrollbar { display: none; }
+
+.wiz-option {
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-size: 12.5px;
+    text-align: left;
+    cursor: pointer;
+    min-height: 44px;
+    min-width: 130px;
+    flex-shrink: 0;
+    font-family: inherit;
+    transition: border-color 0.15s, background 0.15s;
+}
+.wiz-option.selected {
+    border-color: var(--accent);
+    background: rgba(76,175,80,0.10);
+}
+.wiz-opt-name { font-weight: 600; }
+.wiz-opt-meta { font-size: 10.5px; color: var(--text-mute); margin-top: 2px; }
+
+.wiz-cat { margin-bottom: 14px; }
+.wiz-cat-title {
+    font-size: 11.5px;
+    color: var(--text-dim);
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+.wiz-empty {
+    font-size: 12px;
+    color: var(--text-mute);
+    padding: 8px 0;
+}
+
+.wiz-colors { display: flex; gap: 10px; flex-wrap: wrap; }
+.wiz-color {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.08s;
+}
+.wiz-color.selected { border-color: var(--accent); transform: scale(1.1); }
+
+.wiz-nav {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+/* Preview */
+.preview-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12.5px;
+    padding: 5px 0;
+    border-bottom: 1px dashed var(--border);
+}
+.preview-row:last-of-type { border-bottom: none; }
+.preview-row b { font-variant-numeric: tabular-nums; }
