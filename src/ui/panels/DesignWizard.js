@@ -1,8 +1,7 @@
 // FILE: src/ui/panels/DesignWizard.js
 // ============================================================
 // DesignWizard — wizard desain ponsel ERA-AWARE.
-// Komponen & form factor difilter otomatis berdasarkan tahun game.
-// Live preview: mockup SVG + radar chart.
+// Kamera bersifat OPSIONAL (ponsel budget bisa tanpa kamera).
 // ============================================================
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
@@ -18,6 +17,9 @@ import { getDesignEraForYear } from '../../data/era-design.data.js';
 
 let _wizardState = null;
 
+// Kategori yang boleh kosong
+const OPTIONAL_CATEGORIES = ['camera'];
+
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -30,7 +32,7 @@ function defaultState() {
         name: '',
         formFactorId: null,
         displayId: null,
-        cameraId: null,
+        cameraId: 'none',
         batteryId: null,
         chipId: null,
         networkId: null,
@@ -50,9 +52,7 @@ function filterComponentsByEra(catId) {
     const completed = state.get().research.completed || [];
     const all = getComponentsByCategory(catId);
     return all.filter(c => {
-        // Cek minYear
         if (typeof c.minYear === 'number' && year < c.minYear) return false;
-        // Cek research
         if (c.requiresResearch && !completed.includes(c.requiresResearch)) return false;
         return true;
     });
@@ -64,7 +64,6 @@ function filterFormFactorsByEra() {
     const all = COMPONENTS.filter(c => c.category === 'form_factor');
     return all.filter(f => {
         if (typeof f.minYear === 'number' && year < f.minYear) return false;
-        // Cek era whitelist (jika ada)
         if (Array.isArray(era.formFactors) && era.formFactors.length) {
             return era.formFactors.includes(f.id);
         }
@@ -75,9 +74,7 @@ function filterFormFactorsByEra() {
 function filterBodyColorsByEra() {
     const year = DesignEraService.getCurrentYear();
     const era = getDesignEraForYear(year);
-    if (!Array.isArray(era.bodyColors) || !era.bodyColors.length) {
-        return BODY_COLORS;
-    }
+    if (!Array.isArray(era.bodyColors) || !era.bodyColors.length) return BODY_COLORS;
     return BODY_COLORS.filter(c => era.bodyColors.includes(c.id));
 }
 
@@ -92,7 +89,6 @@ function filterBodiesByEra() {
     });
 }
 
-// Ambil era untuk banner
 function currentEraInfo() {
     const year = DesignEraService.getCurrentYear();
     return getDesignEraForYear(year);
@@ -107,15 +103,9 @@ export function openDesignWizard({ researchSystem, osSystem, productSystem }) {
         return;
     }
 
-    // Sanitasi default state dengan era saat ini
     const s = defaultState();
-    const year = DesignEraService.getCurrentYear();
-
-    // Set default form factor yang tersedia di era ini
     const ffs = filterFormFactorsByEra();
     if (ffs.length) s.formFactorId = ffs[ffs.length - 1].id;
-
-    // Set default body color
     const colors = filterBodyColorsByEra();
     if (colors.length) s.bodyColorId = colors[colors.length - 1].id;
 
@@ -131,7 +121,6 @@ function _render() {
     if (!s) return;
 
     const era = currentEraInfo();
-
     let body = '';
     if (s.step === 1)      body = _step1(s);
     else if (s.step === 2) body = _step2(s);
@@ -172,7 +161,7 @@ function _stepTitle(step) {
 }
 
 // ============================================================
-// BIND EVENTS
+// BIND
 // ============================================================
 function _bindStep() {
     const root = document.querySelector('[data-modal-id="design-wizard"]');
@@ -220,7 +209,6 @@ function _bindStep() {
     const confirmBtn = root.querySelector('[data-wiz-confirm]');
     if (confirmBtn) confirmBtn.addEventListener('click', () => _confirm());
 
-    // Live refresh preview saat pertama render (step 4)
     if (_wizardState.step === 4) {
         setTimeout(_refreshPreview, 50);
     }
@@ -236,8 +224,9 @@ function _next() {
         if (!s.formFactorId) { ToastService.warning('Pilih bentuk.'); return; }
     }
     if (s.step === 2) {
-        if (!s.displayId || !s.cameraId || !s.batteryId || !s.chipId || !s.networkId) {
-            ToastService.warning('Lengkapi semua komponen.');
+        // Kamera OPSIONAL — cek komponen wajib saja
+        if (!s.displayId || !s.batteryId || !s.chipId || !s.networkId) {
+            ToastService.warning('Lengkapi komponen wajib (layar, baterai, chip, jaringan).');
             return;
         }
     }
@@ -263,11 +252,12 @@ function _confirm() {
     const s = _wizardState;
     const game = window.__game;
     if (!game || !game.products) { ToastService.error('Sistem belum siap.'); return; }
+
     const res = game.products.confirmDesign({
         name: s.name.trim(),
         formFactorId: s.formFactorId,
         displayId: s.displayId,
-        cameraId: s.cameraId,
+        cameraId: (s.cameraId && s.cameraId !== 'none') ? s.cameraId : null,
         batteryId: s.batteryId,
         chipId: s.chipId,
         networkId: s.networkId,
@@ -288,7 +278,7 @@ function _confirm() {
 }
 
 // ============================================================
-// STEP 1 — NAMA & FORM FACTOR
+// STEP 1
 // ============================================================
 function _step1(s) {
     const ffs = filterFormFactorsByEra();
@@ -323,7 +313,7 @@ function _step1(s) {
 }
 
 // ============================================================
-// STEP 2 — KOMPONEN
+// STEP 2 — KOMPONEN (kamera opsional)
 // ============================================================
 function _step2(s) {
     const cats = ['display', 'camera', 'battery', 'chip', 'network'];
@@ -340,18 +330,38 @@ function _step2(s) {
         const list = filterComponentsByEra(catId);
         const stateKey = stateKeys[catId];
         const selected = s[stateKey];
+        const isOptional = OPTIONAL_CATEGORIES.includes(catId);
+
+        let options = list.map(c => `
+            <button class="wiz-option ${selected === c.id ? 'selected' : ''}" data-wiz-pick="${stateKey}:${c.id}">
+                <div class="wiz-opt-name">${escapeHtml(c.name)}</div>
+                <div class="wiz-opt-meta">$${c.costPerUnit}/unit</div>
+            </button>
+        `).join('');
+
+        // Tambahkan opsi "Tanpa X" untuk kategori opsional
+        if (isOptional) {
+            const noneLabel = catId === 'camera' ? 'Tanpa Kamera' : 'Tanpa ' + cat.name;
+            const noneMeta = catId === 'camera' ? 'Hemat biaya produksi' : 'Opsional';
+            const isNoneSelected = (!selected || selected === 'none');
+            options = `
+                <button class="wiz-option ${isNoneSelected ? 'selected' : ''}" data-wiz-pick="${stateKey}:none">
+                    <div class="wiz-opt-name">${noneLabel}</div>
+                    <div class="wiz-opt-meta">${noneMeta}</div>
+                </button>
+            ` + options;
+        }
+
+        // Jika tidak ada komponen sama sekali & tidak optional → tampilkan pesan
+        const totalCount = list.length + (isOptional ? 1 : 0);
+        if (totalCount === 0) {
+            options = `<div class="wiz-empty">Belum ada komponen — riset dulu atau tunggu tahun berikutnya.</div>`;
+        }
 
         return `
             <div class="wiz-cat">
-                <div class="wiz-cat-title">${cat.icon} ${cat.name} <span style="color:var(--text-mute);font-weight:500;">(${list.length})</span></div>
-                <div class="wiz-options-row">
-                    ${list.length ? list.map(c => `
-                        <button class="wiz-option ${selected === c.id ? 'selected' : ''}" data-wiz-pick="${stateKey}:${c.id}">
-                            <div class="wiz-opt-name">${escapeHtml(c.name)}</div>
-                            <div class="wiz-opt-meta">$${c.costPerUnit}/unit</div>
-                        </button>
-                    `).join('') : '<div class="wiz-empty">Belum ada komponen — riset dulu atau tunggu tahun berikutnya.</div>'}
-                </div>
+                <div class="wiz-cat-title">${cat.icon} ${cat.name} <span style="color:var(--text-mute);font-weight:500;">(${list.length}${isOptional ? ' + opsional' : ''})</span></div>
+                <div class="wiz-options-row">${options}</div>
             </div>
         `;
     }).join('');
@@ -375,7 +385,6 @@ function _step3(s) {
     const bodies = filterBodiesByEra();
     const colors = filterBodyColorsByEra();
 
-    // Jika color saat ini tidak tersedia, reset ke pertama
     if (colors.length && !colors.some(c => c.id === s.bodyColorId)) {
         s.bodyColorId = colors[0].id;
     }
@@ -429,7 +438,7 @@ function _step3(s) {
 }
 
 // ============================================================
-// STEP 4 — HARGA & PRODUKSI + PREVIEW
+// STEP 4 — HARGA + PREVIEW
 // ============================================================
 function _step4(s) {
     return `
@@ -462,13 +471,12 @@ function _step4(s) {
 }
 
 // ============================================================
-// LIVE PREVIEW UPDATE
+// LIVE PREVIEW
 // ============================================================
 function _refreshPreview() {
     const root = document.querySelector('[data-modal-id="design-wizard"]');
     if (!root) return;
 
-    // Update mockup
     const mockupContainer = root.querySelector('[data-wiz-mockup-container]');
     if (mockupContainer) {
         try {
@@ -479,7 +487,6 @@ function _refreshPreview() {
         }
     }
 
-    // Update radar
     const radarContainer = root.querySelector('[data-wiz-radar-container]');
     if (radarContainer) {
         try {
@@ -491,21 +498,16 @@ function _refreshPreview() {
         }
     }
 
-    // Update preview rows
     const previewEl = root.querySelector('[data-wiz-preview]');
     if (previewEl) previewEl.innerHTML = _previewHtml(_wizardState);
 }
 
-// ============================================================
-// STATS COMPUTE (untuk radar)
-// ============================================================
 function _computeStats(s) {
     const ps = window.__game && window.__game.products;
     if (ps && ps.computeStats) {
         try { return ps.computeStats(s); }
         catch (e) { /* fallback */ }
     }
-    // Fallback: hitung manual
     const stat = { display: 0, camera: 0, battery: 0, performance: 0, connectivity: 0, quality: 0, design: 0, usability: 0 };
     const map = {
         displayId: 'display', cameraId: 'camera', batteryId: 'battery',
@@ -526,9 +528,6 @@ function _computeStats(s) {
     return stat;
 }
 
-// ============================================================
-// PREVIEW HTML
-// ============================================================
 function _previewHtml(s) {
     const ps = window.__game && window.__game.products;
     if (!ps) return '<div style="font-size:12px;color:var(--text-mute);">Sistem belum siap.</div>';
@@ -539,6 +538,7 @@ function _previewHtml(s) {
         const demand = ps.estimateDemand ? ps.estimateDemand(s) : 0;
         const margin = (s.price || 0) - unitCost;
         const marginPct = s.price > 0 ? Math.round((margin / s.price) * 100) : 0;
+        const noCamera = !s.cameraId || s.cameraId === 'none';
 
         const warnings = [];
         if (stats.performance > 60 && stats.battery < 40) warnings.push('Chip kuat tapi baterai kecil.');
@@ -551,9 +551,10 @@ function _previewHtml(s) {
             <div class="preview-row"><span>Total biaya</span><b>$${totalCost.toLocaleString('en-US')}</b></div>
             <div class="preview-row"><span>Margin</span><b style="color:${margin >= 0 ? 'var(--success)' : 'var(--danger)'};">$${margin} (${marginPct}%)</b></div>
             <div class="preview-row"><span>Estimasi permintaan/hari</span><b>~${demand.toLocaleString('en-US')} unit</b></div>
+            ${noCamera ? '<div style="margin-top:8px;font-size:11px;color:var(--text-mute);">ℹ Ponsel ini tanpa kamera — pasar mungkin kurang tertarik.</div>' : ''}
             ${warnings.length ? `<div style="margin-top:8px;font-size:11px;color:var(--warn);line-height:1.5;">⚠ ${warnings.join('<br>⚠ ')}</div>` : ''}
         `;
     } catch (e) {
         return '<div style="font-size:12px;color:var(--danger);">Preview error: ' + escapeHtml(e.message) + '</div>';
     }
-        }
+}
