@@ -75,14 +75,36 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
 
         // ===== PASAR (diperluas Batch B) =====
         market: {
-            share: 0,
-            shareHistory: [],
-            competitors: [],
-            reputation: 10,
-            trends: null,      // { camera, battery, screen, performance, design } — 0-1
-            lastTrendUpdateMonth: null,
-            revenueHistory: [] // [{ year, month, playerRevenue, totalRevenue }] — untuk pangsa
-        },
+    share: 0,
+    shareHistory: [],
+    competitors: [],       // state AI runtime, diisi CompetitorSystem
+    reputation: 10,
+    trends: null,
+    lastTrendUpdateMonth: null,
+    revenueHistory: []
+},
+
+// ===== KOMPETITOR AI (Batch C) =====
+competitorState: {
+    // { id: { currentTier, currentShare, lastReleaseMonth, releases[], activeViralId } }
+    entities: {},
+    lastLifeEventYear: 2000
+},
+
+// ===== FEEDBACK PUBLIK (Batch C) =====
+feedback: {
+    sentiment: 50,
+    aspectSentiment: {
+        design: 50, camera: 50, battery: 50, performance: 50,
+        price: 50, reliability: 50, os: 50, support: 50
+    },
+    feed: [],              // 30 ulasan terbaru
+    activeViral: [],       // viral event yang sedang berjalan
+    viralHistory: [],      // viral event yang sudah lewat
+    suggestions: [],       // saran pelanggan aktif (maks 3)
+    perProductSatisfaction: {}, // { productId: score 0-100 }
+    competitorSentiment: {}     // { competitorId: score 0-100 }
+},
 
         events: {
             cooldownUntilMinute: 0,
