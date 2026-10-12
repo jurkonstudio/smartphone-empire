@@ -54,6 +54,7 @@ import * as marketingModule from './data/marketing.data.js';
 import * as feedbackModule from './data/feedback.data.js';
 import { getActiveRendererIdPublic } from './ui/notifications/NotificationRenderer.js';
 import { initSwipe, showSwipeAnimation } from './core/SwipeService.js';
+import { initNavSliderDrag } from './core/NavSliderDrag.js';
 
 // ============ INSTANCE ============
 var timeSystem  = new TimeSystem(state);
@@ -99,7 +100,7 @@ function renderHeaderOnly() {
 }
 
 // ============================================================
-// NAV RENDER — Liquid Glass Slider
+// NAV RENDER — Liquid Glass Slider (dengan drag support)
 // ============================================================
 function renderNavOnly() {
     if (!els.nav) return;
@@ -124,6 +125,9 @@ function renderNavOnly() {
 
 function updateNavSlider(animated) {
     if (!els.nav) return;
+    // Jangan override slider saat user sedang drag manual
+    if (els.nav.dataset.dragging === '1') return;
+
     var slider = els.nav.querySelector('.nav-slider');
     if (!slider) return;
 
@@ -632,9 +636,12 @@ async function boot() {
         timeSystem.start();
         SaveService.startAutoSave(function () { return state; });
 
-        // Update nav slider saat resize
+        // Update nav slider saat resize / rotasi
         window.addEventListener('resize', function () {
             updateNavSlider(false);
+        });
+        window.addEventListener('orientationchange', function () {
+            setTimeout(function () { updateNavSlider(false); }, 200);
         });
 
         var cash = state.get().cash;
@@ -643,6 +650,14 @@ async function boot() {
             animateCash(0, cash);
         }
 
+        // Init drag slider manual
+        initNavSliderDrag({
+            nav: els.nav,
+            getActiveView: function () { return activeView; },
+            navigate: navigate
+        });
+
+        // Init swipe navigation sub-tab
         initSwipe({
             getView: function () { return activeView; },
             getSubtab: function () {
