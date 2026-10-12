@@ -1,6 +1,4 @@
 // FILE: src/main.js — SAFE MODE
-// Menampilkan langkah boot di layar agar terlihat di mana error.
-
 const log = document.createElement('div');
 log.style.cssText = 'position:fixed;inset:0;background:#000;color:#0f0;font:12px monospace;padding:20px;padding-top:60px;z-index:99999;white-space:pre-wrap;overflow:auto;line-height:1.6;';
 log.textContent = 'MEMULAI BOOT...\n';
@@ -14,15 +12,13 @@ function step(msg) {
     log.scrollTop = log.scrollHeight;
     console.log('[SAFE]', msg);
 }
-
 function err(msg) {
     log.textContent += '❌ ' + msg + '\n';
     log.style.color = '#f44';
-    console.error('[SAFE-ERR]', msg);
     log.scrollTop = log.scrollHeight;
+    console.error('[SAFE-ERR]', msg);
 }
 
-// Tangkap error global
 window.addEventListener('error', function (e) {
     err('Global error: ' + (e.message || e.error));
 });
@@ -32,87 +28,67 @@ window.addEventListener('unhandledrejection', function (e) {
 
 (async function () {
     try {
-        step('1. Import config/app.config.js');
+        step('1. Import APP_CONFIG');
         const { APP_CONFIG } = await import('./config/app.config.js');
-        step('   OK, nama app: ' + APP_CONFIG.name);
 
-        step('2. Import config/constants.js');
+        step('2. Import constants');
         const { VIEW_TITLES } = await import('./config/constants.js');
-        step('   OK');
 
-        step('3. Import core/EventBus.js');
+        step('3. Import EventBus');
         const { bus } = await import('./core/EventBus.js');
-        step('   OK');
 
-        step('4. Import core/GameState.js');
+        step('4. Import GameState');
         const { state } = await import('./core/GameState.js');
-        step('   OK, cash: ' + state.get().cash);
 
-        step('5. Import core/TimeSystem.js');
+        step('5. Import TimeSystem');
         const { TimeSystem } = await import('./core/TimeSystem.js');
-        step('   OK');
 
-        step('6. Import core/SaveService.js');
+        step('6. Import SaveService');
         const { SaveService } = await import('./core/SaveService.js');
-        step('   OK');
 
-        step('7. Import core/ToastService.js');
+        step('7. Import ToastService');
         const { ToastService } = await import('./core/ToastService.js');
-        step('   OK');
 
-        step('8. Import systems/EconomySystem.js');
+        step('8. Import EconomySystem');
         const { EconomySystem } = await import('./systems/EconomySystem.js');
-        step('   OK');
 
-        step('9. Import systems/QuestSystem.js');
+        step('9. Import QuestSystem');
         const { QuestSystem } = await import('./systems/QuestSystem.js');
-        step('   OK');
 
-        step('10. Import systems/TutorialSystem.js');
+        step('10. Import TutorialSystem');
         const { TutorialSystem } = await import('./systems/TutorialSystem.js');
-        step('   OK');
 
-        step('11. Import ui/panels/DashboardPanel.js');
+        step('11. Import DashboardPanel');
         const { renderDashboard } = await import('./ui/panels/DashboardPanel.js');
-        step('   OK');
 
-        step('12. Import ui/panels/SettingsPanel.js');
+        step('12. Import SettingsPanel');
         const { renderSettingsPanel, bindSettingsActions } = await import('./ui/panels/SettingsPanel.js');
-        step('   OK');
 
-        step('13. Import ui/panels/GuidePanel.js');
+        step('13. Import GuidePanel');
         const { renderGuidePanel } = await import('./ui/panels/GuidePanel.js');
-        step('   OK');
 
-        step('14. Import ui/panels/ToastContainer.js');
+        step('14. Import ToastContainer');
         const { mountToastContainer } = await import('./ui/panels/ToastContainer.js');
-        step('   OK');
 
-        step('15. Import ui/panels/CashChart.js');
+        step('15. Import CashChart');
         const { drawCashChart } = await import('./ui/panels/CashChart.js');
-        step('   OK');
 
-        step('16. Import ui/panels/TutorialOverlay.js');
+        step('16. Import TutorialOverlay');
         const { initTutorialOverlay } = await import('./ui/panels/TutorialOverlay.js');
-        step('   OK');
 
-        step('17. Import ui/panels/OnboardingModal.js');
+        step('17. Import OnboardingModal');
         const { showOnboarding } = await import('./ui/panels/OnboardingModal.js');
-        step('   OK');
 
-        step('18. Import ui/panels/MonthlySummaryModal.js');
+        step('18. Import MonthlySummaryModal');
         const { initMonthlySummary } = await import('./ui/panels/MonthlySummaryModal.js');
-        step('   OK');
 
-        step('19. Import ui/panels/GameOverScreen.js');
+        step('19. Import GameOverScreen');
         const { initGameOverScreen } = await import('./ui/panels/GameOverScreen.js');
-        step('   OK');
 
-        step('20. Import ui/modal.js');
+        step('20. Import Modal');
         const { Modal } = await import('./ui/modal.js');
-        step('   OK');
 
-        step('21. Cek elemen DOM');
+        step('21. Cek DOM');
         const els = {
             header: document.getElementById('app-header'),
             view: document.getElementById('app-view'),
@@ -120,92 +96,69 @@ window.addEventListener('unhandledrejection', function (e) {
             toast: document.getElementById('toast-container')
         };
         step('   header=' + !!els.header + ' view=' + !!els.view + ' nav=' + !!els.nav + ' toast=' + !!els.toast);
-        if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML tidak lengkap');
 
         step('22. Init instances');
         const timeSystem = new TimeSystem(state);
         const economy = new EconomySystem(state);
         const quests = new QuestSystem(state);
         const tutorial = new TutorialSystem(state);
-        step('   OK');
 
-        step('23. Cek save tersimpan');
-        step('   hasSave=' + SaveService.hasSave());
+        step('23. Cek save');
         if (SaveService.hasSave()) {
             const saved = SaveService.load();
-            if (saved) {
-                state.hydrate(saved);
-                step('   Hydrate OK');
-            }
+            if (saved) { state.hydrate(saved); step('   Hydrate OK'); }
         } else {
-            step('   Tidak ada save, akan onboarding');
-            step('24. Panggil showOnboarding() — akan muncul modal');
+            step('24. Onboarding');
             const onb = await showOnboarding();
-            step('   Onboarding selesai: ' + JSON.stringify(onb));
+            step('   Onboarding OK: ' + JSON.stringify(onb));
             state.patch({ companyName: onb.companyName, difficulty: onb.difficulty });
             const mod = await import('./data/balance.data.js');
             const starting = mod.BALANCE.startingCash[onb.difficulty] || mod.BALANCE.startingCash.normal;
             state.setCash(starting);
             state.addMilestone('founded', 'Perusahaan ' + onb.companyName + ' didirikan.');
-            state.addLog('Perusahaan ' + onb.companyName + ' didirikan dengan modal $' + starting.toLocaleString('en-US') + '.', 'success');
+            state.addLog('Perusahaan didirikan.', 'success');
             SaveService.save(state);
-            step('   Save awal OK');
         }
 
         step('25. Start systems');
         economy.start();
         quests.start();
         tutorial.start();
-        step('   OK');
 
-        step('26. Toast container mount');
+        step('26. Mount toast');
         mountToastContainer(els.toast);
-        step('   OK');
 
         step('27. Tutorial overlay');
         initTutorialOverlay();
-        step('   OK');
 
         step('28. Monthly summary');
         initMonthlySummary();
-        step('   OK');
 
-        step('29. Game over screen');
+        step('29. Game over');
         initGameOverScreen();
-        step('   OK');
 
         step('30. Render dashboard');
         els.view.innerHTML = renderDashboard(state.get(), timeSystem.snapshot());
-        step('   OK');
 
         step('31. Draw chart');
         const chart = els.view.querySelector('.chart-wrap');
         if (chart) drawCashChart(chart);
-        step('   OK');
 
         step('32. Start TimeSystem');
         timeSystem.start();
-        step('   OK');
 
-        step('33. Start autosave');
+        step('33. Autosave');
         SaveService.startAutoSave(function () { return state; });
-        step('   OK');
 
         step('✅✅✅ BOOT BERHASIL ✅✅✅');
-        step('Menghapus log dalam 3 detik...');
+        step('Reload otomatis dalam 3 detik...');
 
-        window.__game = { state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial, SaveService: SaveService };
-
-        setTimeout(function () {
-            log.remove();
-            window.location.reload(); // reload untuk memuat main.js normal
-        }, 3000);
+        setTimeout(function () { window.location.reload(); }, 3000);
 
     } catch (e) {
         err('===========================================');
-        err('BOOT GAGAL DI LANGKAH DI ATAS');
+        err('BOOT GAGAL');
         err('Error: ' + e.message);
-        err('Stack: ' + (e.stack || ''));
         err('===========================================');
     }
 })();
