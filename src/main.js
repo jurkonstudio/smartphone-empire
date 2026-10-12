@@ -6,6 +6,7 @@ import { state } from './core/GameState.js';
 import { TimeSystem } from './core/TimeSystem.js';
 import { SaveService } from './core/SaveService.js';
 import { ToastService } from './core/ToastService.js';
+import { ThemeService } from './core/ThemeService.js';
 import { EconomySystem } from './systems/EconomySystem.js';
 import { QuestSystem } from './systems/QuestSystem.js';
 import { TutorialSystem } from './systems/TutorialSystem.js';
@@ -23,6 +24,7 @@ import { renderDashboard } from './ui/panels/DashboardPanel.js';
 import { renderEmptyState } from './ui/panels/EmptyState.js';
 import { renderSettingsPanel, bindSettingsActions } from './ui/panels/SettingsPanel.js';
 import { renderGuidePanel } from './ui/panels/GuidePanel.js';
+import { renderCompanyProfilePanel } from './ui/panels/CompanyProfilePanel.js';
 import { mountToastContainer } from './ui/panels/ToastContainer.js';
 import { drawCashChart } from './ui/panels/CashChart.js';
 import { initTutorialOverlay } from './ui/panels/TutorialOverlay.js';
@@ -99,6 +101,7 @@ function renderView() {
     let html = '';
     switch (activeView) {
         case 'dashboard': html = renderDashboard(state.get(), getTime(), research, teamSystem); break;
+        case 'profile':   html = renderCompanyProfilePanel({ teamSystem, marketSystem: market, competitors, opinionSystem: opinion }); break;
         case 'team':      html = renderTeamPanel({ subtab: activeTeamSubtab, teamSystem }); break;
         case 'research':  html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os }); break;
         case 'products':  html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os }); break;
@@ -510,6 +513,9 @@ async function boot() {
     try {
         if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML utama tidak ditemukan.');
 
+        // Theme lebih dulu sebelum render apa pun
+        ThemeService.init();
+
         mountToastContainer(els.toast);
         initTutorialOverlay();
         initMonthlySummary();
@@ -563,6 +569,7 @@ async function boot() {
         window.__game = {
             state, bus, timeSystem, economy, quests, tutorial,
             research, os, products, market, competitors, opinion, eraSystem, teamSystem,
+            ThemeService,
             SaveService, ToastService, Modal, navigate, render: renderAll,
             modules: {
                 marketing: marketingModule,
@@ -618,7 +625,11 @@ async function boot() {
                     teamSystem.refreshCandidates();
                     renderAll();
                     return { count: state.get().candidates.length };
-                }
+                },
+                // Theme cheats
+                setTheme: function (id) { ThemeService.setTheme(id); window.__game.render(); return { theme: id }; },
+                setAccent: function (id) { ThemeService.setAccent(id); window.__game.render(); return { accent: id }; },
+                toggleTheme: function () { ThemeService.toggleTheme(); window.__game.render(); return { theme: ThemeService.getTheme() }; }
             }
         };
 
