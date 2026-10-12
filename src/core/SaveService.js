@@ -9,7 +9,7 @@ const AUTOSAVE_INTERVAL_MS = 30000;
 export const SaveService = {
     _timerId: null,
 
-    save(state) {
+    save: function (state) {
         try {
             const payload = {
                 version: SCHEMA_VERSION,
@@ -26,13 +26,12 @@ export const SaveService = {
         }
     },
 
-    load() {
+    load: function () {
         try {
             const raw = localStorage.getItem(SAVE_KEY);
             if (!raw) return null;
             const payload = JSON.parse(raw);
             if (!payload || typeof payload !== 'object') return null;
-            // Terima versi apa pun — migrateV1toV2 di GameState.hydrate akan tangani
             return payload.data;
         } catch (err) {
             console.error('[SaveService] Gagal memuat:', err);
@@ -40,7 +39,7 @@ export const SaveService = {
         }
     },
 
-    clear() {
+    clear: function () {
         try {
             localStorage.removeItem(SAVE_KEY);
             bus.emit('save:cleared');
@@ -51,13 +50,12 @@ export const SaveService = {
         }
     },
 
-    hasSave() {
+    hasSave: function () {
         try { return !!localStorage.getItem(SAVE_KEY); }
-        catch { return false; }
+        catch (e) { return false; }
     },
 
-    // Export sebagai string JSON (untuk backup manual di HP)
-    export(state) {
+    export: function (state) {
         try {
             const payload = {
                 version: SCHEMA_VERSION,
@@ -71,8 +69,7 @@ export const SaveService = {
         }
     },
 
-    // Import dari string JSON. Return objek data | null.
-    parseImport(text) {
+    parseImport: function (text) {
         try {
             const payload = JSON.parse(text);
             if (!payload || typeof payload !== 'object') return null;
@@ -84,16 +81,17 @@ export const SaveService = {
         }
     },
 
-    startAutoSave(getState) {
+    startAutoSave: function (getState) {
+        const self = this;
         if (this._timerId !== null) return;
-        this._timerId = setInterval(() => {
+        this._timerId = setInterval(function () {
             if (document.visibilityState !== 'visible') return;
-            if (getState().data.gameOver) return; // jangan autosave saat game over
-            this.save(getState());
+            if (getState().data.gameOver) return;
+            self.save(getState());
         }, AUTOSAVE_INTERVAL_MS);
     },
 
-    stopAutoSave() {
+    stopAutoSave: function () {
         if (this._timerId !== null) {
             clearInterval(this._timerId);
             this._timerId = null;
