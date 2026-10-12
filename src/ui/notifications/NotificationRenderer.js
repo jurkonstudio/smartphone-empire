@@ -1,17 +1,10 @@
 // FILE: src/ui/notifications/NotificationRenderer.js
-// ============================================================
-// NotificationRenderer — dispatcher + 4 renderer per era.
-// Signature: renderNotification(container, { message, type, durationMs })
-// type: info | success | error | warning
-// ============================================================
+// Dispatcher + 4 renderer per era, dengan support action button.
 import { state } from '../../core/GameState.js';
 import { getEraById, getEraForYear, UI_ERAS } from '../../data/ui-era.data.js';
 
-const VALID_RENDERERS = ['classic', 'glossy', 'flat', 'dynamic_island'];
+var VALID_RENDERERS = ['classic', 'glossy', 'flat', 'dynamic_island'];
 
-// ============================================================
-// UTILITAS
-// ============================================================
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -20,164 +13,184 @@ function escapeHtml(s) {
 
 function iconForType(type, eraStyle) {
     if (eraStyle === 'lcd') {
-        const map = { info: '■', success: '■', warning: '▲', error: '×' };
-        return map[type] || '■';
+        var mapA = { info: '#', success: '#', warning: '!', error: 'x' };
+        return mapA[type] || '#';
     }
-    const map = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌' };
-    return map[type] || 'ℹ️';
+    var mapB = { info: 'i', success: 'OK', warning: '!', error: 'X' };
+    return mapB[type] || 'i';
 }
 
 function colorForType(type) {
-    const map = {
+    var map = {
         info:    '#2196F3',
         success: '#4CAF50',
         warning: '#FF9800',
-        error:   '#EF4444'
+        error:   '#EF4444',
+        news:    '#8b5cf6'
     };
     return map[type] || '#2196F3';
 }
 
-// Ambil renderer aktif — sudah diperkuat guard untuk state.era invalid
 function getActiveRendererId() {
-    let data;
+    var data;
     try { data = state.get(); }
     catch (e) { return 'classic'; }
 
-    const eraId = (data && data.era) ? data.era : null;
+    var eraId = (data && data.era) ? data.era : null;
 
-    // Coba cari dari eraId
     if (eraId) {
-        const eraDef = UI_ERAS.find(e => e.id === eraId);
-        if (eraDef && VALID_RENDERERS.includes(eraDef.renderer)) return eraDef.renderer;
+        for (var i = 0; i < UI_ERAS.length; i++) {
+            if (UI_ERAS[i].id === eraId && VALID_RENDERERS.indexOf(UI_ERAS[i].renderer) !== -1) {
+                return UI_ERAS[i].renderer;
+            }
+        }
     }
 
-    // Fallback: cari dari tahun
     try {
-        const year = data && data.time ? data.time.currentYear : 2000;
-        const eraByYear = getEraForYear(year);
-        if (eraByYear && VALID_RENDERERS.includes(eraByYear.renderer)) return eraByYear.renderer;
+        var year = data && data.time ? data.time.currentYear : 2000;
+        var eraByYear = getEraForYear(year);
+        if (eraByYear && VALID_RENDERERS.indexOf(eraByYear.renderer) !== -1) return eraByYear.renderer;
     } catch (e) {}
 
     return 'classic';
 }
 
 function scheduleDismiss(node, durationMs, onEnd) {
-    let removed = false;
-    const doRemove = () => {
+    var removed = false;
+    function doRemove() {
         if (removed) return;
         removed = true;
         if (!node.parentNode) return;
         node.classList.add('notif-out');
-        setTimeout(() => {
+        setTimeout(function () {
             if (node.parentNode) node.remove();
             if (typeof onEnd === 'function') onEnd();
         }, 300);
-    };
-    const t1 = setTimeout(doRemove, durationMs || 2800);
-    // Fallback total jika setTimeout di-throttle di background tab
-    const t2 = setTimeout(() => {
-        if (node.parentNode) node.remove();
-    }, (durationMs || 2800) + 1500);
-    return () => { clearTimeout(t1); clearTimeout(t2); doRemove(); };
+    }
+    var t1 = setTimeout(doRemove, durationMs || 2800);
+    var t2 = setTimeout(function () { if (node.parentNode) node.remove(); }, (durationMs || 2800) + 1500);
+    return function () { clearTimeout(t1); clearTimeout(t2); doRemove(); };
 }
 
-// Fallback minimal — tidak bergantung CSS kelas
-function renderFallback(container, { message, durationMs }) {
-    const node = document.createElement('div');
+function renderFallback(container, payload) {
+    var node = document.createElement('div');
     node.style.cssText = 'background:#202020;color:#fff;padding:12px 16px;border-radius:8px;border:1px solid #333;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,0.5);max-width:calc(100vw - 40px);word-wrap:break-word;';
-    node.textContent = message || '';
+    node.textContent = payload.message || '';
     container.appendChild(node);
-    scheduleDismiss(node, durationMs || 2800);
+    scheduleDismiss(node, payload.durationMs || 2800);
 }
 
 // ============================================================
-// ERA 1 — CLASSIC (LCD MONOKROM)
+// Action Button helper — dipasang di semua renderer
 // ============================================================
-function renderClassic(container, { message, type, durationMs }) {
-    const node = document.createElement('div');
-    node.className = 'notif-classic notif-' + (type || 'info');
-    node.innerHTML = `
-        <div class="notif-classic-head">
-            <span class="notif-classic-ico">${iconForType(type, 'lcd')}</span>
-            <span class="notif-classic-title">${escapeHtml((type || 'INFO').toUpperCase())}</span>
-        </div>
-        <div class="notif-classic-body">${escapeHtml(message)}</div>
-        <div class="notif-classic-bar"></div>
-    `;
-    container.appendChild(node);
-    scheduleDismiss(node, durationMs || 2500);
+function attachActionButton(node, container, payload) {
+    if (!payload || !payload.action || typeof payload.action.onClick !== 'function') return;
+    var btn = document.createElement('button');
+    btn.className = 'notif-action-btn';
+    btn.textContent = payload.action.label || 'Baca';
+    btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        try { payload.action.onClick(); }
+        catch (err) { console.error('[Notif] action error:', err); }
+        // dismiss saat diklik
+        if (node.parentNode) {
+            node.classList.add('notif-out');
+            setTimeout(function () { if (node.parentNode) node.remove(); }, 300);
+        }
+    });
+    node.appendChild(btn);
 }
 
 // ============================================================
-// ERA 2 — GLOSSY (iOS 6 STYLE)
+// ERA 1 — CLASSIC
 // ============================================================
-function renderGlossy(container, { message, type, durationMs }) {
-    const accent = colorForType(type);
-    const node = document.createElement('div');
-    node.className = 'notif-glossy notif-' + (type || 'info');
-    node.innerHTML = `
-        <div class="notif-glossy-icon" style="background:${accent};">
-            <span>${iconForType(type, 'modern')}</span>
-        </div>
-        <div class="notif-glossy-content">
-            <div class="notif-glossy-text">${escapeHtml(message)}</div>
-        </div>
-    `;
+function renderClassic(container, payload) {
+    var node = document.createElement('div');
+    node.className = 'notif-classic notif-' + (payload.type || 'info');
+    node.innerHTML =
+        '<div class="notif-classic-head">' +
+        '<span class="notif-classic-ico">' + iconForType(payload.type, 'lcd') + '</span>' +
+        '<span class="notif-classic-title">' + escapeHtml((payload.type || 'INFO').toUpperCase()) + '</span>' +
+        '</div>' +
+        '<div class="notif-classic-body">' + escapeHtml(payload.message) + '</div>' +
+        '<div class="notif-classic-bar"></div>';
     container.appendChild(node);
-    scheduleDismiss(node, durationMs || 3000);
+    attachActionButton(node, container, payload);
+    scheduleDismiss(node, payload.durationMs || 2500);
 }
 
 // ============================================================
-// ERA 3 — FLAT (MATERIAL DESIGN)
+// ERA 2 — GLOSSY
 // ============================================================
-function renderFlat(container, { message, type, durationMs }) {
-    const accent = colorForType(type);
-    const node = document.createElement('div');
-    node.className = 'notif-flat notif-' + (type || 'info');
-    node.innerHTML = `
-        <div class="notif-flat-accent" style="background:${accent};"></div>
-        <div class="notif-flat-icon" style="background:${accent}22;color:${accent};">
-            <span>${iconForType(type, 'modern')}</span>
-        </div>
-        <div class="notif-flat-body">
-            <div class="notif-flat-msg">${escapeHtml(message)}</div>
-        </div>
-    `;
+function renderGlossy(container, payload) {
+    var accent = colorForType(payload.type);
+    var node = document.createElement('div');
+    node.className = 'notif-glossy notif-' + (payload.type || 'info');
+    node.innerHTML =
+        '<div class="notif-glossy-icon" style="background:' + accent + ';">' +
+        '<span>' + iconForType(payload.type, 'modern') + '</span>' +
+        '</div>' +
+        '<div class="notif-glossy-content">' +
+        '<div class="notif-glossy-text">' + escapeHtml(payload.message) + '</div>' +
+        '</div>';
     container.appendChild(node);
-    scheduleDismiss(node, durationMs || 3200);
+    attachActionButton(node, container, payload);
+    scheduleDismiss(node, payload.durationMs || 3000);
+}
+
+// ============================================================
+// ERA 3 — FLAT
+// ============================================================
+function renderFlat(container, payload) {
+    var accent = colorForType(payload.type);
+    var node = document.createElement('div');
+    node.className = 'notif-flat notif-' + (payload.type || 'info');
+    node.innerHTML =
+        '<div class="notif-flat-accent" style="background:' + accent + ';"></div>' +
+        '<div class="notif-flat-icon" style="background:' + accent + '22;color:' + accent + ';">' +
+        '<span>' + iconForType(payload.type, 'modern') + '</span>' +
+        '</div>' +
+        '<div class="notif-flat-body">' +
+        '<div class="notif-flat-msg">' + escapeHtml(payload.message) + '</div>' +
+        '</div>';
+    container.appendChild(node);
+    attachActionButton(node, container, payload);
+    scheduleDismiss(node, payload.durationMs || 3200);
 }
 
 // ============================================================
 // ERA 4 — DYNAMIC ISLAND
 // ============================================================
-function renderDynamicIsland(container, { message, type, durationMs }) {
-    const accent = colorForType(type);
-    const node = document.createElement('div');
-    node.className = 'notif-island notif-' + (type || 'info');
+function renderDynamicIsland(container, payload) {
+    var accent = colorForType(payload.type);
+    var node = document.createElement('div');
+    node.className = 'notif-island notif-' + (payload.type || 'info');
 
-    node.innerHTML = `
-        <div class="notif-island-compact">
-            <span class="notif-island-ico" style="color:${accent};">
-                ${iconForType(type, 'modern')}
-            </span>
-            <span class="notif-island-text-compact">${escapeHtml(message)}</span>
-            <span class="notif-island-dot" style="background:${accent};"></span>
-        </div>
-        <div class="notif-island-expanded">
-            <div class="notif-island-expanded-head">
-                <span class="notif-island-ico-big" style="color:${accent};">
-                    ${iconForType(type, 'modern')}
-                </span>
-                <span class="notif-island-type">${escapeHtml((type || 'INFO').toUpperCase())}</span>
-            </div>
-            <div class="notif-island-text-full">${escapeHtml(message)}</div>
-        </div>
-    `;
+    node.innerHTML =
+        '<div class="notif-island-compact">' +
+        '<span class="notif-island-ico" style="color:' + accent + ';">' +
+        iconForType(payload.type, 'modern') +
+        '</span>' +
+        '<span class="notif-island-text-compact">' + escapeHtml(payload.message) + '</span>' +
+        '<span class="notif-island-dot" style="background:' + accent + ';"></span>' +
+        '</div>' +
+        '<div class="notif-island-expanded">' +
+        '<div class="notif-island-expanded-head">' +
+        '<span class="notif-island-ico-big" style="color:' + accent + ';">' +
+        iconForType(payload.type, 'modern') +
+        '</span>' +
+        '<span class="notif-island-type">' + escapeHtml((payload.type || 'INFO').toUpperCase()) + '</span>' +
+        '</div>' +
+        '<div class="notif-island-text-full">' + escapeHtml(payload.message) + '</div>' +
+        '</div>';
 
-    let expanded = false;
-    let dismissHandle = null;
+    var expanded = false;
+    var dismissHandle = null;
 
-    node.addEventListener('click', (e) => {
+    node.addEventListener('click', function (e) {
+        // Kalau klik di tombol action, jangan toggle expand
+        if (e.target && e.target.classList && e.target.classList.contains('notif-action-btn')) return;
+
         e.stopPropagation();
         if (!expanded) {
             node.classList.add('expanded');
@@ -188,13 +201,14 @@ function renderDynamicIsland(container, { message, type, durationMs }) {
     });
 
     container.appendChild(node);
-    dismissHandle = scheduleDismiss(node, durationMs || 5000);
+    attachActionButton(node, container, payload);
+    dismissHandle = scheduleDismiss(node, payload.durationMs || 5000);
 }
 
 // ============================================================
 // DISPATCHER
 // ============================================================
-const RENDERERS = {
+var RENDERERS = {
     classic:        renderClassic,
     glossy:         renderGlossy,
     flat:           renderFlat,
@@ -203,8 +217,8 @@ const RENDERERS = {
 
 export function renderNotification(container, payload) {
     if (!container) return;
-    const rendererId = getActiveRendererId();
-    const renderer = RENDERERS[rendererId];
+    var rendererId = getActiveRendererId();
+    var renderer = RENDERERS[rendererId];
     if (!renderer) {
         renderFallback(container, payload);
         return;
