@@ -96,9 +96,15 @@ function renderNavOnly() {
     els.nav.innerHTML = renderMobileNav({ active: activeView });
 }
 
-// ============ RENDER VIEW (defensive) ============
-function renderView() {
+// ============ RENDER VIEW (defensive + keepScroll) ============
+// opts.keepScroll = true  → pertahankan posisi scroll (untuk re-render dari event)
+// opts.keepScroll = false → reset scroll ke atas (untuk pindah tab / sub-tab)
+function renderView(opts) {
     if (!els.view) return;
+
+    const keepScroll = !!(opts && opts.keepScroll);
+    const prevScroll = els.view.scrollTop;
+
     let html = '';
     try {
         switch (activeView) {
@@ -124,7 +130,14 @@ function renderView() {
                '</span></div></div>';
     }
     els.view.innerHTML = html;
-    els.view.scrollTop = 0;
+
+    // Restore scroll kalau keepScroll = true
+    if (keepScroll) {
+        els.view.scrollTop = prevScroll;
+        requestAnimationFrame(() => { if (els.view) els.view.scrollTop = prevScroll; });
+    } else {
+        els.view.scrollTop = 0;
+    }
 
     try {
         if (activeView === 'dashboard') {
@@ -451,8 +464,11 @@ function bindProgressEvents() {
         if (barEl) barEl.style.width = data.percentOverall + '%';
         if (etaEl) etaEl.textContent = 'Sisa ~' + data.remainingDays + ' hari di tahap ini';
     });
+    // === KEEP SCROLL: re-render karena hari berubah → jangan reset scroll ===
     bus.on('time:day-changed', () => {
-        if (activeView === 'research' || activeView === 'products' || activeView === 'market' || activeView === 'team') renderView();
+        if (activeView === 'research' || activeView === 'products' || activeView === 'market' || activeView === 'team') {
+            renderView({ keepScroll: true });
+        }
     });
 }
 
@@ -471,17 +487,19 @@ function bindTimeEvents() {
         if (c) c.textContent = hh + ':' + mm;
         if (s) { s.textContent = t.isPaused ? 'Paused' : (t.gameSpeed + 'x'); s.classList.toggle('running', !t.isPaused); }
     });
-    bus.on('time:day-changed', function () { if (activeView === 'dashboard') renderView(); });
+    // === KEEP SCROLL: hari berubah di dashboard → jangan reset scroll ===
+    bus.on('time:day-changed', function () { if (activeView === 'dashboard') renderView({ keepScroll: true }); });
     bus.on('time:speed-changed', function () { renderHeaderOnly(); });
 }
 
 // ============ STATE EVENTS ============
 function bindStateEvents() {
     bus.on('state:cash-changed', function (data) { animateCash(data.prev, data.next); });
-    bus.on('state:log-changed', function () { if (activeView === 'dashboard') renderView(); });
-    bus.on('state:milestone-added', function () { if (activeView === 'dashboard') renderView(); });
+    // === KEEP SCROLL: log & milestone update → jangan reset scroll ===
+    bus.on('state:log-changed', function () { if (activeView === 'dashboard') renderView({ keepScroll: true }); });
+    bus.on('state:milestone-added', function () { if (activeView === 'dashboard') renderView({ keepScroll: true }); });
     bus.on('quest:completed', function (data) { ToastService.success('Quest selesai: ' + data.title); vibrate(20); });
-    bus.on('quest:activated', function () { if (activeView === 'dashboard') renderView(); });
+    bus.on('quest:activated', function () { if (activeView === 'dashboard') renderView({ keepScroll: true }); });
     bus.on('economy:warn-burnrate', function (data) {
         _burnWarn = 'Sisa ' + data.monthsLeft + ' bln';
         renderHeaderOnly();
@@ -496,11 +514,12 @@ function bindStateEvents() {
     bus.on('settings:changed', function () {});
     bus.on('tutorial:restart', function () { tutorial.restart(); });
     bus.on('era:changed', function () { renderAll(); });
+    // === KEEP SCROLL: tim berubah → jangan reset scroll ===
     bus.on('team:changed', function () {
-        if (activeView === 'dashboard' || activeView === 'team') renderView();
+        if (activeView === 'dashboard' || activeView === 'team') renderView({ keepScroll: true });
     });
-    bus.on('team:recruited', function () { if (activeView === 'team') renderView(); });
-    bus.on('team:fired', function () { if (activeView === 'team') renderView(); });
+    bus.on('team:recruited', function () { if (activeView === 'team') renderView({ keepScroll: true }); });
+    bus.on('team:fired', function () { if (activeView === 'team') renderView({ keepScroll: true }); });
 }
 
 // ============ BOOT ============
@@ -537,7 +556,6 @@ async function boot() {
         tutorial.start();
         teamSystem.start();
 
-        // Safety: kalau candidates kosong setelah start
         if (!state.get().candidates || state.get().candidates.length === 0) {
             teamSystem.refreshCandidates();
         }
@@ -549,7 +567,6 @@ async function boot() {
         market.start();
         opinion.start();
 
-        // ============ EXPOSE GLOBAL SEBELUM RENDER ============
         window.__game = {
             state, bus, timeSystem, economy, quests, tutorial,
             research, os, products, market, competitors, opinion, eraSystem, teamSystem,
@@ -616,12 +633,10 @@ async function boot() {
             }
         };
 
-        // FIX: expose `render` global supaya file lain yang panggil render() tidak error
         window.render = renderAll;
         window.navigate = navigate;
         window.renderAll = renderAll;
 
-        // ============ RENDER & BIND ============
         renderAll();
         bindGlobalClicks();
         bindTimeEvents();
