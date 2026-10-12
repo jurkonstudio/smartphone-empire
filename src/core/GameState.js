@@ -66,28 +66,32 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             nextProductId: 1
         },
 
-        // ===== CHIP (BARU) =====
         chips: {
-            catalog: [],       // Chip yang sudah selesai dirancang
-            designing: null,   // Chip yang sedang didesain
+            catalog: [],
+            designing: null,
             nextChipId: 1
         },
 
-        // ===== FAB (BARU) =====
         fab: {
             built: false,
-            level: 0,          // 0=none, 1=small, 2=medium, 3=large, 4=mega
+            level: 0,
             builtAtMinute: 0,
-            upgrade: null,     // { targetLevel, progressDays, durationDays, cost, startedAtMinute, lastProcessedMinute }
-            producing: null,   // { chipId, qty, progressUnits, totalUnits, startedAtMinute, lastProcessedMinute }
-            inventory: 0,      // Chip siap pakai di fab (dari produksi internal)
-            history: [],       // Riwayat produksi
+            upgrade: null,
+            producing: null,
+            inventory: 0,
+            history: [],
             totalProduced: 0,
             lastYieldRate: 1.0
         },
 
         marketing: { activeCampaigns: [] },
         reviews: { feed: [] },
+
+        // ===== NEWS (BARU) =====
+        news: {
+            articles: [],
+            lastMilestone: {}
+        },
 
         market: {
             share: 0,
@@ -226,7 +230,6 @@ class GameState {
         return Math.floor(m / perDay);
     }
 
-    // ============== KEUANGAN ==============
     setCash(newCash) {
         const prev = this.data.cash;
         if (prev === newCash) return;
@@ -240,7 +243,6 @@ class GameState {
         this.setCash(this.data.cash + delta);
     }
 
-    // ============== TIM ==============
     setTeam(team) {
         this.data.team = { ...this.data.team, ...team };
         bus.emit('team:changed', this.data.team);
@@ -269,7 +271,6 @@ class GameState {
         return (t.engineers * s.engineer) + (t.designers * s.designer) + (t.marketers * s.marketer);
     }
 
-    // ============== LOG ==============
     addLog(text, type = LOG_TYPES.info) {
         const t = this.data.time;
         const entry = {
@@ -322,14 +323,12 @@ class GameState {
     }
     addSentiment(delta) { this.setSentiment((this.data.feedback.sentiment || 50) + delta); }
 
-    // ============== SERIALISASI ==============
     serialize() { return JSON.parse(JSON.stringify(this.data)); }
 
     hydrate(data) {
         if (!data || typeof data !== 'object') return false;
         let incoming = data;
 
-        // Migrasi berantai
         if (!incoming.schemaVersion || incoming.schemaVersion < 2) {
             const fresh = createInitialState(DIFFICULTY.normal);
             if (typeof incoming.companyName === 'string') fresh.companyName = incoming.companyName;
@@ -341,7 +340,6 @@ class GameState {
         }
         if (incoming.schemaVersion < 3) incoming = migrateV2toV3(incoming);
 
-        // v3 → v4: chips & fab otomatis punya default dari base
         const base = createInitialState(incoming.difficulty || DIFFICULTY.normal);
         this.data = {
             ...base,
@@ -362,7 +360,6 @@ class GameState {
                 ...base.products, ...(incoming.products || {}),
                 catalog: Array.isArray(incoming.products && incoming.products.catalog) ? incoming.products.catalog : []
             },
-            // ===== CHIP & FAB (BARU) =====
             chips: {
                 ...base.chips, ...(incoming.chips || {}),
                 catalog: Array.isArray(incoming.chips && incoming.chips.catalog) ? incoming.chips.catalog : []
@@ -378,6 +375,11 @@ class GameState {
             reviews: {
                 ...base.reviews, ...(incoming.reviews || {}),
                 feed: Array.isArray(incoming.reviews && incoming.reviews.feed) ? incoming.reviews.feed : []
+            },
+            news: {
+                ...base.news, ...(incoming.news || {}),
+                articles: Array.isArray(incoming.news && incoming.news.articles) ? incoming.news.articles : [],
+                lastMilestone: (incoming.news && incoming.news.lastMilestone) ? incoming.news.lastMilestone : {}
             },
             market: {
                 ...base.market, ...(incoming.market || {}),
