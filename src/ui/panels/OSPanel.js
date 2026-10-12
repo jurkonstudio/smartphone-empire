@@ -1,7 +1,9 @@
 // FILE: src/ui/panels/OSPanel.js
 // Sub-tab OS dalam tab Riset. Menampilkan OS aktif, wizard versi baru,
 // daftar fitur, bug, apps, dan lisensi.
+// Icon pakai renderIcon/renderIconHero (SVG), bukan emoji.
 import { renderOsStatBar } from './OsStatBar.js';
+import { renderIcon, renderIconHero } from '../icons/IconRenderer.js';
 import { OS_FEATURES, OS_LICENSES, BUILTIN_APPS, OS_ERAS } from '../../data/os.data.js';
 
 function escapeHtml(s) {
@@ -9,6 +11,14 @@ function escapeHtml(s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
+
+const ERA_ICONS = {
+    firmware: 'cpu',
+    touch:    'pointer',
+    modern:   'smartphone',
+    ai_era:   'brain',
+    future:   'sparkles'
+};
 
 export function renderOSPanel({ osSystem, researchSystem }) {
     const data = window.__game.state.get();
@@ -18,7 +28,7 @@ export function renderOSPanel({ osSystem, researchSystem }) {
     if (!os.name) {
         return `
             <div class="empty">
-                <div class="empty-ico">💿</div>
+                <div class="empty-ico">${renderIconHero('inbox', 64)}</div>
                 <div class="empty-title">Belum ada OS</div>
                 <div class="empty-desc">Bangun sistem operasi sendiri atau lisensi OS pihak ketiga.</div>
                 <button class="btn-primary" data-os-action="create" style="max-width:220px;margin:0 auto;">Buat OS</button>
@@ -80,7 +90,7 @@ export function renderOSPanel({ osSystem, researchSystem }) {
                 return `
                     <div class="bug-item">
                         <div style="flex:1;">
-                            <div class="bug-name">⚠ ${escapeHtml(b.name)}</div>
+                            <div class="bug-name">${renderIcon('question', 14)} ${escapeHtml(b.name)}</div>
                             <div class="bug-meta">Severity ${b.severity} • Patch $${b.patchCost.toLocaleString('en-US')} • ${b.patchDays} hari</div>
                         </div>
                         ${isPatching
@@ -105,11 +115,12 @@ export function renderOSPanel({ osSystem, researchSystem }) {
                 if (!eraFeatures.length) return '';
                 return `
                     <div class="era-group">
-                        <div class="era-label">${era.name}</div>
+                        <div class="era-label">${renderIcon(ERA_ICONS[era.id] || 'smartphone', 16)} ${era.name}</div>
                         ${eraFeatures.map(f => {
                             const st = osSystem.getFeatureStatus(f.id);
                             return `
                                 <div class="feature-item feature-${st.status}" data-os-action="feature-detail" data-feature-id="${f.id}">
+                                    <div class="feature-icon">${renderIcon(f.icon, 20)}</div>
                                     <div style="flex:1;">
                                         <div class="feature-name">${escapeHtml(f.name)}</div>
                                         <div class="feature-status">${_statusLabel(st)}</div>
@@ -190,10 +201,10 @@ function _statusLabel(st) {
 }
 
 function _statusBadge(s) {
-    if (s === 'owned') return '✓';
-    if (s === 'developing') return '⏳';
-    if (s === 'available') return '+';
-    return '🔒';
+    if (s === 'owned')      return renderIcon('check', 14);
+    if (s === 'developing') return renderIcon('clock', 14);
+    if (s === 'available')  return renderIcon('sparkles', 14);
+    return renderIcon('lock', 14);
 }
 
 // ============================================================
@@ -212,6 +223,7 @@ export function openOsWizardModal({ osSystem }) {
     const featureHtml = available.map(f => `
         <label class="wiz-feature">
             <input type="checkbox" data-wiz-feature="${f.id}">
+            <div class="feature-icon">${renderIcon(f.icon, 18)}</div>
             <div style="flex:1;">
                 <div class="wiz-name">${escapeHtml(f.name)}</div>
                 <div class="wiz-meta">$${f.devCost.toLocaleString('en-US')} • ${f.devDays} hari</div>
@@ -333,7 +345,7 @@ export function openFeatureDetailModal({ osSystem, featureId }) {
     if (!f) return;
     const st = osSystem.getFeatureStatus(featureId);
     const html = `
-        <div class="modal-title">${escapeHtml(f.name)}</div>
+        <div class="modal-title">${renderIcon(f.icon, 22)} ${escapeHtml(f.name)}</div>
         <div class="modal-sub">${escapeHtml(f.description)}</div>
         <div class="sum-row"><span>Era</span><b>${f.era}</b></div>
         <div class="sum-row"><span>Tahun min</span><b>${f.minYear}</b></div>
@@ -351,4 +363,4 @@ export function openFeatureDetailModal({ osSystem, featureId }) {
         <button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">Tutup</button>
     `;
     window.__game.Modal.open('feature-detail', html);
-    }
+}
