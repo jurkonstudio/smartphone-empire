@@ -13,6 +13,8 @@ import { ResearchSystem } from './systems/ResearchSystem.js';
 import { OSSystem } from './systems/OSSystem.js';
 import { ProductSystem } from './systems/ProductSystem.js';
 import { MarketSystem } from './systems/MarketSystem.js';
+import { CompetitorSystem } from './systems/CompetitorSystem.js';
+import { PublicOpinionSystem } from './systems/PublicOpinionSystem.js';
 import { renderHeader } from './ui/layout/Header.js';
 import { renderMobileNav } from './ui/layout/MobileNav.js';
 import { renderDashboard } from './ui/panels/DashboardPanel.js';
@@ -35,9 +37,13 @@ import {
 } from './ui/panels/ProductPanel.js';
 import { openDesignWizard } from './ui/panels/DesignWizard.js';
 import { renderMarketPanel, drawShareChart } from './ui/panels/MarketPanel.js';
+import { openCompetitorDetailModal } from './ui/panels/CompetitorDetailModal.js';
+import { openViralResponseModal } from './ui/panels/PublicOpinionPanel.js';
 import { drawSalesChart } from './ui/panels/SalesChart.js';
 import * as marketingModule from './data/marketing.data.js';
+import * as feedbackModule from './data/feedback.data.js';
 
+// ============ INSTANCE ============
 const timeSystem = new TimeSystem(state);
 const economy = new EconomySystem(state);
 const quests = new QuestSystem(state);
@@ -46,11 +52,17 @@ const research = new ResearchSystem(state);
 const os = new OSSystem(state);
 const products = new ProductSystem(state);
 const market = new MarketSystem(state);
+const competitors = new CompetitorSystem(state);
+const opinion = new PublicOpinionSystem(state);
 
+// Integrasi: MarketSystem butuh CompetitorSystem
+market.setCompetitorSystem(competitors);
+
+// ============ STATE UI ============
 let activeView = 'dashboard';
-let activeSubtab = 'tech';        // untuk tab Riset
-let activeProdSubtab = 'design';  // untuk tab Produk
-let activeMarketSubtab = 'share'; // untuk tab Pasar
+let activeSubtab = 'tech';
+let activeProdSubtab = 'design';
+let activeMarketSubtab = 'share';
 let _burnWarn = null;
 
 const els = {
@@ -63,14 +75,12 @@ const els = {
 };
 
 function getTime() { return timeSystem.snapshot(); }
-
 function hideLoading() { if (els.loading) els.loading.style.display = 'none'; }
 
 function renderHeaderOnly() {
     if (!els.header) return;
     els.header.innerHTML = renderHeader({ state: state.get(), timeSnapshot: getTime(), warning: _burnWarn });
 }
-
 function renderNavOnly() {
     if (!els.nav) return;
     els.nav.innerHTML = renderMobileNav({ active: activeView });
@@ -83,16 +93,14 @@ function renderView() {
         case 'dashboard': html = renderDashboard(state.get(), getTime(), research); break;
         case 'research':  html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os }); break;
         case 'products':  html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os }); break;
-        case 'market':    html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market }); break;
+        case 'market':    html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion }); break;
         case 'settings':  html = renderSettingsPanel(); break;
         case 'guide':     html = renderGuidePanel(); break;
-        default:
-            html = renderEmptyState({ icon: '❓', title: 'Tidak ditemukan' });
+        default:          html = renderEmptyState({ icon: '❓', title: 'Tidak ditemukan' });
     }
     els.view.innerHTML = html;
     els.view.scrollTop = 0;
 
-    // Post-render
     if (activeView === 'dashboard') {
         const chart = els.view.querySelector('.chart-wrap');
         if (chart) drawCashChart(chart);
@@ -109,9 +117,9 @@ function renderView() {
 }
 
 function render() { renderAll(); }
-
 function renderAll() { renderHeaderOnly(); renderNavOnly(); renderView(); }
 
+// ============ ANIMASI UANG ============
 let _cashRaf = null;
 function animateCash(from, to) {
     if (_cashRaf) { cancelAnimationFrame(_cashRaf); _cashRaf = null; }
@@ -138,12 +146,10 @@ function navigate(id) {
     bus.emit('view:changed', { id });
     bus.emit('tutorial:action', { id: 'nav:' + id });
 }
-
 function updateTitle() {
     const meta = VIEW_TITLES[activeView];
     document.title = APP_CONFIG.name + ' — ' + (meta ? meta.title : 'Dashboard');
 }
-
 function vibrate(ms) {
     const s = state.get();
     if (!s.settings.vibrate) return;
@@ -152,6 +158,7 @@ function vibrate(ms) {
     }
 }
 
+// ============ EVENT DELEGATION ============
 function bindGlobalClicks() {
     document.body.addEventListener('click', function (e) {
         // 1. Nav
@@ -180,7 +187,7 @@ function bindGlobalClicks() {
         const nodeCard = e.target.closest('[data-node-detail]');
         if (nodeCard) { e.preventDefault(); openNodeDetailModal({ nodeId: nodeCard.dataset.nodeDetail, researchSystem: research }); return; }
 
-        // 6. Aksi riset di modal
+        // 6. Aksi riset
         const rAction = e.target.closest('[data-research-action]');
         if (rAction) {
             e.preventDefault();
@@ -203,17 +210,17 @@ function bindGlobalClicks() {
         if (osAction) {
             e.preventDefault();
             const act = osAction.dataset.osAction;
-            if (act === 'create')        { openCreateOsModal({ osSystem: os }); return; }
-            if (act === 'wizard')        { openOsWizardModal({ osSystem: os }); return; }
+            if (act === 'create') { openCreateOsModal({ osSystem: os }); return; }
+            if (act === 'wizard') { openOsWizardModal({ osSystem: os }); return; }
             if (act === 'cancel-deving') {
                 const res = os.cancelVersion();
                 if (res.ok) { ToastService.info('Dibatalkan (refund $' + res.refund.toLocaleString('en-US') + ').'); renderAll(); }
                 else ToastService.error(res.reason);
                 return;
             }
-            if (act === 'patch-bug')  { const r = os.patchBug(osAction.dataset.bugId); r.ok ? (ToastService.success('Patch dimulai.'), renderAll()) : ToastService.error(r.reason); return; }
+            if (act === 'patch-bug')  { const r = os.patchBug(osAction.dataset.bugId);  r.ok ? (ToastService.success('Patch dimulai.'), renderAll()) : ToastService.error(r.reason); return; }
             if (act === 'ignore-bug') { const r = os.ignoreBug(osAction.dataset.bugId); r.ok ? (ToastService.warning('Diabaikan.'), renderAll()) : ToastService.error(r.reason); return; }
-            if (act === 'start-app')  { const r = os.startApp(osAction.dataset.appId); r.ok ? (ToastService.success('App dirilis.'), renderAll()) : ToastService.error(r.reason); return; }
+            if (act === 'start-app')  { const r = os.startApp(osAction.dataset.appId);  r.ok ? (ToastService.success('App dirilis.'), renderAll()) : ToastService.error(r.reason); return; }
             if (act === 'invite-devs'){ const r = os.inviteDevelopers(); r.ok ? (ToastService.success('+' + r.bonus + ' dev.'), renderAll()) : ToastService.error(r.reason); return; }
             if (act === 'feature-detail') { openFeatureDetailModal({ osSystem: os, featureId: osAction.dataset.featureId }); return; }
         }
@@ -243,7 +250,7 @@ function bindGlobalClicks() {
             }
         }
 
-        // 10. Klik kartu produk
+        // 10. Kartu produk
         const prodCard = e.target.closest('[data-prod-detail]');
         if (prodCard && !e.target.closest('[data-prod-action]')) {
             e.preventDefault();
@@ -251,7 +258,7 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 11. Pilih kampanye
+        // 11. Kampanye
         const campPick = e.target.closest('[data-campaign-pick]');
         if (campPick) {
             e.preventDefault();
@@ -261,7 +268,7 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 12. Konfirmasi order produksi
+        // 12. Order produksi
         const orderConfirm = e.target.closest('[data-order-confirm]');
         if (orderConfirm) {
             e.preventDefault();
@@ -276,6 +283,32 @@ function bindGlobalClicks() {
         // 13. Market sub-tab
         const mktSub = e.target.closest('[data-market-subtab]');
         if (mktSub) { e.preventDefault(); activeMarketSubtab = mktSub.dataset.marketSubtab; renderView(); return; }
+
+        // 14. Kartu kompetitor
+        const compCard = e.target.closest('[data-competitor-detail]');
+        if (compCard) {
+            e.preventDefault();
+            const mode = state.get().settings.competitorMode || 'real';
+            const data = competitors.getCompetitorData(compCard.dataset.competitorDetail, mode);
+            openCompetitorDetailModal({ competitorData: data });
+            return;
+        }
+
+        // 15. Respons viral
+        const viralRespond = e.target.closest('[data-viral-respond]');
+        if (viralRespond) {
+            e.preventDefault();
+            openViralResponseModal({ viralId: viralRespond.dataset.viralId });
+            return;
+        }
+        const viralPick = e.target.closest('[data-viral-response-pick]');
+        if (viralPick) {
+            e.preventDefault();
+            const res = opinion.respondToViral(viralPick.dataset.viralId, viralPick.dataset.viralResponsePick);
+            if (!res.ok) ToastService.error(res.reason);
+            else { ToastService.success('Respons dikirim.'); Modal.close('viral-response', true); renderAll(); }
+            return;
+        }
     });
 
     document.addEventListener('keydown', function (e) {
@@ -285,6 +318,7 @@ function bindGlobalClicks() {
     });
 }
 
+// ============ PROGRESS EVENTS ============
 function bindProgressEvents() {
     bus.on('research:progress', (data) => {
         if (activeView !== 'research' || activeSubtab !== 'tech') return;
@@ -327,6 +361,7 @@ function bindProgressEvents() {
     });
 }
 
+// ============ TIME EVENTS ============
 function bindTimeEvents() {
     bus.on('time:tick', function () {
         const meta = els.header && els.header.querySelector('.header-meta');
@@ -341,12 +376,11 @@ function bindTimeEvents() {
         if (c) c.textContent = hh + ':' + mm;
         if (s) { s.textContent = t.isPaused ? 'Paused' : (t.gameSpeed + 'x'); s.classList.toggle('running', !t.isPaused); }
     });
-    bus.on('time:day-changed', function () {
-        if (activeView === 'dashboard') renderView();
-    });
+    bus.on('time:day-changed', function () { if (activeView === 'dashboard') renderView(); });
     bus.on('time:speed-changed', function () { renderHeaderOnly(); });
 }
 
+// ============ STATE EVENTS ============
 function bindStateEvents() {
     bus.on('state:cash-changed', function (data) { animateCash(data.prev, data.next); });
     bus.on('state:log-changed', function () { if (activeView === 'dashboard') renderView(); });
@@ -368,6 +402,7 @@ function bindStateEvents() {
     bus.on('tutorial:restart', function () { tutorial.restart(); });
 }
 
+// ============ BOOT ============
 async function boot() {
     try {
         if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML utama tidak ditemukan.');
@@ -392,13 +427,21 @@ async function boot() {
             SaveService.save(state);
         }
 
+        // Pastikan field baru ada
+        if (!state.get().settings.competitorMode) {
+            state.get().settings.competitorMode = 'real';
+        }
+
+        // Start semua system
         economy.start();
         quests.start();
         tutorial.start();
         research.start();
         os.start();
         products.start();
+        competitors.start();   // SEBELUM market, karena market butuh competitor data
         market.start();
+        opinion.start();
 
         renderAll();
         bindGlobalClicks();
@@ -417,9 +460,13 @@ async function boot() {
         }
 
         window.__game = {
-            state, bus, timeSystem, economy, quests, tutorial, research, os, products, market,
+            state, bus, timeSystem, economy, quests, tutorial,
+            research, os, products, market, competitors, opinion,
             SaveService, ToastService, Modal, navigate, render: renderAll,
-            modules: { marketing: marketingModule },
+            modules: {
+                marketing: marketingModule,
+                feedbackData: feedbackModule
+            },
             cheat: {
                 addCash: function (n) { state.addCash(n); },
                 fastForwardDays: function (n) { return timeSystem.fastForwardDays(n); },
@@ -431,7 +478,18 @@ async function boot() {
                 completeResearch: function (id) { return research.completeResearch(id); },
                 startOsWith: function (featureIds) { return os.quickSetup(featureIds); },
                 spawnOsBug: function () { return os.spawnBug(); },
-                quickRelease: function (cfg) { return products.quickRelease(cfg); }
+                quickRelease: function (cfg) { return products.quickRelease(cfg); },
+                // Batch C
+                setYear: function (y) {
+                    const cur = state.get().time.currentYear;
+                    const daysPerYear = 365.25;
+                    return timeSystem.fastForwardDays((y - cur) * daysPerYear);
+                },
+                spawnViralEvent: function (type) { return opinion.forceViral(type); },
+                addCompetitorEvent: function (compId) { return competitors.triggerLifeEventFor(compId); },
+                forceCompetitorRelease: function (compId) { return competitors.forceRelease(compId); },
+                forceReview: function () { return opinion.forceReview(); },
+                recomputeSentiment: function () { return opinion.recomputeNow(); }
             }
         };
 
