@@ -1,17 +1,15 @@
 // FILE: src/core/EventBus.js
-// Event bus sederhana berbasis Set — mendukung on/off/emit/clear.
-// Tidak ada listener duplikat dalam satu event.
 class EventBus {
     constructor() {
         this.listeners = new Map();
     }
 
-    // Mendaftarkan listener. Mengembalikan fungsi unsubscribe.
     on(event, callback) {
-        if (typeof callback !== 'function') return () => {};
+        if (typeof callback !== 'function') return function () {};
         if (!this.listeners.has(event)) this.listeners.set(event, new Set());
         this.listeners.get(event).add(callback);
-        return () => this.off(event, callback);
+        const self = this;
+        return function () { self.off(event, callback); };
     }
 
     off(event, callback) {
@@ -24,10 +22,13 @@ class EventBus {
     emit(event, data) {
         const set = this.listeners.get(event);
         if (!set) return;
-        // Snapshot agar aman jika ada listener yang unsubscribe saat iterasi
-        for (const cb of Array.from(set)) {
-            try { cb(data); }
-            catch (err) { console.error(`[EventBus] error di "${event}":`, err); }
+        const arr = Array.from(set);
+        for (let i = 0; i < arr.length; i++) {
+            try {
+                arr[i](data);
+            } catch (err) {
+                console.error('[EventBus] error di "' + event + '":', err);
+            }
         }
     }
 
@@ -37,7 +38,8 @@ class EventBus {
     }
 
     listenerCount(event) {
-        return this.listeners.get(event)?.size ?? 0;
+        const set = this.listeners.get(event);
+        return set ? set.size : 0;
     }
 }
 
