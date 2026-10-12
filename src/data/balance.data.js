@@ -24,8 +24,10 @@ export const BALANCE = {
 
     monthly: { rentHQ: 5000, utilities: 500, baseAdmin: 300 },
 
-    salary: { engineer: 3000, designer: 2800, marketer: 2500 },
+    // ---- Gaji dasar per role (dasar Tier 1, diperbanyak oleh skill tier) ----
+    salary: { engineer: 2500, designer: 2300, marketer: 2000 },
 
+    // ---- Biaya rekrut awal per role (one-time, dasar Tier 1) ----
     recruitCost: { engineer: 2000, designer: 1800, marketer: 1500 },
 
     teamCap: { engineer: 20, designer: 20, marketer: 20 },
@@ -48,6 +50,78 @@ export const BALANCE = {
         first_start_research: { cash: 2000, reputation: 1 },
         first_recruit:        { cash: 1500, reputation: 0 },
         first_product:        { cash: 5000, reputation: 3 }
+    },
+
+    // ============================================================
+    // TEAM — Batch D (Rekrut Tim)
+    // ============================================================
+    team: {
+        // Kandidat direkrut dari pool. Pool refresh tiap X hari.
+        candidatePoolSize: 6,
+        poolRefreshDays: 30,
+
+        // Distribusi skill kandidat (peluang per tier)
+        skillWeightsByYear: {
+            // Semakin tua tahun, semakin besar peluang kandidat skill tinggi
+            early:    { 1: 0.55, 2: 0.30, 3: 0.12, 4: 0.03, 5: 0.00 }, // ≤2005
+            mid:      { 1: 0.35, 2: 0.35, 3: 0.20, 4: 0.08, 5: 0.02 }, // 2006-2015
+            late:     { 1: 0.20, 2: 0.30, 3: 0.30, 4: 0.15, 5: 0.05 }, // 2016-2025
+            modern:   { 1: 0.15, 2: 0.25, 3: 0.30, 4: 0.20, 5: 0.10 }  // 2026+
+        },
+
+        // Gaji bulanan = baseSalary × skillTier.salaryMult + traitBonus + noise
+        traitSalaryBonus: {
+            fast_learner: 0,
+            productive:   0.10,
+            team_player:  0.05,
+            innovative:   0.15,
+            loyal:        -0.05,   // loyal = minta lebih sedikit
+            demanding:    0.25,
+            specialist:   0.20,
+            mentor:       0.15
+        },
+
+        // Tanda tangan awal (one-time signing bonus)
+        signingBonusMult: 0.6,    // 60% dari gaji bulanan × 3 (default)
+
+        // Severance saat fire (pesangon)
+        severanceMonths: 2,
+
+        // Moral
+        moraleStart: 75,
+        moraleMax: 100,
+        moraleMin: 0,
+        moraleDecayPerMonth: 2,
+        moraleFromExtraPay: 15,   // bonus moral jika kas tim kuat (opsional masa depan)
+
+        // Skill progression
+        skillProgressPerMonth: 1.5,       // poin menuju skill berikutnya (100 poin = naik 1 tier)
+        skillFastLearnerBonus: 0.5,       // +50% untuk trait fast_learner
+        skillMentorBonus: 0.25,           // +25% untuk semua anggota jika ada 1 mentor
+
+        // Bonus agregat
+        engineer: {
+            researchSpeedPerEngineer: 0.08,   // +8% kecepatan riset
+            maxResearchSpeed: 2.5,
+            researchSlotPer2Engineers: 0.5,   // tiap 2 engineer = +1 slot (maks 3)
+            maxResearchSlots: 3,
+            osDevSpeedPerEngineer: 0.06,
+            maxOsDevSpeed: 2.0
+        },
+        designer: {
+            productDevSpeedPerDesigner: 0.10, // +10% kecepatan pengembangan
+            maxProductDevSpeed: 3.0,
+            qualityBonusPerDesigner: 0.5,     // +0.5 poin kualitas per designer
+            maxQualityBonus: 15               // maks +15 poin
+        },
+        marketer: {
+            marketingBonusPerMarketer: 0.10,  // +10% efektivitas kampanye
+            maxMarketingBonus: 2.0            // maks 2x
+        },
+
+        // Batas
+        minStaffForFullBonus: 1,     // minimal 1 untuk bonus aktif
+        maxStaffBonusScale: 1.5      // bonus diskalakan turun jika tim besar (diminishing returns)
     },
 
     research: {
@@ -99,14 +173,13 @@ export const BALANCE = {
         reputationPerReviewPoint: 0.4,
         maxActiveProducts: 5,
 
-        // ===== AUTO-RESTOCK =====
         autoRestock: {
             defaultEnabled: false,
-            defaultThresholdPercent: 20,   // trigger saat stok < 20% kapasitas
-            defaultCooldownDays: 7,        // jeda minimum antar auto-order
-            maxStockMultiplier: 2.0,       // stok maksimum = 2x kapasitas awal
-            minOrderQty: 100,              // minimal order otomatis
-            warnIntervalDays: 3            // frekuensi toast peringatan uang kurang
+            defaultThresholdPercent: 20,
+            defaultCooldownDays: 7,
+            maxStockMultiplier: 2.0,
+            minOrderQty: 100,
+            warnIntervalDays: 3
         }
     },
 
