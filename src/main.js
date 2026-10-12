@@ -96,6 +96,7 @@ function renderNavOnly() {
     els.nav.innerHTML = renderMobileNav({ active: activeView });
 }
 
+// ============ RENDER VIEW (defensive) ============
 function renderView() {
     if (!els.view) return;
     let html = '';
@@ -113,14 +114,14 @@ function renderView() {
         }
     } catch (err) {
         console.error('[renderView] Error di view "' + activeView + '":', err);
-        html = `<div class="card" style="border-color:var(--danger);margin-top:20px;">
-            <div class="card-title" style="color:var(--danger);">⚠ Error Render</div>
-            <div style="font-size:13px;line-height:1.6;word-break:break-word;">
-                <b>View:</b> ${activeView}<br>
-                <b>Error:</b> ${err && err.message ? err.message : 'Unknown'}<br>
-                <b>Stack:</b> <span style="font-family:monospace;font-size:11px;">${err && err.stack ? err.stack.split('\n').slice(0,3).join('<br>') : '-'}</span>
-            </div>
-        </div>`;
+        html = '<div class="card" style="border-color:var(--danger);margin-top:20px;">' +
+               '<div class="card-title" style="color:var(--danger);">⚠ Error Render</div>' +
+               '<div style="font-size:13px;line-height:1.6;word-break:break-word;">' +
+               '<b>View:</b> ' + activeView + '<br>' +
+               '<b>Error:</b> ' + (err && err.message ? err.message : 'Unknown') + '<br>' +
+               '<b>Stack:</b> <span style="font-family:monospace;font-size:11px;">' +
+               (err && err.stack ? err.stack.split('\n').slice(0, 3).join('<br>') : '-') +
+               '</span></div></div>';
     }
     els.view.innerHTML = html;
     els.view.scrollTop = 0;
@@ -142,7 +143,11 @@ function renderView() {
     } catch (err) {
         console.error('[renderView] Post-render error:', err);
     }
-}// ============ ANIMASI UANG ============
+}
+
+function renderAll() { renderHeaderOnly(); renderNavOnly(); renderView(); }
+
+// ============ ANIMASI UANG ============
 let _cashRaf = null;
 function animateCash(from, to) {
     if (_cashRaf) { cancelAnimationFrame(_cashRaf); _cashRaf = null; }
@@ -187,7 +192,6 @@ function vibrate(ms) {
 // ============ EVENT DELEGATION ============
 function bindGlobalClicks() {
     document.body.addEventListener('click', function (e) {
-        // 1. AUTO-RESTOCK toggle
         const autoToggle = e.target.closest('[data-auto-toggle]');
         if (autoToggle) {
             e.preventDefault(); vibrate(8);
@@ -201,7 +205,6 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 2. AUTO-RESTOCK threshold
         const autoThresh = e.target.closest('[data-auto-threshold]');
         if (autoThresh) {
             e.preventDefault(); vibrate(6);
@@ -212,11 +215,9 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 3. Navigasi
         const navBtn = e.target.closest('[data-nav]');
         if (navBtn) { e.preventDefault(); vibrate(8); navigate(navBtn.dataset.nav); return; }
 
-        // 4. Time
         const timeBtn = e.target.closest('[data-time-action]');
         if (timeBtn) {
             e.preventDefault(); vibrate(12);
@@ -226,11 +227,9 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 5. Tim sub-tab
         const teamSub = e.target.closest('[data-team-subtab]');
         if (teamSub) { e.preventDefault(); activeTeamSubtab = teamSub.dataset.teamSubtab; renderView(); return; }
 
-        // 6. Team action
         const teamAction = e.target.closest('[data-team-action]');
         if (teamAction) {
             e.preventDefault(); vibrate(8);
@@ -254,7 +253,6 @@ function bindGlobalClicks() {
             }
         }
 
-        // 7. Staff detail card
         const staffCard = e.target.closest('[data-staff-detail]');
         if (staffCard && !e.target.closest('[data-staff-action]')) {
             e.preventDefault();
@@ -262,7 +260,6 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 8. Staff action (fire, train) di modal detail
         const staffAction = e.target.closest('[data-staff-action]');
         if (staffAction) {
             e.preventDefault();
@@ -286,19 +283,15 @@ function bindGlobalClicks() {
             }
         }
 
-        // 9. Riset sub-tab
         const subBtn = e.target.closest('[data-subtab]');
         if (subBtn) { e.preventDefault(); activeSubtab = subBtn.dataset.subtab; renderView(); return; }
 
-        // 10. Filter kategori
         const chip = e.target.closest('[data-filter-cat]');
         if (chip) { e.preventDefault(); setFilterCategory(chip.dataset.filterCat); renderView(); return; }
 
-        // 11. Node detail
         const nodeCard = e.target.closest('[data-node-detail]');
         if (nodeCard) { e.preventDefault(); openNodeDetailModal({ nodeId: nodeCard.dataset.nodeDetail, researchSystem: research }); return; }
 
-        // 12. Research action
         const rAction = e.target.closest('[data-research-action]');
         if (rAction) {
             e.preventDefault();
@@ -316,7 +309,6 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 13. OS action
         const osAction = e.target.closest('[data-os-action]');
         if (osAction) {
             e.preventDefault();
@@ -336,11 +328,9 @@ function bindGlobalClicks() {
             if (act === 'feature-detail') { openFeatureDetailModal({ osSystem: os, featureId: osAction.dataset.featureId }); return; }
         }
 
-        // 14. Produk sub-tab
         const prodSub = e.target.closest('[data-prod-subtab]');
         if (prodSub) { e.preventDefault(); activeProdSubtab = prodSub.dataset.prodSubtab; renderView(); return; }
 
-        // 15. Produk action
         const prodAction = e.target.closest('[data-prod-action]');
         if (prodAction) {
             e.preventDefault();
@@ -361,7 +351,6 @@ function bindGlobalClicks() {
             }
         }
 
-        // 16. Produk card
         const prodCard = e.target.closest('[data-prod-detail]');
         if (prodCard && !e.target.closest('[data-prod-action]') && !e.target.closest('[data-auto-toggle]') && !e.target.closest('[data-auto-threshold]')) {
             e.preventDefault();
@@ -369,7 +358,6 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 17. Campaign pick
         const campPick = e.target.closest('[data-campaign-pick]');
         if (campPick) {
             e.preventDefault();
@@ -379,7 +367,6 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 18. Order production confirm
         const orderConfirm = e.target.closest('[data-order-confirm]');
         if (orderConfirm) {
             e.preventDefault();
@@ -391,11 +378,9 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 19. Market sub-tab
         const mktSub = e.target.closest('[data-market-subtab]');
         if (mktSub) { e.preventDefault(); activeMarketSubtab = mktSub.dataset.marketSubtab; renderView(); return; }
 
-        // 20. Kompetitor card
         const compCard = e.target.closest('[data-competitor-detail]');
         if (compCard) {
             e.preventDefault();
@@ -405,7 +390,6 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 21. Viral respond
         const viralRespond = e.target.closest('[data-viral-respond]');
         if (viralRespond) {
             e.preventDefault();
@@ -524,9 +508,7 @@ async function boot() {
     try {
         if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML utama tidak ditemukan.');
 
-        // Init tema lebih dulu
         ThemeService.init();
-
         mountToastContainer(els.toast);
         initTutorialOverlay();
         initMonthlySummary();
@@ -555,7 +537,7 @@ async function boot() {
         tutorial.start();
         teamSystem.start();
 
-        // ===== PATCH A: Safety refresh candidates =====
+        // Safety: kalau candidates kosong setelah start
         if (!state.get().candidates || state.get().candidates.length === 0) {
             teamSystem.refreshCandidates();
         }
@@ -567,22 +549,7 @@ async function boot() {
         market.start();
         opinion.start();
 
-        renderAll();
-        bindGlobalClicks();
-        bindTimeEvents();
-        bindStateEvents();
-        bindProgressEvents();
-        updateTitle();
-
-        timeSystem.start();
-        SaveService.startAutoSave(function () { return state; });
-
-        const cash = state.get().cash;
-        if (cash > 0) {
-            document.querySelectorAll('[data-cash]').forEach(el => { el.textContent = '$0'; });
-            animateCash(0, cash);
-        }
-
+        // ============ EXPOSE GLOBAL SEBELUM RENDER ============
         window.__game = {
             state, bus, timeSystem, economy, quests, tutorial,
             research, os, products, market, competitors, opinion, eraSystem, teamSystem,
@@ -643,11 +610,33 @@ async function boot() {
                     renderAll();
                     return { count: state.get().candidates.length };
                 },
-                setTheme: function (id) { ThemeService.setTheme(id); window.__game.render(); return { theme: id }; },
-                setAccent: function (id) { ThemeService.setAccent(id); window.__game.render(); return { accent: id }; },
-                toggleTheme: function () { ThemeService.toggleTheme(); window.__game.render(); return { theme: ThemeService.getTheme() }; }
+                setTheme: function (id) { ThemeService.setTheme(id); renderAll(); return { theme: id }; },
+                setAccent: function (id) { ThemeService.setAccent(id); renderAll(); return { accent: id }; },
+                toggleTheme: function () { ThemeService.toggleTheme(); renderAll(); return { theme: ThemeService.getTheme() }; }
             }
         };
+
+        // FIX: expose `render` global supaya file lain yang panggil render() tidak error
+        window.render = renderAll;
+        window.navigate = navigate;
+        window.renderAll = renderAll;
+
+        // ============ RENDER & BIND ============
+        renderAll();
+        bindGlobalClicks();
+        bindTimeEvents();
+        bindStateEvents();
+        bindProgressEvents();
+        updateTitle();
+
+        timeSystem.start();
+        SaveService.startAutoSave(function () { return state; });
+
+        const cash = state.get().cash;
+        if (cash > 0) {
+            document.querySelectorAll('[data-cash]').forEach(el => { el.textContent = '$0'; });
+            animateCash(0, cash);
+        }
 
         console.info('[' + APP_CONFIG.name + '] siap. Era:', state.get().era);
     } catch (err) {
