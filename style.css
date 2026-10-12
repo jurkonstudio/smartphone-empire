@@ -2269,3 +2269,172 @@ body {
     justify-content: center;
     align-items: center;
 }
+/* ===================== FAB PANEL & CHIP UI ===================== */
+
+.fab-warning {
+    background: var(--warn-soft);
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: var(--r);
+    padding: 12px 14px;
+    font-size: 12.5px;
+    color: var(--warn);
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.fab-tier-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 55vh;
+    overflow-y: auto;
+}
+
+.fab-tier-card {
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 14px;
+    transition: border-color 0.15s;
+}
+.fab-tier-card.disabled { opacity: 0.6; }
+
+.fab-tier-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.fab-tier-name {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 3px;
+}
+.fab-tier-desc {
+    font-size: 11.5px;
+    color: var(--text-mute);
+    line-height: 1.4;
+}
+.fab-tier-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: var(--r-pill);
+    flex-shrink: 0;
+}
+
+.fab-tier-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.fab-stat { min-width: 0; }
+.fab-stat-label {
+    font-size: 10px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 2px;
+}
+.fab-stat-value {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Chip list in Chip tab */
+.chip-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.chip-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--bg-3);
+    border-radius: var(--r);
+    cursor: pointer;
+    transition: background 0.15s, transform 0.08s;
+}
+.chip-row:hover { background: var(--bg-4); }
+.chip-row:active { transform: scale(0.99); }
+.chip-row-mockup {
+    width: 70px;
+    height: 70px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #050510;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.chip-row-mockup .chip-mockup-wrap {
+    width: 70px !important;
+    height: 70px !important;
+    filter: none;
+    animation: none;
+}
+.chip-row-info { flex: 1; min-width: 0; }
+.chip-row-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    margin-bottom: 3px;
+    letter-spacing: -0.01em;
+}
+.chip-row-meta {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+}
+.chip-row-meta b { color: var(--text-primary); font-weight: 600; }
+.chip-lifecycle {
+    font-size: 10.5px;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+/* Chip detail modal */
+.chip-detail-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+@media (min-width: 480px) {
+    .chip-detail-layout { flex-direction: row; }
+    .chip-detail-left { flex: 0 0 180px; }
+    .chip-detail-right { flex: 1; min-width: 0; }
+}
+.chip-detail-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+.chip-detail-device {
+    background: linear-gradient(135deg, #050510 0%, #0a1525 100%);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--border);
+    padding: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 180px;
+    min-width: 180px;
+}
+.chip-detail-radar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
