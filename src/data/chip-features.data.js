@@ -1,6 +1,7 @@
 // FILE: src/data/chip-features.data.js
 // ============================================================
 // DATA FITUR CHIP — 23 fitur dalam 7 kategori.
+// Icon kategori pakai string ID dari FeatureIcons.js (bukan emoji).
 // ============================================================
 
 export const CHIP_FEATURES = [
@@ -133,13 +134,13 @@ export const CHIP_FEATURES = [
 ];
 
 export const FEATURE_CATEGORIES = [
-    { id: 'graphics',     name: 'Grafis',       icon: '🎮' },
-    { id: 'memory',       name: 'Memori',       icon: '💾' },
-    { id: 'power',        name: 'Daya',         icon: '🔋' },
-    { id: 'security',     name: 'Keamanan',     icon: '🛡️' },
-    { id: 'ai',           name: 'Kecerdasan',   icon: '🤖' },
-    { id: 'connectivity', name: 'Konektivitas', icon: '📡' },
-    { id: 'special',      name: 'Spesial',      icon: '⚡' }
+    { id: 'graphics',     name: 'Grafis',       icon: 'gamepad' },
+    { id: 'memory',       name: 'Memori',       icon: 'database' },
+    { id: 'power',        name: 'Daya',         icon: 'battery' },
+    { id: 'security',     name: 'Keamanan',     icon: 'shield' },
+    { id: 'ai',           name: 'Kecerdasan',   icon: 'bot' },
+    { id: 'connectivity', name: 'Konektivitas', icon: 'signal' },
+    { id: 'special',      name: 'Spesial',      icon: 'zap' }
 ];
 
 export function getChipFeatureById(id) {
