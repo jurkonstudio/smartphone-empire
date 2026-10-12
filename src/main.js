@@ -59,6 +59,24 @@ const els = {
 
 let activeView = 'dashboard';
 
+// FUNGSI BANTUAN: Menghilangkan Layar Loading
+function hideLoadingScreen() {
+  const loading = document.getElementById('loading-screen');
+  if (loading) {
+    loading.style.display = 'none';
+  }
+}
+
+// FUNGSI BANTUAN: Menampilkan Error di Layar HP
+function showError(message) {
+  const errorDiv = document.getElementById('error-message');
+  if (errorDiv) {
+    errorDiv.style.display = 'block';
+    errorDiv.innerHTML = message;
+  }
+  hideLoadingScreen();
+}
+
 function renderShell() {
   els.header.innerHTML = renderHeader({ state: state.get(), activeView });
   els.sidebar.innerHTML = renderSidebar({ active: activeView });
@@ -94,21 +112,41 @@ function setDocumentTitle() {
 }
 
 function boot() {
-  // Validasi konfigurasi minimal (fail fast kalau ada salah edit)
-  if (!Array.isArray(NAV_ITEMS) || NAV_ITEMS.length === 0) {
-    console.error('[boot] NAV_ITEMS kosong.');
-  }
-  if (!MOBILE_NAV_IDS.length) {
-    console.warn('[boot] MOBILE_NAV_IDS kosong — navigasi mobile tidak akan tampil.');
-  }
+  // BUNGKUS DENGAN TRY-CATCH UNTUK MENANGKAP ERROR
+  try {
+    // Validasi konfigurasi minimal
+    if (!Array.isArray(NAV_ITEMS) || NAV_ITEMS.length === 0) {
+      console.error('[boot] NAV_ITEMS kosong.');
+    }
+    if (!MOBILE_NAV_IDS.length) {
+      console.warn('[boot] MOBILE_NAV_IDS kosong — navigasi mobile tidak akan tampil.');
+    }
 
-  renderShell();
-  renderView();
-  bindNavClicks();
-  setDocumentTitle();
+    // Cek apakah elemen HTML utama ada. Jika tidak, lempar error.
+    if (!els.header || !els.sidebar || !els.mobileNav || !els.view) {
+      throw new Error("Elemen HTML utama (app-header, sidebar, mobile-nav, app-view) tidak ditemukan di index.html");
+    }
 
-  bus.on('view:changed', setDocumentTitle);
-  console.info(`[${APP_CONFIG.name}] v${APP_CONFIG.version} (${APP_CONFIG.milestone}) siap.`);
+    // Jalankan Render
+    renderShell();
+    renderView();
+    bindNavClicks();
+    setDocumentTitle();
+
+    bus.on('view:changed', setDocumentTitle);
+    console.info(`[${APP_CONFIG.name}] v${APP_CONFIG.version} (${APP_CONFIG.milestone}) siap.`);
+    
+    // JIKA SUKSES, HILANGKAN LAYAR LOADING
+    hideLoadingScreen();
+
+  } catch (error) {
+    console.error("[boot] Gagal menjalankan aplikasi:", error);
+    // TAMPILKAN PESAN ERROR DI LAYAR
+    showError("<strong>❌ Terjadi Error saat Memuat Aplikasi:</strong><br><br>" + 
+              error.message + "<br><br>" +
+              "<i>Buka Console browser (F12) untuk melihat detail baris kodenya.</i>");
+  }
 }
 
+// Jalankan aplikasi
 boot();
