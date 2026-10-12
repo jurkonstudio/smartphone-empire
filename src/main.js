@@ -24,37 +24,46 @@ import { initGameOverScreen } from './ui/panels/GameOverScreen.js';
 import { Modal } from './ui/modal.js';
 
 // ============ INSTANCE ============
-const timeSystem  = new TimeSystem(state);
-const economy     = new EconomySystem(state);
-const quests      = new QuestSystem(state);
-const tutorial    = new TutorialSystem(state);
+const timeSystem = new TimeSystem(state);
+const economy = new EconomySystem(state);
+const quests = new QuestSystem(state);
+const tutorial = new TutorialSystem(state);
 
 let activeView = 'dashboard';
-let _burnWarn  = null;
+let _burnWarn = null;
 
 // ============ DOM ============
 const els = {
-    header:  document.getElementById('app-header'),
-    view:    document.getElementById('app-view'),
-    nav:     document.getElementById('mobile-nav'),
+    header: document.getElementById('app-header'),
+    view: document.getElementById('app-view'),
+    nav: document.getElementById('mobile-nav'),
     loading: document.getElementById('loading-screen'),
-    error:   document.getElementById('error-message'),
-    toast:   document.getElementById('toast-container')
+    error: document.getElementById('error-message'),
+    toast: document.getElementById('toast-container')
 };
 
 function getTime() { return timeSystem.snapshot(); }
 
 // ============ VIEW ============
 const EMPTY_VIEWS = {
-    research: { icon: '🔬', title: 'Riset belum aktif',
+    research: {
+        icon: '🔬',
+        title: 'Riset belum aktif',
         description: 'Technology tree, OS, dan ekosistem aplikasi akan dibuka pada Tahap 2.',
-        hint: 'Coming in Tahap 2' },
-    products: { icon: '📱', title: 'Belum ada produk',
+        hint: 'Coming in Tahap 2'
+    },
+    products: {
+        icon: '📱',
+        title: 'Belum ada produk',
         description: 'Desain ponsel, katalog, dan penjualan akan dibuka pada Tahap 3.',
-        hint: 'Coming in Tahap 3' },
-    market:   { icon: '📈', title: 'Pasar belum aktif',
+        hint: 'Coming in Tahap 3'
+    },
+    market: {
+        icon: '📈',
+        title: 'Pasar belum aktif',
         description: 'Kompetitor AI dan tren pasar akan dibuka pada Tahap 4.',
-        hint: 'Coming in Tahap 4' }
+        hint: 'Coming in Tahap 4'
+    }
 };
 
 function renderHeaderOnly() {
@@ -75,9 +84,15 @@ function renderView() {
     if (!els.view) return;
     let html = '';
     switch (activeView) {
-        case 'dashboard': html = renderDashboard(state.get(), getTime()); break;
-        case 'settings':  html = renderSettingsPanel(); break;
-        case 'guide':     html = renderGuidePanel(); break;
+        case 'dashboard':
+            html = renderDashboard(state.get(), getTime());
+            break;
+        case 'settings':
+            html = renderSettingsPanel();
+            break;
+        case 'guide':
+            html = renderGuidePanel();
+            break;
         default:
             html = renderEmptyState(EMPTY_VIEWS[activeView] || { icon: '❓', title: 'Tidak ditemukan' });
     }
@@ -112,7 +127,7 @@ function animateCash(from, to) {
         const eased = 1 - Math.pow(1 - p, 3);
         const val = from + (to - from) * eased;
         const text = '$' + Math.round(val).toLocaleString('en-US');
-        targets.forEach(el => el.textContent = text);
+        targets.forEach(el => { el.textContent = text; });
         if (p < 1) _cashRaf = requestAnimationFrame(step);
         else _cashRaf = null;
     };
@@ -147,14 +162,25 @@ function vibrate(ms) {
 function bindGlobalClicks() {
     document.body.addEventListener('click', (e) => {
         const navBtn = e.target.closest('[data-nav]');
-        if (navBtn) { e.preventDefault(); vibrate(8); navigate(navBtn.dataset.nav); return; }
+        if (navBtn) {
+            e.preventDefault();
+            vibrate(8);
+            navigate(navBtn.dataset.nav);
+            return;
+        }
 
         const timeBtn = e.target.closest('[data-time-action]');
         if (timeBtn) {
-            e.preventDefault(); vibrate(12);
+            e.preventDefault();
+            vibrate(12);
             const a = timeBtn.dataset.timeAction;
-            if (a === 'toggle-pause') { timeSystem.togglePause(); bus.emit('tutorial:action', { id: 'action:toggle-pause' }); }
-            else if (a === 'cycle-speed') { timeSystem.cycleSpeed(); bus.emit('tutorial:action', { id: 'action:cycle-speed' }); }
+            if (a === 'toggle-pause') {
+                timeSystem.togglePause();
+                bus.emit('tutorial:action', { id: 'action:toggle-pause' });
+            } else if (a === 'cycle-speed') {
+                timeSystem.cycleSpeed();
+                bus.emit('tutorial:action', { id: 'action:cycle-speed' });
+            }
             return;
         }
     });
@@ -169,7 +195,7 @@ function bindGlobalClicks() {
 // ============ TIME EVENTS ============
 function bindTimeEvents() {
     bus.on('time:tick', () => {
-        const meta = els.header?.querySelector('.header-meta');
+        const meta = els.header && els.header.querySelector('.header-meta');
         if (!meta) return;
         const t = getTime();
         const hh = String(Math.floor(t.currentHour)).padStart(2, '0');
@@ -220,7 +246,10 @@ function bindStateEvents() {
     bus.on('settings:take-loan', ({ loanId }) => {
         const res = economy.takeLoan(loanId);
         if (!res.ok) ToastService.error(res.error);
-        else { ToastService.success('Pinjaman diterima.'); renderView(); }
+        else {
+            ToastService.success('Pinjaman diterima.');
+            renderView();
+        }
     });
 
     bus.on('settings:changed', () => {});
@@ -230,7 +259,9 @@ function bindStateEvents() {
 // ============ BOOT ============
 async function boot() {
     try {
-        if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML utama tidak ditemukan.');
+        if (!els.header || !els.view || !els.nav) {
+            throw new Error('Elemen HTML utama tidak ditemukan.');
+        }
 
         mountToastContainer(els.toast);
         initTutorialOverlay();
@@ -246,8 +277,8 @@ async function boot() {
         } else {
             const onb = await showOnboarding();
             state.patch({ companyName: onb.companyName, difficulty: onb.difficulty });
-            const BAL = (await import('./data/balance.data.js')).BALANCE;
-            const starting = BAL.startingCash[onb.difficulty] ?? BAL.startingCash.normal;
+            const mod = await import('./data/balance.data.js');
+            const starting = mod.BALANCE.startingCash[onb.difficulty] || mod.BALANCE.startingCash.normal;
             state.setCash(starting);
             state.addMilestone('founded', `Perusahaan ${onb.companyName} didirikan.`);
             state.addLog(`Perusahaan ${onb.companyName} didirikan dengan modal $${starting.toLocaleString('en-US')}.`, 'success');
@@ -269,12 +300,21 @@ async function boot() {
 
         const cash = state.get().cash;
         if (cash > 0) {
-            document.querySelectorAll('[data-cash]').forEach(el => el.textContent = '$0');
+            document.querySelectorAll('[data-cash]').forEach(el => { el.textContent = '$0'; });
             animateCash(0, cash);
         }
 
         window.__game = {
-            state, bus, timeSystem, economy, quests, tutorial, SaveService, ToastService, Modal, navigate,
+            state,
+            bus,
+            timeSystem,
+            economy,
+            quests,
+            tutorial,
+            SaveService,
+            ToastService,
+            Modal,
+            navigate,
             cheat: {
                 addCash(n) { state.addCash(n); },
                 fastForwardDays(n) { return timeSystem.fastForwardDays(n); },
