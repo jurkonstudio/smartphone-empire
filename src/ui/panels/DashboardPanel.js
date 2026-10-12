@@ -22,7 +22,7 @@ function _renderPublicHighlight(state) {
 
     if (!feed.length && !viral) return '';
 
-    const sentColor = sentiment >= 70 ? 'var(--accent)' : sentiment >= 45 ? 'var(--info)' : sentiment >= 30 ? 'var(--warn)' : 'var(--danger)';
+    const sentColor = sentiment >= 70 ? 'var(--success)' : sentiment >= 45 ? 'var(--info)' : sentiment >= 30 ? 'var(--warn)' : 'var(--danger)';
     const latest = feed[0];
 
     return `
@@ -32,7 +32,7 @@ function _renderPublicHighlight(state) {
                 <div style="font-size:13px;color:var(--text-dim);">Sentimen</div>
                 <div style="font-size:16px;font-weight:700;color:${sentColor};">${sentiment}/100</div>
             </div>
-            ${viral ? `<div style="font-size:12px;color:${viral.type === 'positive' ? 'var(--accent)' : 'var(--danger)'};margin-bottom:8px;">
+            ${viral ? `<div style="font-size:12px;color:${viral.type === 'positive' ? 'var(--success)' : 'var(--danger)'};margin-bottom:8px;">
                 ${viral.type === 'positive' ? '✨' : '⚠'} ${escapeHtml(viral.title)}
             </div>` : ''}
             ${latest ? `
@@ -44,11 +44,36 @@ function _renderPublicHighlight(state) {
     `;
 }
 
-export function renderDashboard(state, timeSnapshot, researchSystem) {
+function _renderTeamQuick(state, teamSystem) {
+    if (!teamSystem) return '';
+    const counts = teamSystem.getTeamCounts();
+    const total = counts.engineers + counts.designers + counts.marketers;
+    const morale = teamSystem.getAverageMorale();
+    const moraleColor = morale >= 70 ? 'var(--success)' : morale >= 40 ? 'var(--warn)' : 'var(--danger)';
+
+    return `
+        <div class="card">
+            <div class="card-title">Tim</div>
+            ${total === 0
+                ? `<div style="font-size:12px;color:var(--text-mute);margin-bottom:10px;">Belum ada tim. Rekrut untuk mempercepat riset dan produksi.</div>`
+                : `<div class="sum-row"><span>🔧 Engineer</span><b>${counts.engineers}</b></div>
+                   <div class="sum-row"><span>🎨 Designer</span><b>${counts.designers}</b></div>
+                   <div class="sum-row"><span>📣 Marketer</span><b>${counts.marketers}</b></div>
+                   <div class="sum-row"><span>Moral Rata-rata</span><b style="color:${moraleColor};">${morale}/100</b></div>`
+            }
+            <button class="btn-secondary" data-nav="team" style="width:100%;margin-top:10px;font-size:12px;padding:8px;">
+                ${total === 0 ? 'Buka Rekrutmen →' : 'Kelola Tim →'}
+            </button>
+        </div>
+    `;
+}
+
+export function renderDashboard(state, timeSnapshot, researchSystem, teamSystem) {
     return `
         ${renderKpiCards(state, timeSnapshot)}
         ${renderTimePanel(timeSnapshot)}
         ${renderQuestsPanel(state)}
+        ${_renderTeamQuick(state, teamSystem)}
         ${_renderPublicHighlight(state)}
         ${renderCashChart(state)}
         ${renderProgressPanel(state, researchSystem)}
