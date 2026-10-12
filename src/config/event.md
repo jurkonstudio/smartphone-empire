@@ -9,11 +9,10 @@
 - `team:changed` / `tip:shown`
 
 ## Tema
-- `theme:changed` — `{ theme: 'dark'|'light', accent: 'blue'|'emerald'|'violet'|'amber'|'rose'|'cyan' }`
+- `theme:changed` — `{ theme, accent }`
 
 ## Ekonomi
-- `economy:add-revenue` / `economy:month-processed` / `economy:warn-burnrate` / `economy:game-over`
-- `economy:loan-taken` / `economy:loan-repaid`
+- `economy:add-revenue` / `economy:month-processed` / `economy:warn-burnrate` / `economy:game-over` / `economy:loan-taken` / `economy:loan-repaid`
 
 ## Tim
 - `team:recruited` / `team:fired` / `team:skill-up` / `team:candidates-refreshed`
@@ -29,28 +28,38 @@
 ## Produk
 - `product:development-started` / `product:development-progress` / `product:phase-changed`
 - `product:development-cancelled` / `product:released` / `product:daily-sales-processed`
-- `product:stock-out` / `product:campaign-started` / `product:discontinued`
-- `product:auto-restocked` — `{ productId, name, qty, cost }`
+- `product:stock-out` / `product:campaign-started` / `product:discontinued` / `product:auto-restocked`
+
+## Chip (BARU)
+- `chip:design-started` — `{ chipId, name }` — mulai desain chip
+- `chip:design-progress` — `{ chipId, name, percent, progressDays, durationDays, remainingDays }`
+- `chip:design-cancelled` — `{ chipId, refund }`
+- `chip:released` — `{ chipId, name, stats }` — chip selesai didesain
+
+## Fab (BARU)
+- `fab:build-started` — `{ level, name }` — mulai bangun fab
+- `fab:upgrade-started` — `{ level, name }` — mulai upgrade
+- `fab:progress` — `{ percent, isBuild, targetLevel }`
+- `fab:built` — `{ level }` — fab selesai dibangun
+- `fab:upgraded` — `{ level }` — fab selesai di-upgrade
+- `fab:production-started` — `{ chipId, qty }` — mulai produksi chip
+- `fab:production-progress` — `{ chipId, percent, progressUnits, totalUnits }`
+- `fab:production-completed` — `{ chipId, qty }`
 
 ## Kompetitor
-- `competitor:activated` / `competitor:deactivated`
-- `competitor:released-product` / `competitor:life-event`
+- `competitor:activated` / `competitor:deactivated` / `competitor:released-product` / `competitor:life-event`
 
 ## Pasar
 - `market:share-updated`
 
 ## Feedback Publik
-- `feedback:sentiment-changed` / `feedback:review-received`
-- `feedback:viral-started` / `feedback:viral-ended` / `feedback:viral-responded`
+- `feedback:sentiment-changed` / `feedback:review-received` / `feedback:viral-started` / `feedback:viral-ended` / `feedback:viral-responded`
 
-## Ulasan
+## Ulasan (produk)
 - `review:received`
 
-## Cloud (stub, akan aktif di update mendatang)
-- `cloud:status-changed` — `{ status: 'disconnected'|'connecting'|'connected'|'error' }`
-- `cloud:sync-start` — `{ direction: 'up'|'down' }`
-- `cloud:sync-success` — `{ direction, at }`
-- `cloud:sync-error` — `{ direction, message }`
+## Cloud (stub)
+- `cloud:status-changed` / `cloud:sync-start` / `cloud:sync-success` / `cloud:sync-error`
 
 ## Quest & Tutorial
 - `quest:activated` / `quest:completed`
