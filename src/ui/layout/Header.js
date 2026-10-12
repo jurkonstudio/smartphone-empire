@@ -1,5 +1,6 @@
 // FILE: src/ui/layout/Header.js
 import { getMonthName } from '../../core/TimeSystem.js';
+import { generateLogo } from '../avatars/AvatarGenerator.js';
 
 export function renderHeader({ state, timeSnapshot, warning }) {
     const t = timeSnapshot;
@@ -14,7 +15,11 @@ export function renderHeader({ state, timeSnapshot, warning }) {
     return `
         <div class="header-inner">
             <div class="header-row">
-                <div class="header-company">${state.companyName}</div>
+                <button class="header-company-btn" data-nav="profile" aria-label="Profil perusahaan">
+                    ${generateLogo(state.companyName, { size: 26 })}
+                    <span class="header-company">${state.companyName}</span>
+                    <span class="header-chevron">›</span>
+                </button>
                 ${warnBadge}
                 <div class="header-cash" data-cash>$${state.cash.toLocaleString('en-US')}</div>
             </div>
