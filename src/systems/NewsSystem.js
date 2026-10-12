@@ -16,14 +16,9 @@ import {
 var MAX_ARTICLES = 30;
 var _articleSeq = 1;
 
-// ============================================================
-// HELPERS
-// ============================================================
 function _toneFromScore(score, reputation) {
-    // score: 1-10, reputation: 0-100
-    var repBonus = (reputation - 50) / 100; // -0.5 to +0.5
+    var repBonus = (reputation - 50) / 100;
     var adjusted = score + repBonus * 1.5;
-
     if (adjusted >= 7) return 'positive';
     if (adjusted >= 5) return 'mixed';
     return 'negative';
@@ -48,9 +43,6 @@ function _fillTemplate(text, data) {
         .replace(/\{weak\}/g, data.weak || '');
 }
 
-// ============================================================
-// GENERATOR
-// ============================================================
 function _generateArticle(options) {
     var opts = options || {};
     var data = state.get();
@@ -58,16 +50,13 @@ function _generateArticle(options) {
     var outlets = getOutletsForYear(year);
     if (!outlets.length) return null;
 
-    // Pilih outlet
     var outlet = opts.outlet || getRandomFrom(outlets);
     if (!outlet) return null;
 
-    // Tone berdasarkan skor & reputasi
     var score = opts.score != null ? opts.score : 5;
     var reputation = data.market ? (data.market.reputation || 0) : 0;
     var tone = opts.tone || _toneFromScore(score, reputation);
 
-    // Data template
     var tplData = {
         name: opts.productName || 'Perangkat',
         company: data.companyName || 'Perusahaan',
@@ -78,7 +67,6 @@ function _generateArticle(options) {
         weak: opts.weak || 'beberapa aspek'
     };
 
-    // Headline
     var headlinePool;
     if (opts.type === 'milestone_100m') headlinePool = HEADLINE_TEMPLATES.milestone_100m;
     else if (opts.type === 'milestone_10m') headlinePool = HEADLINE_TEMPLATES.milestone_10m;
@@ -87,26 +75,21 @@ function _generateArticle(options) {
 
     var headline = _fillTemplate(getRandomFrom(headlinePool), tplData);
 
-    // Sub-headline
     var subPool = SUBHEADLINE_TEMPLATES[tone] || SUBHEADLINE_TEMPLATES.mixed;
     var subheadline = _fillTemplate(getRandomFrom(subPool), tplData);
 
-    // Body paragraphs
     var bodyPool = BODY_TEMPLATES[tone] || BODY_TEMPLATES.mixed;
     var paragraphs = [];
     for (var i = 0; i < bodyPool.length; i++) {
         paragraphs.push(_fillTemplate(bodyPool[i], tplData));
     }
 
-    // Pull quote
     var quotePool = PULL_QUOTE_TEMPLATES[tone] || PULL_QUOTE_TEMPLATES.mixed;
     var pullQuote = _fillTemplate(getRandomFrom(quotePool), tplData);
 
-    // Byline & dateline
     var journalist = getJournalistForCountry(outlet.country);
     var city = getDatelineForRegion(outlet.region);
 
-    // ID unik
     var id = 'news_' + Date.now() + '_' + (_articleSeq++);
 
     return {
@@ -138,9 +121,6 @@ function _generateArticle(options) {
     };
 }
 
-// ============================================================
-// PUBLIC API
-// ============================================================
 export var NewsSystem = {
     start: function () {
         bus.on('product:released', function (payload) {
@@ -152,16 +132,12 @@ export var NewsSystem = {
         console.info('[NewsSystem] siap.');
     },
 
-    // ============================================================
-    // TRIGGER 1 — Saat produk dirilis
-    // ============================================================
     _onProductReleased: function (payload) {
         if (!payload) return;
         try {
             var data = state.get();
             if (!data.news) data.news = { articles: [], lastMilestone: {} };
 
-            // Cari produk di katalog
             var product = null;
             for (var i = 0; i < data.products.catalog.length; i++) {
                 if (data.products.catalog[i].id === payload.productId) {
@@ -171,7 +147,6 @@ export var NewsSystem = {
             }
             if (!product) return;
 
-            // Skor dari ulasan pertama produk (jika ada)
             var score = 5;
             if (product.reviews && product.reviews.length) {
                 var sum = 0;
@@ -181,7 +156,6 @@ export var NewsSystem = {
                 score = product.stats.qualityScore / 10;
             }
 
-            // Cari strong/weak stats
             var statKeys = ['display', 'camera', 'battery', 'performance', 'connectivity', 'design', 'usability'];
             var best = statKeys[0], worst = statKeys[0];
             for (var k = 0; k < statKeys.length; k++) {
@@ -189,10 +163,8 @@ export var NewsSystem = {
                 if ((product.stats[key] || 0) > (product.stats[best] || 0)) best = key;
                 if ((product.stats[key] || 0) < (product.stats[worst] || 0)) worst = key;
             }
-            var strongMap = { display: 'layar', camera: 'kamera', battery: 'baterai', performance: 'performa', connectivity: 'konektivitas', design: 'desain', usability: 'kemudahan' };
-            var weakMap = strongMap;
+            var labelMap = { display: 'layar', camera: 'kamera', battery: 'baterai', performance: 'performa', connectivity: 'konektivitas', design: 'desain', usability: 'kemudahan' };
 
-            // Generate 2 artikel dari outlet berbeda
             var articles = [];
             var usedOutletIds = {};
             var attempts = 0;
@@ -204,8 +176,8 @@ export var NewsSystem = {
                     productName: product.name,
                     price: product.price,
                     score: score,
-                    strong: strongMap[best] || 'kualitas',
-                    weak: weakMap[worst] || 'beberapa aspek'
+                    strong: labelMap[best] || 'kualitas',
+                    weak: labelMap[worst] || 'beberapa aspek'
                 });
                 if (art && !usedOutletIds[art.sourceId]) {
                     usedOutletIds[art.sourceId] = true;
@@ -213,7 +185,6 @@ export var NewsSystem = {
                 }
             }
 
-            // Simpan ke state
             for (var m = 0; m < articles.length; m++) {
                 data.news.articles.unshift(articles[m]);
             }
@@ -221,21 +192,17 @@ export var NewsSystem = {
                 data.news.articles.length = MAX_ARTICLES;
             }
 
-            // Emit untuk toast & modal
             for (var n = 0; n < articles.length; n++) {
                 bus.emit('news:published', { article: articles[n] });
             }
 
-            state.addLog(articles.length + ' ulasan media internasional diterbitkan untuk ' + product.name + '.', LOG_TYPES.info);
+            state.addLog(articles.length + ' ulasan media internasional untuk ' + product.name + '.', LOG_TYPES.info);
             bus.emit('state:changed', data);
         } catch (err) {
             console.error('[NewsSystem] _onProductReleased error:', err);
         }
     },
 
-    // ============================================================
-    // TRIGGER 2 — Milestone penjualan
-    // ============================================================
     _onMilestoneSales: function (payload) {
         if (!payload) return;
         try {
@@ -244,7 +211,7 @@ export var NewsSystem = {
             if (!data.news.lastMilestone) data.news.lastMilestone = {};
 
             var productId = payload.productId;
-            var milestone = payload.milestone; // '1m', '10m', '100m'
+            var milestone = payload.milestone;
             var key = productId + '_' + milestone;
             if (data.news.lastMilestone[key]) return;
             data.news.lastMilestone[key] = true;
@@ -272,13 +239,11 @@ export var NewsSystem = {
         }
     },
 
-    // ============================================================
-    // API
-    // ============================================================
     getArticles: function (limit) {
         var data = state.get();
         var list = (data.news && data.news.articles) ? data.news.articles.slice() : [];
-        return list.slice(0, limit || 30);
+        if (limit > 0) return list.slice(0, limit);
+        return list;
     },
 
     getUnreadCount: function () {
@@ -311,7 +276,6 @@ export var NewsSystem = {
         return null;
     },
 
-    // Untuk testing
     generateTestArticle: function () {
         return _generateArticle({
             type: 'release',
