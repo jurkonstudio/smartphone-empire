@@ -2,6 +2,7 @@
 // Tab Tim: sub-tab Tim Aktif | Rekrut | Info Bonus.
 import { ROLES, getRoleById, getSkillTier, getTraitById } from '../../data/staff.data.js';
 import { BALANCE } from '../../data/balance.data.js';
+import { generateAvatar } from '../avatars/AvatarGenerator.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -64,7 +65,6 @@ function _renderActive(data, teamSystem) {
         `;
     }
 
-    // Urutkan per role
     const byRole = { engineer: [], designer: [], marketer: [] };
     staff.forEach(s => { if (byRole[s.role]) byRole[s.role].push(s); });
 
@@ -97,7 +97,7 @@ function _renderStaffRow(s) {
 
     return `
         <div class="staff-row" data-staff-detail="${s.id}">
-            <div class="staff-avatar" style="background:${role.color};">${role.icon}</div>
+            ${generateAvatar(s.name, { size: 38 })}
             <div class="staff-info">
                 <div class="staff-name-row">
                     <span class="staff-name">${escapeHtml(s.name)}</span>
@@ -164,7 +164,7 @@ function _renderRecruit(data, teamSystem) {
         return `
             <div class="cand-card">
                 <div class="cand-head">
-                    <div class="staff-avatar" style="background:${role.color};">${role.icon}</div>
+                    ${generateAvatar(c.name, { size: 38 })}
                     <div style="flex:1;min-width:0;">
                         <div style="font-size:13.5px;font-weight:700;">${escapeHtml(c.name)}</div>
                         <div style="font-size:11px;color:var(--text-mute);margin-top:2px;">${role.label} • Tier ${c.skill} (${tier.label})</div>
