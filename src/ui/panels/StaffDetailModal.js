@@ -3,6 +3,7 @@
 import { Modal } from '../modal.js';
 import { getRoleById, getSkillTier, getTraitById } from '../../data/staff.data.js';
 import { BALANCE } from '../../data/balance.data.js';
+import { generateAvatar } from '../avatars/AvatarGenerator.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -56,7 +57,7 @@ export function openStaffDetailModal({ staffId }) {
 
     const html = `
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
-            <div class="staff-avatar-lg" style="background:${role.color};">${role.icon}</div>
+            ${generateAvatar(s.name, { size: 58 })}
             <div style="flex:1;min-width:0;">
                 <div style="font-size:17px;font-weight:700;letter-spacing:-0.02em;">${escapeHtml(s.name)}</div>
                 <div style="font-size:12px;color:var(--text-dim);">${role.label} • Bergabung ${s.hireDate.day}/${s.hireDate.month}/${s.hireDate.year}</div>
