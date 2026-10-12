@@ -45,25 +45,32 @@ import { renderTeamPanel } from './ui/panels/TeamPanel.js';
 import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
 import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
+import { renderChipMockup } from './ui/phone/ChipMockup.js';
+import { renderChipRadarChart } from './ui/charts/ChipRadarChart.js';
 import * as marketingModule from './data/marketing.data.js';
 import * as feedbackModule from './data/feedback.data.js';
+import { getActiveRendererIdPublic } from './ui/notifications/NotificationRenderer.js';
+import { initSwipe, showSwipeAnimation } from './core/SwipeService.js';
 
-var timeSystem = new TimeSystem(state);
-var economy = new EconomySystem(state);
-var quests = new QuestSystem(state);
-var tutorial = new TutorialSystem(state);
-var research = new ResearchSystem(state);
-var os = new OSSystem(state);
-var products = new ProductSystem(state);
-var market = new MarketSystem(state);
+// ============ INSTANCE ============
+var timeSystem  = new TimeSystem(state);
+var economy     = new EconomySystem(state);
+var quests      = new QuestSystem(state);
+var tutorial    = new TutorialSystem(state);
+var research    = new ResearchSystem(state);
+var os          = new OSSystem(state);
+var products    = new ProductSystem(state);
+var market      = new MarketSystem(state);
 var competitors = new CompetitorSystem(state);
-var opinion = new PublicOpinionSystem(state);
-var eraSystem = new EraSystem(state);
-var teamSystem = new TeamSystem(state);
-var chipSystem = new ChipSystem(state);
-var fabSystem = new FabSystem(state);
+var opinion     = new PublicOpinionSystem(state);
+var eraSystem   = new EraSystem(state);
+var teamSystem  = new TeamSystem(state);
+var chipSystem  = new ChipSystem(state);
+var fabSystem   = new FabSystem(state);
+
 market.setCompetitorSystem(competitors);
 
+// ============ STATE UI ============
 var activeView = 'dashboard';
 var activeSubtab = 'tech';
 var activeProdSubtab = 'design';
@@ -72,20 +79,18 @@ var activeTeamSubtab = 'active';
 var _burnWarn = null;
 
 var els = {
-    header: document.getElementById('app-header'),
-    view: document.getElementById('app-view'),
-    nav: document.getElementById('mobile-nav'),
+    header:  document.getElementById('app-header'),
+    view:    document.getElementById('app-view'),
+    nav:     document.getElementById('mobile-nav'),
     loading: document.getElementById('loading-screen'),
-    error: document.getElementById('error-message'),
-    toast: document.getElementById('toast-container')
+    error:   document.getElementById('error-message'),
+    toast:   document.getElementById('toast-container')
 };
 
 function getTime() { return timeSystem.snapshot(); }
 function hideLoading() { if (els.loading) els.loading.style.display = 'none'; }
 
-// Force-hide loading SEKARANG supaya kalau boot crash, terlihat
-if (els.loading) els.loading.style.display = 'none';
-
+// ============ RENDER ============
 function renderHeaderOnly() {
     if (!els.header) return;
     els.header.innerHTML = renderHeader({ state: state.get(), timeSnapshot: getTime(), warning: _burnWarn });
@@ -101,6 +106,7 @@ function renderView(opts) {
     var soft = !!(opts && opts.soft);
     var prevScroll = els.view.scrollTop;
     if (soft) els.view.classList.add('soft-update');
+
     var html = '';
     try {
         if (activeView === 'dashboard') html = renderDashboard(state.get(), getTime(), research, teamSystem);
@@ -140,6 +146,7 @@ function updateDashboardLive() {
     var y = document.querySelector('[data-kpi-year]'); if (y) y.textContent = t.currentYear;
 }
 
+// ============ ANIMASI UANG ============
 var _cashRaf = null;
 function animateCash(from, to) {
     if (_cashRaf) { cancelAnimationFrame(_cashRaf); _cashRaf = null; }
@@ -157,6 +164,7 @@ function animateCash(from, to) {
     _cashRaf = requestAnimationFrame(step);
 }
 
+// ============ NAVIGASI ============
 function navigate(id) {
     if (id === activeView) return;
     activeView = id;
@@ -177,8 +185,10 @@ function vibrate(ms) {
     if (navigator && typeof navigator.vibrate === 'function') { try { navigator.vibrate(ms); } catch (e) {} }
 }
 
+// ============ EVENT DELEGATION ============
 function bindGlobalClicks() {
     document.body.addEventListener('click', function (e) {
+        // AUTO-RESTOCK
         var autoToggle = e.target.closest('[data-auto-toggle]');
         if (autoToggle) {
             e.preventDefault(); vibrate(8);
@@ -189,6 +199,7 @@ function bindGlobalClicks() {
         var autoThresh = e.target.closest('[data-auto-threshold]');
         if (autoThresh) { e.preventDefault(); vibrate(6); products.setAutoRestockThreshold(autoThresh.dataset.prodId, parseInt(autoThresh.dataset.autoThreshold, 10) || 20); renderAll(); return; }
 
+        // CHIP & FAB
         var chipAction = e.target.closest('[data-chip-action]');
         if (chipAction) {
             e.preventDefault(); vibrate(8);
@@ -217,9 +228,19 @@ function bindGlobalClicks() {
             }
         }
 
+        var chipRow = e.target.closest('[data-chip-detail]');
+        if (chipRow) {
+            e.preventDefault();
+            var chip = chipSystem.getChipById(chipRow.dataset.chipDetail);
+            if (chip) _openChipDetail(chip);
+            return;
+        }
+
+        // NAV
         var navBtn = e.target.closest('[data-nav]');
         if (navBtn) { e.preventDefault(); vibrate(8); navigate(navBtn.dataset.nav); return; }
 
+        // TIME
         var timeBtn = e.target.closest('[data-time-action]');
         if (timeBtn) {
             e.preventDefault(); vibrate(12);
@@ -229,6 +250,7 @@ function bindGlobalClicks() {
             return;
         }
 
+        // TEAM
         var teamSub = e.target.closest('[data-team-subtab]');
         if (teamSub) { e.preventDefault(); activeTeamSubtab = teamSub.dataset.teamSubtab; renderView(); return; }
         var teamAction = e.target.closest('[data-team-action]');
@@ -249,6 +271,7 @@ function bindGlobalClicks() {
             if (a === 'train') { var res = teamSystem.trainStaff(sid); if (!res.ok) ToastService.error(res.reason); else { Modal.close('staff-detail', true); openStaffDetailModal({ staffId: sid }); renderAll(); } return; }
         }
 
+        // RISET
         var subBtn = e.target.closest('[data-subtab]');
         if (subBtn) { e.preventDefault(); activeSubtab = subBtn.dataset.subtab; renderView(); return; }
         var chipFilter = e.target.closest('[data-filter-cat]');
@@ -264,6 +287,7 @@ function bindGlobalClicks() {
             return;
         }
 
+        // OS
         var osAction = e.target.closest('[data-os-action]');
         if (osAction) {
             e.preventDefault();
@@ -278,6 +302,7 @@ function bindGlobalClicks() {
             if (a === 'feature-detail') { openFeatureDetailModal({ osSystem: os, featureId: osAction.dataset.featureId }); return; }
         }
 
+        // PRODUK
         var prodSub = e.target.closest('[data-prod-subtab]');
         if (prodSub) { e.preventDefault(); activeProdSubtab = prodSub.dataset.prodSubtab; renderView(); return; }
         var prodAction = e.target.closest('[data-prod-action]');
@@ -313,6 +338,7 @@ function bindGlobalClicks() {
             return;
         }
 
+        // MARKET
         var mktSub = e.target.closest('[data-market-subtab]');
         if (mktSub) { e.preventDefault(); activeMarketSubtab = mktSub.dataset.marketSubtab; renderView(); return; }
         var compCard = e.target.closest('[data-competitor-detail]');
@@ -342,6 +368,40 @@ function bindGlobalClicks() {
     });
 }
 
+// ============ CHIP DETAIL MODAL ============
+function _openChipDetail(chip) {
+    if (!chip) return;
+    var lifecycle = chipSystem.getChipLifecycle ? chipSystem.getChipLifecycle(chip) : null;
+    var ageMonths = chipSystem.getChipAgeMonths ? chipSystem.getChipAgeMonths(chip) : 0;
+
+    var mockupHtml = '';
+    try { mockupHtml = renderChipMockup(chip.config, { size: 170 }); } catch (e) {}
+    var radarHtml = '';
+    try { radarHtml = renderChipRadarChart({ performance: chip.stats.performance, efficiency: chip.stats.efficiency, costPerUnit: chip.stats.costPerUnit, yieldRate: chip.yieldRate }, { size: 150 }); } catch (e) {}
+
+    var html = '<div class="modal-title">' + chip.name + '</div>' +
+        '<div class="modal-sub">Dirilis ' + chip.releaseDate.day + '/' + chip.releaseDate.month + '/' + chip.releaseDate.year + ' - ' + ageMonths + ' bulan</div>' +
+        '<div class="chip-detail-layout">' +
+        '<div class="chip-detail-left">' +
+        '<div class="chip-detail-device">' + mockupHtml + '</div>' +
+        '<div class="chip-detail-radar">' + radarHtml + '</div>' +
+        '</div>' +
+        '<div class="chip-detail-right">' +
+        '<div class="sum-row"><span>Performance</span><b style="color:var(--success);">' + chip.stats.performance + '</b></div>' +
+        '<div class="sum-row"><span>Efficiency</span><b style="color:var(--info);">' + chip.stats.efficiency + '</b></div>' +
+        '<div class="sum-row"><span>Cost per unit</span><b>$' + chip.stats.costPerUnit + '</b></div>' +
+        '<div class="sum-row"><span>Yield Rate</span><b>' + Math.round(chip.yieldRate * 100) + '%</b></div>' +
+        '<div class="sum-row"><span>Cores</span><b>' + chip.stats.cores + 'x @ ' + chip.stats.clock + ' GHz</b></div>' +
+        '<div class="sum-row"><span>Cache</span><b>' + chip.stats.cacheMB.toFixed(2) + ' MB</b></div>' +
+        (lifecycle ? '<div class="sum-row"><span>Lifecycle</span><b style="color:' + lifecycle.color + ';">' + lifecycle.label + ' (x' + lifecycle.multiplier.toFixed(2) + ')</b></div>' : '') +
+        '</div>' +
+        '</div>' +
+        '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">Tutup</button>';
+
+    Modal.open('chip-detail', html);
+}
+
+// ============ PROGRESS EVENTS ============
 function bindProgressEvents() {
     bus.on('research:progress', function (data) {
         if (activeView !== 'research' || activeSubtab !== 'tech') return;
@@ -374,6 +434,7 @@ function bindProgressEvents() {
     });
 }
 
+// ============ TIME ============
 function bindTimeEvents() {
     bus.on('time:tick', function () {
         var meta = els.header && els.header.querySelector('.header-meta');
@@ -389,6 +450,7 @@ function bindTimeEvents() {
     bus.on('time:speed-changed', function () { renderHeaderOnly(); });
 }
 
+// ============ STATE ============
 function bindStateEvents() {
     bus.on('state:cash-changed', function (data) { animateCash(data.prev, data.next); });
     bus.on('state:log-changed', function () { if (activeView === 'dashboard') renderView({ soft: true }); });
@@ -414,6 +476,7 @@ function bindStateEvents() {
     bus.on('team:fired', function () { if (activeView === 'team') renderView({ soft: true }); });
 }
 
+// ============ BOOT ============
 async function boot() {
     try {
         if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML utama tidak ditemukan.');
@@ -504,6 +567,27 @@ async function boot() {
             document.querySelectorAll('[data-cash]').forEach(function (el) { el.textContent = '$0'; });
             animateCash(0, cash);
         }
+
+        // ============ INIT SWIPE ============
+        initSwipe({
+            getView: function () { return activeView; },
+            getSubtab: function () {
+                if (activeView === 'research') return activeSubtab;
+                if (activeView === 'products') return activeProdSubtab;
+                if (activeView === 'market')   return activeMarketSubtab;
+                if (activeView === 'team')     return activeTeamSubtab;
+                return null;
+            },
+            setSubtab: function (id, direction) {
+                if (activeView === 'research') activeSubtab = id;
+                else if (activeView === 'products') activeProdSubtab = id;
+                else if (activeView === 'market')   activeMarketSubtab = id;
+                else if (activeView === 'team')     activeTeamSubtab = id;
+                renderView();
+                showSwipeAnimation(direction);
+            }
+        });
+
         console.info('[' + APP_CONFIG.name + '] siap. Era: ' + state.get().era);
     } catch (err) {
         console.error('[boot] gagal:', err);
