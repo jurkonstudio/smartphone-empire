@@ -1,11 +1,6 @@
-// ============================================================
-// Konfigurasi Sistem Waktu Simulasi
-// Semua satuan waktu menggunakan nilai integer untuk konsistensi.
-// realSecondsPerGameDay = 60 berarti 1 hari game = 60 detik nyata
-// pada kecepatan 1x.
-// ============================================================
+// FILE: src/config/time.config.js
+// Konfigurasi tunggal sistem waktu. Ubah di sini tanpa menyentuh logika.
 export const TIME_CONFIG = {
-    // Tanggal mulai permainan
     startYear: 2000,
     startMonth: 1,
     startDay: 1,
@@ -18,17 +13,17 @@ export const TIME_CONFIG = {
     hoursPerDay: 24,
     minutesPerHour: 60,
 
-    // Laju waktu: 1 hari game = 60 detik nyata pada 1x
+    // Laju waktu: 1 hari game = 60 detik nyata pada kecepatan 1x
     realSecondsPerGameDay: 60,
 
-    // Batas delta per frame (menghindari lompatan waktu besar)
+    // Batas delta antar frame (mencegah lompatan waktu besar)
     maxDeltaSeconds: 0.25,
 
-    // Pilihan kecepatan yang tersedia (0 = pause, ditangani terpisah)
+    // Pilihan kecepatan simulasi
     speedOptions: [1, 2, 5, 10],
     defaultSpeed: 1,
     startPaused: true,
 
-    // Interval minimum antar event time:tick (ms) untuk hemat CPU
+    // Throttle emit event time:tick (ms)
     tickEmitIntervalMs: 250
 };
