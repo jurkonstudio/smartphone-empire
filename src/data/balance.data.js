@@ -10,20 +10,19 @@ export const BALANCE = {
     },
 
     // ---- Riset dasar yang otomatis selesai di awal permainan ----
-    // Pemain langsung bisa merancang ponsel candy bar dasar.
     starterResearch: [
-        'layar_mono',    // Layar monokrom
-        'cam_vga',       // Kamera VGA
-        'bat_liion',     // Baterai Li-Ion
-        'chip_single',   // Chip single-core
-        'net_gsm'        // Jaringan GSM
+        'layar_mono',
+        'cam_vga',
+        'bat_liion',
+        'chip_single',
+        'net_gsm'
     ],
 
     // ---- Pengali efek kesulitan ----
     difficultyMultiplier: {
-        santai: { expense: 0.8,  competitorAggression: 0.7, taxRate: 0.12 },
-        normal: { expense: 1.0,  competitorAggression: 1.0, taxRate: 0.15 },
-        sulit:  { expense: 1.3,  competitorAggression: 1.4, taxRate: 0.20 }
+        santai: { expense: 0.8, competitorAggression: 0.7, taxRate: 0.12 },
+        normal: { expense: 1.0, competitorAggression: 1.0, taxRate: 0.15 },
+        sulit:  { expense: 1.3, competitorAggression: 1.4, taxRate: 0.20 }
     },
 
     // ---- Biaya tetap bulanan ----
@@ -63,7 +62,9 @@ export const BALANCE = {
         first_product:        { cash: 5000, reputation: 3 }
     },
 
-    // ---- RISET ----
+    // ============================================================
+    // RISET
+    // ============================================================
     research: {
         baseSlots: 1,
         perEngineerSlots: 0.5,
@@ -74,7 +75,9 @@ export const BALANCE = {
         refundPercent: 0.5
     },
 
-    // ---- OS ----
+    // ============================================================
+    // OS
+    // ============================================================
     os: {
         baseFeatureSlots: 3,
         perEngineerFeatureSlots: 0.33,
@@ -93,7 +96,9 @@ export const BALANCE = {
         majorVersionStart: 1
     },
 
-    // ---- PRODUK ----
+    // ============================================================
+    // PRODUK
+    // ============================================================
     products: {
         baseMarketDemand: {
             feature_phone:     5000,
@@ -116,7 +121,9 @@ export const BALANCE = {
         maxActiveProducts: 5
     },
 
-    // ---- PASAR ----
+    // ============================================================
+    // PASAR
+    // ============================================================
     market: {
         startingReputation: 10,
         maxReputation: 100,
@@ -132,72 +139,69 @@ export const BALANCE = {
         trendVariationPerMonth: 0.05
     },
 
-    // ---- PEMASARAN ----
+    // ============================================================
+    // PEMASARAN
+    // ============================================================
     marketing: { perMarketerBonus: 0.1, maxMarketingFactor: 2.5 },
 
-    // ---- ULASAN ----
+    // ============================================================
+    // ULASAN
+    // ============================================================
     reviews: {
         initialWaveDays: 7,
         followUpDays: 30,
         maxReviewsInFeed: 30,
         perDayChance: 0.15
-    }
+    },
+
     // ============================================================
-// KOMPETITOR AI — ditambahkan pada Batch C
-// ============================================================
-competitors: {
-    // Pengali efek pemain terhadap pangsa kompetitor
-    playerPressureMultiplier: 0.4,
+    // KOMPETITOR AI — ditambahkan pada Batch C
+    // ============================================================
+    competitors: {
+        // Pengali efek pemain terhadap pangsa kompetitor
+        playerPressureMultiplier: 0.4,
 
-    // Kecepatan riset AI dasar (per bulan, dalam tier)
-    aiResearchTierPerYear: 0.3,   // tier 1 → tier 2 = ~3.3 tahun
-    aiResearchCostScale: 0.9,     // AI bayar 90% dari biaya riset pemain
+        // Kecepatan riset AI dasar (per tahun, dalam tier)
+        aiResearchTierPerYear: 0.3,
+        aiResearchCostScale: 0.9,
 
-    // Kecepatan rilis produk AI (bulan antar rilis)
-    aiReleaseIntervalMonths: 8,
+        // Kecepatan rilis produk AI (bulan antar rilis)
+        aiReleaseIntervalMonths: 8,
 
-    // Bobot AI dalam pangsa pasar
-    // Pangsa AI = (revenue AI) / (revenue pemain + total revenue AI + others)
-
-    // Sensitivitas reaksi AI terhadap pemain
-    aiReactionSensitivity: 0.3
-},
-
-// ============================================================
-// FEEDBACK PUBLIK — ditambahkan pada Batch C
-// ============================================================
-feedback: {
-    // Sentimen awal pemain (0-100)
-    initialSentiment: 50,
-
-    // Bobot tiap komponen sentimen
-    sentimentWeights: {
-        quality:    0.25,
-        price:      0.15,
-        reputation: 0.20,
-        bugPenalty: 0.15,   // penalti dari bug aktif
-        viralBoost: 0.25    // efek viral sementara
+        // Sensitivitas reaksi AI terhadap pemain
+        aiReactionSensitivity: 0.3
     },
 
-    // Sentimen per aspek (0-100)
-    aspectWeights: {
-        design:      0.15,
-        camera:      0.15,
-        battery:     0.15,
-        performance: 0.15,
-        price:       0.15,
-        reliability: 0.10,
-        os:          0.10,
-        support:     0.05
-    },
+    // ============================================================
+    // FEEDBACK PUBLIK — ditambahkan pada Batch C
+    // ============================================================
+    feedback: {
+        // Sentimen awal pemain (0-100)
+        initialSentiment: 50,
 
-    // Frekuensi ulasan
-    reviewsPerMonthBase: 8,      // minimal per bulan
+        // Bobot tiap komponen sentimen
+        sentimentWeights: {
+            quality:    0.25,
+            price:      0.15,
+            reputation: 0.20,
+            bugPenalty: 0.15,
+            viralBoost: 0.25
+        },
 
-    // Kenaikan sentimen bila menerapkan saran pelanggan di ponsel baru
-    suggestionBonus: 5,
+        // Sentimen per aspek (0-100)
+        aspectWeights: {
+            design:      0.15,
+            camera:      0.15,
+            battery:     0.15,
+            performance: 0.15,
+            price:       0.15,
+            reliability: 0.10,
+            os:          0.10,
+            support:     0.05
+        },
 
-    // Bobot viral event dalam sentimen
-    viralEventImpact: 0.3
-}
+        reviewsPerMonthBase: 8,
+        suggestionBonus: 5,
+        viralEventImpact: 0.3
+    }
 };
