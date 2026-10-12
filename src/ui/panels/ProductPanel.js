@@ -1,6 +1,12 @@
 // FILE: src/ui/panels/ProductPanel.js
+// Tab Produk: sub-tab Desain | Katalog | Penjualan | Chip (conditional).
 import { renderSalesChart } from './SalesChart.js';
 import { getComponentById } from '../../data/components.data.js';
+import { state } from '../../core/GameState.js';
+import { ToastService } from '../../core/ToastService.js';
+import { openChipDesigner } from './ChipDesignerPanel.js';
+import { openFabPanel, openProductionQtyModal } from './FabPanel.js';
+import { renderChipMockup } from '../phone/ChipMockup.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -8,23 +14,49 @@ function escapeHtml(s) {
             .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
+// Chip lab unlock check
+function isChipLabUnlocked() {
+    const data = state.get();
+    return (data.research.completed || []).includes('chip_design_tool');
+}
+
 export function renderProductPanel({ subtab, productSystem, researchSystem, osSystem }) {
+    const chipUnlocked = isChipLabUnlocked();
+
+    // Kalau user set subtab = 'chip' tapi belum unlock, fallback ke design
+    if (subtab === 'chip' && !chipUnlocked) subtab = 'design';
+
+    const subtabs = [
+        { id: 'design',  label: 'Desain' },
+        { id: 'catalog', label: 'Katalog' },
+        { id: 'sales',   label: 'Penjualan' }
+    ];
+    if (chipUnlocked) {
+        subtabs.push({ id: 'chip', label: '🧩 Chip' });
+    }
+
     const subtabBar = `
         <div class="subtab-bar">
-            <button class="subtab-btn ${subtab === 'design'  ? 'active' : ''}" data-prod-subtab="design">Desain</button>
-            <button class="subtab-btn ${subtab === 'catalog' ? 'active' : ''}" data-prod-subtab="catalog">Katalog</button>
-            <button class="subtab-btn ${subtab === 'sales'   ? 'active' : ''}" data-prod-subtab="sales">Penjualan</button>
+            ${subtabs.map(t => `
+                <button class="subtab-btn ${subtab === t.id ? 'active' : ''}" data-prod-subtab="${t.id}">${t.label}</button>
+            `).join('')}
         </div>
     `;
+
     let body = '';
-    if (subtab === 'catalog') body = _renderCatalog();
-    else if (subtab === 'sales') body = _renderSales();
-    else body = _renderDesignTab(productSystem);
+    if (subtab === 'catalog')      body = _renderCatalog();
+    else if (subtab === 'sales')   body = _renderSales();
+    else if (subtab === 'chip')    body = _renderChipTab();
+    else                           body = _renderDesignTab(productSystem);
+
     return subtabBar + body;
 }
 
+// ============================================================
+// SUB-TAB DESAIN
+// ============================================================
 function _renderDesignTab(productSystem) {
-    const data = window.__game.state.get();
+    const data = state.get();
     const dev = data.products.development;
 
     if (dev) {
@@ -69,8 +101,11 @@ function _renderDesignTab(productSystem) {
     `;
 }
 
+// ============================================================
+// SUB-TAB KATALOG
+// ============================================================
 function _renderCatalog() {
-    const data = window.__game.state.get();
+    const data = state.get();
     const catalog = data.products.catalog || [];
     if (!catalog.length) {
         return `<div class="empty">
@@ -113,8 +148,11 @@ function _renderCatalog() {
     return `<div class="prod-list">${cards}</div>`;
 }
 
+// ============================================================
+// SUB-TAB PENJUALAN
+// ============================================================
 function _renderSales() {
-    const data = window.__game.state.get();
+    const data = state.get();
     const catalog = data.products.catalog || [];
     const totalRevenue = catalog.reduce((s, p) => s + p.totalRevenue, 0);
     const totalSold = catalog.reduce((s, p) => s + p.totalSold, 0);
@@ -157,146 +195,141 @@ function _renderSales() {
 }
 
 // ============================================================
-// MODAL DETAIL PRODUK
+// SUB-TAB CHIP
 // ============================================================
-export function openProductDetailModal({ productId, productSystem }) {
-    const data = window.__game.state.get();
-    const p = data.products.catalog.find(x => x.id === productId);
-    if (!p) return;
+function _renderChipTab() {
+    const data = state.get();
+    const cs = window.__game && window.__game.chips ? window.__game.chips : null;
+    const fs = window.__game && window.__game.fab ? window.__game.fab : null;
 
-    const avg = p.reviews.length ? (p.reviews.reduce((s, r) => s + r.score, 0) / p.reviews.length).toFixed(1) : '-';
+    if (!cs) {
+        return `<div class="empty"><div class="empty-ico">🧩</div><div class="empty-title">Chip System belum siap</div></div>`;
+    }
 
-    const specRows = [
-        ['Layar', p.config.displayId],
-        ['Kamera', p.config.cameraId],
-        ['Baterai', p.config.batteryId],
-        ['Chip', p.config.chipId],
-        ['Jaringan', p.config.networkId],
-        ['Bodi', p.config.bodyId],
-        ['OS', p.config.osOptionId]
-    ].map(([label, id]) => {
-        const comp = getComponentById(id);
-        const label2 = comp ? comp.name : (id || '-');
-        return `<div class="sum-row"><span>${label}</span><b>${escapeHtml(label2)}</b></div>`;
-    }).join('');
+    const chips = (data.chips && data.chips.catalog) || [];
+    const designing = data.chips && data.chips.designing;
+    const fab = data.fab || { built: false, level: 0, inventory: 0 };
 
-    const campaigns = data.marketing.activeCampaigns.filter(c => c.productId === p.id);
+    // Available architectures/nodes/features count
+    const archs = cs.getAvailableArchitectures ? cs.getAvailableArchitectures() : [];
+    const nodes = cs.getAvailableNodes ? cs.getAvailableNodes() : [];
+    const feats = cs.getAvailableFeatures ? cs.getAvailableFeatures() : [];
 
-    // Guard autoRestock
-    const ar = p.autoRestock || { enabled: false, thresholdPercent: 20, lastAutoOrderMinute: 0 };
-    const baseCapacity = p.baseCapacity || (p.config && p.config.productionQty) || 5000;
-    const threshold = Math.round(baseCapacity * (ar.thresholdPercent / 100));
-    const now = data.time.elapsedGameMinutes;
-    const lastOrderDaysAgo = ar.lastAutoOrderMinute > 0
-        ? Math.floor((now - ar.lastAutoOrderMinute) / 1440)
-        : null;
-
-    const autoSection = p.status === 'selling' ? `
-        <div class="card-title" style="margin-top:14px;">🔄 Pengisian Stok Otomatis</div>
-        <div class="auto-restock-row">
-            <div style="flex:1;">
-                <div style="font-size:13px;font-weight:600;">Aktifkan Auto-Restock</div>
-                <div style="font-size:11px;color:var(--text-mute);margin-top:2px;">
-                    ${ar.enabled ? 'Sistem akan restock otomatis saat stok rendah' : 'Restock manual saja'}
-                </div>
-            </div>
-            <button class="toggle-switch ${ar.enabled ? 'on' : ''}"
-                    data-auto-toggle data-prod-id="${p.id}"
-                    aria-label="${ar.enabled ? 'Matikan' : 'Aktifkan'}">
-                <span class="toggle-thumb"></span>
-            </button>
+    // Header lab stats
+    const labHeader = `
+        <div class="card">
+            <div class="card-title">🧩 Chip Lab</div>
+            <div class="sum-row"><span>Arsitektur tersedia</span><b>${archs.length}</b></div>
+            <div class="sum-row"><span>Node tersedia</span><b>${nodes.length}</b></div>
+            <div class="sum-row"><span>Fitur tersedia</span><b>${feats.length}</b></div>
+            <div class="sum-row"><span>Chip di katalog</span><b>${chips.length}</b></div>
         </div>
-        ${ar.enabled ? `
-            <div class="auto-restock-sub">
-                <div class="auto-label">Restock saat stok turun di bawah:</div>
-                <div class="threshold-chips">
-                    ${[10, 20, 30, 40, 50].map(t => `
-                        <button class="chip-small ${ar.thresholdPercent === t ? 'active' : ''}"
-                                data-auto-threshold="${t}" data-prod-id="${p.id}">${t}%</button>
-                    `).join('')}
+    `;
+
+    // Design in progress
+    let designHtml = '';
+    if (designing) {
+        const pct = Math.round((designing.progressDays / designing.durationDays) * 100);
+        designHtml = `
+            <div class="card" style="border-color:var(--info);">
+                <div class="card-title" style="color:var(--info);">🔧 Sedang Didesain</div>
+                <div style="font-size:14px;font-weight:700;margin-bottom:6px;">${escapeHtml(designing.name)}</div>
+                <div class="progress-label"><span>Progress</span><span>${pct}%</span></div>
+                <div class="progress"><div class="progress-bar" style="width:${pct}%;"></div></div>
+                <div style="font-size:11.5px;color:var(--text-mute);margin-top:6px;">
+                    ${Math.max(0, Math.ceil(designing.durationDays - designing.progressDays))} hari tersisa
                 </div>
-                <div style="margin-top:10px;">
-                    <div class="sum-row"><span>Target stok</span><b>${baseCapacity.toLocaleString('en-US')} unit</b></div>
-                    <div class="sum-row"><span>Trigger di</span><b>${threshold.toLocaleString('en-US')} unit</b></div>
-                    <div class="sum-row"><span>Stok sekarang</span><b>${p.stock.toLocaleString('en-US')} unit</b></div>
-                    <div class="sum-row"><span>Cooldown</span><b>7 hari</b></div>
-                    <div class="sum-row"><span>Terakhir auto-order</span><b>${lastOrderDaysAgo !== null ? lastOrderDaysAgo + ' hari lalu' : 'Belum pernah'}</b></div>
+                <button class="btn-danger" data-chip-action="cancel-design" style="width:100%;margin-top:10px;font-size:12px;">Batalkan</button>
+            </div>
+        `;
+    } else {
+        designHtml = `
+            <div class="card">
+                <div class="card-title">Desain Chip Baru</div>
+                <div style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;">
+                    Rancang silicon: pilih arsitektur, node, core, clock, dan fitur. Chip akan dipakai di ponsel atau diproduksi massal.
+                </div>
+                <button class="btn-primary" data-chip-action="new" style="width:100%;">
+                    🧩 Mulai Desain Chip
+                </button>
+            </div>
+        `;
+    }
+
+    // Chips catalog
+    let catalogHtml = '';
+    if (chips.length) {
+        catalogHtml = `
+            <div class="card">
+                <div class="card-title">Katalog Chip (${chips.length})</div>
+                <div class="chip-list">
+                    ${chips.map(c => {
+                        const lifecycle = cs.getChipLifecycle ? cs.getChipLifecycle(c) : null;
+                        let mockup = '';
+                        try { mockup = renderChipMockup(c.config, { size: 70 }); }
+                        catch (e) { mockup = ''; }
+                        return `
+                            <div class="chip-row" data-chip-detail="${c.id}">
+                                <div class="chip-row-mockup">${mockup}</div>
+                                <div class="chip-row-info">
+                                    <div class="chip-row-name">${escapeHtml(c.name)}</div>
+                                    <div class="chip-row-meta">
+                                        Perf <b>${c.stats.performance}</b> • Eff <b>${c.stats.efficiency}</b> • $${c.stats.costPerUnit}/unit
+                                    </div>
+                                    ${lifecycle ? `
+                                        <div class="chip-lifecycle" style="color:${lifecycle.color};">
+                                            ● ${lifecycle.label} (×${lifecycle.multiplier.toFixed(2)})
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
             </div>
-        ` : ''}
-    ` : '';
+        `;
+    } else if (!designing) {
+        catalogHtml = `
+            <div class="empty">
+                <div class="empty-ico">🧩</div>
+                <div class="empty-title">Belum ada chip</div>
+                <div class="empty-desc">Desain chip pertama Anda di Chip Designer.</div>
+            </div>
+        `;
+    }
 
-    const html = `
-        <div class="modal-title">${escapeHtml(p.name)}</div>
-        <div class="modal-sub">Rilis ${p.releaseDate.day}/${p.releaseDate.month}/${p.releaseDate.year}</div>
-        <div class="card-title" style="margin-top:8px;">Penjualan</div>
-        <div class="sum-row"><span>Total terjual</span><b>${p.totalSold.toLocaleString('en-US')} unit</b></div>
-        <div class="sum-row"><span>Pendapatan</span><b>$${p.totalRevenue.toLocaleString('en-US')}</b></div>
-        <div class="sum-row"><span>Stok saat ini</span><b>${p.stock.toLocaleString('en-US')}</b></div>
-        <div class="sum-row"><span>Ulasan rata-rata</span><b>⭐ ${avg}/10 (${p.reviews.length})</b></div>
+    // Fab section
+    let fabHtml = '';
+    if (fab.built) {
+        const levelInfo = fs && fs.getFabLevelInfo ? fs.getFabLevelInfo(fab.level) : null;
+        const capacity = levelInfo ? levelInfo.capacityMonthly : 0;
+        fabHtml = `
+            <div class="card">
+                <div class="card-title">🏭 Fabrikasi</div>
+                <div class="sum-row"><span>Level</span><b>${fab.level} — ${levelInfo ? escapeHtml(levelInfo.name) : 'Fab'}</b></div>
+                <div class="sum-row"><span>Kapasitas</span><b>${capacity.toLocaleString('en-US')}/bln</b></div>
+                <div class="sum-row"><span>Stok chip</span><b style="color:var(--accent);">${(fab.inventory || 0).toLocaleString('en-US')} unit</b></div>
+                <button class="btn-secondary" data-chip-action="fab" style="width:100%;margin-top:10px;">
+                    🏭 Kelola Fab
+                </button>
+            </div>
+        `;
+    } else {
+        const hasResearch = (data.research.completed || []).includes('fab_construction');
+        fabHtml = `
+            <div class="card">
+                <div class="card-title">🏭 Fabrikasi</div>
+                <div style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:10px;">
+                    ${hasResearch
+                        ? 'Bangun pabrik chip sendiri untuk produksi massal & biaya lebih murah.'
+                        : 'Butuh riset "Konstruksi Fab" untuk membangun pabrik sendiri.'}
+                </div>
+                <button class="btn-primary" data-chip-action="fab" style="width:100%;" ${!hasResearch ? 'disabled style="opacity:0.5;width:100%;"' : ''}>
+                    ${hasResearch ? '🏭 Bangun Fab' : 'Butuh Riset Fab'}
+                </button>
+            </div>
+        `;
+    }
 
-        <div class="card-title" style="margin-top:12px;">Spesifikasi</div>
-        ${specRows}
-
-        ${autoSection}
-
-        ${p.status === 'selling' ? `
-            <div class="card-title" style="margin-top:14px;">Aksi</div>
-            <button class="btn-secondary" data-prod-action="order-prod" data-prod-id="${p.id}" style="width:100%;margin-bottom:6px;">
-                🏭 Pesan Produksi Tambahan
-            </button>
-            <button class="btn-secondary" data-prod-action="campaign" data-prod-id="${p.id}" style="width:100%;margin-bottom:6px;">
-                📣 Kampanye Pemasaran ${campaigns.length ? '(' + campaigns.length + ' aktif)' : ''}
-            </button>
-            <button class="btn-danger" data-prod-action="discontinue" data-prod-id="${p.id}" style="width:100%;">
-                Hentikan Produk
-            </button>
-        ` : '<div class="empty-hint" style="margin-top:10px;">Produk sudah dihentikan.</div>'}
-
-        <button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">Tutup</button>
-    `;
-    window.__game.Modal.open('product-detail', html);
-}
-
-export function openCampaignModal({ productId }) {
-    const { MARKETING_CAMPAIGNS } = window.__game.modules.marketing;
-    const html = `
-        <div class="modal-title">Pilih Kampanye</div>
-        <div class="modal-sub">Efek diperkuat oleh jumlah Marketer.</div>
-        ${MARKETING_CAMPAIGNS.map(c => `
-            <button class="wiz-option" data-campaign-pick="${c.id}" data-prod-id="${productId}" style="width:100%;margin-bottom:6px;text-align:left;">
-                <div class="wiz-opt-name">${escapeHtml(c.name)}</div>
-                <div class="wiz-opt-meta">$${c.cost.toLocaleString('en-US')} • ${c.durationDays} hari • reach +${Math.round(c.reachBase * 100)}%</div>
-            </button>
-        `).join('')}
-        <button class="btn-secondary" data-modal-close style="width:100%;margin-top:8px;">Batal</button>
-    `;
-    window.__game.Modal.open('campaign-pick', html);
-}
-
-export function openOrderProductionModal({ productId }) {
-    const data = window.__game.state.get();
-    const p = data.products.catalog.find(x => x.id === productId);
-    if (!p) return;
-    const html = `
-        <div class="modal-title">Produksi Tambahan</div>
-        <div class="modal-sub">${escapeHtml(p.name)}</div>
-        <label class="field-label">Jumlah unit</label>
-        <input class="field-input" data-order-qty type="number" min="100" step="100" value="1000" />
-        <div class="sum-row" style="margin-top:8px;"><span>Biaya per unit</span><b>$${p.unitCost}</b></div>
-        <div class="sum-row"><span>Setup cost</span><b>$2.000</b></div>
-        <div class="sum-row"><span>Total estimasi</span><b data-order-total>$0</b></div>
-        <button class="btn-primary" data-order-confirm data-prod-id="${productId}" style="width:100%;margin-top:12px;">Pesan</button>
-        <button class="btn-secondary" data-modal-close style="width:100%;margin-top:6px;">Batal</button>
-    `;
-    window.__game.Modal.open('order-prod', html);
-    const root = document.querySelector('[data-modal-id="order-prod"]');
-    const qtyInput = root.querySelector('[data-order-qty]');
-    const totalEl = root.querySelector('[data-order-total]');
-    const refresh = () => {
-        const q = parseInt(qtyInput.value, 10) || 0;
-        totalEl.textContent = '$' + ((q * p.unitCost) + 2000).toLocaleString('en-US');
-    };
-    qtyInput.addEventListener('input', refresh);
-    refresh();
+    return labHeader + designHtml + catalogHtml + fabHtml;
 }
