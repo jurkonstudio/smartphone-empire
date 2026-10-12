@@ -1,19 +1,21 @@
+// FILE: src/config/constants.js
+
+// 5 tab utama sesuai roadmap Fase 1
 export const NAV_ITEMS = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-    { id: 'products', label: 'Produk', icon: 'box' },
-    { id: 'research', label: 'Riset', icon: 'flask' },
-    { id: 'factory', label: 'Pabrik', icon: 'factory' },
-    { id: 'finance', label: 'Keuangan', icon: 'dollar' },
-    { id: 'settings', label: 'Pengaturan', icon: 'settings' }
+    { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+    { id: 'research',  label: 'Riset',     icon: '🔬' },
+    { id: 'products',  label: 'Produk',    icon: '📱' },
+    { id: 'market',    label: 'Pasar',     icon: '📈' },
+    { id: 'settings',  label: 'Setelan',   icon: '⚙️' }
 ];
 
 export const VIEW_TITLES = {
     dashboard: { title: 'Dashboard' },
-    products: { title: 'Produk' },
-    research: { title: 'Riset' },
-    factory: { title: 'Pabrik' },
-    finance: { title: 'Keuangan' },
-    settings: { title: 'Pengaturan' }
+    research:  { title: 'Riset' },
+    products:  { title: 'Produk' },
+    market:    { title: 'Pasar' },
+    settings:  { title: 'Pengaturan' }
 };
 
-export const MOBILE_NAV_IDS = ['dashboard', 'products', 'research', 'settings'];
+// Semua tab tampil di bottom nav mobile
+export const MOBILE_NAV_IDS = NAV_ITEMS.map(i => i.id);
