@@ -2,8 +2,35 @@
 import { bus } from './EventBus.js';
 import { TIME_CONFIG } from '../config/time.config.js';
 
-// TimeSystem — SATU-SATUNYA pemaju waktu simulasi.
-// Menggunakan requestAnimationFrame + delta time (bukan setInterval).
+// ============================================================
+// Utilitas kalender
+// ============================================================
+export function isLeapYear(year) {
+    return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+}
+
+export function getDaysInMonth(year, month) {
+    // month: 1-12
+    const m = TIME_CONFIG.months[month - 1];
+    if (!m) return 30;
+    if (m.days === 28 && isLeapYear(year)) return 29;
+    return m.days;
+}
+
+export function getMonthName(month, short) {
+    const m = TIME_CONFIG.months[month - 1];
+    if (!m) return 'Bulan ' + month;
+    return short ? m.short : m.name;
+}
+
+export function formatDate(year, month, day, opts) {
+    const short = opts && opts.short;
+    return day + ' ' + getMonthName(month, short) + ' ' + year;
+}
+
+// ============================================================
+// TimeSystem
+// ============================================================
 export class TimeSystem {
     constructor(gameState) {
         this.state = gameState;
@@ -29,7 +56,6 @@ export class TimeSystem {
         document.removeEventListener('visibilitychange', this._boundVis);
     }
 
-    // Reset timestamp saat tab kembali terlihat agar tidak ada lompatan
     _handleVisibility() {
         if (document.visibilityState === 'visible') this._lastTs = null;
     }
@@ -41,7 +67,6 @@ export class TimeSystem {
         let dt = (ts - this._lastTs) / 1000;
         this._lastTs = ts;
 
-        // Batas aman
         if (dt > TIME_CONFIG.maxDeltaSeconds) dt = TIME_CONFIG.maxDeltaSeconds;
         if (dt < 0) dt = 0;
 
@@ -53,7 +78,6 @@ export class TimeSystem {
             if (gameMinutes > 0) this._advance(gameMinutes);
         }
 
-        // Emit tick throttled (untuk update jam di header)
         if (ts - this._lastTickEmit >= TIME_CONFIG.tickEmitIntervalMs) {
             this._lastTickEmit = ts;
             bus.emit('time:tick', this.snapshot());
@@ -77,16 +101,19 @@ export class TimeSystem {
             t.currentHour -= TIME_CONFIG.hoursPerDay;
             t.currentDay += 1;
         }
-        while (t.currentDay > TIME_CONFIG.daysPerMonth) {
-            t.currentDay -= TIME_CONFIG.daysPerMonth;
+
+        // Rollover hari -> bulan -> tahun menggunakan kalender realistis
+        let daysThisMonth = getDaysInMonth(t.currentYear, t.currentMonth);
+        while (t.currentDay > daysThisMonth) {
+            t.currentDay -= daysThisMonth;
             t.currentMonth += 1;
-        }
-        while (t.currentMonth > TIME_CONFIG.monthsPerYear) {
-            t.currentMonth -= TIME_CONFIG.monthsPerYear;
-            t.currentYear += 1;
+            if (t.currentMonth > TIME_CONFIG.monthsPerYear) {
+                t.currentMonth = 1;
+                t.currentYear += 1;
+            }
+            daysThisMonth = getDaysInMonth(t.currentYear, t.currentMonth);
         }
 
-        // Event kalender
         if (t.currentDay !== pDay || t.currentMonth !== pMonth || t.currentYear !== pYear) {
             bus.emit('time:day-changed', this.snapshot());
         }
@@ -130,8 +157,8 @@ export class TimeSystem {
         this.setSpeed(opts[(idx + 1) % opts.length]);
     }
 
-    // Utilitas untuk testing manual via console:
-    //   window.__game.timeSystem.fastForwardDays(30)
+    // Untuk testing manual via console:
+    //   __game.cheat.skipDays(30)
     fastForwardDays(days) {
         const mins = days * TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
         this._advance(mins);
