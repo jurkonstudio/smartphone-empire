@@ -1,20 +1,11 @@
-import { icon } from '../icons.js';
-import { NAV_ITEMS, MOBILE_NAV_IDS } from '../../config/constants.js';
-
-export function renderMobileNav({ active }) {
-  const items = MOBILE_NAV_IDS.map((id) => {
-    const item = NAV_ITEMS.find((n) => n.id === id);
-    if (!item) return '';
-    const isActive = item.id === active;
+export function renderEmptyState({ title, description, hint }) {
     return `
-      <button class="nav-item${isActive ? ' is-active' : ''}"
-              type="button"
-              data-nav="${item.id}"
-              aria-current="${isActive ? 'page' : 'false'}">
-        <span class="nav-item__icon">${icon(item.icon, 20)}</span>
-        <span class="nav-item__label">${item.label}</span>
-      </button>
+        <div style="text-align:center; padding:40px 20px; color:#fff;">
+            <h2 style="color:#aaa; margin-bottom:10px; font-size:18px;">${title}</h2>
+            <p style="color:#666; margin-bottom:20px; font-size:14px;">${description}</p>
+            <span style="background:#333; padding:5px 10px; border-radius:15px; font-size:12px; color:#ff9800;">
+                ${hint}
+            </span>
+        </div>
     `;
-  }).join('');
-  return items;
 }
