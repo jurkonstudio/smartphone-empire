@@ -1,5 +1,4 @@
 // FILE: src/ui/panels/ProductPanel.js
-// Tab Produk: sub-tab Desain | Katalog | Penjualan.
 import { renderSalesChart } from './SalesChart.js';
 import { getComponentById } from '../../data/components.data.js';
 
@@ -24,9 +23,6 @@ export function renderProductPanel({ subtab, productSystem, researchSystem, osSy
     return subtabBar + body;
 }
 
-// ============================================================
-// SUB-TAB DESAIN
-// ============================================================
 function _renderDesignTab(productSystem) {
     const data = window.__game.state.get();
     const dev = data.products.development;
@@ -73,9 +69,6 @@ function _renderDesignTab(productSystem) {
     `;
 }
 
-// ============================================================
-// SUB-TAB KATALOG
-// ============================================================
 function _renderCatalog() {
     const data = window.__game.state.get();
     const catalog = data.products.catalog || [];
@@ -91,18 +84,22 @@ function _renderCatalog() {
             ? (p.reviews.reduce((s, r) => s + r.score, 0) / p.reviews.length).toFixed(1)
             : '-';
         const statusLabel = { selling: 'Dijual', discontinued: 'Dihentikan' }[p.status] || p.status;
+        const autoActive = p.autoRestock && p.autoRestock.enabled;
         return `
             <div class="card prod-card" data-prod-detail="${p.id}">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
                     <div style="flex:1;min-width:0;">
-                        <div style="font-size:14px;font-weight:700;">${escapeHtml(p.name)}</div>
+                        <div style="font-size:14px;font-weight:700;">
+                            ${escapeHtml(p.name)}
+                            ${autoActive ? '<span style="color:var(--accent);font-size:12px;margin-left:6px;">🔄</span>' : ''}
+                        </div>
                         <div style="font-size:11px;color:var(--text-mute);">${p.releaseDate.day}/${p.releaseDate.month}/${p.releaseDate.year} • ${statusLabel}</div>
                     </div>
                     <div class="prod-badge ${p.status === 'selling' ? 'selling' : 'disc'}">${statusLabel}</div>
                 </div>
                 <div class="prod-stats-mini">
                     <span>⭐ ${avgReview}/10</span>
-                    <span>📦 ${p.stock} stok</span>
+                    <span>📦 ${p.stock.toLocaleString('en-US')} stok</span>
                     <span>💰 $${p.totalRevenue.toLocaleString('en-US')}</span>
                 </div>
                 <div class="prod-stats-mini">
@@ -116,16 +113,12 @@ function _renderCatalog() {
     return `<div class="prod-list">${cards}</div>`;
 }
 
-// ============================================================
-// SUB-TAB PENJUALAN
-// ============================================================
 function _renderSales() {
     const data = window.__game.state.get();
     const catalog = data.products.catalog || [];
     const totalRevenue = catalog.reduce((s, p) => s + p.totalRevenue, 0);
     const totalSold = catalog.reduce((s, p) => s + p.totalSold, 0);
     const activeProducts = catalog.filter(p => p.status === 'selling').length;
-
     const topProduct = catalog.slice().sort((a, b) => b.totalSold - a.totalSold)[0];
 
     return `
@@ -173,7 +166,6 @@ export function openProductDetailModal({ productId, productSystem }) {
 
     const avg = p.reviews.length ? (p.reviews.reduce((s, r) => s + r.score, 0) / p.reviews.length).toFixed(1) : '-';
 
-    // Spesifikasi
     const specRows = [
         ['Layar', p.config.displayId],
         ['Kamera', p.config.cameraId],
@@ -190,6 +182,50 @@ export function openProductDetailModal({ productId, productSystem }) {
 
     const campaigns = data.marketing.activeCampaigns.filter(c => c.productId === p.id);
 
+    // Guard autoRestock
+    const ar = p.autoRestock || { enabled: false, thresholdPercent: 20, lastAutoOrderMinute: 0 };
+    const baseCapacity = p.baseCapacity || (p.config && p.config.productionQty) || 5000;
+    const threshold = Math.round(baseCapacity * (ar.thresholdPercent / 100));
+    const now = data.time.elapsedGameMinutes;
+    const lastOrderDaysAgo = ar.lastAutoOrderMinute > 0
+        ? Math.floor((now - ar.lastAutoOrderMinute) / 1440)
+        : null;
+
+    const autoSection = p.status === 'selling' ? `
+        <div class="card-title" style="margin-top:14px;">🔄 Pengisian Stok Otomatis</div>
+        <div class="auto-restock-row">
+            <div style="flex:1;">
+                <div style="font-size:13px;font-weight:600;">Aktifkan Auto-Restock</div>
+                <div style="font-size:11px;color:var(--text-mute);margin-top:2px;">
+                    ${ar.enabled ? 'Sistem akan restock otomatis saat stok rendah' : 'Restock manual saja'}
+                </div>
+            </div>
+            <button class="toggle-switch ${ar.enabled ? 'on' : ''}"
+                    data-auto-toggle data-prod-id="${p.id}"
+                    aria-label="${ar.enabled ? 'Matikan' : 'Aktifkan'}">
+                <span class="toggle-thumb"></span>
+            </button>
+        </div>
+        ${ar.enabled ? `
+            <div class="auto-restock-sub">
+                <div class="auto-label">Restock saat stok turun di bawah:</div>
+                <div class="threshold-chips">
+                    ${[10, 20, 30, 40, 50].map(t => `
+                        <button class="chip-small ${ar.thresholdPercent === t ? 'active' : ''}"
+                                data-auto-threshold="${t}" data-prod-id="${p.id}">${t}%</button>
+                    `).join('')}
+                </div>
+                <div style="margin-top:10px;">
+                    <div class="sum-row"><span>Target stok</span><b>${baseCapacity.toLocaleString('en-US')} unit</b></div>
+                    <div class="sum-row"><span>Trigger di</span><b>${threshold.toLocaleString('en-US')} unit</b></div>
+                    <div class="sum-row"><span>Stok sekarang</span><b>${p.stock.toLocaleString('en-US')} unit</b></div>
+                    <div class="sum-row"><span>Cooldown</span><b>7 hari</b></div>
+                    <div class="sum-row"><span>Terakhir auto-order</span><b>${lastOrderDaysAgo !== null ? lastOrderDaysAgo + ' hari lalu' : 'Belum pernah'}</b></div>
+                </div>
+            </div>
+        ` : ''}
+    ` : '';
+
     const html = `
         <div class="modal-title">${escapeHtml(p.name)}</div>
         <div class="modal-sub">Rilis ${p.releaseDate.day}/${p.releaseDate.month}/${p.releaseDate.year}</div>
@@ -202,8 +238,10 @@ export function openProductDetailModal({ productId, productSystem }) {
         <div class="card-title" style="margin-top:12px;">Spesifikasi</div>
         ${specRows}
 
+        ${autoSection}
+
         ${p.status === 'selling' ? `
-            <div class="card-title" style="margin-top:12px;">Aksi</div>
+            <div class="card-title" style="margin-top:14px;">Aksi</div>
             <button class="btn-secondary" data-prod-action="order-prod" data-prod-id="${p.id}" style="width:100%;margin-bottom:6px;">
                 🏭 Pesan Produksi Tambahan
             </button>
