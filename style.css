@@ -138,17 +138,20 @@ svg { display: block; }
 
 /* ---------- Header ---------- */
 .app-header {
-  height: var(--header-h);
+  min-height: calc(var(--header-h) + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+  padding-left: 14px;
+  padding-right: 14px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 14px;
   background: rgba(17, 22, 33, 0.85);
   backdrop-filter: saturate(140%) blur(8px);
   -webkit-backdrop-filter: saturate(140%) blur(8px);
   border-bottom: 1px solid var(--border);
   position: sticky; top: 0; z-index: 10;
+  box-sizing: content-box; /* aman untuk safe-area-inset */
 }
 .header__mobile-brand {
   display: flex; align-items: center; gap: 8px;
