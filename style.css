@@ -2716,3 +2716,79 @@ body {
 .notif-island.expanded .notif-action-btn {
     margin-top: 10px;
 }
+/* ===================== LIQUID GLASS NAV SLIDER ===================== */
+
+/* Sembunyikan indicator lama (kalau ada) */
+.nav-btn.active::before {
+    display: none !important;
+    content: none !important;
+}
+
+/* Container nav — pastikan relative untuk slider absolute */
+.mobile-nav {
+    position: relative;
+}
+
+/* Slider — Liquid Glass effect */
+.nav-slider {
+    position: absolute;
+    top: 6px;
+    height: calc(100% - 12px);
+    left: 0;
+    width: 60px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.09);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow:
+        0 2px 14px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+    transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1),
+                width 0.42s cubic-bezier(0.32, 0.72, 0, 1);
+    pointer-events: none;
+    z-index: 0;
+    will-change: transform, width;
+}
+
+/* Setiap tombol nav harus di atas slider */
+.mobile-nav .nav-btn {
+    position: relative;
+    z-index: 1;
+}
+
+/* Active state — text & icon pakai accent */
+.mobile-nav .nav-btn.active {
+    color: var(--accent);
+}
+
+/* Label & icon transisi halus saat jadi active */
+.mobile-nav .nav-btn .nav-ico,
+.mobile-nav .nav-btn .nav-label {
+    transition: color 0.25s ease, transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.mobile-nav .nav-btn.active .nav-ico {
+    transform: scale(1.1);
+}
+
+/* Light theme — slider lebih terang */
+[data-theme="light"] .nav-slider {
+    background: rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow:
+        0 2px 12px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.7),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Accessibility — matikan animasi kalau user disable motion */
+@media (prefers-reduced-motion: reduce) {
+    .nav-slider {
+        transition: none !important;
+    }
+    .mobile-nav .nav-btn .nav-ico,
+    .mobile-nav .nav-btn .nav-label {
+        transition: none !important;
+    }
+}
