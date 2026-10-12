@@ -2832,3 +2832,54 @@ body {
     background: rgba(0, 0, 0, 0.12);
     border: 1px solid rgba(0, 0, 0, 0.15);
 }
+/* ===================== DUOTONE ICON SYSTEM ===================== */
+
+/* Wrapper duotone — soft accent background + solid stroke */
+.icon-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    flex-shrink: 0;
+    transition: background 0.15s, transform 0.1s;
+}
+
+.icon-wrap svg {
+    display: block;
+    flex-shrink: 0;
+}
+
+/* Mode outline — tanpa background */
+.icon-wrap.outline {
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+/* Ukuran besar untuk hero/empty state */
+.icon-hero {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    margin: 0 auto 14px;
+}
+
+/* Light theme penyesuaian */
+[data-theme="light"] .icon-wrap {
+    background: rgba(37, 99, 235, 0.10);
+    color: var(--accent);
+}
+[data-theme="light"] .icon-wrap.outline {
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+/* Cegah flicker saat render di dalam list */
+.icon-wrap,
+.icon-hero {
+    will-change: transform;
+}
