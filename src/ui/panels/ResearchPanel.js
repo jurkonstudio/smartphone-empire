@@ -1,5 +1,6 @@
 // FILE: src/ui/panels/ResearchPanel.js
 // Tab Riset: sub-tab Teknologi | OS.
+// Node riset diurutkan: Berjalan → Tersedia → Selesai → Terkunci.
 import { RESEARCH_CATEGORIES, getNodeById } from '../../data/research.data.js';
 import { renderOSPanel, openOsWizardModal, openCreateOsModal, openFeatureDetailModal } from './OSPanel.js';
 
@@ -9,40 +10,65 @@ function escapeHtml(s) {
             .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
-// Simpan filter kategori di module-scope (bukan state game, cukup UI state).
 let _filterCategory = 'all';
 
 export function getFilterCategory() { return _filterCategory; }
 export function setFilterCategory(cat) { _filterCategory = cat; }
 
 export function renderResearchPanel({ subtab, researchSystem, osSystem }) {
-    // Sub-tab bar
     const subtabBar = `
         <div class="subtab-bar">
             <button class="subtab-btn ${subtab === 'tech' ? 'active' : ''}" data-subtab="tech">Teknologi</button>
             <button class="subtab-btn ${subtab === 'os'   ? 'active' : ''}" data-subtab="os">OS</button>
         </div>
     `;
-
     let body = '';
     if (subtab === 'os') {
         body = renderOSPanel({ osSystem, researchSystem });
     } else {
         body = renderTechSection({ researchSystem });
     }
-
     return subtabBar + body;
 }
 
 // ============================================================
-// Sub-tab Teknologi
+// PRIORITAS STATUS (untuk sorting)
+// ============================================================
+function _statusPriority(status) {
+    if (status === 'running')   return 1;
+    if (status === 'available') return 2;
+    if (status === 'done')      return 3;
+    return 4; // locked
+}
+
+function _sortNodesByStatus(nodes, researchSystem) {
+    // Hitung status sekali per node (hindari komputasi berulang)
+    const withStatus = nodes.map(n => {
+        const st = researchSystem.getNodeStatus(n.id);
+        return { node: n, status: st.status };
+    });
+
+    withStatus.sort((a, b) => {
+        const pa = _statusPriority(a.status);
+        const pb = _statusPriority(b.status);
+        if (pa !== pb) return pa - pb;
+        // Prioritas sekunder: tier lebih rendah dulu, lalu tahun
+        if (a.node.tier !== b.node.tier) return a.node.tier - b.node.tier;
+        return (a.node.minYear || 0) - (b.node.minYear || 0);
+    });
+
+    return withStatus.map(x => x.node);
+}
+
+// ============================================================
+// SUB-TAB TEKNOLOGI
 // ============================================================
 function renderTechSection({ researchSystem }) {
     const data = window.__game.state.get();
     const active = data.research.active;
     const maxSlots = data.research.maxSlots;
 
-    // Header slot
+    // ===== Ringkasan slot =====
     const slotHeader = `
         <div class="card" style="padding:12px;">
             <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -71,7 +97,7 @@ function renderTechSection({ researchSystem }) {
         </div>
     `;
 
-    // Filter kategori
+    // ===== Chip kategori =====
     const chipBar = `
         <div class="chip-bar">
             <button class="chip ${_filterCategory === 'all' ? 'active' : ''}" data-filter-cat="all">Semua</button>
@@ -83,14 +109,37 @@ function renderTechSection({ researchSystem }) {
         </div>
     `;
 
-    // Daftar node
-    const nodes = _filterCategory === 'all'
+    // ===== Ambil & urutkan node =====
+    const allNodes = _filterCategory === 'all'
         ? RESEARCH_CATEGORIES.flatMap(c => researchSystem.getNodesByCategory(c.id))
         : researchSystem.getNodesByCategory(_filterCategory);
 
-    const nodeList = nodes.map(n => renderTechNodeCard(n, researchSystem)).join('');
+    const sortedNodes = _sortNodesByStatus(allNodes, researchSystem);
 
-    return slotHeader + chipBar + `<div class="tech-node-list">${nodeList}</div>`;
+    // ===== Hitung counter status =====
+    let countAvailable = 0, countRunning = 0, countDone = 0, countLocked = 0;
+    sortedNodes.forEach(n => {
+        const s = researchSystem.getNodeStatus(n.id).status;
+        if (s === 'available') countAvailable++;
+        else if (s === 'running') countRunning++;
+        else if (s === 'done') countDone++;
+        else countLocked++;
+    });
+
+    // ===== Counter bar =====
+    const counterBar = `
+        <div class="card" style="padding:10px 12px;display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px;">
+            <span><b style="color:var(--info);font-size:13px;">${countAvailable}</b> <span style="color:var(--text-dim);">tersedia</span></span>
+            ${countRunning > 0 ? `<span><b style="color:var(--warn);font-size:13px;">${countRunning}</b> <span style="color:var(--text-dim);">berjalan</span></span>` : ''}
+            ${countDone > 0 ? `<span><b style="color:var(--accent);font-size:13px;">${countDone}</b> <span style="color:var(--text-dim);">selesai</span></span>` : ''}
+            <span><b style="color:var(--text-mute);font-size:13px;">${countLocked}</b> <span style="color:var(--text-dim);">terkunci</span></span>
+        </div>
+    `;
+
+    // ===== Daftar node =====
+    const nodeList = sortedNodes.map(n => renderTechNodeCard(n, researchSystem)).join('');
+
+    return slotHeader + counterBar + chipBar + `<div class="tech-node-list">${nodeList}</div>`;
 }
 
 function renderTechNodeCard(node, researchSystem) {
@@ -124,7 +173,7 @@ function _statusBadge(s) {
 }
 
 // ============================================================
-// Modal detail node riset
+// MODAL DETAIL NODE
 // ============================================================
 export function openNodeDetailModal({ nodeId, researchSystem }) {
     const node = getNodeById(nodeId);
@@ -132,7 +181,6 @@ export function openNodeDetailModal({ nodeId, researchSystem }) {
     const st = researchSystem.getNodeStatus(nodeId);
     const cat = RESEARCH_CATEGORIES.find(c => c.id === node.category);
 
-    // Prasyarat
     const prereqHtml = (node.prerequisites || []).length
         ? node.prerequisites.map(p => {
             const pn = getNodeById(p);
@@ -141,7 +189,6 @@ export function openNodeDetailModal({ nodeId, researchSystem }) {
         }).join('')
         : '<div style="font-size:12px;color:var(--text-mute);">Tidak ada prasyarat.</div>';
 
-    // Efek
     const eff = node.effects || {};
     const unlockComps = (eff.unlocksComponents || []).length
         ? `<div style="font-size:12px;color:var(--text-dim);">Komponen: ${eff.unlocksComponents.join(', ')}</div>` : '';
