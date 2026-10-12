@@ -1561,3 +1561,95 @@ body {
     .header-company { font-size: 14px; }
     .header-cash { font-size: 15px; }
    }
+/* ===================== AUTO-RESTOCK UI ===================== */
+
+.auto-restock-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.auto-restock-sub {
+    padding: 8px 0;
+    animation: fadeIn 0.25s ease;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.auto-label {
+    font-size: 11.5px;
+    color: var(--text-dim);
+    margin-top: 10px;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.threshold-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.chip-small {
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border-soft);
+    color: var(--text-dim);
+    padding: 8px 14px;
+    border-radius: var(--r-pill);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    min-height: 36px;
+    transition: background 0.15s, color 0.15s, transform 0.08s, border-color 0.15s;
+}
+.chip-small.active {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(79, 140, 255, 0.3);
+}
+.chip-small:active { transform: scale(0.95); }
+
+/* iOS-style toggle switch */
+.toggle-switch {
+    position: relative;
+    width: 51px;
+    height: 31px;
+    background: #39393d;
+    border-radius: 31px;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: inherit;
+    min-width: 51px;
+}
+.toggle-switch.on {
+    background: var(--success);
+}
+.toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 27px;
+    height: 27px;
+    background: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.toggle-switch.on .toggle-thumb {
+    transform: translateX(20px);
+}
+.toggle-switch:active .toggle-thumb {
+    width: 30px;
+}
+.toggle-switch.on:active .toggle-thumb {
+    transform: translateX(17px);
+}
