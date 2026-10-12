@@ -30,7 +30,7 @@ const quests      = new QuestSystem(state);
 const tutorial    = new TutorialSystem(state);
 
 let activeView = 'dashboard';
-let _burnWarn  = null;      // string atau null
+let _burnWarn  = null;
 
 // ============ DOM ============
 const els = {
@@ -84,7 +84,6 @@ function renderView() {
     els.view.innerHTML = html;
     els.view.scrollTop = 0;
 
-    // Post-render hooks
     if (activeView === 'dashboard') {
         const chart = els.view.querySelector('.chart-wrap');
         if (chart) drawCashChart(chart);
@@ -127,7 +126,6 @@ function navigate(id) {
     renderAll();
     updateTitle();
     bus.emit('view:changed', { id });
-    // Notifikasi untuk tutorial
     bus.emit('tutorial:action', { id: 'nav:' + id });
 }
 
@@ -161,7 +159,6 @@ function bindGlobalClicks() {
         }
     });
 
-    // Keyboard shortcut (desktop)
     document.addEventListener('keydown', (e) => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
         if (e.code === 'Space') { e.preventDefault(); timeSystem.togglePause(); }
@@ -171,7 +168,6 @@ function bindGlobalClicks() {
 
 // ============ TIME EVENTS ============
 function bindTimeEvents() {
-    // Update jam/status tanpa re-render header (hemat)
     bus.on('time:tick', () => {
         const meta = els.header?.querySelector('.header-meta');
         if (!meta) return;
@@ -189,12 +185,10 @@ function bindTimeEvents() {
         }
     });
 
-    // Refresh view dashboard pada pergantian hari (agar KPI & chart konsisten)
     bus.on('time:day-changed', () => {
         if (activeView === 'dashboard') renderView();
     });
 
-    // Refresh header saat speed berubah (karena ikon pause/resume)
     bus.on('time:speed-changed', () => renderHeaderOnly());
 }
 
@@ -216,7 +210,6 @@ function bindStateEvents() {
         if (activeView === 'dashboard') renderView();
     });
 
-    // Burn rate
     bus.on('economy:warn-burnrate', ({ monthsLeft }) => {
         _burnWarn = `Sisa ${monthsLeft} bln`;
         renderHeaderOnly();
@@ -224,17 +217,13 @@ function bindStateEvents() {
         vibrate(30);
     });
 
-    // Loan
     bus.on('settings:take-loan', ({ loanId }) => {
         const res = economy.takeLoan(loanId);
         if (!res.ok) ToastService.error(res.error);
         else { ToastService.success('Pinjaman diterima.'); renderView(); }
     });
 
-    // Settings toggles
-    bus.on('settings:changed', () => { /* toast sudah dari SettingsPanel */ });
-
-    // Tutorial restart
+    bus.on('settings:changed', () => {});
     bus.on('tutorial:restart', () => tutorial.restart());
 }
 
@@ -248,7 +237,6 @@ async function boot() {
         initMonthlySummary();
         initGameOverScreen();
 
-        // ============ Onboarding atau Load Save ============
         if (SaveService.hasSave()) {
             const saved = SaveService.load();
             if (saved) {
@@ -256,11 +244,8 @@ async function boot() {
                 console.info('[boot] Save dimuat.');
             }
         } else {
-            // Tidak ada save: tanya nama + kesulitan
             const onb = await showOnboarding();
-            // Terapkan pilihan
             state.patch({ companyName: onb.companyName, difficulty: onb.difficulty });
-            // Sesuaikan modal awal berdasarkan kesulitan
             const BAL = (await import('./data/balance.data.js')).BALANCE;
             const starting = BAL.startingCash[onb.difficulty] ?? BAL.startingCash.normal;
             state.setCash(starting);
@@ -269,12 +254,10 @@ async function boot() {
             SaveService.save(state);
         }
 
-        // ============ Start systems ============
         economy.start();
         quests.start();
         tutorial.start();
 
-        // ============ Render & bind ============
         renderAll();
         bindGlobalClicks();
         bindTimeEvents();
@@ -284,14 +267,12 @@ async function boot() {
         timeSystem.start();
         SaveService.startAutoSave(() => state);
 
-        // Animasi uang awal
         const cash = state.get().cash;
         if (cash > 0) {
             document.querySelectorAll('[data-cash]').forEach(el => el.textContent = '$0');
             animateCash(0, cash);
         }
 
-        // Expose debugging
         window.__game = {
             state, bus, timeSystem, economy, quests, tutorial, SaveService, ToastService, Modal, navigate,
             cheat: {
