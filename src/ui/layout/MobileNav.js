@@ -1,9 +1,13 @@
-import { NAV_ITEMS, MOBILE_NAV_IDS } from '../../config/constants.js';
+// FILE: src/ui/layout/MobileNav.js
+import { NAV_ITEMS } from '../../config/constants.js';
 
 export function renderMobileNav({ active }) {
-    const mobileItems = NAV_ITEMS.filter(item => MOBILE_NAV_IDS.includes(item.id));
-    return mobileItems.map(item => `
-        <button data-nav="${item.id}" style="background:transparent; border:none; color:${active === item.id ? '#4CAF50' : '#aaa'}; font-size:12px; display:flex; flex-direction:column; align-items:center; cursor:pointer; padding:10px;">
+    return NAV_ITEMS.map(item => `
+        <button class="nav-btn ${active === item.id ? 'active' : ''}"
+                data-nav="${item.id}"
+                aria-label="${item.label}"
+                aria-current="${active === item.id ? 'page' : 'false'}">
+            <span class="nav-ico" aria-hidden="true">${item.icon}</span>
             <span>${item.label}</span>
         </button>
     `).join('');
