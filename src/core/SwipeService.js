@@ -1,7 +1,6 @@
 // FILE: src/core/SwipeService.js
 // ============================================================
-// SwipeService — deteksi swipe horizontal untuk ganti sub-tab.
-// Fitur: throttle, no wrap-around, blacklist elemen, cleanup animasi.
+// SwipeService — versi debug, dengan console.log.
 // ============================================================
 
 var SUBTABS = {
@@ -11,7 +10,6 @@ var SUBTABS = {
     team:     ['active', 'recruit', 'info']
 };
 
-// State
 var _getView = null;
 var _getSubtab = null;
 var _setSubtab = null;
@@ -24,36 +22,31 @@ var _ignore = false;
 var _running = false;
 var _lastTrigger = 0;
 
-// Konfigurasi
-var THRESHOLD_PX = 60;        // minimum jarak horizontal
-var MAX_DURATION_MS = 800;    // swipe terlalu lama = bukan swipe
-var THROTTLE_MS = 250;        // jeda minimum antar trigger
-var VERTICAL_TOLERANCE = 12;  // toleransi gerakan vertikal sebelum ignore
-var ANIM_MS = 240;            // durasi animasi (harus sinkron dengan CSS)
+var THRESHOLD_PX = 50;
+var MAX_DURATION_MS = 900;
+var THROTTLE_MS = 220;
+var VERTICAL_TOLERANCE = 15;
 
-// Elemen yang tidak boleh jadi starting point swipe
 var BLACKLIST_SELECTORS = [
-    '[data-no-swipe]',
     '.chip-bar',
     '.wiz-options-row',
     '.subtab-bar',
     'canvas',
     'input',
     'textarea',
-    'select',
-    'button',
-    'a',
-    'label'
+    'select'
 ];
 
 // ============================================================
-// INIT / STOP
+// INIT
 // ============================================================
 export function initSwipe(callbacks) {
-    if (!callbacks) return;
+    console.log('[Swipe] initSwipe dipanggil');
+    if (!callbacks) { console.warn('[Swipe] callbacks kosong'); return; }
     _getView    = callbacks.getView || null;
     _getSubtab  = callbacks.getSubtab || null;
     _setSubtab  = callbacks.setSubtab || null;
+    console.log('[Swipe] getView set?', !!_getView, '| getSubtab set?', !!_getSubtab, '| setSubtab set?', !!_setSubtab);
 
     if (!_running) {
         document.addEventListener('touchstart', _onStart, { passive: true });
@@ -61,6 +54,9 @@ export function initSwipe(callbacks) {
         document.addEventListener('touchend',   _onEnd,   { passive: true });
         document.addEventListener('touchcancel', _onCancel, { passive: true });
         _running = true;
+        console.log('[Swipe] Event listeners terpasang');
+    } else {
+        console.log('[Swipe] Sudah running sebelumnya');
     }
 }
 
@@ -77,13 +73,9 @@ export function stopSwipe() {
 // HELPERS
 // ============================================================
 function _isModalOpen() {
-    // Modal apapun yang visible
     if (document.querySelector('.modal-backdrop.visible')) return true;
-    // Onboarding pakai modal juga
     if (document.querySelector('[data-modal-id="onboarding"]')) return true;
-    // Tutorial overlay
-    var tut = document.querySelector('.tut-root.visible');
-    if (tut) return true;
+    if (document.querySelector('.tut-root.visible')) return true;
     return false;
 }
 
@@ -117,23 +109,36 @@ function _getSubtabsForView(view) {
 
 function _cycleSubtab(direction) {
     var now = Date.now();
-    if (now - _lastTrigger < THROTTLE_MS) return;
+    if (now - _lastTrigger < THROTTLE_MS) {
+        console.log('[Swipe] Throttled');
+        return;
+    }
 
     var view = _getView ? _getView() : null;
+    console.log('[Swipe] Current view:', view);
     if (!view) return;
+
     var tabs = _getSubtabsForView(view);
-    if (!tabs || tabs.length < 2) return;
+    console.log('[Swipe] Tabs:', tabs);
+    if (!tabs || tabs.length < 2) {
+        console.log('[Swipe] Tidak ada sub-tab untuk view ini');
+        return;
+    }
 
     var currentId = _getSubtab ? _getSubtab() : null;
+    console.log('[Swipe] Current subtab:', currentId);
     var idx = tabs.indexOf(currentId);
     if (idx < 0) idx = 0;
 
-    // No wrap-around: berhenti di ujung
     var nextIdx = idx + direction;
-    if (nextIdx < 0 || nextIdx >= tabs.length) return;
+    if (nextIdx < 0 || nextIdx >= tabs.length) {
+        console.log('[Swipe] Batas tercapai, tidak pindah');
+        return;
+    }
 
     _lastTrigger = now;
     var nextId = tabs[nextIdx];
+    console.log('[Swipe] Pindah ke:', nextId);
     if (_setSubtab) _setSubtab(nextId, direction);
 }
 
@@ -154,12 +159,24 @@ function _onStart(e) {
     if (!e.touches || !e.touches[0]) return;
 
     var target = e.target;
-    if (_isBlacklisted(target)) return;
+    if (_isBlacklisted(target)) {
+        // Cek elemen apa yang memblokir
+        for (var i = 0; i < BLACKLIST_SELECTORS.length; i++) {
+            var blocked = null;
+            try { blocked = target.closest(BLACKLIST_SELECTORS[i]); } catch (err) {}
+            if (blocked) {
+                console.log('[Swipe] Skipped, karena di elemen:', BLACKLIST_SELECTORS[i], blocked);
+                break;
+            }
+        }
+        return;
+    }
 
     _startX = e.touches[0].clientX;
     _startY = e.touches[0].clientY;
     _startTime = Date.now();
     _tracking = true;
+    console.log('[Swipe] Mulai tracking di', Math.round(_startX), Math.round(_startY));
 }
 
 function _onMove(e) {
@@ -169,9 +186,9 @@ function _onMove(e) {
     var dx = e.touches[0].clientX - _startX;
     var dy = e.touches[0].clientY - _startY;
 
-    // Kalau jelas scroll vertikal, tandai ignore
     if (Math.abs(dy) > VERTICAL_TOLERANCE && Math.abs(dy) > Math.abs(dx)) {
         _ignore = true;
+        console.log('[Swipe] Diabaikan — scroll vertical');
     }
 }
 
@@ -185,14 +202,22 @@ function _onEnd(e) {
     var dy = e.changedTouches[0].clientY - _startY;
     var dt = Date.now() - _startTime;
 
-    // Batas minimum horizontal
-    if (Math.abs(dx) < THRESHOLD_PX) return;
+    console.log('[Swipe] Selesai. dx:', Math.round(dx), 'dy:', Math.round(dy), 'dt:', dt);
 
-    // Bukan vertical
-    if (Math.abs(dy) > Math.abs(dx)) return;
+    if (Math.abs(dx) < THRESHOLD_PX) {
+        console.log('[Swipe] Terlalu pendek (<', THRESHOLD_PX, ')');
+        return;
+    }
 
-    // Terlalu lama? Bukan swipe
-    if (dt > MAX_DURATION_MS) return;
+    if (Math.abs(dy) > Math.abs(dx)) {
+        console.log('[Swipe] Vertical dominan');
+        return;
+    }
+
+    if (dt > MAX_DURATION_MS) {
+        console.log('[Swipe] Terlalu lama (', dt, 'ms)');
+        return;
+    }
 
     if (dx < 0) _cycleSubtab(1);
     else _cycleSubtab(-1);
@@ -204,15 +229,14 @@ function _onCancel() {
 }
 
 // ============================================================
-// PUBLIC — helper untuk main.js
+// PUBLIC
 // ============================================================
 export function showSwipeAnimation(direction) {
     var view = document.getElementById('app-view');
     if (!view) return;
     _cleanupAnimation();
-    // Force reflow agar animasi bisa re-trigger
     void view.offsetWidth;
     if (direction > 0) view.classList.add('swipe-in-left');
     else view.classList.add('swipe-in-right');
-    setTimeout(_cleanupAnimation, ANIM_MS + 40);
+    setTimeout(_cleanupAnimation, 280);
 }
