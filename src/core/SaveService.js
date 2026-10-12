@@ -1,19 +1,18 @@
 // FILE: src/core/SaveService.js
 import { bus } from './EventBus.js';
 import { APP_CONFIG } from '../config/app.config.js';
+import { SCHEMA_VERSION } from './GameState.js';
 
 const SAVE_KEY = APP_CONFIG.saveKey;
-const SAVE_VERSION = 1;
 const AUTOSAVE_INTERVAL_MS = 30000;
 
 export const SaveService = {
     _timerId: null,
 
-    // Simpan state ke localStorage. Return true/false.
     save(state) {
         try {
             const payload = {
-                version: SAVE_VERSION,
+                version: SCHEMA_VERSION,
                 savedAt: Date.now(),
                 data: state.serialize()
             };
@@ -27,17 +26,13 @@ export const SaveService = {
         }
     },
 
-    // Muat data dari localStorage. Return objek data | null.
     load() {
         try {
             const raw = localStorage.getItem(SAVE_KEY);
             if (!raw) return null;
             const payload = JSON.parse(raw);
             if (!payload || typeof payload !== 'object') return null;
-            if (payload.version !== SAVE_VERSION) {
-                console.warn('[SaveService] Versi save tidak cocok, diabaikan.');
-                return null;
-            }
+            // Terima versi apa pun — migrateV1toV2 di GameState.hydrate akan tangani
             return payload.data;
         } catch (err) {
             console.error('[SaveService] Gagal memuat:', err);
@@ -51,7 +46,7 @@ export const SaveService = {
             bus.emit('save:cleared');
             return true;
         } catch (err) {
-            console.error('[SaveService] Gagal menghapus save:', err);
+            console.error('[SaveService] Gagal menghapus:', err);
             return false;
         }
     },
@@ -61,11 +56,39 @@ export const SaveService = {
         catch { return false; }
     },
 
-    // Autosave tiap 30 detik. Skip jika tab tidak terlihat.
+    // Export sebagai string JSON (untuk backup manual di HP)
+    export(state) {
+        try {
+            const payload = {
+                version: SCHEMA_VERSION,
+                savedAt: Date.now(),
+                data: state.serialize()
+            };
+            return JSON.stringify(payload);
+        } catch (err) {
+            console.error('[SaveService] Export gagal:', err);
+            return null;
+        }
+    },
+
+    // Import dari string JSON. Return objek data | null.
+    parseImport(text) {
+        try {
+            const payload = JSON.parse(text);
+            if (!payload || typeof payload !== 'object') return null;
+            if (!payload.data) return null;
+            return payload.data;
+        } catch (err) {
+            console.error('[SaveService] Import gagal:', err);
+            return null;
+        }
+    },
+
     startAutoSave(getState) {
         if (this._timerId !== null) return;
         this._timerId = setInterval(() => {
             if (document.visibilityState !== 'visible') return;
+            if (getState().data.gameOver) return; // jangan autosave saat game over
             this.save(getState());
         }, AUTOSAVE_INTERVAL_MS);
     },
