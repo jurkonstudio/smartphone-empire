@@ -2088,3 +2088,80 @@ body {
 .radar-chart-wrap polygon[fill] {
     animation: polygonPulse 4s ease-in-out infinite;
 }
+/* ===================== WIZARD ERA-AWARE ===================== */
+
+.wiz-era-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: var(--r);
+    border: 1px solid;
+    margin-bottom: 12px;
+    background: linear-gradient(90deg, var(--bg-3) 0%, var(--bg-2) 100%);
+}
+.wiz-era-year {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.wiz-era-info { flex: 1; min-width: 0; }
+.wiz-era-label {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 2px;
+    letter-spacing: -0.005em;
+}
+.wiz-era-desc {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* Preview layout step 4 */
+.wiz-preview-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+@media (min-width: 480px) {
+    .wiz-preview-layout {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+    .wiz-preview-left {
+        flex: 0 0 180px;
+    }
+    .wiz-preview-right {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+.wiz-preview-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+.wiz-preview-device {
+    padding: 12px;
+    background: linear-gradient(135deg, var(--bg-3) 0%, var(--bg-2) 100%);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--border);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+}
+.wiz-preview-radar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.wiz-preview-right { display: flex; flex-direction: column; }
