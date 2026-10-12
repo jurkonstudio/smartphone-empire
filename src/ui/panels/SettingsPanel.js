@@ -30,16 +30,19 @@ export function renderSettingsPanel() {
 
         <div class="card">
             <div class="card-title">Pinjaman</div>
-            ${loans.map(l => `
-                <div class="sum-row">
-                    <span>${l.label} ($${l.principal.toLocaleString('en-US')}, ${Math.round(l.monthlyInterestRate*100)}%/bln)</span>
-                    <button class="btn-secondary" data-loan="${l.id}">Ambil</button>
-                </div>
-            `).join('')}
+            ${loans.map(function (l) {
+                return `
+                    <div class="sum-row">
+                        <span>${l.label} ($${l.principal.toLocaleString('en-US')}, ${Math.round(l.monthlyInterestRate * 100)}%/bln)</span>
+                        <button class="btn-secondary" data-loan="${l.id}">Ambil</button>
+                    </div>
+                `;
+            }).join('')}
             ${s.finance.loans.length
-                ? `<div style="margin-top:10px;font-size:12px;color:var(--warn);">
-                        Pinjaman aktif: ${s.finance.loans.map(l => l.label).join(', ')}
-                   </div>` : ''}
+                ? '<div style="margin-top:10px;font-size:12px;color:var(--warn);">Pinjaman aktif: ' +
+                  s.finance.loans.map(function (l) { return l.label; }).join(', ') +
+                  '</div>'
+                : ''}
         </div>
 
         <div class="card">
@@ -68,22 +71,24 @@ export function renderSettingsPanel() {
     `;
 }
 
-// Event delegation dari main.js memanggil fungsi ini via data-set / data-toggle / data-loan
 export function bindSettingsActions(root) {
-    root.addEventListener('click', (e) => {
+    root.addEventListener('click', function (e) {
         const setBtn = e.target.closest('[data-set]');
         const togBtn = e.target.closest('[data-toggle]');
         const loanBtn = e.target.closest('[data-loan]');
 
-        if (setBtn) return _handleSet(setBtn.dataset.set);
-        if (togBtn) return _handleToggle(togBtn.dataset.toggle);
-        if (loanBtn) return bus.emit('settings:take-loan', { loanId: loanBtn.dataset.loan });
+        if (setBtn) { _handleSet(setBtn.dataset.set); return; }
+        if (togBtn) { _handleToggle(togBtn.dataset.toggle); return; }
+        if (loanBtn) { bus.emit('settings:take-loan', { loanId: loanBtn.dataset.loan }); return; }
     });
 }
 
 function _handleSet(action) {
     switch (action) {
-        case 'save':   SaveService.save(state) ? ToastService.success('Save tersimpan.') : ToastService.error('Gagal save.'); break;
+        case 'save':
+            if (SaveService.save(state)) ToastService.success('Save tersimpan.');
+            else ToastService.error('Gagal save.');
+            break;
         case 'load':   _confirmLoad(); break;
         case 'export': _openExport(); break;
         case 'import': _openImport(); break;
@@ -97,13 +102,13 @@ function _handleToggle(key) {
     const s = state.get();
     s.settings[key] = !s.settings[key];
     state.patch({ settings: s.settings });
-    ToastService.info(`${key}: ${s.settings[key] ? 'ON' : 'OFF'}`);
+    ToastService.info(key + ': ' + (s.settings[key] ? 'ON' : 'OFF'));
     bus.emit('settings:changed', s.settings);
 }
 
 function _openExport() {
     const json = SaveService.export(state);
-    if (!json) return ToastService.error('Export gagal.');
+    if (!json) { ToastService.error('Export gagal.'); return; }
     const html = `
         <div class="modal-title">Export Save</div>
         <div class="modal-sub">Salin teks ini ke catatan HP-mu untuk backup.</div>
@@ -125,19 +130,19 @@ function _openImport() {
     `;
     Modal.open('import', html);
     const root = document.querySelector('[data-modal-id="import"]');
-    root.querySelector('[data-import-confirm]').addEventListener('click', () => {
+    root.querySelector('[data-import-confirm]').addEventListener('click', function () {
         const text = root.querySelector('[data-import-text]').value;
         const data = SaveService.parseImport(text);
-        if (!data) return ToastService.error('JSON tidak valid.');
+        if (!data) { ToastService.error('JSON tidak valid.'); return; }
         state.hydrate(data);
         SaveService.save(state);
         ToastService.success('Save diimpor. Memuat ulang...');
-        setTimeout(() => window.location.reload(), 800);
+        setTimeout(function () { window.location.reload(); }, 800);
     });
 }
 
 function _confirmLoad() {
-    if (!SaveService.hasSave()) return ToastService.warning('Tidak ada save.');
+    if (!SaveService.hasSave()) { ToastService.warning('Tidak ada save.'); return; }
     const html = `
         <div class="modal-title">Muat Save?</div>
         <div class="modal-sub">Progres saat ini akan diganti.</div>
@@ -146,9 +151,9 @@ function _confirmLoad() {
             <button class="btn-primary" data-load-confirm style="flex:1;">Muat</button>
         </div>`;
     Modal.open('confirm-load', html);
-    document.querySelector('[data-load-confirm]').addEventListener('click', () => {
+    document.querySelector('[data-load-confirm]').addEventListener('click', function () {
         const data = SaveService.load();
-        if (!data) return ToastService.error('Gagal memuat.');
+        if (!data) { ToastService.error('Gagal memuat.'); return; }
         state.hydrate(data);
         ToastService.success('Save dimuat.');
         Modal.close('confirm-load', true);
@@ -164,7 +169,7 @@ function _confirmReset() {
             <button class="btn-danger" data-reset-confirm style="flex:1;">Reset</button>
         </div>`;
     Modal.open('confirm-reset', html);
-    document.querySelector('[data-reset-confirm]').addEventListener('click', () => {
+    document.querySelector('[data-reset-confirm]').addEventListener('click', function () {
         SaveService.clear();
         SaveService.stopAutoSave();
         window.location.reload();
