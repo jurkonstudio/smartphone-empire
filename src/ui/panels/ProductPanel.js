@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/ProductPanel.js
-// Versi DEFENSIVE — semua bagian di-guard agar tidak crash.
+// Versi LENGKAP — Defensive + 3 modal (Detail, Campaign, Order).
 import { renderSalesChart } from './SalesChart.js';
 import { getComponentById } from '../../data/components.data.js';
 import { state } from '../../core/GameState.js';
@@ -28,11 +28,13 @@ function isChipLabUnlocked() {
         if (!data || !data.research || !Array.isArray(data.research.completed)) return false;
         return data.research.completed.indexOf('chip_design_tool') !== -1;
     } catch (e) {
-        console.error('[ProductPanel] isChipLabUnlocked error:', e);
         return false;
     }
 }
 
+// ============================================================
+// MAIN RENDER
+// ============================================================
 export function renderProductPanel(params) {
     params = params || {};
     var subtab = params.subtab || 'design';
@@ -71,6 +73,9 @@ export function renderProductPanel(params) {
     return subtabBar + body;
 }
 
+// ============================================================
+// SUB-TAB DESAIN
+// ============================================================
 function _renderDesignTab(productSystem) {
     var data = state.get();
     var dev = data.products ? data.products.development : null;
@@ -98,6 +103,9 @@ function _renderDesignTab(productSystem) {
         '</div>';
 }
 
+// ============================================================
+// SUB-TAB KATALOG
+// ============================================================
 function _renderCatalog() {
     var data = state.get();
     var catalog = (data.products && data.products.catalog) ? data.products.catalog : [];
@@ -125,6 +133,9 @@ function _renderCatalog() {
     return '<div class="prod-list">' + cards + '</div>';
 }
 
+// ============================================================
+// SUB-TAB PENJUALAN
+// ============================================================
 function _renderSales() {
     var data = state.get();
     var catalog = (data.products && data.products.catalog) ? data.products.catalog : [];
@@ -157,6 +168,9 @@ function _renderSales() {
     return kpiGrid + chartHtml + listHtml;
 }
 
+// ============================================================
+// SUB-TAB CHIP
+// ============================================================
 function _renderChipTab() {
     var data = state.get();
     var game = window.__game || {};
@@ -245,4 +259,136 @@ function _renderChipTab() {
     }
 
     return labHeader + designHtml + catalogHtml + fabHtml;
+}
+
+// ============================================================
+// MODAL: DETAIL PRODUK
+// ============================================================
+export function openProductDetailModal(params) {
+    try {
+        var productId = params && params.productId;
+        var data = state.get();
+        var p = (data.products && data.products.catalog) ? data.products.catalog.find(function (x) { return x.id === productId; }) : null;
+        if (!p) return;
+
+        var avg = (p.reviews && p.reviews.length) ? (p.reviews.reduce(function (s, r) { return s + r.score; }, 0) / p.reviews.length).toFixed(1) : '-';
+
+        var specRows = '';
+        var specs = [
+            ['Layar', p.config.displayId],
+            ['Kamera', p.config.cameraId],
+            ['Baterai', p.config.batteryId],
+            ['Chip', p.config.chipId],
+            ['Jaringan', p.config.networkId],
+            ['Bodi', p.config.bodyId],
+            ['OS', p.config.osOptionId]
+        ];
+        for (var i = 0; i < specs.length; i++) {
+            var comp = getComponentById(specs[i][1]);
+            var label = comp ? comp.name : (specs[i][1] || '-');
+            specRows += '<div class="sum-row"><span>' + specs[i][0] + '</span><b>' + escapeHtml(label) + '</b></div>';
+        }
+
+        var autoRestock = p.autoRestock || { enabled: false, thresholdPercent: 20 };
+        var autoSection = p.status === 'selling'
+            ? '<div class="card-title" style="margin-top:14px;">Pengisian Stok Otomatis</div>' +
+              '<div class="auto-restock-row">' +
+              '<div style="flex:1;">' +
+              '<div style="font-size:13px;font-weight:600;">Aktifkan Auto-Restock</div>' +
+              '<div style="font-size:11px;color:var(--text-mute);margin-top:2px;">' + (autoRestock.enabled ? 'Sistem akan restock otomatis' : 'Restock manual') + '</div>' +
+              '</div>' +
+              '<button class="toggle-switch ' + (autoRestock.enabled ? 'on' : '') + '" data-auto-toggle data-prod-id="' + p.id + '"><span class="toggle-thumb"></span></button>' +
+              '</div>'
+            : '';
+
+        var actionsHtml = p.status === 'selling'
+            ? '<div class="card-title" style="margin-top:14px;">Aksi</div>' +
+              '<button class="btn-secondary" data-prod-action="order-prod" data-prod-id="' + p.id + '" style="width:100%;margin-bottom:6px;">Pesan Produksi Tambahan</button>' +
+              '<button class="btn-secondary" data-prod-action="campaign" data-prod-id="' + p.id + '" style="width:100%;margin-bottom:6px;">Kampanye Pemasaran</button>' +
+              '<button class="btn-danger" data-prod-action="discontinue" data-prod-id="' + p.id + '" style="width:100%;">Hentikan Produk</button>'
+            : '<div class="empty-hint" style="margin-top:10px;">Produk sudah dihentikan.</div>';
+
+        var html = '<div class="modal-title">' + escapeHtml(p.name) + '</div>' +
+            '<div class="modal-sub">Rilis ' + p.releaseDate.day + '/' + p.releaseDate.month + '/' + p.releaseDate.year + '</div>' +
+            '<div class="card-title">Penjualan</div>' +
+            '<div class="sum-row"><span>Total terjual</span><b>' + p.totalSold.toLocaleString('en-US') + ' unit</b></div>' +
+            '<div class="sum-row"><span>Pendapatan</span><b>$' + p.totalRevenue.toLocaleString('en-US') + '</b></div>' +
+            '<div class="sum-row"><span>Stok saat ini</span><b>' + p.stock.toLocaleString('en-US') + '</b></div>' +
+            '<div class="sum-row"><span>Ulasan rata-rata</span><b>' + avg + '/10 (' + p.reviews.length + ')</b></div>' +
+            '<div class="card-title" style="margin-top:12px;">Spesifikasi</div>' +
+            specRows +
+            autoSection +
+            actionsHtml +
+            '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">Tutup</button>';
+
+        window.__game.Modal.open('product-detail', html);
+    } catch (err) {
+        console.error('[openProductDetailModal] error:', err);
+    }
+}
+
+// ============================================================
+// MODAL: PILIH KAMPANYE
+// ============================================================
+export function openCampaignModal(params) {
+    try {
+        var productId = params && params.productId;
+        var marketing = (window.__game && window.__game.modules && window.__game.modules.marketing) ? window.__game.modules.marketing : null;
+        var campaigns = (marketing && marketing.MARKETING_CAMPAIGNS) ? marketing.MARKETING_CAMPAIGNS : [];
+
+        var buttonsHtml = '';
+        for (var i = 0; i < campaigns.length; i++) {
+            var c = campaigns[i];
+            buttonsHtml += '<button class="wiz-option" data-campaign-pick="' + c.id + '" data-prod-id="' + productId + '" style="width:100%;margin-bottom:6px;text-align:left;">' +
+                '<div class="wiz-opt-name">' + escapeHtml(c.name) + '</div>' +
+                '<div class="wiz-opt-meta">$' + c.cost.toLocaleString('en-US') + ' - ' + c.durationDays + ' hari - reach +' + Math.round(c.reachBase * 100) + '%</div>' +
+                '</button>';
+        }
+
+        var html = '<div class="modal-title">Pilih Kampanye</div>' +
+            '<div class="modal-sub">Efek diperkuat oleh jumlah Marketer.</div>' +
+            buttonsHtml +
+            '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:8px;">Batal</button>';
+
+        window.__game.Modal.open('campaign-pick', html);
+    } catch (err) {
+        console.error('[openCampaignModal] error:', err);
+    }
+}
+
+// ============================================================
+// MODAL: ORDER PRODUKSI
+// ============================================================
+export function openOrderProductionModal(params) {
+    try {
+        var productId = params && params.productId;
+        var data = state.get();
+        var p = (data.products && data.products.catalog) ? data.products.catalog.find(function (x) { return x.id === productId; }) : null;
+        if (!p) return;
+
+        var html = '<div class="modal-title">Produksi Tambahan</div>' +
+            '<div class="modal-sub">' + escapeHtml(p.name) + '</div>' +
+            '<label class="field-label">Jumlah unit</label>' +
+            '<input class="field-input" data-order-qty type="number" min="100" step="100" value="1000" />' +
+            '<div class="sum-row" style="margin-top:8px;"><span>Biaya per unit</span><b>$' + p.unitCost + '</b></div>' +
+            '<div class="sum-row"><span>Setup cost</span><b>$2.000</b></div>' +
+            '<div class="sum-row"><span>Total estimasi</span><b data-order-total>$0</b></div>' +
+            '<button class="btn-primary" data-order-confirm data-prod-id="' + productId + '" style="width:100%;margin-top:12px;">Pesan</button>' +
+            '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:6px;">Batal</button>';
+
+        window.__game.Modal.open('order-prod', html);
+
+        var root = document.querySelector('[data-modal-id="order-prod"]');
+        if (!root) return;
+        var qtyInput = root.querySelector('[data-order-qty]');
+        var totalEl = root.querySelector('[data-order-total]');
+        function refresh() {
+            var q = parseInt(qtyInput.value, 10) || 0;
+            totalEl.textContent = '$' + ((q * p.unitCost) + 2000).toLocaleString('en-US');
+        }
+        qtyInput.addEventListener('input', refresh);
+        refresh();
+    } catch (err) {
+        console.error('[openOrderProductionModal] error:', err);
+    }
 }
