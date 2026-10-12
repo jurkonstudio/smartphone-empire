@@ -6,7 +6,7 @@ import { bus } from './EventBus.js';
 
 export const SCHEMA_VERSION = 2;
 
-// ---------- Default state (v2) ----------
+// ---------- Default state (v2, diperluas Batch A) ----------
 function createInitialState(difficulty = DIFFICULTY.normal) {
     const startingCash = BALANCE.startingCash[difficulty] ?? BALANCE.startingCash.normal;
     return {
@@ -31,43 +31,54 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
         // Keuangan
         cash: startingCash,
         finance: {
-            history: [],              // max 24 bulan
-            negativeMonths: 0,        // beruntun
-            loans: [],                // pinjaman aktif
-            lastProcessed: null       // { year, month } cegah double
+            history: [],
+            negativeMonths: 0,
+            loans: [],
+            lastProcessed: null
         },
 
         // Tim
         team: { engineers: 0, designers: 0, marketers: 0 },
 
-        // Riset
+        // ===== RISET (diperluas Batch A) =====
         research: {
-            active: [],               // maks BASE_RESEARCH_SLOTS
-            completed: [],            // [id]
-            maxSlots: 1
+            active: [],              // [{ nodeId, category, name, startedAtGameMinute, lastProcessedMinute, progressDays, durationDays, startYear, startMonth, startDay }]
+            completed: [],           // [nodeId]
+            maxSlots: 1,             // dihitung dinamis oleh ResearchSystem
+            totalCompleted: 0
         },
 
-        // OS
+        // ===== OS (diperluas Batch A) =====
         os: {
-            versions: [],             // history OS selesai
+            name: null,              // nama OS yang dibuat pemain
+            createdAt: null,         // { year, month, day }
+            versions: [],            // [{ id, versionString, features:[], stats:{stability,speed,features,security,design}, devCost, releasedAt:{year,month,day} }]
             currentVersionId: null,
-            developing: null          // proyek OS berjalan
+            developing: null,        // { features:[], versionString, startedAtGameMinute, lastProcessedMinute, progressDays, durationDays, cost }
+            bugs: [],                // [{ id, templateId, name, severity, satisfactionHit, reputationHit, patchCost, patchDays, appearedAtGameMinute, status:'active'|'patching'|'fixed', patchCompleteAtMinute }]
+            apps: {
+                builtin: [],         // [appId]
+                thirdParty: 0        // jumlah apps developer pihak ketiga
+            },
+            appsAccumulator: 0,      // akumulator growth bulanan
+            licenseChoice: null      // null | 'own' | <licenseId>
         },
 
-        // Produk
+        // Produk (Batch B)
         products: {
             catalog: [],
             designing: null
         },
 
-        // Pasar
+        // Pasar (Batch C)
         market: {
             share: 0,
             shareHistory: [],
-            competitors: []
+            competitors: [],
+            reputation: 0
         },
 
-        // Event
+        // Event (Batch D)
         events: {
             cooldownUntilMinute: 0,
             pending: null,
@@ -93,7 +104,7 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
         eraStartYear: TIME_CONFIG.startYear,
 
         // Status akhir
-        gameOver: null   // { reason, year, month } jika kalah
+        gameOver: null
     };
 }
 
@@ -102,7 +113,6 @@ function migrateV1toV2(oldData) {
     const fresh = createInitialState(DIFFICULTY.normal);
     if (!oldData || typeof oldData !== 'object') return fresh;
 
-    // Bawa nilai yang mungkin ada di v1
     if (typeof oldData.companyName === 'string') fresh.companyName = oldData.companyName;
     if (typeof oldData.cash === 'number') fresh.cash = oldData.cash;
     if (oldData.time && typeof oldData.time === 'object') {
@@ -110,7 +120,6 @@ function migrateV1toV2(oldData) {
     }
     if (typeof oldData.isPaused === 'boolean') fresh.isPaused = oldData.isPaused;
     if (typeof oldData.gameSpeed === 'number') fresh.gameSpeed = oldData.gameSpeed;
-    // research v1 (activeId/progress) diabaikan — schema baru
     return fresh;
 }
 
@@ -125,6 +134,14 @@ class GameState {
     patch(updates) {
         Object.assign(this.data, updates);
         bus.emit('state:changed', this.data);
+    }
+
+    // ============== WAKTU ==============
+    // Total hari game sejak awal (0-based).
+    getGameDay() {
+        const m = this.data.time.elapsedGameMinutes || 0;
+        const perDay = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
+        return Math.floor(m / perDay);
     }
 
     // ============== KEUANGAN ==============
@@ -205,29 +222,41 @@ class GameState {
     hydrate(data) {
         if (!data || typeof data !== 'object') return false;
 
-        // Tangani migrasi berdasarkan schemaVersion
         let incoming = data;
         if (!incoming.schemaVersion || incoming.schemaVersion < 2) {
             incoming = migrateV1toV2(incoming);
         }
 
-        // Merge dengan default agar field baru tidak hilang
         const base = createInitialState(incoming.difficulty || DIFFICULTY.normal);
         this.data = {
             ...base,
             ...incoming,
-            time:      { ...base.time,      ...(incoming.time || {}) },
-            finance:   { ...base.finance,   ...(incoming.finance || {}) },
-            team:      { ...base.team,      ...(incoming.team || {}) },
-            research:  { ...base.research,  ...(incoming.research || {}) },
-            os:        { ...base.os,        ...(incoming.os || {}) },
-            products:  { ...base.products,  ...(incoming.products || {}) },
-            market:    { ...base.market,    ...(incoming.market || {}) },
-            events:    { ...base.events,    ...(incoming.events || {}) },
-            quests:    { ...base.quests,    ...(incoming.quests || {}) },
-            tutorial:  { ...base.tutorial,  ...(incoming.tutorial || {}) },
-            settings:  { ...base.settings,  ...(incoming.settings || {}) }
+            time:     { ...base.time,     ...(incoming.time || {}) },
+            finance:  { ...base.finance,  ...(incoming.finance || {}) },
+            team:     { ...base.team,     ...(incoming.team || {}) },
+            research: { ...base.research, ...(incoming.research || {}) },
+            os: {
+                ...base.os,
+                ...(incoming.os || {}),
+                // Merge nested apps agar field baru tetap ada
+                apps: {
+                    ...base.os.apps,
+                    ...((incoming.os && incoming.os.apps) || {})
+                }
+            },
+            products: { ...base.products, ...(incoming.products || {}) },
+            market:   { ...base.market,   ...(incoming.market || {}) },
+            events:   { ...base.events,   ...(incoming.events || {}) },
+            quests:   { ...base.quests,   ...(incoming.quests || {}) },
+            tutorial: { ...base.tutorial, ...(incoming.tutorial || {}) },
+            settings: { ...base.settings, ...(incoming.settings || {}) }
         };
+
+        // Pastikan totalCompleted konsisten (untuk save lama)
+        if (typeof this.data.research.totalCompleted !== 'number') {
+            this.data.research.totalCompleted = this.data.research.completed.length;
+        }
+
         bus.emit('state:hydrated', this.data);
         bus.emit('state:changed', this.data);
         return true;
@@ -238,7 +267,7 @@ class GameState {
         bus.emit('state:changed', this.data);
     }
 
-    // Utilitas: total gaji bulanan (dipakai EconomySystem & UI)
+    // ============== UTILITAS ==============
     getMonthlySalary() {
         const t = this.data.team;
         const s = BALANCE.salary;
