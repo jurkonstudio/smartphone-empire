@@ -11,6 +11,8 @@ import { QuestSystem } from './systems/QuestSystem.js';
 import { TutorialSystem } from './systems/TutorialSystem.js';
 import { ResearchSystem } from './systems/ResearchSystem.js';
 import { OSSystem } from './systems/OSSystem.js';
+import { ProductSystem } from './systems/ProductSystem.js';
+import { MarketSystem } from './systems/MarketSystem.js';
 import { renderHeader } from './ui/layout/Header.js';
 import { renderMobileNav } from './ui/layout/MobileNav.js';
 import { renderDashboard } from './ui/panels/DashboardPanel.js';
@@ -25,13 +27,16 @@ import { initMonthlySummary } from './ui/panels/MonthlySummaryModal.js';
 import { initGameOverScreen } from './ui/panels/GameOverScreen.js';
 import { Modal } from './ui/modal.js';
 import {
-    renderResearchPanel,
-    setFilterCategory,
-    openNodeDetailModal,
-    openOsWizardModal,
-    openCreateOsModal,
-    openFeatureDetailModal
+    renderResearchPanel, setFilterCategory,
+    openNodeDetailModal, openOsWizardModal, openCreateOsModal, openFeatureDetailModal
 } from './ui/panels/ResearchPanel.js';
+import {
+    renderProductPanel, openProductDetailModal, openCampaignModal, openOrderProductionModal
+} from './ui/panels/ProductPanel.js';
+import { openDesignWizard } from './ui/panels/DesignWizard.js';
+import { renderMarketPanel, drawShareChart } from './ui/panels/MarketPanel.js';
+import { drawSalesChart } from './ui/panels/SalesChart.js';
+import * as marketingModule from './data/marketing.data.js';
 
 const timeSystem = new TimeSystem(state);
 const economy = new EconomySystem(state);
@@ -39,9 +44,13 @@ const quests = new QuestSystem(state);
 const tutorial = new TutorialSystem(state);
 const research = new ResearchSystem(state);
 const os = new OSSystem(state);
+const products = new ProductSystem(state);
+const market = new MarketSystem(state);
 
 let activeView = 'dashboard';
-let activeSubtab = 'tech';
+let activeSubtab = 'tech';        // untuk tab Riset
+let activeProdSubtab = 'design';  // untuk tab Produk
+let activeMarketSubtab = 'share'; // untuk tab Pasar
 let _burnWarn = null;
 
 const els = {
@@ -54,11 +63,6 @@ const els = {
 };
 
 function getTime() { return timeSystem.snapshot(); }
-
-const EMPTY_VIEWS = {
-    products: { icon: '📱', title: 'Belum ada produk', description: 'Desain ponsel, katalog, dan penjualan akan dibuka pada Batch B.', hint: 'Coming in Batch B' },
-    market:   { icon: '📈', title: 'Pasar belum aktif', description: 'Kompetitor dan tren pasar akan dibuka pada Batch C.', hint: 'Coming in Batch C' }
-};
 
 function hideLoading() { if (els.loading) els.loading.style.display = 'none'; }
 
@@ -78,31 +82,35 @@ function renderView() {
     switch (activeView) {
         case 'dashboard': html = renderDashboard(state.get(), getTime(), research); break;
         case 'research':  html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os }); break;
+        case 'products':  html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os }); break;
+        case 'market':    html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market }); break;
         case 'settings':  html = renderSettingsPanel(); break;
         case 'guide':     html = renderGuidePanel(); break;
         default:
-            html = renderEmptyState(EMPTY_VIEWS[activeView] || { icon: '❓', title: 'Tidak ditemukan' });
+            html = renderEmptyState({ icon: '❓', title: 'Tidak ditemukan' });
     }
     els.view.innerHTML = html;
     els.view.scrollTop = 0;
 
+    // Post-render
     if (activeView === 'dashboard') {
         const chart = els.view.querySelector('.chart-wrap');
         if (chart) drawCashChart(chart);
     }
-    if (activeView === 'settings') {
-        bindSettingsActions(els.view);
+    if (activeView === 'products' && activeProdSubtab === 'sales') {
+        const sc = els.view.querySelector('.chart-wrap');
+        if (sc) drawSalesChart(sc);
     }
+    if (activeView === 'market' && activeMarketSubtab === 'share') {
+        const sc = els.view.querySelector('.chart-wrap');
+        if (sc) drawShareChart(sc);
+    }
+    if (activeView === 'settings') bindSettingsActions(els.view);
 }
 
-// Global re-render entry (dipakai modal untuk refresh setelah aksi)
 function render() { renderAll(); }
 
-function renderAll() {
-    renderHeaderOnly();
-    renderNavOnly();
-    renderView();
-}
+function renderAll() { renderHeaderOnly(); renderNavOnly(); renderView(); }
 
 let _cashRaf = null;
 function animateCash(from, to) {
@@ -110,13 +118,12 @@ function animateCash(from, to) {
     const targets = document.querySelectorAll('[data-cash]');
     if (!targets.length || from === to) return;
     const start = performance.now();
-    const DUR = 520;
     const step = function (ts) {
-        const p = Math.min(1, (ts - start) / DUR);
+        const p = Math.min(1, (ts - start) / 520);
         const eased = 1 - Math.pow(1 - p, 3);
         const val = from + (to - from) * eased;
         const text = '$' + Math.round(val).toLocaleString('en-US');
-        targets.forEach(function (el) { el.textContent = text; });
+        targets.forEach(el => { el.textContent = text; });
         if (p < 1) _cashRaf = requestAnimationFrame(step);
         else _cashRaf = null;
     };
@@ -145,16 +152,13 @@ function vibrate(ms) {
     }
 }
 
-// ============================================================
-// EVENT DELEGATION TUNGGAL — semua tombol di sini
-// ============================================================
 function bindGlobalClicks() {
     document.body.addEventListener('click', function (e) {
-        // 1. Navigasi bottom nav
+        // 1. Nav
         const navBtn = e.target.closest('[data-nav]');
         if (navBtn) { e.preventDefault(); vibrate(8); navigate(navBtn.dataset.nav); return; }
 
-        // 2. Kontrol waktu
+        // 2. Time
         const timeBtn = e.target.closest('[data-time-action]');
         if (timeBtn) {
             e.preventDefault(); vibrate(12);
@@ -164,33 +168,19 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 3. Sub-tab Riset
+        // 3. Riset sub-tab
         const subBtn = e.target.closest('[data-subtab]');
-        if (subBtn) {
-            e.preventDefault(); vibrate(6);
-            activeSubtab = subBtn.dataset.subtab;
-            renderView();
-            return;
-        }
+        if (subBtn) { e.preventDefault(); activeSubtab = subBtn.dataset.subtab; renderView(); return; }
 
-        // 4. Filter kategori node riset
+        // 4. Filter kategori
         const chip = e.target.closest('[data-filter-cat]');
-        if (chip) {
-            e.preventDefault();
-            setFilterCategory(chip.dataset.filterCat);
-            renderView();
-            return;
-        }
+        if (chip) { e.preventDefault(); setFilterCategory(chip.dataset.filterCat); renderView(); return; }
 
-        // 5. Detail node riset (klik kartu)
+        // 5. Node detail
         const nodeCard = e.target.closest('[data-node-detail]');
-        if (nodeCard) {
-            e.preventDefault();
-            openNodeDetailModal({ nodeId: nodeCard.dataset.nodeDetail, researchSystem: research });
-            return;
-        }
+        if (nodeCard) { e.preventDefault(); openNodeDetailModal({ nodeId: nodeCard.dataset.nodeDetail, researchSystem: research }); return; }
 
-        // 6. Action di modal node detail
+        // 6. Aksi riset di modal
         const rAction = e.target.closest('[data-research-action]');
         if (rAction) {
             e.preventDefault();
@@ -198,12 +188,12 @@ function bindGlobalClicks() {
             const nodeId = rAction.dataset.nodeId;
             if (act === 'start') {
                 const res = research.startResearch(nodeId);
-                if (!res.ok) ToastService.error(res.reason || 'Gagal.');
+                if (!res.ok) ToastService.error(res.reason);
                 else { ToastService.success('Riset dimulai!'); Modal.close('node-detail', true); renderAll(); }
             } else if (act === 'cancel') {
                 const res = research.cancelResearch(nodeId);
-                if (!res.ok) ToastService.error(res.reason || 'Gagal.');
-                else { ToastService.info('Riset dibatalkan.'); Modal.close('node-detail', true); renderAll(); }
+                if (!res.ok) ToastService.error(res.reason);
+                else { ToastService.info('Dibatalkan.'); Modal.close('node-detail', true); renderAll(); }
             }
             return;
         }
@@ -217,39 +207,75 @@ function bindGlobalClicks() {
             if (act === 'wizard')        { openOsWizardModal({ osSystem: os }); return; }
             if (act === 'cancel-deving') {
                 const res = os.cancelVersion();
-                if (res.ok) { ToastService.info('Pengembangan dibatalkan (refund $' + res.refund.toLocaleString('en-US') + ').'); renderAll(); }
+                if (res.ok) { ToastService.info('Dibatalkan (refund $' + res.refund.toLocaleString('en-US') + ').'); renderAll(); }
                 else ToastService.error(res.reason);
                 return;
             }
-            if (act === 'patch-bug') {
-                const res = os.patchBug(osAction.dataset.bugId);
-                if (!res.ok) ToastService.error(res.reason);
-                else { ToastService.success('Patch dimulai.'); renderAll(); }
+            if (act === 'patch-bug')  { const r = os.patchBug(osAction.dataset.bugId); r.ok ? (ToastService.success('Patch dimulai.'), renderAll()) : ToastService.error(r.reason); return; }
+            if (act === 'ignore-bug') { const r = os.ignoreBug(osAction.dataset.bugId); r.ok ? (ToastService.warning('Diabaikan.'), renderAll()) : ToastService.error(r.reason); return; }
+            if (act === 'start-app')  { const r = os.startApp(osAction.dataset.appId); r.ok ? (ToastService.success('App dirilis.'), renderAll()) : ToastService.error(r.reason); return; }
+            if (act === 'invite-devs'){ const r = os.inviteDevelopers(); r.ok ? (ToastService.success('+' + r.bonus + ' dev.'), renderAll()) : ToastService.error(r.reason); return; }
+            if (act === 'feature-detail') { openFeatureDetailModal({ osSystem: os, featureId: osAction.dataset.featureId }); return; }
+        }
+
+        // 8. Produk sub-tab
+        const prodSub = e.target.closest('[data-prod-subtab]');
+        if (prodSub) { e.preventDefault(); activeProdSubtab = prodSub.dataset.prodSubtab; renderView(); return; }
+
+        // 9. Aksi produk
+        const prodAction = e.target.closest('[data-prod-action]');
+        if (prodAction) {
+            e.preventDefault();
+            const act = prodAction.dataset.prodAction;
+            const pid = prodAction.dataset.prodId;
+            if (act === 'open-wizard') { openDesignWizard({ researchSystem: research, osSystem: os, productSystem: products }); return; }
+            if (act === 'cancel-dev') {
+                const r = products.cancelDevelopment();
+                r.ok ? (ToastService.info('Dibatalkan (refund $' + r.refund.toLocaleString('en-US') + ').'), renderAll()) : ToastService.error(r.reason);
                 return;
             }
-            if (act === 'ignore-bug') {
-                const res = os.ignoreBug(osAction.dataset.bugId);
-                if (!res.ok) ToastService.error(res.reason);
-                else { ToastService.warning('Bug diabaikan.'); renderAll(); }
-                return;
-            }
-            if (act === 'start-app') {
-                const res = os.startApp(osAction.dataset.appId);
-                if (!res.ok) ToastService.error(res.reason);
-                else { ToastService.success('Aplikasi dirilis.'); renderAll(); }
-                return;
-            }
-            if (act === 'invite-devs') {
-                const res = os.inviteDevelopers();
-                if (!res.ok) ToastService.error(res.reason);
-                else { ToastService.success('+' + res.bonus + ' developer!'); renderAll(); }
-                return;
-            }
-            if (act === 'feature-detail') {
-                openFeatureDetailModal({ osSystem: os, featureId: osAction.dataset.featureId });
+            if (act === 'order-prod')  { openOrderProductionModal({ productId: pid }); return; }
+            if (act === 'campaign')    { openCampaignModal({ productId: pid }); return; }
+            if (act === 'discontinue') {
+                const r = products.discontinueProduct(pid);
+                r.ok ? (ToastService.info('Produk dihentikan.'), Modal.close('product-detail', true), renderAll()) : ToastService.error(r.reason);
                 return;
             }
         }
+
+        // 10. Klik kartu produk
+        const prodCard = e.target.closest('[data-prod-detail]');
+        if (prodCard && !e.target.closest('[data-prod-action]')) {
+            e.preventDefault();
+            openProductDetailModal({ productId: prodCard.dataset.prodDetail, productSystem: products });
+            return;
+        }
+
+        // 11. Pilih kampanye
+        const campPick = e.target.closest('[data-campaign-pick]');
+        if (campPick) {
+            e.preventDefault();
+            const res = products.startCampaign(campPick.dataset.prodId, campPick.dataset.campaignPick);
+            if (!res.ok) ToastService.error(res.reason);
+            else { ToastService.success('Kampanye dimulai!'); Modal.close('campaign-pick', true); renderAll(); }
+            return;
+        }
+
+        // 12. Konfirmasi order produksi
+        const orderConfirm = e.target.closest('[data-order-confirm]');
+        if (orderConfirm) {
+            e.preventDefault();
+            const root = document.querySelector('[data-modal-id="order-prod"]');
+            const qty = parseInt(root.querySelector('[data-order-qty]').value, 10) || 0;
+            const res = products.orderProduction(orderConfirm.dataset.prodId, qty);
+            if (!res.ok) ToastService.error(res.reason);
+            else { ToastService.success('Order produksi dibuat.'); Modal.close('order-prod', true); renderAll(); }
+            return;
+        }
+
+        // 13. Market sub-tab
+        const mktSub = e.target.closest('[data-market-subtab]');
+        if (mktSub) { e.preventDefault(); activeMarketSubtab = mktSub.dataset.marketSubtab; renderView(); return; }
     });
 
     document.addEventListener('keydown', function (e) {
@@ -259,16 +285,11 @@ function bindGlobalClicks() {
     });
 }
 
-// ============================================================
-// Update progress live tanpa re-render
-// ============================================================
 function bindProgressEvents() {
     bus.on('research:progress', (data) => {
         if (activeView !== 'research' || activeSubtab !== 'tech') return;
-        // Update header slot count
         const slotsEl = els.view.querySelector('[data-research-slots]');
         if (slotsEl) slotsEl.textContent = data.active.length + '/' + data.maxSlots;
-
         data.active.forEach(r => {
             const pct = Math.round(r.percent * 100);
             const bar = els.view.querySelector('[data-research-bar="' + r.nodeId + '"]');
@@ -279,7 +300,6 @@ function bindProgressEvents() {
             if (etaEl) etaEl.textContent = 'Sisa ~' + Math.ceil(r.remainingDays) + ' hari • ' + r.progressDays.toFixed(1) + '/' + r.durationDays + ' hari';
         });
     });
-
     bus.on('os:progress', (data) => {
         if (activeView !== 'research' || activeSubtab !== 'os') return;
         const pct = Math.round(data.percent * 100);
@@ -290,16 +310,23 @@ function bindProgressEvents() {
         const eta = els.view.querySelector('[data-os-dev-eta]');
         if (eta) eta.textContent = 'Sisa ~' + Math.ceil(data.remainingDays) + ' hari • ' + data.progressDays.toFixed(1) + '/' + data.durationDays + ' hari';
     });
-
-    // Saat hari berubah & di tab Riset, re-render agar daftar bug & fitur update
+    bus.on('product:development-progress', (data) => {
+        if (activeView !== 'products' || activeProdSubtab !== 'design') return;
+        const phaseMap = { design: 'Desain', prototype: 'Prototipe', production: 'Produksi', released: 'Rilis' };
+        const phaseEl = els.view.querySelector('[data-prod-dev-phase]');
+        const pctEl = els.view.querySelector('[data-prod-dev-pct]');
+        const barEl = els.view.querySelector('[data-prod-dev-bar]');
+        const etaEl = els.view.querySelector('[data-prod-dev-eta]');
+        if (phaseEl) phaseEl.textContent = phaseMap[data.phase] || data.phase;
+        if (pctEl) pctEl.textContent = data.percentOverall + '%';
+        if (barEl) barEl.style.width = data.percentOverall + '%';
+        if (etaEl) etaEl.textContent = 'Sisa ~' + data.remainingDays + ' hari di tahap ini';
+    });
     bus.on('time:day-changed', () => {
-        if (activeView === 'research') renderView();
+        if (activeView === 'research' || activeView === 'products' || activeView === 'market') renderView();
     });
 }
 
-// ============================================================
-// EVENT LAMA (dipertahankan)
-// ============================================================
 function bindTimeEvents() {
     bus.on('time:tick', function () {
         const meta = els.header && els.header.querySelector('.header-meta');
@@ -312,10 +339,7 @@ function bindTimeEvents() {
         const s = meta.querySelector('[data-time-status]');
         if (d) d.textContent = 'Hari ' + t.currentDay + '/' + t.currentMonth + '/' + t.currentYear;
         if (c) c.textContent = hh + ':' + mm;
-        if (s) {
-            s.textContent = t.isPaused ? 'Paused' : (t.gameSpeed + 'x');
-            s.classList.toggle('running', !t.isPaused);
-        }
+        if (s) { s.textContent = t.isPaused ? 'Paused' : (t.gameSpeed + 'x'); s.classList.toggle('running', !t.isPaused); }
     });
     bus.on('time:day-changed', function () {
         if (activeView === 'dashboard') renderView();
@@ -325,19 +349,10 @@ function bindTimeEvents() {
 
 function bindStateEvents() {
     bus.on('state:cash-changed', function (data) { animateCash(data.prev, data.next); });
-    bus.on('state:log-changed', function () {
-        if (activeView === 'dashboard') renderView();
-    });
-    bus.on('state:milestone-added', function () {
-        if (activeView === 'dashboard') renderView();
-    });
-    bus.on('quest:completed', function (data) {
-        ToastService.success('Quest selesai: ' + data.title);
-        vibrate(20);
-    });
-    bus.on('quest:activated', function () {
-        if (activeView === 'dashboard') renderView();
-    });
+    bus.on('state:log-changed', function () { if (activeView === 'dashboard') renderView(); });
+    bus.on('state:milestone-added', function () { if (activeView === 'dashboard') renderView(); });
+    bus.on('quest:completed', function (data) { ToastService.success('Quest selesai: ' + data.title); vibrate(20); });
+    bus.on('quest:activated', function () { if (activeView === 'dashboard') renderView(); });
     bus.on('economy:warn-burnrate', function (data) {
         _burnWarn = 'Sisa ' + data.monthsLeft + ' bln';
         renderHeaderOnly();
@@ -382,6 +397,8 @@ async function boot() {
         tutorial.start();
         research.start();
         os.start();
+        products.start();
+        market.start();
 
         renderAll();
         bindGlobalClicks();
@@ -395,13 +412,14 @@ async function boot() {
 
         const cash = state.get().cash;
         if (cash > 0) {
-            document.querySelectorAll('[data-cash]').forEach(function (el) { el.textContent = '$0'; });
+            document.querySelectorAll('[data-cash]').forEach(el => { el.textContent = '$0'; });
             animateCash(0, cash);
         }
 
         window.__game = {
-            state, bus, timeSystem, economy, quests, tutorial, research, os,
+            state, bus, timeSystem, economy, quests, tutorial, research, os, products, market,
             SaveService, ToastService, Modal, navigate, render: renderAll,
+            modules: { marketing: marketingModule },
             cheat: {
                 addCash: function (n) { state.addCash(n); },
                 fastForwardDays: function (n) { return timeSystem.fastForwardDays(n); },
@@ -412,7 +430,8 @@ async function boot() {
                 completeAllResearch: function () { return research.completeAllResearch(); },
                 completeResearch: function (id) { return research.completeResearch(id); },
                 startOsWith: function (featureIds) { return os.quickSetup(featureIds); },
-                spawnOsBug: function () { return os.spawnBug(); }
+                spawnOsBug: function () { return os.spawnBug(); },
+                quickRelease: function (cfg) { return products.quickRelease(cfg); }
             }
         };
 
@@ -420,10 +439,7 @@ async function boot() {
     } catch (err) {
         console.error('[boot] gagal:', err);
         hideLoading();
-        if (els.error) {
-            els.error.style.display = 'block';
-            els.error.textContent = 'Boot error: ' + err.message;
-        }
+        if (els.error) { els.error.style.display = 'block'; els.error.textContent = 'Boot error: ' + err.message; }
     }
 }
 
