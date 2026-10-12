@@ -1,5 +1,4 @@
 // FILE: src/ui/panels/CloudStatus.js
-// Fase 1: fokus save lokal. Cloud sync masuk pada fase berikutnya.
 export function renderCloudStatus() {
     return `
         <div class="card">
