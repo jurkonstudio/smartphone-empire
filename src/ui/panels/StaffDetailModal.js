@@ -1,7 +1,7 @@
 // FILE: src/ui/panels/StaffDetailModal.js
 // Modal detail staff: info lengkap + tombol Fire + Training.
 import { Modal } from '../modal.js';
-import { getRoleById, getSkillTier, getTraitById, TRAITS } from '../../data/staff.data.js';
+import { getRoleById, getSkillTier, getTraitById } from '../../data/staff.data.js';
 import { BALANCE } from '../../data/balance.data.js';
 
 function escapeHtml(s) {
@@ -87,4 +87,15 @@ export function openStaffDetailModal({ staffId }) {
             <button class="btn-secondary" data-staff-action="train" data-staff-id="${s.id}"
                     ${canTrain ? '' : 'disabled'}
                     style="width:100%;margin-top:14px;${canTrain ? '' : 'opacity:0.5;'}">
-                📚 Training Intensif (+30
+                📚 Training Intensif (+30 progress) — $${trainingCost.toLocaleString('en-US')}
+            </button>
+        ` : ''}
+
+        <button class="btn-danger" data-staff-action="fire" data-staff-id="${s.id}" style="width:100%;margin-top:8px;">
+            ⛔ PHK Staff (pesangon $${severance.toLocaleString('en-US')})
+        </button>
+
+        <button class="btn-secondary" data-modal-close style="width:100%;margin-top:8px;">Tutup</button>
+    `;
+    Modal.open('staff-detail', html);
+}
