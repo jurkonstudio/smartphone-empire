@@ -9,6 +9,8 @@ import { ToastService } from './core/ToastService.js';
 import { EconomySystem } from './systems/EconomySystem.js';
 import { QuestSystem } from './systems/QuestSystem.js';
 import { TutorialSystem } from './systems/TutorialSystem.js';
+import { ResearchSystem } from './systems/ResearchSystem.js';
+import { OSSystem } from './systems/OSSystem.js';
 import { renderHeader } from './ui/layout/Header.js';
 import { renderMobileNav } from './ui/layout/MobileNav.js';
 import { renderDashboard } from './ui/panels/DashboardPanel.js';
@@ -27,30 +29,30 @@ const timeSystem = new TimeSystem(state);
 const economy = new EconomySystem(state);
 const quests = new QuestSystem(state);
 const tutorial = new TutorialSystem(state);
+const research = new ResearchSystem(state);
+const os = new OSSystem(state);
 
 let activeView = 'dashboard';
 let _burnWarn = null;
 
 const els = {
-    header: document.getElementById('app-header'),
-    view: document.getElementById('app-view'),
-    nav: document.getElementById('mobile-nav'),
+    header:  document.getElementById('app-header'),
+    view:    document.getElementById('app-view'),
+    nav:     document.getElementById('mobile-nav'),
     loading: document.getElementById('loading-screen'),
-    error: document.getElementById('error-message'),
-    toast: document.getElementById('toast-container')
+    error:   document.getElementById('error-message'),
+    toast:   document.getElementById('toast-container')
 };
 
 function getTime() { return timeSystem.snapshot(); }
 
 const EMPTY_VIEWS = {
-    research: { icon: '🔬', title: 'Riset belum aktif', description: 'Technology tree, OS, dan ekosistem aplikasi akan dibuka pada Tahap 2.', hint: 'Coming in Tahap 2' },
-    products: { icon: '📱', title: 'Belum ada produk', description: 'Desain ponsel, katalog, dan penjualan akan dibuka pada Tahap 3.', hint: 'Coming in Tahap 3' },
-    market:   { icon: '📈', title: 'Pasar belum aktif', description: 'Kompetitor AI dan tren pasar akan dibuka pada Tahap 4.', hint: 'Coming in Tahap 4' }
+    research: { icon: '🔬', title: 'Riset belum aktif', description: 'UI Riset akan segera hadir.', hint: 'Batch A2' },
+    products: { icon: '📱', title: 'Belum ada produk', description: 'Desain ponsel, katalog, dan penjualan akan dibuka pada Batch B.', hint: 'Coming in Batch B' },
+    market:   { icon: '📈', title: 'Pasar belum aktif', description: 'Kompetitor dan tren pasar akan dibuka pada Batch C.', hint: 'Coming in Batch C' }
 };
 
-function hideLoading() {
-    if (els.loading) els.loading.style.display = 'none';
-}
+function hideLoading() { if (els.loading) els.loading.style.display = 'none'; }
 
 function renderHeaderOnly() {
     if (!els.header) return;
@@ -232,7 +234,6 @@ async function boot() {
         initMonthlySummary();
         initGameOverScreen();
 
-        // ==== FIX UTAMA: sembunyikan loading SEBELUM onboarding ====
         hideLoading();
 
         if (SaveService.hasSave()) {
@@ -252,9 +253,12 @@ async function boot() {
             SaveService.save(state);
         }
 
+        // Start semua system
         economy.start();
         quests.start();
         tutorial.start();
+        research.start();
+        os.start();
 
         renderAll();
         bindGlobalClicks();
@@ -271,22 +275,21 @@ async function boot() {
             animateCash(0, cash);
         }
 
+        // Cheat console (Batch A)
         window.__game = {
-            state: state,
-            bus: bus,
-            timeSystem: timeSystem,
-            economy: economy,
-            quests: quests,
-            tutorial: tutorial,
-            SaveService: SaveService,
-            ToastService: ToastService,
-            Modal: Modal,
-            navigate: navigate,
+            state, bus, timeSystem, economy, quests, tutorial, research, os,
+            SaveService, ToastService, Modal, navigate,
             cheat: {
                 addCash: function (n) { state.addCash(n); },
                 fastForwardDays: function (n) { return timeSystem.fastForwardDays(n); },
+                skipDays: function (n) { return timeSystem.fastForwardDays(n); },
                 skipToMonth: function (n) { timeSystem.fastForwardDays(n * 30); },
-                finishTutorial: function () { tutorial.skip(); }
+                finishTutorial: function () { tutorial.skip(); },
+                addEngineers: function (n) { state.setTeam({ engineers: (state.get().team.engineers || 0) + n }); },
+                completeAllResearch: function () { return research.completeAllResearch(); },
+                completeResearch: function (id) { return research.completeResearch(id); },
+                startOsWith: function (featureIds) { return os.quickSetup(featureIds); },
+                spawnOsBug: function () { return os.spawnBug(); }
             }
         };
 
