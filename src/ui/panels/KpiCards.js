@@ -14,9 +14,9 @@ export function renderKpiCards(state, timeSnapshot) {
             </div>
             <div class="kpi blue">
                 <div class="kpi-label">Hari Ke-</div>
-                <div class="kpi-value">${day}</div>
+                <div class="kpi-value" data-kpi-day>${day}</div>
                 <div style="font-size:11px;color:var(--text-mute);margin-top:2px;">
-                    Bulan ${month} • Tahun ${year}
+                    Bulan <span data-kpi-month>${month}</span> • Tahun <span data-kpi-year>${year}</span>
                 </div>
             </div>
         </div>
