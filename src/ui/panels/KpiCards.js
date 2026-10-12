@@ -1,6 +1,4 @@
 // FILE: src/ui/panels/KpiCards.js
-// Kartu KPI: uang tunai & hari berjalan.
-// FIX: sumber "Hari Ke-" dari timeSnapshot.currentDay (bukan state.day yang tidak ada).
 export function renderKpiCards(state, timeSnapshot) {
     const day = timeSnapshot.currentDay;
     const month = timeSnapshot.currentMonth;
