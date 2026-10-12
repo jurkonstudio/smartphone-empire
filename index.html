@@ -5,107 +5,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Smartphone Empire</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+        /* CSS Dasar & Tema Gelap */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #1a1a1a; color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden; width: 100vw; height: 100vh;
+            display: flex; flex-direction: column;
         }
         
-        body {
-            background-color: #1a1a1a;
-            color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            overflow: hidden;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        /* Layout Utama */
+        #app-header { 
+            height: 60px; background: #2a2a2a; border-bottom: 1px solid #333; 
+            flex-shrink: 0; display: flex; align-items: center; padding: 0 15px;
+        }
+        #sidebar { 
+            width: 250px; background: #222; border-right: 1px solid #333; 
+            display: none; /* Disembunyikan di HP secara default */
+            flex-direction: column; padding: 15px;
+        }
+        #mobile-nav { 
+            height: 60px; background: #2a2a2a; border-top: 1px solid #333; 
+            flex-shrink: 0; display: flex; align-items: center; justify-content: space-around;
+        }
+        #app-view { 
+            flex-grow: 1; overflow-y: auto; padding: 20px; position: relative; 
         }
 
-        /* Wadah Game */
-        #game-container {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        /* Elemen Canvas untuk Game (jika dibutuhkan) */
-        canvas {
-            display: block;
-            max-width: 100%;
-            max-height: 100%;
-            background-color: #000; /* Warna dasar canvas */
+        /* Tampilan Responsif untuk Desktop/Layar Lebar */
+        @media (min-width: 768px) {
+            body { flex-direction: row; }
+            #sidebar { display: flex; }
+            #mobile-nav { display: none; }
+            #app-view { height: 100vh; }
         }
 
         /* Layar Loading */
         #loading-screen {
-            position: absolute;
-            z-index: 10;
-            text-align: center;
-            font-size: 16px;
-            color: #aaaaaa;
-            animation: pulse 1.5s infinite;
+            position: absolute; z-index: 9999; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); text-align: center;
+            font-size: 16px; color: #aaaaaa; animation: pulse 1.5s infinite;
+            background: rgba(26, 26, 26, 0.9); padding: 20px; border-radius: 8px;
         }
-
-        /* Pesan Error (Jika script gagal) */
+        
+        /* Kotak Pesan Error */
         #error-message {
-            position: absolute;
-            z-index: 20;
-            color: #ff5555;
-            background: rgba(0,0,0,0.8);
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            display: none; /* Sembunyikan secara default */
-            max-width: 90%;
-            word-wrap: break-word;
+            position: absolute; z-index: 10000; top: 10px; left: 10px; right: 10px;
+            background: #ff3333; color: white; padding: 15px; border-radius: 5px;
+            display: none; word-wrap: break-word; font-size: 14px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); line-height: 1.5;
         }
 
-        @keyframes pulse {
-            0% { opacity: 0.6; }
-            50% { opacity: 1; }
-            100% { opacity: 0.6; }
-        }
+        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <!-- Layar Loading akan hilang jika script berhasil -->
-        <div id="loading-screen">Memuat Smartphone Empire...</div>
-        
-        <!-- Pesan error akan muncul jika script gagal dimuat -->
-        <div id="error-message"></div>
+    <!-- 1. ELEMEN UTAMA YANG DIBUTUHKAN OLEH main.js -->
+    <header id="app-header"></header>
+    <aside id="sidebar"></aside>
+    <main id="app-view"></main>
+    <nav id="mobile-nav"></nav>
 
-        <!-- 
-            Elemen Canvas: Banyak game HTML5 membutuhkan ini.
-            Jika main.js Anda menggunakan canvas, pastikan ID-nya sesuai.
-            Jika tidak, Anda bisa menghapusnya.
-        -->
-        <canvas id="gameCanvas"></canvas>
-    </div>
+    <!-- 2. LAYAR LOADING & WADAH ERROR -->
+    <div id="loading-screen">Memuat Smartphone Empire...</div>
+    <div id="error-message"></div>
 
-    <!-- Script Utama -->
-    <script type="module" src="./src/main.js"></script>
+    <!-- 3. SCRIPT UTAMA (Wajib type="module") -->
+    <script type="module" src="./src/main.js" id="main-script"></script>
 
-    <!-- Script Fallback untuk menangkap error jika main.js gagal dimuat -->
+    <!-- 4. SCRIPT PENJAGA (Mendeteksi jika file JS gagal dimuat/404) -->
     <script>
         window.addEventListener('error', function(e) {
-            // Jika error terjadi saat memuat script
             if (e.target && e.target.tagName === 'SCRIPT') {
                 const errorDiv = document.getElementById('error-message');
                 const loadingDiv = document.getElementById('loading-screen');
                 if (loadingDiv) loadingDiv.style.display = 'none';
                 if (errorDiv) {
                     errorDiv.style.display = 'block';
-                    errorDiv.innerHTML = "<strong>Gagal memuat script:</strong><br>" + (e.target.src || 'Unknown source') + "<br><br>Cek Console (F12) untuk detail error.";
+                    errorDiv.innerHTML = "<strong>❌ GAGAL MEMUAT SCRIPT</strong><br><br>" +
+                                         "File yang dicari:<br>" + (e.target.src || 'Unknown') + "<br><br>" +
+                                         "<b>Penyebab:</b><br>1. File tidak ada di folder tersebut.<br>" +
+                                         "2. Salah satu file yang di-import tidak ditemukan.<br>" +
+                                         "3. Nama folder/huruf besar-kecil salah.";
                 }
             }
-        }, true);
+        }, true); 
     </script>
 
 </body>
