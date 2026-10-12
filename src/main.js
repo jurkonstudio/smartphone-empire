@@ -18,6 +18,8 @@ import { CompetitorSystem } from './systems/CompetitorSystem.js';
 import { PublicOpinionSystem } from './systems/PublicOpinionSystem.js';
 import { EraSystem } from './systems/EraSystem.js';
 import { TeamSystem } from './systems/TeamSystem.js';
+import { ChipSystem } from './systems/ChipSystem.js';
+import { FabSystem } from './systems/FabSystem.js';
 import { renderHeader } from './ui/layout/Header.js';
 import { renderMobileNav } from './ui/layout/MobileNav.js';
 import { renderDashboard } from './ui/panels/DashboardPanel.js';
@@ -46,6 +48,10 @@ import { openViralResponseModal } from './ui/panels/PublicOpinionPanel.js';
 import { drawSalesChart } from './ui/panels/SalesChart.js';
 import { renderTeamPanel } from './ui/panels/TeamPanel.js';
 import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
+import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
+import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
+import { renderChipMockup } from './ui/phone/ChipMockup.js';
+import { renderChipRadarChart } from './ui/charts/ChipRadarChart.js';
 import * as marketingModule from './data/marketing.data.js';
 import * as feedbackModule from './data/feedback.data.js';
 import { getActiveRendererIdPublic } from './ui/notifications/NotificationRenderer.js';
@@ -63,6 +69,8 @@ const competitors = new CompetitorSystem(state);
 const opinion     = new PublicOpinionSystem(state);
 const eraSystem   = new EraSystem(state);
 const teamSystem  = new TeamSystem(state);
+const chipSystem  = new ChipSystem(state);
+const fabSystem   = new FabSystem(state);
 
 market.setCompetitorSystem(competitors);
 
@@ -161,14 +169,10 @@ function renderView(opts) {
 
 function renderAll() { renderHeaderOnly(); renderNavOnly(); renderView(); }
 
-// ============================================================
-// TARGETED UPDATE — dipanggil saat hari berubah, tanpa re-render
-// ============================================================
+// ============ TARGETED UPDATE ============
 function updateDashboardLive() {
     const data = state.get();
     const t = data.time;
-
-    // KPI day counter
     const dayEl = document.querySelector('[data-kpi-day]');
     if (dayEl) dayEl.textContent = t.currentDay;
     const monthEl = document.querySelector('[data-kpi-month]');
@@ -177,9 +181,7 @@ function updateDashboardLive() {
     if (yearEl) yearEl.textContent = t.currentYear;
 }
 
-// ============================================================
-// ANIMASI UANG
-// ============================================================
+// ============ ANIMASI UANG ============
 let _cashRaf = null;
 function animateCash(from, to) {
     if (_cashRaf) { cancelAnimationFrame(_cashRaf); _cashRaf = null; }
@@ -224,6 +226,7 @@ function vibrate(ms) {
 // ============ EVENT DELEGATION ============
 function bindGlobalClicks() {
     document.body.addEventListener('click', function (e) {
+        // AUTO-RESTOCK
         const autoToggle = e.target.closest('[data-auto-toggle]');
         if (autoToggle) {
             e.preventDefault(); vibrate(8);
@@ -236,7 +239,6 @@ function bindGlobalClicks() {
             }
             return;
         }
-
         const autoThresh = e.target.closest('[data-auto-threshold]');
         if (autoThresh) {
             e.preventDefault(); vibrate(6);
@@ -247,9 +249,77 @@ function bindGlobalClicks() {
             return;
         }
 
+        // CHIP & FAB actions
+        const chipAction = e.target.closest('[data-chip-action]');
+        if (chipAction) {
+            e.preventDefault(); vibrate(8);
+            const act = chipAction.dataset.chipAction;
+            if (act === 'new')    { openChipDesigner(); return; }
+            if (act === 'fab')    { openFabPanel(); return; }
+            if (act === 'cancel-design') {
+                const r = chipSystem.cancelDesign();
+                r.ok ? (ToastService.info('Dibatalkan.'), renderAll()) : ToastService.error(r.reason);
+                return;
+            }
+        }
+
+        const fabAction = e.target.closest('[data-fab-action]');
+        if (fabAction) {
+            e.preventDefault(); vibrate(8);
+            const act = fabAction.dataset.fabAction;
+            if (act === 'build') {
+                const lvl = parseInt(fabAction.dataset.fabLevel, 10) || 1;
+                const r = fabSystem.buildFab(lvl);
+                r.ok ? (Modal.close('fab-panel', true), renderAll()) : ToastService.error(r.reason);
+                return;
+            }
+            if (act === 'upgrade') {
+                const r = fabSystem.upgradeFab();
+                r.ok ? (Modal.close('fab-panel', true), renderAll()) : ToastService.error(r.reason);
+                return;
+            }
+            if (act === 'cancel-upgrade') {
+                const r = fabSystem.cancelUpgrade();
+                r.ok ? (Modal.close('fab-panel', true), renderAll()) : ToastService.error(r.reason);
+                return;
+            }
+            if (act === 'cancel-prod') {
+                const r = fabSystem.cancelProduction();
+                r.ok ? (Modal.close('fab-panel', true), renderAll()) : ToastService.error(r.reason);
+                return;
+            }
+            if (act === 'select-prod') {
+                const cid = fabAction.dataset.chipId;
+                Modal.close('fab-panel', true);
+                setTimeout(() => openProductionQtyModal(cid), 100);
+                return;
+            }
+            if (act === 'confirm-prod') {
+                const cid = fabAction.dataset.chipId;
+                const root = document.querySelector('[data-modal-id="fab-prod-qty"]');
+                const qty = parseInt(root.querySelector('[data-prod-qty]').value, 10) || 0;
+                const r = fabSystem.orderProduction(cid, qty);
+                if (!r.ok) ToastService.error(r.reason);
+                else { ToastService.success('Produksi dimulai!'); Modal.close('fab-prod-qty', true); renderAll(); }
+                return;
+            }
+        }
+
+        // Chip detail (click chip row)
+        const chipRow = e.target.closest('[data-chip-detail]');
+        if (chipRow) {
+            e.preventDefault();
+            const cid = chipRow.dataset.chipDetail;
+            const chip = chipSystem.getChipById(cid);
+            if (chip) _openChipDetail(chip);
+            return;
+        }
+
+        // NAV
         const navBtn = e.target.closest('[data-nav]');
         if (navBtn) { e.preventDefault(); vibrate(8); navigate(navBtn.dataset.nav); return; }
 
+        // TIME
         const timeBtn = e.target.closest('[data-time-action]');
         if (timeBtn) {
             e.preventDefault(); vibrate(12);
@@ -259,9 +329,9 @@ function bindGlobalClicks() {
             return;
         }
 
+        // TEAM
         const teamSub = e.target.closest('[data-team-subtab]');
         if (teamSub) { e.preventDefault(); activeTeamSubtab = teamSub.dataset.teamSubtab; renderView(); return; }
-
         const teamAction = e.target.closest('[data-team-action]');
         if (teamAction) {
             e.preventDefault(); vibrate(8);
@@ -278,20 +348,14 @@ function bindGlobalClicks() {
                 renderAll();
                 return;
             }
-            if (act === 'goto-recruit') {
-                activeTeamSubtab = 'recruit';
-                renderView();
-                return;
-            }
+            if (act === 'goto-recruit') { activeTeamSubtab = 'recruit'; renderView(); return; }
         }
-
         const staffCard = e.target.closest('[data-staff-detail]');
         if (staffCard && !e.target.closest('[data-staff-action]')) {
             e.preventDefault();
             openStaffDetailModal({ staffId: staffCard.dataset.staffDetail });
             return;
         }
-
         const staffAction = e.target.closest('[data-staff-action]');
         if (staffAction) {
             e.preventDefault();
@@ -306,24 +370,18 @@ function bindGlobalClicks() {
             if (act === 'train') {
                 const res = teamSystem.trainStaff(sid);
                 if (!res.ok) ToastService.error(res.reason);
-                else {
-                    Modal.close('staff-detail', true);
-                    openStaffDetailModal({ staffId: sid });
-                    renderAll();
-                }
+                else { Modal.close('staff-detail', true); openStaffDetailModal({ staffId: sid }); renderAll(); }
                 return;
             }
         }
 
+        // RISET
         const subBtn = e.target.closest('[data-subtab]');
         if (subBtn) { e.preventDefault(); activeSubtab = subBtn.dataset.subtab; renderView(); return; }
-
-        const chip = e.target.closest('[data-filter-cat]');
-        if (chip) { e.preventDefault(); setFilterCategory(chip.dataset.filterCat); renderView(); return; }
-
+        const chipFilter = e.target.closest('[data-filter-cat]');
+        if (chipFilter) { e.preventDefault(); setFilterCategory(chipFilter.dataset.filterCat); renderView(); return; }
         const nodeCard = e.target.closest('[data-node-detail]');
         if (nodeCard) { e.preventDefault(); openNodeDetailModal({ nodeId: nodeCard.dataset.nodeDetail, researchSystem: research }); return; }
-
         const rAction = e.target.closest('[data-research-action]');
         if (rAction) {
             e.preventDefault();
@@ -341,6 +399,7 @@ function bindGlobalClicks() {
             return;
         }
 
+        // OS
         const osAction = e.target.closest('[data-os-action]');
         if (osAction) {
             e.preventDefault();
@@ -360,9 +419,9 @@ function bindGlobalClicks() {
             if (act === 'feature-detail') { openFeatureDetailModal({ osSystem: os, featureId: osAction.dataset.featureId }); return; }
         }
 
+        // PRODUK sub-tab & actions
         const prodSub = e.target.closest('[data-prod-subtab]');
         if (prodSub) { e.preventDefault(); activeProdSubtab = prodSub.dataset.prodSubtab; renderView(); return; }
-
         const prodAction = e.target.closest('[data-prod-action]');
         if (prodAction) {
             e.preventDefault();
@@ -382,14 +441,12 @@ function bindGlobalClicks() {
                 return;
             }
         }
-
         const prodCard = e.target.closest('[data-prod-detail]');
         if (prodCard && !e.target.closest('[data-prod-action]') && !e.target.closest('[data-auto-toggle]') && !e.target.closest('[data-auto-threshold]')) {
             e.preventDefault();
             openProductDetailModal({ productId: prodCard.dataset.prodDetail, productSystem: products });
             return;
         }
-
         const campPick = e.target.closest('[data-campaign-pick]');
         if (campPick) {
             e.preventDefault();
@@ -398,7 +455,6 @@ function bindGlobalClicks() {
             else { ToastService.success('Kampanye dimulai!'); Modal.close('campaign-pick', true); renderAll(); }
             return;
         }
-
         const orderConfirm = e.target.closest('[data-order-confirm]');
         if (orderConfirm) {
             e.preventDefault();
@@ -410,9 +466,9 @@ function bindGlobalClicks() {
             return;
         }
 
+        // MARKET
         const mktSub = e.target.closest('[data-market-subtab]');
         if (mktSub) { e.preventDefault(); activeMarketSubtab = mktSub.dataset.marketSubtab; renderView(); return; }
-
         const compCard = e.target.closest('[data-competitor-detail]');
         if (compCard) {
             e.preventDefault();
@@ -421,7 +477,6 @@ function bindGlobalClicks() {
             openCompetitorDetailModal({ competitorData: data });
             return;
         }
-
         const viralRespond = e.target.closest('[data-viral-respond]');
         if (viralRespond) {
             e.preventDefault();
@@ -443,6 +498,50 @@ function bindGlobalClicks() {
         if (e.code === 'Space') { e.preventDefault(); timeSystem.togglePause(); }
         if (e.key === 'f' || e.key === 'F') timeSystem.cycleSpeed();
     });
+}
+
+// ============================================================
+// CHIP DETAIL MODAL
+// ============================================================
+function _openChipDetail(chip) {
+    if (!chip) return;
+    const cs = chipSystem;
+    const lifecycle = cs.getChipLifecycle ? cs.getChipLifecycle(chip) : null;
+    const ageMonths = cs.getChipAgeMonths ? cs.getChipAgeMonths(chip) : 0;
+
+    let mockupHtml = '';
+    try { mockupHtml = renderChipMockup(chip.config, { size: 170 }); } catch (e) {}
+    let radarHtml = '';
+    try { radarHtml = renderChipRadarChart({ ...chip.stats, yieldRate: chip.yieldRate }, { size: 150 }); } catch (e) {}
+
+    const arch = chip.config && chip.config.architectureId;
+    const node = chip.config && chip.config.nodeId;
+
+    const html = `
+        <div class="modal-title">${chip.name}</div>
+        <div class="modal-sub">Dirilis ${chip.releaseDate.day}/${chip.releaseDate.month}/${chip.releaseDate.year} • ${ageMonths} bulan</div>
+
+        <div class="chip-detail-layout">
+            <div class="chip-detail-left">
+                <div class="chip-detail-device">${mockupHtml}</div>
+                <div class="chip-detail-radar">${radarHtml}</div>
+            </div>
+            <div class="chip-detail-right">
+                <div class="sum-row"><span>Performance</span><b style="color:var(--success);">${chip.stats.performance}</b></div>
+                <div class="sum-row"><span>Efficiency</span><b style="color:var(--info);">${chip.stats.efficiency}</b></div>
+                <div class="sum-row"><span>Cost per unit</span><b>$${chip.stats.costPerUnit}</b></div>
+                <div class="sum-row"><span>Yield Rate</span><b>${Math.round(chip.yieldRate*100)}%</b></div>
+                <div class="sum-row"><span>Cores</span><b>${chip.stats.cores}x @ ${chip.stats.clock} GHz</b></div>
+                <div class="sum-row"><span>Cache</span><b>${chip.stats.cacheMB.toFixed(2)} MB</b></div>
+                ${lifecycle ? `
+                    <div class="sum-row"><span>Lifecycle</span><b style="color:${lifecycle.color};">${lifecycle.label} (×${lifecycle.multiplier.toFixed(2)})</b></div>
+                ` : ''}
+            </div>
+        </div>
+
+        <button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">Tutup</button>
+    `;
+    Modal.open('chip-detail', html);
 }
 
 // ============ PROGRESS EVENTS ============
@@ -483,7 +582,11 @@ function bindProgressEvents() {
         if (barEl) barEl.style.width = data.percentOverall + '%';
         if (etaEl) etaEl.textContent = 'Sisa ~' + data.remainingDays + ' hari di tahap ini';
     });
-    // TIDAK ADA re-render pada day-changed — hanya targeted update.
+    bus.on('time:day-changed', () => {
+        if (activeView === 'research' || activeView === 'products' || activeView === 'market' || activeView === 'team') {
+            renderView({ soft: true });
+        }
+    });
 }
 
 // ============ TIME ============
@@ -501,32 +604,19 @@ function bindTimeEvents() {
         if (c) c.textContent = hh + ':' + mm;
         if (s) { s.textContent = t.isPaused ? 'Paused' : (t.gameSpeed + 'x'); s.classList.toggle('running', !t.isPaused); }
     });
-
-    // FIX: hanya targeted update, BUKAN re-render
     bus.on('time:day-changed', function () {
-        if (activeView === 'dashboard') {
-            updateDashboardLive();
-        }
+        if (activeView === 'dashboard') updateDashboardLive();
     });
-
     bus.on('time:speed-changed', function () { renderHeaderOnly(); });
 }
 
 // ============ STATE EVENTS ============
 function bindStateEvents() {
     bus.on('state:cash-changed', function (data) { animateCash(data.prev, data.next); });
-
-    // Log berubah → soft re-render (tanpa animasi flicker)
-    bus.on('state:log-changed', function () {
-        if (activeView === 'dashboard') renderView({ soft: true });
-    });
-    bus.on('state:milestone-added', function () {
-        if (activeView === 'dashboard') renderView({ soft: true });
-    });
+    bus.on('state:log-changed', function () { if (activeView === 'dashboard') renderView({ soft: true }); });
+    bus.on('state:milestone-added', function () { if (activeView === 'dashboard') renderView({ soft: true }); });
     bus.on('quest:completed', function (data) { ToastService.success('Quest selesai: ' + data.title); vibrate(20); });
-    bus.on('quest:activated', function () {
-        if (activeView === 'dashboard') renderView({ soft: true });
-    });
+    bus.on('quest:activated', function () { if (activeView === 'dashboard') renderView({ soft: true }); });
     bus.on('economy:warn-burnrate', function (data) {
         _burnWarn = 'Sisa ' + data.monthsLeft + ' bln';
         renderHeaderOnly();
@@ -581,27 +671,24 @@ async function boot() {
         quests.start();
         tutorial.start();
         teamSystem.start();
-
-        if (!state.get().candidates || state.get().candidates.length === 0) {
-            teamSystem.refreshCandidates();
-        }
-
+        if (!state.get().candidates || state.get().candidates.length === 0) teamSystem.refreshCandidates();
         research.start();
         os.start();
         products.start();
         competitors.start();
         market.start();
         opinion.start();
+        chipSystem.start();
+        fabSystem.start();
 
         window.__game = {
             state, bus, timeSystem, economy, quests, tutorial,
             research, os, products, market, competitors, opinion, eraSystem, teamSystem,
+            chips: chipSystem,
+            fab: fabSystem,
             ThemeService,
             SaveService, ToastService, Modal, navigate, render: renderAll,
-            modules: {
-                marketing: marketingModule,
-                feedbackData: feedbackModule
-            },
+            modules: { marketing: marketingModule, feedbackData: feedbackModule },
             cheat: {
                 addCash: function (n) { state.addCash(n); },
                 fastForwardDays: function (n) { return timeSystem.fastForwardDays(n); },
@@ -644,10 +731,7 @@ async function boot() {
                     renderAll();
                     return { count: list.length };
                 },
-                tickAutoRestock: function () {
-                    products._tickAutoRestock();
-                    return { ok: true };
-                },
+                tickAutoRestock: function () { products._tickAutoRestock(); return { ok: true }; },
                 refreshCandidates: function () {
                     teamSystem.refreshCandidates();
                     renderAll();
@@ -655,7 +739,19 @@ async function boot() {
                 },
                 setTheme: function (id) { ThemeService.setTheme(id); renderAll(); return { theme: id }; },
                 setAccent: function (id) { ThemeService.setAccent(id); renderAll(); return { accent: id }; },
-                toggleTheme: function () { ThemeService.toggleTheme(); renderAll(); return { theme: ThemeService.getTheme() }; }
+                toggleTheme: function () { ThemeService.toggleTheme(); renderAll(); return { theme: ThemeService.getTheme() }; },
+                // Chip cheats
+                unlockChipDesign: function () {
+                    ['chip_design_tool','chip_arch_arm_a','node_180','node_130','node_90','chip_isp_basic','chip_dvfs','fab_construction'].forEach(id => research.completeResearch(id));
+                    return { ok: true };
+                },
+                quickDesignChip: function (cfg) { return chipSystem.quickDesignChip(cfg); },
+                buildFab: function (lvl) { return fabSystem.quickBuildFab(lvl || 1); },
+                upgradeFab: function () { return fabSystem.upgradeFab(); },
+                produceChips: function (chipId, qty) {
+                    const id = chipId || (state.get().chips.catalog[0] && state.get().chips.catalog[0].id);
+                    return fabSystem.orderProduction(id, qty || 1000);
+                }
             }
         };
 
