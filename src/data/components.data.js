@@ -150,13 +150,14 @@ export const COMPONENTS = [
 
 // Warna bodi (affects design & demand slightly)
 export const BODY_COLORS = [
-    { id: 'color_black',  name: 'Hitam',    hex: '#1a1a1a', designBonus: 5 },
-    { id: 'color_white',  name: 'Putih',    hex: '#f5f5f5', designBonus: 4 },
-    { id: 'color_silver', name: 'Silver',   hex: '#c0c0c0', designBonus: 6 },
-    { id: 'color_blue',   name: 'Biru',     hex: '#2196F3', designBonus: 7 },
-    { id: 'color_red',    name: 'Merah',    hex: '#e53935', designBonus: 6 },
-    { id: 'color_gold',   name: 'Emas',     hex: '#ffd700', designBonus: 9 },
-    { id: 'color_green',  name: 'Hijau',    hex: '#43a047', designBonus: 5 }
+    { id: 'color_black',    name: 'Hitam',    hex: '#1a1a1a', designBonus: 5 },
+    { id: 'color_white',    name: 'Putih',    hex: '#f5f5f5', designBonus: 4 },
+    { id: 'color_silver',   name: 'Silver',   hex: '#c0c0c0', designBonus: 6 },
+    { id: 'color_blue',     name: 'Biru',     hex: '#2196F3', designBonus: 7 },
+    { id: 'color_red',      name: 'Merah',    hex: '#e53935', designBonus: 6 },
+    { id: 'color_gold',     name: 'Emas',     hex: '#ffd700', designBonus: 9 },
+    { id: 'color_green',    name: 'Hijau',    hex: '#43a047', designBonus: 5 },
+    { id: 'color_titanium', name: 'Titanium', hex: '#8a8a8a', designBonus: 10 }
 ];
 
 // Utilitas pencarian
