@@ -60,7 +60,7 @@ const els = {
 let activeView = 'dashboard';
 
 function renderShell() {
-  els.header.innerHTML = renderHeader({ state: state.get() });
+  els.header.innerHTML = renderHeader({ state: state.get(), activeView });
   els.sidebar.innerHTML = renderSidebar({ active: activeView });
   els.mobileNav.innerHTML = renderMobileNav({ active: activeView });
 }
