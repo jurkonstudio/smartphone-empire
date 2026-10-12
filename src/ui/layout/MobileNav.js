@@ -1,17 +1,11 @@
-const items = MOBILE_NAV_IDS.map((id) => {
-  const item = NAV_ITEMS.find((n) => n.id === id);
-  if (!item) {
-    console.warn(`[MobileNav] id "${id}" tidak ditemukan di NAV_ITEMS`);
-    return '';
-  }
-  const isActive = item.id === active;
-  const ariaCurrent = isActive ? ' aria-current="page"' : '';
-  return `
-    <button class="nav-item${isActive ? ' is-active' : ''}"
-            type="button"
-            data-nav="${item.id}"${ariaCurrent}>
-      <span class="nav-item__icon">${icon(item.icon, 20)}</span>
-      <span class="nav-item__label">${item.label}</span>
-    </button>
-  `;
-}).join('');
+import { NAV_ITEMS, MOBILE_NAV_IDS } from '../../config/constants.js';
+
+export function renderMobileNav({ active }) {
+    const mobileItems = NAV_ITEMS.filter(item => MOBILE_NAV_IDS.includes(item.id));
+    
+    return mobileItems.map(item => `
+        <button data-nav="${item.id}" style="background:transparent; border:none; color:${active === item.id ? '#4CAF50' : '#aaa'}; font-size:12px; display:flex; flex-direction:column; align-items:center; cursor:pointer;">
+            <span>${item.label}</span>
+        </button>
+    `).join('');
+}
