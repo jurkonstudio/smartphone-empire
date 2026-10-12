@@ -6,7 +6,6 @@
 //   3. Features + Budget
 //   4. Preview + Confirm
 // Live preview mockup + radar chart.
-// Icon pakai renderIcon (SVG), bukan emoji.
 // ============================================================
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
@@ -22,7 +21,6 @@ import {
 } from '../../data/chip-features.data.js';
 import { renderChipMockup } from '../phone/ChipMockup.js';
 import { renderChipRadarChart } from '../charts/ChipRadarChart.js';
-import { renderIcon } from '../icons/IconRenderer.js';
 
 let _wiz = null;
 
@@ -87,7 +85,7 @@ function _render() {
 
     const html = `
         <div class="chip-wiz-header">
-            <div class="chip-wiz-icon">${renderIcon('layout-grid', 24)}</div>
+            <div class="chip-wiz-icon">🧩</div>
             <div>
                 <div class="chip-wiz-title">Chip Designer</div>
                 <div class="chip-wiz-sub">Rancang silicon-mu sendiri</div>
@@ -268,7 +266,7 @@ function _step2(s) {
         <div style="max-height:50vh;overflow-y:auto;padding-right:4px;">
 
             <div class="wiz-cat">
-                <div class="wiz-cat-title">${renderIcon('cpu', 14)} Process Node <span style="color:var(--text-mute);font-weight:500;">(${nodes.length})</span></div>
+                <div class="wiz-cat-title">⚙️ Process Node <span style="color:var(--text-mute);font-weight:500;">(${nodes.length})</span></div>
                 <div class="wiz-options-row">
                     ${nodes.length ? nodes.map(n => `
                         <button class="wiz-option ${s.nodeId === n.id ? 'selected' : ''}" data-chip-pick="nodeId:${n.id}">
@@ -283,7 +281,7 @@ function _step2(s) {
             </div>
 
             <div class="wiz-cat">
-                <div class="wiz-cat-title">${renderIcon('layout-grid', 14)} Jumlah Core <span style="color:var(--text-mute);font-weight:500;">(max ${coresMax})</span></div>
+                <div class="wiz-cat-title">🔲 Jumlah Core <span style="color:var(--text-mute);font-weight:500;">(max ${coresMax})</span></div>
                 <div class="wiz-options-row">
                     ${coreOptions.map(c => `
                         <button class="wiz-option ${s.cores === c ? 'selected' : ''}" data-chip-pick="cores:${c}" style="min-width:60px;">
@@ -294,7 +292,7 @@ function _step2(s) {
             </div>
 
             <div class="wiz-cat">
-                <div class="wiz-cat-title">${renderIcon('zap', 14)} Clock Speed (GHz)</div>
+                <div class="wiz-cat-title">⚡ Clock Speed (GHz)</div>
                 <div class="wiz-options-row">
                     ${clockOptions.map(c => `
                         <button class="wiz-option ${s.clockGHz === c ? 'selected' : ''}" data-chip-pick="clockGHz:${c}" style="min-width:58px;">
@@ -305,7 +303,7 @@ function _step2(s) {
             </div>
 
             <div class="wiz-cat">
-                <div class="wiz-cat-title">${renderIcon('database', 14)} Cache Size</div>
+                <div class="wiz-cat-title">💾 Cache Size</div>
                 <div class="wiz-options-row">
                     ${cacheOptions.map(c => {
                         const label = c >= 1024 ? (c/1024) + ' MB' : c + ' KB';
@@ -345,7 +343,7 @@ function _step3(s) {
         if (!list.length) return '';
         return `
             <div class="wiz-cat">
-                <div class="wiz-cat-title">${renderIcon(cat.icon, 14)} ${cat.name}</div>
+                <div class="wiz-cat-title">${cat.icon} ${cat.name}</div>
                 <div class="wiz-options-row">
                     ${list.map(f => {
                         const selected = (s.features || []).includes(f.id);
@@ -367,7 +365,7 @@ function _step3(s) {
         <div style="max-height:50vh;overflow-y:auto;padding-right:4px;">
 
             <div class="wiz-cat">
-                <div class="wiz-cat-title">${renderIcon('credit-card', 14)} Budget R&D</div>
+                <div class="wiz-cat-title">💰 Budget R&D</div>
                 <div class="wiz-options">
                     ${budgets.map(b => `
                         <button class="wiz-option ${s.budgetId === b.id ? 'selected' : ''}" data-chip-pick="budgetId:${b.id}">
@@ -379,7 +377,7 @@ function _step3(s) {
             </div>
 
             <div class="wiz-cat">
-                <div class="wiz-cat-title">${renderIcon('sparkles', 14)} Fitur <span style="color:var(--text-mute);font-weight:500;">(${selectedCount} dipilih)</span></div>
+                <div class="wiz-cat-title">🧩 Fitur <span style="color:var(--text-mute);font-weight:500;">(${selectedCount} dipilih)</span></div>
                 ${featureSections || '<div class="wiz-empty">Belum ada fitur tersedia.</div>'}
             </div>
 
@@ -409,7 +407,7 @@ function _step4(s) {
 
         <div class="wiz-nav">
             <button class="btn-secondary" data-chip-back style="flex:1;">← Kembali</button>
-            <button class="btn-primary" data-chip-confirm style="flex:2;">Mulai Desain ${renderIcon('check', 14)}</button>
+            <button class="btn-primary" data-chip-confirm style="flex:2;">Mulai Desain ✓</button>
         </div>
     `;
 }
@@ -487,4 +485,4 @@ function _previewHtml(s) {
     } catch (e) {
         return '<div style="font-size:12px;color:var(--danger);">Preview error: ' + escapeHtml(e.message) + '</div>';
     }
-                                          }
+      }

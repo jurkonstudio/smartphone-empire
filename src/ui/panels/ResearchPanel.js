@@ -1,10 +1,8 @@
 // FILE: src/ui/panels/ResearchPanel.js
 // Tab Riset: sub-tab Teknologi | OS.
 // Node riset diurutkan: Berjalan → Tersedia → Selesai → Terkunci.
-// Icon pakai renderIcon (SVG), bukan emoji.
 import { RESEARCH_CATEGORIES, getNodeById } from '../../data/research.data.js';
 import { renderOSPanel, openOsWizardModal, openCreateOsModal, openFeatureDetailModal } from './OSPanel.js';
-import { renderIcon } from '../icons/IconRenderer.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -105,7 +103,7 @@ function renderTechSection({ researchSystem }) {
             <button class="chip ${_filterCategory === 'all' ? 'active' : ''}" data-filter-cat="all">Semua</button>
             ${RESEARCH_CATEGORIES.map(c => `
                 <button class="chip ${_filterCategory === c.id ? 'active' : ''}" data-filter-cat="${c.id}">
-                    ${renderIcon(c.icon, 16)} ${c.name}
+                    ${c.icon} ${c.name}
                 </button>
             `).join('')}
         </div>
@@ -153,14 +151,14 @@ function renderTechNodeCard(node, researchSystem) {
             <div class="tech-node-head">
                 <div style="flex:1;min-width:0;">
                     <div class="tech-node-title">${escapeHtml(node.name)}</div>
-                    <div class="tech-node-cat">${cat ? renderIcon(cat.icon, 14) + ' ' + cat.name : node.category} • Tier ${node.tier} • ${node.minYear}</div>
+                    <div class="tech-node-cat">${cat ? cat.icon + ' ' + cat.name : node.category} • Tier ${node.tier} • ${node.minYear}</div>
                 </div>
                 <div class="tech-status-badge badge-${st.status}">${_statusBadge(st.status)}</div>
             </div>
             <div class="tech-node-desc">${escapeHtml(node.description)}</div>
             <div class="tech-node-foot">
-                <span>${renderIcon('credit-card', 12)} $${node.cost.toLocaleString('en-US')}</span>
-                <span>${renderIcon('clock', 12)} ${node.durationDays} hari</span>
+                <span>💰 $${node.cost.toLocaleString('en-US')}</span>
+                <span>⏱ ${node.durationDays} hari</span>
                 ${st.reason ? `<span class="tech-node-reason">${escapeHtml(st.reason)}</span>` : ''}
             </div>
         </div>
@@ -168,10 +166,10 @@ function renderTechNodeCard(node, researchSystem) {
 }
 
 function _statusBadge(s) {
-    if (s === 'done')      return renderIcon('check', 12) + ' Selesai';
-    if (s === 'running')   return renderIcon('clock', 12) + ' Berjalan';
-    if (s === 'available') return renderIcon('sparkles', 12) + ' Mulai';
-    return renderIcon('lock', 12) + ' Terkunci';
+    if (s === 'done') return '✓ Selesai';
+    if (s === 'running') return '⏳ Berjalan';
+    if (s === 'available') return '+ Mulai';
+    return '🔒 Terkunci';
 }
 
 // ============================================================
@@ -187,7 +185,7 @@ export function openNodeDetailModal({ nodeId, researchSystem }) {
         ? node.prerequisites.map(p => {
             const pn = getNodeById(p);
             const done = window.__game.state.get().research.completed.includes(p);
-            return `<div class="sum-row"><span>${done ? renderIcon('check', 12) : renderIcon('question', 12)} ${pn ? escapeHtml(pn.name) : p}</span><b></b></div>`;
+            return `<div class="sum-row"><span>${done ? '✓' : '○'} ${pn ? escapeHtml(pn.name) : p}</span><b></b></div>`;
         }).join('')
         : '<div style="font-size:12px;color:var(--text-mute);">Tidak ada prasyarat.</div>';
 
@@ -200,7 +198,7 @@ export function openNodeDetailModal({ nodeId, researchSystem }) {
     const canStart = st.status === 'available';
 
     const html = `
-        <div class="modal-title">${renderIcon(cat ? cat.icon : 'brain', 22)} ${escapeHtml(node.name)}</div>
+        <div class="modal-title">${escapeHtml(node.name)}</div>
         <div class="modal-sub">${escapeHtml(node.description)}</div>
         <div class="sum-row"><span>Kategori</span><b>${cat ? cat.name : node.category}</b></div>
         <div class="sum-row"><span>Tier</span><b>${node.tier}</b></div>
