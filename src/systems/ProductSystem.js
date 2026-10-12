@@ -1,28 +1,4 @@
 // FILE: src/systems/ProductSystem.js
-// ============================================================
-// ProductSystem — desain, pengembangan, produksi, penjualan harian.
-//
-// RUMUS PERMINTAAN HARIAN (transparan):
-//
-//   demandBase = market.baseMarketDemand[era] * product.baseDemandMultiplier
-//
-//   qualityFactor   = (qualityScore / refs.quality) ^ weights.quality
-//   priceFactor     = (refs.price / max(1, price)) ^ weights.price
-//   reputationF     = (reputation / refs.reputation) ^ weights.reputation
-//   marketingF      = min(maxMarketingFactor, 1 + sum(campaign.effectiveReach))
-//   osFactor        = (osAvgStat / refs.os) ^ weights.os
-//   trendFactor     = sum(trends[k] * productStats[k] / 100) / sum(trends)
-//                     (0.5 - 1.5, default 1)
-//   competitorF     = 1 / (1 + competitorPressure)  → 0.4-1.0
-//   lifecycleF      = berdasarkan umur produk (rise/peak/decline/dead)
-//
-//   demand = demandBase * qualityFactor * priceFactor * reputationF
-//            * marketingF * osFactor * trendFactor * competitorF
-//            * lifecycleF * (1 + noise)
-//
-//   dailySales = min(demand, stock)
-//   revenue = dailySales * price
-// ============================================================
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
@@ -37,11 +13,8 @@ import { getCampaignById, MARKETING_CAMPAIGNS } from '../data/marketing.data.js'
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
-// ============================================================
-// Sumber ulasan (per era)
-// ============================================================
 const REVIEW_SOURCES = {
-    feature_phone:    ['Majalah Tekno', 'Forum HP', 'Taboid Gadget'],
+    feature_phone:    ['Majalah Tekno', 'Forum HP', 'Tabloid Gadget'],
     touch_revolution: ['Blog Teknologi', 'Forum Diskusi', 'Portal Berita'],
     modern_smartphone:['YouTube Review', 'Media Sosial', 'Situs Teknologi'],
     ai_ecosystem:     ['Reviewer Video Pendek', 'Komunitas Online', 'Podcast Tech']
@@ -54,8 +27,8 @@ export class ProductSystem {
     }
 
     start() {
-        this._unsubs.push(bus.on('time:day-changed',   (s) => this._onDayChanged(s)));
-        this._unsubs.push(bus.on('state:hydrated',     () => this._onHydrated()));
+        this._unsubs.push(bus.on('time:day-changed', (s) => this._onDayChanged(s)));
+        this._unsubs.push(bus.on('state:hydrated',   () => this._onHydrated()));
         console.info('[ProductSystem] siap.');
     }
 
@@ -70,16 +43,37 @@ export class ProductSystem {
         if (!data.marketing.activeCampaigns) data.marketing.activeCampaigns = [];
         if (!data.reviews.feed) data.reviews.feed = [];
 
-        // Guard setiap produk
+        const defThreshold = (BALANCE.products.autoRestock && BALANCE.products.autoRestock.defaultThresholdPercent) || 20;
+
         data.products.catalog.forEach(p => {
             if (typeof p.stock !== 'number') p.stock = 0;
             if (typeof p.totalSold !== 'number') p.totalSold = 0;
             if (typeof p.totalRevenue !== 'number') p.totalRevenue = 0;
+            if (typeof p.totalProduced !== 'number') p.totalProduced = p.stock;
             if (!Array.isArray(p.reviews)) p.reviews = [];
             if (!p.status) p.status = 'selling';
+
+            // Guard baseCapacity
+            if (typeof p.baseCapacity !== 'number') {
+                p.baseCapacity = (p.config && p.config.productionQty) || 5000;
+            }
+
+            // Guard autoRestock
+            if (!p.autoRestock || typeof p.autoRestock !== 'object') {
+                p.autoRestock = {
+                    enabled: false,
+                    thresholdPercent: defThreshold,
+                    lastAutoOrderMinute: 0,
+                    lastWarnMinute: 0
+                };
+            } else {
+                if (typeof p.autoRestock.enabled !== 'boolean') p.autoRestock.enabled = false;
+                if (typeof p.autoRestock.thresholdPercent !== 'number') p.autoRestock.thresholdPercent = defThreshold;
+                if (typeof p.autoRestock.lastAutoOrderMinute !== 'number') p.autoRestock.lastAutoOrderMinute = 0;
+                if (typeof p.autoRestock.lastWarnMinute !== 'number') p.autoRestock.lastWarnMinute = 0;
+            }
         });
 
-        // Guard development
         const d = data.products.development;
         if (d) {
             if (typeof d.phaseProgressDays !== 'number') d.phaseProgressDays = 0;
@@ -90,25 +84,19 @@ export class ProductSystem {
     }
 
     // ============================================================
-    // HITUNG STATISTIK PRODUK
+    // STATISTIK PRODUK
     // ============================================================
-    // config = {
-    //   name, formFactorId, displayId, cameraId, batteryId, chipId, networkId,
-    //   bodyId, bodyColorId, osOptionId, price, productionQty
-    // }
     computeStats(config) {
         const stats = {
             display: 0, camera: 0, battery: 0, performance: 0,
             connectivity: 0, quality: 0, design: 0, usability: 0
         };
-
         const map = {
             display: config.displayId, camera: config.cameraId,
             battery: config.batteryId, chip: config.chipId,
             network: config.networkId, body: config.bodyId,
             form_factor: config.formFactorId
         };
-
         for (const k in map) {
             const comp = getComponentById(map[k]);
             if (!comp) continue;
@@ -116,18 +104,13 @@ export class ProductSystem {
                 if (stats[s] !== undefined) stats[s] += comp.stats[s];
             }
         }
-
-        // Warna bodi
         const color = getBodyColorById(config.bodyColorId);
         if (color) stats.design += (color.designBonus || 0);
 
-        // Clamp kategori 0-100
-        ['display', 'camera', 'battery', 'performance', 'connectivity', 'quality', 'design', 'usability'].forEach(k => {
+        ['display','camera','battery','performance','connectivity','quality','design','usability'].forEach(k => {
             stats[k] = Math.max(0, Math.min(100, Math.round(stats[k])));
         });
 
-        // Skor kualitas = rata-rata berbobot
-        // display 15%, camera 15%, battery 15%, performance 20%, connectivity 10%, quality 10%, design 10%, usability 5%
         const qualityScore = Math.round(
             stats.display * 0.15 +
             stats.camera * 0.15 +
@@ -139,11 +122,9 @@ export class ProductSystem {
             stats.usability * 0.05
         );
         stats.qualityScore = qualityScore;
-
         return stats;
     }
 
-    // Biaya produksi per unit = sum(costPerUnit) + markup untuk OS
     computeUnitCost(config) {
         let cost = 0;
         const ids = [config.displayId, config.cameraId, config.batteryId,
@@ -152,73 +133,44 @@ export class ProductSystem {
             const c = getComponentById(id);
             if (c) cost += c.costPerUnit;
         });
-        // OS license per unit
-        if (config.osOptionId && config.osOptionId.startsWith('license:')) {
-            const data = this.state.data;
-            const licId = config.osOptionId.replace('license:', '');
-            const opts = [];
-            // Ambil biaya lisensi dari os.data.js via OSSystem (dipanggil UI)
-            // Fallback: OS option yang dikirim harus sudah menyertakan biaya per unit.
-        }
         return Math.round(cost);
     }
 
-    // Estimasi permintaan untuk preview di wizard (tanpa efek lifecycle & noise)
     estimateDemand(config) {
         const data = this.state.data;
         const stats = this.computeStats(config);
         const era = data.era || 'feature_phone';
         const baseDemand = BALANCE.products.baseMarketDemand[era] || 5000;
-
         const ff = getComponentById(config.formFactorId);
         const baseMult = (ff && ff.baseDemandMultiplier) ? ff.baseDemandMultiplier : 1.0;
-
         const w = BALANCE.products.weights;
         const refs = BALANCE.products.refs;
 
-        const qualityF   = Math.pow(Math.max(0.2, stats.qualityScore / refs.quality), w.quality);
-        const priceF     = Math.pow(Math.max(0.2, refs.price / Math.max(1, config.price)), w.price);
-        const repF       = Math.pow(Math.max(0.2, (data.market.reputation || 10) / refs.reputation), w.reputation);
-
-        // Marketing: aktif = 1.0 (belum ada kampanye saat preview)
+        const qualityF = Math.pow(Math.max(0.2, stats.qualityScore / refs.quality), w.quality);
+        const priceF   = Math.pow(Math.max(0.2, refs.price / Math.max(1, config.price)), w.price);
+        const repF     = Math.pow(Math.max(0.2, (data.market.reputation || 10) / refs.reputation), w.reputation);
         const marketingF = 1.0;
-
-        // OS factor: ambil dari os.currentVersionId
         const osFactor = this._getOsFactor();
-
-        // Trend factor
         const trendF = this._getTrendFactor(stats);
-
-        // Competitor pressure (dasar — Batch C akan memperkuat)
         const competitorF = 0.8;
-
-        const lifecycleF = 1.0; // new product = peak expected
+        const lifecycleF = 1.0;
 
         const demand = baseDemand * baseMult * qualityF * priceF * repF * marketingF * osFactor * trendF * competitorF * lifecycleF;
-
         return Math.max(0, Math.round(demand));
     }
 
     _getOsFactor() {
-        const data = this.state.data;
         const os = window.__game && window.__game.os ? window.__game.os : null;
         if (!os || !os.getCurrentStats()) return 0.7;
         const stats = os.getCurrentStats();
         const avg = (stats.stability + stats.speed + stats.features + stats.security + stats.design) / 5;
-        const ref = BALANCE.products.refs.os;
-        return Math.pow(Math.max(0.2, avg / ref), BALANCE.products.weights.os);
+        return Math.pow(Math.max(0.2, avg / BALANCE.products.refs.os), BALANCE.products.weights.os);
     }
 
     _getTrendFactor(stats) {
         const data = this.state.data;
         const trends = data.market.trends || BALANCE.market.trendsByEra[data.era] || {};
-        const mapping = {
-            camera:      stats.camera,
-            battery:     stats.battery,
-            screen:      stats.display,
-            performance: stats.performance,
-            design:      stats.design
-        };
+        const mapping = { camera: stats.camera, battery: stats.battery, screen: stats.display, performance: stats.performance, design: stats.design };
         let sum = 0, weightSum = 0;
         for (const k in trends) {
             const w = trends[k] || 0;
@@ -227,21 +179,16 @@ export class ProductSystem {
             weightSum += w;
         }
         if (weightSum === 0) return 1.0;
-        // Normalkan ke 0.5 - 1.5 (default 1.0)
-        const avg = sum / weightSum; // 0 - 1
-        return 0.5 + avg;            // 0.5 - 1.5
+        return 0.5 + (sum / weightSum);
     }
 
     // ============================================================
-    // API PUBLIK — KONFIRMASI DESAIN
+    // KONFIRMASI DESAIN
     // ============================================================
     confirmDesign(config) {
         const data = this.state.data;
-        if (data.products.development) {
-            return { ok: false, reason: 'Ada produk yang sedang dikembangkan.' };
-        }
+        if (data.products.development) return { ok: false, reason: 'Ada produk yang sedang dikembangkan.' };
 
-        // Validasi
         const required = ['displayId', 'cameraId', 'batteryId', 'chipId', 'networkId', 'formFactorId', 'bodyId'];
         for (const k of required) {
             if (!config[k]) return { ok: false, reason: 'Komponen belum lengkap: ' + k };
@@ -252,27 +199,19 @@ export class ProductSystem {
         if (config.price < 1) return { ok: false, reason: 'Harga minimal $1.' };
         if (config.productionQty < 100) return { ok: false, reason: 'Jumlah produksi minimal 100 unit.' };
 
-        // Hitung biaya & durasi
         const unitCost = this.computeUnitCost(config);
         const setupCost = BALANCE.products.productionSetupCost;
         const totalCost = unitCost * config.productionQty + setupCost;
 
-        if (data.cash < totalCost) {
-            return { ok: false, reason: 'Uang tidak cukup. Butuh $' + totalCost.toLocaleString('en-US') + '.' };
-        }
+        if (data.cash < totalCost) return { ok: false, reason: 'Uang tidak cukup. Butuh $' + totalCost.toLocaleString('en-US') + '.' };
 
-        // Statistik
         const stats = this.computeStats(config);
-
-        // Durasi: design 30% + production 70%, dipercepat designer & engineer
         const baseDays = 40 + Math.floor(config.productionQty / 5000);
         const speedup = this._getDevSpeedMultiplier();
         const totalDays = Math.max(7, Math.round(baseDays / speedup));
 
-        // Potong uang
         this.state.setCash(data.cash - totalCost);
 
-        // Buat proyek
         const productId = 'p_' + Date.now() + '_' + data.products.nextProductId;
         data.products.nextProductId += 1;
 
@@ -285,17 +224,13 @@ export class ProductSystem {
             totalCost: totalCost,
             price: config.price,
             productionQty: config.productionQty,
-            phase: 'design',            // design -> prototype -> production -> released
+            phase: 'design',
             phaseProgressDays: 0,
             phaseDurationDays: Math.max(3, Math.round(totalDays * 0.3)),
             totalDurationDays: totalDays,
             startedAtGameMinute: data.time.elapsedGameMinutes,
             lastProcessedMinute: data.time.elapsedGameMinutes,
-            startedAt: {
-                year: data.time.currentYear,
-                month: data.time.currentMonth,
-                day: data.time.currentDay
-            }
+            startedAt: { year: data.time.currentYear, month: data.time.currentMonth, day: data.time.currentDay }
         };
         data.products.development = project;
         data.products.designing = null;
@@ -305,7 +240,6 @@ export class ProductSystem {
         bus.emit('product:development-started', { productId, name, phases: 4 });
         bus.emit('tutorial:action', { id: 'action:product-started' });
         bus.emit('state:changed', data);
-
         return { ok: true, productId, totalCost, totalDays };
     }
 
@@ -337,6 +271,7 @@ export class ProductSystem {
         this._processDailySales();
         this._chargeWarehouse();
         this._maybeAddRandomReviews();
+        this._tickAutoRestock();
     }
 
     _tickDevelopment() {
@@ -351,7 +286,6 @@ export class ProductSystem {
         d.phaseProgressDays += (deltaMin / MINUTES_PER_DAY) * speed;
         d.lastProcessedMinute = currentMinute;
 
-        const totalPhases = 4;
         const phaseIndex = { design: 1, prototype: 2, production: 3, released: 4 };
         const percentOverall = ((phaseIndex[d.phase] - 1) * 25) + Math.min(25, (d.phaseProgressDays / d.phaseDurationDays) * 25);
 
@@ -374,7 +308,6 @@ export class ProductSystem {
                 this.state.addLog('"' + d.name + '" tahap: ' + next + '.', LOG_TYPES.info);
                 bus.emit('product:phase-changed', { productId: d.id, phase: next });
             } else {
-                // Selesai
                 this._releaseProduct(d);
             }
         }
@@ -393,6 +326,7 @@ export class ProductSystem {
             unitCost: d.unitCost,
             stock: cfg.productionQty,
             totalProduced: cfg.productionQty,
+            baseCapacity: cfg.productionQty,   // referensi untuk auto-restock
             totalSold: 0,
             totalRevenue: 0,
             status: 'selling',
@@ -404,28 +338,30 @@ export class ProductSystem {
             },
             reviews: [],
             dailySales: [],
-            competitorPressure: 0.2
+            competitorPressure: 0.2,
+            autoRestock: {
+                enabled: false,
+                thresholdPercent: (BALANCE.products.autoRestock && BALANCE.products.autoRestock.defaultThresholdPercent) || 20,
+                lastAutoOrderMinute: 0,
+                lastWarnMinute: 0
+            }
         };
 
-        // Sanity: max produk aktif
         const activeCount = data.products.catalog.filter(p => p.status === 'selling').length;
         if (activeCount >= BALANCE.products.maxActiveProducts) {
             ToastService.warning('Katalog penuh (maks ' + BALANCE.products.maxActiveProducts + ' produk aktif).');
         }
 
-        // Ulasan rilis awal
         const rv = this._generateReview(product, true);
         product.reviews.push(rv);
         this._pushReviewToFeed(product, rv);
 
-        // Reputasi dari ulasan pertama
         const repDelta = (rv.score - 5) * BALANCE.products.reputationPerReviewPoint;
         if (repDelta !== 0) this.state.addReputation((data.market.reputation || 0) + repDelta);
 
         data.products.catalog.push(product);
         data.products.development = null;
 
-        // Milestone produk pertama
         if (data.products.catalog.length === 1) {
             this.state.addMilestone('first_product', 'Ponsel pertama dirilis: ' + product.name);
         }
@@ -446,7 +382,6 @@ export class ProductSystem {
         if (!data.products.catalog.length) return;
 
         let totalDailyRevenue = 0;
-        const currentMinute = data.time.elapsedGameMinutes;
 
         for (const p of data.products.catalog) {
             if (p.status !== 'selling') continue;
@@ -462,7 +397,6 @@ export class ProductSystem {
             p.totalRevenue += revenue;
             totalDailyRevenue += revenue;
 
-            // Log harian (aggregate per 30 hari untuk hemat memori)
             if (!p.dailySales) p.dailySales = [];
             p.dailySales.push({ day: data.time.elapsedGameMinutes, sold, revenue });
             if (p.dailySales.length > 400) p.dailySales.shift();
@@ -486,16 +420,15 @@ export class ProductSystem {
         const baseDemand = BALANCE.products.baseMarketDemand[era] || 5000;
         const ff = getComponentById(p.config.formFactorId);
         const baseMult = (ff && ff.baseDemandMultiplier) ? ff.baseDemandMultiplier : 1.0;
-
         const w = BALANCE.products.weights;
         const refs = BALANCE.products.refs;
 
-        const qualityF   = Math.pow(Math.max(0.2, p.stats.qualityScore / refs.quality), w.quality);
-        const priceF     = Math.pow(Math.max(0.2, refs.price / Math.max(1, p.price)), w.price);
-        const repF       = Math.pow(Math.max(0.2, (data.market.reputation || 10) / refs.reputation), w.reputation);
+        const qualityF = Math.pow(Math.max(0.2, p.stats.qualityScore / refs.quality), w.quality);
+        const priceF   = Math.pow(Math.max(0.2, refs.price / Math.max(1, p.price)), w.price);
+        const repF     = Math.pow(Math.max(0.2, (data.market.reputation || 10) / refs.reputation), w.reputation);
         const marketingF = this._getMarketingFactor(p.id);
-        const osFactor   = this._getOsFactor();
-        const trendF     = this._getTrendFactor(p.stats);
+        const osFactor = this._getOsFactor();
+        const trendF = this._getTrendFactor(p.stats);
         const competitorF = Math.max(0.4, 1 / (1 + (p.competitorPressure || 0)));
         const lifecycleF = this._getLifecycleFactor(p);
 
@@ -525,6 +458,102 @@ export class ProductSystem {
         if (ageDays < lc.declineDays) return lc.peakMult - ((ageDays - lc.peakDays) / (lc.declineDays - lc.peakDays)) * (lc.peakMult - lc.declineMult);
         if (ageDays < lc.deadDays)    return lc.declineMult * (1 - (ageDays - lc.declineDays) / (lc.deadDays - lc.declineDays)) + lc.deadMult * ((ageDays - lc.declineDays) / (lc.deadDays - lc.declineDays));
         return lc.deadMult;
+    }
+
+    // ============================================================
+    // AUTO-RESTOCK (BARU)
+    // ============================================================
+    _tickAutoRestock() {
+        const data = this.state.data;
+        const cfg = BALANCE.products.autoRestock;
+        if (!cfg) return;
+
+        const now = data.time.elapsedGameMinutes;
+        const cooldownMs = (cfg.defaultCooldownDays || 7) * MINUTES_PER_DAY;
+        const warnInterval = (cfg.warnIntervalDays || 3) * MINUTES_PER_DAY;
+        const minQty = cfg.minOrderQty || 100;
+        const maxMult = cfg.maxStockMultiplier || 2.0;
+
+        for (const p of data.products.catalog) {
+            if (p.status !== 'selling') continue;
+            const ar = p.autoRestock;
+            if (!ar || !ar.enabled) continue;
+
+            const baseCapacity = p.baseCapacity || (p.config && p.config.productionQty) || 5000;
+            const thresholdPct = (ar.thresholdPercent || 20) / 100;
+            const threshold = baseCapacity * thresholdPct;
+            const maxStock = baseCapacity * maxMult;
+
+            // Stok masih cukup?
+            if (p.stock > threshold) continue;
+
+            // Sudah mentok max stock?
+            if (p.stock >= maxStock) continue;
+
+            // Cooldown?
+            if ((now - (ar.lastAutoOrderMinute || 0)) < cooldownMs) continue;
+
+            // Hitung qty
+            let neededQty = baseCapacity - p.stock;
+            if (neededQty < minQty) neededQty = minQty;
+            if (p.stock + neededQty > maxStock) neededQty = maxStock - p.stock;
+            if (neededQty <= 0) continue;
+
+            const totalCost = p.unitCost * neededQty + BALANCE.products.productionSetupCost;
+
+            // Uang tidak cukup?
+            if (data.cash < totalCost) {
+                if ((now - (ar.lastWarnMinute || 0)) >= warnInterval) {
+                    ToastService.warning('⚠ Auto-restock "' + p.name + '" gagal: butuh $' + totalCost.toLocaleString('en-US'));
+                    this.state.addLog('Auto-restock "' + p.name + '" gagal: uang tidak cukup.', LOG_TYPES.warning);
+                    ar.lastWarnMinute = now;
+                    bus.emit('state:changed', data);
+                }
+                continue;
+            }
+
+            // Jalankan auto-restock
+            this.state.setCash(data.cash - totalCost);
+            p.stock += neededQty;
+            p.totalProduced += neededQty;
+            ar.lastAutoOrderMinute = now;
+            ar.lastWarnMinute = 0;
+
+            const msg = 'Auto-restock "' + p.name + '": +' + neededQty.toLocaleString('en-US') + ' unit ($' + totalCost.toLocaleString('en-US') + ')';
+            this.state.addLog(msg, LOG_TYPES.success);
+            ToastService.success('🔄 ' + msg);
+
+            bus.emit('product:auto-restocked', {
+                productId: p.id,
+                name: p.name,
+                qty: neededQty,
+                cost: totalCost
+            });
+        }
+    }
+
+    // API untuk UI
+    toggleAutoRestock(productId, enabled) {
+        const data = this.state.data;
+        const p = data.products.catalog.find(x => x.id === productId);
+        if (!p) return { ok: false, reason: 'Produk tidak ditemukan.' };
+        if (!p.autoRestock) p.autoRestock = { enabled: false, thresholdPercent: 20, lastAutoOrderMinute: 0, lastWarnMinute: 0 };
+        p.autoRestock.enabled = !!enabled;
+        const label = enabled ? 'diaktifkan' : 'dimatikan';
+        ToastService.info('Auto-restock "' + p.name + '" ' + label + '.');
+        bus.emit('state:changed', data);
+        return { ok: true };
+    }
+
+    setAutoRestockThreshold(productId, percent) {
+        const data = this.state.data;
+        const p = data.products.catalog.find(x => x.id === productId);
+        if (!p) return { ok: false, reason: 'Produk tidak ditemukan.' };
+        if (!p.autoRestock) p.autoRestock = { enabled: false, thresholdPercent: 20, lastAutoOrderMinute: 0, lastWarnMinute: 0 };
+        const clamped = Math.max(5, Math.min(80, percent));
+        p.autoRestock.thresholdPercent = clamped;
+        bus.emit('state:changed', data);
+        return { ok: true, thresholdPercent: clamped };
     }
 
     // ============================================================
@@ -575,7 +604,7 @@ export class ProductSystem {
     }
 
     // ============================================================
-    // STOK & PRODUKSI TAMBAHAN
+    // STOK & PRODUKSI
     // ============================================================
     orderProduction(productId, qty) {
         const data = this.state.data;
@@ -603,21 +632,15 @@ export class ProductSystem {
                 total += p.stock * BALANCE.products.warehouseCostPerUnitPerDay;
             }
         });
-        if (total > 0) {
-            this.state.addCash(-Math.round(total));
-        }
+        if (total > 0) this.state.addCash(-Math.round(total));
     }
 
-    // ============================================================
-    // DISCONTINUE
-    // ============================================================
     discontinueProduct(productId) {
         const data = this.state.data;
         const p = data.products.catalog.find(x => x.id === productId);
         if (!p) return { ok: false, reason: 'Produk tidak ditemukan.' };
         if (p.status !== 'selling') return { ok: false, reason: 'Produk sudah tidak aktif.' };
 
-        // Jual sisa stok dengan diskon
         const discountPrice = Math.round(p.price * (1 - BALANCE.products.discontinueDiscountPercent));
         const fireSale = p.stock * discountPrice;
         p.status = 'discontinued';
@@ -638,7 +661,6 @@ export class ProductSystem {
         const era = this.state.data.era || 'feature_phone';
         const sources = REVIEW_SOURCES[era] || REVIEW_SOURCES.feature_phone;
         const source = sources[Math.floor(Math.random() * sources.length)];
-
         const q = product.stats.qualityScore;
         const thresholds = BALANCE.products.reviewThresholds;
         let base;
@@ -647,12 +669,10 @@ export class ProductSystem {
         else if (q >= thresholds.average) base = 6;
         else if (q >= thresholds.poor) base = 4;
         else base = 2.5;
-
         const variance = (Math.random() * 2 - 1) * 1.2;
         let score = Math.round((base + variance) * 10) / 10;
         score = Math.max(1, Math.min(10, score));
 
-        // Cari kekuatan & kelemahan
         const statKeys = ['display', 'camera', 'battery', 'performance', 'connectivity', 'design', 'usability'];
         let best = statKeys[0], worst = statKeys[0];
         statKeys.forEach(k => {
@@ -698,9 +718,7 @@ export class ProductSystem {
         const d = this.state.data;
         return {
             id: 'rv_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-            source,
-            score,
-            text,
+            source, score, text,
             year: d.time.currentYear,
             month: d.time.currentMonth,
             day: d.time.currentDay,
@@ -711,11 +729,7 @@ export class ProductSystem {
 
     _pushReviewToFeed(product, review) {
         const data = this.state.data;
-        data.reviews.feed.unshift({
-            ...review,
-            productId: product.id,
-            productName: product.name
-        });
+        data.reviews.feed.unshift({ ...review, productId: product.id, productName: product.name });
         if (data.reviews.feed.length > BALANCE.reviews.maxReviewsInFeed) {
             data.reviews.feed.length = BALANCE.reviews.maxReviewsInFeed;
         }
@@ -745,7 +759,6 @@ export class ProductSystem {
         const cfg = configOverride || this._pickCheatConfig();
         const res = this.confirmDesign(cfg);
         if (!res.ok) return res;
-        // Langsung rilis
         const d = this.state.data.products.development;
         if (d) this._releaseProduct(d);
         return { ok: true };
@@ -777,4 +790,4 @@ export class ProductSystem {
             productionQty: 10000
         };
     }
-    }
+            }
