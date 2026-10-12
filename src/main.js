@@ -46,17 +46,17 @@ import * as feedbackModule from './data/feedback.data.js';
 import { getActiveRendererIdPublic } from './ui/notifications/NotificationRenderer.js';
 
 // ============ INSTANCE ============
-const timeSystem = new TimeSystem(state);
-const economy = new EconomySystem(state);
-const quests = new QuestSystem(state);
-const tutorial = new TutorialSystem(state);
-const research = new ResearchSystem(state);
-const os = new OSSystem(state);
-const products = new ProductSystem(state);
-const market = new MarketSystem(state);
+const timeSystem  = new TimeSystem(state);
+const economy     = new EconomySystem(state);
+const quests      = new QuestSystem(state);
+const tutorial    = new TutorialSystem(state);
+const research    = new ResearchSystem(state);
+const os          = new OSSystem(state);
+const products    = new ProductSystem(state);
+const market      = new MarketSystem(state);
 const competitors = new CompetitorSystem(state);
-const opinion = new PublicOpinionSystem(state);
-const eraSystem = new EraSystem(state);
+const opinion     = new PublicOpinionSystem(state);
+const eraSystem   = new EraSystem(state);
 
 market.setCompetitorSystem(competitors);
 
@@ -83,6 +83,7 @@ function renderHeaderOnly() {
     if (!els.header) return;
     els.header.innerHTML = renderHeader({ state: state.get(), timeSnapshot: getTime(), warning: _burnWarn });
 }
+
 function renderNavOnly() {
     if (!els.nav) return;
     els.nav.innerHTML = renderMobileNav({ active: activeView });
@@ -140,6 +141,7 @@ function animateCash(from, to) {
     _cashRaf = requestAnimationFrame(step);
 }
 
+// ============ NAVIGASI ============
 function navigate(id) {
     if (id === activeView) return;
     activeView = id;
@@ -148,10 +150,12 @@ function navigate(id) {
     bus.emit('view:changed', { id });
     bus.emit('tutorial:action', { id: 'nav:' + id });
 }
+
 function updateTitle() {
     const meta = VIEW_TITLES[activeView];
     document.title = APP_CONFIG.name + ' — ' + (meta ? meta.title : 'Dashboard');
 }
+
 function vibrate(ms) {
     const s = state.get();
     if (!s.settings.vibrate) return;
@@ -163,9 +167,38 @@ function vibrate(ms) {
 // ============ EVENT DELEGATION ============
 function bindGlobalClicks() {
     document.body.addEventListener('click', function (e) {
+        // 1. AUTO-RESTOCK: toggle switch
+        const autoToggle = e.target.closest('[data-auto-toggle]');
+        if (autoToggle) {
+            e.preventDefault();
+            vibrate(8);
+            const pid = autoToggle.dataset.prodId;
+            const p = state.get().products.catalog.find(x => x.id === pid);
+            if (p) {
+                const newState = !(p.autoRestock && p.autoRestock.enabled);
+                products.toggleAutoRestock(pid, newState);
+                renderAll();
+            }
+            return;
+        }
+
+        // 2. AUTO-RESTOCK: threshold chip
+        const autoThresh = e.target.closest('[data-auto-threshold]');
+        if (autoThresh) {
+            e.preventDefault();
+            vibrate(6);
+            const pid = autoThresh.dataset.prodId;
+            const val = parseInt(autoThresh.dataset.autoThreshold, 10) || 20;
+            products.setAutoRestockThreshold(pid, val);
+            renderAll();
+            return;
+        }
+
+        // 3. Navigasi bottom nav
         const navBtn = e.target.closest('[data-nav]');
         if (navBtn) { e.preventDefault(); vibrate(8); navigate(navBtn.dataset.nav); return; }
 
+        // 4. Kontrol waktu
         const timeBtn = e.target.closest('[data-time-action]');
         if (timeBtn) {
             e.preventDefault(); vibrate(12);
@@ -175,15 +208,19 @@ function bindGlobalClicks() {
             return;
         }
 
+        // 5. Sub-tab Riset
         const subBtn = e.target.closest('[data-subtab]');
         if (subBtn) { e.preventDefault(); activeSubtab = subBtn.dataset.subtab; renderView(); return; }
 
+        // 6. Filter kategori riset
         const chip = e.target.closest('[data-filter-cat]');
         if (chip) { e.preventDefault(); setFilterCategory(chip.dataset.filterCat); renderView(); return; }
 
+        // 7. Detail node riset
         const nodeCard = e.target.closest('[data-node-detail]');
         if (nodeCard) { e.preventDefault(); openNodeDetailModal({ nodeId: nodeCard.dataset.nodeDetail, researchSystem: research }); return; }
 
+        // 8. Aksi riset di modal
         const rAction = e.target.closest('[data-research-action]');
         if (rAction) {
             e.preventDefault();
@@ -201,6 +238,7 @@ function bindGlobalClicks() {
             return;
         }
 
+        // 9. Aksi OS
         const osAction = e.target.closest('[data-os-action]');
         if (osAction) {
             e.preventDefault();
@@ -220,9 +258,11 @@ function bindGlobalClicks() {
             if (act === 'feature-detail') { openFeatureDetailModal({ osSystem: os, featureId: osAction.dataset.featureId }); return; }
         }
 
+        // 10. Sub-tab Produk
         const prodSub = e.target.closest('[data-prod-subtab]');
         if (prodSub) { e.preventDefault(); activeProdSubtab = prodSub.dataset.prodSubtab; renderView(); return; }
 
+        // 11. Aksi produk (dari modal detail)
         const prodAction = e.target.closest('[data-prod-action]');
         if (prodAction) {
             e.preventDefault();
@@ -243,13 +283,15 @@ function bindGlobalClicks() {
             }
         }
 
+        // 12. Kartu produk (klik buka modal detail)
         const prodCard = e.target.closest('[data-prod-detail]');
-        if (prodCard && !e.target.closest('[data-prod-action]')) {
+        if (prodCard && !e.target.closest('[data-prod-action]') && !e.target.closest('[data-auto-toggle]') && !e.target.closest('[data-auto-threshold]')) {
             e.preventDefault();
             openProductDetailModal({ productId: prodCard.dataset.prodDetail, productSystem: products });
             return;
         }
 
+        // 13. Pilih kampanye
         const campPick = e.target.closest('[data-campaign-pick]');
         if (campPick) {
             e.preventDefault();
@@ -259,6 +301,7 @@ function bindGlobalClicks() {
             return;
         }
 
+        // 14. Konfirmasi order produksi
         const orderConfirm = e.target.closest('[data-order-confirm]');
         if (orderConfirm) {
             e.preventDefault();
@@ -270,9 +313,11 @@ function bindGlobalClicks() {
             return;
         }
 
+        // 15. Sub-tab Pasar
         const mktSub = e.target.closest('[data-market-subtab]');
         if (mktSub) { e.preventDefault(); activeMarketSubtab = mktSub.dataset.marketSubtab; renderView(); return; }
 
+        // 16. Kartu kompetitor
         const compCard = e.target.closest('[data-competitor-detail]');
         if (compCard) {
             e.preventDefault();
@@ -282,6 +327,7 @@ function bindGlobalClicks() {
             return;
         }
 
+        // 17. Respons viral
         const viralRespond = e.target.closest('[data-viral-respond]');
         if (viralRespond) {
             e.preventDefault();
@@ -305,7 +351,7 @@ function bindGlobalClicks() {
     });
 }
 
-// ============ PROGRESS ============
+// ============ PROGRESS EVENTS ============
 function bindProgressEvents() {
     bus.on('research:progress', (data) => {
         if (activeView !== 'research' || activeSubtab !== 'tech') return;
@@ -321,6 +367,7 @@ function bindProgressEvents() {
             if (etaEl) etaEl.textContent = 'Sisa ~' + Math.ceil(r.remainingDays) + ' hari • ' + r.progressDays.toFixed(1) + '/' + r.durationDays + ' hari';
         });
     });
+
     bus.on('os:progress', (data) => {
         if (activeView !== 'research' || activeSubtab !== 'os') return;
         const pct = Math.round(data.percent * 100);
@@ -331,6 +378,7 @@ function bindProgressEvents() {
         const eta = els.view.querySelector('[data-os-dev-eta]');
         if (eta) eta.textContent = 'Sisa ~' + Math.ceil(data.remainingDays) + ' hari • ' + data.progressDays.toFixed(1) + '/' + data.durationDays + ' hari';
     });
+
     bus.on('product:development-progress', (data) => {
         if (activeView !== 'products' || activeProdSubtab !== 'design') return;
         const phaseMap = { design: 'Desain', prototype: 'Prototipe', production: 'Produksi', released: 'Rilis' };
@@ -343,12 +391,13 @@ function bindProgressEvents() {
         if (barEl) barEl.style.width = data.percentOverall + '%';
         if (etaEl) etaEl.textContent = 'Sisa ~' + data.remainingDays + ' hari di tahap ini';
     });
+
     bus.on('time:day-changed', () => {
         if (activeView === 'research' || activeView === 'products' || activeView === 'market') renderView();
     });
 }
 
-// ============ TIME ============
+// ============ TIME EVENTS ============
 function bindTimeEvents() {
     bus.on('time:tick', function () {
         const meta = els.header && els.header.querySelector('.header-meta');
@@ -367,7 +416,7 @@ function bindTimeEvents() {
     bus.on('time:speed-changed', function () { renderHeaderOnly(); });
 }
 
-// ============ STATE ============
+// ============ STATE EVENTS ============
 function bindStateEvents() {
     bus.on('state:cash-changed', function (data) { animateCash(data.prev, data.next); });
     bus.on('state:log-changed', function () { if (activeView === 'dashboard') renderView(); });
@@ -393,10 +442,11 @@ function bindStateEvents() {
 // ============ BOOT ============
 async function boot() {
     try {
-        if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML utama tidak ditemukan.');
+        if (!els.header || !els.view || !els.nav) {
+            throw new Error('Elemen HTML utama tidak ditemukan.');
+        }
 
-        // ===== URUTAN PENTING =====
-        // 1. Mount toast container LEBIH DULU agar notifikasi awal tertangkap
+        // 1. Mount toast container LEBIH DULU
         mountToastContainer(els.toast);
 
         // 2. Init overlay & modal
@@ -422,7 +472,7 @@ async function boot() {
 
         if (!state.get().settings.competitorMode) state.get().settings.competitorMode = 'real';
 
-        // 4. Start EraSystem LEBIH DULU sebelum toast lain (fix Isu #4)
+        // 4. Start EraSystem lebih dulu
         eraSystem.start();
 
         // 5. Start sistem lain
@@ -459,7 +509,10 @@ async function boot() {
             state, bus, timeSystem, economy, quests, tutorial,
             research, os, products, market, competitors, opinion, eraSystem,
             SaveService, ToastService, Modal, navigate, render: renderAll,
-            modules: { marketing: marketingModule, feedbackData: feedbackModule },
+            modules: {
+                marketing: marketingModule,
+                feedbackData: feedbackModule
+            },
             cheat: {
                 addCash: function (n) { state.addCash(n); },
                 fastForwardDays: function (n) { return timeSystem.fastForwardDays(n); },
@@ -481,7 +534,6 @@ async function boot() {
                 forceCompetitorRelease: function (compId) { return competitors.forceRelease(compId); },
                 forceReview: function () { return opinion.forceReview(); },
                 recomputeSentiment: function () { return opinion.recomputeNow(); },
-                // === PATCH ERA UI ===
                 previewNotif: function (msg, type) {
                     ToastService.show(msg || 'Contoh notifikasi.', type || 'info', 3500);
                     return { renderer: getActiveRendererIdPublic() };
@@ -491,6 +543,20 @@ async function boot() {
                     bus.emit('state:changed', state.get());
                     renderAll();
                     return { era: eraId, renderer: getActiveRendererIdPublic() };
+                },
+                // Auto-restock cheats
+                enableAutoRestockAll: function (threshold) {
+                    const list = state.get().products.catalog;
+                    list.forEach(p => {
+                        products.toggleAutoRestock(p.id, true);
+                        if (threshold) products.setAutoRestockThreshold(p.id, threshold);
+                    });
+                    renderAll();
+                    return { count: list.length };
+                },
+                tickAutoRestock: function () {
+                    products._tickAutoRestock();
+                    return { ok: true };
                 }
             }
         };
@@ -499,7 +565,10 @@ async function boot() {
     } catch (err) {
         console.error('[boot] gagal:', err);
         hideLoading();
-        if (els.error) { els.error.style.display = 'block'; els.error.textContent = 'Boot error: ' + err.message; }
+        if (els.error) {
+            els.error.style.display = 'block';
+            els.error.textContent = 'Boot error: ' + err.message;
+        }
     }
 }
 
