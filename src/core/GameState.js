@@ -15,6 +15,7 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
         companyName: 'My Tech Co',
         difficulty,
 
+        // ===== WAKTU =====
         time: {
             currentYear: TIME_CONFIG.startYear,
             currentMonth: TIME_CONFIG.startMonth,
@@ -26,6 +27,7 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
         isPaused: TIME_CONFIG.startPaused,
         gameSpeed: TIME_CONFIG.defaultSpeed,
 
+        // ===== KEUANGAN =====
         cash: startingCash,
         finance: {
             history: [],
@@ -34,15 +36,18 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             lastProcessed: null
         },
 
+        // ===== TIM =====
         team: { engineers: 0, designers: 0, marketers: 0 },
 
+        // ===== RISET =====
         research: {
-    active: [],
-    completed: (BALANCE.starterResearch || []).slice(),
-    maxSlots: 1,
-    totalCompleted: (BALANCE.starterResearch || []).length
-},
+            active: [],
+            completed: (BALANCE.starterResearch || []).slice(),
+            maxSlots: 1,
+            totalCompleted: (BALANCE.starterResearch || []).length
+        },
 
+        // ===== OS =====
         os: {
             name: null,
             createdAt: null,
@@ -55,76 +60,83 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             licenseChoice: null
         },
 
-        // ===== PRODUK (diperluas Batch B) =====
+        // ===== PRODUK =====
         products: {
-            catalog: [],       // Produk yang sudah dirilis
-            designing: null,   // Wizard design yang sedang diisi (state sementara)
-            development: null, // Proyek pengembangan aktif (setelah confirm design)
+            catalog: [],
+            designing: null,
+            development: null,
             nextProductId: 1
         },
 
-        // ===== PEMASARAN (Batch B) =====
+        // ===== PEMASARAN =====
         marketing: {
-            activeCampaigns: []  // [{ id, campaignId, productId, startedAtMinute, endsAtMinute, cost, effectiveReach }]
+            activeCampaigns: []
         },
 
-        // ===== ULASAN (Batch B) =====
+        // ===== ULASAN (dari produk) =====
         reviews: {
-            feed: []           // Maks 30, [{ id, productId, source, score, text, date:{year,month,day}, gameMinute }]
+            feed: []
         },
 
-        // ===== PASAR (diperluas Batch B) =====
+        // ===== PASAR =====
         market: {
-    share: 0,
-    shareHistory: [],
-    competitors: [],       // state AI runtime, diisi CompetitorSystem
-    reputation: 10,
-    trends: null,
-    lastTrendUpdateMonth: null,
-    revenueHistory: []
-},
+            share: 0,
+            shareHistory: [],
+            competitors: [],
+            reputation: 10,
+            trends: null,
+            lastTrendUpdateMonth: null,
+            revenueHistory: []
+        },
 
-// ===== KOMPETITOR AI (Batch C) =====
-competitorState: {
-    // { id: { currentTier, currentShare, lastReleaseMonth, releases[], activeViralId } }
-    entities: {},
-    lastLifeEventYear: 2000
-},
+        // ===== KOMPETITOR AI (Batch C) =====
+        competitorState: {
+            entities: {},           // { [id]: { currentTier, currentShare, lastReleaseMonth, releases[], activeViralId } }
+            lastLifeEventYear: 2000,
+            initialized: false
+        },
 
-// ===== FEEDBACK PUBLIK (Batch C) =====
-feedback: {
-    sentiment: 50,
-    aspectSentiment: {
-        design: 50, camera: 50, battery: 50, performance: 50,
-        price: 50, reliability: 50, os: 50, support: 50
-    },
-    feed: [],              // 30 ulasan terbaru
-    activeViral: [],       // viral event yang sedang berjalan
-    viralHistory: [],      // viral event yang sudah lewat
-    suggestions: [],       // saran pelanggan aktif (maks 3)
-    perProductSatisfaction: {}, // { productId: score 0-100 }
-    competitorSentiment: {}     // { competitorId: score 0-100 }
-},
+        // ===== FEEDBACK PUBLIK (Batch C) =====
+        feedback: {
+            sentiment: 50,
+            aspectSentiment: {
+                design: 50, camera: 50, battery: 50, performance: 50,
+                price: 50, reliability: 50, os: 50, support: 50
+            },
+            feed: [],
+            activeViral: [],
+            viralHistory: [],
+            suggestions: [],
+            perProductSatisfaction: {},
+            competitorSentiment: {}
+        },
 
+        // ===== EVENT =====
         events: {
             cooldownUntilMinute: 0,
             pending: null,
             history: []
         },
 
+        // ===== QUEST =====
         quests: { active: [], completed: [] },
 
+        // ===== LOG & MILESTONE =====
         log: [],
         milestones: [],
 
+        // ===== TUTORIAL & TIPS =====
         tutorial: { completed: false, skipped: false, currentStep: 0 },
         seenTips: [],
 
+        // ===== PENGATURAN =====
         settings: { vibrate: true, sound: false },
 
+        // ===== ERA =====
         era: 'feature_phone',
         eraStartYear: TIME_CONFIG.startYear,
 
+        // ===== STATUS AKHIR =====
         gameOver: null
     };
 }
@@ -236,6 +248,17 @@ class GameState {
         this.setReputation((this.data.market.reputation || 0) + delta);
     }
 
+    // ============== SENTIMEN PUBLIK ==============
+    setSentiment(value) {
+        const clamped = Math.max(0, Math.min(100, Math.round(value)));
+        this.data.feedback.sentiment = clamped;
+        bus.emit('feedback:sentiment-changed', { value: clamped });
+        bus.emit('state:changed', this.data);
+    }
+    addSentiment(delta) {
+        this.setSentiment((this.data.feedback.sentiment || 50) + delta);
+    }
+
     // ============== SERIALISASI ==============
     serialize() { return JSON.parse(JSON.stringify(this.data)); }
 
@@ -251,33 +274,39 @@ class GameState {
         this.data = {
             ...base,
             ...incoming,
+
             time:     { ...base.time,     ...(incoming.time || {}) },
             finance:  { ...base.finance,  ...(incoming.finance || {}) },
             team:     { ...base.team,     ...(incoming.team || {}) },
             research: { ...base.research, ...(incoming.research || {}) },
+
             os: {
                 ...base.os,
                 ...(incoming.os || {}),
                 apps: { ...base.os.apps, ...((incoming.os && incoming.os.apps) || {}) }
             },
+
             products: {
                 ...base.products,
                 ...(incoming.products || {}),
                 catalog: Array.isArray(incoming.products && incoming.products.catalog)
                     ? incoming.products.catalog : []
             },
+
             marketing: {
                 ...base.marketing,
                 ...(incoming.marketing || {}),
                 activeCampaigns: Array.isArray(incoming.marketing && incoming.marketing.activeCampaigns)
                     ? incoming.marketing.activeCampaigns : []
             },
+
             reviews: {
                 ...base.reviews,
                 ...(incoming.reviews || {}),
                 feed: Array.isArray(incoming.reviews && incoming.reviews.feed)
                     ? incoming.reviews.feed : []
             },
+
             market: {
                 ...base.market,
                 ...(incoming.market || {}),
@@ -286,17 +315,56 @@ class GameState {
                 revenueHistory: Array.isArray(incoming.market && incoming.market.revenueHistory)
                     ? incoming.market.revenueHistory : []
             },
+
+            // ===== KOMPETITOR AI =====
+            competitorState: {
+                ...base.competitorState,
+                ...(incoming.competitorState || {}),
+                entities: {
+                    ...base.competitorState.entities,
+                    ...((incoming.competitorState && incoming.competitorState.entities) || {})
+                }
+            },
+
+            // ===== FEEDBACK PUBLIK =====
+            feedback: {
+                ...base.feedback,
+                ...(incoming.feedback || {}),
+                aspectSentiment: {
+                    ...base.feedback.aspectSentiment,
+                    ...((incoming.feedback && incoming.feedback.aspectSentiment) || {})
+                },
+                feed: Array.isArray(incoming.feedback && incoming.feedback.feed)
+                    ? incoming.feedback.feed : [],
+                activeViral: Array.isArray(incoming.feedback && incoming.feedback.activeViral)
+                    ? incoming.feedback.activeViral : [],
+                viralHistory: Array.isArray(incoming.feedback && incoming.feedback.viralHistory)
+                    ? incoming.feedback.viralHistory : [],
+                suggestions: Array.isArray(incoming.feedback && incoming.feedback.suggestions)
+                    ? incoming.feedback.suggestions : [],
+                perProductSatisfaction: {
+                    ...((incoming.feedback && incoming.feedback.perProductSatisfaction) || {})
+                },
+                competitorSentiment: {
+                    ...((incoming.feedback && incoming.feedback.competitorSentiment) || {})
+                }
+            },
+
             events:   { ...base.events,   ...(incoming.events || {}) },
             quests:   { ...base.quests,   ...(incoming.quests || {}) },
             tutorial: { ...base.tutorial, ...(incoming.tutorial || {}) },
             settings: { ...base.settings, ...(incoming.settings || {}) }
         };
 
+        // ---- Guard untuk save lama ----
         if (typeof this.data.research.totalCompleted !== 'number') {
             this.data.research.totalCompleted = this.data.research.completed.length;
         }
         if (!this.data.market.trends) {
             this.data.market.trends = { ...BALANCE.market.trendsByEra.feature_phone };
+        }
+        if (typeof this.data.feedback.sentiment !== 'number') {
+            this.data.feedback.sentiment = BALANCE.feedback ? BALANCE.feedback.initialSentiment : 50;
         }
 
         bus.emit('state:hydrated', this.data);
@@ -309,6 +377,7 @@ class GameState {
         bus.emit('state:changed', this.data);
     }
 
+    // ============== UTILITAS ==============
     getMonthlySalary() {
         const t = this.data.team;
         const s = BALANCE.salary;
