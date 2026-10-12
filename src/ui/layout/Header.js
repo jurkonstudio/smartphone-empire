@@ -3,9 +3,9 @@ import { VIEW_TITLES } from '../../config/constants.js';
 import { APP_CONFIG } from '../../config/app.config.js';
 import { formatMonthYear } from '../../utils/format.js';
 
-export function renderHeader({ state }) {
+export function renderHeader({ state, activeView = 'dashboard' }) {
   const s = state;
-  const meta = VIEW_TITLES.dashboard;
+  const meta = VIEW_TITLES[activeView] || VIEW_TITLES.dashboard;
   const dateStr = formatMonthYear(s.time.year, s.time.month);
 
   return `
