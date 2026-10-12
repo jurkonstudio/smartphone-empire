@@ -1,6 +1,4 @@
 // FILE: src/ui/panels/ProgressPanel.js
-// FIX: sebelumnya 40% hardcode. Sekarang baca state.research.progress (0..1).
-// Belum ada riset aktif di Fase 1, jadi 0%.
 export function renderProgressPanel(state) {
     const r = state.research || {};
     const progress = typeof r.progress === 'number' ? r.progress : 0;
@@ -8,9 +6,7 @@ export function renderProgressPanel(state) {
     const percent = Math.round(clamped * 100);
 
     const hasActive = !!r.activeId;
-    const label = hasActive
-        ? 'Riset berjalan'
-        : 'Tidak ada riset aktif';
+    const label = hasActive ? 'Riset berjalan' : 'Tidak ada riset aktif';
 
     return `
         <div class="card">
