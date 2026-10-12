@@ -1,4 +1,5 @@
 // FILE: src/systems/ProductSystem.js
+// FIX: kamera jadi komponen OPSIONAL.
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
@@ -52,20 +53,10 @@ export class ProductSystem {
             if (typeof p.totalProduced !== 'number') p.totalProduced = p.stock;
             if (!Array.isArray(p.reviews)) p.reviews = [];
             if (!p.status) p.status = 'selling';
+            if (typeof p.baseCapacity !== 'number') p.baseCapacity = (p.config && p.config.productionQty) || 5000;
 
-            // Guard baseCapacity
-            if (typeof p.baseCapacity !== 'number') {
-                p.baseCapacity = (p.config && p.config.productionQty) || 5000;
-            }
-
-            // Guard autoRestock
             if (!p.autoRestock || typeof p.autoRestock !== 'object') {
-                p.autoRestock = {
-                    enabled: false,
-                    thresholdPercent: defThreshold,
-                    lastAutoOrderMinute: 0,
-                    lastWarnMinute: 0
-                };
+                p.autoRestock = { enabled: false, thresholdPercent: defThreshold, lastAutoOrderMinute: 0, lastWarnMinute: 0 };
             } else {
                 if (typeof p.autoRestock.enabled !== 'boolean') p.autoRestock.enabled = false;
                 if (typeof p.autoRestock.thresholdPercent !== 'number') p.autoRestock.thresholdPercent = defThreshold;
@@ -92,9 +83,12 @@ export class ProductSystem {
             connectivity: 0, quality: 0, design: 0, usability: 0
         };
         const map = {
-            display: config.displayId, camera: config.cameraId,
-            battery: config.batteryId, chip: config.chipId,
-            network: config.networkId, body: config.bodyId,
+            display: config.displayId,
+            camera: config.cameraId,
+            battery: config.batteryId,
+            chip: config.chipId,
+            network: config.networkId,
+            body: config.bodyId,
             form_factor: config.formFactorId
         };
         for (const k in map) {
@@ -184,16 +178,22 @@ export class ProductSystem {
 
     // ============================================================
     // KONFIRMASI DESAIN
+    // FIX: cameraId OPSIONAL — boleh null / 'none'
     // ============================================================
     confirmDesign(config) {
         const data = this.state.data;
         if (data.products.development) return { ok: false, reason: 'Ada produk yang sedang dikembangkan.' };
 
-        const required = ['displayId', 'cameraId', 'batteryId', 'chipId', 'networkId', 'formFactorId', 'bodyId'];
+        // Normalisasi: 'none' → null
+        if (config.cameraId === 'none') config.cameraId = null;
+
+        // Required komponen (kamera TIDAK termasuk)
+        const required = ['displayId', 'batteryId', 'chipId', 'networkId', 'formFactorId', 'bodyId'];
         for (const k of required) {
             if (!config[k]) return { ok: false, reason: 'Komponen belum lengkap: ' + k };
         }
         if (!config.osOptionId) return { ok: false, reason: 'Pilih OS.' };
+
         const name = (config.name || '').trim();
         if (!name) return { ok: false, reason: 'Nama produk kosong.' };
         if (config.price < 1) return { ok: false, reason: 'Harga minimal $1.' };
@@ -326,7 +326,7 @@ export class ProductSystem {
             unitCost: d.unitCost,
             stock: cfg.productionQty,
             totalProduced: cfg.productionQty,
-            baseCapacity: cfg.productionQty,   // referensi untuk auto-restock
+            baseCapacity: cfg.productionQty,
             totalSold: 0,
             totalRevenue: 0,
             status: 'selling',
@@ -461,7 +461,7 @@ export class ProductSystem {
     }
 
     // ============================================================
-    // AUTO-RESTOCK (BARU)
+    // AUTO-RESTOCK
     // ============================================================
     _tickAutoRestock() {
         const data = this.state.data;
@@ -484,16 +484,10 @@ export class ProductSystem {
             const threshold = baseCapacity * thresholdPct;
             const maxStock = baseCapacity * maxMult;
 
-            // Stok masih cukup?
             if (p.stock > threshold) continue;
-
-            // Sudah mentok max stock?
             if (p.stock >= maxStock) continue;
-
-            // Cooldown?
             if ((now - (ar.lastAutoOrderMinute || 0)) < cooldownMs) continue;
 
-            // Hitung qty
             let neededQty = baseCapacity - p.stock;
             if (neededQty < minQty) neededQty = minQty;
             if (p.stock + neededQty > maxStock) neededQty = maxStock - p.stock;
@@ -501,7 +495,6 @@ export class ProductSystem {
 
             const totalCost = p.unitCost * neededQty + BALANCE.products.productionSetupCost;
 
-            // Uang tidak cukup?
             if (data.cash < totalCost) {
                 if ((now - (ar.lastWarnMinute || 0)) >= warnInterval) {
                     ToastService.warning('⚠ Auto-restock "' + p.name + '" gagal: butuh $' + totalCost.toLocaleString('en-US'));
@@ -512,7 +505,6 @@ export class ProductSystem {
                 continue;
             }
 
-            // Jalankan auto-restock
             this.state.setCash(data.cash - totalCost);
             p.stock += neededQty;
             p.totalProduced += neededQty;
@@ -523,12 +515,7 @@ export class ProductSystem {
             this.state.addLog(msg, LOG_TYPES.success);
             ToastService.success('🔄 ' + msg);
 
-            bus.emit('product:auto-restocked', {
-                productId: p.id,
-                name: p.name,
-                qty: neededQty,
-                cost: totalCost
-            });
+            bus.emit('product:auto-restocked', { productId: p.id, name: p.name, qty: neededQty, cost: totalCost });
         }
     }
 
@@ -777,7 +764,7 @@ export class ProductSystem {
             name: 'CheatPhone ' + Math.floor(Math.random() * 1000),
             formFactorId: pick('form_factor') || 'ff_candybar',
             displayId:    pick('display')     || 'scr_mono',
-            cameraId:     pick('camera')      || 'cam_vga',
+            cameraId:     pick('camera')      || null,
             batteryId:    pick('battery')     || 'bat_liion',
             chipId:       pick('chip')        || 'chip_single',
             networkId:    pick('network')     || 'net_gsm',
@@ -790,4 +777,4 @@ export class ProductSystem {
             productionQty: 10000
         };
     }
-            }
+    }
