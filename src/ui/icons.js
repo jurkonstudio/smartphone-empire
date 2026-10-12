@@ -21,6 +21,11 @@ const PATHS = {
 
 export function icon(name, size = 18, extraAttrs = '') {
   const d = PATHS[name];
-  if (!d) return '';
+  if (!d) {
+    if (typeof console !== 'undefined') {
+      console.warn(`[icon] Nama ikon tidak dikenal: "${name}"`);
+    }
+    return '';
+  }
   return `<svg class="icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${extraAttrs} aria-hidden="true">${d}</svg>`;
 }
