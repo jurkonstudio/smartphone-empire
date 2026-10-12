@@ -3,18 +3,19 @@
 // RISET CHIP — 52 node riset khusus chip.
 // 6 kategori: Design, Architecture, Process, Graphics/AI,
 // Power/Security, Fab & Business.
+// Icon kategori pakai string ID dari FeatureIcons.js (bukan emoji).
 //
 // Setiap node: id, category, name, description, cost, durationDays,
 //              prerequisites[], minYear, tier, unlock (data id).
 // ============================================================
 
 export const CHIP_RESEARCH_CATEGORIES = [
-    { id: 'design',       name: 'Desain',         icon: '📐' },
-    { id: 'architecture', name: 'Arsitektur',     icon: '🧩' },
-    { id: 'process',      name: 'Fabrikasi',      icon: '⚙️' },
-    { id: 'graphics',     name: 'Grafis & AI',    icon: '🤖' },
-    { id: 'power',        name: 'Daya & Keamanan',icon: '🔋' },
-    { id: 'business',     name: 'Fab & Bisnis',   icon: '🏭' }
+    { id: 'design',       name: 'Desain',         icon: 'palette' },
+    { id: 'architecture', name: 'Arsitektur',     icon: 'layout-grid' },
+    { id: 'process',      name: 'Fabrikasi',      icon: 'settings' },
+    { id: 'graphics',     name: 'Grafis & AI',    icon: 'brain' },
+    { id: 'power',        name: 'Daya & Keamanan',icon: 'battery' },
+    { id: 'business',     name: 'Fab & Bisnis',   icon: 'store' }
 ];
 
 export const CHIP_RESEARCH_NODES = [
@@ -431,4 +432,4 @@ export function getChipResearchByCategory(catId) {
 
 export function getChipResearchByTier(tier) {
     return CHIP_RESEARCH_NODES.filter(n => n.tier === tier);
-      }
+}
