@@ -1839,3 +1839,171 @@ body {
     .nav-btn .nav-ico { width: 20px; height: 20px; }
     .nav-btn .nav-label { font-size: 9px; }
 }
+/* ===================== ILLUSTRATIONS ===================== */
+
+.illus-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 8px;
+    animation: illusFadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.illus-wrap svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+}
+
+@keyframes illusFadeIn {
+    from { opacity: 0; transform: translateY(8px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ===================== AVATARS ===================== */
+
+.avatar-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    transition: transform 0.15s;
+}
+.avatar-wrap:hover { transform: scale(1.05); }
+.avatar-wrap svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.logo-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 22%;
+    overflow: hidden;
+    box-shadow: 0 4px 14px var(--accent-glow);
+}
+
+/* ===================== MICRO-ANIMATIONS ===================== */
+
+/* Fade in up — untuk panel saat render */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.card, .kpi, .tech-node, .cand-card, .staff-row, .prod-card {
+    animation: fadeInUp 0.28s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+/* Stagger delay untuk kesan halus */
+.card:nth-child(2)  { animation-delay: 0.02s; }
+.card:nth-child(3)  { animation-delay: 0.04s; }
+.card:nth-child(4)  { animation-delay: 0.06s; }
+.card:nth-child(5)  { animation-delay: 0.08s; }
+
+/* Shimmer untuk progress bar aktif */
+@keyframes progressShimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+.progress-bar:not([style*="width:0%"]) {
+    background-size: 200% 100%;
+    background-image: linear-gradient(
+        90deg,
+        var(--accent-hover) 0%,
+        var(--accent) 40%,
+        var(--accent-hover) 60%,
+        var(--accent) 100%
+    );
+    animation: progressShimmer 2.4s linear infinite;
+}
+
+/* Pulse untuk dot status (viral, bug) */
+@keyframes dotPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.5; transform: scale(1.15); }
+}
+.quest-dot, .notif-island-dot, .staff-traits span {
+    animation: dotPulse 1.8s ease-in-out infinite;
+}
+
+/* Bounce untuk toast masuk */
+@keyframes bounceIn {
+    0%   { opacity: 0; transform: scale(0.9) translateY(-12px); }
+    60%  { opacity: 1; transform: scale(1.02) translateY(2px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Rotate subtle untuk icon aktif */
+@keyframes rotateSubtle {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+.nav-btn.active .nav-ico {
+    animation: rotateSubtle 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Glow pada KPI accent bar */
+@keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+    50%      { box-shadow: 0 0 12px 2px var(--accent-glow); }
+}
+.kpi::before {
+    animation: glowPulse 3s ease-in-out infinite;
+}
+
+/* Breathing untuk loading spinner */
+@keyframes breathe {
+    0%, 100% { opacity: 0.4; transform: scale(0.95); }
+    50%      { opacity: 1; transform: scale(1.05); }
+}
+.loading-screen {
+    animation: breathe 2s ease-in-out infinite !important;
+}
+
+/* Hover lift untuk card interaktif */
+.tech-node:hover,
+.cand-card:hover,
+.prod-card:hover,
+.comp-card:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
+
+/* Tap feedback scale */
+.staff-row:active,
+.tech-node:active,
+.nav-btn:active {
+    transform: scale(0.98);
+}
+
+/* Number roll-in untuk KPI value */
+@keyframes numberIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.kpi-value, .header-cash {
+    animation: numberIn 0.4s ease-out;
+}
+
+/* Subtle rotation untuk modal entry */
+.modal-card {
+    animation: modalSlideIn 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+@keyframes modalSlideIn {
+    from { transform: translateY(24px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+}
+
+/* Dim semua animasi untuk aksesibilitas (users yang tidak suka motion) */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
