@@ -1,19 +1,18 @@
+// FILE: src/ui/panels/DashboardPanel.js
 import { renderKpiCards } from './KpiCards.js';
-import { renderProgressPanel } from './ProgressPanel.js';
-import { renderActivityPanel } from './ActivityPanel.js';
-import { renderTimelinePanel } from './TimelinePanel.js';
-import { renderCloudStatus } from './CloudStatus.js';
 import { renderTimePanel } from './TimePanel.js';
+import { renderProgressPanel } from './ProgressPanel.js';
+import { renderTimelinePanel } from './TimelinePanel.js';
+import { renderActivityPanel } from './ActivityPanel.js';
+import { renderCloudStatus } from './CloudStatus.js';
 
 export function renderDashboard(state, timeSnapshot) {
     return `
-        <div style="max-width:800px; margin:0 auto; padding:10px;">
-            ${renderTimePanel(timeSnapshot)}
-            ${renderKpiCards(state)}
-            ${renderProgressPanel()}
-            ${renderTimelinePanel()}
-            ${renderActivityPanel()}
-            ${renderCloudStatus()}
-        </div>
+        ${renderKpiCards(state, timeSnapshot)}
+        ${renderTimePanel(timeSnapshot)}
+        ${renderProgressPanel(state)}
+        ${renderTimelinePanel(state, timeSnapshot)}
+        ${renderActivityPanel(state)}
+        ${renderCloudStatus()}
     `;
 }
