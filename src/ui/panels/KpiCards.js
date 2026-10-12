@@ -1,13 +1,25 @@
-export function renderKpiCards(data) {
+// FILE: src/ui/panels/KpiCards.js
+// Kartu KPI: uang tunai & hari berjalan.
+// FIX: sumber "Hari Ke-" dari timeSnapshot.currentDay (bukan state.day yang tidak ada).
+export function renderKpiCards(state, timeSnapshot) {
+    const day = timeSnapshot.currentDay;
+    const month = timeSnapshot.currentMonth;
+    const year = timeSnapshot.currentYear;
+
     return `
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
-            <div style="background:#222; padding:15px; border-radius:8px; border-left: 4px solid #4CAF50;">
-                <div style="font-size:12px; color:#aaa; margin-bottom:5px;">Uang Tunai</div>
-                <div style="font-size:18px; font-weight:bold; color:#4CAF50;">$${data.cash.toLocaleString()}</div>
+        <div class="kpi-grid">
+            <div class="kpi">
+                <div class="kpi-label">Uang Tunai</div>
+                <div class="kpi-value" data-cash style="color:var(--accent);">
+                    $${state.cash.toLocaleString('en-US')}
+                </div>
             </div>
-            <div style="background:#222; padding:15px; border-radius:8px; border-left: 4px solid #2196F3;">
-                <div style="font-size:12px; color:#aaa; margin-bottom:5px;">Hari Ke-</div>
-                <div style="font-size:18px; font-weight:bold; color:#fff;">${data.day}</div>
+            <div class="kpi blue">
+                <div class="kpi-label">Hari Ke-</div>
+                <div class="kpi-value">${day}</div>
+                <div style="font-size:11px;color:var(--text-mute);margin-top:2px;">
+                    Bulan ${month} • Tahun ${year}
+                </div>
             </div>
         </div>
     `;
