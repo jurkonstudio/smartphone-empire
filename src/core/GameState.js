@@ -5,7 +5,7 @@ import { DIFFICULTY, LOG_TYPES } from '../config/constants.js';
 import { bus } from './EventBus.js';
 import { generateRandomName, rollTraits } from '../data/staff.data.js';
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 function createInitialState(difficulty = DIFFICULTY.normal) {
     const startingCash = BALANCE.startingCash[difficulty] ?? BALANCE.startingCash.normal;
@@ -35,20 +35,10 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             lastProcessed: null
         },
 
-        // Counter agregat — turunan dari state.staff (untuk fallback/perf)
         team: { engineers: 0, designers: 0, marketers: 0 },
-
-        // Individu staff
         staff: [],
-
-        // Pool kandidat rekrut
         candidates: [],
-
-        // Metadata pool
-        candidatePool: {
-            lastRefreshMinute: 0,
-            lastRefreshMonth: null
-        },
+        candidatePool: { lastRefreshMinute: 0, lastRefreshMonth: null },
 
         research: {
             active: [],
@@ -74,6 +64,26 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             designing: null,
             development: null,
             nextProductId: 1
+        },
+
+        // ===== CHIP (BARU) =====
+        chips: {
+            catalog: [],       // Chip yang sudah selesai dirancang
+            designing: null,   // Chip yang sedang didesain
+            nextChipId: 1
+        },
+
+        // ===== FAB (BARU) =====
+        fab: {
+            built: false,
+            level: 0,          // 0=none, 1=small, 2=medium, 3=large, 4=mega
+            builtAtMinute: 0,
+            upgrade: null,     // { targetLevel, progressDays, durationDays, cost, startedAtMinute, lastProcessedMinute }
+            producing: null,   // { chipId, qty, progressUnits, totalUnits, startedAtMinute, lastProcessedMinute }
+            inventory: 0,      // Chip siap pakai di fab (dari produksi internal)
+            history: [],       // Riwayat produksi
+            totalProduced: 0,
+            lastYieldRate: 1.0
         },
 
         marketing: { activeCampaigns: [] },
@@ -132,18 +142,22 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
     };
 }
 
-// ---------- Migrasi v2 → v3 (counter → staff individu) ----------
+function migrateV1toV2(oldData) {
+    const fresh = createInitialState(DIFFICULTY.normal);
+    if (!oldData || typeof oldData !== 'object') return fresh;
+    if (typeof oldData.companyName === 'string') fresh.companyName = oldData.companyName;
+    if (typeof oldData.cash === 'number') fresh.cash = oldData.cash;
+    if (oldData.time && typeof oldData.time === 'object') fresh.time = { ...fresh.time, ...oldData.time };
+    if (typeof oldData.isPaused === 'boolean') fresh.isPaused = oldData.isPaused;
+    if (typeof oldData.gameSpeed === 'number') fresh.gameSpeed = oldData.gameSpeed;
+    return fresh;
+}
+
 function migrateV2toV3(oldData) {
     const fresh = createInitialState(DIFFICULTY.normal);
     if (!oldData || typeof oldData !== 'object') return fresh;
-
-    // Salin semua field lama
     Object.assign(fresh, oldData);
-
-    // Pastikan schema version baru
-    fresh.schemaVersion = SCHEMA_VERSION;
-
-    // Jika ada counter team tapi tidak ada staff → generate staff retroaktif
+    fresh.schemaVersion = 3;
     const t = oldData.team || { engineers: 0, designers: 0, marketers: 0 };
     if (!Array.isArray(oldData.staff) || oldData.staff.length === 0) {
         const generated = [];
@@ -156,12 +170,10 @@ function migrateV2toV3(oldData) {
         });
         fresh.staff = generated;
     }
-
     if (!Array.isArray(fresh.candidates)) fresh.candidates = [];
     if (!fresh.candidatePool || typeof fresh.candidatePool !== 'object') {
         fresh.candidatePool = { lastRefreshMinute: 0, lastRefreshMonth: null };
     }
-
     return fresh;
 }
 
@@ -179,11 +191,7 @@ function _makeStaffEntry(role, skill, idNum, timeObj) {
         morale: (BALANCE.team && BALANCE.team.moraleStart) || 75,
         traits: traitList,
         skillProgress: 0,
-        hireDate: timeObj ? {
-            year: timeObj.currentYear,
-            month: timeObj.currentMonth,
-            day: timeObj.currentDay
-        } : { year: 2000, month: 1, day: 1 },
+        hireDate: timeObj ? { year: timeObj.currentYear, month: timeObj.currentMonth, day: timeObj.currentDay } : { year: 2000, month: 1, day: 1 },
         hireGameMinute: timeObj ? (timeObj.elapsedGameMinutes || 0) : 0
     };
 }
@@ -232,14 +240,13 @@ class GameState {
         this.setCash(this.data.cash + delta);
     }
 
-    // ============== TIM (counter) ==============
+    // ============== TIM ==============
     setTeam(team) {
         this.data.team = { ...this.data.team, ...team };
         bus.emit('team:changed', this.data.team);
         bus.emit('state:changed', this.data);
     }
 
-    // Recompute counter dari state.staff
     syncTeamCounters() {
         const counts = { engineers: 0, designers: 0, marketers: 0 };
         (this.data.staff || []).forEach(s => {
@@ -253,12 +260,10 @@ class GameState {
         return counts;
     }
 
-    // Total gaji bulanan dari staff
     getMonthlySalary() {
         if (Array.isArray(this.data.staff) && this.data.staff.length > 0) {
             return (this.data.staff || []).reduce((sum, s) => sum + (s.salary || 0), 0);
         }
-        // Fallback: counter × gaji dasar (untuk save lama)
         const t = this.data.team;
         const s = BALANCE.salary;
         return (t.engineers * s.engineer) + (t.designers * s.designer) + (t.marketers * s.marketer);
@@ -273,19 +278,15 @@ class GameState {
             year: t.currentYear,
             month: t.currentMonth,
             day: t.currentDay,
-            text,
-            type
+            text, type
         };
         this.data.log.unshift(entry);
-        if (this.data.log.length > BALANCE.maxLogEntries) {
-            this.data.log.length = BALANCE.maxLogEntries;
-        }
+        if (this.data.log.length > BALANCE.maxLogEntries) this.data.log.length = BALANCE.maxLogEntries;
         bus.emit('state:log-changed', { entry });
         bus.emit('state:changed', this.data);
         return entry;
     }
 
-    // ============== MILESTONE ==============
     addMilestone(id, text) {
         if (this.data.milestones.some(m => m.id === id)) return false;
         const t = this.data.time;
@@ -297,7 +298,6 @@ class GameState {
         return true;
     }
 
-    // ============== TIPS ==============
     hasSeenTip(id) { return this.data.seenTips.includes(id); }
     markTipSeen(id) {
         if (this.hasSeenTip(id)) return false;
@@ -307,36 +307,29 @@ class GameState {
         return true;
     }
 
-    // ============== REPUTASI ==============
     setReputation(value) {
         const clamped = Math.max(BALANCE.market.minReputation, Math.min(BALANCE.market.maxReputation, value));
         this.data.market.reputation = clamped;
         bus.emit('state:changed', this.data);
     }
-    addReputation(delta) {
-        this.setReputation((this.data.market.reputation || 0) + delta);
-    }
+    addReputation(delta) { this.setReputation((this.data.market.reputation || 0) + delta); }
 
-    // ============== SENTIMEN ==============
     setSentiment(value) {
         const clamped = Math.max(0, Math.min(100, Math.round(value)));
         this.data.feedback.sentiment = clamped;
         bus.emit('feedback:sentiment-changed', { value: clamped });
         bus.emit('state:changed', this.data);
     }
-    addSentiment(delta) {
-        this.setSentiment((this.data.feedback.sentiment || 50) + delta);
-    }
+    addSentiment(delta) { this.setSentiment((this.data.feedback.sentiment || 50) + delta); }
 
     // ============== SERIALISASI ==============
     serialize() { return JSON.parse(JSON.stringify(this.data)); }
 
     hydrate(data) {
         if (!data || typeof data !== 'object') return false;
-
         let incoming = data;
 
-        // Migrasi
+        // Migrasi berantai
         if (!incoming.schemaVersion || incoming.schemaVersion < 2) {
             const fresh = createInitialState(DIFFICULTY.normal);
             if (typeof incoming.companyName === 'string') fresh.companyName = incoming.companyName;
@@ -345,15 +338,14 @@ class GameState {
             if (typeof incoming.isPaused === 'boolean') fresh.isPaused = incoming.isPaused;
             if (typeof incoming.gameSpeed === 'number') fresh.gameSpeed = incoming.gameSpeed;
             incoming = fresh;
-        } else if (incoming.schemaVersion < 3) {
-            incoming = migrateV2toV3(incoming);
         }
+        if (incoming.schemaVersion < 3) incoming = migrateV2toV3(incoming);
 
+        // v3 → v4: chips & fab otomatis punya default dari base
         const base = createInitialState(incoming.difficulty || DIFFICULTY.normal);
         this.data = {
             ...base,
             ...incoming,
-
             time:     { ...base.time,     ...(incoming.time || {}) },
             finance:  { ...base.finance,  ...(incoming.finance || {}) },
             team:     { ...base.team,     ...(incoming.team || {}) },
@@ -363,98 +355,65 @@ class GameState {
             research: { ...base.research, ...(incoming.research || {}) },
 
             os: {
-                ...base.os,
-                ...(incoming.os || {}),
+                ...base.os, ...(incoming.os || {}),
                 apps: { ...base.os.apps, ...((incoming.os && incoming.os.apps) || {}) }
             },
-
             products: {
-                ...base.products,
-                ...(incoming.products || {}),
-                catalog: Array.isArray(incoming.products && incoming.products.catalog)
-                    ? incoming.products.catalog : []
+                ...base.products, ...(incoming.products || {}),
+                catalog: Array.isArray(incoming.products && incoming.products.catalog) ? incoming.products.catalog : []
             },
-
+            // ===== CHIP & FAB (BARU) =====
+            chips: {
+                ...base.chips, ...(incoming.chips || {}),
+                catalog: Array.isArray(incoming.chips && incoming.chips.catalog) ? incoming.chips.catalog : []
+            },
+            fab: {
+                ...base.fab, ...(incoming.fab || {}),
+                history: Array.isArray(incoming.fab && incoming.fab.history) ? incoming.fab.history : []
+            },
             marketing: {
-                ...base.marketing,
-                ...(incoming.marketing || {}),
-                activeCampaigns: Array.isArray(incoming.marketing && incoming.marketing.activeCampaigns)
-                    ? incoming.marketing.activeCampaigns : []
+                ...base.marketing, ...(incoming.marketing || {}),
+                activeCampaigns: Array.isArray(incoming.marketing && incoming.marketing.activeCampaigns) ? incoming.marketing.activeCampaigns : []
             },
-
             reviews: {
-                ...base.reviews,
-                ...(incoming.reviews || {}),
-                feed: Array.isArray(incoming.reviews && incoming.reviews.feed)
-                    ? incoming.reviews.feed : []
+                ...base.reviews, ...(incoming.reviews || {}),
+                feed: Array.isArray(incoming.reviews && incoming.reviews.feed) ? incoming.reviews.feed : []
             },
-
             market: {
-                ...base.market,
-                ...(incoming.market || {}),
-                shareHistory: Array.isArray(incoming.market && incoming.market.shareHistory)
-                    ? incoming.market.shareHistory : [],
-                revenueHistory: Array.isArray(incoming.market && incoming.market.revenueHistory)
-                    ? incoming.market.revenueHistory : []
+                ...base.market, ...(incoming.market || {}),
+                shareHistory: Array.isArray(incoming.market && incoming.market.shareHistory) ? incoming.market.shareHistory : [],
+                revenueHistory: Array.isArray(incoming.market && incoming.market.revenueHistory) ? incoming.market.revenueHistory : []
             },
-
             competitorState: {
-                ...base.competitorState,
-                ...(incoming.competitorState || {}),
-                entities: {
-                    ...base.competitorState.entities,
-                    ...((incoming.competitorState && incoming.competitorState.entities) || {})
-                }
+                ...base.competitorState, ...(incoming.competitorState || {}),
+                entities: { ...base.competitorState.entities, ...((incoming.competitorState && incoming.competitorState.entities) || {}) }
             },
-
             feedback: {
-                ...base.feedback,
-                ...(incoming.feedback || {}),
-                aspectSentiment: {
-                    ...base.feedback.aspectSentiment,
-                    ...((incoming.feedback && incoming.feedback.aspectSentiment) || {})
-                },
-                feed: Array.isArray(incoming.feedback && incoming.feedback.feed)
-                    ? incoming.feedback.feed : [],
-                activeViral: Array.isArray(incoming.feedback && incoming.feedback.activeViral)
-                    ? incoming.feedback.activeViral : [],
-                viralHistory: Array.isArray(incoming.feedback && incoming.feedback.viralHistory)
-                    ? incoming.feedback.viralHistory : [],
-                suggestions: Array.isArray(incoming.feedback && incoming.feedback.suggestions)
-                    ? incoming.feedback.suggestions : [],
-                perProductSatisfaction: {
-                    ...((incoming.feedback && incoming.feedback.perProductSatisfaction) || {})
-                },
-                competitorSentiment: {
-                    ...((incoming.feedback && incoming.feedback.competitorSentiment) || {})
-                }
+                ...base.feedback, ...(incoming.feedback || {}),
+                aspectSentiment: { ...base.feedback.aspectSentiment, ...((incoming.feedback && incoming.feedback.aspectSentiment) || {}) },
+                feed: Array.isArray(incoming.feedback && incoming.feedback.feed) ? incoming.feedback.feed : [],
+                activeViral: Array.isArray(incoming.feedback && incoming.feedback.activeViral) ? incoming.feedback.activeViral : [],
+                viralHistory: Array.isArray(incoming.feedback && incoming.feedback.viralHistory) ? incoming.feedback.viralHistory : [],
+                suggestions: Array.isArray(incoming.feedback && incoming.feedback.suggestions) ? incoming.feedback.suggestions : [],
+                perProductSatisfaction: { ...((incoming.feedback && incoming.feedback.perProductSatisfaction) || {}) },
+                competitorSentiment: { ...((incoming.feedback && incoming.feedback.competitorSentiment) || {}) }
             },
-
             events:   { ...base.events,   ...(incoming.events || {}) },
             quests:   { ...base.quests,   ...(incoming.quests || {}) },
             tutorial: { ...base.tutorial, ...(incoming.tutorial || {}) },
             settings: { ...base.settings, ...(incoming.settings || {}) }
         };
 
-        // Guard
-        if (typeof this.data.research.totalCompleted !== 'number') {
-            this.data.research.totalCompleted = this.data.research.completed.length;
-        }
-        if (!this.data.market.trends) {
-            this.data.market.trends = { ...BALANCE.market.trendsByEra.feature_phone };
-        }
-        if (typeof this.data.feedback.sentiment !== 'number') {
-            this.data.feedback.sentiment = (BALANCE.feedback && BALANCE.feedback.initialSentiment) || 50;
-        }
+        if (typeof this.data.research.totalCompleted !== 'number') this.data.research.totalCompleted = this.data.research.completed.length;
+        if (!this.data.market.trends) this.data.market.trends = { ...BALANCE.market.trendsByEra.feature_phone };
+        if (typeof this.data.feedback.sentiment !== 'number') this.data.feedback.sentiment = (BALANCE.feedback && BALANCE.feedback.initialSentiment) || 50;
 
-        // Pastikan staff punya field default
         this.data.staff.forEach(s => {
             if (typeof s.skillProgress !== 'number') s.skillProgress = 0;
             if (typeof s.morale !== 'number') s.morale = 75;
             if (!Array.isArray(s.traits)) s.traits = [];
         });
 
-        // Sync counter dari staff jika ada
         if (this.data.staff.length > 0) this.syncTeamCounters();
 
         bus.emit('state:hydrated', this.data);
