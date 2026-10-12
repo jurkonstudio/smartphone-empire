@@ -20,6 +20,7 @@ import { EraSystem } from './systems/EraSystem.js';
 import { TeamSystem } from './systems/TeamSystem.js';
 import { ChipSystem } from './systems/ChipSystem.js';
 import { FabSystem } from './systems/FabSystem.js';
+import { NewsSystem } from './systems/NewsSystem.js';
 import { renderHeader } from './ui/layout/Header.js';
 import { renderMobileNav } from './ui/layout/MobileNav.js';
 import { renderDashboard } from './ui/panels/DashboardPanel.js';
@@ -45,6 +46,8 @@ import { renderTeamPanel } from './ui/panels/TeamPanel.js';
 import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
 import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
+import { openNewsArticleModal } from './ui/panels/NewsArticleModal.js';
+import { handleNewsListClick } from './ui/panels/NewsListPanel.js';
 import { renderChipMockup } from './ui/phone/ChipMockup.js';
 import { renderChipRadarChart } from './ui/charts/ChipRadarChart.js';
 import * as marketingModule from './data/marketing.data.js';
@@ -90,7 +93,6 @@ var els = {
 function getTime() { return timeSystem.snapshot(); }
 function hideLoading() { if (els.loading) els.loading.style.display = 'none'; }
 
-// ============ RENDER ============
 function renderHeaderOnly() {
     if (!els.header) return;
     els.header.innerHTML = renderHeader({ state: state.get(), timeSnapshot: getTime(), warning: _burnWarn });
@@ -146,7 +148,7 @@ function updateDashboardLive() {
     var y = document.querySelector('[data-kpi-year]'); if (y) y.textContent = t.currentYear;
 }
 
-// ============ ANIMASI UANG ============
+// ============ CASH ANIMATION ============
 var _cashRaf = null;
 function animateCash(from, to) {
     if (_cashRaf) { cancelAnimationFrame(_cashRaf); _cashRaf = null; }
@@ -164,7 +166,7 @@ function animateCash(from, to) {
     _cashRaf = requestAnimationFrame(step);
 }
 
-// ============ NAVIGASI ============
+// ============ NAV ============
 function navigate(id) {
     if (id === activeView) return;
     activeView = id;
@@ -185,10 +187,9 @@ function vibrate(ms) {
     if (navigator && typeof navigator.vibrate === 'function') { try { navigator.vibrate(ms); } catch (e) {} }
 }
 
-// ============ EVENT DELEGATION ============
+// ============ CLICKS ============
 function bindGlobalClicks() {
     document.body.addEventListener('click', function (e) {
-        // AUTO-RESTOCK
         var autoToggle = e.target.closest('[data-auto-toggle]');
         if (autoToggle) {
             e.preventDefault(); vibrate(8);
@@ -199,7 +200,6 @@ function bindGlobalClicks() {
         var autoThresh = e.target.closest('[data-auto-threshold]');
         if (autoThresh) { e.preventDefault(); vibrate(6); products.setAutoRestockThreshold(autoThresh.dataset.prodId, parseInt(autoThresh.dataset.autoThreshold, 10) || 20); renderAll(); return; }
 
-        // CHIP & FAB
         var chipAction = e.target.closest('[data-chip-action]');
         if (chipAction) {
             e.preventDefault(); vibrate(8);
@@ -236,11 +236,12 @@ function bindGlobalClicks() {
             return;
         }
 
-        // NAV
+        // NEWS
+        if (handleNewsListClick(e)) return;
+
         var navBtn = e.target.closest('[data-nav]');
         if (navBtn) { e.preventDefault(); vibrate(8); navigate(navBtn.dataset.nav); return; }
 
-        // TIME
         var timeBtn = e.target.closest('[data-time-action]');
         if (timeBtn) {
             e.preventDefault(); vibrate(12);
@@ -250,7 +251,6 @@ function bindGlobalClicks() {
             return;
         }
 
-        // TEAM
         var teamSub = e.target.closest('[data-team-subtab]');
         if (teamSub) { e.preventDefault(); activeTeamSubtab = teamSub.dataset.teamSubtab; renderView(); return; }
         var teamAction = e.target.closest('[data-team-action]');
@@ -271,7 +271,6 @@ function bindGlobalClicks() {
             if (a === 'train') { var res = teamSystem.trainStaff(sid); if (!res.ok) ToastService.error(res.reason); else { Modal.close('staff-detail', true); openStaffDetailModal({ staffId: sid }); renderAll(); } return; }
         }
 
-        // RISET
         var subBtn = e.target.closest('[data-subtab]');
         if (subBtn) { e.preventDefault(); activeSubtab = subBtn.dataset.subtab; renderView(); return; }
         var chipFilter = e.target.closest('[data-filter-cat]');
@@ -287,7 +286,6 @@ function bindGlobalClicks() {
             return;
         }
 
-        // OS
         var osAction = e.target.closest('[data-os-action]');
         if (osAction) {
             e.preventDefault();
@@ -302,7 +300,6 @@ function bindGlobalClicks() {
             if (a === 'feature-detail') { openFeatureDetailModal({ osSystem: os, featureId: osAction.dataset.featureId }); return; }
         }
 
-        // PRODUK
         var prodSub = e.target.closest('[data-prod-subtab]');
         if (prodSub) { e.preventDefault(); activeProdSubtab = prodSub.dataset.prodSubtab; renderView(); return; }
         var prodAction = e.target.closest('[data-prod-action]');
@@ -338,7 +335,6 @@ function bindGlobalClicks() {
             return;
         }
 
-        // MARKET
         var mktSub = e.target.closest('[data-market-subtab]');
         if (mktSub) { e.preventDefault(); activeMarketSubtab = mktSub.dataset.marketSubtab; renderView(); return; }
         var compCard = e.target.closest('[data-competitor-detail]');
@@ -368,7 +364,7 @@ function bindGlobalClicks() {
     });
 }
 
-// ============ CHIP DETAIL MODAL ============
+// ============ CHIP DETAIL ============
 function _openChipDetail(chip) {
     if (!chip) return;
     var lifecycle = chipSystem.getChipLifecycle ? chipSystem.getChipLifecycle(chip) : null;
@@ -401,7 +397,7 @@ function _openChipDetail(chip) {
     Modal.open('chip-detail', html);
 }
 
-// ============ PROGRESS EVENTS ============
+// ============ PROGRESS ============
 function bindProgressEvents() {
     bus.on('research:progress', function (data) {
         if (activeView !== 'research' || activeSubtab !== 'tech') return;
@@ -474,6 +470,26 @@ function bindStateEvents() {
     bus.on('team:changed', function () { if (activeView === 'dashboard' || activeView === 'team') renderView({ soft: true }); });
     bus.on('team:recruited', function () { if (activeView === 'team') renderView({ soft: true }); });
     bus.on('team:fired', function () { if (activeView === 'team') renderView({ soft: true }); });
+
+    // NEWS
+    bus.on('news:published', function (data) {
+        try {
+            var article = data && data.article;
+            if (!article) return;
+            var shortMsg = article.source + ': ' + article.headline;
+            if (shortMsg.length > 70) shortMsg = shortMsg.slice(0, 67) + '...';
+            ToastService.show(shortMsg, 'news', 6500, {
+                action: {
+                    label: 'Baca',
+                    onClick: function () { openNewsArticleModal(article); }
+                }
+            });
+            if (activeView === 'dashboard') renderView({ soft: true });
+            vibrate(15);
+        } catch (err) {
+            console.error('[main] news:published handler error:', err);
+        }
+    });
 }
 
 // ============ BOOT ============
@@ -517,11 +533,12 @@ async function boot() {
         opinion.start();
         chipSystem.start();
         fabSystem.start();
+        NewsSystem.start();
 
         window.__game = {
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
             research: research, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
-            chips: chipSystem, fab: fabSystem, ThemeService: ThemeService,
+            chips: chipSystem, fab: fabSystem, news: NewsSystem, ThemeService: ThemeService,
             SaveService: SaveService, ToastService: ToastService, Modal: Modal, navigate: navigate, render: renderAll,
             modules: { marketing: marketingModule, feedbackData: feedbackModule },
             cheat: {
@@ -544,7 +561,8 @@ async function boot() {
                 unlockChipDesign: function () { ['chip_design_tool','chip_arch_arm_a','node_180','node_130','node_90','chip_isp_basic','chip_dvfs','fab_construction'].forEach(function (id) { research.completeResearch(id); }); return { ok: true }; },
                 quickDesignChip: function (cfg) { return chipSystem.quickDesignChip(cfg); },
                 buildFab: function (lvl) { return fabSystem.quickBuildFab(lvl || 1); },
-                produceChips: function (chipId, qty) { var id = chipId || (state.get().chips.catalog[0] && state.get().chips.catalog[0].id); return fabSystem.orderProduction(id, qty || 1000); }
+                produceChips: function (chipId, qty) { var id = chipId || (state.get().chips.catalog[0] && state.get().chips.catalog[0].id); return fabSystem.orderProduction(id, qty || 1000); },
+                testNews: function () { var a = NewsSystem.generateTestArticle(); if (a) bus.emit('news:published', { article: a }); return a; }
             }
         };
 
@@ -568,7 +586,6 @@ async function boot() {
             animateCash(0, cash);
         }
 
-        // ============ INIT SWIPE ============
         initSwipe({
             getView: function () { return activeView; },
             getSubtab: function () {
