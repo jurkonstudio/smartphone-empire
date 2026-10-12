@@ -5,20 +5,78 @@ import { ToastService } from '../../core/ToastService.js';
 import { bus } from '../../core/EventBus.js';
 import { Modal } from '../modal.js';
 import { BALANCE } from '../../data/balance.data.js';
+import { ThemeService } from '../../core/ThemeService.js';
+import { THEMES, ACCENTS } from '../../data/theme.data.js';
+
+function escapeHtml(s) {
+    if (typeof s !== 'string') return '';
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
 
 export function renderSettingsPanel() {
     const s = state.get();
     const loans = BALANCE.loans;
+    const currentTheme  = ThemeService.getTheme();
+    const currentAccent = ThemeService.getAccent();
+
     return `
         <div class="card">
-            <div class="card-title">Perusahaan</div>
-            <div class="sum-row"><span>Nama</span><b>${s.companyName}</b></div>
-            <div class="sum-row"><span>Kesulitan</span><b>${s.difficulty}</b></div>
+            <div class="card-title">🎨 Tampilan</div>
+
+            <div class="settings-section">
+                <div class="settings-label">Tema</div>
+                <div class="theme-picker">
+                    ${THEMES.map(t => `
+                        <button class="theme-option ${currentTheme === t.id ? 'active' : ''}" data-theme-pick="${t.id}">
+                            <div class="theme-icon">${t.icon}</div>
+                            <div class="theme-info">
+                                <div class="theme-label">${escapeHtml(t.label)}</div>
+                                <div class="theme-desc">${escapeHtml(t.description)}</div>
+                            </div>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div class="settings-section" style="margin-top:16px;">
+                <div class="settings-label">Warna Aksen</div>
+                <div class="accent-picker">
+                    ${ACCENTS.map(a => `
+                        <button class="accent-dot ${currentAccent === a.id ? 'active' : ''}"
+                                data-accent-pick="${a.id}"
+                                style="background:${a.hex};"
+                                aria-label="${escapeHtml(a.label)}"
+                                title="${escapeHtml(a.label)}"></button>
+                    `).join('')}
+                </div>
+                <div class="settings-hint">Pilih warna utama tombol &amp; highlight.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🏢 Perusahaan</div>
+            <div class="sum-row"><span>Nama</span><b>${escapeHtml(s.companyName)}</b></div>
+            <div class="sum-row"><span>Kesulitan</span><b>${escapeHtml(s.difficulty)}</b></div>
             <div class="sum-row"><span>Uang</span><b>$${s.cash.toLocaleString('en-US')}</b></div>
         </div>
 
         <div class="card">
-            <div class="card-title">Penyimpanan</div>
+            <div class="card-title">☁️ Cloud Sync</div>
+            <div class="sum-row">
+                <span>Status</span>
+                <b style="color:var(--text-tertiary);">Belum terhubung</b>
+            </div>
+            <div class="settings-hint" style="margin-bottom:10px;">
+                Cloud sync akan hadir di update berikutnya. Save lokal Anda tetap aman.
+            </div>
+            <button class="btn-secondary" disabled style="width:100%;opacity:0.55;cursor:not-allowed;">
+                Atur Cloud (Coming Soon)
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">💾 Penyimpanan</div>
             <div class="settings-actions">
                 <button class="btn-secondary" data-set="save">💾 Simpan Manual</button>
                 <button class="btn-secondary" data-set="load">📂 Muat Save</button>
@@ -29,24 +87,22 @@ export function renderSettingsPanel() {
         </div>
 
         <div class="card">
-            <div class="card-title">Pinjaman</div>
-            ${loans.map(function (l) {
-                return `
-                    <div class="sum-row">
-                        <span>${l.label} ($${l.principal.toLocaleString('en-US')}, ${Math.round(l.monthlyInterestRate * 100)}%/bln)</span>
-                        <button class="btn-secondary" data-loan="${l.id}">Ambil</button>
-                    </div>
-                `;
-            }).join('')}
+            <div class="card-title">🏦 Pinjaman</div>
+            ${loans.map(l => `
+                <div class="sum-row">
+                    <span>${escapeHtml(l.label)} — $${l.principal.toLocaleString('en-US')} (${Math.round(l.monthlyInterestRate * 100)}%/bln)</span>
+                    <button class="btn-secondary" data-loan="${l.id}" style="min-height:36px;padding:6px 12px;font-size:12px;">Ambil</button>
+                </div>
+            `).join('')}
             ${s.finance.loans.length
-                ? '<div style="margin-top:10px;font-size:12px;color:var(--warn);">Pinjaman aktif: ' +
-                  s.finance.loans.map(function (l) { return l.label; }).join(', ') +
-                  '</div>'
+                ? `<div style="margin-top:10px;font-size:12px;color:var(--warn);">
+                        Pinjaman aktif: ${s.finance.loans.map(l => escapeHtml(l.label)).join(', ')}
+                   </div>`
                 : ''}
         </div>
 
         <div class="card">
-            <div class="card-title">Preferensi</div>
+            <div class="card-title">⚙️ Preferensi</div>
             <div class="sum-row">
                 <span>Getar</span>
                 <button class="btn-toggle ${s.settings.vibrate ? 'on' : ''}" data-toggle="vibrate">
@@ -62,7 +118,7 @@ export function renderSettingsPanel() {
         </div>
 
         <div class="card">
-            <div class="card-title">Bantuan</div>
+            <div class="card-title">❓ Bantuan</div>
             <div class="settings-actions">
                 <button class="btn-secondary" data-set="guide">📖 Panduan</button>
                 <button class="btn-secondary" data-set="tutorial">🎓 Ulangi Tutorial</button>
@@ -76,7 +132,26 @@ export function bindSettingsActions(root) {
         const setBtn = e.target.closest('[data-set]');
         const togBtn = e.target.closest('[data-toggle]');
         const loanBtn = e.target.closest('[data-loan]');
+        const themeBtn = e.target.closest('[data-theme-pick]');
+        const accentBtn = e.target.closest('[data-accent-pick]');
 
+        if (themeBtn) {
+            e.preventDefault();
+            const id = themeBtn.dataset.themePick;
+            ThemeService.setTheme(id);
+            ToastService.info('Tema: ' + id);
+            // Re-render panel Setelan agar active state terupdate
+            window.__game.render();
+            return;
+        }
+        if (accentBtn) {
+            e.preventDefault();
+            const id = accentBtn.dataset.accentPick;
+            ThemeService.setAccent(id);
+            ToastService.info('Warna aksen diperbarui.');
+            window.__game.render();
+            return;
+        }
         if (setBtn) { _handleSet(setBtn.dataset.set); return; }
         if (togBtn) { _handleToggle(togBtn.dataset.toggle); return; }
         if (loanBtn) { bus.emit('settings:take-loan', { loanId: loanBtn.dataset.loan }); return; }
@@ -93,7 +168,7 @@ function _handleSet(action) {
         case 'export': _openExport(); break;
         case 'import': _openImport(); break;
         case 'reset':  _confirmReset(); break;
-        case 'guide':  bus.emit('view:changed', { id: 'guide' }); break;
+        case 'guide':  bus.emit('view:changed', { id: 'guide' }); window.__game.navigate('guide'); break;
         case 'tutorial': bus.emit('tutorial:restart'); break;
     }
 }
@@ -113,7 +188,7 @@ function _openExport() {
         <div class="modal-title">Export Save</div>
         <div class="modal-sub">Salin teks ini ke catatan HP-mu untuk backup.</div>
         <textarea class="field-textarea" readonly rows="10">${json}</textarea>
-        <button class="btn-secondary" data-modal-close style="margin-top:12px;">Tutup</button>
+        <button class="btn-secondary" data-modal-close style="margin-top:12px;width:100%;">Tutup</button>
     `;
     Modal.open('export', html);
 }
@@ -122,7 +197,7 @@ function _openImport() {
     const html = `
         <div class="modal-title">Import Save</div>
         <div class="modal-sub">Tempel JSON backup di bawah. Ini akan menimpa save saat ini.</div>
-        <textarea class="field-textarea" data-import-text rows="10" placeholder='{"version":2,"data":{...}}'></textarea>
+        <textarea class="field-textarea" data-import-text rows="10" placeholder='{"version":3,"data":{...}}'></textarea>
         <div style="display:flex;gap:8px;margin-top:12px;">
             <button class="btn-secondary" data-modal-close style="flex:1;">Batal</button>
             <button class="btn-primary" data-import-confirm style="flex:1;">Impor</button>
