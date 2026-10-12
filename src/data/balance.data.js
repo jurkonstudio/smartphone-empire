@@ -70,3 +70,54 @@ export const BALANCE = {
         first_product:        { cash: 5000, reputation: 3 }
     }
 };
+// ============================================================
+// RISET — ditambahkan pada Batch A
+// ============================================================
+research: {
+    // Slot paralel dasar + bonus dari engineer (di-cap di ResearchSystem)
+    baseSlots: 1,
+    perEngineerSlots: 0.5,        // tiap 2 engineer = +1 slot
+    maxSlots: 3,
+
+    // Kecepatan riset (hari game per hari nyata)
+    baseSpeed: 1.0,
+    perEngineerSpeed: 0.08,       // +8% kecepatan per engineer
+    maxSpeedMultiplier: 2.5,      // kecepatan maksimal 2.5x base
+
+    // Kebijakan refund saat batal
+    refundPercent: 0.5,           // 50% uang kembali, tidak ada refund waktu
+},
+
+// ============================================================
+// OS — ditambahkan pada Batch A
+// ============================================================
+os: {
+    // Batas fitur per versi (dipilih pemain di wizard)
+    baseFeatureSlots: 3,
+    perEngineerFeatureSlots: 0.33, // tiap 3 engineer = +1 fitur
+    maxFeatureSlots: 8,
+
+    // Kecepatan pengembangan versi OS
+    baseSpeed: 1.0,
+    perEngineerSpeed: 0.06,
+    maxSpeedMultiplier: 2.0,
+
+    // Bug rate
+    baseBugChancePerDay: 0.02,     // 2% dasar
+    // Peluang efektif per hari = baseBugChancePerDay * (100 - stability)/100
+
+    // Ekosistem aplikasi (developer pihak ketiga)
+    appGrowthPerMonth: 5,
+    appGrowthPerReputation: 0.5,
+    appGrowthPerStability: 0.1,
+    maxApps: 2000,
+
+    // Refund saat batal kembangkan versi
+    refundPercent: 0.5,
+
+    // Versi awal
+    initialVersion: 'v1.0',
+    // Pola penomoran: v1.0 -> v1.1 -> v1.2 -> v2.0 -> v2.1 ...
+    minorVersionMax: 9,
+    majorVersionStart: 1
+},
