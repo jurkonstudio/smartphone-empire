@@ -19,9 +19,9 @@ export const BALANCE = {
 
     // ---- Biaya tetap bulanan ----
     monthly: {
-        rentHQ: 5000,         // sewa kantor pusat
-        utilities: 500,        // listrik, internet, dll
-        baseAdmin: 300         // administrasi
+        rentHQ: 5000,
+        utilities: 500,
+        baseAdmin: 300
     },
 
     // ---- Gaji bulanan per role ----
@@ -46,7 +46,7 @@ export const BALANCE = {
     },
 
     // ---- Pajak ----
-    taxRate: 0.15, // dipakai jika difficultyMultiplier tidak menimpa
+    taxRate: 0.15,
 
     // ---- Pinjaman bank ----
     loans: [
@@ -57,67 +57,57 @@ export const BALANCE = {
 
     // ---- Game over ----
     gameOverNegativeMonths: 2,
-    burnRateWarnThreshold: 2, // beri peringatan jika cash < N bulan biaya
+    burnRateWarnThreshold: 2,
 
     // ---- Log ----
-    maxLogEntries: 100,       // simpan 100 terbaru
+    maxLogEntries: 100,
     maxMilestones: 200,
 
-    // ---- Quest awal (sebagian dikelola QuestSystem) ----
+    // ---- Quest awal ----
     questRewards: {
         first_start_research: { cash: 2000, reputation: 1 },
         first_recruit:        { cash: 1500, reputation: 0 },
         first_product:        { cash: 5000, reputation: 3 }
+    },
+
+    // ============================================================
+    // RISET — ditambahkan pada Batch A
+    // ============================================================
+    research: {
+        baseSlots: 1,
+        perEngineerSlots: 0.5,
+        maxSlots: 3,
+
+        baseSpeed: 1.0,
+        perEngineerSpeed: 0.08,
+        maxSpeedMultiplier: 2.5,
+
+        refundPercent: 0.5
+    },
+
+    // ============================================================
+    // OS — ditambahkan pada Batch A
+    // ============================================================
+    os: {
+        baseFeatureSlots: 3,
+        perEngineerFeatureSlots: 0.33,
+        maxFeatureSlots: 8,
+
+        baseSpeed: 1.0,
+        perEngineerSpeed: 0.06,
+        maxSpeedMultiplier: 2.0,
+
+        baseBugChancePerDay: 0.02,
+
+        appGrowthPerMonth: 5,
+        appGrowthPerReputation: 0.5,
+        appGrowthPerStability: 0.1,
+        maxApps: 2000,
+
+        refundPercent: 0.5,
+
+        initialVersion: 'v1.0',
+        minorVersionMax: 9,
+        majorVersionStart: 1
     }
 };
-// ============================================================
-// RISET — ditambahkan pada Batch A
-// ============================================================
-research: {
-    // Slot paralel dasar + bonus dari engineer (di-cap di ResearchSystem)
-    baseSlots: 1,
-    perEngineerSlots: 0.5,        // tiap 2 engineer = +1 slot
-    maxSlots: 3,
-
-    // Kecepatan riset (hari game per hari nyata)
-    baseSpeed: 1.0,
-    perEngineerSpeed: 0.08,       // +8% kecepatan per engineer
-    maxSpeedMultiplier: 2.5,      // kecepatan maksimal 2.5x base
-
-    // Kebijakan refund saat batal
-    refundPercent: 0.5,           // 50% uang kembali, tidak ada refund waktu
-},
-
-// ============================================================
-// OS — ditambahkan pada Batch A
-// ============================================================
-os: {
-    // Batas fitur per versi (dipilih pemain di wizard)
-    baseFeatureSlots: 3,
-    perEngineerFeatureSlots: 0.33, // tiap 3 engineer = +1 fitur
-    maxFeatureSlots: 8,
-
-    // Kecepatan pengembangan versi OS
-    baseSpeed: 1.0,
-    perEngineerSpeed: 0.06,
-    maxSpeedMultiplier: 2.0,
-
-    // Bug rate
-    baseBugChancePerDay: 0.02,     // 2% dasar
-    // Peluang efektif per hari = baseBugChancePerDay * (100 - stability)/100
-
-    // Ekosistem aplikasi (developer pihak ketiga)
-    appGrowthPerMonth: 5,
-    appGrowthPerReputation: 0.5,
-    appGrowthPerStability: 0.1,
-    maxApps: 2000,
-
-    // Refund saat batal kembangkan versi
-    refundPercent: 0.5,
-
-    // Versi awal
-    initialVersion: 'v1.0',
-    // Pola penomoran: v1.0 -> v1.1 -> v1.2 -> v2.0 -> v2.1 ...
-    minorVersionMax: 9,
-    majorVersionStart: 1
-},
