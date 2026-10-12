@@ -1,7 +1,13 @@
+// FILE: src/ui/panels/CloudStatus.js
+// Fase 1: fokus save lokal. Cloud sync masuk pada fase berikutnya.
 export function renderCloudStatus() {
     return `
-        <div style="background:#222; padding:15px; border-radius:8px;">
-            <div style="font-size:12px; color:#4CAF50;">☁️ Cloud Sync: Aktif</div>
+        <div class="card">
+            <div class="card-title">Penyimpanan</div>
+            <div style="font-size:12.5px;color:var(--accent);line-height:1.7;">
+                💾 Auto-save lokal aktif (setiap 30 detik).<br>
+                ☁️ Cloud sync: <span style="color:var(--text-mute)">Belum tersedia</span>
+            </div>
         </div>
     `;
 }
