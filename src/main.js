@@ -98,11 +98,65 @@ function renderHeaderOnly() {
     els.header.innerHTML = renderHeader({ state: state.get(), timeSnapshot: getTime(), warning: _burnWarn });
 }
 
+// ============================================================
+// NAV RENDER — Liquid Glass Slider
+// ============================================================
 function renderNavOnly() {
     if (!els.nav) return;
-    els.nav.innerHTML = renderMobileNav({ active: activeView });
+
+    var hasRendered = !!els.nav.querySelector('.nav-btn');
+
+    if (!hasRendered) {
+        els.nav.innerHTML = renderMobileNav({ active: activeView });
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () { updateNavSlider(false); });
+        });
+    } else {
+        var buttons = els.nav.querySelectorAll('.nav-btn');
+        for (var i = 0; i < buttons.length; i++) {
+            var isActive = buttons[i].dataset.nav === activeView;
+            buttons[i].classList.toggle('active', isActive);
+            buttons[i].setAttribute('aria-current', isActive ? 'page' : 'false');
+        }
+        updateNavSlider(true);
+    }
 }
 
+function updateNavSlider(animated) {
+    if (!els.nav) return;
+    var slider = els.nav.querySelector('.nav-slider');
+    if (!slider) return;
+
+    var buttons = els.nav.querySelectorAll('.nav-btn');
+    if (!buttons.length) return;
+
+    var idx = -1;
+    for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i].classList.contains('active')) { idx = i; break; }
+    }
+    if (idx < 0) idx = 0;
+
+    var navW = els.nav.clientWidth;
+    if (navW <= 0) return;
+
+    var count = buttons.length;
+    var itemW = navW / count;
+    var sliderW = Math.max(56, Math.min(itemW * 0.88, 80));
+    var x = (idx * itemW) + ((itemW - sliderW) / 2);
+
+    if (!animated) {
+        slider.style.transition = 'none';
+        slider.style.width = sliderW + 'px';
+        slider.style.transform = 'translateX(' + x + 'px)';
+        void slider.offsetWidth;
+        requestAnimationFrame(function () { slider.style.transition = ''; });
+    } else {
+        slider.style.width = sliderW + 'px';
+        slider.style.transform = 'translateX(' + x + 'px)';
+    }
+}
+
+// ============ RENDER VIEW ============
 function renderView(opts) {
     if (!els.view) return;
     var soft = !!(opts && opts.soft);
@@ -236,7 +290,6 @@ function bindGlobalClicks() {
             return;
         }
 
-        // NEWS
         if (handleNewsListClick(e)) return;
 
         var navBtn = e.target.closest('[data-nav]');
@@ -471,7 +524,6 @@ function bindStateEvents() {
     bus.on('team:recruited', function () { if (activeView === 'team') renderView({ soft: true }); });
     bus.on('team:fired', function () { if (activeView === 'team') renderView({ soft: true }); });
 
-    // NEWS
     bus.on('news:published', function (data) {
         try {
             var article = data && data.article;
@@ -579,6 +631,11 @@ async function boot() {
 
         timeSystem.start();
         SaveService.startAutoSave(function () { return state; });
+
+        // Update nav slider saat resize
+        window.addEventListener('resize', function () {
+            updateNavSlider(false);
+        });
 
         var cash = state.get().cash;
         if (cash > 0) {
