@@ -1653,3 +1653,177 @@ body {
 .toggle-switch.on:active .toggle-thumb {
     transform: translateX(17px);
 }
+/* ===================== TEAM PANEL ===================== */
+
+/* 6-tab nav — kurangi font size sedikit */
+.mobile-nav { grid-template-columns: repeat(6, 1fr); }
+.nav-btn { font-size: 10px; padding: 6px 2px; }
+.nav-btn .nav-ico { font-size: 18px; }
+
+/* Staff row di Tim Aktif */
+.staff-list { display: flex; flex-direction: column; gap: 8px; }
+.staff-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-elev-2);
+    border-radius: var(--r);
+    cursor: pointer;
+    transition: background 0.15s, transform 0.08s;
+}
+.staff-row:active { transform: scale(0.99); background: var(--bg-elev-3); }
+
+.staff-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.15);
+}
+.staff-avatar-lg {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+    box-shadow: inset 0 0 0 3px rgba(255,255,255,0.15);
+}
+
+.staff-info { flex: 1; min-width: 0; }
+.staff-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+.staff-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+    min-width: 0;
+}
+.staff-tier {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: var(--r-pill);
+    background: rgba(255,255,255,0.06);
+    flex-shrink: 0;
+}
+.staff-traits {
+    font-size: 10px;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+}
+.staff-meta-row {
+    display: flex;
+    gap: 6px;
+    font-size: 11.5px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+}
+.staff-arrow {
+    color: var(--text-mute);
+    font-size: 20px;
+    font-weight: 300;
+    flex-shrink: 0;
+}
+
+/* Candidates */
+.cand-list { display: flex; flex-direction: column; gap: 10px; }
+.cand-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--r-lg);
+    padding: 14px;
+    box-shadow: var(--shadow-sm);
+}
+.cand-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.cand-traits {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+.cand-trait {
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: var(--r-pill);
+    border: 1px solid;
+    letter-spacing: 0.2px;
+}
+
+/* Skill tier row di modal */
+.skill-tier-row {
+    background: var(--bg-elev-2);
+    border-radius: var(--r);
+    padding: 12px 14px;
+    margin-top: 8px;
+}
+.skill-tier-label {
+    font-size: 11px;
+    color: var(--text-mute);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+.skill-tier-name {
+    font-size: 16px;
+    font-weight: 700;
+    margin-top: 2px;
+    letter-spacing: -0.01em;
+}
+.skill-pips {
+    display: flex;
+    gap: 4px;
+    margin-top: 10px;
+}
+.skill-pip {
+    flex: 1;
+    height: 6px;
+    border-radius: var(--r-pill);
+    background: var(--bg-elev-3);
+    transition: background 0.3s;
+}
+
+/* Trait chip di modal staff */
+.trait-chip {
+    padding: 10px 12px;
+    border-radius: var(--r);
+    background: var(--bg-elev-2);
+    border-left: 3px solid;
+    margin-bottom: 6px;
+}
+.trait-name {
+    font-size: 12.5px;
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+.trait-desc {
+    font-size: 11.5px;
+    color: var(--text-dim);
+    line-height: 1.4;
+}
+
+/* Responsive tweak untuk 6 tab */
+@media (max-width: 380px) {
+    .nav-btn { font-size: 9.5px; }
+    .nav-btn .nav-ico { font-size: 17px; }
+}
