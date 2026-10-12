@@ -1785,3 +1785,57 @@ body {
                 0 2px 8px rgba(0,0,0,0.3);
     transform: scale(1.05);
 }
+/* ===================== NAV SVG ICONS ===================== */
+
+.nav-btn .nav-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    line-height: 1;
+    color: inherit;
+    transition: transform 0.15s, color 0.15s;
+}
+.nav-btn .nav-ico svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+.nav-btn.active .nav-ico {
+    transform: scale(1.08);
+}
+.nav-btn:active .nav-ico {
+    transform: scale(0.92);
+}
+.nav-btn .nav-label {
+    font-size: 9.5px;
+    font-weight: var(--fw-semibold);
+    letter-spacing: -0.005em;
+    line-height: 1;
+    margin-top: 2px;
+}
+
+/* Sidebar (desktop) */
+#sidebar .nav-btn {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    font-size: var(--fs-sm);
+    border-radius: var(--r);
+}
+#sidebar .nav-btn .nav-ico {
+    width: 20px;
+    height: 20px;
+}
+#sidebar .nav-btn .nav-label {
+    font-size: var(--fs-sm);
+    margin-top: 0;
+}
+
+/* Ukuran kecil */
+@media (max-width: 380px) {
+    .nav-btn .nav-ico { width: 20px; height: 20px; }
+    .nav-btn .nav-label { font-size: 9px; }
+}
