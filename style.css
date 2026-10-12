@@ -2165,3 +2165,13 @@ body {
     align-items: center;
 }
 .wiz-preview-right { display: flex; flex-direction: column; }
+/* ============================================================
+   SOFT UPDATE — cegah flicker saat re-render (log/milestone/tim)
+   ============================================================ */
+.app-view.soft-update,
+.app-view.soft-update *,
+.app-view.soft-update *::before,
+.app-view.soft-update *::after {
+    animation: none !important;
+    transition: none !important;
+}
