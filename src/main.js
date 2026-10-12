@@ -15,6 +15,7 @@ import { ProductSystem } from './systems/ProductSystem.js';
 import { MarketSystem } from './systems/MarketSystem.js';
 import { CompetitorSystem } from './systems/CompetitorSystem.js';
 import { PublicOpinionSystem } from './systems/PublicOpinionSystem.js';
+import { EraSystem } from './systems/EraSystem.js';
 import { renderHeader } from './ui/layout/Header.js';
 import { renderMobileNav } from './ui/layout/MobileNav.js';
 import { renderDashboard } from './ui/panels/DashboardPanel.js';
@@ -42,6 +43,7 @@ import { openViralResponseModal } from './ui/panels/PublicOpinionPanel.js';
 import { drawSalesChart } from './ui/panels/SalesChart.js';
 import * as marketingModule from './data/marketing.data.js';
 import * as feedbackModule from './data/feedback.data.js';
+import { getActiveRendererIdPublic } from './ui/notifications/NotificationRenderer.js';
 
 // ============ INSTANCE ============
 const timeSystem = new TimeSystem(state);
@@ -54,8 +56,8 @@ const products = new ProductSystem(state);
 const market = new MarketSystem(state);
 const competitors = new CompetitorSystem(state);
 const opinion = new PublicOpinionSystem(state);
+const eraSystem = new EraSystem(state);
 
-// Integrasi: MarketSystem butuh CompetitorSystem
 market.setCompetitorSystem(competitors);
 
 // ============ STATE UI ============
@@ -161,11 +163,9 @@ function vibrate(ms) {
 // ============ EVENT DELEGATION ============
 function bindGlobalClicks() {
     document.body.addEventListener('click', function (e) {
-        // 1. Nav
         const navBtn = e.target.closest('[data-nav]');
         if (navBtn) { e.preventDefault(); vibrate(8); navigate(navBtn.dataset.nav); return; }
 
-        // 2. Time
         const timeBtn = e.target.closest('[data-time-action]');
         if (timeBtn) {
             e.preventDefault(); vibrate(12);
@@ -175,19 +175,15 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 3. Riset sub-tab
         const subBtn = e.target.closest('[data-subtab]');
         if (subBtn) { e.preventDefault(); activeSubtab = subBtn.dataset.subtab; renderView(); return; }
 
-        // 4. Filter kategori
         const chip = e.target.closest('[data-filter-cat]');
         if (chip) { e.preventDefault(); setFilterCategory(chip.dataset.filterCat); renderView(); return; }
 
-        // 5. Node detail
         const nodeCard = e.target.closest('[data-node-detail]');
         if (nodeCard) { e.preventDefault(); openNodeDetailModal({ nodeId: nodeCard.dataset.nodeDetail, researchSystem: research }); return; }
 
-        // 6. Aksi riset
         const rAction = e.target.closest('[data-research-action]');
         if (rAction) {
             e.preventDefault();
@@ -205,7 +201,6 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 7. Aksi OS
         const osAction = e.target.closest('[data-os-action]');
         if (osAction) {
             e.preventDefault();
@@ -225,11 +220,9 @@ function bindGlobalClicks() {
             if (act === 'feature-detail') { openFeatureDetailModal({ osSystem: os, featureId: osAction.dataset.featureId }); return; }
         }
 
-        // 8. Produk sub-tab
         const prodSub = e.target.closest('[data-prod-subtab]');
         if (prodSub) { e.preventDefault(); activeProdSubtab = prodSub.dataset.prodSubtab; renderView(); return; }
 
-        // 9. Aksi produk
         const prodAction = e.target.closest('[data-prod-action]');
         if (prodAction) {
             e.preventDefault();
@@ -250,7 +243,6 @@ function bindGlobalClicks() {
             }
         }
 
-        // 10. Kartu produk
         const prodCard = e.target.closest('[data-prod-detail]');
         if (prodCard && !e.target.closest('[data-prod-action]')) {
             e.preventDefault();
@@ -258,7 +250,6 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 11. Kampanye
         const campPick = e.target.closest('[data-campaign-pick]');
         if (campPick) {
             e.preventDefault();
@@ -268,7 +259,6 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 12. Order produksi
         const orderConfirm = e.target.closest('[data-order-confirm]');
         if (orderConfirm) {
             e.preventDefault();
@@ -280,11 +270,9 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 13. Market sub-tab
         const mktSub = e.target.closest('[data-market-subtab]');
         if (mktSub) { e.preventDefault(); activeMarketSubtab = mktSub.dataset.marketSubtab; renderView(); return; }
 
-        // 14. Kartu kompetitor
         const compCard = e.target.closest('[data-competitor-detail]');
         if (compCard) {
             e.preventDefault();
@@ -294,7 +282,6 @@ function bindGlobalClicks() {
             return;
         }
 
-        // 15. Respons viral
         const viralRespond = e.target.closest('[data-viral-respond]');
         if (viralRespond) {
             e.preventDefault();
@@ -318,7 +305,7 @@ function bindGlobalClicks() {
     });
 }
 
-// ============ PROGRESS EVENTS ============
+// ============ PROGRESS ============
 function bindProgressEvents() {
     bus.on('research:progress', (data) => {
         if (activeView !== 'research' || activeSubtab !== 'tech') return;
@@ -361,7 +348,7 @@ function bindProgressEvents() {
     });
 }
 
-// ============ TIME EVENTS ============
+// ============ TIME ============
 function bindTimeEvents() {
     bus.on('time:tick', function () {
         const meta = els.header && els.header.querySelector('.header-meta');
@@ -380,7 +367,7 @@ function bindTimeEvents() {
     bus.on('time:speed-changed', function () { renderHeaderOnly(); });
 }
 
-// ============ STATE EVENTS ============
+// ============ STATE ============
 function bindStateEvents() {
     bus.on('state:cash-changed', function (data) { animateCash(data.prev, data.next); });
     bus.on('state:log-changed', function () { if (activeView === 'dashboard') renderView(); });
@@ -400,6 +387,7 @@ function bindStateEvents() {
     });
     bus.on('settings:changed', function () {});
     bus.on('tutorial:restart', function () { tutorial.restart(); });
+    bus.on('era:changed', function () { renderAll(); });
 }
 
 // ============ BOOT ============
@@ -407,12 +395,17 @@ async function boot() {
     try {
         if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML utama tidak ditemukan.');
 
+        // ===== URUTAN PENTING =====
+        // 1. Mount toast container LEBIH DULU agar notifikasi awal tertangkap
         mountToastContainer(els.toast);
+
+        // 2. Init overlay & modal
         initTutorialOverlay();
         initMonthlySummary();
         initGameOverScreen();
         hideLoading();
 
+        // 3. Load save atau onboarding
         if (SaveService.hasSave()) {
             const saved = SaveService.load();
             if (saved) { state.hydrate(saved); console.info('[boot] Save dimuat.'); }
@@ -427,22 +420,23 @@ async function boot() {
             SaveService.save(state);
         }
 
-        // Pastikan field baru ada
-        if (!state.get().settings.competitorMode) {
-            state.get().settings.competitorMode = 'real';
-        }
+        if (!state.get().settings.competitorMode) state.get().settings.competitorMode = 'real';
 
-        // Start semua system
+        // 4. Start EraSystem LEBIH DULU sebelum toast lain (fix Isu #4)
+        eraSystem.start();
+
+        // 5. Start sistem lain
         economy.start();
         quests.start();
         tutorial.start();
         research.start();
         os.start();
         products.start();
-        competitors.start();   // SEBELUM market, karena market butuh competitor data
+        competitors.start();
         market.start();
         opinion.start();
 
+        // 6. Render & bind
         renderAll();
         bindGlobalClicks();
         bindTimeEvents();
@@ -450,6 +444,7 @@ async function boot() {
         bindProgressEvents();
         updateTitle();
 
+        // 7. Start jam
         timeSystem.start();
         SaveService.startAutoSave(function () { return state; });
 
@@ -459,14 +454,12 @@ async function boot() {
             animateCash(0, cash);
         }
 
+        // 8. Expose debug
         window.__game = {
             state, bus, timeSystem, economy, quests, tutorial,
-            research, os, products, market, competitors, opinion,
+            research, os, products, market, competitors, opinion, eraSystem,
             SaveService, ToastService, Modal, navigate, render: renderAll,
-            modules: {
-                marketing: marketingModule,
-                feedbackData: feedbackModule
-            },
+            modules: { marketing: marketingModule, feedbackData: feedbackModule },
             cheat: {
                 addCash: function (n) { state.addCash(n); },
                 fastForwardDays: function (n) { return timeSystem.fastForwardDays(n); },
@@ -479,21 +472,30 @@ async function boot() {
                 startOsWith: function (featureIds) { return os.quickSetup(featureIds); },
                 spawnOsBug: function () { return os.spawnBug(); },
                 quickRelease: function (cfg) { return products.quickRelease(cfg); },
-                // Batch C
                 setYear: function (y) {
                     const cur = state.get().time.currentYear;
-                    const daysPerYear = 365.25;
-                    return timeSystem.fastForwardDays((y - cur) * daysPerYear);
+                    return timeSystem.fastForwardDays((y - cur) * 365.25);
                 },
                 spawnViralEvent: function (type) { return opinion.forceViral(type); },
                 addCompetitorEvent: function (compId) { return competitors.triggerLifeEventFor(compId); },
                 forceCompetitorRelease: function (compId) { return competitors.forceRelease(compId); },
                 forceReview: function () { return opinion.forceReview(); },
-                recomputeSentiment: function () { return opinion.recomputeNow(); }
+                recomputeSentiment: function () { return opinion.recomputeNow(); },
+                // === PATCH ERA UI ===
+                previewNotif: function (msg, type) {
+                    ToastService.show(msg || 'Contoh notifikasi.', type || 'info', 3500);
+                    return { renderer: getActiveRendererIdPublic() };
+                },
+                forceEra: function (eraId) {
+                    state.get().era = eraId;
+                    bus.emit('state:changed', state.get());
+                    renderAll();
+                    return { era: eraId, renderer: getActiveRendererIdPublic() };
+                }
             }
         };
 
-        console.info('[' + APP_CONFIG.name + '] siap.');
+        console.info('[' + APP_CONFIG.name + '] siap. Era:', state.get().era);
     } catch (err) {
         console.error('[boot] gagal:', err);
         hideLoading();
