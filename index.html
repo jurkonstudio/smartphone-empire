@@ -6,6 +6,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0f0f0f">
 <title>Smartphone Empire</title>
+    <script>
+window.addEventListener('error', function(e) {
+    var msg = 'GLOBAL ERROR\n\n';
+    msg += 'Message: ' + (e.message || e.error || 'unknown') + '\n';
+    msg += 'File: ' + (e.filename || '-') + '\n';
+    msg += 'Line: ' + (e.lineno || '-') + ':' + (e.colno || '-') + '\n\n';
+    msg += 'Stack:\n' + ((e.error && e.error.stack) ? e.error.stack : '-');
+    var box = document.createElement('pre');
+    box.style.cssText = 'position:fixed;inset:0;background:#000;color:#f44;font:12px monospace;padding:20px;padding-top:80px;overflow:auto;z-index:999999;white-space:pre-wrap;word-break:break-word;';
+    box.textContent = msg;
+    if (document.body) document.body.appendChild(box);
+    else document.addEventListener('DOMContentLoaded', function() { document.body.appendChild(box); });
+});
+window.addEventListener('unhandledrejection', function(e) {
+    var msg = 'PROMISE REJECTED\n\nReason: ' + (e.reason && e.reason.message ? e.reason.message : e.reason) + '\n\nStack:\n' + ((e.reason && e.reason.stack) ? e.reason.stack : '-');
+    var box = document.createElement('pre');
+    box.style.cssText = 'position:fixed;inset:0;background:#000;color:#fa0;font:12px monospace;padding:20px;padding-top:80px;overflow:auto;z-index:999999;white-space:pre-wrap;word-break:break-word;';
+    box.textContent = msg;
+    if (document.body) document.body.appendChild(box);
+});
+    </script>
     <link rel="modulepreload" href="./src/data/components.data.js">
 <link rel="modulepreload" href="./src/systems/ProductSystem.js">
 <link rel="modulepreload" href="./src/systems/MarketSystem.js">
