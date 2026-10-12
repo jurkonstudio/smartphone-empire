@@ -142,4 +142,62 @@ export const BALANCE = {
         maxReviewsInFeed: 30,
         perDayChance: 0.15
     }
+    // ============================================================
+// KOMPETITOR AI — ditambahkan pada Batch C
+// ============================================================
+competitors: {
+    // Pengali efek pemain terhadap pangsa kompetitor
+    playerPressureMultiplier: 0.4,
+
+    // Kecepatan riset AI dasar (per bulan, dalam tier)
+    aiResearchTierPerYear: 0.3,   // tier 1 → tier 2 = ~3.3 tahun
+    aiResearchCostScale: 0.9,     // AI bayar 90% dari biaya riset pemain
+
+    // Kecepatan rilis produk AI (bulan antar rilis)
+    aiReleaseIntervalMonths: 8,
+
+    // Bobot AI dalam pangsa pasar
+    // Pangsa AI = (revenue AI) / (revenue pemain + total revenue AI + others)
+
+    // Sensitivitas reaksi AI terhadap pemain
+    aiReactionSensitivity: 0.3
+},
+
+// ============================================================
+// FEEDBACK PUBLIK — ditambahkan pada Batch C
+// ============================================================
+feedback: {
+    // Sentimen awal pemain (0-100)
+    initialSentiment: 50,
+
+    // Bobot tiap komponen sentimen
+    sentimentWeights: {
+        quality:    0.25,
+        price:      0.15,
+        reputation: 0.20,
+        bugPenalty: 0.15,   // penalti dari bug aktif
+        viralBoost: 0.25    // efek viral sementara
+    },
+
+    // Sentimen per aspek (0-100)
+    aspectWeights: {
+        design:      0.15,
+        camera:      0.15,
+        battery:     0.15,
+        performance: 0.15,
+        price:       0.15,
+        reliability: 0.10,
+        os:          0.10,
+        support:     0.05
+    },
+
+    // Frekuensi ulasan
+    reviewsPerMonthBase: 8,      // minimal per bulan
+
+    // Kenaikan sentimen bila menerapkan saran pelanggan di ponsel baru
+    suggestionBonus: 5,
+
+    // Bobot viral event dalam sentimen
+    viralEventImpact: 0.3
+}
 };
