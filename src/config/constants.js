@@ -48,3 +48,31 @@ export const LOG_TYPES = {
     warning: 'warning',
     danger:  'danger'
 };
+// ============================================================
+// TIP IDs baru (Batch A)
+// ============================================================
+export const TIP_IDS_EXTRA = {
+    RESEARCH_INTRO: 'research_intro',
+    OS_INTRO:       'os_intro',
+    OS_BUG:         'os_bug',
+    OS_APPSTORE:    'os_appstore'
+};
+
+// Merge ke TIP_IDS lama tanpa menimpa
+// (jika TIP_IDS di constants.js lama sudah object, tambahkan manual 4 entri di atas ke object tersebut)
+
+// ============================================================
+// RESEARCH — konstanta UI & logic
+// ============================================================
+export const RESEARCH_STATUS = {
+    LOCKED:    'locked',
+    AVAILABLE: 'available',
+    RUNNING:   'running',
+    DONE:      'done'
+};
+
+export const OS_VERSION_STATUS = {
+    DEVELOPING: 'developing',
+    RELEASED:   'released',
+    FAILED:     'failed'
+};
