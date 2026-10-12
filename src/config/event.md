@@ -8,15 +8,15 @@
 - `state:changed` / `state:cash-changed` / `state:hydrated` / `state:log-changed` / `state:milestone-added`
 - `team:changed` / `tip:shown`
 
+## Tema
+- `theme:changed` — `{ theme: 'dark'|'light', accent: 'blue'|'emerald'|'violet'|'amber'|'rose'|'cyan' }`
+
 ## Ekonomi
 - `economy:add-revenue` / `economy:month-processed` / `economy:warn-burnrate` / `economy:game-over`
 - `economy:loan-taken` / `economy:loan-repaid`
 
-## Tim (Batch D)
-- `team:recruited` — `{ staff, cost }` — staff baru direkrut
-- `team:fired` — `{ staffId, name, severance }` — staff di-PHK
-- `team:skill-up` — `{ staffId, skill }` — staff naik tier
-- `team:candidates-refreshed` — `{ count }` — pool kandidat di-refresh
+## Tim
+- `team:recruited` / `team:fired` / `team:skill-up` / `team:candidates-refreshed`
 
 ## Riset
 - `research:started` / `research:progress` / `research:completed` / `research:cancelled` / `research:slots-changed`
@@ -43,8 +43,14 @@
 - `feedback:sentiment-changed` / `feedback:review-received`
 - `feedback:viral-started` / `feedback:viral-ended` / `feedback:viral-responded`
 
-## Ulasan (produk)
-- `review:received` — `{ productId, review }`
+## Ulasan
+- `review:received`
+
+## Cloud (stub, akan aktif di update mendatang)
+- `cloud:status-changed` — `{ status: 'disconnected'|'connecting'|'connected'|'error' }`
+- `cloud:sync-start` — `{ direction: 'up'|'down' }`
+- `cloud:sync-success` — `{ direction, at }`
+- `cloud:sync-error` — `{ direction, message }`
 
 ## Quest & Tutorial
 - `quest:activated` / `quest:completed`
