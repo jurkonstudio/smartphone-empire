@@ -1,15 +1,7 @@
 // FILE: src/data/components.data.js
 // ============================================================
 // DATA KOMPONEN PONSEL
-// Setiap komponen: id, category, name, tier, costPerUnit, stats, requiresResearch, minYear.
-// Hanya komponen dengan requiresResearch yang sudah selesai yang bisa dipakai.
-//
-// Tabel balancing per tier (biaya per unit × stat):
-//   Tier 1 (2000-2003): cost 5-15,     stat total 10-25
-//   Tier 2 (2003-2007): cost 15-40,    stat total 25-45
-//   Tier 3 (2007-2013): cost 40-90,    stat total 45-70
-//   Tier 4 (2013-2019): cost 90-180,   stat total 70-90
-//   Tier 5 (2019-2025): cost 180-350,  stat total 90-100
+// FIX: cam_vga minYear 2001 → 2000.
 // ============================================================
 
 export const COMPONENT_CATEGORIES = [
@@ -42,7 +34,7 @@ export const COMPONENTS = [
       costPerUnit: 300, stats: { display: 96, quality: 92 }, requiresResearch: 'layar_foldable' },
 
     // ==================== KAMERA ====================
-    { id: 'cam_vga',      category: 'camera', tier: 1, minYear: 2001, name: 'Kamera VGA',
+    { id: 'cam_vga',      category: 'camera', tier: 1, minYear: 2000, name: 'Kamera VGA',
       costPerUnit: 6,  stats: { camera: 8,  quality: 6 },  requiresResearch: 'cam_vga' },
     { id: 'cam_1mp',      category: 'camera', tier: 1, minYear: 2003, name: 'Kamera 1 MP',
       costPerUnit: 14, stats: { camera: 18, quality: 14 }, requiresResearch: 'cam_1mp' },
@@ -114,7 +106,6 @@ export const COMPONENTS = [
       costPerUnit: 160, stats: { connectivity: 100, quality: 92 }, requiresResearch: 'net_wifi6' },
 
     // ==================== BODI ====================
-    // Bodi tidak butuh riset (kecuali titanium di era akhir).
     { id: 'body_plastic',   category: 'body', tier: 1, minYear: 2000, name: 'Plastik',
       costPerUnit: 3,   stats: { quality: 5,  design: 4 },   requiresResearch: null },
     { id: 'body_aluminum',  category: 'body', tier: 2, minYear: 2005, name: 'Aluminium',
@@ -127,7 +118,6 @@ export const COMPONENTS = [
       costPerUnit: 100, stats: { quality: 55, design: 62 },  requiresResearch: null },
 
     // ==================== FORM FACTOR ====================
-    // Form factor memengaruhi baseDemand dan usability.
     { id: 'ff_candybar',  category: 'form_factor', tier: 1, minYear: 2000, name: 'Candybar',
       costPerUnit: 0, stats: { usability: 20, design: 15 }, requiresResearch: null,
       baseDemandMultiplier: 1.0 },
@@ -148,7 +138,7 @@ export const COMPONENTS = [
       baseDemandMultiplier: 1.25 }
 ];
 
-// Warna bodi (affects design & demand slightly)
+// Warna bodi
 export const BODY_COLORS = [
     { id: 'color_black',    name: 'Hitam',    hex: '#1a1a1a', designBonus: 5 },
     { id: 'color_white',    name: 'Putih',    hex: '#f5f5f5', designBonus: 4 },
@@ -160,7 +150,7 @@ export const BODY_COLORS = [
     { id: 'color_titanium', name: 'Titanium', hex: '#8a8a8a', designBonus: 10 }
 ];
 
-// Utilitas pencarian
+// Utilitas
 export function getComponentById(id) {
     return COMPONENTS.find(c => c.id === id) || null;
 }
@@ -169,4 +159,4 @@ export function getComponentsByCategory(catId) {
 }
 export function getBodyColorById(id) {
     return BODY_COLORS.find(c => c.id === id) || BODY_COLORS[0];
-     }
+}
