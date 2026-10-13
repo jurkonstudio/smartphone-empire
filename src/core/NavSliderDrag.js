@@ -1,18 +1,24 @@
 // FILE: src/core/NavSliderDrag.js
 // ============================================================
 // NavSliderDrag — drag support untuk liquid glass nav slider.
-// Drag TIDAK mulai saat touchstart. Hanya mulai setelah gerakan
-// horizontal melewati DRAG_START_THRESHOLD. Tap murni → hanya
-// click handler yang jalan (tidak trigger drag).
+//
+// FIX v3:
+//   - Touch HARUS dimulai di dalam .nav-btn (bukan area kosong nav).
+//   - Threshold drag dinaikkan ke 15px.
+//   - Mouse events diabaikan 500ms setelah touch (Android emulation).
 // ============================================================
 
 var _nav = null;
 var _getActiveView = null;
 var _navigate = null;
 
-var DRAG_START_THRESHOLD = 10;   // px — minimum horizontal movement untuk mulai drag
+var DRAG_START_THRESHOLD = 15;   // px
 var FLICK_VELOCITY = 0.55;       // px/ms
 var VELOCITY_WINDOW = 80;        // ms
+var TAP_MAX_DURATION = 220;      // ms
+var IGNORE_MOUSE_AFTER_TOUCH = 500; // ms
+
+var _ignoreMouseUntil = 0;
 
 var _state = {
     dragging: false,
@@ -32,7 +38,6 @@ var _state = {
     lastHoverIdx: -1,
     rafId: null,
     pendingX: null,
-    // Velocity
     lastSampleX: 0,
     lastSampleT: 0,
     velocity: 0
@@ -119,8 +124,14 @@ function _hapticSnap() {
     } catch (e) {}
 }
 
+// Cek apakah target sentuh ada di dalam tombol nav.
+function _isOnButton(target) {
+    if (!target || !target.closest) return false;
+    return !!target.closest('.nav-btn');
+}
+
 // ============================================================
-// BEGIN DRAG (dipanggil hanya setelah threshold terlewati)
+// BEGIN DRAG
 // ============================================================
 function _beginDrag(originX) {
     var slider = _slider();
@@ -178,10 +189,8 @@ function _moveTo(clientX) {
     _sampleVelocity(clientX);
 
     var dx = clientX - _state.startX;
-
     var targetX = _state.startSliderX + dx;
 
-    // Soft resistance di ujung
     if (targetX < _state.minX) {
         targetX = _state.minX + (targetX - _state.minX) * 0.32;
     }
@@ -191,7 +200,6 @@ function _moveTo(clientX) {
 
     _state.currentX = targetX;
 
-    // Squash & stretch berdasarkan velocity
     var vAbs = Math.min(Math.abs(_state.velocity), 2);
     var stretch = 1 + Math.min(vAbs * 0.06, 0.12);
     var squashW = _state.baseSliderW * stretch;
@@ -247,7 +255,6 @@ function _end() {
 
     _clearHighlight();
 
-    // Velocity-based flick
     var targetIdx = nearestIdx;
     var vAbs = Math.abs(_state.velocity);
     if (vAbs > FLICK_VELOCITY) {
@@ -258,7 +265,6 @@ function _end() {
         }
     }
 
-    // Kalau tetap di tab yang sama, snap balik
     if (targetIdx === _state.activeIdx) {
         slider.style.transform = 'translateX(' + _idxToX(targetIdx, _state.itemW, _state.baseSliderW) + 'px)';
         return;
@@ -297,11 +303,18 @@ function _cancel() {
 // ============================================================
 function _onTouchStart(e) {
     if (!e.touches || !e.touches[0]) return;
-
-    // Jangan proses kalau sudah dragging
     if (_state.dragging) return;
 
-    // Set pending — belum tentu drag
+    // Abaikan mouse events setelah touch (Android emulation)
+    _ignoreMouseUntil = Date.now() + IGNORE_MOUSE_AFTER_TOUCH;
+
+    // Hanya mulai kalau touch di dalam tombol nav.
+    // Area kosong di nav bar (kalau ada) tidak akan trigger drag.
+    if (!_isOnButton(e.target)) {
+        _state.pending = false;
+        return;
+    }
+
     _state.pending = true;
     _state.startX = e.touches[0].clientX;
     _state.startY = e.touches[0].clientY;
@@ -313,10 +326,10 @@ function _onTouchMove(e) {
     var x = e.touches[0].clientX;
     var y = e.touches[0].clientY;
 
-    // Kalau belum dragging tapi pending → cek apakah gerakan cukup untuk mulai drag
     if (!_state.dragging && _state.pending) {
         var dx = x - _state.startX;
         var dy = y - _state.startY;
+        var dt = Date.now() - _state.startTime;
 
         // Gerakan vertikal dominan → batalkan (biarkan scroll)
         if (Math.abs(dy) > DRAG_START_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
@@ -324,13 +337,17 @@ function _onTouchMove(e) {
             return;
         }
 
-        // Gerakan horizontal cukup → mulai drag dari origin
-        if (Math.abs(dx) > DRAG_START_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+        // Cek waktu: tap cepat (di bawah TAP_MAX_DURATION) dengan gerakan kecil
+        // TETAP dianggap tap, bukan drag. Meskipun gerakan sedikit di atas threshold,
+        // ini mencegah tap yang jitter.
+        var moved = Math.abs(dx) > DRAG_START_THRESHOLD && Math.abs(dx) > Math.abs(dy);
+        var longEnough = dt > TAP_MAX_DURATION;
+
+        if (moved && longEnough) {
             if (!_beginDrag(_state.startX)) {
                 _state.pending = false;
                 return;
             }
-            // Langsung terapkan posisi saat ini
             _state.pendingX = x;
             if (_state.rafId === null) {
                 _state.rafId = requestAnimationFrame(_flushMove);
@@ -339,7 +356,6 @@ function _onTouchMove(e) {
         return;
     }
 
-    // Sedang dragging → update posisi
     if (_state.dragging) {
         _state.pendingX = x;
         if (_state.rafId === null) {
@@ -353,7 +369,7 @@ function _onTouchEnd(_e) {
     if (_state.dragging) {
         _end();
     }
-    // else: tap biasa, biarkan click handler yang jalan
+    // Kalau tidak dragging: cuma tap → biarkan click handler yang jalan
 }
 
 function _onTouchCancel() {
@@ -366,6 +382,15 @@ function _onTouchCancel() {
 function _onMouseDown(e) {
     if (e.button !== 0) return;
     if (_state.dragging) return;
+
+    // Abaikan mouse events kalau baru saja touch
+    if (Date.now() < _ignoreMouseUntil) return;
+
+    if (!_isOnButton(e.target)) {
+        _state.pending = false;
+        return;
+    }
+
     _state.pending = true;
     _state.startX = e.clientX;
     _state.startY = e.clientY;
@@ -376,11 +401,13 @@ function _onMouseMove(e) {
     if (!_state.dragging && _state.pending) {
         var dx = e.clientX - _state.startX;
         var dy = e.clientY - _state.startY;
+        var dt = Date.now() - _state.startTime;
+
         if (Math.abs(dy) > DRAG_START_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
             _state.pending = false;
             return;
         }
-        if (Math.abs(dx) > DRAG_START_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+        if (Math.abs(dx) > DRAG_START_THRESHOLD && Math.abs(dx) > Math.abs(dy) && dt > TAP_MAX_DURATION) {
             if (!_beginDrag(_state.startX)) {
                 _state.pending = false;
                 return;
@@ -406,4 +433,4 @@ function _onMouseUp() {
 
 export function isDragging() {
     return _state.dragging;
-}
+        }
