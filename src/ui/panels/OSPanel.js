@@ -133,13 +133,13 @@ export function renderOSPanel({ osSystem, researchSystem }) {
             <div style="margin-top:10px;">
                 ${BUILTIN_APPS.map(a => {
                     const owned = os.apps.builtin.includes(a.id);
-                    const hasFeature = osSystem.hasFeature(a.requiresFeature);
+                    const hasFeature = !a.requiresFeature || osSystem.hasFeature(a.requiresFeature);
                     const canStart = !owned && hasFeature;
                     return `
                         <div class="app-item">
                             <div style="flex:1;">
                                 <div class="app-name">${escapeHtml(a.name)}</div>
-                                <div class="app-meta">$${a.devCost.toLocaleString('en-US')} • ${a.devDays} hari • +${a.appealBonus} appeal</div>
+                                <div class="app-meta">$${a.devCost.toLocaleString('en-US')} • +${a.appealBonus} appeal</div>
                             </div>
                             ${owned
                                 ? '<div class="app-badge">DIMILIKI</div>'
@@ -206,8 +206,7 @@ export function openOsWizardModal({ osSystem }) {
         return;
     }
     const maxSlots = osSystem._getMaxFeatureSlots();
-    const currentVersion = osSystem.getCurrentVersionObject();
-    const baseStats = currentVersion ? currentVersion.stats : { stability: 20, speed: 20, features: 20, security: 20, design: 20 };
+    const baseStats = osSystem.previewStats([]);
 
     const featureHtml = available.map(f => `
         <label class="wiz-feature">
@@ -249,27 +248,23 @@ export function openOsWizardModal({ osSystem }) {
         const selected = Array.from(checkboxes).filter(c => c.checked);
         // Batasi maks
         if (selected.length > maxSlots) {
-            // Uncheck terakhir
             selected[selected.length - 1].checked = false;
             window.__game.ToastService.warning('Maks ' + maxSlots + ' fitur per versi.');
             return refresh();
         }
 
         let cost = 0, days = 0;
-        const stats = { ...baseStats };
+        const selectedIds = [];
         selected.forEach(c => {
             const f = available.find(x => x.id === c.dataset.wizFeature);
             if (!f) return;
             cost += f.devCost;
             days += f.devDays;
-            stats.stability += f.statEffects.stability || 0;
-            stats.speed     += f.statEffects.speed     || 0;
-            stats.features  += f.statEffects.features  || 0;
-            stats.security  += f.statEffects.security  || 0;
-            stats.design    += f.statEffects.design    || 0;
+            selectedIds.push(f.id);
         });
-        // Clamp
-        Object.keys(stats).forEach(k => { stats[k] = Math.max(0, Math.min(100, Math.round(stats[k]))); });
+
+        // Preview via OSSystem supaya sama dengan hasil akhir versi.
+        const stats = osSystem.previewStats(selectedIds);
 
         preview.innerHTML = renderOsStatBar(stats);
         costEl.textContent = '$' + cost.toLocaleString('en-US');
@@ -351,4 +346,4 @@ export function openFeatureDetailModal({ osSystem, featureId }) {
         <button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">Tutup</button>
     `;
     window.__game.Modal.open('feature-detail', html);
-    }
+}
