@@ -11,6 +11,7 @@ import {
     getComponentById, getComponentsByCategory, getBodyColorById
 } from '../data/components.data.js';
 import { getCampaignById, MARKETING_CAMPAIGNS } from '../data/marketing.data.js';
+import { getLicenseById } from '../data/os.data.js';
 
 var MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -143,7 +144,7 @@ export class ProductSystem {
         var priceF   = Math.pow(Math.max(0.2, refs.price / Math.max(1, config.price)), w.price);
         var repF     = Math.pow(Math.max(0.2, (data.market.reputation || 10) / refs.reputation), w.reputation);
         var marketingF = 1.0;
-        var osFactor = this._getOsFactor();
+        var osFactor = this._getOsFactor(config);
         var trendF = this._getTrendFactor(stats);
         var competitorF = 0.8;
         var lifecycleF = 1.0;
@@ -152,10 +153,39 @@ export class ProductSystem {
         return Math.max(0, Math.round(demand));
     }
 
-    _getOsFactor() {
-        var os = window.__game && window.__game.os ? window.__game.os : null;
-        if (!os || !os.getCurrentStats()) return 0.7;
-        var stats = os.getCurrentStats();
+    _getOsFactor(configOrProduct) {
+        var data = this.state.data;
+        var osOptionId = null;
+
+        // Terima config langsung atau product (yang punya config.osOptionId).
+        if (configOrProduct) {
+            if (configOrProduct.osOptionId) osOptionId = configOrProduct.osOptionId;
+            else if (configOrProduct.config && configOrProduct.config.osOptionId) {
+                osOptionId = configOrProduct.config.osOptionId;
+            }
+        }
+
+        var stats = null;
+        if (osOptionId) {
+            if (osOptionId.indexOf('own:') === 0) {
+                var versionId = osOptionId.slice(4);
+                var v = (data.os.versions || []).find(function (x) { return x.id === versionId; });
+                if (v && v.stats) stats = v.stats;
+            } else if (osOptionId.indexOf('license:') === 0) {
+                var licenseId = osOptionId.slice(8);
+                var lic = getLicenseById(licenseId);
+                if (lic && lic.stats) stats = lic.stats;
+            }
+        }
+
+        // Fallback: OS pemain saat ini (perilaku lama).
+        if (!stats) {
+            var os = window.__game && window.__game.os ? window.__game.os : null;
+            if (!os) return 0.7;
+            stats = os.getCurrentStats();
+            if (!stats) return 0.7;
+        }
+
         var avg = (stats.stability + stats.speed + stats.features + stats.security + stats.design) / 5;
         return Math.pow(Math.max(0.2, avg / BALANCE.products.refs.os), BALANCE.products.weights.os);
     }
@@ -452,7 +482,7 @@ export class ProductSystem {
         var priceF   = Math.pow(Math.max(0.2, refs.price / Math.max(1, p.price)), w.price);
         var repF     = Math.pow(Math.max(0.2, (data.market.reputation || 10) / refs.reputation), w.reputation);
         var marketingF = this._getMarketingFactor(p.id);
-        var osFactor = this._getOsFactor();
+        var osFactor = this._getOsFactor(p);
         var trendF = this._getTrendFactor(p.stats);
         var competitorF = Math.max(0.4, 1 / (1 + (p.competitorPressure || 0)));
         var lifecycleF = this._getLifecycleFactor(p);
@@ -802,4 +832,4 @@ export class ProductSystem {
             productionQty: 10000
         };
     }
-}
+    }
