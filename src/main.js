@@ -182,6 +182,20 @@ function renderView(opts) {
         html = '<div class="card" style="border-color:var(--danger);margin-top:20px;"><div class="card-title" style="color:var(--danger);">Error Render</div><div style="font-size:13px;line-height:1.6;word-break:break-word;"><b>View:</b> ' + activeView + '<br><b>Error:</b> ' + (err && err.message ? err.message : 'Unknown') + '</div></div>';
     }
     els.view.innerHTML = html;
+
+    // ============================================================
+    // REVISI 2 — Trigger animasi masuk saat pindah halaman.
+    // Hanya untuk render NON-soft. Class dihapus 600ms kemudian
+    // supaya tidak re-trigger pada render granular (time tick, log, dll).
+    // ============================================================
+    if (!soft) {
+        els.view.classList.add('view-fresh');
+        if (window.__viewFreshTimer) clearTimeout(window.__viewFreshTimer);
+        window.__viewFreshTimer = setTimeout(function () {
+            if (els.view) els.view.classList.remove('view-fresh');
+        }, 600);
+    }
+
     if (soft) {
         els.view.scrollTop = prevScroll;
         requestAnimationFrame(function () { if (els.view) { els.view.scrollTop = prevScroll; els.view.classList.remove('soft-update'); } });
