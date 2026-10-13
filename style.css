@@ -3340,3 +3340,46 @@ body {
         text-align: center;
     }
 }
+
+
+/* ============================================================
+   FIX FLICKER v4 — reaktivasi animasi yang aman.
+   
+   Blok ini ditambahkan di paling bawah, jadi menang lewat CSS
+   cascade. Blok "FIX FLICKER v2" dan "v3" di atas tetap ada
+   (tidak dihapus) — keduanya masih berguna untuk override
+   dasar. Yang kita lakukan hanya mengaktifkan kembali animasi
+   yang sebelumnya dimatikan tapi aman untuk dinyalakan.
+   
+   Yang diaktifkan kembali:
+   - .nav-btn.active .nav-ico → rotate saat pindah tab
+   - .phone-mockup-wrap → fade saat buka wizard
+   - .chip-mockup-wrap → fade saat buka chip designer
+   - .radar-chart-wrap → fade saat render chart
+   - .illus-wrap → fade saat empty state
+   - .wiz-mockup-live → fade saat buka wizard desain
+   ============================================================ */
+
+.nav-btn.active .nav-ico {
+    animation: rotateSubtle 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.phone-mockup-wrap {
+    animation: phoneIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.chip-mockup-wrap {
+    animation: chipIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.radar-chart-wrap {
+    animation: radarIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.illus-wrap {
+    animation: illusFadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.wiz-mockup-live {
+    animation: wizMockupIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
