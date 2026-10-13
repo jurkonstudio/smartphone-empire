@@ -4,7 +4,7 @@
 
 var _activeNodes = [];
 var _recentMessages = {};
-var MAX_ACTIVE = 3;          // ubah ke 1 kalau mau super simple
+var MAX_ACTIVE = 1;          // ubah ke 1 kalau mau super simple
 var DEDUPE_WINDOW = 800;     // ms — jendela dedupe by message
 
 function escapeHtml(s) {
