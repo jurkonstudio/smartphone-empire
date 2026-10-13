@@ -2,19 +2,22 @@
 import { bus } from '../core/EventBus.js';
 import { TIP_IDS } from '../config/constants.js';
 
-// Tutorial interaktif: 8 langkah. Setiap langkah maju ketika pemain
+// Tutorial interaktif: 8 langkah minimum. Setiap langkah maju ketika pemain
 // melakukan aksi yang diminta. Mendukung tombol Lewati.
 //
-// Kontrak ID aksi (dari main.js):
-//   - Header  -> 'action:toggle-pause' | 'action:cycle-speed'
-//   - Navigasi-> 'nav:<viewId>'  (tanpa prefix 'action:')
-//   - Acknowledge -> tombol Lanjut memancarkan 'tutorial:next'
+// Cara kerja:
+//   - TutorialSystem memancarkan event 'tutorial:step-changed'.
+//   - UI (TutorialOverlay) mendengarkan dan menampilkan spotlight + pesan.
+//   - Aksi pemain (klik tombol, dst) memicu bus.emit('tutorial:action', {id}).
+//   - System memajukan step jika cocok.
+//
+// Tips kontekstual: ditampilkan sekali per ID; disimpan di state.seenTips.
 
 const STEPS = [
     {
         id: 'welcome',
         title: 'Selamat datang!',
-        text: 'Kamu memimpin perusahaan ponsel baru. Tekan tombol waktu di header untuk mulai berjalan.',
+        text: 'Kamu memimpin perusahaan ponsel baru. Tekan Mulai untuk menjalankan waktu.',
         target: '[data-time-action="toggle-pause"]',
         waitFor: 'action:toggle-pause',
         tipOnEnter: TIP_IDS.FIRST_START
@@ -22,7 +25,7 @@ const STEPS = [
     {
         id: 'speed',
         title: 'Atur kecepatan',
-        text: 'Percepat simulasi dengan tombol kecepatan di header.',
+        text: 'Percepat simulasi dengan tombol kecepatan.',
         target: '[data-time-action="cycle-speed"]',
         waitFor: 'action:cycle-speed',
         tipOnEnter: TIP_IDS.FIRST_SPEED
@@ -40,7 +43,7 @@ const STEPS = [
         title: 'Buka tab Riset',
         text: 'Riset teknologi adalah kunci. Buka tab Riset.',
         target: '[data-nav="research"]',
-        waitFor: 'nav:research',
+        waitFor: 'action:nav:research',
         tipOnEnter: null
     },
     {
@@ -48,7 +51,7 @@ const STEPS = [
         title: 'Lihat Produk',
         text: 'Desain ponsel ada di tab Produk.',
         target: '[data-nav="products"]',
-        waitFor: 'nav:products',
+        waitFor: 'action:nav:products',
         tipOnEnter: null
     },
     {
@@ -56,7 +59,7 @@ const STEPS = [
         title: 'Cek Pasar',
         text: 'Pantau kompetitor dan pangsa pasar.',
         target: '[data-nav="market"]',
-        waitFor: 'nav:market',
+        waitFor: 'action:nav:market',
         tipOnEnter: null
     },
     {
@@ -64,7 +67,7 @@ const STEPS = [
         title: 'Tab Pengaturan',
         text: 'Kelola save, getar, dan bantuan di sini.',
         target: '[data-nav="settings"]',
-        waitFor: 'nav:settings',
+        waitFor: 'action:nav:settings',
         tipOnEnter: TIP_IDS.FIRST_SETTINGS
     },
     {
@@ -72,7 +75,7 @@ const STEPS = [
         title: 'Siap!',
         text: 'Kembali ke Dashboard kapan pun. Selamat bermain!',
         target: '[data-nav="dashboard"]',
-        waitFor: 'nav:dashboard',
+        waitFor: 'acknowledge',
         tipOnEnter: null
     }
 ];
@@ -86,10 +89,12 @@ export class TutorialSystem {
     start() {
         if (this.state.data.tutorial.completed || this.state.data.tutorial.skipped) return;
 
+        // Dengarkan aksi dari UI
         this._unsubs.push(bus.on('tutorial:action', ({ id }) => this._handleAction(id)));
         this._unsubs.push(bus.on('tutorial:skip', () => this.skip()));
         this._unsubs.push(bus.on('tutorial:next', () => this.advance()));
 
+        // Pancarkan step pertama
         this._emitCurrent();
     }
 
@@ -111,13 +116,13 @@ export class TutorialSystem {
             this._finish(false);
             return;
         }
+        // Tampilkan tip sekali jika diminta
         if (step.tipOnEnter && !this.state.hasSeenTip(step.tipOnEnter)) {
             this.state.markTipSeen(step.tipOnEnter);
         }
         bus.emit('tutorial:step-changed', {
             stepIndex: this.state.data.tutorial.currentStep,
-            step,
-            totalSteps: STEPS.length
+            step
         });
     }
 
@@ -142,12 +147,11 @@ export class TutorialSystem {
     }
 
     restart() {
-        // FIX: cegah listener terdaftar dua kali.
-        this.stop();
         this.state.data.tutorial.completed = false;
         this.state.data.tutorial.skipped = false;
         this.state.data.tutorial.currentStep = 0;
-        this.start(); // start() sudah memancarkan step pertama
+        this.start();
+        this._emitCurrent();
     }
 
     _finish(skipped) {
