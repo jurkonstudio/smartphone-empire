@@ -1,10 +1,16 @@
 // FILE: src/core/SwipeService.js
 // ============================================================
-// SwipeService — versi debug, dengan console.log.
+// SwipeService — swipe horizontal untuk pindah sub-tab.
+// View -> daftar sub-tab (urutan sesuai urutan tampil di UI).
+//
+// CATATAN: research punya chip subtab KONDISIONAL — muncul otomatis
+// kalau 'chip_design_tool' sudah ada di research.completed.
+// ResearchPanel.js harus support rendering 'chip' sebelum ini aktif
+// sepenuhnya. Kalau belum, swipe ke 'chip' akan fallback ke Teknologi.
 // ============================================================
 
 var SUBTABS = {
-    research: ['tech', 'os'],
+    // research: dinamis, lihat _getSubtabsForView()
     products: ['design', 'catalog', 'sales'],
     market:   ['share', 'competitors', 'trends', 'public'],
     team:     ['active', 'recruit', 'info']
@@ -41,12 +47,10 @@ var BLACKLIST_SELECTORS = [
 // INIT
 // ============================================================
 export function initSwipe(callbacks) {
-    console.log('[Swipe] initSwipe dipanggil');
     if (!callbacks) { console.warn('[Swipe] callbacks kosong'); return; }
     _getView    = callbacks.getView || null;
     _getSubtab  = callbacks.getSubtab || null;
     _setSubtab  = callbacks.setSubtab || null;
-    console.log('[Swipe] getView set?', !!_getView, '| getSubtab set?', !!_getSubtab, '| setSubtab set?', !!_setSubtab);
 
     if (!_running) {
         document.addEventListener('touchstart', _onStart, { passive: true });
@@ -54,9 +58,6 @@ export function initSwipe(callbacks) {
         document.addEventListener('touchend',   _onEnd,   { passive: true });
         document.addEventListener('touchcancel', _onCancel, { passive: true });
         _running = true;
-        console.log('[Swipe] Event listeners terpasang');
-    } else {
-        console.log('[Swipe] Sudah running sebelumnya');
     }
 }
 
@@ -89,56 +90,58 @@ function _isBlacklisted(target) {
     return false;
 }
 
+// Ambil daftar sub-tab untuk view tertentu.
+// Research & Products punya item KONDISIONAL yang muncul kalau
+// 'chip_design_tool' sudah selesai (chip lab terbuka).
 function _getSubtabsForView(view) {
     if (!view) return null;
-    if (view === 'products') {
-        var tabs = ['design', 'catalog', 'sales'];
-        try {
-            var game = window.__game;
-            if (game && game.state && game.state.get) {
-                var data = game.state.get();
-                var completed = (data.research && data.research.completed) || [];
-                if (completed.indexOf('chip_design_tool') !== -1) tabs.push('chip');
-            }
-        } catch (e) {}
-        return tabs;
+
+    var completed = [];
+    try {
+        var game = window.__game;
+        if (game && game.state && game.state.get) {
+            var data = game.state.get();
+            completed = (data.research && data.research.completed) || [];
+        }
+    } catch (e) { completed = []; }
+
+    var chipUnlocked = completed.indexOf('chip_design_tool') !== -1;
+
+    if (view === 'research') {
+        var rtabs = ['tech', 'os', 'sejarah'];
+        if (chipUnlocked) rtabs.push('chip');
+        return rtabs;
     }
+
+    if (view === 'products') {
+        var ptabs = ['design', 'catalog', 'sales'];
+        if (chipUnlocked) ptabs.push('chip');
+        return ptabs;
+    }
+
     if (SUBTABS[view]) return SUBTABS[view].slice();
     return null;
 }
 
 function _cycleSubtab(direction) {
     var now = Date.now();
-    if (now - _lastTrigger < THROTTLE_MS) {
-        console.log('[Swipe] Throttled');
-        return;
-    }
+    if (now - _lastTrigger < THROTTLE_MS) return;
 
     var view = _getView ? _getView() : null;
-    console.log('[Swipe] Current view:', view);
     if (!view) return;
 
     var tabs = _getSubtabsForView(view);
-    console.log('[Swipe] Tabs:', tabs);
-    if (!tabs || tabs.length < 2) {
-        console.log('[Swipe] Tidak ada sub-tab untuk view ini');
-        return;
-    }
+    if (!tabs || tabs.length < 2) return;
 
     var currentId = _getSubtab ? _getSubtab() : null;
-    console.log('[Swipe] Current subtab:', currentId);
     var idx = tabs.indexOf(currentId);
     if (idx < 0) idx = 0;
 
     var nextIdx = idx + direction;
-    if (nextIdx < 0 || nextIdx >= tabs.length) {
-        console.log('[Swipe] Batas tercapai, tidak pindah');
-        return;
-    }
+    if (nextIdx < 0 || nextIdx >= tabs.length) return;
 
     _lastTrigger = now;
     var nextId = tabs[nextIdx];
-    console.log('[Swipe] Pindah ke:', nextId);
     if (_setSubtab) _setSubtab(nextId, direction);
 }
 
@@ -157,26 +160,12 @@ function _onStart(e) {
 
     if (_isModalOpen()) return;
     if (!e.touches || !e.touches[0]) return;
-
-    var target = e.target;
-    if (_isBlacklisted(target)) {
-        // Cek elemen apa yang memblokir
-        for (var i = 0; i < BLACKLIST_SELECTORS.length; i++) {
-            var blocked = null;
-            try { blocked = target.closest(BLACKLIST_SELECTORS[i]); } catch (err) {}
-            if (blocked) {
-                console.log('[Swipe] Skipped, karena di elemen:', BLACKLIST_SELECTORS[i], blocked);
-                break;
-            }
-        }
-        return;
-    }
+    if (_isBlacklisted(e.target)) return;
 
     _startX = e.touches[0].clientX;
     _startY = e.touches[0].clientY;
     _startTime = Date.now();
     _tracking = true;
-    console.log('[Swipe] Mulai tracking di', Math.round(_startX), Math.round(_startY));
 }
 
 function _onMove(e) {
@@ -188,7 +177,6 @@ function _onMove(e) {
 
     if (Math.abs(dy) > VERTICAL_TOLERANCE && Math.abs(dy) > Math.abs(dx)) {
         _ignore = true;
-        console.log('[Swipe] Diabaikan — scroll vertical');
     }
 }
 
@@ -202,22 +190,9 @@ function _onEnd(e) {
     var dy = e.changedTouches[0].clientY - _startY;
     var dt = Date.now() - _startTime;
 
-    console.log('[Swipe] Selesai. dx:', Math.round(dx), 'dy:', Math.round(dy), 'dt:', dt);
-
-    if (Math.abs(dx) < THRESHOLD_PX) {
-        console.log('[Swipe] Terlalu pendek (<', THRESHOLD_PX, ')');
-        return;
-    }
-
-    if (Math.abs(dy) > Math.abs(dx)) {
-        console.log('[Swipe] Vertical dominan');
-        return;
-    }
-
-    if (dt > MAX_DURATION_MS) {
-        console.log('[Swipe] Terlalu lama (', dt, 'ms)');
-        return;
-    }
+    if (Math.abs(dx) < THRESHOLD_PX) return;
+    if (Math.abs(dy) > Math.abs(dx)) return;
+    if (dt > MAX_DURATION_MS) return;
 
     if (dx < 0) _cycleSubtab(1);
     else _cycleSubtab(-1);
