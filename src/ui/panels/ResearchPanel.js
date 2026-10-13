@@ -1,8 +1,9 @@
 // FILE: src/ui/panels/ResearchPanel.js
-// Tab Riset: sub-tab Teknologi | OS.
+// Tab Riset: sub-tab Teknologi | OS | Sejarah.
 // Node riset diurutkan: Berjalan → Tersedia → Selesai → Terkunci.
 import { RESEARCH_CATEGORIES, getNodeById } from '../../data/research.data.js';
 import { renderOSPanel, openOsWizardModal, openCreateOsModal, openFeatureDetailModal } from './OSPanel.js';
+import { renderTimelinePanel, getTimelineFilter, setTimelineFilter } from './TimelinePanel.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 
 function escapeHtml(s) {
@@ -19,13 +20,16 @@ export function setFilterCategory(cat) { _filterCategory = cat; }
 export function renderResearchPanel({ subtab, researchSystem, osSystem }) {
     const subtabBar = `
         <div class="subtab-bar">
-            <button class="subtab-btn ${subtab === 'tech' ? 'active' : ''}" data-subtab="tech">Teknologi</button>
-            <button class="subtab-btn ${subtab === 'os'   ? 'active' : ''}" data-subtab="os">OS</button>
+            <button class="subtab-btn ${subtab === 'tech'    ? 'active' : ''}" data-subtab="tech">Teknologi</button>
+            <button class="subtab-btn ${subtab === 'os'      ? 'active' : ''}" data-subtab="os">OS</button>
+            <button class="subtab-btn ${subtab === 'sejarah' ? 'active' : ''}" data-subtab="sejarah">Sejarah</button>
         </div>
     `;
     let body = '';
     if (subtab === 'os') {
         body = renderOSPanel({ osSystem, researchSystem });
+    } else if (subtab === 'sejarah') {
+        body = renderTimelinePanel();
     } else {
         body = renderTechSection({ researchSystem });
     }
@@ -43,7 +47,6 @@ function _statusPriority(status) {
 }
 
 function _sortNodesByStatus(nodes, researchSystem) {
-    // Hitung status sekali per node (hindari komputasi berulang)
     const withStatus = nodes.map(n => {
         const st = researchSystem.getNodeStatus(n.id);
         return { node: n, status: st.status };
@@ -53,7 +56,6 @@ function _sortNodesByStatus(nodes, researchSystem) {
         const pa = _statusPriority(a.status);
         const pb = _statusPriority(b.status);
         if (pa !== pb) return pa - pb;
-        // Prioritas sekunder: tier lebih rendah dulu, lalu tahun
         if (a.node.tier !== b.node.tier) return a.node.tier - b.node.tier;
         return (a.node.minYear || 0) - (b.node.minYear || 0);
     });
@@ -69,7 +71,6 @@ function renderTechSection({ researchSystem }) {
     const active = data.research.active;
     const maxSlots = data.research.maxSlots;
 
-    // ===== Ringkasan slot =====
     const slotHeader = `
         <div class="card" style="padding:12px;">
             <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -98,7 +99,6 @@ function renderTechSection({ researchSystem }) {
         </div>
     `;
 
-    // ===== Chip kategori =====
     const chipBar = `
         <div class="chip-bar">
             <button class="chip ${_filterCategory === 'all' ? 'active' : ''}" data-filter-cat="all">Semua</button>
@@ -110,14 +110,12 @@ function renderTechSection({ researchSystem }) {
         </div>
     `;
 
-    // ===== Ambil & urutkan node =====
     const allNodes = _filterCategory === 'all'
         ? RESEARCH_CATEGORIES.flatMap(c => researchSystem.getNodesByCategory(c.id))
         : researchSystem.getNodesByCategory(_filterCategory);
 
     const sortedNodes = _sortNodesByStatus(allNodes, researchSystem);
 
-    // ===== Hitung counter status =====
     let countAvailable = 0, countRunning = 0, countDone = 0, countLocked = 0;
     sortedNodes.forEach(n => {
         const s = researchSystem.getNodeStatus(n.id).status;
@@ -127,7 +125,6 @@ function renderTechSection({ researchSystem }) {
         else countLocked++;
     });
 
-    // ===== Counter bar =====
     const counterBar = `
         <div class="card" style="padding:10px 12px;display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px;">
             <span><b style="color:var(--info);font-size:13px;">${countAvailable}</b> <span style="color:var(--text-dim);">tersedia</span></span>
@@ -137,7 +134,6 @@ function renderTechSection({ researchSystem }) {
         </div>
     `;
 
-    // ===== Daftar node =====
     const nodeList = sortedNodes.map(n => renderTechNodeCard(n, researchSystem)).join('');
 
     return slotHeader + counterBar + chipBar + `<div class="tech-node-list">${nodeList}</div>`;
@@ -221,4 +217,5 @@ export function openNodeDetailModal({ nodeId, researchSystem }) {
     window.__game.Modal.open('node-detail', html);
 }
 
-export { openOsWizardModal, openCreateOsModal, openFeatureDetailModal };
+// Re-export supaya main.js bisa import dari sini (konsisten dengan setFilterCategory).
+export { openOsWizardModal, openCreateOsModal, openFeatureDetailModal, getTimelineFilter, setTimelineFilter };
