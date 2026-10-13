@@ -482,9 +482,19 @@ function bindProgressEvents() {
         var barEl = els.view.querySelector('[data-prod-dev-bar]'); if (barEl) barEl.style.width = data.percentOverall + '%';
         var etaEl = els.view.querySelector('[data-prod-dev-eta]'); if (etaEl) etaEl.textContent = 'Sisa ~' + data.remainingDays + ' hari';
     });
-    bus.on('time:day-changed', function () {
-        if (activeView === 'research' || activeView === 'products' || activeView === 'market' || activeView === 'team') renderView({ soft: true });
-    });
+
+    // ===== FIX FLICKER: hapus re-render tiap hari. =====
+    // Sebelumnya: bus.on('time:day-changed', ...renderView({ soft: true })) tiap hari
+    // → memicu animasi fadeInUp di semua .card → flicker.
+    // Sekarang: render hanya saat ada perubahan struktural (riset/produk mulai-selesai-batal).
+    // Progress bar tetap update via event granular di atas.
+    bus.on('research:started',   function () { if (activeView === 'research' && activeSubtab === 'tech') renderView({ soft: true }); });
+    bus.on('research:completed', function () { if (activeView === 'research' && activeSubtab === 'tech') renderView({ soft: true }); });
+    bus.on('research:cancelled', function () { if (activeView === 'research' && activeSubtab === 'tech') renderView({ soft: true }); });
+
+    bus.on('product:development-started',   function () { if (activeView === 'products') renderView({ soft: true }); });
+    bus.on('product:released',              function () { if (activeView === 'products') renderView({ soft: true }); });
+    bus.on('product:development-cancelled', function () { if (activeView === 'products') renderView({ soft: true }); });
 }
 
 // ============ TIME ============
