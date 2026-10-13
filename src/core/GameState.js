@@ -47,6 +47,15 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             totalCompleted: (BALANCE.starterResearch || []).length
         },
 
+        // V6d — riset chip TERPISAH dari riset biasa.
+        // Node chip dari chip-research.data.js disimpan di sini.
+        chipResearch: {
+            active: [],
+            completed: [],
+            maxSlots: 1,
+            totalCompleted: 0
+        },
+
         os: {
             name: null,
             createdAt: null,
@@ -87,7 +96,6 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
         marketing: { activeCampaigns: [] },
         reviews: { feed: [] },
 
-        // ===== NEWS (BARU) =====
         news: {
             articles: [],
             lastMilestone: {}
@@ -352,6 +360,14 @@ class GameState {
             candidatePool: { ...base.candidatePool, ...(incoming.candidatePool || {}) },
             research: { ...base.research, ...(incoming.research || {}) },
 
+            // V6d — merge chipResearch dengan base defaults.
+            chipResearch: {
+                ...base.chipResearch,
+                ...(incoming.chipResearch || {}),
+                active: Array.isArray(incoming.chipResearch && incoming.chipResearch.active) ? incoming.chipResearch.active : [],
+                completed: Array.isArray(incoming.chipResearch && incoming.chipResearch.completed) ? incoming.chipResearch.completed : []
+            },
+
             os: {
                 ...base.os, ...(incoming.os || {}),
                 apps: { ...base.os.apps, ...((incoming.os && incoming.os.apps) || {}) }
@@ -409,6 +425,10 @@ class GameState {
         if (typeof this.data.research.totalCompleted !== 'number') this.data.research.totalCompleted = this.data.research.completed.length;
         if (!this.data.market.trends) this.data.market.trends = { ...BALANCE.market.trendsByEra.feature_phone };
         if (typeof this.data.feedback.sentiment !== 'number') this.data.feedback.sentiment = (BALANCE.feedback && BALANCE.feedback.initialSentiment) || 50;
+
+        if (typeof this.data.chipResearch.totalCompleted !== 'number') {
+            this.data.chipResearch.totalCompleted = this.data.chipResearch.completed.length;
+        }
 
         this.data.staff.forEach(s => {
             if (typeof s.skillProgress !== 'number') s.skillProgress = 0;
