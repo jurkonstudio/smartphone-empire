@@ -2874,6 +2874,7 @@ body {
     color: var(--accent);
 }
 [data-theme="light"] .icon-wrap.outline {
+   
     background: transparent;
     color: var(--text-secondary);
 }
@@ -2883,3 +2884,20 @@ body {
 .icon-hero {
     will-change: transform;
 }
+/* V2.2b — Brand text di bawah mockup */
+.phone-brand {
+    text-align: center;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    margin-top: 2px;
+    user-select: none;
+}
+
+/* Spec-based subtle effects */
+.phone-spec-ms_notch   { filter: drop-shadow(0 6px 20px rgba(255,255,255,0.06)); }
+.phone-spec-ms_dynamic_island { filter: drop-shadow(0 10px 28px rgba(0,212,255,0.35)); }
+.phone-spec-ms_tri_fold,
+.phone-spec-ms_future  { filter: drop-shadow(0 12px 32px rgba(168,85,247,0.35)); }
