@@ -3383,3 +3383,59 @@ body {
 .wiz-mockup-live {
     animation: wizMockupIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
 }
+
+
+/* ============================================================
+   REVISI 2 — ANIMASI MASUK untuk card & KPI.
+   
+   Trigger lewat class .view-fresh yang hanya ditambahkan saat
+   pindah halaman (render non-soft). Saat update granular
+   (soft-update, time tick, log update), class ini tidak
+   ditambahkan → animasi tidak re-trigger → tidak flicker.
+   ============================================================ */
+
+@keyframes viewCardIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes viewKpiIn {
+    from { opacity: 0; transform: translateY(6px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Card masuk dengan stagger halus */
+.view-fresh .card {
+    animation: viewCardIn 0.32s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.view-fresh .card:nth-child(1) { animation-delay: 0.00s; }
+.view-fresh .card:nth-child(2) { animation-delay: 0.03s; }
+.view-fresh .card:nth-child(3) { animation-delay: 0.06s; }
+.view-fresh .card:nth-child(4) { animation-delay: 0.09s; }
+.view-fresh .card:nth-child(5) { animation-delay: 0.12s; }
+.view-fresh .card:nth-child(n+6) { animation-delay: 0.15s; }
+
+/* KPI value masuk dengan sedikit scale */
+.view-fresh .kpi {
+    animation: viewKpiIn 0.30s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.view-fresh .kpi-value {
+    animation: viewKpiIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation-delay: 0.05s;
+}
+
+/* Header cash di halaman baru juga animate masuk */
+.view-fresh ~ * .header-cash,
+.view-fresh .header-cash {
+    /* tidak fires karena header di luar #app-view, sengaja dikosongkan */
+}
+
+/* tech-node & prod-card juga dapat animasi masuk */
+.view-fresh .tech-node {
+    animation: viewCardIn 0.30s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.view-fresh .tech-node:nth-child(2) { animation-delay: 0.02s; }
+.view-fresh .tech-node:nth-child(3) { animation-delay: 0.04s; }
+.view-fresh .tech-node:nth-child(4) { animation-delay: 0.06s; }
+.view-fresh .tech-node:nth-child(5) { animation-delay: 0.08s; }
+.view-fresh .tech-node:nth-child(n+6) { animation-delay: 0.10s; }
