@@ -3,6 +3,7 @@
 // daftar fitur, bug, apps, dan lisensi.
 import { renderOsStatBar } from './OsStatBar.js';
 import { OS_FEATURES, OS_LICENSES, BUILTIN_APPS, OS_ERAS } from '../../data/os.data.js';
+import { renderOsScreenMockup } from '../phone/OsScreenMockup.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -29,20 +30,30 @@ export function renderOSPanel({ osSystem, researchSystem }) {
     const currentVersion = osSystem.getCurrentVersionObject();
     const developing = os.developing;
 
+    // ===== Mockup layar OS =====
+    let mockupHtml = '';
+    try {
+        mockupHtml = renderOsScreenMockup({ size: 120 });
+    } catch (e) {
+        console.error('[OSPanel] OsScreenMockup error:', e);
+        mockupHtml = '';
+    }
+
     // ===== Kartu OS aktif =====
     const headerHtml = `
         <div class="card">
             <div class="card-title">OS Aktif</div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                <div>
-                    <div style="font-size:16px;font-weight:700;">${escapeHtml(os.name)}</div>
-                    <div style="font-size:12px;color:var(--text-dim);">
+            <div class="os-active-hero">
+                <div class="os-active-screen">${mockupHtml}</div>
+                <div class="os-active-details">
+                    <div style="font-size:16px;font-weight:700;letter-spacing:-0.01em;">${escapeHtml(os.name)}</div>
+                    <div style="font-size:12px;color:var(--text-dim);margin-top:2px;">
                         ${currentVersion ? 'Versi ' + escapeHtml(currentVersion.versionString) : 'Belum ada versi rilis'}
                     </div>
+                    <button class="btn-secondary" data-os-action="wizard" style="width:100%;margin-top:10px;font-size:12px;padding:8px 12px;">
+                        + Versi Baru
+                    </button>
                 </div>
-                <button class="btn-secondary" data-os-action="wizard" style="min-width:auto;padding:8px 12px;font-size:12px;">
-                    + Versi Baru
-                </button>
             </div>
             ${currentVersion
                 ? renderOsStatBar(currentVersion.stats)
@@ -246,7 +257,6 @@ export function openOsWizardModal({ osSystem }) {
 
     function refresh() {
         const selected = Array.from(checkboxes).filter(c => c.checked);
-        // Batasi maks
         if (selected.length > maxSlots) {
             selected[selected.length - 1].checked = false;
             window.__game.ToastService.warning('Maks ' + maxSlots + ' fitur per versi.');
@@ -263,7 +273,6 @@ export function openOsWizardModal({ osSystem }) {
             selectedIds.push(f.id);
         });
 
-        // Preview via OSSystem supaya sama dengan hasil akhir versi.
         const stats = osSystem.previewStats(selectedIds);
 
         preview.innerHTML = renderOsStatBar(stats);
