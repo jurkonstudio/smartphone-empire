@@ -33,11 +33,27 @@ function _ensureNode() {
     _node.querySelector('[data-tut-skip]').addEventListener('click', () => {
         bus.emit('tutorial:skip');
     });
-    _node.querySelector('[data-tut-next]').addEventListener('click', () => {
-        bus.emit('tutorial:next');
-    });
+    _node.querySelector('[data-tut-next]').addEventListener('click', _onNextClick);
     window.addEventListener('resize', () => _reposition());
     return _node;
+}
+
+// Klik "Mulai/Lanjut":
+//  - step acknowledge  -> langsung lanjut
+//  - step aksi         -> klik target agar aksi benar-benar terjadi
+//  - target tak ada    -> paksa lanjut (fallback)
+function _onNextClick() {
+    if (!_currentStep) return;
+    if (_currentStep.waitFor === 'acknowledge') {
+        bus.emit('tutorial:next');
+        return;
+    }
+    const target = document.querySelector(_currentStep.target);
+    if (target) {
+        target.click();
+        return;
+    }
+    bus.emit('tutorial:next');
 }
 
 function _show(stepIndex, step) {
@@ -47,12 +63,14 @@ function _show(stepIndex, step) {
     node.classList.add('visible');
     node.querySelector('.tut-title').textContent = step.title;
     node.querySelector('.tut-text').textContent = step.text;
-    // Tombol "Lanjut" hanya untuk step acknowledge
+
+    // Selalu tampil — jalur utama untuk step acknowledge,
+    // dan fallback bila pemain kesulitan menemukan target aksi.
     const nextBtn = node.querySelector('[data-tut-next]');
-    nextBtn.style.display = step.waitFor === 'acknowledge' ? 'inline-flex' : 'none';
-    // Reposisi setelah layout selesai
+    nextBtn.style.display = 'inline-flex';
+    nextBtn.textContent = stepIndex === 0 ? 'Mulai' : 'Lanjut';
+
     requestAnimationFrame(() => _reposition());
-    // Target bisa berubah (re-render); pantau singkat
     setTimeout(_reposition, 120);
     setTimeout(_reposition, 400);
 }
@@ -69,7 +87,6 @@ function _reposition() {
     hole.style.width  = (r.width + pad * 2) + 'px';
     hole.style.height = (r.height + pad * 2) + 'px';
 
-    // Posisi bubble: bawah target jika ada ruang, atas jika tidak
     const bubble = _node.querySelector('.tut-bubble');
     bubble.style.left = '12px';
     bubble.style.right = '12px';
@@ -85,6 +102,5 @@ function _reposition() {
 
 function _hide() {
     if (_node) _node.classList.remove('visible');
-    setTimeout(() => { if (_node) _node.classList.remove('visible'); _currentStep = null; }, 200);
     _currentStep = null;
 }
