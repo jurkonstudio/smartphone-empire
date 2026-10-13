@@ -3059,3 +3059,225 @@ body {
 
 /* Nav btn active tetap dapat efek warna & scale dari CSS lain.
    Hanya animasi rotate yang dimatikan. */
+
+
+/* ============================================================
+   V4c — TIMELINE PANEL (Riset → Sejarah)
+   ============================================================ */
+
+.tl-list {
+    display: flex;
+    flex-direction: column;
+    margin-top: 8px;
+}
+
+.tl-item {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    position: relative;
+}
+
+.tl-item + .tl-item {
+    border-top: 1px solid var(--border);
+}
+
+.tl-marker {
+    flex: 0 0 32px;
+    display: flex;
+    justify-content: center;
+    position: relative;
+}
+
+.tl-marker::before {
+    content: "";
+    position: absolute;
+    top: 32px;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    background: var(--border);
+}
+
+.tl-item:last-child .tl-marker::before {
+    display: none;
+}
+
+.tl-marker-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-3);
+    border: 2px solid var(--border-strong);
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    z-index: 1;
+}
+
+/* Past events */
+.tl-item.tl-past .tl-marker-icon {
+    background: var(--bg-2);
+    border-color: var(--text-tertiary);
+    color: var(--text-secondary);
+}
+
+/* Current (tahun ini) */
+.tl-item.tl-current .tl-marker-icon {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #ffffff;
+    box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+/* Future events */
+.tl-item.tl-future {
+    opacity: 0.55;
+}
+.tl-item.tl-future .tl-marker-icon {
+    border-color: var(--border);
+    color: var(--text-tertiary);
+}
+
+.tl-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.tl-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+}
+
+.tl-year {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
+
+.tl-kind-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-tertiary);
+    background: var(--bg-3);
+    padding: 2px 7px;
+    border-radius: var(--r-pill);
+}
+
+.tl-spec-badge {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    background: var(--warn-soft);
+    color: var(--warn);
+    padding: 2px 6px;
+    border-radius: var(--r-pill);
+}
+
+.tl-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+}
+
+.tl-subtitle {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.tl-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.tl-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.tl-tag {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    background: var(--bg-3);
+    padding: 2px 7px;
+    border-radius: var(--r-pill);
+    letter-spacing: 0.2px;
+}
+
+/* "Posisi Anda Saat Ini" marker */
+.tl-now-marker {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 0;
+    margin: 6px 0;
+}
+
+.tl-now-dot {
+    flex: 0 0 32px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.tl-now-dot::before {
+    content: "";
+    display: block;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+    animation: tlPulse 2s ease-in-out infinite;
+}
+
+@keyframes tlPulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-soft); }
+    50%      { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); }
+}
+
+.tl-now-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--accent-soft);
+    padding: 6px 12px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--accent);
+}
+
+.tl-now-text {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+}
+
+.tl-now-year {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
