@@ -2,11 +2,9 @@
 // ============================================================
 // ChipSystem — desain chip, lifecycle aging, stat computation.
 //
-// Rumus utama:
-//   Performance = cores^0.85 × clockGHz^1.2 × arch.perf × node.perf
-//   Efficiency  = node.eff × arch.eff ÷ clockGHz^0.6 × cacheBonus
-//   Cost/unit   = node.costBase × (cores^0.7) × arch.cost × fabMultiplier
-//   Yield Rate  = node.yieldBase × (budget/optimalBudget)^0.3
+// V6c-1: getAvailable* sekarang gate berbasis chipResearch.completed
+// (bukan cuma minYear). Fallback ke gate tahun untuk backward-compat
+// save lama yang belum punya data.chipResearch.
 // ============================================================
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
@@ -61,6 +59,26 @@ export class ChipSystem {
     }
 
     // ============================================================
+    // GATE HELPER — cek chipResearch
+    // ============================================================
+    // Return true kalau sistem chipResearch sudah pernah dipakai
+    // (ada completed atau active). Kalau belum, pakai fallback tahun.
+    _hasChipResearchState() {
+        const cr = this.state.data.chipResearch;
+        if (!cr) return false;
+        if (!Array.isArray(cr.completed) || !Array.isArray(cr.active)) return false;
+        return (cr.completed.length > 0 || cr.active.length > 0);
+    }
+
+    _isUnlocked(requiresResearch) {
+        const data = this.state.data;
+        const cr = data.chipResearch;
+        if (!cr || !Array.isArray(cr.completed)) return false;
+        if (!requiresResearch) return true;
+        return cr.completed.indexOf(requiresResearch) !== -1;
+    }
+
+    // ============================================================
     // STAT COMPUTATION
     // ============================================================
     computeChipStats(config) {
@@ -73,16 +91,12 @@ export class ChipSystem {
         const cacheMB = Math.max(0.06, (config.cacheKB || 64) / 1024);
         const featureIds = Array.isArray(config.features) ? config.features : [];
 
-        // PERFORMANCE
         let perf = Math.pow(cores, 0.85) * Math.pow(clock, 1.2) * arch.perfMultiplier * node.perfBonus;
-        // Cache bonus (logaritmik)
         perf *= 1 + Math.log10(1 + cacheMB) * 0.15;
 
-        // EFFICIENCY
         let eff = node.effBonus * arch.effMultiplier / Math.pow(clock, 0.6);
         eff *= 1 + Math.log10(1 + cacheMB) * 0.08;
 
-        // Features bonus
         let featureBonus = { camera: 0, display: 0, performance: 0, battery: 0, connectivity: 0, quality: 0 };
         featureIds.forEach(fid => {
             const f = getChipFeatureById(fid);
@@ -93,18 +107,15 @@ export class ChipSystem {
             }
         });
 
-        // Scale ke 0-100 (chip tier 1 tahun 2003 = ~25-35; chip modern = 90+)
         const perfScore = Math.min(100, Math.round(perf * 22 + featureBonus.performance));
         const effScore = Math.min(100, Math.round(eff * 28 + featureBonus.battery));
 
-        // COST per unit ($) — base
         let cost = node.costBase * Math.pow(cores, 0.7) * arch.costMultiplier;
         cost += featureIds.reduce((sum, fid) => {
             const f = getChipFeatureById(fid);
             return sum + (f ? f.costPerUnit : 0);
         }, 0);
 
-        // Bonus tambahan dari feature
         return {
             performance: perfScore,
             efficiency: effScore,
@@ -127,14 +138,10 @@ export class ChipSystem {
         const cores = Math.max(1, config.cores || 1);
         const featureCount = Array.isArray(config.features) ? config.features.length : 0;
 
-        // Basis: $50k × tier arsitektur × node tier
         let base = 50000 * arch.tier * node.tier;
-        // Core multiplier
         base *= 1 + (cores - 1) * 0.15;
-        // Feature multiplier
         base *= 1 + featureCount * 0.1;
 
-        // Budget tier multiplier
         const budget = BUDGET_TIERS.find(b => b.id === (config.budgetId || 'normal'));
         if (budget) base *= budget.multiplier;
 
@@ -153,16 +160,12 @@ export class ChipSystem {
         days += (cores - 1) * 5;
         days += featureCount * 8;
 
-        // Engineer speedup
         const engineers = (this.state.data.staff || []).filter(s => s.role === 'engineer').length;
         const speedup = 1 + Math.min(1.0, engineers * 0.08);
 
         return Math.max(30, Math.round(days / speedup));
     }
 
-    // ============================================================
-    // YIELD RATE — % hasil produksi yang layak jual
-    // ============================================================
     computeYieldRate(config) {
         const node = getChipNodeById(config.nodeId);
         if (!node) return 0.5;
@@ -170,12 +173,10 @@ export class ChipSystem {
         const budget = BUDGET_TIERS.find(b => b.id === (config.budgetId || 'normal'));
         const budgetMod = budget ? budget.yieldMod : 0;
 
-        // Complexity factor — makin banyak core + fitur, yield turun
         const cores = Math.max(1, config.cores || 1);
         const featureCount = Array.isArray(config.features) ? config.features.length : 0;
         const complexityPenalty = (cores - 1) * 0.015 + featureCount * 0.01;
 
-        // Fab level bonus — kalau punya fab sendiri, yield naik
         const fab = this.state.data.fab;
         const fabBonus = fab && fab.built ? (fab.level - 1) * 0.03 : 0;
 
@@ -184,23 +185,33 @@ export class ChipSystem {
     }
 
     // ============================================================
-    // API PUBLIK
+    // API PUBLIK — V6c-1 gate berbasis chipResearch
     // ============================================================
-    // Sumber ketersediaan: HANYA cek minYear.
-    // (chip-research.data.js belum diproses sistem riset — see catatan.)
+    // Kalau pemain sudah pernah pakai sistem chipResearch (ada completed
+    // atau active), gate pakai chipResearch.completed.
+    // Kalau belum, fallback ke gate tahun (backward-compat save lama).
     getAvailableArchitectures() {
         const year = this.state.data.time.currentYear;
-        return CHIP_ARCHITECTURES.filter(a => year >= (a.minYear || 0));
+        if (!this._hasChipResearchState()) {
+            return CHIP_ARCHITECTURES.filter(a => year >= (a.minYear || 0));
+        }
+        return CHIP_ARCHITECTURES.filter(a => this._isUnlocked(a.requiresResearch));
     }
 
     getAvailableNodes() {
         const year = this.state.data.time.currentYear;
-        return CHIP_NODES.filter(n => year >= (n.minYear || 0));
+        if (!this._hasChipResearchState()) {
+            return CHIP_NODES.filter(n => year >= (n.minYear || 0));
+        }
+        return CHIP_NODES.filter(n => this._isUnlocked(n.requiresResearch));
     }
 
     getAvailableFeatures() {
         const year = this.state.data.time.currentYear;
-        return CHIP_FEATURES.filter(f => year >= (f.minYear || 0));
+        if (!this._hasChipResearchState()) {
+            return CHIP_FEATURES.filter(f => year >= (f.minYear || 0));
+        }
+        return CHIP_FEATURES.filter(f => this._isUnlocked(f.requiresResearch));
     }
 
     getBudgetTiers() {
@@ -212,7 +223,7 @@ export class ChipSystem {
     }
 
     // ============================================================
-    // LIFECYCLE — aging multiplier
+    // LIFECYCLE
     // ============================================================
     getChipAgeMonths(chip) {
         const currentMinute = this.state.data.time.elapsedGameMinutes;
@@ -245,25 +256,21 @@ export class ChipSystem {
         const node = getChipNodeById(config.nodeId);
         if (!node) return { ok: false, reason: 'Proses node tidak valid.' };
 
-        // Core count check
         const cores = config.cores || 1;
         if (cores < 1 || cores > arch.coresMax) {
             return { ok: false, reason: 'Jumlah core harus 1-' + arch.coresMax + '.' };
         }
 
-        // Clock check (200 MHz - 5 GHz)
         const clock = config.clockGHz || 1.0;
         if (clock < 0.2 || clock > 5.0) {
             return { ok: false, reason: 'Clock speed harus 0.2 - 5.0 GHz.' };
         }
 
-        // Cache check
         const cacheKB = config.cacheKB || 64;
         if (cacheKB < 64 || cacheKB > 16384) {
             return { ok: false, reason: 'Cache harus 64 KB - 16 MB.' };
         }
 
-        // Features check — semua harus tersedia
         const features = Array.isArray(config.features) ? config.features : [];
         const availableFeatures = this.getAvailableFeatures().map(f => f.id);
         for (const fid of features) {
@@ -272,21 +279,17 @@ export class ChipSystem {
             }
         }
 
-        // Cost check
         const designCost = this.computeDesignCost(config);
         if (data.cash < designCost) {
             return { ok: false, reason: 'Uang tidak cukup. Butuh $' + designCost.toLocaleString('en-US') + '.' };
         }
 
-        // Charge
         this.state.setCash(data.cash - designCost);
 
-        // Compute stats once
         const stats = this.computeChipStats(config);
         const durationDays = this.computeDesignDuration(config);
         const yieldRate = this.computeYieldRate(config);
 
-        // Register project
         const project = {
             id: 'chip_' + Date.now() + '_' + data.chips.nextChipId,
             name,
@@ -345,7 +348,6 @@ export class ChipSystem {
         const deltaMinutes = currentMinute - last;
         if (deltaMinutes <= 0) return;
 
-        // Engineer speedup
         const engineers = (data.staff || []).filter(s => s.role === 'engineer').length;
         const speedup = 1 + Math.min(1.0, engineers * 0.08);
 
@@ -389,7 +391,6 @@ export class ChipSystem {
         data.chips.catalog.push(chip);
         data.chips.designing = null;
 
-        // Milestone chip pertama
         if (data.chips.catalog.length === 1) {
             this.state.addMilestone('first_chip', 'Chip pertama dirilis: ' + chip.name);
         }
@@ -434,4 +435,4 @@ export class ChipSystem {
             budgetId: 'normal'
         };
     }
-            }
+}
