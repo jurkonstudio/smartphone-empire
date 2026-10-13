@@ -209,10 +209,10 @@ export const OS_FEATURES = [
       devCost: 55000, devDays: 40, complexity: 4, requiresFeatures: ['fw_smart_notif'],
       statEffects: { stability: 8, speed: 4, features: 20, security: 18, design: 6 } },
 
-    { id: 'fw_imessage_apps', era: 'modern', minYear: 2016, requiresResearch: ['fw_appstore'],
+    { id: 'fw_imessage_apps', era: 'modern', minYear: 2016, requiresResearch: [],
       name: 'iMessage Apps', icon: 'gift',
       description: 'Platform aplikasi di dalam chat.',
-      devCost: 50000, devDays: 45, complexity: 4, requiresFeatures: ['fw_imessage'],
+      devCost: 50000, devDays: 45, complexity: 4, requiresFeatures: ['fw_imessage', 'fw_appstore'],
       statEffects: { stability: 6, speed: 6, features: 18, security: 8, design: 12 } },
 
     { id: 'fw_portrait_mode', era: 'modern', minYear: 2016, requiresResearch: ['cam_dual'],
@@ -442,7 +442,7 @@ export const OS_LICENSES = [
 export const BUILTIN_APPS = [
     { id: 'app_messenger',  name: 'Pesan',          devCost: 3000,  devDays: 5,  requiresFeature: 'fw_sms',              appealBonus: 3 },
     { id: 'app_photos',     name: 'Galeri Foto',    devCost: 5000,  devDays: 8,  requiresFeature: 'fw_camera_gallery',   appealBonus: 4 },
-    { id: 'app_music',      name: 'Pemutar Musik',  devCost: 6000,  devDays: 10, requiresFeature: 'fw_contacts',         appealBonus: 4 },
+    { id: 'app_music',      name: 'Pemutar Musik',  devCost: 6000,  devDays: 10, requiresFeature: null,                  appealBonus: 4 },
     { id: 'app_maps',       name: 'Peta',           devCost: 12000, devDays: 18, requiresFeature: 'fw_gps',              appealBonus: 6 },
     { id: 'app_store',      name: 'Toko App',       devCost: 20000, devDays: 25, requiresFeature: 'fw_appstore',         appealBonus: 10 },
     { id: 'app_wallet',     name: 'Dompet Digital', devCost: 25000, devDays: 30, requiresFeature: 'fw_digital_pay',      appealBonus: 8 },
