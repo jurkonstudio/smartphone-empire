@@ -22,11 +22,13 @@ function safe(fn, fallback) {
     }
 }
 
+// Chip lab tersedia mulai tahun 2003.
+// Untuk sementara berbasis tahun (chip-research.data.js belum diproses sistem riset).
 function isChipLabUnlocked() {
     try {
         var data = state.get();
-        if (!data || !data.research || !Array.isArray(data.research.completed)) return false;
-        return data.research.completed.indexOf('chip_design_tool') !== -1;
+        if (!data || !data.time) return false;
+        return (data.time.currentYear >= 2003);
     } catch (e) {
         return false;
     }
