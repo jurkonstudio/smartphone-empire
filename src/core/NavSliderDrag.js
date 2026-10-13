@@ -1,7 +1,7 @@
 // FILE: src/core/NavSliderDrag.js
 // ============================================================
 // NavSliderDrag — drag support untuk liquid glass nav slider.
-// Sentuh & geser slider, lepas → snap ke tab terdekat.
+// Apple-like: velocity tracking, spring snap, squash & stretch.
 // ============================================================
 
 var _nav = null;
@@ -13,14 +13,25 @@ var _state = {
     moved: false,
     startX: 0,
     startSliderX: 0,
+    currentX: 0,
     itemW: 0,
     sliderW: 0,
+    baseSliderW: 0,
     count: 0,
     activeIdx: 0,
     minX: 0,
     maxX: 0,
-    lastHoverIdx: -1
+    lastHoverIdx: -1,
+    rafId: null,
+    pendingX: null,
+    // Velocity tracking (px/ms)
+    lastSampleX: 0,
+    lastSampleT: 0,
+    velocity: 0
 };
+
+var VELOCITY_WINDOW = 80; // ms — waktu minimal antar sampel
+var FLICK_VELOCITY = 0.55; // px/ms — di atas ini = flick
 
 // ============================================================
 // INIT
@@ -80,7 +91,6 @@ function _highlight(idx) {
     for (var i = 0; i < buttons.length; i++) {
         buttons[i].classList.toggle('drag-hover', i === idx);
     }
-    // Haptic ringan saat melewati tab
     try {
         var s = (window.__game && window.__game.state) ? window.__game.state.get() : null;
         if (s && s.settings && s.settings.vibrate && navigator.vibrate) {
@@ -93,6 +103,15 @@ function _clearHighlight() {
     _state.lastHoverIdx = -1;
     var buttons = _buttons();
     for (var i = 0; i < buttons.length; i++) buttons[i].classList.remove('drag-hover');
+}
+
+function _hapticSnap() {
+    try {
+        var s = (window.__game && window.__game.state) ? window.__game.state.get() : null;
+        if (s && s.settings && s.settings.vibrate && navigator.vibrate) {
+            navigator.vibrate(8);
+        }
+    } catch (e) {}
 }
 
 // ============================================================
@@ -115,13 +134,23 @@ function _startAt(clientX) {
     _state.startX = clientX;
     _state.itemW = m.itemW;
     _state.sliderW = m.sliderW;
+    _state.baseSliderW = m.sliderW;
     _state.count = m.count;
     _state.activeIdx = activeIdx;
     _state.startSliderX = _idxToX(activeIdx, m.itemW, m.sliderW);
+    _state.currentX = _state.startSliderX;
     _state.minX = _idxToX(0, m.itemW, m.sliderW);
     _state.maxX = _idxToX(m.count - 1, m.itemW, m.sliderW);
+    _state.pendingX = null;
+    _state.velocity = 0;
+    _state.lastSampleX = clientX;
+    _state.lastSampleT = Date.now();
 
-    // Matikan transisi & tandai sedang drag
+    if (_state.rafId !== null) {
+        cancelAnimationFrame(_state.rafId);
+        _state.rafId = null;
+    }
+
     slider.style.transition = 'none';
     _nav.dataset.dragging = '1';
     _nav.classList.add('dragging');
@@ -130,10 +159,24 @@ function _startAt(clientX) {
 // ============================================================
 // DRAG MOVE
 // ============================================================
+function _sampleVelocity(x) {
+    var now = Date.now();
+    var dt = now - _state.lastSampleT;
+    if (dt < VELOCITY_WINDOW) return;
+    var dx = x - _state.lastSampleX;
+    var v = dx / dt;
+    // Exponential smoothing
+    _state.velocity = _state.velocity * 0.4 + v * 0.6;
+    _state.lastSampleX = x;
+    _state.lastSampleT = now;
+}
+
 function _moveTo(clientX) {
     if (!_state.dragging) return;
     var slider = _slider();
     if (!slider) return;
+
+    _sampleVelocity(clientX);
 
     var dx = clientX - _state.startX;
     if (Math.abs(dx) > 6) _state.moved = true;
@@ -148,11 +191,29 @@ function _moveTo(clientX) {
         targetX = _state.maxX + (targetX - _state.maxX) * 0.32;
     }
 
-    slider.style.transform = 'translateX(' + targetX + 'px) scale(1.03)';
+    _state.currentX = targetX;
 
-    // Highlight tab terdekat
-    var nearest = _nearestIdx(targetX + _state.sliderW / 2);
+    // Squash & stretch: slider sedikit melebar mengikuti velocity
+    // Velocity tinggi → sedikit melebar (maks 1.12x). Velocity rendah → base.
+    var vAbs = Math.min(Math.abs(_state.velocity), 2);
+    var stretch = 1 + Math.min(vAbs * 0.06, 0.12);
+    var squashW = _state.baseSliderW * stretch;
+    var wDelta = squashW - _state.baseSliderW;
+    var squashX = targetX - wDelta / 2;
+
+    slider.style.width = squashW + 'px';
+    slider.style.transform = 'translateX(' + squashX + 'px)';
+
+    var nearest = _nearestIdx(squashX + squashW / 2);
     _highlight(nearest);
+}
+
+function _flushMove() {
+    _state.rafId = null;
+    if (_state.pendingX === null) return;
+    var x = _state.pendingX;
+    _state.pendingX = null;
+    _moveTo(x);
 }
 
 // ============================================================
@@ -162,6 +223,15 @@ function _end() {
     if (!_state.dragging) return;
     _state.dragging = false;
 
+    if (_state.rafId !== null) {
+        cancelAnimationFrame(_state.rafId);
+        _state.rafId = null;
+    }
+    if (_state.pendingX !== null) {
+        _moveTo(_state.pendingX);
+        _state.pendingX = null;
+    }
+
     var slider = _slider();
     if (!slider) {
         delete _nav.dataset.dragging;
@@ -169,40 +239,48 @@ function _end() {
         return;
     }
 
-    // Hapus tanda drag
     delete _nav.dataset.dragging;
     _nav.classList.remove('dragging');
 
-    // Aktifkan kembali transisi spring
+    // Aktifkan kembali transition (CSS)
     slider.style.transition = '';
-    slider.style.transform = '';
+    // Kembalikan lebar ke base
+    slider.style.width = _state.baseSliderW + 'px';
 
-    if (!_state.moved) {
-        // Tap biasa — biarkan handler click yang jalan
-        _clearHighlight();
-        return;
-    }
-
-    // Snap ke tab terdekat
-    var transform = slider.style.transform;
-    var curX = _state.startSliderX;
-    // Ambil posisi terakhir dari inline style sebelum direset
-    var lastTransform = slider.getAttribute('data-last-x');
-    if (lastTransform) {
-        curX = parseFloat(lastTransform) || _state.startSliderX;
-    }
+    var wasMoved = _state.moved;
+    _state.moved = false;
 
     var buttons = _buttons();
-    var targetIdx = _nearestIdx(curX + _state.sliderW / 2);
-    var snapX = _idxToX(targetIdx, _state.itemW, _state.sliderW);
-
-    slider.style.transform = 'translateX(' + snapX + 'px)';
+    var nearestIdx = _nearestIdx(_state.currentX + _state.baseSliderW / 2);
 
     _clearHighlight();
 
-    // Navigate ke tab baru
+    if (!wasMoved) {
+        return;
+    }
+
+    // Velocity-based: kalau flick cepat, prioritaskan arah velocity
+    var targetIdx = nearestIdx;
+    var vAbs = Math.abs(_state.velocity);
+    if (vAbs > FLICK_VELOCITY) {
+        if (_state.velocity > 0 && nearestIdx < _state.count - 1) {
+            // flick ke kanan → tab berikutnya minimal
+            targetIdx = Math.max(nearestIdx, _state.activeIdx + 1);
+        } else if (_state.velocity < 0 && nearestIdx > 0) {
+            // flick ke kiri → tab sebelumnya maksimal
+            targetIdx = Math.min(nearestIdx, _state.activeIdx - 1);
+        }
+    }
+
+    // Kalau tetap di tab yang sama, snap balik
+    if (targetIdx === _state.activeIdx) {
+        slider.style.transform = 'translateX(' + _idxToX(targetIdx, _state.itemW, _state.baseSliderW) + 'px)';
+        return;
+    }
+
     var btn = buttons[targetIdx];
     if (btn && _navigate) {
+        _hapticSnap();
         var navId = btn.dataset.nav;
         if (navId) _navigate(navId);
     }
@@ -210,9 +288,17 @@ function _end() {
 
 function _cancel() {
     _state.dragging = false;
+    _state.moved = false;
+    if (_state.rafId !== null) {
+        cancelAnimationFrame(_state.rafId);
+        _state.rafId = null;
+    }
+    _state.pendingX = null;
+
     var slider = _slider();
     if (slider) {
         slider.style.transition = '';
+        slider.style.width = '';
         slider.style.transform = '';
     }
     delete _nav.dataset.dragging;
@@ -231,14 +317,10 @@ function _onTouchStart(e) {
 function _onTouchMove(e) {
     if (!_state.dragging) return;
     if (!e.touches || !e.touches[0]) return;
-    // Simpan posisi terakhir di dataset untuk snap
-    var slider = _slider();
-    if (slider) {
-        var tr = slider.style.transform;
-        var m = tr.match(/translateX\(([\-\d.]+)px\)/);
-        if (m) slider.setAttribute('data-last-x', m[1]);
+    _state.pendingX = e.touches[0].clientX;
+    if (_state.rafId === null) {
+        _state.rafId = requestAnimationFrame(_flushMove);
     }
-    _moveTo(e.touches[0].clientX);
 }
 
 function _onTouchEnd(_e) {
@@ -250,7 +332,7 @@ function _onTouchCancel() {
 }
 
 // ============================================================
-// MOUSE (untuk desktop preview)
+// MOUSE (desktop preview)
 // ============================================================
 function _onMouseDown(e) {
     if (e.button !== 0) return;
@@ -259,13 +341,10 @@ function _onMouseDown(e) {
 
 function _onMouseMove(e) {
     if (!_state.dragging) return;
-    var slider = _slider();
-    if (slider) {
-        var tr = slider.style.transform;
-        var m = tr.match(/translateX\(([\-\d.]+)px\)/);
-        if (m) slider.setAttribute('data-last-x', m[1]);
+    _state.pendingX = e.clientX;
+    if (_state.rafId === null) {
+        _state.rafId = requestAnimationFrame(_flushMove);
     }
-    _moveTo(e.clientX);
 }
 
 function _onMouseUp() {
@@ -274,4 +353,4 @@ function _onMouseUp() {
 
 export function isDragging() {
     return _state.dragging;
-    }
+}
