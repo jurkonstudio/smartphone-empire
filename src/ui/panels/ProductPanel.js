@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/ProductPanel.js
-// Versi LENGKAP — Defensive + 3 modal (Detail, Campaign, Order).
+// Versi LENGKAP — V6c-2 gate chip berbasis chipResearch + grandfather rule.
 import { renderSalesChart } from './SalesChart.js';
 import { getComponentById } from '../../data/components.data.js';
 import { state } from '../../core/GameState.js';
@@ -22,13 +22,62 @@ function safe(fn, fallback) {
     }
 }
 
-// Chip lab tersedia mulai tahun 2003.
-// Untuk sementara berbasis tahun (chip-research.data.js belum diproses sistem riset).
+// ============================================================
+// GATE CHIP LAB — V6c-2
+// Syarat buka Chip Lab (dalam urutan prioritas):
+//   1. Grandfather rule: pemain sudah punya chip di katalog → unlock
+//   2. ChipResearch: chip_design_tool sudah selesai → unlock
+//   3. Fallback backward-compat: chipResearch belum ada sama sekali
+//      (save lama sebelum V6) → pakai gate tahun >= 2003
+// ============================================================
 function isChipLabUnlocked() {
     try {
         var data = state.get();
-        if (!data || !data.time) return false;
+        if (!data) return false;
+
+        // 1. Grandfather rule
+        if (data.chips && Array.isArray(data.chips.catalog) && data.chips.catalog.length > 0) {
+            return true;
+        }
+
+        // 2. ChipResearch gate
+        var cr = data.chipResearch;
+        if (cr && Array.isArray(cr.completed) && cr.completed.length > 0) {
+            return cr.completed.indexOf('chip_design_tool') !== -1;
+        }
+
+        // 3. Fallback: chipResearch belum ada → gate tahun
+        if (!data.time) return false;
         return (data.time.currentYear >= 2003);
+    } catch (e) {
+        return false;
+    }
+}
+
+// ============================================================
+// GATE FAB — V6c-2
+// Cek fab_construction di chipResearch.completed.
+// Fallback ke research.completed (save lama).
+// ============================================================
+function isFabUnlocked() {
+    try {
+        var data = state.get();
+        if (!data) return false;
+
+        // Fab sudah dibangun → unlock
+        if (data.fab && data.fab.built) return true;
+
+        var cr = data.chipResearch;
+        if (cr && Array.isArray(cr.completed)) {
+            if (cr.completed.indexOf('fab_construction') !== -1) return true;
+        }
+
+        // Fallback save lama
+        if (data.research && Array.isArray(data.research.completed)) {
+            if (data.research.completed.indexOf('fab_construction') !== -1) return true;
+        }
+
+        return false;
     } catch (e) {
         return false;
     }
@@ -241,6 +290,7 @@ function _renderChipTab() {
     }
 
     var fabHtml = '';
+    var fabUnlocked = isFabUnlocked();
     if (fab.built) {
         var levelInfo = (fs && fs.getFabLevelInfo) ? safe(function () { return fs.getFabLevelInfo(fab.level); }, null) : null;
         var capacity = levelInfo ? levelInfo.capacityMonthly : 0;
@@ -252,11 +302,10 @@ function _renderChipTab() {
             '<button class="btn-secondary" data-chip-action="fab" style="width:100%;margin-top:10px;">Kelola Fab</button>' +
             '</div>';
     } else {
-        var hasResearch = (data.research && Array.isArray(data.research.completed)) ? data.research.completed.indexOf('fab_construction') !== -1 : false;
         fabHtml = '<div class="card">' +
             '<div class="card-title">Fabrikasi</div>' +
-            '<div style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:10px;">' + (hasResearch ? 'Bangun pabrik chip sendiri untuk produksi massal.' : 'Butuh riset Konstruksi Fab untuk membangun pabrik sendiri.') + '</div>' +
-            '<button class="btn-primary" data-chip-action="fab" style="width:100%;"' + (!hasResearch ? ' disabled style="opacity:0.5;width:100%;"' : '') + '>' + (hasResearch ? 'Bangun Fab' : 'Butuh Riset Fab') + '</button>' +
+            '<div style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:10px;">' + (fabUnlocked ? 'Bangun pabrik chip sendiri untuk produksi massal.' : 'Butuh riset Konstruksi Fab untuk membangun pabrik sendiri.') + '</div>' +
+            '<button class="btn-primary" data-chip-action="fab" style="width:100%;"' + (!fabUnlocked ? ' disabled style="opacity:0.5;width:100%;"' : '') + '>' + (fabUnlocked ? 'Bangun Fab' : 'Butuh Riset Fab') + '</button>' +
             '</div>';
     }
 
