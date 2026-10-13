@@ -15,13 +15,13 @@ import { TIME_CONFIG } from '../config/time.config.js';
 import { ToastService } from '../core/ToastService.js';
 import { LOG_TYPES } from '../config/constants.js';
 import {
-    CHIP_ARCHITECTURES, getArchitectureById, getAvailableArchitectures
+    CHIP_ARCHITECTURES, getArchitectureById
 } from '../data/chip-architecture.data.js';
 import {
-    CHIP_NODES, getChipNodeById, getAvailableChipNodes
+    CHIP_NODES, getChipNodeById
 } from '../data/chip-node.data.js';
 import {
-    CHIP_FEATURES, getChipFeatureById, getAvailableChipFeatures
+    CHIP_FEATURES, getChipFeatureById
 } from '../data/chip-features.data.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
@@ -186,22 +186,21 @@ export class ChipSystem {
     // ============================================================
     // API PUBLIK
     // ============================================================
+    // Sumber ketersediaan: HANYA cek minYear.
+    // (chip-research.data.js belum diproses sistem riset — see catatan.)
     getAvailableArchitectures() {
         const year = this.state.data.time.currentYear;
-        const completed = this.state.data.research.completed || [];
-        return getAvailableArchitectures(year, completed);
+        return CHIP_ARCHITECTURES.filter(a => year >= (a.minYear || 0));
     }
 
     getAvailableNodes() {
         const year = this.state.data.time.currentYear;
-        const completed = this.state.data.research.completed || [];
-        return getAvailableChipNodes(year, completed);
+        return CHIP_NODES.filter(n => year >= (n.minYear || 0));
     }
 
     getAvailableFeatures() {
         const year = this.state.data.time.currentYear;
-        const completed = this.state.data.research.completed || [];
-        return getAvailableChipFeatures(year, completed);
+        return CHIP_FEATURES.filter(f => year >= (f.minYear || 0));
     }
 
     getBudgetTiers() {
@@ -435,4 +434,4 @@ export class ChipSystem {
             budgetId: 'normal'
         };
     }
-                                         }
+}
