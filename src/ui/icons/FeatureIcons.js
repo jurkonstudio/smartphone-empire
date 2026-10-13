@@ -1,7 +1,8 @@
 // FILE: src/ui/icons/FeatureIcons.js
 // ============================================================
-// Duotone SVG Icon Library — 80+ ikon.
-// Style: outline stroke 1.75px + accent fill (via wrapper CSS).
+// Duotone SVG Icon Library — 80+ outline icons.
+// + Filled versions (batch 1: 10 icons).
+// Style: outline stroke 1.75px | filled = solid currentColor.
 // Compatible dengan Lucide/Feather design language.
 // ============================================================
 
@@ -115,7 +116,7 @@ export var FEATURE_ICONS = {
     gamepad:        '<line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="15" y1="13" x2="15.01" y2="13"/><line x1="18" y1="11" x2="18.01" y2="11"/><rect x="2" y="6" width="20" height="12" rx="2"/>',
     film:           '<rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/>',
 
-    // ==================== V0.5 — NEW ICONS ====================
+    // ==================== V0.5 — NEW OUTLINE ICONS ====================
     coin:           '<circle cx="12" cy="12" r="9"/><path d="M12 6.5v11M15 9.5a3 3 0 0 0-6 0c0 3 6 3 6 6a3 3 0 0 1-6 0"/>',
     check:          '<polyline points="20 6 9 17 4 12"/>',
     hourglass:      '<path d="M5 3h14M5 21h14M7 3v3l5 5 5-5V3M7 21v-3l5-5 5 5v3"/>',
@@ -124,8 +125,48 @@ export var FEATURE_ICONS = {
     warn:           '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
 };
 
-export function getIconContent(id) {
+// ============================================================
+// FILLED ICONS — batch 1 (10 ikon).
+// Fill currentColor. Jangan pakai stroke kecuali perlu.
+// ============================================================
+export var FEATURE_ICONS_FILLED = {
+    // CPU / chip silikon dengan pin
+    cpu:      '<path fill-rule="evenodd" d="M5 5h14v14H5V5zm4 4v6h6V9H9z"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>',
+
+    // Speech bubble solid
+    message:  '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+
+    // Amplop solid dengan lipatan V cut-out
+    mail:     '<path fill-rule="evenodd" d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 3v11h16V7l-8 5-8-5z"/>',
+
+    // Kamera solid + lensa cut-out
+    camera:   '<path fill-rule="evenodd" d="M4 7h3l2.5-3h5L17 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zm8 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/>',
+
+    // Baterai solid + kontak
+    battery:  '<rect x="2" y="7" width="18" height="10" rx="2"/><rect x="21" y="11" width="2" height="2" rx="0.5"/>',
+
+    // Database silinder solid (top ellipse sebagai cut-out)
+    database: '<path fill-rule="evenodd" d="M12 2C6.48 2 3 3.34 3 5v14c0 1.66 3.48 3 9 3s9-1.34 9-3V5c0-1.66-3.48-3-9-3zm0 2c3.87 0 7 .9 7 1s-3.13 1-7 1-7-.9-7-1 3.13-1 7-1z"/>',
+
+    // Shield solid
+    shield:   '<path d="M12 2 4 5v7c0 5.55 8 10 8 10s8-4.45 8-10V5l-8-3z"/>',
+
+    // Gembok solid + shackle stroke
+    lock:     '<path fill-rule="evenodd" d="M7 10V7a5 5 0 0 1 10 0v3h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h1zm2-3v3h6V7a3 3 0 0 0-6 0z"/>',
+
+    // Cloud solid
+    cloud:    '<path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97 6 6 0 0 0-11.6 1.6A4 4 0 0 0 7 19h10.5z"/>',
+
+    // Heart solid
+    heart:    '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7z"/>'
+};
+
+// ============================================================
+// PUBLIC API
+// ============================================================
+export function getIconContent(id, filled) {
     if (!id) return null;
+    if (filled && FEATURE_ICONS_FILLED[id]) return FEATURE_ICONS_FILLED[id];
     return FEATURE_ICONS[id] || null;
 }
 
@@ -139,20 +180,36 @@ export function hasIcon(id) {
     return !!FEATURE_ICONS[id];
 }
 
+export function hasFilledIcon(id) {
+    return !!FEATURE_ICONS_FILLED[id];
+}
+
 // ============================================================
-// renderIcon — bungkus konten ikon dalam SVG agar siap render.
-// Dipakai di panel untuk render dari icon ID (bukan emoji).
+// renderIcon — bungkus konten ikon dalam SVG.
+// options.filled = true → pakai versi filled kalau tersedia.
+// Kalau tidak tersedia, fallback ke outline (tidak error).
 // ============================================================
-export function renderIcon(id, size, extraAttrs) {
+export function renderIcon(id, size, extraAttrs, options) {
     if (!id) return '';
-    const content = FEATURE_ICONS[id];
+
+    const wantFilled = !!(options && options.filled);
+    const filled = wantFilled && !!FEATURE_ICONS_FILLED[id];
+    const content = filled ? FEATURE_ICONS_FILLED[id] : FEATURE_ICONS[id];
+
     if (!content) {
         if (typeof console !== 'undefined') {
             console.warn('[renderIcon] Ikon tidak dikenal: "' + id + '"');
         }
         return '';
     }
+
     const s = size || 16;
     const extra = extraAttrs || '';
-    return '<svg class="icon" width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" ' + extra + ' aria-hidden="true">' + content + '</svg>';
+    const cls = filled ? 'icon icon-filled' : 'icon';
+
+    if (filled) {
+        return '<svg class="' + cls + '" width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="currentColor" stroke="none" stroke-linecap="round" stroke-linejoin="round" ' + extra + ' aria-hidden="true">' + content + '</svg>';
+    }
+
+    return '<svg class="' + cls + '" width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" ' + extra + ' aria-hidden="true">' + content + '</svg>';
 }
