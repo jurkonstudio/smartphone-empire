@@ -3914,3 +3914,116 @@ body {
         animation: none !important;
     }
 }
+
+
+/* ============================================================
+   REVISI 4b — ANIMATED BACKGROUND DRIFT
+   
+   Background gradient bergerak sangat halus (80s loop) untuk
+   memberi kesan "hidup" pada UI. Tidak menyentuh DOM element,
+   hanya property background-position pada body — jadi tidak
+   memicu flicker.
+   
+   Kalau terasa lag di HP low-end, hapus blok ini saja.
+   ============================================================ */
+
+body {
+    background:
+        radial-gradient(ellipse 70% 50% at 20% 10%,
+            rgba(37, 99, 235, 0.10) 0%,
+            transparent 55%),
+        radial-gradient(ellipse 70% 50% at 80% 90%,
+            rgba(139, 92, 246, 0.08) 0%,
+            transparent 55%),
+        var(--bg-0);
+    background-size: 200% 200%;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    animation: bgDrift 80s ease-in-out infinite;
+    will-change: background-position;
+}
+
+[data-accent="emerald"] body {
+    background:
+        radial-gradient(ellipse 70% 50% at 20% 10%, rgba(16, 185, 129, 0.10) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 50% at 80% 90%, rgba(6, 182, 212, 0.08) 0%, transparent 55%),
+        var(--bg-0);
+    background-size: 200% 200%;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+[data-accent="violet"] body {
+    background:
+        radial-gradient(ellipse 70% 50% at 20% 10%, rgba(139, 92, 246, 0.11) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 50% at 80% 90%, rgba(236, 72, 153, 0.08) 0%, transparent 55%),
+        var(--bg-0);
+    background-size: 200% 200%;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+[data-accent="amber"] body {
+    background:
+        radial-gradient(ellipse 70% 50% at 20% 10%, rgba(245, 158, 11, 0.10) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 50% at 80% 90%, rgba(239, 68, 68, 0.06) 0%, transparent 55%),
+        var(--bg-0);
+    background-size: 200% 200%;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+[data-accent="rose"] body {
+    background:
+        radial-gradient(ellipse 70% 50% at 20% 10%, rgba(244, 63, 94, 0.10) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 50% at 80% 90%, rgba(236, 72, 153, 0.08) 0%, transparent 55%),
+        var(--bg-0);
+    background-size: 200% 200%;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+[data-accent="cyan"] body {
+    background:
+        radial-gradient(ellipse 70% 50% at 20% 10%, rgba(6, 182, 212, 0.11) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 50% at 80% 90%, rgba(37, 99, 235, 0.08) 0%, transparent 55%),
+        var(--bg-0);
+    background-size: 200% 200%;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+[data-theme="light"] body {
+    background:
+        radial-gradient(ellipse 70% 50% at 20% 10%,
+            rgba(37, 99, 235, 0.05) 0%,
+            transparent 55%),
+        radial-gradient(ellipse 70% 50% at 80% 90%,
+            rgba(139, 92, 246, 0.04) 0%,
+            transparent 55%),
+        var(--bg-0);
+    background-size: 200% 200%;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+@keyframes bgDrift {
+    0% {
+        background-position: 0% 0%, 100% 100%, 0 0;
+    }
+    25% {
+        background-position: 25% 15%, 75% 85%, 0 0;
+    }
+    50% {
+        background-position: 50% 30%, 50% 70%, 0 0;
+    }
+    75% {
+        background-position: 20% 40%, 80% 60%, 0 0;
+    }
+    100% {
+        background-position: 0% 0%, 100% 100%, 0 0;
+    }
+}
+
+/* Cegah gradient "melompat" saat repaint besar */
+@media (prefers-reduced-motion: reduce) {
+    body {
+        animation: none !important;
+    }
+}
