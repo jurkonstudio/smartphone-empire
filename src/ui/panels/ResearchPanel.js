@@ -3,6 +3,7 @@
 // Node riset diurutkan: Berjalan → Tersedia → Selesai → Terkunci.
 import { RESEARCH_CATEGORIES, getNodeById } from '../../data/research.data.js';
 import { renderOSPanel, openOsWizardModal, openCreateOsModal, openFeatureDetailModal } from './OSPanel.js';
+import { renderIcon } from '../icons/FeatureIcons.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -103,7 +104,7 @@ function renderTechSection({ researchSystem }) {
             <button class="chip ${_filterCategory === 'all' ? 'active' : ''}" data-filter-cat="all">Semua</button>
             ${RESEARCH_CATEGORIES.map(c => `
                 <button class="chip ${_filterCategory === c.id ? 'active' : ''}" data-filter-cat="${c.id}">
-                    ${c.icon} ${c.name}
+                    ${renderIcon(c.icon, 14, 'style="vertical-align:middle;margin-right:4px;"')} ${c.name}
                 </button>
             `).join('')}
         </div>
@@ -151,7 +152,7 @@ function renderTechNodeCard(node, researchSystem) {
             <div class="tech-node-head">
                 <div style="flex:1;min-width:0;">
                     <div class="tech-node-title">${escapeHtml(node.name)}</div>
-                    <div class="tech-node-cat">${cat ? cat.icon + ' ' + cat.name : node.category} • Tier ${node.tier} • ${node.minYear}</div>
+                    <div class="tech-node-cat">${cat ? renderIcon(cat.icon, 12, 'style="vertical-align:middle;margin-right:3px;"') + cat.name : node.category} • Tier ${node.tier} • ${node.minYear}</div>
                 </div>
                 <div class="tech-status-badge badge-${st.status}">${_statusBadge(st.status)}</div>
             </div>
