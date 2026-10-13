@@ -2999,3 +2999,27 @@ body {
     border: 1px solid var(--border);
     min-height: 190px;
 }
+
+
+/* ============================================================
+   FIX FLICKER v2 — Override auto fadeInUp.
+   Rule lama masih ada di atas, tapi yang ini menang karena
+   ditulis belakangan (CSS cascade). Animasi fadeInUp dimatikan
+   untuk semua elemen yang sebelumnya auto-animate.
+   ============================================================ */
+
+.card,
+.kpi,
+.tech-node,
+.cand-card,
+.staff-row,
+.prod-card {
+    animation: none !important;
+}
+
+.card:nth-child(2),
+.card:nth-child(3),
+.card:nth-child(4),
+.card:nth-child(5) {
+    animation-delay: 0s !important;
+}
