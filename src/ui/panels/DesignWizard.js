@@ -1,6 +1,8 @@
 // FILE: src/ui/panels/DesignWizard.js
 // ============================================================
-// DesignWizard — wizard desain ponsel ERA-AWARE.
+// DesignWizard — wizard desain ponsel ERA-AWARE dengan live mockup.
+// Mockup muncul di atas wizard, live update di setiap step.
+// Tombol "Lihat Detail" → modal mockup besar + spec info.
 // Kamera bersifat OPSIONAL (ponsel budget bisa tanpa kamera).
 // ============================================================
 import { Modal } from '../modal.js';
@@ -12,8 +14,8 @@ import {
     getComponentById, getComponentsByCategory, getBodyColorById
 } from '../../data/components.data.js';
 import { renderPhoneMockup } from '../phone/PhoneMockup.js';
-import { renderRadarChart } from '../charts/RadarChart.js';
 import { getDesignEraForYear } from '../../data/era-design.data.js';
+import { resolveSpec } from '../../data/phone-specs.data.js';
 
 let _wizardState = null;
 
@@ -121,11 +123,11 @@ function _render() {
     if (!s) return;
 
     const era = currentEraInfo();
-    let body = '';
-    if (s.step === 1)      body = _step1(s);
-    else if (s.step === 2) body = _step2(s);
-    else if (s.step === 3) body = _step3(s);
-    else                   body = _step4(s);
+    let stepBody = '';
+    if (s.step === 1)      stepBody = _step1(s);
+    else if (s.step === 2) stepBody = _step2(s);
+    else if (s.step === 3) stepBody = _step3(s);
+    else                   stepBody = _step4(s);
 
     const html = `
         <div class="wiz-era-banner" style="background:${era.aesthetic.bg};border-color:${era.aesthetic.accent}40;">
@@ -136,12 +138,17 @@ function _render() {
             </div>
         </div>
 
+        <div class="wiz-mockup-live" data-wiz-mockup-container></div>
+        <div class="wiz-mockup-actions">
+            <button class="btn-secondary" data-wiz-detail style="font-size:12px;min-height:34px;padding:6px 12px;">Lihat Detail</button>
+        </div>
+
         <div class="wiz-step-indicator">
             ${[1,2,3,4].map(i => `<span class="wiz-dot ${i === s.step ? 'active' : ''} ${i < s.step ? 'done' : ''}"></span>`).join('')}
         </div>
         <div class="modal-sub" style="margin-bottom:12px;">Langkah ${s.step} dari 4 — ${_stepTitle(s.step)}</div>
 
-        ${body}
+        ${stepBody}
     `;
 
     if (Modal.isOpen && Modal.isOpen('design-wizard')) {
@@ -149,10 +156,12 @@ function _render() {
         if (root) {
             root.querySelector('.modal-card').innerHTML = html;
             _bindStep();
+            requestAnimationFrame(_refreshPreview);
         }
     } else {
         Modal.open('design-wizard', html, { dismissible: false });
         _bindStep();
+        requestAnimationFrame(_refreshPreview);
     }
 }
 
@@ -209,9 +218,8 @@ function _bindStep() {
     const confirmBtn = root.querySelector('[data-wiz-confirm]');
     if (confirmBtn) confirmBtn.addEventListener('click', () => _confirm());
 
-    if (_wizardState.step === 4) {
-        setTimeout(_refreshPreview, 50);
-    }
+    const detailBtn = root.querySelector('[data-wiz-detail]');
+    if (detailBtn) detailBtn.addEventListener('click', () => _openDetailModal());
 }
 
 // ============================================================
@@ -224,7 +232,6 @@ function _next() {
         if (!s.formFactorId) { ToastService.warning('Pilih bentuk.'); return; }
     }
     if (s.step === 2) {
-        // Kamera OPSIONAL — cek komponen wajib saja
         if (!s.displayId || !s.batteryId || !s.chipId || !s.networkId) {
             ToastService.warning('Lengkapi komponen wajib (layar, baterai, chip, jaringan).');
             return;
@@ -313,7 +320,7 @@ function _step1(s) {
 }
 
 // ============================================================
-// STEP 2 — KOMPONEN (kamera opsional)
+// STEP 2 — KOMPONEN
 // ============================================================
 function _step2(s) {
     const cats = ['display', 'camera', 'battery', 'chip', 'network'];
@@ -339,7 +346,6 @@ function _step2(s) {
             </button>
         `).join('');
 
-        // Tambahkan opsi "Tanpa X" untuk kategori opsional
         if (isOptional) {
             const noneLabel = catId === 'camera' ? 'Tanpa Kamera' : 'Tanpa ' + cat.name;
             const noneMeta = catId === 'camera' ? 'Hemat biaya produksi' : 'Opsional';
@@ -352,7 +358,6 @@ function _step2(s) {
             ` + options;
         }
 
-        // Jika tidak ada komponen sama sekali & tidak optional → tampilkan pesan
         const totalCount = list.length + (isOptional ? 1 : 0);
         if (totalCount === 0) {
             options = `<div class="wiz-empty">Belum ada komponen — riset dulu atau tunggu tahun berikutnya.</div>`;
@@ -438,29 +443,24 @@ function _step3(s) {
 }
 
 // ============================================================
-// STEP 4 — HARGA + PREVIEW
+// STEP 4 — HARGA + RINGKASAN (mockup sudah di atas)
 // ============================================================
 function _step4(s) {
     return `
-        <div class="wiz-preview-layout">
-            <div class="wiz-preview-left">
-                <div class="wiz-preview-device">
-                    <div data-wiz-mockup-container></div>
-                </div>
-                <div class="wiz-preview-radar" data-wiz-radar-container></div>
-            </div>
-            <div class="wiz-preview-right">
+        <div class="wiz-price-layout">
+            <div>
                 <label class="field-label">Harga Jual (USD)</label>
                 <input class="field-input" data-wiz-price type="number" min="1" value="${s.price}" />
-
-                <label class="field-label" style="margin-top:10px;">Jumlah Produksi Awal</label>
-                <input class="field-input" data-wiz-qty type="number" min="100" step="100" value="${s.productionQty}" />
-
-                <div style="margin-top:14px;">
-                    <div class="card-title">Preview</div>
-                    <div data-wiz-preview>${_previewHtml(s)}</div>
-                </div>
             </div>
+            <div>
+                <label class="field-label">Jumlah Produksi Awal</label>
+                <input class="field-input" data-wiz-qty type="number" min="100" step="100" value="${s.productionQty}" />
+            </div>
+        </div>
+
+        <div style="margin-top:14px;">
+            <div class="card-title">Ringkasan</div>
+            <div data-wiz-preview>${_previewHtml(s)}</div>
         </div>
 
         <div class="wiz-nav">
@@ -484,17 +484,6 @@ function _refreshPreview() {
         } catch (e) {
             console.error('[DesignWizard] Mockup error:', e);
             mockupContainer.innerHTML = '<div style="color:var(--text-mute);font-size:11px;">Mockup error</div>';
-        }
-    }
-
-    const radarContainer = root.querySelector('[data-wiz-radar-container]');
-    if (radarContainer) {
-        try {
-            const stats = _computeStats(_wizardState);
-            radarContainer.innerHTML = renderRadarChart(stats, { size: 160 });
-        } catch (e) {
-            console.error('[DesignWizard] Radar error:', e);
-            radarContainer.innerHTML = '';
         }
     }
 
@@ -558,3 +547,63 @@ function _previewHtml(s) {
         return '<div style="font-size:12px;color:var(--danger);">Preview error: ' + escapeHtml(e.message) + '</div>';
     }
 }
+
+// ============================================================
+// DETAIL MODAL
+// ============================================================
+function _openDetailModal() {
+    const s = _wizardState;
+    if (!s) return;
+
+    const year = DesignEraService.getCurrentYear();
+    const completed = state.get().research.completed || [];
+    const era = getDesignEraForYear(year);
+    const spec = resolveSpec(year, completed);
+
+    let mockupHtml = '';
+    try {
+        mockupHtml = renderPhoneMockup(s, { size: 240 });
+    } catch (e) {
+        mockupHtml = '<div style="color:var(--danger);font-size:12px;">Mockup error: ' + escapeHtml(e.message) + '</div>';
+    }
+
+    const compInfo = [
+        { label: 'Bentuk', id: s.formFactorId },
+        { label: 'Layar', id: s.displayId },
+        { label: 'Kamera', id: (s.cameraId && s.cameraId !== 'none') ? s.cameraId : null },
+        { label: 'Baterai', id: s.batteryId },
+        { label: 'Chip', id: s.chipId },
+        { label: 'Jaringan', id: s.networkId },
+        { label: 'Bodi', id: s.bodyId }
+    ];
+
+    const compRows = compInfo.map(function (row) {
+        var comp = row.id ? getComponentById(row.id) : null;
+        var label = comp ? comp.name : (row.id ? row.id : '—');
+        return '<div class="sum-row"><span>' + row.label + '</span><b>' + escapeHtml(label) + '</b></div>';
+    }).join('');
+
+    var colorComp = s.bodyColorId ? getBodyColorById(s.bodyColorId) : null;
+    var colorRow = colorComp
+        ? '<div class="sum-row"><span>Warna</span><b><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + colorComp.hex + ';vertical-align:middle;margin-right:6px;border:1px solid var(--border);"></span>' + escapeHtml(colorComp.name) + '</b></div>'
+        : '';
+
+    const html = `
+        <div class="modal-title">Detail Ponsel</div>
+        <div class="modal-sub">${escapeHtml(s.name || 'Tanpa Nama')} — ${year}</div>
+
+        <div class="wiz-detail-mockup">
+            ${mockupHtml}
+        </div>
+
+        <div class="sum-row"><span>Era Desain</span><b>${escapeHtml(era.label)}</b></div>
+        <div class="sum-row"><span>Milestone</span><b>${escapeHtml(spec.label || spec.id)}</b></div>
+        <div class="card-title" style="margin-top:14px;">Komponen</div>
+        ${compRows}
+        ${colorRow}
+
+        <button class="btn-secondary" data-modal-close style="width:100%;margin-top:14px;">Tutup</button>
+    `;
+
+    Modal.open('design-wizard-detail', html);
+        }
