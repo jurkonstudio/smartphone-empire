@@ -1,8 +1,10 @@
 // FILE: src/ui/phone/OsScreenMockup.js
 // ============================================================
 // OsScreenMockup — render layar OS sebagai SVG realistis.
-// Tampilan berubah sesuai fitur OS yang sudah dimiliki pemain.
-// Layer: wallpaper, status bar, widget, app grid, dock, home.
+// Dua mode:
+//   - 'settings' (default) — tampilan Settings/Pengaturan
+//   - 'home'               — tampilan home screen dengan grid app
+// Nilai di setiap row berubah sesuai fitur OS yang dimiliki pemain.
 // ============================================================
 import { state } from '../../core/GameState.js';
 import { getDesignEraForYear } from '../../data/era-design.data.js';
@@ -19,7 +21,6 @@ function safeGetState() {
     catch (e) { return { time: { currentYear: 2000 }, research: { completed: [] }, os: { versions: [] } }; }
 }
 
-// Ambil fitur dari versi OS aktif.
 function getCurrentFeatures(osState) {
     if (!osState || !osState.versions || !osState.versions.length) return [];
     const id = osState.currentVersionId || osState.versions[osState.versions.length - 1].id;
@@ -28,84 +29,94 @@ function getCurrentFeatures(osState) {
     return v.features;
 }
 
-// ============================================================
-// WALLPAPER per era
-// ============================================================
-function wallpaperPalette(eraId, isDark) {
-    const table = {
-        era_lcd_mono:         { a: '#6a8a4a', b: '#3a4a2a', pattern: 'grid' },
-        era_tft_color:        { a: '#1a3a5a', b: '#3a6a9a', pattern: 'dots' },
-        era_touch_revolution: { a: '#0a1525', b: '#1a3050', pattern: 'gloss' },
-        era_smartphone_modern:{ a: '#1a2530', b: '#2a3a50', pattern: 'flat' },
-        era_premium:          { a: '#0a0a0a', b: '#2a1f10', pattern: 'noise' },
-        era_ai_era:           { a: '#080c14', b: '#0f2030', pattern: 'mesh' },
-        era_foldable:         { a: '#04040a', b: '#1a0a2a', pattern: 'aurora' }
-    };
-    const base = table[eraId] || table.era_smartphone_modern;
-    if (isDark) {
-        return { a: '#000000', b: '#0a0a14', pattern: base.pattern };
-    }
-    return base;
+function getCurrentVersionString(osState) {
+    if (!osState || !osState.versions || !osState.versions.length) return '';
+    const id = osState.currentVersionId || osState.versions[osState.versions.length - 1].id;
+    const v = osState.versions.find(function (x) { return x.id === id; });
+    return v ? v.versionString : '';
 }
 
 // ============================================================
-// WALLPAPER render
+// PALETTE (per era, dark/light)
 // ============================================================
-function renderWallpaper(eraId, isDark, w, h) {
-    const pal = wallpaperPalette(eraId, isDark);
-    const gradId = 'oswp_' + Math.random().toString(36).slice(2, 7);
-
-    let pattern = '';
-    if (pal.pattern === 'grid') {
-        pattern = '<g opacity="0.08">' +
-            Array.from({ length: 20 }, function (_, i) {
-                return '<line x1="0" y1="' + (i * h / 20) + '" x2="' + w + '" y2="' + (i * h / 20) + '" stroke="#fff" stroke-width="0.3"/>';
-            }).join('') + '</g>';
-    } else if (pal.pattern === 'dots') {
-        pattern = '<g opacity="0.1">' +
-            Array.from({ length: 12 }, function (_, i) {
-                return Array.from({ length: 6 }, function (_, j) {
-                    return '<circle cx="' + (i * w / 12) + '" cy="' + (j * h / 6) + '" r="0.8" fill="#fff"/>';
-                }).join('');
-            }).join('') + '</g>';
-    } else if (pal.pattern === 'aurora') {
-        const blurId = 'osblur_' + Math.random().toString(36).slice(2, 7);
-        pattern = '<defs><filter id="' + blurId + '"><feGaussianBlur stdDeviation="24"/></filter></defs>' +
-            '<ellipse cx="' + (w * 0.3) + '" cy="' + (h * 0.25) + '" rx="' + (w * 0.7) + '" ry="' + (h * 0.3) + '" fill="#a855f7" opacity="0.35" filter="url(#' + blurId + ')"/>' +
-            '<ellipse cx="' + (w * 0.7) + '" cy="' + (h * 0.65) + '" rx="' + (w * 0.6) + '" ry="' + (h * 0.25) + '" fill="#06b6d4" opacity="0.3" filter="url(#' + blurId + ')"/>';
-    } else if (pal.pattern === 'mesh') {
-        const blurId = 'osblur_' + Math.random().toString(36).slice(2, 7);
-        pattern = '<defs><radialGradient id="' + gradId + '_mesh" cx="30%" cy="35%">' +
-            '<stop offset="0%" stop-color="#00d4ff" stop-opacity="0.28"/>' +
-            '<stop offset="100%" stop-color="' + pal.a + '" stop-opacity="0"/></radialGradient></defs>' +
-            '<rect x="0" y="0" width="' + w + '" height="' + h + '" fill="url(#' + gradId + '_mesh)"/>';
+function palette(eraId, isDark) {
+    if (isDark) {
+        return {
+            bg: '#000000',
+            surface: '#1a1a1f',
+            surfaceAlt: '#0a0a0f',
+            text: '#f0f4ff',
+            sub: 'rgba(240,244,255,0.55)',
+            line: 'rgba(255,255,255,0.08)',
+            accent: '#0a84ff'
+        };
     }
+    // Light mode (default kalau belum punya fw_dark_mode)
+    const eras = {
+        era_lcd_mono:          { accent: '#4a5a3a' },
+        era_tft_color:         { accent: '#3a6a9a' },
+        era_touch_revolution:  { accent: '#0a84ff' },
+        era_smartphone_modern: { accent: '#4f8cff' },
+        era_premium:           { accent: '#c9a961' },
+        era_ai_era:            { accent: '#00d4ff' },
+        era_foldable:          { accent: '#a855f7' }
+    };
+    const e = eras[eraId] || eras.era_smartphone_modern;
+    return {
+        bg: '#f2f2f7',
+        surface: '#ffffff',
+        surfaceAlt: '#e8e8ed',
+        text: '#0a0a0f',
+        sub: 'rgba(10,10,15,0.55)',
+        line: 'rgba(0,0,0,0.08)',
+        accent: e.accent
+    };
+}
 
-    return '<defs>' +
-        '<linearGradient id="' + gradId + '" x1="0%" y1="0%" x2="100%" y2="100%">' +
-            '<stop offset="0%" stop-color="' + pal.a + '"/>' +
-            '<stop offset="100%" stop-color="' + pal.b + '"/>' +
-        '</linearGradient>' +
-        '</defs>' +
-        '<rect x="0" y="0" width="' + w + '" height="' + h + '" fill="url(#' + gradId + ')"/>' +
-        pattern;
+// ============================================================
+// NOTCH / DYNAMIC ISLAND
+// ============================================================
+function renderNotch(spec, w, pal) {
+    if (!spec || !spec.notch) return '';
+    const cx = w / 2;
+    const notchColor = '#000';
+
+    if (spec.notch === 'notch') {
+        const nw = w * 0.42;
+        return '<path d="M ' + (cx - nw/2) + ' 0 L ' + (cx - nw/2 + 3) + ' 12 L ' + (cx + nw/2 - 3) + ' 12 L ' + (cx + nw/2) + ' 0 Z" fill="' + notchColor + '"/>' +
+            '<circle cx="' + (cx + nw/2 - 8) + '" cy="7" r="1.6" fill="#0a0a14"/>';
+    }
+    if (spec.notch === 'teardrop') {
+        return '<path d="M ' + (cx - 10) + ' 0 Q ' + (cx - 10) + ' 12 ' + cx + ' 12 Q ' + (cx + 10) + ' 12 ' + (cx + 10) + ' 0 Z" fill="' + notchColor + '"/>';
+    }
+    if (spec.notch === 'punch_hole_center') {
+        return '<circle cx="' + cx + '" cy="7" r="4" fill="' + notchColor + '"/>' +
+            '<circle cx="' + cx + '" cy="7" r="2" fill="#1a1a1f"/>';
+    }
+    if (spec.notch === 'punch_hole_left') {
+        return '<circle cx="20" cy="7" r="4" fill="' + notchColor + '"/>' +
+            '<circle cx="20" cy="7" r="2" fill="#1a1a1f"/>';
+    }
+    if (spec.notch === 'dynamic_island') {
+        return '<rect x="' + (cx - 24) + '" y="4" width="48" height="15" rx="7.5" fill="' + notchColor + '"/>' +
+            '<circle cx="' + (cx + 14) + '" cy="11.5" r="2.6" fill="#0a0a14"/>' +
+            '<circle cx="' + (cx + 14) + '" cy="11.5" r="1.3" fill="#1a2a3a" opacity="0.6"/>';
+    }
+    return '';
 }
 
 // ============================================================
 // STATUS BAR
 // ============================================================
-function renderStatusBar(w, isDark, accent) {
-    const color = isDark ? '#e8eaee' : '#f0f4ff';
-    const timeText = '9:41';
+function renderStatusBar(w, pal) {
+    const color = pal.text;
     return '<g>' +
-        '<text x="14" y="15" font-size="9" font-family="-apple-system, sans-serif" font-weight="700" fill="' + color + '">' + timeText + '</text>' +
+        '<text x="14" y="14" font-size="9" font-family="-apple-system, sans-serif" font-weight="700" fill="' + color + '">9:41</text>' +
         '<g fill="' + color + '" opacity="0.9">' +
-            // signal bars
             '<rect x="' + (w - 44) + '" y="8" width="2" height="3" rx="0.3"/>' +
             '<rect x="' + (w - 41) + '" y="7" width="2" height="4" rx="0.3"/>' +
             '<rect x="' + (w - 38) + '" y="6" width="2" height="5" rx="0.3"/>' +
             '<rect x="' + (w - 35) + '" y="5" width="2" height="6" rx="0.3"/>' +
-            // battery
             '<rect x="' + (w - 26) + '" y="6" width="14" height="7" rx="1.5" fill="none" stroke="' + color + '" stroke-width="0.8"/>' +
             '<rect x="' + (w - 25) + '" y="7" width="9" height="5" rx="0.8" fill="' + color + '"/>' +
             '<rect x="' + (w - 11) + '" y="8" width="1.5" height="3" rx="0.3" fill="' + color + '"/>' +
@@ -114,221 +125,175 @@ function renderStatusBar(w, isDark, accent) {
 }
 
 // ============================================================
-// NOTCH / DYNAMIC ISLAND
+// HEADER (back arrow + title)
 // ============================================================
-function renderNotch(spec, w) {
-    if (!spec || !spec.notch) return '';
-    const cx = w / 2;
-
-    if (spec.notch === 'notch') {
-        const nw = w * 0.42;
-        return '<path d="M ' + (cx - nw/2) + ' 0 L ' + (cx - nw/2 + 3) + ' 12 L ' + (cx + nw/2 - 3) + ' 12 L ' + (cx + nw/2) + ' 0 Z" fill="#000"/>' +
-            '<circle cx="' + (cx + nw/2 - 8) + '" cy="7" r="1.6" fill="#0a0a14"/>' +
-            '<circle cx="' + (cx - nw/2 + 8) + '" cy="7" r="0.8" fill="#0a0a14"/>';
-    }
-    if (spec.notch === 'teardrop') {
-        return '<path d="M ' + (cx - 10) + ' 0 Q ' + (cx - 10) + ' 12 ' + cx + ' 12 Q ' + (cx + 10) + ' 12 ' + (cx + 10) + ' 0 Z" fill="#000"/>';
-    }
-    if (spec.notch === 'punch_hole_center') {
-        return '<circle cx="' + cx + '" cy="7" r="4" fill="#000"/>' +
-            '<circle cx="' + cx + '" cy="7" r="2" fill="#0a0a14"/>';
-    }
-    if (spec.notch === 'punch_hole_left') {
-        return '<circle cx="20" cy="7" r="4" fill="#000"/>' +
-            '<circle cx="20" cy="7" r="2" fill="#0a0a14"/>';
-    }
-    if (spec.notch === 'dynamic_island') {
-        return '<rect x="' + (cx - 22) + '" y="4" width="44" height="14" rx="7" fill="#000"/>' +
-            '<circle cx="' + (cx + 14) + '" cy="11" r="2.5" fill="#0a0a14"/>' +
-            '<circle cx="' + (cx + 14) + '" cy="11" r="1.2" fill="#1a2a3a" opacity="0.6"/>';
-    }
-    return '';
-}
-
-// ============================================================
-// WIDGET (jika fw_widgets_basic / fw_home_widgets)
-// ============================================================
-function renderWidget(hasBasic, hasAdvanced, w, accent, isDark) {
-    if (!hasBasic && !hasAdvanced) return '';
-    const cardBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.35)';
-    const textColor = '#ffffff';
-    const timeText = '9:41';
-    const big = hasAdvanced;
-    const cardW = big ? (w - 48) : (w - 60);
-    const cardH = big ? 78 : 62;
-    const x = 24;
-    const y = 34;
-
+function renderHeader(pal, title, subtitle) {
     return '<g>' +
-        '<rect x="' + x + '" y="' + y + '" width="' + cardW + '" height="' + cardH + '" rx="10" fill="' + cardBg + '"/>' +
-        '<text x="' + (x + 12) + '" y="' + (y + 22) + '" font-size="' + (big ? 22 : 18) + '" font-family="-apple-system, sans-serif" font-weight="200" fill="' + textColor + '" letter-spacing="-0.5">' + timeText + '</text>' +
-        '<text x="' + (x + 12) + '" y="' + (y + 34) + '" font-size="7" font-family="sans-serif" fill="' + textColor + '" opacity="0.7">Design Studio</text>' +
-        (big
-            ? '<g>' +
-                '<line x1="' + (x + 12) + '" y1="' + (y + 46) + '" x2="' + (x + cardW - 12) + '" y2="' + (y + 46) + '" stroke="' + textColor + '" stroke-opacity="0.15"/>' +
-                '<text x="' + (x + 12) + '" y="' + (y + 60) + '" font-size="7" fill="' + textColor + '" opacity="0.8">Design session aktif</text>' +
-                '<circle cx="' + (x + cardW - 16) + '" cy="' + (y + 56) + '" r="5" fill="' + accent + '" opacity="0.85"/>' +
-              '</g>'
-            : '') +
+        '<path d="M 22 30 L 14 34 L 22 38" fill="none" stroke="' + pal.accent + '" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '<text x="' + (subtitle ? 34 : 100) + '" y="32" ' + (subtitle ? '' : 'text-anchor="middle" ') + 'font-size="11" font-family="-apple-system, sans-serif" font-weight="700" fill="' + pal.text + '">' + escapeHtml(title) + '</text>' +
+        (subtitle ? '<text x="34" y="42" font-size="6.5" font-family="-apple-system, sans-serif" fill="' + pal.sub + '">' + escapeHtml(subtitle) + '</text>' : '') +
     '</g>';
 }
 
 // ============================================================
-// APP ICON
+// SEARCH BAR
 // ============================================================
-function renderAppIcon(x, y, size, color, glyph) {
-    const r = size * 0.22;
+function renderSearchBar(pal, y) {
     return '<g>' +
-        '<rect x="' + x + '" y="' + y + '" width="' + size + '" height="' + size + '" rx="' + r + '" fill="' + color + '"/>' +
-        '<g transform="translate(' + x + ',' + y + ')" stroke="#ffffff" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.95">' +
-            glyph +
-        '</g>' +
+        '<rect x="14" y="' + y + '" width="172" height="18" rx="6" fill="' + pal.surfaceAlt + '"/>' +
+        '<circle cx="26" cy="' + (y + 9) + '" r="3.5" fill="none" stroke="' + pal.sub + '" stroke-width="0.9"/>' +
+        '<line x1="28.5" y1="' + (y + 11.5) + '" x2="31" y2="' + (y + 14) + '" stroke="' + pal.sub + '" stroke-width="0.9" stroke-linecap="round"/>' +
+        '<text x="36" y="' + (y + 12) + '" font-size="7" font-family="-apple-system, sans-serif" fill="' + pal.sub + '">Cari pengaturan</text>' +
     '</g>';
 }
 
-// Glyphs for common apps
-function glyphFor(appId) {
-    const t = function (cx, cy) { return 'translate(' + cx + ',' + cy + ')'; };
+// ============================================================
+// PROFILE CARD
+// ============================================================
+function renderProfileCard(pal, y, companyName) {
+    const w = 172;
+    const h = 42;
+    const x = 14;
+    const initial = (companyName || 'My Tech Co').charAt(0).toUpperCase();
+
+    return '<g>' +
+        '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="8" fill="' + pal.surface + '"/>' +
+        '<circle cx="' + (x + 22) + '" cy="' + (y + h/2) + '" r="12" fill="' + pal.accent + '"/>' +
+        '<text x="' + (x + 22) + '" y="' + (y + h/2 + 4) + '" text-anchor="middle" font-size="13" font-family="-apple-system, sans-serif" font-weight="700" fill="#ffffff">' + escapeHtml(initial) + '</text>' +
+        '<text x="' + (x + 42) + '" y="' + (y + 18) + '" font-size="8.5" font-family="-apple-system, sans-serif" font-weight="700" fill="' + pal.text + '">' + escapeHtml(companyName || 'My Tech Co') + '</text>' +
+        '<text x="' + (x + 42) + '" y="' + (y + 29) + '" font-size="7" font-family="-apple-system, sans-serif" fill="' + pal.sub + '">Akun &amp; Ekosistem</text>' +
+        '<path d="M ' + (x + w - 18) + ' ' + (y + h/2 - 4) + ' L ' + (x + w - 14) + ' ' + (y + h/2) + ' L ' + (x + w - 18) + ' ' + (y + h/2 + 4) + '" fill="none" stroke="' + pal.sub + '" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</g>';
+}
+
+// ============================================================
+// ICON GLYPHS (mini, 14x14 area — origin di 0,0)
+// ============================================================
+function glyph(name, color) {
+    const s = 'fill="none" stroke="' + color + '" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"';
     const map = {
-        app_messenger: '<path d="M3 3h12v9H7l-4 3z" transform="' + t(4, 4) + '"/>',
-        app_photos:    '<circle cx="10" cy="10" r="3" transform="' + t(4, 4) + '"/><circle cx="6" cy="6" r="1" transform="' + t(4, 4) + '" fill="#fff"/>',
-        app_music:     '<circle cx="7" cy="15" r="2" transform="' + t(5, 3) + '"/><circle cx="15" cy="13" r="2" transform="' + t(5, 3) + '"/><line x1="9" y1="15" x2="9" y2="6" transform="' + t(5, 3) + '"/><line x1="17" y1="13" x2="17" y2="4" transform="' + t(5, 3) + '"/>',
-        app_maps:      '<path d="M10 3C6 3 4 6 4 9c0 4 6 9 6 9s6-5 6-9c0-3-2-6-6-6z" transform="' + t(3, 2) + '"/><circle cx="10" cy="9" r="2" transform="' + t(3, 2) + '"/>',
-        app_store:     '<path d="M4 4l4-2 8 2v12H4z" transform="' + t(3, 3) + '"/><line x1="8" y1="2" x2="8" y2="16" transform="' + t(3, 3) + '"/>',
-        app_wallet:    '<rect x="4" y="6" width="14" height="10" rx="2" transform="' + t(2, 2) + '"/><line x1="4" y1="10" x2="18" y2="10" transform="' + t(2, 2) + '"/>',
-        app_health:    '<path d="M11 15l-5-5a3 3 0 1 1 5-4 3 3 0 1 1 5 4z" transform="' + t(1, 2) + '"/>',
-        app_arkit:     '<path d="M10 3l7 4v8l-7 4-7-4V7z" transform="' + t(2, 2) + '"/><line x1="3" y1="7" x2="10" y2="11" transform="' + t(2, 2) + '"/><line x1="10" y1="11" x2="17" y2="7" transform="' + t(2, 2) + '"/>',
-        app_assistant: '<rect x="4" y="6" width="12" height="10" rx="2" transform="' + t(2, 2) + '"/><circle cx="8" cy="10" r="1" transform="' + t(2, 2) + '" fill="#fff"/><circle cx="12" cy="10" r="1" transform="' + t(2, 2) + '" fill="#fff"/>',
-        app_llm:       '<path d="M10 4v12M6 8c-2 0-3 2-3 4s1 4 3 4M14 8c2 0 3 2 3 4s-1 4-3 4" transform="' + t(2, 2) + '"/>',
-        // System apps (dari fitur)
-        sys_phone:     '<path d="M4 4l3 1 2 4-2 2 4 4 2-2 4 2v3c0 1-1 2-2 2-6 0-11-5-11-11 0-1 1-2 2-2z" transform="' + t(2, 2) + '"/>',
-        sys_camera:    '<rect x="3" y="6" width="14" height="10" rx="2" transform="' + t(2, 2) + '"/><circle cx="10" cy="11" r="3" transform="' + t(2, 2) + '"/>',
-        sys_calendar:  '<rect x="3" y="4" width="14" height="12" rx="2" transform="' + t(2, 2) + '"/><line x1="3" y1="9" x2="17" y2="9" transform="' + t(2, 2) + '"/>',
-        sys_browser:   '<circle cx="10" cy="10" r="7" transform="' + t(2, 2) + '"/><line x1="3" y1="10" x2="17" y2="10" transform="' + t(2, 2) + '"/><path d="M10 3c3 2 3 12 0 14" transform="' + t(2, 2) + '"/>',
-        sys_music:     '<circle cx="10" cy="14" r="2" transform="' + t(2, 2) + '"/><line x1="12" y1="14" x2="12" y2="4" transform="' + t(2, 2) + '"/><path d="M12 4l5 1v3l-5-1" transform="' + t(2, 2) + '"/>',
-        sys_cloud:     '<path d="M6 14c-2 0-3-2-3-4s1-4 3-4c1-2 3-3 5-3 3 0 5 2 6 4 2 0 3 2 3 4s-1 4-3 4z" transform="' + t(0, 2) + '"/>',
-        sys_health:    '<path d="M11 15l-5-5a3 3 0 1 1 5-4 3 3 0 1 1 5 4z" transform="' + t(1, 2) + '"/>',
-        sys_folder:    '<path d="M3 6h5l2 2h9v9H3z" transform="' + t(2, 2) + '"/>',
-        sys_files:     '<path d="M5 3h7l3 3v11H5z" transform="' + t(2, 2) + '"/><path d="M8 9h6M8 12h6" transform="' + t(2, 2) + '"/>',
-        sys_ai:        '<circle cx="10" cy="10" r="6" transform="' + t(2, 2) + '"/><path d="M7 10h6M10 7v6" transform="' + t(2, 2) + '"/>',
-        sys_pay:       '<rect x="3" y="6" width="14" height="10" rx="2" transform="' + t(2, 2) + '"/><line x1="3" y1="10" x2="17" y2="10" transform="' + t(2, 2) + '"/>'
+        wifi:     '<path d="M3 7 a8 8 0 0 1 8 0" ' + s + '/><path d="M0.5 4.5 a12 12 0 0 1 13 0" ' + s + '/><circle cx="7" cy="10" r="0.7" fill="' + color + '"/>',
+        display:  '<rect x="1" y="2" width="12" height="9" rx="1.2" ' + s + '/><line x1="5" y1="14" x2="9" y2="14" ' + s + '/><line x1="7" y1="11" x2="7" y2="14" ' + s + '/>',
+        volume:   '<path d="M1 5 L4 5 L7 2 L7 12 L4 9 L1 9 Z" ' + s + '/><path d="M9 4.5 a4 4 0 0 1 0 5" ' + s + '/>',
+        bell:     '<path d="M3 9 c0 -3 0.5 -5 4 -5 c3.5 0 4 2 4 5 l1 1.5 h-10 z" ' + s + '/><path d="M5.5 11.5 a1.5 1.5 0 0 0 3 0" ' + s + '/>',
+        lock:     '<rect x="2.5" y="6" width="9" height="7" rx="1.4" ' + s + '/><path d="M4.5 6 V4.5 a2.5 2.5 0 0 1 5 0 V6" ' + s + '/>',
+        ai:       '<circle cx="7" cy="7" r="3" ' + s + '/><path d="M7 1 v2 M7 11 v2 M1 7 h2 M11 7 h2 M2.5 2.5 l1.5 1.5 M10 10 l1.5 1.5 M2.5 11.5 l1.5 -1.5 M10 4 l1.5 -1.5" ' + s + '/>',
+        info:     '<circle cx="7" cy="7" r="6" ' + s + '/><line x1="7" y1="6" x2="7" y2="10" ' + s + '/><circle cx="7" cy="4.5" r="0.6" fill="' + color + '"/>',
+        cloud:    '<path d="M3 11 h7 a2.5 2.5 0 0 0 0.5 -4.5 a3.5 3.5 0 0 0 -6.5 -1 a2.5 2.5 0 0 0 -1 5.5 z" ' + s + '/>'
     };
-    return map[appId] || '<rect x="6" y="6" width="8" height="8" rx="2" transform="' + t(2, 2) + '"/>';
-}
-
-// Daftar app yang muncul, berdasarkan fitur + builtin apps.
-function collectApps(featureIds, builtinIds) {
-    const has = function (id) { return featureIds.indexOf(id) >= 0; };
-    const apps = [];
-
-    // Builtin apps pemain (dari os.apps.builtin)
-    const builtinMeta = {
-        app_messenger: { label: 'Pesan',      color: '#2563eb', icon: 'app_messenger' },
-        app_photos:    { label: 'Galeri',     color: '#8b5cf6', icon: 'app_photos' },
-        app_music:     { label: 'Musik',      color: '#ec4899', icon: 'app_music' },
-        app_maps:      { label: 'Peta',       color: '#10b981', icon: 'app_maps' },
-        app_store:     { label: 'Toko',       color: '#3b82f6', icon: 'app_store' },
-        app_wallet:    { label: 'Dompet',     color: '#111827', icon: 'app_wallet' },
-        app_health:    { label: 'Kesehatan',  color: '#ef4444', icon: 'app_health' },
-        app_arkit:     { label: 'AR',         color: '#a855f7', icon: 'app_arkit' },
-        app_assistant: { label: 'Asisten',    color: '#06b6d4', icon: 'app_assistant' },
-        app_llm:       { label: 'AI',         color: '#7c3aed', icon: 'app_llm' }
-    };
-    builtinIds.forEach(function (id) {
-        const meta = builtinMeta[id];
-        if (meta) apps.push({ id: id, label: meta.label, color: meta.color, icon: meta.icon });
-    });
-
-    // System apps dari fitur OS
-    if (has('fw_sms'))               apps.push({ id: 'sys_phone',    label: 'Telepon', color: '#16a34a', icon: 'sys_phone' });
-    if (has('fw_camera_app') || has('fw_camera_gallery'))
-                                     apps.push({ id: 'sys_camera',   label: 'Kamera',  color: '#475569', icon: 'sys_camera' });
-    if (has('fw_calendar'))          apps.push({ id: 'sys_calendar', label: 'Kalender', color: '#dc2626', icon: 'sys_calendar' });
-    if (has('fw_browser_mobile') || has('fw_wap_browser'))
-                                     apps.push({ id: 'sys_browser',  label: 'Browser', color: '#0284c7', icon: 'sys_browser' });
-    if (has('fw_music_streaming'))   apps.push({ id: 'sys_music',    label: 'Streaming', color: '#db2777', icon: 'sys_music' });
-    if (has('fw_cloud_sync'))        apps.push({ id: 'sys_cloud',    label: 'Cloud',   color: '#0891b2', icon: 'sys_cloud' });
-    if (has('fw_health'))            apps.push({ id: 'sys_health',   label: 'Sehat',   color: '#e11d48', icon: 'sys_health' });
-    if (has('fw_files'))             apps.push({ id: 'sys_files',    label: 'File',    color: '#0891b2', icon: 'sys_files' });
-    if (has('fw_siri') || has('fw_ai_on_device'))
-                                     apps.push({ id: 'sys_ai',       label: 'AI',      color: '#7c3aed', icon: 'sys_ai' });
-    if (has('fw_digital_pay'))       apps.push({ id: 'sys_pay',      label: 'Bayar',   color: '#1f2937', icon: 'sys_pay' });
-    if (has('fw_folders'))           apps.push({ id: 'sys_folder',   label: 'Folder',  color: '#f59e0b', icon: 'sys_folder' });
-
-    // Dedup by id (kalau builtin sudah ada, skip system)
-    const seen = {};
-    const out = [];
-    apps.forEach(function (a) {
-        if (!seen[a.id]) { seen[a.id] = true; out.push(a); }
-    });
-    return out.slice(0, 16);
+    return map[name] || '';
 }
 
 // ============================================================
-// APP GRID
+// SETTINGS ROW
 // ============================================================
-function renderAppGrid(apps, featureIds, isDark) {
-    const has = function (id) { return featureIds.indexOf(id) >= 0; };
-    const w = 200;
-    const gridTop = (has('fw_widgets_basic') || has('fw_home_widgets')) ? 130 : 60;
-    const cols = 4;
-    const iconSize = 22;
-    const gapX = (w - 24 - cols * iconSize) / (cols - 1);
-    const gapY = 34;
+function renderRow(y, iconName, label, value, pal, toggleOn) {
+    const iconX = 22;
+    const iconY = y + 8;
+    const valueX = 178;
+    const chevronX = 186;
 
-    let html = '<g>';
-    apps.forEach(function (app, i) {
-        const col = i % cols;
-        const row = Math.floor(i / cols);
-        const x = 14 + col * (iconSize + gapX);
-        const y = gridTop + row * gapY;
-        if (y > 320) return;
-        html += renderAppIcon(x, y, iconSize, app.color, glyphFor(app.icon));
-        html += '<text x="' + (x + iconSize / 2) + '" y="' + (y + iconSize + 7) + '" text-anchor="middle" font-size="5.5" font-family="sans-serif" fill="#ffffff" opacity="0.85">' + escapeHtml(app.label) + '</text>';
-    });
-    html += '</g>';
-    return html;
-}
-
-// ============================================================
-// DOCK (era modern+)
-// ============================================================
-function renderDock(featureIds) {
-    const has = function (id) { return featureIds.indexOf(id) >= 0; };
-    const isModern = has('fw_touch') || has('fw_control_center') || has('fw_gesture_nav');
-    if (!isModern) return '';
+    let rightSide = '';
+    if (toggleOn === true) {
+        // Toggle: track + knob
+        rightSide = '<rect x="' + (chevronX - 16) + '" y="' + (y + 6) + '" width="20" height="12" rx="6" fill="' + pal.accent + '"/>' +
+            '<circle cx="' + (chevronX - 2) + '" cy="' + (y + 12) + '" r="4.5" fill="#ffffff"/>';
+    } else if (toggleOn === false) {
+        rightSide = '<rect x="' + (chevronX - 16) + '" y="' + (y + 6) + '" width="20" height="12" rx="6" fill="' + pal.surfaceAlt + '"/>' +
+            '<circle cx="' + (chevronX - 12) + '" cy="' + (y + 12) + '" r="4.5" fill="#ffffff"/>';
+    } else {
+        rightSide =
+            (value ? '<text x="' + (chevronX - 6) + '" y="' + (y + 13) + '" text-anchor="end" font-size="6.5" font-family="-apple-system, sans-serif" fill="' + pal.sub + '">' + escapeHtml(value) + '</text>' : '') +
+            '<path d="M ' + (chevronX - 3) + ' ' + (y + 9) + ' L ' + (chevronX) + ' ' + (y + 12) + ' L ' + (chevronX - 3) + ' ' + (y + 15) + '" fill="none" stroke="' + pal.sub + '" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>';
+    }
 
     return '<g>' +
-        '<rect x="14" y="340" width="172" height="42" rx="14" fill="rgba(255,255,255,0.08)"/>' +
-        '<g>' +
-            renderDockIcon(24, 348, '#16a34a', 'sys_phone') +
-            renderDockIcon(62, 348, '#2563eb', 'app_messenger') +
-            renderDockIcon(100, 348, '#0284c7', 'sys_browser') +
-            renderDockIcon(138, 348, '#475569', 'sys_camera') +
-        '</g>' +
+        '<g transform="translate(' + iconX + ',' + iconY + ')" stroke-linecap="round" stroke-linejoin="round">' + glyph(iconName, pal.accent) + '</g>' +
+        '<text x="' + (iconX + 22) + '" y="' + (y + 13) + '" font-size="8" font-family="-apple-system, sans-serif" font-weight="500" fill="' + pal.text + '">' + escapeHtml(label) + '</text>' +
+        rightSide +
+        '<line x1="14" y1="' + (y + 22) + '" x2="186" y2="' + (y + 22) + '" stroke="' + pal.line + '" stroke-width="0.5"/>' +
     '</g>';
 }
 
-function renderDockIcon(x, y, color, iconId) {
-    return renderAppIcon(x, y, 26, color, glyphFor(iconId));
+// ============================================================
+// FOOTER
+// ============================================================
+function renderFooter(pal, osName, versionString) {
+    const label = (osName || 'MyOS') + ' ' + (versionString || '—');
+    return '<g>' +
+        '<text x="100" y="392" text-anchor="middle" font-size="6.5" font-family="-apple-system, sans-serif" fill="' + pal.sub + '">' + escapeHtml(label) + '</text>' +
+    '</g>';
 }
 
 // ============================================================
-// HOME INDICATOR
+// SETTINGS VIEW
 // ============================================================
-function renderHomeIndicator(featureIds) {
+function renderSettingsView(featureIds, osState, spec, year, isDark, size) {
     const has = function (id) { return featureIds.indexOf(id) >= 0; };
-    if (!has('fw_gesture_nav') && !has('fw_touch')) return '';
-    return '<rect x="88" y="392" width="24" height="2" rx="1" fill="#ffffff" opacity="0.6"/>';
+    const eraId = getDesignEraForYear(year).id;
+    const pal = palette(eraId, isDark);
+    const w = 200;
+    const h = 400;
+
+    // Hitung nilai per row
+    const networkValue = has('net_5g') ? '5G' : has('net_4g') ? 'LTE' : has('net_3g') ? '3G' : has('net_gsm') ? 'GSM' : 'Nonaktif';
+    const displayValue = isDark ? 'Gelap' : 'Terang';
+    const volumeValue = '80%';
+    const notificationOn = has('fw_smart_notif') || has('fw_notifications');
+    const securityValue = has('fw_biometric') ? 'Face ID' : has('fw_fingerprint') ? 'Fingerprint' : has('fw_privacy') ? 'PIN' : 'Nonaktif';
+    const aiOn = has('fw_siri') || has('fw_ai_on_device') || has('fw_ondevice_llm');
+    const versionValue = getCurrentVersionString(osState) || '—';
+    const storageValue = has('fw_cloud_sync') ? '128 GB' : '64 GB';
+
+    // Status bar
+    let svg = '<rect x="0" y="0" width="' + w + '" height="' + h + '" fill="' + pal.bg + '"/>';
+    svg += renderStatusBar(w, pal);
+    svg += renderHeader(pal, 'Pengaturan', 'Sistem & Preferensi');
+    svg += renderSearchBar(pal, 52);
+    svg += renderProfileCard(pal, 78, osState && osState.name ? osState.name : null);
+
+    // Section title
+    svg += '<text x="14" y="134" font-size="7" font-family="-apple-system, sans-serif" font-weight="700" fill="' + pal.sub + '" letter-spacing="0.5">PENGATURAN SISTEM</text>';
+
+    // Rows
+    const startY = 142;
+    const rowH = 24;
+    let i = 0;
+    svg += renderRow(startY + i * rowH, 'wifi',    'Jaringan',   networkValue, pal); i++;
+    svg += renderRow(startY + i * rowH, 'display', 'Tampilan',   displayValue, pal); i++;
+    svg += renderRow(startY + i * rowH, 'volume',  'Suara',      volumeValue, pal); i++;
+    svg += renderRow(startY + i * rowH, 'bell',    'Notifikasi', null, pal, notificationOn); i++;
+    svg += renderRow(startY + i * rowH, 'lock',    'Keamanan',   securityValue, pal); i++;
+    svg += renderRow(startY + i * rowH, 'ai',      'AI & Asisten', null, pal, aiOn); i++;
+    svg += renderRow(startY + i * rowH, 'cloud',   'Penyimpanan', storageValue, pal); i++;
+
+    // About OS row
+    svg += renderRow(startY + i * rowH, 'info', 'Tentang OS', versionValue, pal); i++;
+
+    // Notch di atas
+    svg += renderNotch(spec, w, pal);
+
+    // Footer versi
+    svg += renderFooter(pal, osState && osState.name, versionValue);
+
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' ' + h + '" width="' + size + '" height="' + Math.round(size * 2) + '" preserveAspectRatio="xMidYMid meet">' + svg + '</svg>';
 }
 
 // ============================================================
-// CONTROL CENTER indikator
+// HOME VIEW (sederhana, untuk nanti)
 // ============================================================
-function renderControlCenterHint(featureIds, accent) {
+function renderHomeView(featureIds, osState, spec, year, isDark, size) {
     const has = function (id) { return featureIds.indexOf(id) >= 0; };
-    if (!has('fw_control_center')) return '';
-    return '<rect x="0" y="0" width="200" height="3" fill="' + accent + '" opacity="0.4"/>';
+    const eraId = getDesignEraForYear(year).id;
+    const pal = palette(eraId, isDark);
+    const w = 200;
+    const h = 400;
+
+    let svg = '<rect x="0" y="0" width="' + w + '" height="' + h + '" fill="' + pal.bg + '"/>';
+    svg += renderStatusBar(w, pal);
+    svg += '<text x="100" y="200" text-anchor="middle" font-size="10" font-family="-apple-system, sans-serif" fill="' + pal.sub + '">Home screen</text>';
+    svg += renderNotch(spec, w, pal);
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' ' + h + '" width="' + size + '" height="' + Math.round(size * 2) + '" preserveAspectRatio="xMidYMid meet">' + svg + '</svg>';
 }
 
 // ============================================================
@@ -336,44 +301,33 @@ function renderControlCenterHint(featureIds, accent) {
 // ============================================================
 export function renderOsScreenMockup(opts) {
     opts = opts || {};
-    const st = opts.osState ? { os: opts.osState, time: opts.time || { currentYear: 2000 }, research: opts.research || { completed: [] } } : safeGetState();
+    const st = opts.osState ? {
+        os: opts.osState,
+        time: opts.time || { currentYear: 2000 },
+        research: opts.research || { completed: [] }
+    } : safeGetState();
 
     const year = (st.time && st.time.currentYear) || 2000;
     const completed = (st.research && st.research.completed) || [];
-    const era = getDesignEraForYear(year);
     const spec = resolveSpec(year, completed);
 
     const osState = st.os || {};
     const featureIds = getCurrentFeatures(osState);
-    const builtinIds = (osState.apps && Array.isArray(osState.apps.builtin)) ? osState.apps.builtin : [];
+    const isDark = featureIds.indexOf('fw_dark_mode') >= 0;
 
-    const has = function (id) { return featureIds.indexOf(id) >= 0; };
-    const isDark = has('fw_dark_mode');
+    const size = opts.size || 120;
+    const view = opts.view || 'settings';
 
-    const size = opts.size || 200;
-    const w = 200;
-    const h = 400;
+    let svgInner = '';
+    if (view === 'home') {
+        svgInner = renderHomeView(featureIds, osState, spec, year, isDark, size);
+    } else {
+        svgInner = renderSettingsView(featureIds, osState, spec, year, isDark, size);
+    }
 
-    const apps = collectApps(featureIds, builtinIds);
-
-    const svg =
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' ' + h + '" width="' + size + '" height="' + Math.round(size * 2) + '" preserveAspectRatio="xMidYMid meet">' +
-            renderWallpaper(era.id, isDark, w, h) +
-            renderWidget(has('fw_widgets_basic'), has('fw_home_widgets'), w, era.aesthetic.accent, isDark) +
-            renderAppGrid(apps, featureIds, isDark) +
-            renderDock(featureIds) +
-            renderStatusBar(w, isDark, era.aesthetic.accent) +
-            renderControlCenterHint(featureIds, era.aesthetic.accent) +
-            renderNotch(spec, w) +
-            renderHomeIndicator(featureIds) +
-        '</svg>';
-
-    return '<div class="os-screen-wrap">' + svg + '</div>';
+    return '<div class="os-screen-wrap">' + svgInner + '</div>';
 }
 
-// ============================================================
-// THUMBNAIL & API
-// ============================================================
 export function renderOsScreenThumbnail(osState, size) {
     return renderOsScreenMockup({ osState: osState, size: size || 100 });
 }
@@ -390,4 +344,4 @@ export function getOsMockupInfo() {
         featureCount: featureIds.length,
         isDark: featureIds.indexOf('fw_dark_mode') >= 0
     };
-}
+                                      }
