@@ -35,7 +35,7 @@ import { showOnboarding } from './ui/panels/OnboardingModal.js';
 import { initMonthlySummary } from './ui/panels/MonthlySummaryModal.js';
 import { initGameOverScreen } from './ui/panels/GameOverScreen.js';
 import { Modal } from './ui/modal.js';
-import { renderResearchPanel, setFilterCategory, openNodeDetailModal, openOsWizardModal, openCreateOsModal, openFeatureDetailModal } from './ui/panels/ResearchPanel.js';
+import { renderResearchPanel, setFilterCategory, setTimelineFilter, openNodeDetailModal, openOsWizardModal, openCreateOsModal, openFeatureDetailModal } from './ui/panels/ResearchPanel.js';
 import { renderProductPanel, openProductDetailModal, openCampaignModal, openOrderProductionModal } from './ui/panels/ProductPanel.js';
 import { openDesignWizard } from './ui/panels/DesignWizard.js';
 import { renderMarketPanel, drawShareChart } from './ui/panels/MarketPanel.js';
@@ -125,7 +125,6 @@ function renderNavOnly() {
 
 function updateNavSlider(animated) {
     if (!els.nav) return;
-    // Jangan override slider saat user sedang drag manual
     if (els.nav.dataset.dragging === '1') return;
 
     var slider = els.nav.querySelector('.nav-slider');
@@ -228,14 +227,9 @@ function animateCash(from, to) {
 function navigate(id) {
     if (id === activeView) return;
     activeView = id;
-
-    // Opsi A: matikan animasi fadeInUp sementara saat pindah halaman.
-    // Class dihapus setelah 2 frame supaya animasi granular tetap berjalan normal.
     if (els.view) els.view.classList.add('soft-update');
-
     renderAll();
     updateTitle();
-
     if (els.view) {
         requestAnimationFrame(function () {
             requestAnimationFrame(function () {
@@ -243,7 +237,6 @@ function navigate(id) {
             });
         });
     }
-
     bus.emit('view:changed', { id: id });
     bus.emit('tutorial:action', { id: 'nav:' + id });
 }
@@ -346,6 +339,8 @@ function bindGlobalClicks() {
         if (subBtn) { e.preventDefault(); activeSubtab = subBtn.dataset.subtab; renderView(); return; }
         var chipFilter = e.target.closest('[data-filter-cat]');
         if (chipFilter) { e.preventDefault(); setFilterCategory(chipFilter.dataset.filterCat); renderView(); return; }
+        var timelineFilter = e.target.closest('[data-timeline-filter]');
+        if (timelineFilter) { e.preventDefault(); setTimelineFilter(timelineFilter.dataset.timelineFilter); renderView(); return; }
         var nodeCard = e.target.closest('[data-node-detail]');
         if (nodeCard) { e.preventDefault(); openNodeDetailModal({ nodeId: nodeCard.dataset.nodeDetail, researchSystem: research }); return; }
         var rAction = e.target.closest('[data-research-action]');
@@ -497,7 +492,6 @@ function bindProgressEvents() {
         var etaEl = els.view.querySelector('[data-prod-dev-eta]'); if (etaEl) etaEl.textContent = 'Sisa ~' + data.remainingDays + ' hari';
     });
 
-    // FIX FLICKER: hapus re-render tiap hari. Render hanya saat ada perubahan struktural.
     bus.on('research:started',   function () { if (activeView === 'research' && activeSubtab === 'tech') renderView({ soft: true }); });
     bus.on('research:completed', function () { if (activeView === 'research' && activeSubtab === 'tech') renderView({ soft: true }); });
     bus.on('research:cancelled', function () { if (activeView === 'research' && activeSubtab === 'tech') renderView({ soft: true }); });
@@ -656,7 +650,6 @@ async function boot() {
         timeSystem.start();
         SaveService.startAutoSave(function () { return state; });
 
-        // Update nav slider saat resize / rotasi
         window.addEventListener('resize', function () {
             updateNavSlider(false);
         });
@@ -670,14 +663,12 @@ async function boot() {
             animateCash(0, cash);
         }
 
-        // Init drag slider manual
         initNavSliderDrag({
             nav: els.nav,
             getActiveView: function () { return activeView; },
             navigate: navigate
         });
 
-        // Init swipe navigation sub-tab
         initSwipe({
             getView: function () { return activeView; },
             getSubtab: function () {
