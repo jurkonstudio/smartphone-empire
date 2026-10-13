@@ -110,7 +110,10 @@ export var FEATURE_ICONS = {
     grid:           '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>',
     portrait:       '<rect width="14" height="20" x="5" y="2" rx="2"/>',
     smile:          '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>',
-    "question":     '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
+    "question":     '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+    calendar:       '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/>',
+    gamepad:        '<line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="15" y1="13" x2="15.01" y2="13"/><line x1="18" y1="11" x2="18.01" y2="11"/><rect x="2" y="6" width="20" height="12" rx="2"/>',
+    film:           '<rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/>'
 };
 
 export function getIconContent(id) {
@@ -126,4 +129,22 @@ export function getAvailableIconIds() {
 
 export function hasIcon(id) {
     return !!FEATURE_ICONS[id];
+}
+
+// ============================================================
+// renderIcon — bungkus konten ikon dalam SVG agar siap render.
+// Dipakai di panel untuk render dari icon ID (bukan emoji).
+// ============================================================
+export function renderIcon(id, size, extraAttrs) {
+    if (!id) return '';
+    const content = FEATURE_ICONS[id];
+    if (!content) {
+        if (typeof console !== 'undefined') {
+            console.warn('[renderIcon] Ikon tidak dikenal: "' + id + '"');
+        }
+        return '';
+    }
+    const s = size || 16;
+    const extra = extraAttrs || '';
+    return '<svg class="icon" width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" ' + extra + ' aria-hidden="true">' + content + '</svg>';
 }
