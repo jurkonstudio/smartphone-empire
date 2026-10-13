@@ -328,6 +328,13 @@ export class OSSystem {
         return v ? { ...v.stats } : null;
     }
 
+    // Preview statistik jika fitur2 ini ditambahkan ke versi berikutnya.
+    // Mengembalikan hasil yang akan sama dengan _calculateStats saat versi dirilis.
+    previewStats(featureIds) {
+        const ids = Array.isArray(featureIds) ? featureIds.slice() : [];
+        return this._calculateStats(ids);
+    }
+
     getAvailableFeatures() {
         return OS_FEATURES.filter(f => this.getFeatureStatus(f.id).status === 'available');
     }
@@ -362,6 +369,7 @@ export class OSSystem {
     }
 
     hasFeature(featureId) {
+        if (!featureId) return false;
         const v = this.getCurrentVersionObject();
         return v ? v.features.includes(featureId) : false;
     }
