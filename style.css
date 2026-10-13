@@ -1,3 +1,4 @@
+// FILE: style.css
 /* ============================================================================
    SMARTPHONE EMPIRE — Data-Dense Pro Theme
    Inspired by Football Manager · Game Dev Tycoon · Two Point Hospital
@@ -1315,8 +1316,8 @@ body {
    TUTORIAL OVERLAY
    ============================================================================ */
 .tut-root { position: fixed; inset: 0; pointer-events: none; z-index: 10002; opacity: 0; transition: opacity 0.22s; }
-.tut-root.visible { opacity: 1; pointer-events: auto; }
-.tut-dim { position: absolute; inset: 0; background: rgba(0,0,0,0.78); }
+.tut-root.visible { opacity: 1; }
+.tut-dim { position: absolute; inset: 0; background: rgba(0,0,0,0.78); pointer-events: none; }
 .tut-hole {
     position: absolute;
     border-radius: var(--r);
@@ -1334,6 +1335,15 @@ body {
     box-shadow: var(--shadow-lg);
     z-index: 10003;
     transition: top 0.25s, bottom 0.25s;
+    pointer-events: auto;
+}
+.tut-progress {
+    font-size: var(--fs-2xs);
+    color: var(--text-tertiary);
+    font-weight: var(--fw-bold);
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
 }
 .tut-title { font-size: var(--fs-md); font-weight: var(--fw-bold); margin-bottom: 6px; letter-spacing: -0.015em; }
 .tut-text { font-size: var(--fs-sm); color: var(--text-secondary); line-height: var(--lh-base); margin-bottom: 12px; }
@@ -2882,4 +2892,4 @@ body {
 .icon-wrap,
 .icon-hero {
     will-change: transform;
-}
+   }
