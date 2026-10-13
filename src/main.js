@@ -36,7 +36,7 @@ import { showOnboarding } from './ui/panels/OnboardingModal.js';
 import { initMonthlySummary } from './ui/panels/MonthlySummaryModal.js';
 import { initGameOverScreen } from './ui/panels/GameOverScreen.js';
 import { Modal } from './ui/modal.js';
-import { renderResearchPanel, setFilterCategory, setTimelineFilter, openNodeDetailModal, openOsWizardModal, openCreateOsModal, openFeatureDetailModal } from './ui/panels/ResearchPanel.js';
+import { renderResearchPanel, setFilterCategory, setTimelineFilter, getChipResearchFilter, setChipResearchFilter, openNodeDetailModal, openOsWizardModal, openCreateOsModal, openFeatureDetailModal, openChipNodeModal } from './ui/panels/ResearchPanel.js';
 import { renderProductPanel, openProductDetailModal, openCampaignModal, openOrderProductionModal } from './ui/panels/ProductPanel.js';
 import { openDesignWizard } from './ui/panels/DesignWizard.js';
 import { renderMarketPanel, drawShareChart } from './ui/panels/MarketPanel.js';
@@ -102,7 +102,7 @@ function renderHeaderOnly() {
 }
 
 // ============================================================
-// NAV RENDER — Liquid Glass Slider (dengan drag support)
+// NAV RENDER — Liquid Glass Slider
 // ============================================================
 function renderNavOnly() {
     if (!els.nav) return;
@@ -173,7 +173,7 @@ function renderView(opts) {
         if (activeView === 'dashboard') html = renderDashboard(state.get(), getTime(), research, teamSystem);
         else if (activeView === 'profile') html = renderCompanyProfilePanel({ teamSystem: teamSystem, marketSystem: market, competitors: competitors, opinionSystem: opinion });
         else if (activeView === 'team') html = renderTeamPanel({ subtab: activeTeamSubtab, teamSystem: teamSystem });
-        else if (activeView === 'research') html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os });
+        else if (activeView === 'research') html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os, chipResearchSystem: chipResearch });
         else if (activeView === 'products') html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os });
         else if (activeView === 'market') html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion });
         else if (activeView === 'settings') html = renderSettingsPanel();
@@ -352,6 +352,21 @@ function bindGlobalClicks() {
         if (chipFilter) { e.preventDefault(); setFilterCategory(chipFilter.dataset.filterCat); renderView(); return; }
         var timelineFilter = e.target.closest('[data-timeline-filter]');
         if (timelineFilter) { e.preventDefault(); setTimelineFilter(timelineFilter.dataset.timelineFilter); renderView(); return; }
+
+        // Chip research
+        var chipFilterCat = e.target.closest('[data-chip-filter-cat]');
+        if (chipFilterCat) { e.preventDefault(); setChipResearchFilter(chipFilterCat.dataset.chipFilterCat); renderView(); return; }
+        var chipNodeCard = e.target.closest('[data-chip-node-detail]');
+        if (chipNodeCard) { e.preventDefault(); openChipNodeModal({ nodeId: chipNodeCard.dataset.chipNodeDetail, chipResearchSystem: chipResearch }); return; }
+        var chipRAction = e.target.closest('[data-chip-research-action]');
+        if (chipRAction) {
+            e.preventDefault();
+            var a = chipRAction.dataset.chipResearchAction; var nodeId = chipRAction.dataset.nodeId;
+            if (a === 'start') { var res = chipResearch.startResearch(nodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.success('Riset chip dimulai!'); Modal.close('chip-node-detail', true); renderAll(); } }
+            else if (a === 'cancel') { var res = chipResearch.cancelResearch(nodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.info('Dibatalkan.'); Modal.close('chip-node-detail', true); renderAll(); } }
+            return;
+        }
+
         var nodeCard = e.target.closest('[data-node-detail]');
         if (nodeCard) { e.preventDefault(); openNodeDetailModal({ nodeId: nodeCard.dataset.nodeDetail, researchSystem: research }); return; }
         var rAction = e.target.closest('[data-research-action]');
@@ -503,9 +518,26 @@ function bindProgressEvents() {
         var etaEl = els.view.querySelector('[data-prod-dev-eta]'); if (etaEl) etaEl.textContent = 'Sisa ~' + data.remainingDays + ' hari';
     });
 
+    // Chip research progress
+    bus.on('chip-research:progress', function (data) {
+        if (activeView !== 'research' || activeSubtab !== 'chip') return;
+        var slotsEl = els.view.querySelector('[data-chip-research-slots]');
+        if (slotsEl) slotsEl.textContent = data.active.length + '/' + data.maxSlots;
+        data.active.forEach(function (r) {
+            var pct = Math.round(r.percent * 100);
+            var bar = els.view.querySelector('[data-chip-research-bar="' + r.nodeId + '"]'); if (bar) bar.style.width = pct + '%';
+            var pctEl = els.view.querySelector('[data-chip-research-pct="' + r.nodeId + '"]'); if (pctEl) pctEl.textContent = pct + '%';
+            var etaEl = els.view.querySelector('[data-chip-research-eta="' + r.nodeId + '"]'); if (etaEl) etaEl.textContent = 'Sisa ~' + Math.ceil(r.remainingDays) + ' hari';
+        });
+    });
+
     bus.on('research:started',   function () { if (activeView === 'research' && activeSubtab === 'tech') renderView({ soft: true }); });
     bus.on('research:completed', function () { if (activeView === 'research' && activeSubtab === 'tech') renderView({ soft: true }); });
     bus.on('research:cancelled', function () { if (activeView === 'research' && activeSubtab === 'tech') renderView({ soft: true }); });
+
+    bus.on('chip-research:started',   function () { if (activeView === 'research' && activeSubtab === 'chip') renderView({ soft: true }); });
+    bus.on('chip-research:completed', function () { if (activeView === 'research' && activeSubtab === 'chip') renderView({ soft: true }); });
+    bus.on('chip-research:cancelled', function () { if (activeView === 'research' && activeSubtab === 'chip') renderView({ soft: true }); });
 
     bus.on('product:development-started',   function () { if (activeView === 'products') renderView({ soft: true }); });
     bus.on('product:released',              function () { if (activeView === 'products') renderView({ soft: true }); });
