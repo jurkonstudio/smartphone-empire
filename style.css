@@ -3281,3 +3281,62 @@ body {
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
 }
+
+
+/* ============================================================
+   V3b — OS ACTIVE HERO (OSPanel) + OsScreenMockup wrapper
+   ============================================================ */
+
+.os-active-hero {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.os-active-screen {
+    flex: 0 0 120px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.os-active-details {
+    flex: 1;
+    min-width: 0;
+    padding-top: 4px;
+}
+
+/* Layar mockup wrapper */
+.os-screen-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.06);
+    background: #000;
+    flex-shrink: 0;
+}
+
+.os-screen-wrap svg {
+    display: block;
+}
+
+/* Responsif — di layar sangat kecil, susun vertikal & center */
+@media (max-width: 380px) {
+    .os-active-hero {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .os-active-screen {
+        flex: 0 0 auto;
+    }
+    .os-active-details {
+        width: 100%;
+        text-align: center;
+    }
+}
