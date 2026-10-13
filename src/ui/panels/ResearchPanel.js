@@ -1,9 +1,15 @@
 // FILE: src/ui/panels/ResearchPanel.js
-// Tab Riset: sub-tab Teknologi | OS | Sejarah.
+// Tab Riset: sub-tab Teknologi | OS | Sejarah | Chip.
 // Node riset diurutkan: Berjalan → Tersedia → Selesai → Terkunci.
 import { RESEARCH_CATEGORIES, getNodeById } from '../../data/research.data.js';
 import { renderOSPanel, openOsWizardModal, openCreateOsModal, openFeatureDetailModal } from './OSPanel.js';
 import { renderTimelinePanel, getTimelineFilter, setTimelineFilter } from './TimelinePanel.js';
+import {
+    renderChipResearchPanel,
+    getChipResearchFilter,
+    setChipResearchFilter,
+    openChipNodeModal
+} from './ChipResearchPanel.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 
 function escapeHtml(s) {
@@ -17,12 +23,31 @@ let _filterCategory = 'all';
 export function getFilterCategory() { return _filterCategory; }
 export function setFilterCategory(cat) { _filterCategory = cat; }
 
-export function renderResearchPanel({ subtab, researchSystem, osSystem }) {
+// ============================================================
+// CHIP TAB VISIBILITY
+// ============================================================
+function _isChipTabVisible() {
+    try {
+        const data = window.__game.state.get();
+        if (data.time && data.time.currentYear >= 2003) return true;
+        if (data.chipResearch && data.chipResearch.completed && data.chipResearch.completed.length > 0) return true;
+        if (data.chips && data.chips.catalog && data.chips.catalog.length > 0) return true;
+        return false;
+    } catch (e) { return false; }
+}
+
+// ============================================================
+// MAIN RENDER
+// ============================================================
+export function renderResearchPanel({ subtab, researchSystem, osSystem, chipResearchSystem }) {
+    const chipTabVisible = _isChipTabVisible();
+
     const subtabBar = `
         <div class="subtab-bar">
             <button class="subtab-btn ${subtab === 'tech'    ? 'active' : ''}" data-subtab="tech">Teknologi</button>
             <button class="subtab-btn ${subtab === 'os'      ? 'active' : ''}" data-subtab="os">OS</button>
             <button class="subtab-btn ${subtab === 'sejarah' ? 'active' : ''}" data-subtab="sejarah">Sejarah</button>
+            ${chipTabVisible ? `<button class="subtab-btn ${subtab === 'chip' ? 'active' : ''}" data-subtab="chip">Chip</button>` : ''}
         </div>
     `;
     let body = '';
@@ -30,6 +55,8 @@ export function renderResearchPanel({ subtab, researchSystem, osSystem }) {
         body = renderOSPanel({ osSystem, researchSystem });
     } else if (subtab === 'sejarah') {
         body = renderTimelinePanel();
+    } else if (subtab === 'chip' && chipTabVisible && chipResearchSystem) {
+        body = renderChipResearchPanel({ chipResearchSystem });
     } else {
         body = renderTechSection({ researchSystem });
     }
@@ -170,7 +197,7 @@ function _statusBadge(s) {
 }
 
 // ============================================================
-// MODAL DETAIL NODE
+// MODAL DETAIL NODE (riset umum)
 // ============================================================
 export function openNodeDetailModal({ nodeId, researchSystem }) {
     const node = getNodeById(nodeId);
@@ -217,5 +244,14 @@ export function openNodeDetailModal({ nodeId, researchSystem }) {
     window.__game.Modal.open('node-detail', html);
 }
 
-// Re-export supaya main.js bisa import dari sini (konsisten dengan setFilterCategory).
-export { openOsWizardModal, openCreateOsModal, openFeatureDetailModal, getTimelineFilter, setTimelineFilter };
+// Re-export untuk main.js
+export {
+    openOsWizardModal,
+    openCreateOsModal,
+    openFeatureDetailModal,
+    getTimelineFilter,
+    setTimelineFilter,
+    getChipResearchFilter,
+    setChipResearchFilter,
+    openChipNodeModal
+};
