@@ -12,11 +12,11 @@
 // ============================================================
 
 export const RESEARCH_CATEGORIES = [
-    { id: 'display',   name: 'Layar',    icon: '📺' },
-    { id: 'camera',    name: 'Kamera',   icon: '📷' },
-    { id: 'battery',   name: 'Baterai',  icon: '🔋' },
-    { id: 'chip',      name: 'Chip',     icon: '🔲' },
-    { id: 'network',   name: 'Jaringan', icon: '📡' }
+    { id: 'display',   name: 'Layar',    icon: 'monitor' },
+    { id: 'camera',    name: 'Kamera',   icon: 'camera' },
+    { id: 'battery',   name: 'Baterai',  icon: 'battery' },
+    { id: 'chip',      name: 'Chip',     icon: 'cpu' },
+    { id: 'network',   name: 'Jaringan', icon: 'signal' }
 ];
 
 export const RESEARCH_NODES = [
@@ -416,4 +416,4 @@ export function getNodeById(id) {
 }
 export function getNodesByCategory(catId) {
     return RESEARCH_NODES.filter(n => n.category === catId);
-      }
+                           }
