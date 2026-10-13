@@ -7,6 +7,7 @@ import { TimeSystem } from './core/TimeSystem.js';
 import { SaveService } from './core/SaveService.js';
 import { ToastService } from './core/ToastService.js';
 import { ThemeService } from './core/ThemeService.js';
+import { ChipResearchSystem } from './core/ChipResearchSystem.js';
 import { EconomySystem } from './systems/EconomySystem.js';
 import { QuestSystem } from './systems/QuestSystem.js';
 import { TutorialSystem } from './systems/TutorialSystem.js';
@@ -57,20 +58,21 @@ import { initSwipe, showSwipeAnimation } from './core/SwipeService.js';
 import { initNavSliderDrag } from './core/NavSliderDrag.js';
 
 // ============ INSTANCE ============
-var timeSystem  = new TimeSystem(state);
-var economy     = new EconomySystem(state);
-var quests      = new QuestSystem(state);
-var tutorial    = new TutorialSystem(state);
-var research    = new ResearchSystem(state);
-var os          = new OSSystem(state);
-var products    = new ProductSystem(state);
-var market      = new MarketSystem(state);
-var competitors = new CompetitorSystem(state);
-var opinion     = new PublicOpinionSystem(state);
-var eraSystem   = new EraSystem(state);
-var teamSystem  = new TeamSystem(state);
-var chipSystem  = new ChipSystem(state);
-var fabSystem   = new FabSystem(state);
+var timeSystem        = new TimeSystem(state);
+var economy           = new EconomySystem(state);
+var quests            = new QuestSystem(state);
+var tutorial          = new TutorialSystem(state);
+var research          = new ResearchSystem(state);
+var chipResearch      = new ChipResearchSystem(state);
+var os                = new OSSystem(state);
+var products          = new ProductSystem(state);
+var market            = new MarketSystem(state);
+var competitors       = new CompetitorSystem(state);
+var opinion           = new PublicOpinionSystem(state);
+var eraSystem         = new EraSystem(state);
+var teamSystem        = new TeamSystem(state);
+var chipSystem        = new ChipSystem(state);
+var fabSystem         = new FabSystem(state);
 
 market.setCompetitorSystem(competitors);
 
@@ -183,11 +185,6 @@ function renderView(opts) {
     }
     els.view.innerHTML = html;
 
-    // ============================================================
-    // REVISI 2 — Trigger animasi masuk saat pindah halaman.
-    // Hanya untuk render NON-soft. Class dihapus 600ms kemudian
-    // supaya tidak re-trigger pada render granular (time tick, log, dll).
-    // ============================================================
     if (!soft) {
         els.view.classList.add('view-fresh');
         if (window.__viewFreshTimer) clearTimeout(window.__viewFreshTimer);
@@ -610,6 +607,7 @@ async function boot() {
         teamSystem.start();
         if (!state.get().candidates || state.get().candidates.length === 0) teamSystem.refreshCandidates();
         research.start();
+        chipResearch.start();
         os.start();
         products.start();
         competitors.start();
@@ -621,7 +619,7 @@ async function boot() {
 
         window.__game = {
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
-            research: research, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
+            research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, news: NewsSystem, ThemeService: ThemeService,
             SaveService: SaveService, ToastService: ToastService, Modal: Modal, navigate: navigate, render: renderAll,
             modules: { marketing: marketingModule, feedbackData: feedbackModule },
@@ -636,13 +634,15 @@ async function boot() {
                 addMarketers: function (n) { teamSystem.fillStaff('marketer', n, 3); },
                 completeAllResearch: function () { return research.completeAllResearch(); },
                 completeResearch: function (id) { return research.completeResearch(id); },
+                completeAllChipResearch: function () { return chipResearch.completeAllResearch(); },
+                completeChipResearch: function (id) { return chipResearch.completeResearch(id); },
                 startOsWith: function (ids) { return os.quickSetup(ids); },
                 quickRelease: function (cfg) { return products.quickRelease(cfg); },
                 setYear: function (y) { var cur = state.get().time.currentYear; return timeSystem.fastForwardDays((y - cur) * 365.25); },
                 forceEra: function (eraId) { state.get().era = eraId; bus.emit('state:changed', state.get()); renderAll(); return { era: eraId }; },
                 setTheme: function (id) { ThemeService.setTheme(id); renderAll(); return { theme: id }; },
                 setAccent: function (id) { ThemeService.setAccent(id); renderAll(); return { accent: id }; },
-                unlockChipDesign: function () { ['chip_design_tool','chip_arch_arm_a','node_180','node_130','node_90','chip_isp_basic','chip_dvfs','fab_construction'].forEach(function (id) { research.completeResearch(id); }); return { ok: true }; },
+                unlockChipDesign: function () { ['chip_design_tool','chip_arch_arm_a','node_180','node_130','node_90','chip_isp_basic','chip_dvfs','fab_construction'].forEach(function (id) { research.completeResearch(id); chipResearch.completeResearch(id); }); return { ok: true }; },
                 quickDesignChip: function (cfg) { return chipSystem.quickDesignChip(cfg); },
                 buildFab: function (lvl) { return fabSystem.quickBuildFab(lvl || 1); },
                 produceChips: function (chipId, qty) { var id = chipId || (state.get().chips.catalog[0] && state.get().chips.catalog[0].id); return fabSystem.orderProduction(id, qty || 1000); },
