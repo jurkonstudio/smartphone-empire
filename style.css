@@ -3023,3 +3023,39 @@ body {
 .card:nth-child(5) {
     animation-delay: 0s !important;
 }
+
+
+/* ============================================================
+   FIX FLICKER v3 — override SEMUA animasi trigger-on-render.
+   Setelah audit menyeluruh, ternyata fadeInUp bukan penyebab utama.
+   Penyebab nyata: numberIn (header-cash, kpi-value) + rotateSubtle (nav).
+   Rule ini menonaktifkan semua animasi masuk yang re-trigger
+   setiap innerHTML diganti.
+   ============================================================ */
+
+/* Header cash — numberIn */
+.header-cash {
+    animation: none !important;
+}
+
+/* KPI value — numberIn */
+.kpi-value {
+    animation: none !important;
+}
+
+/* Nav icon — rotateSubtle */
+.nav-btn.active .nav-ico {
+    animation: none !important;
+}
+
+/* Mockup & chart — phoneIn, chipIn, radarIn, illusFadeIn, wizMockupIn */
+.phone-mockup-wrap,
+.chip-mockup-wrap,
+.radar-chart-wrap,
+.illus-wrap,
+.wiz-mockup-live {
+    animation: none !important;
+}
+
+/* Nav btn active tetap dapat efek warna & scale dari CSS lain.
+   Hanya animasi rotate yang dimatikan. */
