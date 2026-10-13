@@ -3678,3 +3678,239 @@ body {
         transform: none !important;
     }
 }
+
+
+/* ============================================================
+   REVISI 4 — AMBIENT MOTION
+   Gerakan halus terus-menerus pada elemen statis.
+   Semua target adalah elemen yang TIDAK di-render ulang oleh JS,
+   jadi tidak akan memicu flicker.
+   ============================================================ */
+
+/* --- 1. Background gradient bergerak sangat halus (60s) --- */
+@keyframes ambientBgShift {
+    0%   { background-position: 0% 0%; }
+    50%  { background-position: 100% 100%; }
+    100% { background-position: 0% 0%; }
+}
+
+body {
+    background:
+        radial-gradient(ellipse at 20% 0%,
+            rgba(37, 99, 235, 0.06) 0%,
+            transparent 45%),
+        radial-gradient(ellipse at 80% 100%,
+            rgba(139, 92, 246, 0.05) 0%,
+            transparent 45%),
+        var(--bg-0);
+    background-size: 100% 100%;
+    background-attachment: fixed;
+}
+
+[data-accent="emerald"] body {
+    background:
+        radial-gradient(ellipse at 20% 0%, rgba(16, 185, 129, 0.06) 0%, transparent 45%),
+        radial-gradient(ellipse at 80% 100%, rgba(6, 182, 212, 0.05) 0%, transparent 45%),
+        var(--bg-0);
+}
+[data-accent="violet"] body {
+    background:
+        radial-gradient(ellipse at 20% 0%, rgba(139, 92, 246, 0.07) 0%, transparent 45%),
+        radial-gradient(ellipse at 80% 100%, rgba(236, 72, 153, 0.05) 0%, transparent 45%),
+        var(--bg-0);
+}
+[data-accent="amber"] body {
+    background:
+        radial-gradient(ellipse at 20% 0%, rgba(245, 158, 11, 0.06) 0%, transparent 45%),
+        radial-gradient(ellipse at 80% 100%, rgba(239, 68, 68, 0.04) 0%, transparent 45%),
+        var(--bg-0);
+}
+[data-accent="rose"] body {
+    background:
+        radial-gradient(ellipse at 20% 0%, rgba(244, 63, 94, 0.06) 0%, transparent 45%),
+        radial-gradient(ellipse at 80% 100%, rgba(236, 72, 153, 0.05) 0%, transparent 45%),
+        var(--bg-0);
+}
+[data-accent="cyan"] body {
+    background:
+        radial-gradient(ellipse at 20% 0%, rgba(6, 182, 212, 0.07) 0%, transparent 45%),
+        radial-gradient(ellipse at 80% 100%, rgba(37, 99, 235, 0.05) 0%, transparent 45%),
+        var(--bg-0);
+}
+
+[data-theme="light"] body {
+    background:
+        radial-gradient(ellipse at 20% 0%,
+            rgba(37, 99, 235, 0.04) 0%,
+            transparent 45%),
+        radial-gradient(ellipse at 80% 100%,
+            rgba(139, 92, 246, 0.03) 0%,
+            transparent 45%),
+        var(--bg-0);
+}
+
+/* Aplikasi view juga transparan agar gradient terlihat */
+.app-view {
+    background: transparent !important;
+}
+
+/* --- 2. Bug dot berdenyut (alarm visual) --- */
+@keyframes bugAlert {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.4);
+        opacity: 0.6;
+    }
+}
+
+.bug-name::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--warn);
+    margin-right: 8px;
+    vertical-align: middle;
+    box-shadow: 0 0 0 3px var(--warn-soft);
+    animation: bugAlert 1.6s ease-in-out infinite;
+}
+
+/* --- 3. News dot berdenyut --- */
+@keyframes newsPulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 currentColor;
+    }
+    50% {
+        transform: scale(1.25);
+        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0);
+    }
+}
+
+.news-dot.positive {
+    animation: newsPulse 2s ease-in-out infinite;
+}
+.news-dot.negative {
+    animation: newsPulse 1.4s ease-in-out infinite;
+}
+
+/* --- 4. Quest dot lebih hidup --- */
+@keyframes questBreath {
+    0%, 100% {
+        box-shadow: 0 0 0 3px var(--warn-soft),
+                    0 0 8px var(--warn);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 0 6px var(--warn-soft),
+                    0 0 14px var(--warn);
+        transform: scale(1.15);
+    }
+}
+
+.quest-dot {
+    animation: questBreath 2.4s ease-in-out infinite;
+}
+
+/* --- 5. Header status running — pulse halus --- */
+@keyframes statusPulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.55;
+    }
+}
+
+.header-status.running {
+    animation: statusPulse 2.8s ease-in-out infinite;
+}
+
+/* --- 6. KPI accent bar — glow diperkuat (dari style lama) --- */
+@keyframes kpiGlowStrong {
+    0%, 100% {
+        box-shadow: 0 0 0 0 var(--accent-glow);
+    }
+    50% {
+        box-shadow: 0 0 14px 2px var(--accent-glow);
+    }
+}
+
+.kpi::before {
+    animation: kpiGlowStrong 4s ease-in-out infinite;
+}
+
+/* --- 7. Cloud status (jika ada) breathing --- */
+@keyframes cloudBreath {
+    0%, 100% {
+        opacity: 0.5;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+.cloud-status-dot,
+.cloud-status-indicator {
+    animation: cloudBreath 3s ease-in-out infinite;
+}
+
+/* --- 8. Loading screen — diperkuat dari breathe lama --- */
+@keyframes loadBreath {
+    0%, 100% {
+        opacity: 0.4;
+        transform: scale(0.98);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.02);
+    }
+}
+
+.loading-screen {
+    animation: loadBreath 2.4s ease-in-out infinite !important;
+}
+
+/* --- 9. Modal backdrop breathing (sangat halus) --- */
+@keyframes backdropIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.modal-backdrop.visible {
+    animation: backdropIn 0.22s ease-out;
+}
+
+/* --- 10. Toast container saat idle (untuk memberi kesan "hidup") --- */
+@keyframes toastContainerHint {
+    0%, 100% {
+        filter: drop-shadow(0 0 0 transparent);
+    }
+    50% {
+        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+    }
+}
+
+.toast-container:not(:empty) {
+    animation: toastContainerHint 4s ease-in-out infinite;
+}
+
+/* --- Reduced motion — matikan semua ambient --- */
+@media (prefers-reduced-motion: reduce) {
+    .bug-name::before,
+    .news-dot.positive,
+    .news-dot.negative,
+    .quest-dot,
+    .header-status.running,
+    .kpi::before,
+    .cloud-status-dot,
+    .cloud-status-indicator,
+    .loading-screen,
+    .toast-container:not(:empty) {
+        animation: none !important;
+    }
+}
