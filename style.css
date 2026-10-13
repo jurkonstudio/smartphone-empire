@@ -2883,36 +2883,3 @@ body {
 .icon-hero {
     will-change: transform;
 }
-/* ============================================================================
-   OS PANEL v2 — tempel di AKHIR style.css. Semua class berawalan "osx-".
-   ========================================================================== */
-
-/* ---------- Logo OS (bentuk mengikuti era) ---------- */
-.osx-logo {
-    --s: 52px;
-    position: relative;
-    flex: none;
-    width: var(--s); height: var(--s);
-    display: inline-grid; place-items: center;
-    font-size: calc(var(--s) * 0.46);
-    font-weight: var(--fw-black);
-    color: #fff;
-    letter-spacing: -0.02em;
-    overflow: hidden;
-}
-.osx-logo--mono {
-    border-radius: 14%;
-    background: hsl(var(--h), 22%, 28%);
-    border: 2px solid hsl(var(--h), 22%, 52%);
-    font-family: var(--font-mono);
-    text-shadow: 0 0 6px hsl(var(--h), 40%, 70%);
-}
-.osx-logo--gloss {
-    border-radius: 24%;
-    background: linear-gradient(160deg, hsl(var(--h), 72%, 58%), hsl(var(--h), 70%, 34%));
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25), 0 3px 8px rgba(0,0,0,0.35);
-}
-.osx-logo--gloss::after {
-    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 50%;
-    background: linear-gradient(rgba(255,255,255,0.45), rgba(255,255,255,0.05));
-}
