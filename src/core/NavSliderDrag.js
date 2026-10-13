@@ -1,17 +1,25 @@
 // FILE: src/core/NavSliderDrag.js
 // ============================================================
 // NavSliderDrag — drag support untuk liquid glass nav slider.
-// Apple-like: velocity tracking, spring snap, squash & stretch.
+// Drag TIDAK mulai saat touchstart. Hanya mulai setelah gerakan
+// horizontal melewati DRAG_START_THRESHOLD. Tap murni → hanya
+// click handler yang jalan (tidak trigger drag).
 // ============================================================
 
 var _nav = null;
 var _getActiveView = null;
 var _navigate = null;
 
+var DRAG_START_THRESHOLD = 10;   // px — minimum horizontal movement untuk mulai drag
+var FLICK_VELOCITY = 0.55;       // px/ms
+var VELOCITY_WINDOW = 80;        // ms
+
 var _state = {
     dragging: false,
-    moved: false,
+    pending: false,
     startX: 0,
+    startY: 0,
+    startTime: 0,
     startSliderX: 0,
     currentX: 0,
     itemW: 0,
@@ -24,14 +32,11 @@ var _state = {
     lastHoverIdx: -1,
     rafId: null,
     pendingX: null,
-    // Velocity tracking (px/ms)
+    // Velocity
     lastSampleX: 0,
     lastSampleT: 0,
     velocity: 0
 };
-
-var VELOCITY_WINDOW = 80; // ms — waktu minimal antar sampel
-var FLICK_VELOCITY = 0.55; // px/ms — di atas ini = flick
 
 // ============================================================
 // INIT
@@ -115,13 +120,13 @@ function _hapticSnap() {
 }
 
 // ============================================================
-// DRAG START
+// BEGIN DRAG (dipanggil hanya setelah threshold terlewati)
 // ============================================================
-function _startAt(clientX) {
+function _beginDrag(originX) {
     var slider = _slider();
-    if (!slider) return;
+    if (!slider) return false;
     var m = _readMetrics();
-    if (m.count < 2) return;
+    if (m.count < 2) return false;
 
     var buttons = _buttons();
     var activeIdx = 0;
@@ -130,8 +135,8 @@ function _startAt(clientX) {
     }
 
     _state.dragging = true;
-    _state.moved = false;
-    _state.startX = clientX;
+    _state.pending = false;
+    _state.startX = originX;
     _state.itemW = m.itemW;
     _state.sliderW = m.sliderW;
     _state.baseSliderW = m.sliderW;
@@ -141,19 +146,14 @@ function _startAt(clientX) {
     _state.currentX = _state.startSliderX;
     _state.minX = _idxToX(0, m.itemW, m.sliderW);
     _state.maxX = _idxToX(m.count - 1, m.itemW, m.sliderW);
-    _state.pendingX = null;
     _state.velocity = 0;
-    _state.lastSampleX = clientX;
+    _state.lastSampleX = originX;
     _state.lastSampleT = Date.now();
-
-    if (_state.rafId !== null) {
-        cancelAnimationFrame(_state.rafId);
-        _state.rafId = null;
-    }
 
     slider.style.transition = 'none';
     _nav.dataset.dragging = '1';
     _nav.classList.add('dragging');
+    return true;
 }
 
 // ============================================================
@@ -165,7 +165,6 @@ function _sampleVelocity(x) {
     if (dt < VELOCITY_WINDOW) return;
     var dx = x - _state.lastSampleX;
     var v = dx / dt;
-    // Exponential smoothing
     _state.velocity = _state.velocity * 0.4 + v * 0.6;
     _state.lastSampleX = x;
     _state.lastSampleT = now;
@@ -179,7 +178,6 @@ function _moveTo(clientX) {
     _sampleVelocity(clientX);
 
     var dx = clientX - _state.startX;
-    if (Math.abs(dx) > 6) _state.moved = true;
 
     var targetX = _state.startSliderX + dx;
 
@@ -193,8 +191,7 @@ function _moveTo(clientX) {
 
     _state.currentX = targetX;
 
-    // Squash & stretch: slider sedikit melebar mengikuti velocity
-    // Velocity tinggi → sedikit melebar (maks 1.12x). Velocity rendah → base.
+    // Squash & stretch berdasarkan velocity
     var vAbs = Math.min(Math.abs(_state.velocity), 2);
     var stretch = 1 + Math.min(vAbs * 0.06, 0.12);
     var squashW = _state.baseSliderW * stretch;
@@ -242,32 +239,21 @@ function _end() {
     delete _nav.dataset.dragging;
     _nav.classList.remove('dragging');
 
-    // Aktifkan kembali transition (CSS)
     slider.style.transition = '';
-    // Kembalikan lebar ke base
     slider.style.width = _state.baseSliderW + 'px';
-
-    var wasMoved = _state.moved;
-    _state.moved = false;
 
     var buttons = _buttons();
     var nearestIdx = _nearestIdx(_state.currentX + _state.baseSliderW / 2);
 
     _clearHighlight();
 
-    if (!wasMoved) {
-        return;
-    }
-
-    // Velocity-based: kalau flick cepat, prioritaskan arah velocity
+    // Velocity-based flick
     var targetIdx = nearestIdx;
     var vAbs = Math.abs(_state.velocity);
     if (vAbs > FLICK_VELOCITY) {
         if (_state.velocity > 0 && nearestIdx < _state.count - 1) {
-            // flick ke kanan → tab berikutnya minimal
             targetIdx = Math.max(nearestIdx, _state.activeIdx + 1);
         } else if (_state.velocity < 0 && nearestIdx > 0) {
-            // flick ke kiri → tab sebelumnya maksimal
             targetIdx = Math.min(nearestIdx, _state.activeIdx - 1);
         }
     }
@@ -288,7 +274,7 @@ function _end() {
 
 function _cancel() {
     _state.dragging = false;
-    _state.moved = false;
+    _state.pending = false;
     if (_state.rafId !== null) {
         cancelAnimationFrame(_state.rafId);
         _state.rafId = null;
@@ -311,20 +297,63 @@ function _cancel() {
 // ============================================================
 function _onTouchStart(e) {
     if (!e.touches || !e.touches[0]) return;
-    _startAt(e.touches[0].clientX);
+
+    // Jangan proses kalau sudah dragging
+    if (_state.dragging) return;
+
+    // Set pending — belum tentu drag
+    _state.pending = true;
+    _state.startX = e.touches[0].clientX;
+    _state.startY = e.touches[0].clientY;
+    _state.startTime = Date.now();
 }
 
 function _onTouchMove(e) {
-    if (!_state.dragging) return;
     if (!e.touches || !e.touches[0]) return;
-    _state.pendingX = e.touches[0].clientX;
-    if (_state.rafId === null) {
-        _state.rafId = requestAnimationFrame(_flushMove);
+    var x = e.touches[0].clientX;
+    var y = e.touches[0].clientY;
+
+    // Kalau belum dragging tapi pending → cek apakah gerakan cukup untuk mulai drag
+    if (!_state.dragging && _state.pending) {
+        var dx = x - _state.startX;
+        var dy = y - _state.startY;
+
+        // Gerakan vertikal dominan → batalkan (biarkan scroll)
+        if (Math.abs(dy) > DRAG_START_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
+            _state.pending = false;
+            return;
+        }
+
+        // Gerakan horizontal cukup → mulai drag dari origin
+        if (Math.abs(dx) > DRAG_START_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+            if (!_beginDrag(_state.startX)) {
+                _state.pending = false;
+                return;
+            }
+            // Langsung terapkan posisi saat ini
+            _state.pendingX = x;
+            if (_state.rafId === null) {
+                _state.rafId = requestAnimationFrame(_flushMove);
+            }
+        }
+        return;
+    }
+
+    // Sedang dragging → update posisi
+    if (_state.dragging) {
+        _state.pendingX = x;
+        if (_state.rafId === null) {
+            _state.rafId = requestAnimationFrame(_flushMove);
+        }
     }
 }
 
 function _onTouchEnd(_e) {
-    _end();
+    _state.pending = false;
+    if (_state.dragging) {
+        _end();
+    }
+    // else: tap biasa, biarkan click handler yang jalan
 }
 
 function _onTouchCancel() {
@@ -336,19 +365,43 @@ function _onTouchCancel() {
 // ============================================================
 function _onMouseDown(e) {
     if (e.button !== 0) return;
-    _startAt(e.clientX);
+    if (_state.dragging) return;
+    _state.pending = true;
+    _state.startX = e.clientX;
+    _state.startY = e.clientY;
+    _state.startTime = Date.now();
 }
 
 function _onMouseMove(e) {
-    if (!_state.dragging) return;
-    _state.pendingX = e.clientX;
-    if (_state.rafId === null) {
-        _state.rafId = requestAnimationFrame(_flushMove);
+    if (!_state.dragging && _state.pending) {
+        var dx = e.clientX - _state.startX;
+        var dy = e.clientY - _state.startY;
+        if (Math.abs(dy) > DRAG_START_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
+            _state.pending = false;
+            return;
+        }
+        if (Math.abs(dx) > DRAG_START_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+            if (!_beginDrag(_state.startX)) {
+                _state.pending = false;
+                return;
+            }
+        } else {
+            return;
+        }
+    }
+    if (_state.dragging) {
+        _state.pendingX = e.clientX;
+        if (_state.rafId === null) {
+            _state.rafId = requestAnimationFrame(_flushMove);
+        }
     }
 }
 
 function _onMouseUp() {
-    _end();
+    _state.pending = false;
+    if (_state.dragging) {
+        _end();
+    }
 }
 
 export function isDragging() {
