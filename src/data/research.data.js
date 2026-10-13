@@ -416,4 +416,4 @@ export function getNodeById(id) {
 }
 export function getNodesByCategory(catId) {
     return RESEARCH_NODES.filter(n => n.category === catId);
-                           }
+}
