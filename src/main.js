@@ -228,8 +228,22 @@ function animateCash(from, to) {
 function navigate(id) {
     if (id === activeView) return;
     activeView = id;
+
+    // Opsi A: matikan animasi fadeInUp sementara saat pindah halaman.
+    // Class dihapus setelah 2 frame supaya animasi granular tetap berjalan normal.
+    if (els.view) els.view.classList.add('soft-update');
+
     renderAll();
     updateTitle();
+
+    if (els.view) {
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                if (els.view) els.view.classList.remove('soft-update');
+            });
+        });
+    }
+
     bus.emit('view:changed', { id: id });
     bus.emit('tutorial:action', { id: 'nav:' + id });
 }
@@ -483,11 +497,7 @@ function bindProgressEvents() {
         var etaEl = els.view.querySelector('[data-prod-dev-eta]'); if (etaEl) etaEl.textContent = 'Sisa ~' + data.remainingDays + ' hari';
     });
 
-    // ===== FIX FLICKER: hapus re-render tiap hari. =====
-    // Sebelumnya: bus.on('time:day-changed', ...renderView({ soft: true })) tiap hari
-    // → memicu animasi fadeInUp di semua .card → flicker.
-    // Sekarang: render hanya saat ada perubahan struktural (riset/produk mulai-selesai-batal).
-    // Progress bar tetap update via event granular di atas.
+    // FIX FLICKER: hapus re-render tiap hari. Render hanya saat ada perubahan struktural.
     bus.on('research:started',   function () { if (activeView === 'research' && activeSubtab === 'tech') renderView({ soft: true }); });
     bus.on('research:completed', function () { if (activeView === 'research' && activeSubtab === 'tech') renderView({ soft: true }); });
     bus.on('research:cancelled', function () { if (activeView === 'research' && activeSubtab === 'tech') renderView({ soft: true }); });
