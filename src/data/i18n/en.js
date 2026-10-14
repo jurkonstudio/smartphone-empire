@@ -1,11 +1,9 @@
 // FILE: src/data/i18n/en.js
 // English dictionary. Flat keys with category prefix.
-// v2027.13a — Adds: date.month.*, kpi.*, dashboard.*, log.*, news.*, timeline.*
+// v2027.13b — fix: hapus kurung kurawal premature.
 
 export const en = {
-    // ============================================================
     // NAVIGATION
-    // ============================================================
     'nav.home':     'Home',
     'nav.team':     'HQ',
     'nav.research': 'Research',
@@ -13,18 +11,14 @@ export const en = {
     'nav.market':   'Market',
     'nav.settings': 'Settings',
 
-    // ============================================================
     // HEADER
-    // ============================================================
     'header.company_aria': 'Company profile',
     'header.pause_aria':   'Pause',
     'header.play_aria':    'Play',
     'header.speed_aria':   'Speed',
     'header.paused':       'Paused',
 
-    // ============================================================
     // CALENDAR
-    // ============================================================
     'date.month.1':  'Jan',
     'date.month.2':  'Feb',
     'date.month.3':  'Mar',
@@ -51,9 +45,7 @@ export const en = {
     'date.month_full.11': 'November',
     'date.month_full.12': 'December',
 
-    // ============================================================
     // SETTINGS
-    // ============================================================
     'settings.tab.general':    'General',
     'settings.tab.appearance': 'Appearance',
     'settings.tab.audio':      'Audio',
@@ -144,9 +136,7 @@ export const en = {
     'toast.no_save':         'No save found.',
     'toast.reset_confirm':   'All progress will be lost.',
 
-    // ============================================================
-    // HQ — Sub-tabs & Home placeholder
-    // ============================================================
+    // HQ
     'hq.tab.overview': 'Overview',
     'hq.tab.campus':   'Campus',
     'hq.tab.team':     'Team',
@@ -155,9 +145,7 @@ export const en = {
     'campus.placeholder.title': 'Campus 3D Map',
     'campus.placeholder.body':  'The 3D headquarters map and building upgrade system will be available in a future update.',
 
-    // ============================================================
-    // KPI CARDS (Dashboard)
-    // ============================================================
+    // KPI
     'kpi.cash':          'Cash',
     'kpi.reputation':    'Reputation',
     'kpi.rep_high':      'Good',
@@ -168,14 +156,12 @@ export const en = {
     'kpi.team_morale':   'Morale {n}/100',
     'kpi.date':          'Date',
 
-    // ============================================================
     // DASHBOARD
-    // ============================================================
     'dashboard.public_highlight': 'Public Highlight',
     'dashboard.sentiment':        'Sentiment',
     'dashboard.view_feedback':    'View Public Feedback',
-    'dashboard.timeline_title':   'History Timeline 2000–2026',
-    'dashboard.focus_title':      'Today\'s Focus',
+    'dashboard.timeline_title':   'History Timeline 2000-2026',
+    'dashboard.focus_title':      'Today Focus',
     'dashboard.focus_empty_title':'All running smoothly',
     'dashboard.focus_empty_desc': 'Research new tech, hire staff, or release a product to speed up growth.',
     'dashboard.focus_open_research': 'Open Research Tab',
@@ -183,9 +169,7 @@ export const en = {
     'dashboard.focus_slots':      '{n}/{max} slots used',
     'dashboard.focus_quest':      'Quests',
 
-    // ============================================================
-    // LOG / ACTIVITY
-    // ============================================================
+    // LOG
     'log.title':       'Recent Activity',
     'log.empty':       'No activity yet.',
     'log.type.info':   'Info',
@@ -193,9 +177,7 @@ export const en = {
     'log.type.warning':'Warning',
     'log.type.danger': 'Danger',
 
-    // ============================================================
     // NEWS
-    // ============================================================
     'news.panel_title':     'International News',
     'news.panel_empty':     'No news yet. Release a product to see press reviews.',
     'news.new_badge':       '{n} new',
@@ -209,9 +191,7 @@ export const en = {
     'news.article.from':       'Article from {source} ({type})',
     'news.article.close':      'Close Article',
 
-    // ============================================================
     // TIMELINE
-    // ============================================================
     'timeline.header.era':      'Era',
     'timeline.filter.all':      'All',
     'timeline.filter.phone':    'Phones',
@@ -223,25 +203,20 @@ export const en = {
     'timeline.empty_title':     'No timeline data yet',
     'timeline.empty_desc':      'Historical data will appear as time progresses.',
 
-    // ============================================================
-    // TEAM — dropdown, roster, recruit, info
-    // ============================================================
+    // TEAM
     'team.mode.roster':  'Roster',
     'team.mode.recruit': 'Recruit',
     'team.mode.info':    'Info',
-
     'team.kpi.salary':   'Salary/Mo',
     'team.kpi.engineer': 'Engineer',
     'team.kpi.designer': 'Designer',
     'team.kpi.marketer': 'Marketer',
-
     'team.roster.empty_title': 'No staff yet',
     'team.roster.empty_desc':  'Open the Recruit menu above to find candidates.',
     'team.roster.unnamed':     'Unnamed',
     'team.roster.morale':      'Morale',
     'team.roster.corrupt':     'Corrupt staff data',
     'team.roster.error':       'Error',
-
     'team.recruit.candidates_avail': 'candidates available',
     'team.recruit.refresh_in':       'refresh in {n} days',
     'team.recruit.filter_all':       'All',
@@ -252,7 +227,6 @@ export const en = {
     'team.recruit.per_month':        '/mo',
     'team.recruit.total':            'Total',
     'team.recruit.pool_refreshed':   'Pool refreshed.',
-
     'team.modal.traits':        'Traits',
     'team.modal.traits_empty':  'No special traits.',
     'team.modal.detail':        'Details',
@@ -269,7 +243,6 @@ export const en = {
     'team.modal.btn_cancel':    'Cancel',
     'team.modal.btn_hire':      'Recruit',
     'team.modal.aria_hire':     'Recruit',
-
     'team.info.system_not_ready': 'TeamSystem not ready',
     'team.info.eng_section':      'Engineer Bonus',
     'team.info.eng_count':        'Engineer count',
@@ -277,31 +250,23 @@ export const en = {
     'team.info.extra_res_slots':  'Extra Research Slots',
     'team.info.os_speed':         'OS Dev Speed',
     'team.info.extra_os_slots':   'Extra OS Feature Slots',
-
     'team.info.des_section':      'Designer Bonus',
     'team.info.des_count':        'Designer count',
     'team.info.product_speed':    'Product Design Speed',
     'team.info.quality_bonus':    'Product Quality Bonus',
-
     'team.info.mkt_section':      'Marketer Bonus',
     'team.info.mkt_count':        'Marketer count',
     'team.info.campaign_bonus':   'Campaign Effectiveness',
-
     'team.info.summary_section':  'Team Summary',
     'team.info.total_staff':      'Total Staff',
     'team.info.total_salary':     'Total Salary / Month',
     'team.info.avg_morale':       'Average Morale',
     'team.info.points_unit':      'pts',
-
     'team.tips.title': 'TIPS',
     'team.tips.l1':    'Higher tier staff give bigger bonuses but cost more.',
     'team.tips.l2':    'Fast Learner trait speeds up tier progression.',
     'team.tips.l3':    'Specialist trait gives +25% bonus in its field.',
     'team.tips.l4':    'Low morale reduces productivity.',
-
-    // ============================================================
-    // STAFF DETAIL MODAL
-    // ============================================================
     'staff.detail.role_joined': '{role} • Joined {day}/{month}/{year}',
     'staff.detail.months_worked': '{n} months working',
     'staff.detail.tier_label':    'Tier {n}',
@@ -314,25 +279,19 @@ export const en = {
     'staff.detail.train_btn':     '📚 Intensive Training (+30 progress) — ${cost}',
     'staff.detail.fire_btn':      '⛔ Fire Staff (severance ${severance})',
     'staff.detail.close':         'Close',
-};
-    // ============================================================
-    // RESEARCH PANEL
-    // ============================================================
+        // RESEARCH
     'research.subtab.tech':    'Technology',
     'research.subtab.os':      'OS',
     'research.subtab.history': 'History',
     'research.subtab.chip':    'Chip',
-
     'research.section.running':   'Running',
     'research.section.available': 'Available',
     'research.section.done':      'Done',
     'research.section.locked':    'Locked',
     'research.section.empty':     'No nodes in this category',
-
     'research.slot.title':       'Active Research',
     'research.slot.hint':        'No research running. Pick a node below.',
     'research.slot.eta':         '~{n} days left',
-
     'research.node.category':    'Category',
     'research.node.tier':        'Tier',
     'research.node.available_year': 'Available year',
@@ -349,40 +308,32 @@ export const en = {
     'research.node.cancel':      'Cancel Research',
     'research.node.not_available': 'Not available',
 
-    // ============================================================
-    // OS PANEL
-    // ============================================================
+    // OS
     'os.empty.title':       'No OS yet',
     'os.empty.desc':        'Build your own operating system or license a third-party OS.',
     'os.empty.create':      'Create OS',
-
     'os.hero.version':      'Version {v}',
     'os.hero.no_version':   'No released version yet',
     'os.hero.dev_new':      'Develop New Version',
     'os.hero.dev_empty':    'Develop the first version (v1.0) to see stats.',
-
     'os.dev.title':         'In Development',
     'os.dev.features_count': '{n} new features',
     'os.dev.cancel':        'Cancel Development',
     'os.dev.progress':      'Progress',
     'os.dev.eta_calc':      'Calculating estimate...',
-
     'os.bug.title':         'Active Bugs · {n}',
     'os.bug.severity':      'Sev {n}',
     'os.bug.patch':         'Patch',
     'os.bug.ignore':        'Ignore',
     'os.bug.patching':      'PATCHING',
-
     'os.features.section_available': 'Available',
     'os.features.section_deving':    'In Development',
     'os.features.section_owned':     'Owned',
     'os.features.section_locked':    'Locked',
-
     'os.feature.badge_owned':      'OWNED',
     'os.feature.badge_deving':     'IN DEV',
     'os.feature.badge_available':  'AVAILABLE',
     'os.feature.badge_locked':     'LOCKED',
-
     'os.apps.section':      'App Ecosystem · {owned}/{total}',
     'os.apps.third_party':  'Third-party apps: {n}',
     'os.apps.owned_badge':  'OWNED',
@@ -390,12 +341,10 @@ export const en = {
     'os.apps.build':        'Build',
     'os.apps.invite':       'Invite Developers (+apps)',
     'os.apps.appeal_bonus': '+{n} appeal',
-
     'os.licenses.section':  'Third-Party OS Licenses',
     'os.licenses.per_unit': '${cost}/unit',
     'os.licenses.available':'Available',
     'os.licenses.available_from': 'Available {year}',
-
     'os.stat.stability':    'Stability',
     'os.stat.speed':        'Speed',
     'os.stat.features':     'Features',
@@ -406,7 +355,6 @@ export const en = {
     'os.stat.fitur_short':  'Feat',
     'os.stat.aman_short':   'Sec',
     'os.stat.desain_short': 'Design',
-
     'os.wizard.title':      'Develop New Version',
     'os.wizard.sub':        'Select up to {n} features. Stats will be recomputed.',
     'os.wizard.preview':    'Stats Preview',
@@ -417,14 +365,12 @@ export const en = {
     'os.wizard.no_features':'No new features available.',
     'os.wizard.select_min': 'Select at least 1 feature.',
     'os.wizard.max_features':'Max {n} features per version.',
-
     'os.create.title':      'Create New OS',
     'os.create.sub':        'Give your operating system a name.',
     'os.create.label':      'OS Name',
     'os.create.placeholder':'E.g. MyOS, Aurora, ...',
     'os.create.btn':        'Create',
     'os.create.cancel':     'Cancel',
-
     'os.feature_detail.era':       'Era',
     'os.feature_detail.min_year':  'Min year',
     'os.feature_detail.cost':      'Cost',
@@ -436,15 +382,12 @@ export const en = {
     'os.feature_detail.status_available': 'Available for next version',
     'os.feature_detail.close':     'Close',
 
-    // ============================================================
-    // CHIP / CHIP DESIGNER
-    // ============================================================
+    // CHIP
     'chip.lab.title':       'Chip Lab',
     'chip.lab.arch_avail':  'Architectures available',
     'chip.lab.node_avail':  'Nodes available',
     'chip.lab.feat_avail':  'Features available',
     'chip.lab.catalog':     'Chips in catalog',
-
     'chip.design.title':    'Design New Chip',
     'chip.design.desc':     'Design silicon: pick architecture, node, cores, clock, and features.',
     'chip.design.start':    'Start Chip Design',
@@ -452,13 +395,11 @@ export const en = {
     'chip.design.progress': 'Progress',
     'chip.design.days_left':'{n} days left',
     'chip.design.cancel':   'Cancel',
-
     'chip.catalog.title':   'Chip Catalog ({n})',
     'chip.catalog.empty':   'No chips yet',
     'chip.catalog.empty_desc': 'Design your first chip in Chip Designer.',
     'chip.catalog.perf':    'Perf',
     'chip.catalog.eff':     'Eff',
-
     'chip.fab.title':       'Fabrication',
     'chip.fab.level':       'Level',
     'chip.fab.capacity':    'Capacity',
@@ -471,7 +412,6 @@ export const en = {
     'chip.fab.system_not_ready': 'Chip System not ready',
     'chip.fab.per_month':   '/mo',
     'chip.fab.unit':        'units',
-
     'chip.wiz.title':       'Chip Designer',
     'chip.wiz.sub':         'Design your own silicon',
     'chip.wiz.step1':       'Name & Architecture',
@@ -501,7 +441,6 @@ export const en = {
     'chip.wiz.err_node':    'Pick a process node.',
     'chip.wiz.goto_research': 'Open Chip Research →',
     'chip.wiz.no_arch':     'No architectures available. Research chip architecture first.',
-
     'chip.research.slot_title':  'Chip Research',
     'chip.research.done_summary': 'Done: <b>{n}</b> / {total} nodes',
     'chip.research.empty_active': 'No research running.',
@@ -510,14 +449,11 @@ export const en = {
     'chip.research.section_done':      'Done',
     'chip.research.section_locked':    'Locked',
 
-    // ============================================================
-    // PRODUCT PANEL & DESIGN WIZARD
-    // ============================================================
+    // PRODUCT
     'prod.subtab.design':  'Design',
     'prod.subtab.catalog': 'Catalog',
     'prod.subtab.sales':   'Sales',
     'prod.subtab.chip':    'Chip',
-
     'prod.design.title':    'Design New Product',
     'prod.design.desc':     'Design a phone: pick components, choose OS, set price and production quantity.',
     'prod.design.start':    'Start Phone Design',
@@ -525,12 +461,10 @@ export const en = {
     'prod.design.dev_phase':'Phase: <b>{phase}</b> - Total {days} game days',
     'prod.design.dev_eta':  'Waiting for time to advance...',
     'prod.design.cancel':   'Cancel Project',
-
     'prod.phase.design':    'Design',
     'prod.phase.prototype': 'Prototype',
     'prod.phase.production':'Production',
     'prod.phase.released':  'Released',
-
     'prod.catalog.empty':   'No products yet',
     'prod.catalog.empty_desc': 'Release your first phone in the Design sub-tab.',
     'prod.catalog.status_selling': 'Selling',
@@ -542,14 +476,12 @@ export const en = {
     'prod.catalog.sold':    'Sold: {n}',
     'prod.catalog.price':   'Price: ${n}',
     'prod.catalog.quality': 'Quality: {n}',
-
     'prod.sales.total_revenue': 'Total Revenue',
     'prod.sales.total_sold':    'Total Sold',
     'prod.sales.active_products':'Active Products',
     'prod.sales.best_seller':   'Best Seller',
     'prod.sales.list_title':    'Product List',
     'prod.sales.list_empty':    'No products yet.',
-
     'prod.detail.title':         'Phone Detail',
     'prod.detail.release':       'Released {day}/{month}/{year}',
     'prod.detail.section_sales': 'Sales',
@@ -576,11 +508,9 @@ export const en = {
     'prod.detail.discontinue_btn':'Discontinue Product',
     'prod.detail.discontinued':  'Product has been discontinued.',
     'prod.detail.close':         'Close',
-
     'prod.campaign.title':   'Pick Campaign',
     'prod.campaign.sub':     'Effect is amplified by Marketer count.',
     'prod.campaign.cancel':  'Cancel',
-
     'prod.order.title':      'Additional Production',
     'prod.order.qty_label':  'Number of units',
     'prod.order.cost_unit':  'Cost per unit',
@@ -589,13 +519,13 @@ export const en = {
     'prod.order.submit':     'Order',
     'prod.order.cancel':     'Cancel',
 
+    // WIZARD
     'wiz.era_banner_year':   '{year}',
     'wiz.step_of':           'Step {n} of 4 — {title}',
     'wiz.step1.title':       'Name & Form',
     'wiz.step2.title':       'Components',
     'wiz.step3.title':       'OS & Body',
     'wiz.step4.title':       'Price & Production',
-
     'wiz.step1.name_label':  'Phone Name',
     'wiz.step1.name_ph':     'E.g. X1, Nova, ...',
     'wiz.step1.autofill_btn':'Auto-fill Recommendation',
@@ -605,7 +535,6 @@ export const en = {
     'wiz.step1.cancel':      'Cancel',
     'wiz.step1.next':        'Next →',
     'wiz.step1.no_ff':       'No form factors available this year. Research first.',
-
     'wiz.step2.cat_count':   '({n})',
     'wiz.step2.cat_count_opt':'({n} + optional)',
     'wiz.step2.no_camera':   'No Camera',
@@ -615,7 +544,6 @@ export const en = {
     'wiz.step2.empty':       'No components yet — research first or wait for next year.',
     'wiz.step2.back':        '← Back',
     'wiz.step2.next':        'Next →',
-
     'wiz.step3.os_label':    'Operating System',
     'wiz.step3.body_label':  'Body',
     'wiz.step3.color_label': 'Color',
@@ -625,14 +553,12 @@ export const en = {
     'wiz.step3.os_free':     'Free',
     'wiz.step3.back':        '← Back',
     'wiz.step3.next':        'Next →',
-
     'wiz.step4.price_label': 'Sale Price (USD)',
     'wiz.step4.qty_label':   'Initial Production Quantity',
     'wiz.step4.summary':     'Summary',
     'wiz.step4.back':        '← Back',
     'wiz.step4.release':     'Release Product ✓',
     'wiz.step4.price_low':   'Price < Cost',
-
     'wiz.preview.quality':    'Quality Score',
     'wiz.preview.unit_cost':  'Cost per unit',
     'wiz.preview.total_cost': 'Total cost',
@@ -643,7 +569,6 @@ export const en = {
     'wiz.preview.warn_chip_bat': 'Strong chip but small battery.',
     'wiz.preview.warn_cam_disp': 'Good camera but poor screen.',
     'wiz.preview.warn_margin':   'Price is below production cost!',
-
     'wiz.detail.title':       'Phone Detail',
     'wiz.detail.sub':         '{name} — {year}',
     'wiz.detail.era':         'Design Era',
@@ -659,7 +584,6 @@ export const en = {
     'wiz.detail.spec_color':  'Color',
     'wiz.detail.close':       'Close',
     'wiz.detail.btn_show':    'View Detail',
-
     'wiz.err.need_name':      'Enter product name.',
     'wiz.err.need_ff':        'Pick a form factor.',
     'wiz.err.need_comp':      'Complete the required components (screen, battery, chip, network).',
@@ -670,21 +594,17 @@ export const en = {
     'wiz.success.autofill':   'Best recommendation applied!',
     'wiz.warn.autofill_missing': 'Not available this year: {list}',
     'wiz.err.dev_active':     'A product is already in development.',
-
     'wiz.spec.quality':       'Score',
     'wiz.spec.margin':        'Margin',
     'wiz.spec.screen':        'Screen',
     'wiz.spec.chip':          'Chip',
     'wiz.spec.no_name':       'Unnamed',
 
-    // ============================================================
-    // MARKET PANEL
-    // ============================================================
+    // MARKET
     'market.subtab.share':       'Share',
     'market.subtab.competitors': 'Competitors',
     'market.subtab.trends':      'Trends',
     'market.subtab.public':      'Public',
-
     'market.share.title':        'Your Market Share',
     'market.share.updated':      'Data updated monthly',
     'market.share.chart_title':  'Share Chart (24 Months)',
@@ -692,32 +612,27 @@ export const en = {
     'market.share.rank_title':   'Ranking',
     'market.share.you':          'You',
     'market.share.others':       'Other players',
-
     'market.competitors.empty':  'No competitors yet',
     'market.competitors.not_ready': 'Competitor system not ready',
     'market.comp.share_label':   'share',
     'market.comp.latest':        '📱 Latest: {name} ({year})',
     'market.comp.os_tier':       'OS: {os} • Tier {tier}',
-
     'market.trends.title':       'Market Highlight',
     'market.trends.likes':       'The market is currently favoring <b>{name}</b>.',
     'market.trends.taste':       'Market Taste',
     'market.trends.note_title':  'Note',
     'market.trends.note_desc':   'Market taste shifts slowly each month. Products aligned with trends sell better.',
-
     'market.trend.camera':      'Camera',
     'market.trend.battery':     'Battery',
     'market.trend.screen':      'Screen',
     'market.trend.performance': 'Performance',
     'market.trend.design':      'Design',
-
     'market.personality.aggressive': '⚔️ Aggressive Pricing',
     'market.personality.premium':    '💎 Premium',
     'market.personality.innovator':  '💡 Innovator',
     'market.personality.follower':   '🔄 Follower',
     'market.personality.dominant':   '👑 Dominant',
     'market.personality.declining':  '📉 Declining',
-
     'market.comp_detail.title':      'Competitor Detail',
     'market.comp_detail.os':         'OS',
     'market.comp_detail.share':      'Current share',
@@ -729,16 +644,13 @@ export const en = {
     'market.comp_detail.no_sig':     'No signature products yet.',
     'market.comp_detail.close':      'Close',
 
-    // ============================================================
-    // PUBLIC OPINION
-    // ============================================================
+    // OPINION
     'opinion.sentiment.title':       'Public Sentiment',
     'opinion.sentiment.very_good':   'Very Good',
     'opinion.sentiment.good':        'Good',
     'opinion.sentiment.neutral':     'Neutral',
     'opinion.sentiment.bad':         'Bad',
     'opinion.sentiment.very_bad':    'Very Bad',
-
     'opinion.aspects.title':         'By Aspect',
     'opinion.aspect.design':         'Design',
     'opinion.aspect.camera':         'Camera',
@@ -748,32 +660,24 @@ export const en = {
     'opinion.aspect.reliability':    'Reliability',
     'opinion.aspect.os':             'OS/Software',
     'opinion.aspect.support':        'After-sales',
-
     'opinion.comparison.title':      'Satisfaction Comparison',
     'opinion.comparison.you':        'You',
-
     'opinion.viral.positive':        '✨ Positive Viral',
     'opinion.viral.negative':        '⚠ Negative Viral',
     'opinion.viral.expires':         'Ends in ~{n} days',
     'opinion.viral.respond':        'Choose Response',
-
     'opinion.suggestions.title':     'Customer Suggestions',
     'opinion.suggestions.score':     'Aspect score: {n}/100',
-
     'opinion.per_product.title':     'Satisfaction per Product',
-
     'opinion.feed.title':            'Review Feed ({n})',
     'opinion.feed.empty':            'No reviews yet',
     'opinion.feed.empty_desc':       'Release a phone first so the public starts commenting.',
-
     'opinion.viral_modal.title':     'Negative Viral Response',
     'opinion.viral_modal.sub':       'Choose how to respond. Strong responses cost money.',
     'opinion.viral_modal.free':      'Free',
     'opinion.viral_modal.cancel':    'Cancel',
 
-    // ============================================================
-    // NEWS ARTICLE MODAL
-    // ============================================================
+    // NEWS ARTICLE
     'news_article.by':        'By',
     'news_article.score':     'Editor Score',
     'news_article.from':      'Article from {source} ({type})',
@@ -781,9 +685,7 @@ export const en = {
     'news_article.redaksi':   'Editorial',
     'news_article.global':    'Global',
 
-    // ============================================================
-    // MONTHLY SUMMARY
-    // ============================================================
+    // MONTHLY
     'monthly.title':          'Report for {month}/{year}',
     'monthly.sub':            'Automatic financial summary.',
     'monthly.income':         'Income',
@@ -795,11 +697,9 @@ export const en = {
     'monthly.cash_end':       'Ending balance',
     'monthly.close':          'Close',
 
-    // ============================================================
     // ONBOARDING
-    // ============================================================
     'onb.title':              'Welcome',
-    'onb.sub':                'Let\'s found your first phone company.',
+    'onb.sub':                'Let us found your first phone company.',
     'onb.name_label':         'Company name',
     'onb.diff_label':         'Difficulty level',
     'onb.diff_santai':        'Relaxed',
@@ -810,20 +710,16 @@ export const en = {
     'onb.diff_sulit_desc':    'Small capital, high costs, aggressive competitors.',
     'onb.submit':             'Start Playing',
 
-    // ============================================================
     // GAME OVER
-    // ============================================================
     'gameover.title':         'Company Bankrupt',
-    'gameover.sub':           '{company} couldn\'t survive.',
+    'gameover.sub':           '{company} could not survive.',
     'gameover.reason':        'Negative cash for {n} consecutive months.',
     'gameover.end_year':      'Ended: Year {year} Month {month}',
     'gameover.phones':        'Phones released: {n}',
     'gameover.milestones':    'Milestones reached: {n}',
     'gameover.restart':       'Start Over',
 
-    // ============================================================
-    // COMPANY PROFILE
-    // ============================================================
+    // PROFILE
     'profile.founded':        'Founded 2000',
     'profile.era_year':       '{era} • Year {year}',
     'profile.kpi_revenue':    'Total Revenue',
@@ -849,41 +745,31 @@ export const en = {
     'profile.cloud_error':        'Connection failed',
     'profile.cloud_desc':     'Cloud sync will arrive in a future update. Your save is currently stored locally on your device.',
     'profile.cloud_btn':      'Set Up Cloud (Coming Soon)',
-
     'profile.era.feature_phone':     'Feature Phone',
     'profile.era.touch_revolution':  'Touch Revolution',
     'profile.era.modern_smartphone': 'Modern Smartphone',
     'profile.era.ai_ecosystem':      'AI & Ecosystem',
 
-    // ============================================================
-    // CLOUD STATUS CARD
-    // ============================================================
+    // CLOUD
     'cloud.card_title':       'Storage',
     'cloud.autosave':         '💾 Local auto-save active (every 30 seconds).',
     'cloud.sync_unavailable': '☁️ Cloud sync: Not available yet',
 
-    // ============================================================
-    // QUESTS PANEL
-    // ============================================================
+    // QUESTS
     'quests.title':           'Quests ({n} done)',
     'quests.empty':           'All initial quests completed 🎉',
 
-    // ============================================================
-    // TIME PANEL
-    // ============================================================
+    // TIME
     'time.title':             'Simulation Time',
     'time.clock':             'At <b>{hh}:{mm}</b>',
     'time.elapsed':           'Total {n} game minutes elapsed',
     'time.paused':            'Paused',
 
-    // ============================================================
-    // GUIDE PANEL
-    // ============================================================
+    // GUIDE
     'guide.glossary_title':   'Glossary',
     'guide.tips_title':       'General Tips',
     'guide.shortcuts_title':  'Shortcuts',
     'guide.back':             '← Back',
-
     'guide.term.reputation':  'Reputation',
     'guide.def.reputation':   'Market trust in your company. Affects demand.',
     'guide.term.share':       'Market Share',
@@ -891,7 +777,7 @@ export const en = {
     'guide.term.quality':     'Quality',
     'guide.def.quality':      'Combined score from phone components & OS.',
     'guide.term.burnrate':    'Burn Rate',
-    'guide.def.burnrate':     'Average monthly cost. If cash < 2x burn rate, you\'re in danger.',
+    'guide.def.burnrate':     'Average monthly cost. If cash < 2x burn rate, you are in danger.',
     'guide.term.rnd':         'R&D',
     'guide.def.rnd':          'Research & Development — technology research activity.',
     'guide.term.era':         'Era',
@@ -902,16 +788,13 @@ export const en = {
     'guide.def.prototype':    'Testing phase before mass production.',
     'guide.term.lifecycle':   'Lifecycle',
     'guide.def.lifecycle':    'Product life cycle: rise, peak, decline.',
-
     'guide.tip.1':            'Keep cash above 3 months of operating costs.',
     'guide.tip.2':            'Early research unlocks cheaper high-quality components.',
     'guide.tip.3':            'Hire Engineers to speed up research; Designers to boost product quality.',
-    'guide.tip.4':            'Don\'t forget marketing when releasing a phone.',
-    'guide.tip.5':            'Follow era trends so your product doesn\'t feel outdated.',
+    'guide.tip.4':            'Do not forget marketing when releasing a phone.',
+    'guide.tip.5':            'Follow era trends so your product does not feel outdated.',
 
-    // ============================================================
-    // FAB PANEL
-    // ============================================================
+    // FAB
     'fab.title':              '🏭 Fab Panel',
     'fab.sub':                'Manage your chip factory',
     'fab.build_title':        '🏭 Build Chip Fabrication',
@@ -951,7 +834,6 @@ export const en = {
     'fab.build_btn':          'Build {name}',
     'fab.need_research_btn':  'Needs Fab Research',
     'fab.no_money':           'Insufficient funds',
-
     'fab.prod_qty_title':     '🏭 Production: {name}',
     'fab.prod_qty_sub':       'Chip output target',
     'fab.prod_qty_label':     'Number of Units',
@@ -962,31 +844,23 @@ export const en = {
     'fab.prod_qty_cancel':    'Cancel',
     'fab.prod_qty_confirm':   'Produce',
 
-    // ============================================================
     // CHIP MISC
-    // ============================================================
     'chip.arch.tier_desc':    'Tier {tier} • Max {max} cores • {year}',
     'chip.node.perf':         'Perf ×{n} • Yield {y}%',
 
-    // ============================================================
-    // ACTIVITY PANEL (legacy)
-    // ============================================================
+    // ACTIVITY
     'activity.title':         'Recent Activity',
     'activity.founded':       'Day 1: Company <b>{name}</b> was founded.',
     'activity.waiting':       'Waiting for the next milestone.',
 
-    // ============================================================
     // CHART
-    // ============================================================
     'chart.sales_title':      'Sales Chart',
     'chart.sales_empty':      'No sales yet. Release a product first.',
     'chart.sales_x':          'Last 30 days',
     'chart.cash_title':       'Finance — 24 Months',
     'chart.cash_empty':       'Data appears after 2 months of simulation.',
 
-    // ============================================================
-    // TUTORIAL OVERLAY
-    // ============================================================
+    // TUTORIAL
     'tut.skip':               'Skip',
     'tut.next':               'Next',
 };
