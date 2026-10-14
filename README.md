@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="assets/logo.png" alt="Jurkon Studio" width="180" />
+# JURKON STUDIO
 
-# Smartphone Empire
+### Smartphone Empire
 
 **Bangun perusahaan ponsel dari nol. Mulai dari tahun 2000, bersaing dengan Nokia, Apple, Samsung, sampai era AI.**
 
@@ -75,6 +75,11 @@ Yang bikin menarik: ada **life events nyata** yang bikin permainan berubah. Tahu
 
 **Audio**
 - Tap sound synth (Web Audio API) — 5 suara: tap, select, toggle, success, error
+
+**Era-aware visual**
+- Phone mockup berubah per era (2000 → 2026+)
+- Screen content realistis: monokrom, TFT, glossy, flat, AMOLED, HDR, flexible
+- Setiap era punya karakter visual sendiri
 
 ---
 
