@@ -17,6 +17,7 @@ export const id = {
     'header.play_aria':    'Mulai',
     'header.speed_aria':   'Kecepatan',
     'header.paused':       'Paused',
+    'header.day_prefix': 'Hari',
 
     // KALENDER
     'date.month.1':  'Jan',
