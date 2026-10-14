@@ -913,4 +913,4 @@ export const id = {
 'campus.manager.category.marketing':  'Marketing',
 'campus.manager.category.industry':   'Industri',
 'campus.manager.category.support':    'Fasilitas',
-};
+}
