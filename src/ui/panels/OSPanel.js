@@ -1,10 +1,12 @@
 // FILE: src/ui/panels/OSPanel.js
 // Sub-tab OS dalam tab Riset.
 // v2026.3 — row-based, section-grouped (konsisten dengan Research v2026.2).
+// v2027.13c — i18n.
 import { renderOsStatBar } from './OsStatBar.js';
 import { OS_FEATURES, OS_LICENSES, BUILTIN_APPS, OS_ERAS } from '../../data/os.data.js';
 import { renderOsScreenMockup } from '../phone/OsScreenMockup.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
+import { t } from '../../core/LanguageService.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -13,15 +15,19 @@ function escapeHtml(s) {
 }
 
 var STAT_ORDER = ['stability', 'speed', 'features', 'security', 'design'];
-var STAT_SHORT = {
-    stability: 'Stab', speed: 'Cepat', features: 'Fitur',
-    security: 'Aman', design: 'Desain'
+var STAT_SHORT_KEYS = {
+    stability: 'os.stat.stab_short',
+    speed:     'os.stat.cepat_short',
+    features:  'os.stat.fitur_short',
+    security:  'os.stat.aman_short',
+    design:    'os.stat.desain_short'
 };
 
 // ============================================================
 // MAIN
 // ============================================================
-export function renderOSPanel({ osSystem, researchSystem }) {
+export function renderOSPanel(params) {
+    var osSystem = params.osSystem;
     const data = window.__game.state.get();
     const os = data.os;
 
@@ -51,14 +57,14 @@ function _renderEmptyState() {
         '<div class="empty-ico" style="font-size:0;line-height:0;">' +
             renderIcon('disc', 48) +
         '</div>' +
-        '<div class="empty-title">Belum ada OS</div>' +
-        '<div class="empty-desc">Bangun sistem operasi sendiri atau lisensi OS pihak ketiga.</div>' +
-        '<button class="btn-primary" data-os-action="create" style="max-width:220px;margin:0 auto;">Buat OS</button>' +
+        '<div class="empty-title">' + t('os.empty.title') + '</div>' +
+        '<div class="empty-desc">' + t('os.empty.desc') + '</div>' +
+        '<button class="btn-primary" data-os-action="create" style="max-width:220px;margin:0 auto;">' + t('os.empty.create') + '</button>' +
         '</div>';
 }
 
 // ============================================================
-// HERO — mockup + nama + tombol + stat bar
+// HERO
 // ============================================================
 function _renderHero(os, currentVersion, osSystem) {
     let mockupHtml = '';
@@ -70,12 +76,12 @@ function _renderHero(os, currentVersion, osSystem) {
     }
 
     const verLabel = currentVersion
-        ? 'Versi ' + escapeHtml(currentVersion.versionString)
-        : 'Belum ada versi rilis';
+        ? t('os.hero.version', { v: escapeHtml(currentVersion.versionString) })
+        : t('os.hero.no_version');
 
     const statHtml = currentVersion
         ? renderOsStatBar(currentVersion.stats)
-        : '<div class="os-hero-empty-stat">Kembangkan versi pertama (v1.0) untuk melihat stat.</div>';
+        : '<div class="os-hero-empty-stat">' + t('os.hero.dev_empty') + '</div>';
 
     return '<div class="card os-hero">' +
         '<div class="os-hero-top">' +
@@ -85,7 +91,7 @@ function _renderHero(os, currentVersion, osSystem) {
                 '<div class="os-hero-version">' + verLabel + '</div>' +
                 '<button class="btn-primary os-hero-cta" data-os-action="wizard">' +
                     '<span style="font-size:15px;line-height:1;margin-right:4px;">+</span>' +
-                    'Kembangkan Versi Baru' +
+                    t('os.hero.dev_new') +
                 '</button>' +
             '</div>' +
         '</div>' +
@@ -94,28 +100,28 @@ function _renderHero(os, currentVersion, osSystem) {
 }
 
 // ============================================================
-// DEV STRIP — pakai .slot-strip dari v2026.2
+// DEV STRIP
 // ============================================================
 function _renderDevStrip(developing) {
     return '<div class="slot-strip">' +
         '<div class="slot-strip-top">' +
-            '<span class="slot-strip-label">Sedang Dikembangkan</span>' +
+            '<span class="slot-strip-label">' + t('os.dev.title') + '</span>' +
             '<span class="slot-strip-count">' + escapeHtml(developing.versionString) + '</span>' +
         '</div>' +
         '<div class="slot-strip-item">' +
             '<div class="slot-strip-item-head">' +
                 '<span class="slot-strip-item-name">' +
-                    developing.features.length + ' fitur baru' +
+                    t('os.dev.features_count', { n: developing.features.length }) +
                 '</span>' +
                 '<span class="slot-strip-item-pct" data-os-dev-pct>0%</span>' +
             '</div>' +
             '<div class="progress slot-strip-item-progress">' +
                 '<div class="progress-bar" data-os-dev-bar style="width:0%;"></div>' +
             '</div>' +
-            '<div class="slot-strip-item-eta" data-os-dev-eta>Menghitung estimasi...</div>' +
+            '<div class="slot-strip-item-eta" data-os-dev-eta>' + t('os.dev.eta_calc') + '</div>' +
         '</div>' +
         '<button class="btn-danger os-dev-cancel" data-os-action="cancel-deving">' +
-            'Batalkan Pengembangan' +
+            t('os.dev.cancel') +
         '</button>' +
         '</div>';
 }
@@ -138,25 +144,25 @@ function _renderBugsSection(bugs) {
                     escapeHtml(b.name) +
                 '</div>' +
                 '<div class="os-row-meta">' +
-                    '<span class="os-bug-sev">Sev ' + b.severity + '</span>' +
+                    '<span class="os-bug-sev">' + t('os.bug.severity', { n: b.severity }) + '</span>' +
                     '<span class="os-row-dot">·</span>' +
                     '<span>$' + b.patchCost.toLocaleString('en-US') + '</span>' +
                     '<span class="os-row-dot">·</span>' +
-                    '<span>' + b.patchDays + ' hari</span>' +
+                    '<span>' + b.patchDays + ' </span>' +
                 '</div>' +
             '</div>' +
             '<div class="os-row-actions">' +
                 (isPatching
-                    ? '<span class="os-status-badge os-status-running">DIPATCH</span>'
-                    : '<button class="os-mini-btn" data-os-action="patch-bug" data-bug-id="' + b.id + '">Patch</button>' +
-                      '<button class="os-mini-btn os-mini-btn-ghost" data-os-action="ignore-bug" data-bug-id="' + b.id + '">Abaikan</button>'
+                    ? '<span class="os-status-badge os-status-running">' + t('os.bug.patching') + '</span>'
+                    : '<button class="os-mini-btn" data-os-action="patch-bug" data-bug-id="' + b.id + '">' + t('os.bug.patch') + '</button>' +
+                      '<button class="os-mini-btn os-mini-btn-ghost" data-os-action="ignore-bug" data-bug-id="' + b.id + '">' + t('os.bug.ignore') + '</button>'
                 ) +
             '</div>' +
             '</div>';
     }).join('');
 
     return '<div class="section-label">' +
-        '<span class="section-label-text">Bug Aktif · ' + active.length + '</span>' +
+        '<span class="section-label-text">' + t('os.bug.title', { n: active.length }) + '</span>' +
         '<span class="section-label-line"></span>' +
         '</div>' +
         '<div class="os-list">' + rows + '</div>';
@@ -184,16 +190,16 @@ function _renderFeaturesSection(osSystem) {
     var html = '';
 
     if (groups.available.length) {
-        html += _renderFeatureGroup('Tersedia', groups.available, 'available');
+        html += _renderFeatureGroup(t('os.features.section_available'), groups.available, 'available');
     }
     if (groups.developing.length) {
-        html += _renderFeatureGroup('Dikembangkan', groups.developing, 'developing');
+        html += _renderFeatureGroup(t('os.features.section_deving'), groups.developing, 'developing');
     }
     if (groups.owned.length) {
-        html += _renderFeatureGroupCollapsible('Dimiliki', groups.owned, 'owned');
+        html += _renderFeatureGroupCollapsible(t('os.features.section_owned'), groups.owned, 'owned');
     }
     if (groups.locked.length) {
-        html += _renderFeatureGroupCollapsible('Terkunci', groups.locked, 'locked');
+        html += _renderFeatureGroupCollapsible(t('os.features.section_locked'), groups.locked, 'locked');
     }
 
     return html;
@@ -223,19 +229,18 @@ function _renderFeatureRow(feature, status) {
     var era = OS_ERAS.find(function (e) { return e.id === feature.era; });
     var eraName = era ? era.name : feature.era;
 
-    // Stat effects compact
     var se = feature.statEffects || {};
     var statChips = STAT_ORDER.map(function (k) {
         var v = se[k] || 0;
         if (v <= 0) return '';
-        return '<span class="os-stat-chip">+' + v + ' ' + STAT_SHORT[k] + '</span>';
+        return '<span class="os-stat-chip">+' + v + ' ' + t(STAT_SHORT_KEYS[k]) + '</span>';
     }).filter(function (s) { return s; }).join('');
 
     var badgeCls = 'os-status-badge os-status-' + status;
-    var badgeLabel = status === 'owned' ? 'DIMILIKI'
-        : status === 'developing' ? 'DIKEMBANGKAN'
-        : status === 'available' ? 'TERSEDIA'
-        : 'TERKUNCI';
+    var badgeLabel = status === 'owned' ? t('os.feature.badge_owned')
+        : status === 'developing' ? t('os.feature.badge_deving')
+        : status === 'available' ? t('os.feature.badge_available')
+        : t('os.feature.badge_locked');
 
     return '<div class="os-row os-feat-row os-feat-' + status + '" data-os-action="feature-detail" data-feature-id="' + feature.id + '">' +
         '<div class="os-row-main">' +
@@ -250,7 +255,7 @@ function _renderFeatureRow(feature, status) {
             '<div class="os-row-foot">' +
                 '<span class="os-row-cost">$' + feature.devCost.toLocaleString('en-US') + '</span>' +
                 '<span class="os-row-dot">·</span>' +
-                '<span class="os-row-dur">' + feature.devDays + ' hari</span>' +
+                '<span class="os-row-dur">' + feature.devDays + '</span>' +
             '</div>' +
         '</div>' +
         '<div class="os-row-actions">' +
@@ -272,15 +277,14 @@ function _renderAppsSection(osSystem, os) {
     var rows = BUILTIN_APPS.map(function (a) {
         var isOwned = owned.indexOf(a.id) !== -1;
         var hasFeature = !a.requiresFeature || osSystem.hasFeature(a.requiresFeature);
-        var canStart = !isOwned && hasFeature;
 
         var statusHtml = '';
         if (isOwned) {
-            statusHtml = '<span class="os-status-badge os-status-owned">DIMILIKI</span>';
+            statusHtml = '<span class="os-status-badge os-status-owned">' + t('os.apps.owned_badge') + '</span>';
         } else if (!hasFeature) {
-            statusHtml = '<span class="os-status-badge os-status-locked">TERKUNCI</span>';
+            statusHtml = '<span class="os-status-badge os-status-locked">' + t('os.apps.locked_badge') + '</span>';
         } else {
-            statusHtml = '<button class="os-mini-btn os-mini-btn-primary" data-os-action="start-app" data-app-id="' + a.id + '">Buat</button>';
+            statusHtml = '<button class="os-mini-btn os-mini-btn-primary" data-os-action="start-app" data-app-id="' + a.id + '">' + t('os.apps.build') + '</button>';
         }
 
         return '<div class="os-row os-app-row">' +
@@ -289,7 +293,7 @@ function _renderAppsSection(osSystem, os) {
                 '<div class="os-row-meta">' +
                     '<span>$' + a.devCost.toLocaleString('en-US') + '</span>' +
                     '<span class="os-row-dot">·</span>' +
-                    '<span>+' + a.appealBonus + ' appeal</span>' +
+                    '<span>' + t('os.apps.appeal_bonus', { n: a.appealBonus }) + '</span>' +
                 '</div>' +
             '</div>' +
             '<div class="os-row-actions">' + statusHtml + '</div>' +
@@ -297,20 +301,20 @@ function _renderAppsSection(osSystem, os) {
     }).join('');
 
     return '<div class="section-label">' +
-        '<span class="section-label-text">Ekosistem Aplikasi · ' + owned.length + '/' + total + '</span>' +
+        '<span class="section-label-text">' + t('os.apps.section', { owned: owned.length, total: total }) + '</span>' +
         '<span class="section-label-line"></span>' +
         '</div>' +
         '<div class="os-apps-summary">' +
-            '<span>Aplikasi pihak ketiga: <b>' + thirdParty + '</b></span>' +
+            '<span>' + t('os.apps.third_party', { n: thirdParty }) + '</span>' +
         '</div>' +
         '<div class="os-list">' + rows + '</div>' +
         '<button class="btn-secondary os-apps-invite" data-os-action="invite-devs">' +
-            'Undang Developer (+apps)' +
+            t('os.apps.invite') +
         '</button>';
 }
 
 // ============================================================
-// LICENSES — collapsible
+// LICENSES
 // ============================================================
 function _renderLicensesSection(data) {
     var rows = OS_LICENSES.map(function (l) {
@@ -318,13 +322,14 @@ function _renderLicensesSection(data) {
         var avgStat = Math.round(
             (l.stats.stability + l.stats.speed + l.stats.features + l.stats.security + l.stats.design) / 5
         );
+        var availLabel = available ? t('os.licenses.available') : t('os.licenses.available_from', { year: l.availableFromYear });
         return '<div class="os-row os-lic-row' + (available ? '' : ' os-lic-locked') + '">' +
             '<div class="os-row-main">' +
                 '<div class="os-row-title">' + escapeHtml(l.name) + '</div>' +
                 '<div class="os-row-meta">' +
-                    '<span>$' + l.costPerUnit + '/unit</span>' +
+                    '<span>' + t('os.licenses.per_unit', { cost: l.costPerUnit }) + '</span>' +
                     '<span class="os-row-dot">·</span>' +
-                    '<span>' + (available ? 'Tersedia' : 'Tersedia ' + l.availableFromYear) + '</span>' +
+                    '<span>' + availLabel + '</span>' +
                 '</div>' +
             '</div>' +
             '<div class="os-row-actions">' +
@@ -334,7 +339,7 @@ function _renderLicensesSection(data) {
     }).join('');
 
     var header = '<summary class="section-summary">' +
-        '<span class="section-summary-text">Lisensi OS Pihak Ketiga</span>' +
+        '<span class="section-summary-text">' + t('os.licenses.section') + '</span>' +
         '<span class="section-summary-line"></span>' +
         '</summary>';
 
@@ -344,42 +349,43 @@ function _renderLicensesSection(data) {
 }
 
 // ============================================================
-// MODAL — WIZARD VERSI BARU (tidak berubah)
+// MODAL — WIZARD VERSI BARU
 // ============================================================
-export function openOsWizardModal({ osSystem }) {
+export function openOsWizardModal(params) {
+    var osSystem = params.osSystem;
     const available = osSystem.getAvailableFeatures();
     if (!available.length) {
-        window.__game.ToastService.warning('Tidak ada fitur baru yang tersedia.');
+        window.__game.ToastService.warning(t('os.wizard.no_features'));
         return;
     }
     const maxSlots = osSystem._getMaxFeatureSlots();
     const baseStats = osSystem.previewStats([]);
 
-    const featureHtml = available.map(f => `
-        <label class="wiz-feature">
-            <input type="checkbox" data-wiz-feature="${f.id}">
-            <div style="flex:1;">
-                <div class="wiz-name">${escapeHtml(f.name)}</div>
-                <div class="wiz-meta">$${f.devCost.toLocaleString('en-US')} • ${f.devDays} hari</div>
-            </div>
-        </label>
-    `).join('');
+    const featureHtml = available.map(function (f) {
+        return '<label class="wiz-feature">' +
+            '<input type="checkbox" data-wiz-feature="' + f.id + '">' +
+            '<div style="flex:1;">' +
+                '<div class="wiz-name">' + escapeHtml(f.name) + '</div>' +
+                '<div class="wiz-meta">$' + f.devCost.toLocaleString('en-US') + ' • ' + f.devDays + '</div>' +
+            '</div>' +
+            '</label>';
+    }).join('');
 
     const html = `
-        <div class="modal-title">Kembangkan Versi Baru</div>
-        <div class="modal-sub">Pilih maks ${maxSlots} fitur. Stat akan dihitung ulang.</div>
+        <div class="modal-title">${t('os.wizard.title')}</div>
+        <div class="modal-sub">${t('os.wizard.sub', { n: maxSlots })}</div>
         <div style="max-height:40vh;overflow-y:auto;margin-bottom:12px;" data-wiz-list>
             ${featureHtml}
         </div>
-        <div class="card-title">Preview Stat</div>
+        <div class="card-title">${t('os.wizard.preview')}</div>
         <div data-wiz-preview style="margin-bottom:12px;">
             ${renderOsStatBar(baseStats)}
         </div>
-        <div class="sum-row"><span>Total biaya</span><b data-wiz-cost>$0</b></div>
-        <div class="sum-row"><span>Durasi</span><b data-wiz-days>0 hari</b></div>
+        <div class="sum-row"><span>${t('os.wizard.total_cost')}</span><b data-wiz-cost>$0</b></div>
+        <div class="sum-row"><span>${t('os.wizard.duration')}</span><b data-wiz-days>0</b></div>
         <div style="display:flex;gap:8px;margin-top:12px;">
-            <button class="btn-secondary" data-modal-close style="flex:1;">Batal</button>
-            <button class="btn-primary" data-wiz-confirm style="flex:1;">Mulai Kembangkan</button>
+            <button class="btn-secondary" data-modal-close style="flex:1;">${t('os.wizard.cancel')}</button>
+            <button class="btn-primary" data-wiz-confirm style="flex:1;">${t('os.wizard.start')}</button>
         </div>
     `;
 
@@ -392,16 +398,16 @@ export function openOsWizardModal({ osSystem }) {
     const checkboxes = root.querySelectorAll('[data-wiz-feature]');
 
     function refresh() {
-        const selected = Array.from(checkboxes).filter(c => c.checked);
+        const selected = Array.from(checkboxes).filter(function (c) { return c.checked; });
         if (selected.length > maxSlots) {
             selected[selected.length - 1].checked = false;
-            window.__game.ToastService.warning('Maks ' + maxSlots + ' fitur per versi.');
+            window.__game.ToastService.warning(t('os.wizard.max_features', { n: maxSlots }));
             return refresh();
         }
         let cost = 0, days = 0;
         const selectedIds = [];
-        selected.forEach(c => {
-            const f = available.find(x => x.id === c.dataset.wizFeature);
+        selected.forEach(function (c) {
+            const f = available.find(function (x) { return x.id === c.dataset.wizFeature; });
             if (!f) return;
             cost += f.devCost;
             days += f.devDays;
@@ -410,22 +416,22 @@ export function openOsWizardModal({ osSystem }) {
         const stats = osSystem.previewStats(selectedIds);
         preview.innerHTML = renderOsStatBar(stats);
         costEl.textContent = '$' + cost.toLocaleString('en-US');
-        daysEl.textContent = days + ' hari';
+        daysEl.textContent = days;
     }
 
-    checkboxes.forEach(cb => cb.addEventListener('change', refresh));
+    checkboxes.forEach(function (cb) { cb.addEventListener('change', refresh); });
 
-    root.querySelector('[data-wiz-confirm]').addEventListener('click', () => {
-        const selected = Array.from(checkboxes).filter(c => c.checked).map(c => c.dataset.wizFeature);
+    root.querySelector('[data-wiz-confirm]').addEventListener('click', function () {
+        const selected = Array.from(checkboxes).filter(function (c) { return c.checked; }).map(function (c) { return c.dataset.wizFeature; });
         if (!selected.length) {
-            window.__game.ToastService.warning('Pilih minimal 1 fitur.');
+            window.__game.ToastService.warning(t('os.wizard.select_min'));
             return;
         }
         const res = osSystem.startVersion(selected);
         if (!res.ok) {
-            window.__game.ToastService.error(res.reason || 'Gagal memulai.');
+            window.__game.ToastService.error(res.reason || 'Failed.');
         } else {
-            window.__game.ToastService.success('Pengembangan ' + res.versionString + ' dimulai!');
+            window.__game.ToastService.success('v' + res.versionString);
             window.__game.Modal.close('os-wizard', true);
             window.__game.render();
         }
@@ -433,29 +439,30 @@ export function openOsWizardModal({ osSystem }) {
 }
 
 // ============================================================
-// MODAL — BUAT OS BARU (tidak berubah)
+// MODAL — BUAT OS BARU
 // ============================================================
-export function openCreateOsModal({ osSystem }) {
+export function openCreateOsModal(params) {
+    var osSystem = params.osSystem;
     const html = `
-        <div class="modal-title">Buat OS Baru</div>
-        <div class="modal-sub">Beri nama sistem operasi perusahaanmu.</div>
-        <label class="field-label">Nama OS</label>
-        <input class="field-input" data-os-name maxlength="24" placeholder="Contoh: MyOS, Aurora, ..." />
+        <div class="modal-title">${t('os.create.title')}</div>
+        <div class="modal-sub">${t('os.create.sub')}</div>
+        <label class="field-label">${t('os.create.label')}</label>
+        <input class="field-input" data-os-name maxlength="24" placeholder="${t('os.create.placeholder')}" />
         <div style="display:flex;gap:8px;margin-top:16px;">
-            <button class="btn-secondary" data-modal-close style="flex:1;">Batal</button>
-            <button class="btn-primary" data-os-create-confirm style="flex:1;">Buat</button>
+            <button class="btn-secondary" data-modal-close style="flex:1;">${t('os.create.cancel')}</button>
+            <button class="btn-primary" data-os-create-confirm style="flex:1;">${t('os.create.btn')}</button>
         </div>
     `;
     window.__game.Modal.open('os-create', html);
     const root = document.querySelector('[data-modal-id="os-create"]');
     const input = root.querySelector('[data-os-name]');
     input.focus();
-    root.querySelector('[data-os-create-confirm]').addEventListener('click', () => {
+    root.querySelector('[data-os-create-confirm]').addEventListener('click', function () {
         const res = osSystem.createOs(input.value);
         if (!res.ok) {
             window.__game.ToastService.error(res.reason);
         } else {
-            window.__game.ToastService.success('OS dibuat!');
+            window.__game.ToastService.success('OS');
             window.__game.Modal.close('os-create', true);
             window.__game.render();
         }
@@ -463,20 +470,23 @@ export function openCreateOsModal({ osSystem }) {
 }
 
 // ============================================================
-// MODAL — DETAIL FITUR (tidak berubah)
+// MODAL — DETAIL FITUR
 // ============================================================
-export function openFeatureDetailModal({ osSystem, featureId }) {
-    const f = OS_FEATURES.find(x => x.id === featureId);
+export function openFeatureDetailModal(params) {
+    var osSystem = params.osSystem;
+    var featureId = params.featureId;
+
+    const f = OS_FEATURES.find(function (x) { return x.id === featureId; });
     if (!f) return;
     const st = osSystem.getFeatureStatus(featureId);
     const html = `
         <div class="modal-title">${escapeHtml(f.name)}</div>
         <div class="modal-sub">${escapeHtml(f.description)}</div>
-        <div class="sum-row"><span>Era</span><b>${f.era}</b></div>
-        <div class="sum-row"><span>Tahun min</span><b>${f.minYear}</b></div>
-        <div class="sum-row"><span>Biaya</span><b>$${f.devCost.toLocaleString('en-US')}</b></div>
-        <div class="sum-row"><span>Durasi</span><b>${f.devDays} hari</b></div>
-        <div class="card-title" style="margin-top:12px;">Efek Stat</div>
+        <div class="sum-row"><span>${t('os.feature_detail.era')}</span><b>${f.era}</b></div>
+        <div class="sum-row"><span>${t('os.feature_detail.min_year')}</span><b>${f.minYear}</b></div>
+        <div class="sum-row"><span>${t('os.feature_detail.cost')}</span><b>$${f.devCost.toLocaleString('en-US')}</b></div>
+        <div class="sum-row"><span>${t('os.feature_detail.duration')}</span><b>${f.devDays}</b></div>
+        <div class="card-title" style="margin-top:12px;">${t('os.feature_detail.effects')}</div>
         ${renderOsStatBar({
             stability: f.statEffects.stability || 0,
             speed: f.statEffects.speed || 0,
@@ -484,15 +494,15 @@ export function openFeatureDetailModal({ osSystem, featureId }) {
             security: f.statEffects.security || 0,
             design: f.statEffects.design || 0
         }, { compact: true })}
-        <div class="sum-row" style="margin-top:12px;"><span>Status</span><b>${_statusLabel(st)}</b></div>
-        <button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">Tutup</button>
+        <div class="sum-row" style="margin-top:12px;"><span>${t('os.feature_detail.status')}</span><b>${_statusLabel(st)}</b></div>
+        <button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">${t('os.feature_detail.close')}</button>
     `;
     window.__game.Modal.open('feature-detail', html);
 }
 
 function _statusLabel(st) {
-    if (st.status === 'owned') return 'Sudah dimiliki';
-    if (st.status === 'developing') return 'Sedang dikembangkan';
-    if (st.status === 'available') return 'Tersedia untuk versi berikutnya';
-    return st.reason || 'Terkunci';
-            }
+    if (st.status === 'owned') return t('os.feature_detail.status_owned');
+    if (st.status === 'developing') return t('os.feature_detail.status_deving');
+    if (st.status === 'available') return t('os.feature_detail.status_available');
+    return st.reason || t('os.feature.badge_locked');
+}
