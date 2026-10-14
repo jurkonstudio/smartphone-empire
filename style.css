@@ -3174,24 +3174,6 @@ body {
     .campus-row-icon { width: 38px; height: 38px; border-radius: 10px; }
     .campus-row-name { font-size: var(--fs-base); }
 }
-/* ============================================================================
-   64. HOME — MAP + TAB CAROUSEL (v2027.17a)
-   ============================================================================ */
-
-.home-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.home-map {
-    padding: 0;
-    height: min(42vh, 380px);
-    min-height: 260px;
-    position: relative;
-    overflow: hidden;
-    margin-bottom: 0;
-}
 
 /* ---------- TAB PILLS ---------- */
 .home-tabs {
@@ -3249,6 +3231,7 @@ body {
     scroll-snap-stop: always;
     padding: 0 2px;
     box-sizing: border-box;
+   
     /* Batasi tinggi supaya halaman tidak scroll panjang */
     max-height: 42vh;
     overflow-y: auto;
@@ -3269,24 +3252,6 @@ body {
     .home-map { height: min(38vh, 320px); min-height: 220px; }
     .home-slide { max-height: 38vh; }
     .home-tab { font-size: var(--fs-xs); padding: 8px 4px; }
-}
-/* ============================================================================
-   64. HOME — MAP + CAROUSEL + DOTS (v2027.18a)
-   ============================================================================ */
-
-.home-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
-
-.home-map {
-    padding: 0;
-    height: min(45vh, 400px);
-    min-height: 260px;
-    position: relative;
-    overflow: hidden;
-    margin-bottom: 10px;
 }
 
 /* ---------- CAROUSEL ---------- */
@@ -3356,17 +3321,38 @@ body {
     .home-dots { padding: 10px 0 4px; }
 }
 /* ============================================================================
-   HOME — CAROUSEL (FIX SLIDE)
+   64. HOME — MAP (STICKY) + CAROUSEL + DOTS (v2027.20a)
    ============================================================================ */
+
+.home-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.home-map {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding: 0;
+    height: 38vh;
+    min-height: 220px;
+    max-height: 320px;
+    overflow: hidden;
+    margin: 0 0 8px 0;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
+}
+
 .home-carousel {
     display: flex;
     overflow-x: auto;
     overflow-y: hidden;
-    scroll-snap-type: x mandatory;      /* wajib: mengunci slide per halaman */
+    scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;  /* momentum scroll di iOS */
+    -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    touch-action: pan-x;                /* izinkan geser horizontal, blokir vertikal */
+    touch-action: pan-x;
     gap: 0;
 }
 .home-carousel::-webkit-scrollbar { display: none; }
@@ -3374,7 +3360,49 @@ body {
 .home-slide {
     flex: 0 0 100%;
     width: 100%;
-    scroll-snap-align: start;           /* setiap slide “menempel” di kiri */
+    min-width: 100%;
+    scroll-snap-align: start;
     scroll-snap-stop: always;
     box-sizing: border-box;
+    padding: 0;
+    max-height: 52vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+.home-slide > .card:first-child { margin-top: 0; }
+.home-slide > .card:last-child { margin-bottom: 0; }
+
+.home-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 0 4px;
+    flex-shrink: 0;
+}
+
+.home-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--bg-4);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: background 0.25s, transform 0.25s, width 0.25s;
+    -webkit-tap-highlight-color: transparent;
+}
+.home-dot.active {
+    background: var(--accent);
+    width: 22px;
+    border-radius: 4px;
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+@media (max-width: 380px) {
+    .home-map { height: 34vh; min-height: 200px; max-height: 280px; }
+    .home-slide { max-height: 48vh; }
+    .home-dots { padding: 8px 0 2px; }
 }
