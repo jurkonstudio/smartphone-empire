@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/HomePanel.js
-// v2027.37a — emit event carousel scroll start/end untuk pause 3D map
+// v2027.37b — restore refreshHomeSlides + emit carousel scroll events
 import { t } from '../../core/LanguageService.js';
 import { bus } from '../../core/EventBus.js';
 import { renderCampusLoading } from '../campus/CampusFallback.js';
@@ -14,23 +14,24 @@ let _observedCarousel = null;
 let _intersectionObserver = null;
 
 // ============================================================
-// SLIDE RENDER
+// SLIDE INNER RENDER (dipakai di awal + refresh)
 // ============================================================
-function _renderSlide(tabId, state, research) {
-    let inner = '';
+function _renderSlideInner(tabId, state, research) {
     try {
-        if (tabId === 'focus') {
-            inner = renderProgressPanel(state, research);
-        } else if (tabId === 'news') {
-            inner = renderNewsListPanel(state);
-        } else if (tabId === 'activity') {
-            inner = renderLogPanel(state, { limit: 8 });
-        }
+        if (tabId === 'focus') return renderProgressPanel(state, research);
+        if (tabId === 'news') return renderNewsListPanel(state);
+        if (tabId === 'activity') return renderLogPanel(state, { limit: 8 });
     } catch (e) {
         console.error('[HomePanel] slide error:', tabId, e);
-        inner = '<div class="card"><div class="log-empty">Error</div></div>';
+        return '<div class="card"><div class="log-empty">Error</div></div>';
     }
-    return '<div class="home-slide" data-home-slide="' + tabId + '">' + inner + '</div>';
+    return '';
+}
+
+function _renderSlide(tabId, state, research) {
+    return '<div class="home-slide" data-home-slide="' + tabId + '">' +
+        _renderSlideInner(tabId, state, research) +
+        '</div>';
 }
 
 // ============================================================
@@ -67,8 +68,25 @@ export function renderHomePanel() {
 }
 
 // ============================================================
+// REFRESH SLIDES — tanpa re-render seluruh panel
+// Dipanggil dari main.js saat ada update news/log/quest
+// ============================================================
+export function refreshHomeSlides() {
+    var carousel = document.querySelector('[data-home-carousel]');
+    if (!carousel) return;
+
+    var state = (window.__game && window.__game.state) ? window.__game.state.get() : null;
+    var research = (window.__game && window.__game.research) ? window.__game.research : null;
+
+    TABS.forEach(function (id) {
+        var slideEl = carousel.querySelector('[data-home-slide="' + id + '"]');
+        if (!slideEl) return;
+        slideEl.innerHTML = _renderSlideInner(id, state, research);
+    });
+}
+
+// ============================================================
 // CAROUSEL SCROLL TRACKING (v2027.37a)
-// Emit event start/end untuk pause 3D map selama swipe
 // ============================================================
 function _trackCarouselScroll(carousel) {
     var isScrolling = false;
@@ -116,17 +134,14 @@ export function initHomeTabs(rootEl) {
     const carousel = rootEl.querySelector('[data-home-carousel]');
     if (!carousel) return;
 
-    // Dots: tap untuk pindah tab
     rootEl.querySelectorAll('[data-home-dot]').forEach(function (btn) {
         btn.addEventListener('click', function () {
             _goToTab(carousel, btn.dataset.homeDot, true);
         });
     });
 
-    // Biarkan browser menangani scroll horizontal secara native.
     carousel.style.touchAction = 'pan-x';
 
-    // v2027.37a — tracking scroll untuk pause 3D map
     _trackCarouselScroll(carousel);
 
     requestAnimationFrame(function () {
