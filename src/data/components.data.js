@@ -1,7 +1,6 @@
 // FILE: src/data/components.data.js
-// v2027.2a — Display diperdalam (14 komponen, specs teknis, realReference).
-//             Kategori lain masih versi lama — akan di-update di step berikutnya.
-//             Icon kategori = ID FeatureIcons (bukan emoji).
+// v2027.2b — Display (14) + Kamera (14) sudah diperdalam dengan specs teknis.
+//             Kategori lain menyusul di step berikutnya.
 //             ID lama DIPERTAHANKAN — save & sistem lain aman.
 
 export const COMPONENT_CATEGORIES = [
@@ -24,12 +23,7 @@ export const COMPONENTS = [
       description: 'Layar LCD monokrom standar ponsel fitur awal — ikonik Nokia 3310.',
       costPerUnit: 5,
       stats: { display: 8, quality: 5 },
-      specs: {
-        resolutionW: 84, resolutionH: 48,
-        ppi: 40, sizeInch: 1.4,
-        colorDepth: 1, techType: 'Mono LCD',
-        refreshHz: 30, hasTouch: false
-      },
+      specs: { resolutionW: 84, resolutionH: 48, ppi: 40, sizeInch: 1.4, colorDepth: 1, techType: 'Mono LCD', refreshHz: 30, hasTouch: false },
       realReference: 'Nokia 3310 (2000)',
       milestone: false,
       requiresResearch: 'layar_mono' },
@@ -40,12 +34,7 @@ export const COMPONENTS = [
       description: 'Monokrom resolusi lebih tinggi untuk menu ikon — dipakai kelas atas Nokia.',
       costPerUnit: 7,
       stats: { display: 12, quality: 8 },
-      specs: {
-        resolutionW: 96, resolutionH: 65,
-        ppi: 60, sizeInch: 1.5,
-        colorDepth: 1, techType: 'Mono LCD',
-        refreshHz: 30, hasTouch: false
-      },
+      specs: { resolutionW: 96, resolutionH: 65, ppi: 60, sizeInch: 1.5, colorDepth: 1, techType: 'Mono LCD', refreshHz: 30, hasTouch: false },
       realReference: 'Nokia 6210 (2000)',
       milestone: false,
       requiresResearch: 'layar_mono' },
@@ -56,12 +45,7 @@ export const COMPONENTS = [
       description: 'Layar warna pertama — 256 warna, backlight LED.',
       costPerUnit: 10,
       stats: { display: 15, quality: 10 },
-      specs: {
-        resolutionW: 101, resolutionH: 80,
-        ppi: 65, sizeInch: 1.5,
-        colorDepth: 256, techType: 'STN',
-        refreshHz: 30, hasTouch: false
-      },
+      specs: { resolutionW: 101, resolutionH: 80, ppi: 65, sizeInch: 1.5, colorDepth: 256, techType: 'STN', refreshHz: 30, hasTouch: false },
       realReference: 'Nokia 8250 (2001)',
       milestone: true,
       requiresResearch: 'layar_color_tft' },
@@ -72,12 +56,7 @@ export const COMPONENTS = [
       description: 'Color STN dengan 4K warna — peningkatan STN konvensional.',
       costPerUnit: 14,
       stats: { display: 22, quality: 16 },
-      specs: {
-        resolutionW: 128, resolutionH: 128,
-        ppi: 80, sizeInch: 1.6,
-        colorDepth: 4096, techType: 'CSTN',
-        refreshHz: 30, hasTouch: false
-      },
+      specs: { resolutionW: 128, resolutionH: 128, ppi: 80, sizeInch: 1.6, colorDepth: 4096, techType: 'CSTN', refreshHz: 30, hasTouch: false },
       realReference: 'Samsung SGH-T100 (2002)',
       milestone: false,
       requiresResearch: 'layar_color_tft' },
@@ -88,12 +67,7 @@ export const COMPONENTS = [
       description: 'TFT-LCD 65.000 warna — standar baru ponsel mid-range.',
       costPerUnit: 18,
       stats: { display: 28, quality: 22 },
-      specs: {
-        resolutionW: 128, resolutionH: 160,
-        ppi: 100, sizeInch: 1.8,
-        colorDepth: 65536, techType: 'TFT-LCD',
-        refreshHz: 60, hasTouch: false
-      },
+      specs: { resolutionW: 128, resolutionH: 160, ppi: 100, sizeInch: 1.8, colorDepth: 65536, techType: 'TFT-LCD', refreshHz: 60, hasTouch: false },
       realReference: 'Nokia 6230 (2003)',
       milestone: false,
       requiresResearch: 'layar_color_tft' },
@@ -104,12 +78,7 @@ export const COMPONENTS = [
       description: 'TFT resolusi QVGA 240×320 — standar ponsel layar besar era 2004.',
       costPerUnit: 22,
       stats: { display: 34, quality: 26 },
-      specs: {
-        resolutionW: 240, resolutionH: 320,
-        ppi: 130, sizeInch: 2.0,
-        colorDepth: 65536, techType: 'TFT-LCD',
-        refreshHz: 60, hasTouch: false
-      },
+      specs: { resolutionW: 240, resolutionH: 320, ppi: 130, sizeInch: 2.0, colorDepth: 65536, techType: 'TFT-LCD', refreshHz: 60, hasTouch: false },
       realReference: 'Motorola RAZR V3 (2004)',
       milestone: false,
       requiresResearch: 'layar_touch_res' },
@@ -120,12 +89,7 @@ export const COMPONENTS = [
       description: 'TFT VGA resolusi tinggi — smartphone high-end era Symbian.',
       costPerUnit: 32,
       stats: { display: 40, quality: 32 },
-      specs: {
-        resolutionW: 480, resolutionH: 640,
-        ppi: 200, sizeInch: 2.6,
-        colorDepth: 262144, techType: 'TFT-LCD',
-        refreshHz: 60, hasTouch: false
-      },
+      specs: { resolutionW: 480, resolutionH: 640, ppi: 200, sizeInch: 2.6, colorDepth: 262144, techType: 'TFT-LCD', refreshHz: 60, hasTouch: false },
       realReference: 'Nokia N95 (2007)',
       milestone: false,
       requiresResearch: 'layar_touch_res' },
@@ -136,12 +100,7 @@ export const COMPONENTS = [
       description: 'Sentuh resistif dengan stylus — dominan PDA & Windows Mobile.',
       costPerUnit: 28,
       stats: { display: 32, quality: 26 },
-      specs: {
-        resolutionW: 240, resolutionH: 320,
-        ppi: 130, sizeInch: 2.8,
-        colorDepth: 65536, techType: 'TFT-LCD Resistive',
-        refreshHz: 60, hasTouch: true, touchType: 'resistive'
-      },
+      specs: { resolutionW: 240, resolutionH: 320, ppi: 130, sizeInch: 2.8, colorDepth: 65536, techType: 'TFT-LCD Resistive', refreshHz: 60, hasTouch: true, touchType: 'resistive' },
       realReference: 'Palm Treo 650 (2004)',
       milestone: false,
       requiresResearch: 'layar_touch_res' },
@@ -152,12 +111,7 @@ export const COMPONENTS = [
       description: 'Sentuh kapasitif multitouch — fondasi era iPhone.',
       costPerUnit: 48,
       stats: { display: 48, quality: 40 },
-      specs: {
-        resolutionW: 320, resolutionH: 480,
-        ppi: 165, sizeInch: 3.5,
-        colorDepth: 16777216, techType: 'TFT-LCD Capacitive',
-        refreshHz: 60, hasTouch: true, touchType: 'capacitive'
-      },
+      specs: { resolutionW: 320, resolutionH: 480, ppi: 165, sizeInch: 3.5, colorDepth: 16777216, techType: 'TFT-LCD Capacitive', refreshHz: 60, hasTouch: true, touchType: 'capacitive' },
       realReference: 'Apple iPhone (2007)',
       milestone: true,
       requiresResearch: 'layar_touch_cap' },
@@ -168,12 +122,7 @@ export const COMPONENTS = [
       description: 'AMOLED pertama di ponsel massal — kontras tinggi, warna vivid.',
       costPerUnit: 75,
       stats: { display: 58, quality: 50 },
-      specs: {
-        resolutionW: 480, resolutionH: 800,
-        ppi: 233, sizeInch: 4.0,
-        colorDepth: 16777216, techType: 'AMOLED',
-        refreshHz: 60, hasTouch: true, touchType: 'capacitive'
-      },
+      specs: { resolutionW: 480, resolutionH: 800, ppi: 233, sizeInch: 4.0, colorDepth: 16777216, techType: 'AMOLED', refreshHz: 60, hasTouch: true, touchType: 'capacitive' },
       realReference: 'Samsung Galaxy S (2010)',
       milestone: true,
       requiresResearch: 'layar_amoled' },
@@ -184,12 +133,7 @@ export const COMPONENTS = [
       description: 'IPS LCD kepadatan tinggi — warna akurat, sudut pandang luas.',
       costPerUnit: 70,
       stats: { display: 62, quality: 58 },
-      specs: {
-        resolutionW: 720, resolutionH: 1280,
-        ppi: 326, sizeInch: 4.7,
-        colorDepth: 16777216, techType: 'IPS LCD',
-        refreshHz: 60, hasTouch: true, touchType: 'capacitive'
-      },
+      specs: { resolutionW: 720, resolutionH: 1280, ppi: 326, sizeInch: 4.7, colorDepth: 16777216, techType: 'IPS LCD', refreshHz: 60, hasTouch: true, touchType: 'capacitive' },
       realReference: 'iPhone 4 (2010)',
       milestone: true,
       requiresResearch: 'layar_ips' },
@@ -200,12 +144,7 @@ export const COMPONENTS = [
       description: 'AMOLED QHD dengan kepadatan ekstrem — flagship standar.',
       costPerUnit: 120,
       stats: { display: 78, quality: 72 },
-      specs: {
-        resolutionW: 1440, resolutionH: 2560,
-        ppi: 515, sizeInch: 5.5,
-        colorDepth: 16777216, techType: 'AMOLED',
-        refreshHz: 60, hasTouch: true, touchType: 'capacitive'
-      },
+      specs: { resolutionW: 1440, resolutionH: 2560, ppi: 515, sizeInch: 5.5, colorDepth: 16777216, techType: 'AMOLED', refreshHz: 60, hasTouch: true, touchType: 'capacitive' },
       realReference: 'Samsung Galaxy S6 (2015)',
       milestone: false,
       requiresResearch: 'layar_amoled' },
@@ -216,12 +155,7 @@ export const COMPONENTS = [
       description: 'Refresh rate tinggi untuk animasi mulus — standar flagship modern.',
       costPerUnit: 165,
       stats: { display: 88, quality: 80 },
-      specs: {
-        resolutionW: 1080, resolutionH: 2340,
-        ppi: 400, sizeInch: 6.1,
-        colorDepth: 16777216, techType: 'AMOLED HFR',
-        refreshHz: 120, hasTouch: true, touchType: 'capacitive'
-      },
+      specs: { resolutionW: 1080, resolutionH: 2340, ppi: 400, sizeInch: 6.1, colorDepth: 16777216, techType: 'AMOLED HFR', refreshHz: 120, hasTouch: true, touchType: 'capacitive' },
       realReference: 'iPhone 13 Pro (2021)',
       milestone: false,
       requiresResearch: 'layar_hfr' },
@@ -232,13 +166,7 @@ export const COMPONENTS = [
       description: 'Panel fleksibel — memungkinkan ponsel lipat & tri-fold.',
       costPerUnit: 300,
       stats: { display: 96, quality: 92 },
-      specs: {
-        resolutionW: 1768, resolutionH: 2208,
-        ppi: 374, sizeInch: 7.6,
-        colorDepth: 16777216, techType: 'Foldable AMOLED',
-        refreshHz: 120, hasTouch: true, touchType: 'capacitive',
-        foldable: true
-      },
+      specs: { resolutionW: 1768, resolutionH: 2208, ppi: 374, sizeInch: 7.6, colorDepth: 16777216, techType: 'Foldable AMOLED', refreshHz: 120, hasTouch: true, touchType: 'capacitive', foldable: true },
       realReference: 'Samsung Galaxy Fold (2019)',
       milestone: true,
       requiresResearch: 'layar_foldable' },
@@ -249,35 +177,167 @@ export const COMPONENTS = [
       description: 'Panel LTPO adaptif 1-144 Hz — hemat daya sekaligus mulus.',
       costPerUnit: 340,
       stats: { display: 99, quality: 95 },
-      specs: {
-        resolutionW: 1440, resolutionH: 3120,
-        ppi: 515, sizeInch: 6.8,
-        colorDepth: 16777216, techType: 'LTPO AMOLED',
-        refreshHz: 144, hasTouch: true, touchType: 'capacitive'
-      },
+      specs: { resolutionW: 1440, resolutionH: 3120, ppi: 515, sizeInch: 6.8, colorDepth: 16777216, techType: 'LTPO AMOLED', refreshHz: 144, hasTouch: true, touchType: 'capacitive' },
       realReference: 'Samsung Galaxy S23 Ultra (2023)',
       milestone: true,
       requiresResearch: 'layar_hfr' },
 
     // ============================================================
-    // KAMERA — versi lama (akan di-update Step 2)
+    // KAMERA — 14 komponen (2000-2026)
     // ============================================================
-    { id: 'cam_vga', category: 'camera', tier: 1, minYear: 2000, name: 'Kamera VGA',
-      costPerUnit: 6, stats: { camera: 8, quality: 6 }, requiresResearch: 'cam_vga' },
-    { id: 'cam_1mp', category: 'camera', tier: 1, minYear: 2003, name: 'Kamera 1 MP',
-      costPerUnit: 14, stats: { camera: 18, quality: 14 }, requiresResearch: 'cam_1mp' },
-    { id: 'cam_2mp', category: 'camera', tier: 2, minYear: 2005, name: 'Kamera 2 MP',
-      costPerUnit: 24, stats: { camera: 30, quality: 24 }, requiresResearch: 'cam_2mp' },
-    { id: 'cam_5mp', category: 'camera', tier: 3, minYear: 2007, name: 'Kamera 5 MP',
-      costPerUnit: 48, stats: { camera: 48, quality: 42 }, requiresResearch: 'cam_5mp' },
-    { id: 'cam_8mp', category: 'camera', tier: 3, minYear: 2010, name: 'Kamera 8 MP',
-      costPerUnit: 72, stats: { camera: 62, quality: 54 }, requiresResearch: 'cam_8mp' },
-    { id: 'cam_12mp', category: 'camera', tier: 4, minYear: 2013, name: 'Kamera 12 MP',
-      costPerUnit: 120, stats: { camera: 78, quality: 68 }, requiresResearch: 'cam_12mp' },
-    { id: 'cam_dual', category: 'camera', tier: 4, minYear: 2016, name: 'Kamera Ganda',
-      costPerUnit: 180, stats: { camera: 88, quality: 78 }, requiresResearch: 'cam_dual' },
-    { id: 'cam_48mp', category: 'camera', tier: 5, minYear: 2019, name: 'Kamera 48 MP',
-      costPerUnit: 260, stats: { camera: 96, quality: 90 }, requiresResearch: 'cam_48mp' },
+    { id: 'cam_vga', category: 'camera', tier: 1, minYear: 2000,
+      name: 'Kamera VGA 0.3 MP',
+      icon: 'camera',
+      description: 'Kamera pertama di ponsel massal — resolusi rendah tapi mengubah industri.',
+      costPerUnit: 6,
+      stats: { camera: 8, quality: 6 },
+      specs: { megapixels: 0.3, aperture: 'f/2.8', sensorSize: '1/4"', lensCount: 1, hasOIS: false, videoMax: 'QCIF', flashType: 'none', techType: 'CMOS' },
+      realReference: 'Sharp J-SH04 (2000)',
+      milestone: true,
+      requiresResearch: 'cam_vga' },
+
+    { id: 'cam_1_3mp', category: 'camera', tier: 1, minYear: 2002,
+      name: 'Kamera 1.3 MP',
+      icon: 'camera',
+      description: 'Lompatan resolusi pertama — foto mulai layak dicetak kecil.',
+      costPerUnit: 10,
+      stats: { camera: 22, quality: 18 },
+      specs: { megapixels: 1.3, aperture: 'f/2.8', sensorSize: '1/3.2"', lensCount: 1, hasOIS: false, videoMax: 'QCIF', flashType: 'LED', techType: 'CMOS' },
+      realReference: 'Samsung SGH-V200 (2002)',
+      milestone: false,
+      requiresResearch: 'cam_vga' },
+
+    { id: 'cam_1mp', category: 'camera', tier: 1, minYear: 2003,
+      name: 'Kamera 1 MP Autofocus',
+      icon: 'camera',
+      description: 'Kamera 1MP dengan autofocus — standar kamera ponsel 2003.',
+      costPerUnit: 14,
+      stats: { camera: 18, quality: 14 },
+      specs: { megapixels: 1.0, aperture: 'f/2.8', sensorSize: '1/3.2"', lensCount: 1, hasOIS: false, videoMax: 'QCIF', flashType: 'LED', techType: 'CMOS' },
+      realReference: 'Sharp J-SH53 (2003)',
+      milestone: false,
+      requiresResearch: 'cam_1mp' },
+
+    { id: 'cam_2mp', category: 'camera', tier: 2, minYear: 2005,
+      name: 'Kamera 2 MP Carl Zeiss',
+      icon: 'camera',
+      description: '2MP dengan optik Carl Zeiss — kualitas foto melompat.',
+      costPerUnit: 24,
+      stats: { camera: 30, quality: 24 },
+      specs: { megapixels: 2.0, aperture: 'f/2.8', sensorSize: '1/2.5"', lensCount: 1, hasOIS: false, videoMax: 'QCIF', flashType: 'LED', techType: 'CMOS' },
+      realReference: 'Sony Ericsson K750 (2005)',
+      milestone: false,
+      requiresResearch: 'cam_2mp' },
+
+    { id: 'cam_3_2mp', category: 'camera', tier: 2, minYear: 2006,
+      name: 'Kamera 3.2 MP Auto-Focus',
+      icon: 'camera',
+      description: '3.2MP dengan flash LED — standar ponsel multimedia.',
+      costPerUnit: 34,
+      stats: { camera: 38, quality: 32 },
+      specs: { megapixels: 3.2, aperture: 'f/2.8', sensorSize: '1/2.5"', lensCount: 1, hasOIS: false, videoMax: 'VGA', flashType: 'LED', techType: 'CMOS' },
+      realReference: 'Nokia N73 (2006)',
+      milestone: false,
+      requiresResearch: 'cam_2mp' },
+
+    { id: 'cam_5mp', category: 'camera', tier: 3, minYear: 2007,
+      name: 'Kamera 5 MP Carl Zeiss',
+      icon: 'camera',
+      description: '5MP dengan flash xenon — puncak kamera era Symbian.',
+      costPerUnit: 48,
+      stats: { camera: 48, quality: 42 },
+      specs: { megapixels: 5.0, aperture: 'f/2.8', sensorSize: '1/2.5"', lensCount: 1, hasOIS: false, videoMax: 'VGA', flashType: 'xenon', techType: 'CMOS' },
+      realReference: 'Nokia N95 (2007)',
+      milestone: true,
+      requiresResearch: 'cam_5mp' },
+
+    { id: 'cam_8mp', category: 'camera', tier: 3, minYear: 2010,
+      name: 'Kamera 8 MP BSI',
+      icon: 'camera',
+      description: '8MP Backside-Illuminated — sensitivitas cahaya rendah lebih baik.',
+      costPerUnit: 72,
+      stats: { camera: 62, quality: 54 },
+      specs: { megapixels: 8.0, aperture: 'f/2.4', sensorSize: '1/3.2"', lensCount: 1, hasOIS: false, videoMax: '720p', flashType: 'LED', techType: 'BSI-CMOS' },
+      realReference: 'iPhone 4 (2010)',
+      milestone: false,
+      requiresResearch: 'cam_8mp' },
+
+    { id: 'cam_8mp_ois', category: 'camera', tier: 3, minYear: 2011,
+      name: 'Kamera 8 MP OIS',
+      icon: 'camera',
+      description: '8MP dengan Optical Image Stabilization — video stabil.',
+      costPerUnit: 85,
+      stats: { camera: 68, quality: 60 },
+      specs: { megapixels: 8.0, aperture: 'f/2.2', sensorSize: '1/3.2"', lensCount: 1, hasOIS: true, videoMax: '1080p', flashType: 'LED', techType: 'BSI-CMOS' },
+      realReference: 'iPhone 4S (2011)',
+      milestone: false,
+      requiresResearch: 'cam_8mp' },
+
+    { id: 'cam_12mp', category: 'camera', tier: 4, minYear: 2013,
+      name: 'Kamera 12 MP BSI',
+      icon: 'camera',
+      description: '12MP dengan sensor lebih besar — standar flagship 2013-2015.',
+      costPerUnit: 120,
+      stats: { camera: 78, quality: 68 },
+      specs: { megapixels: 12.0, aperture: 'f/2.2', sensorSize: '1/3"', lensCount: 1, hasOIS: true, videoMax: '1080p', flashType: 'dual LED', techType: 'BSI-CMOS' },
+      realReference: 'iPhone 5s (2013)',
+      milestone: false,
+      requiresResearch: 'cam_12mp' },
+
+    { id: 'cam_dual', category: 'camera', tier: 4, minYear: 2016,
+      name: 'Kamera Ganda 12+12 MP',
+      icon: 'camera',
+      description: 'Dua kamera (wide + tele) — era baru fotografi ponsel.',
+      costPerUnit: 180,
+      stats: { camera: 88, quality: 78 },
+      specs: { megapixels: 12, aperture: 'f/1.8', sensorSize: '1/2.55"', lensCount: 2, hasOIS: true, videoMax: '4K', flashType: 'quad LED', techType: 'BSI-CMOS' },
+      realReference: 'iPhone 7 Plus (2016)',
+      milestone: true,
+      requiresResearch: 'cam_dual' },
+
+    { id: 'cam_triple', category: 'camera', tier: 4, minYear: 2017,
+      name: 'Kamera Triple 12+12+12 MP',
+      icon: 'camera',
+      description: 'Tiga kamera: wide + ultrawide + tele. Standar flagship.',
+      costPerUnit: 220,
+      stats: { camera: 90, quality: 82 },
+      specs: { megapixels: 12, aperture: 'f/1.8', sensorSize: '1/2.55"', lensCount: 3, hasOIS: true, videoMax: '4K', flashType: 'quad LED', techType: 'Stacked CMOS' },
+      realReference: 'iPhone X (2017)',
+      milestone: false,
+      requiresResearch: 'cam_dual' },
+
+    { id: 'cam_48mp', category: 'camera', tier: 5, minYear: 2019,
+      name: 'Kamera 48 MP Quad Bayer',
+      icon: 'camera',
+      description: '48MP dengan piksel binning 4-in-1 — detail + low-light.',
+      costPerUnit: 260,
+      stats: { camera: 96, quality: 90 },
+      specs: { megapixels: 48, aperture: 'f/1.8', sensorSize: '1/2"', lensCount: 3, hasOIS: true, videoMax: '4K', flashType: 'quad LED', techType: 'Quad Bayer' },
+      realReference: 'Xiaomi Mi 9 (2019)',
+      milestone: true,
+      requiresResearch: 'cam_48mp' },
+
+    { id: 'cam_108mp', category: 'camera', tier: 5, minYear: 2020,
+      name: 'Kamera 108 MP',
+      icon: 'camera',
+      description: '108MP — sensor besar untuk detail ekstrem.',
+      costPerUnit: 320,
+      stats: { camera: 98, quality: 94 },
+      specs: { megapixels: 108, aperture: 'f/1.8', sensorSize: '1/1.33"', lensCount: 4, hasOIS: true, videoMax: '8K', flashType: 'quad LED', techType: 'ISOCELL' },
+      realReference: 'Samsung Galaxy S20 Ultra (2020)',
+      milestone: true,
+      requiresResearch: 'cam_48mp' },
+
+    { id: 'cam_200mp', category: 'camera', tier: 5, minYear: 2023,
+      name: 'Kamera 200 MP ISOCELL',
+      icon: 'camera',
+      description: '200MP dengan piksel binning 16-in-1 — puncak fotografi mobile.',
+      costPerUnit: 420,
+      stats: { camera: 100, quality: 97 },
+      specs: { megapixels: 200, aperture: 'f/1.7', sensorSize: '1/1.3"', lensCount: 4, hasOIS: true, videoMax: '8K', flashType: 'quad LED', techType: 'ISOCELL HP2' },
+      realReference: 'Samsung Galaxy S23 Ultra (2023)',
+      milestone: true,
+      requiresResearch: 'cam_48mp' },
 
     // ============================================================
     // BATERAI — versi lama (akan di-update Step 3)
@@ -320,7 +380,7 @@ export const COMPONENTS = [
       costPerUnit: 480, stats: { performance: 100, quality: 95 }, requiresResearch: 'chip_3nm' },
 
     // ============================================================
-    // JARINGAN — versi lama (akan di-update Step 5)
+    // JARINGAN — versi lama (akan di-update Step 4)
     // ============================================================
     { id: 'net_gsm', category: 'network', tier: 1, minYear: 2000, name: 'GSM',
       costPerUnit: 3, stats: { connectivity: 8, quality: 5 }, requiresResearch: 'net_gsm' },
@@ -340,7 +400,7 @@ export const COMPONENTS = [
       costPerUnit: 160, stats: { connectivity: 100, quality: 92 }, requiresResearch: 'net_wifi6' },
 
     // ============================================================
-    // BODI — versi lama (akan di-update Step 6)
+    // BODI — versi lama (akan di-update Step 5)
     // ============================================================
     { id: 'body_plastic',   category: 'body', tier: 1, minYear: 2000, name: 'Plastik',
       costPerUnit: 3,   stats: { quality: 5,  design: 4 },   requiresResearch: null },
@@ -354,7 +414,7 @@ export const COMPONENTS = [
       costPerUnit: 100, stats: { quality: 55, design: 62 },  requiresResearch: null },
 
     // ============================================================
-    // FORM FACTOR — versi lama (akan di-update Step 6)
+    // FORM FACTOR — versi lama (akan di-update Step 5)
     // ============================================================
     { id: 'ff_candybar',  category: 'form_factor', tier: 1, minYear: 2000, name: 'Candybar',
       costPerUnit: 0, stats: { usability: 20, design: 15 }, requiresResearch: null,
@@ -397,4 +457,4 @@ export function getComponentsByCategory(catId) {
 }
 export function getBodyColorById(id) {
     return BODY_COLORS.find(c => c.id === id) || BODY_COLORS[0];
-        }
+                              }
