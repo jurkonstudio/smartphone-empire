@@ -225,24 +225,16 @@ function renderView(opts) {
 }
 
 // ============================================================
-// HOMEPANEL PERF — freeze 3D map saat carousel scroll
+// HOMEPANEL PERF — (v2027.34a) NO-OP
+// Dulu: menambah class .scrolling ke #campus-map tiap carousel di-scroll,
+// yang di CSS memakai content-visibility:hidden -> peta 3D ikut hilang/
+// berkedip dan canvas WebGL bisa kosong setelahnya.
+// Peta 3D sudah render-on-demand (tidak ada loop rAF), jadi tidak perlu
+// di-freeze. Fungsi dipertahankan agar pemanggilnya di renderView tetap aman.
 // ============================================================
-var _carouselPerfTimer = null;
 function _bindCarouselPerf(wrapperEl) {
-    var carousel = wrapperEl.querySelector('[data-home-carousel]');
-    var map = wrapperEl.querySelector('#campus-map');
-    if (!carousel || !map) return;
-    carousel.addEventListener('scroll', function () {
-        if (!map.classList.contains('scrolling')) {
-            map.classList.add('scrolling');
-        }
-        bus.emit('home:carousel-scroll');   // v2027.31b — paksa render
-        if (_carouselPerfTimer) clearTimeout(_carouselPerfTimer);
-        _carouselPerfTimer = setTimeout(function () {
-            map.classList.remove('scrolling');
-            bus.emit('home:carousel-scroll-end');   // v2027.31b
-        }, 180);
-    }, { passive: true });
+    var map = wrapperEl && wrapperEl.querySelector('#campus-map');
+    if (map) map.classList.remove('scrolling');
 }
 
 function renderAll() { renderHeaderOnly(); renderNavOnly(); renderView(); }
