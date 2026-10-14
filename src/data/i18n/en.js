@@ -6,7 +6,7 @@ export const en = {
     // NAVIGATION
     // ============================================================
     'nav.home':     'Home',
-    'nav.team':     'Team',
+    'nav.team':     'HQ',
     'nav.research': 'Research',
     'nav.products': 'Products',
     'nav.market':   'Market',
@@ -126,4 +126,15 @@ export const en = {
     'toast.save_fail':       'Save failed.',
     'toast.no_save':         'No save found.',
     'toast.reset_confirm':   'All progress will be lost.',
+
+    // ============================================================
+    // HQ — Sub-tabs & Home placeholder
+    // ============================================================
+    'hq.tab.overview': 'Overview',
+    'hq.tab.campus':   'Campus',
+    'hq.tab.team':     'Team',
+    'home.placeholder.title': 'Campus Map',
+    'home.placeholder.body':  'The 3D headquarters map will appear here. For now, open the HQ tab to manage your company.',
+    'campus.placeholder.title': 'Campus 3D Map',
+    'campus.placeholder.body':  'The 3D headquarters map and building upgrade system will be available in a future update.',
 };
