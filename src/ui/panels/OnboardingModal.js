@@ -1,5 +1,6 @@
 // FILE: src/ui/panels/OnboardingModal.js
 // v2027.13c — i18n.
+// v2027.14b — tambah logo Jurkon Studio di atas modal.
 import { Modal } from '../modal.js';
 import { bus } from '../../core/EventBus.js';
 import { DIFFICULTY } from '../../config/constants.js';
@@ -16,6 +17,10 @@ export function showOnboarding() {
         let selected = DIFFICULTY.normal;
 
         const html = `
+            <div style="text-align:center;margin:4px 0 18px;">
+                <img src="assets/jurkon-studio-logo.png" alt="Jurkon Studio" class="onb-logo">
+            </div>
+
             <div class="modal-title">${t('onb.title')}</div>
             <div class="modal-sub">${t('onb.sub')}</div>
 
