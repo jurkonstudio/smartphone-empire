@@ -1,53 +1,72 @@
 // FILE: src/ui/panels/ProgressPanel.js
-// Menampilkan riset aktif nyata dari ResearchSystem (dipakai di Dashboard).
+// Rework: merge riset aktif + quest aktif menjadi satu kartu "Fokus Hari Ini".
+
+function escapeHtml(s) {
+    if (typeof s !== 'string') return '';
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
 
 export function renderProgressPanel(state, researchSystem) {
-    // Fallback aman jika researchSystem tidak di-pass
-    if (!researchSystem) {
-        return `
-            <div class="card">
-                <div class="card-title">Progres Riset</div>
-                <div style="font-size:12px;color:var(--text-mute);">Sistem riset belum siap.</div>
-            </div>
-        `;
+    var activeResearch = [];
+    try {
+        if (researchSystem && typeof researchSystem.getProgress === 'function') {
+            activeResearch = researchSystem.getProgress() || [];
+        }
+    } catch (e) { activeResearch = []; }
+
+    var activeQuests = (state.quests && Array.isArray(state.quests.active))
+        ? state.quests.active : [];
+
+    var hasAny = activeResearch.length > 0 || activeQuests.length > 0;
+
+    if (!hasAny) {
+        return '<div class="card">' +
+            '<div class="card-title">Fokus Hari Ini</div>' +
+            '<div class="focus-empty">' +
+                '<div class="focus-empty-title">Semua berjalan lancar</div>' +
+                '<div class="focus-empty-desc">Riset teknologi baru, rekrut tim, atau rilis produk untuk mempercepat pertumbuhan.</div>' +
+                '<button class="btn-primary" data-nav="research" style="width:100%;margin-top:10px;">Buka Tab Riset</button>' +
+            '</div>' +
+            '</div>';
     }
 
-    const active = researchSystem.getProgress();
+    var body = '';
 
-    if (!active.length) {
-        return `
-            <div class="card">
-                <div class="card-title">Progres Riset</div>
-                <div class="empty-hint" style="margin-top:4px;margin-bottom:10px;">Tidak ada riset aktif</div>
-                <button class="btn-secondary" data-nav="research" style="width:100%;font-size:12px;padding:8px;">
-                    Buka Tab Riset →
-                </button>
-            </div>
-        `;
+    if (activeResearch.length) {
+        var slots = (state.research && state.research.maxSlots) || 1;
+        var activeCount = (state.research && state.research.active)
+            ? state.research.active.length : activeResearch.length;
+
+        body += '<div class="focus-section-label">Riset Aktif</div>';
+        body += '<div class="focus-section-meta">' + activeCount + '/' + slots + ' slot terpakai</div>';
+        body += activeResearch.map(function (r) {
+            var pct = Math.round(r.percent * 100);
+            return '<div class="focus-item">' +
+                '<div class="progress-label">' +
+                    '<span>' + escapeHtml(r.name) + '</span>' +
+                    '<span>' + pct + '% • ' + r.remainingDays + 'h</span>' +
+                '</div>' +
+                '<div class="progress"><div class="progress-bar" style="width:' + pct + '%;"></div></div>' +
+                '</div>';
+        }).join('');
     }
 
-    const rows = active.map(r => {
-        const pct = Math.round(r.percent * 100);
-        return `
-            <div style="margin-bottom:10px;">
-                <div class="progress-label">
-                    <span>${r.name}</span>
-                    <span>${pct}% • sisa ${r.remainingDays} hari</span>
-                </div>
-                <div class="progress">
-                    <div class="progress-bar" style="width:${pct}%;"></div>
-                </div>
-            </div>
-        `;
-    }).join('');
+    if (activeQuests.length) {
+        body += '<div class="focus-section-label">Quest</div>';
+        body += activeQuests.slice(0, 3).map(function (q) {
+            return '<div class="focus-quest">' +
+                '<div class="quest-dot"></div>' +
+                '<div>' +
+                    '<div class="focus-quest-title">' + escapeHtml(q.title) + '</div>' +
+                    '<div class="focus-quest-desc">' + escapeHtml(q.description) + '</div>' +
+                '</div>' +
+                '</div>';
+        }).join('');
+    }
 
-    const slots = state.research ? state.research.maxSlots : 1;
-    const activeCount = state.research ? state.research.active.length : 0;
-
-    return `
-        <div class="card">
-            <div class="card-title">Progres Riset (${activeCount}/${slots} slot)</div>
-            ${rows}
-        </div>
-    `;
+    return '<div class="card">' +
+        '<div class="card-title">Fokus Hari Ini</div>' +
+        body +
+        '</div>';
 }
