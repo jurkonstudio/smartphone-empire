@@ -1,6 +1,6 @@
 // FILE: src/data/components.data.js
-// v2027.2b — Display (14) + Kamera (14) sudah diperdalam dengan specs teknis.
-//             Kategori lain menyusul di step berikutnya.
+// v2027.2c — Display (14) + Kamera (14) + Baterai (15) dengan specs teknis.
+//             Kategori lain (chip/network/body/ff) menyusul di step berikutnya.
 //             ID lama DIPERTAHANKAN — save & sistem lain aman.
 
 export const COMPONENT_CATEGORIES = [
@@ -15,7 +15,7 @@ export const COMPONENT_CATEGORIES = [
 
 export const COMPONENTS = [
     // ============================================================
-    // LAYAR — 14 komponen (2000-2026)
+    // LAYAR — 14 komponen
     // ============================================================
     { id: 'scr_mono', category: 'display', tier: 1, minYear: 2000,
       name: 'Layar Monokrom 84×48',
@@ -24,8 +24,7 @@ export const COMPONENTS = [
       costPerUnit: 5,
       stats: { display: 8, quality: 5 },
       specs: { resolutionW: 84, resolutionH: 48, ppi: 40, sizeInch: 1.4, colorDepth: 1, techType: 'Mono LCD', refreshHz: 30, hasTouch: false },
-      realReference: 'Nokia 3310 (2000)',
-      milestone: false,
+      realReference: 'Nokia 3310 (2000)', milestone: false,
       requiresResearch: 'layar_mono' },
 
     { id: 'scr_mono_hi', category: 'display', tier: 1, minYear: 2000,
@@ -35,8 +34,7 @@ export const COMPONENTS = [
       costPerUnit: 7,
       stats: { display: 12, quality: 8 },
       specs: { resolutionW: 96, resolutionH: 65, ppi: 60, sizeInch: 1.5, colorDepth: 1, techType: 'Mono LCD', refreshHz: 30, hasTouch: false },
-      realReference: 'Nokia 6210 (2000)',
-      milestone: false,
+      realReference: 'Nokia 6210 (2000)', milestone: false,
       requiresResearch: 'layar_mono' },
 
     { id: 'scr_stn_color', category: 'display', tier: 1, minYear: 2001,
@@ -46,8 +44,7 @@ export const COMPONENTS = [
       costPerUnit: 10,
       stats: { display: 15, quality: 10 },
       specs: { resolutionW: 101, resolutionH: 80, ppi: 65, sizeInch: 1.5, colorDepth: 256, techType: 'STN', refreshHz: 30, hasTouch: false },
-      realReference: 'Nokia 8250 (2001)',
-      milestone: true,
+      realReference: 'Nokia 8250 (2001)', milestone: true,
       requiresResearch: 'layar_color_tft' },
 
     { id: 'scr_cstn', category: 'display', tier: 2, minYear: 2002,
@@ -57,8 +54,7 @@ export const COMPONENTS = [
       costPerUnit: 14,
       stats: { display: 22, quality: 16 },
       specs: { resolutionW: 128, resolutionH: 128, ppi: 80, sizeInch: 1.6, colorDepth: 4096, techType: 'CSTN', refreshHz: 30, hasTouch: false },
-      realReference: 'Samsung SGH-T100 (2002)',
-      milestone: false,
+      realReference: 'Samsung SGH-T100 (2002)', milestone: false,
       requiresResearch: 'layar_color_tft' },
 
     { id: 'scr_tft', category: 'display', tier: 2, minYear: 2003,
@@ -68,8 +64,7 @@ export const COMPONENTS = [
       costPerUnit: 18,
       stats: { display: 28, quality: 22 },
       specs: { resolutionW: 128, resolutionH: 160, ppi: 100, sizeInch: 1.8, colorDepth: 65536, techType: 'TFT-LCD', refreshHz: 60, hasTouch: false },
-      realReference: 'Nokia 6230 (2003)',
-      milestone: false,
+      realReference: 'Nokia 6230 (2003)', milestone: false,
       requiresResearch: 'layar_color_tft' },
 
     { id: 'scr_qvga_tft', category: 'display', tier: 2, minYear: 2004,
@@ -79,8 +74,7 @@ export const COMPONENTS = [
       costPerUnit: 22,
       stats: { display: 34, quality: 26 },
       specs: { resolutionW: 240, resolutionH: 320, ppi: 130, sizeInch: 2.0, colorDepth: 65536, techType: 'TFT-LCD', refreshHz: 60, hasTouch: false },
-      realReference: 'Motorola RAZR V3 (2004)',
-      milestone: false,
+      realReference: 'Motorola RAZR V3 (2004)', milestone: false,
       requiresResearch: 'layar_touch_res' },
 
     { id: 'scr_vga_tft', category: 'display', tier: 2, minYear: 2005,
@@ -90,8 +84,7 @@ export const COMPONENTS = [
       costPerUnit: 32,
       stats: { display: 40, quality: 32 },
       specs: { resolutionW: 480, resolutionH: 640, ppi: 200, sizeInch: 2.6, colorDepth: 262144, techType: 'TFT-LCD', refreshHz: 60, hasTouch: false },
-      realReference: 'Nokia N95 (2007)',
-      milestone: false,
+      realReference: 'Nokia N95 (2007)', milestone: false,
       requiresResearch: 'layar_touch_res' },
 
     { id: 'scr_touch_res', category: 'display', tier: 2, minYear: 2005,
@@ -101,8 +94,7 @@ export const COMPONENTS = [
       costPerUnit: 28,
       stats: { display: 32, quality: 26 },
       specs: { resolutionW: 240, resolutionH: 320, ppi: 130, sizeInch: 2.8, colorDepth: 65536, techType: 'TFT-LCD Resistive', refreshHz: 60, hasTouch: true, touchType: 'resistive' },
-      realReference: 'Palm Treo 650 (2004)',
-      milestone: false,
+      realReference: 'Palm Treo 650 (2004)', milestone: false,
       requiresResearch: 'layar_touch_res' },
 
     { id: 'scr_touch_cap', category: 'display', tier: 3, minYear: 2007,
@@ -112,8 +104,7 @@ export const COMPONENTS = [
       costPerUnit: 48,
       stats: { display: 48, quality: 40 },
       specs: { resolutionW: 320, resolutionH: 480, ppi: 165, sizeInch: 3.5, colorDepth: 16777216, techType: 'TFT-LCD Capacitive', refreshHz: 60, hasTouch: true, touchType: 'capacitive' },
-      realReference: 'Apple iPhone (2007)',
-      milestone: true,
+      realReference: 'Apple iPhone (2007)', milestone: true,
       requiresResearch: 'layar_touch_cap' },
 
     { id: 'scr_wvga_amoled', category: 'display', tier: 3, minYear: 2010,
@@ -123,8 +114,7 @@ export const COMPONENTS = [
       costPerUnit: 75,
       stats: { display: 58, quality: 50 },
       specs: { resolutionW: 480, resolutionH: 800, ppi: 233, sizeInch: 4.0, colorDepth: 16777216, techType: 'AMOLED', refreshHz: 60, hasTouch: true, touchType: 'capacitive' },
-      realReference: 'Samsung Galaxy S (2010)',
-      milestone: true,
+      realReference: 'Samsung Galaxy S (2010)', milestone: true,
       requiresResearch: 'layar_amoled' },
 
     { id: 'scr_ips', category: 'display', tier: 3, minYear: 2010,
@@ -134,8 +124,7 @@ export const COMPONENTS = [
       costPerUnit: 70,
       stats: { display: 62, quality: 58 },
       specs: { resolutionW: 720, resolutionH: 1280, ppi: 326, sizeInch: 4.7, colorDepth: 16777216, techType: 'IPS LCD', refreshHz: 60, hasTouch: true, touchType: 'capacitive' },
-      realReference: 'iPhone 4 (2010)',
-      milestone: true,
+      realReference: 'iPhone 4 (2010)', milestone: true,
       requiresResearch: 'layar_ips' },
 
     { id: 'scr_amoled', category: 'display', tier: 4, minYear: 2014,
@@ -145,8 +134,7 @@ export const COMPONENTS = [
       costPerUnit: 120,
       stats: { display: 78, quality: 72 },
       specs: { resolutionW: 1440, resolutionH: 2560, ppi: 515, sizeInch: 5.5, colorDepth: 16777216, techType: 'AMOLED', refreshHz: 60, hasTouch: true, touchType: 'capacitive' },
-      realReference: 'Samsung Galaxy S6 (2015)',
-      milestone: false,
+      realReference: 'Samsung Galaxy S6 (2015)', milestone: false,
       requiresResearch: 'layar_amoled' },
 
     { id: 'scr_hfr', category: 'display', tier: 4, minYear: 2017,
@@ -156,8 +144,7 @@ export const COMPONENTS = [
       costPerUnit: 165,
       stats: { display: 88, quality: 80 },
       specs: { resolutionW: 1080, resolutionH: 2340, ppi: 400, sizeInch: 6.1, colorDepth: 16777216, techType: 'AMOLED HFR', refreshHz: 120, hasTouch: true, touchType: 'capacitive' },
-      realReference: 'iPhone 13 Pro (2021)',
-      milestone: false,
+      realReference: 'iPhone 13 Pro (2021)', milestone: false,
       requiresResearch: 'layar_hfr' },
 
     { id: 'scr_fold', category: 'display', tier: 5, minYear: 2019,
@@ -167,8 +154,7 @@ export const COMPONENTS = [
       costPerUnit: 300,
       stats: { display: 96, quality: 92 },
       specs: { resolutionW: 1768, resolutionH: 2208, ppi: 374, sizeInch: 7.6, colorDepth: 16777216, techType: 'Foldable AMOLED', refreshHz: 120, hasTouch: true, touchType: 'capacitive', foldable: true },
-      realReference: 'Samsung Galaxy Fold (2019)',
-      milestone: true,
+      realReference: 'Samsung Galaxy Fold (2019)', milestone: true,
       requiresResearch: 'layar_foldable' },
 
     { id: 'scr_ltpo_144', category: 'display', tier: 5, minYear: 2022,
@@ -178,12 +164,11 @@ export const COMPONENTS = [
       costPerUnit: 340,
       stats: { display: 99, quality: 95 },
       specs: { resolutionW: 1440, resolutionH: 3120, ppi: 515, sizeInch: 6.8, colorDepth: 16777216, techType: 'LTPO AMOLED', refreshHz: 144, hasTouch: true, touchType: 'capacitive' },
-      realReference: 'Samsung Galaxy S23 Ultra (2023)',
-      milestone: true,
+      realReference: 'Samsung Galaxy S23 Ultra (2023)', milestone: true,
       requiresResearch: 'layar_hfr' },
 
     // ============================================================
-    // KAMERA — 14 komponen (2000-2026)
+    // KAMERA — 14 komponen
     // ============================================================
     { id: 'cam_vga', category: 'camera', tier: 1, minYear: 2000,
       name: 'Kamera VGA 0.3 MP',
@@ -192,8 +177,7 @@ export const COMPONENTS = [
       costPerUnit: 6,
       stats: { camera: 8, quality: 6 },
       specs: { megapixels: 0.3, aperture: 'f/2.8', sensorSize: '1/4"', lensCount: 1, hasOIS: false, videoMax: 'QCIF', flashType: 'none', techType: 'CMOS' },
-      realReference: 'Sharp J-SH04 (2000)',
-      milestone: true,
+      realReference: 'Sharp J-SH04 (2000)', milestone: true,
       requiresResearch: 'cam_vga' },
 
     { id: 'cam_1_3mp', category: 'camera', tier: 1, minYear: 2002,
@@ -203,8 +187,7 @@ export const COMPONENTS = [
       costPerUnit: 10,
       stats: { camera: 22, quality: 18 },
       specs: { megapixels: 1.3, aperture: 'f/2.8', sensorSize: '1/3.2"', lensCount: 1, hasOIS: false, videoMax: 'QCIF', flashType: 'LED', techType: 'CMOS' },
-      realReference: 'Samsung SGH-V200 (2002)',
-      milestone: false,
+      realReference: 'Samsung SGH-V200 (2002)', milestone: false,
       requiresResearch: 'cam_vga' },
 
     { id: 'cam_1mp', category: 'camera', tier: 1, minYear: 2003,
@@ -214,8 +197,7 @@ export const COMPONENTS = [
       costPerUnit: 14,
       stats: { camera: 18, quality: 14 },
       specs: { megapixels: 1.0, aperture: 'f/2.8', sensorSize: '1/3.2"', lensCount: 1, hasOIS: false, videoMax: 'QCIF', flashType: 'LED', techType: 'CMOS' },
-      realReference: 'Sharp J-SH53 (2003)',
-      milestone: false,
+      realReference: 'Sharp J-SH53 (2003)', milestone: false,
       requiresResearch: 'cam_1mp' },
 
     { id: 'cam_2mp', category: 'camera', tier: 2, minYear: 2005,
@@ -225,8 +207,7 @@ export const COMPONENTS = [
       costPerUnit: 24,
       stats: { camera: 30, quality: 24 },
       specs: { megapixels: 2.0, aperture: 'f/2.8', sensorSize: '1/2.5"', lensCount: 1, hasOIS: false, videoMax: 'QCIF', flashType: 'LED', techType: 'CMOS' },
-      realReference: 'Sony Ericsson K750 (2005)',
-      milestone: false,
+      realReference: 'Sony Ericsson K750 (2005)', milestone: false,
       requiresResearch: 'cam_2mp' },
 
     { id: 'cam_3_2mp', category: 'camera', tier: 2, minYear: 2006,
@@ -236,8 +217,7 @@ export const COMPONENTS = [
       costPerUnit: 34,
       stats: { camera: 38, quality: 32 },
       specs: { megapixels: 3.2, aperture: 'f/2.8', sensorSize: '1/2.5"', lensCount: 1, hasOIS: false, videoMax: 'VGA', flashType: 'LED', techType: 'CMOS' },
-      realReference: 'Nokia N73 (2006)',
-      milestone: false,
+      realReference: 'Nokia N73 (2006)', milestone: false,
       requiresResearch: 'cam_2mp' },
 
     { id: 'cam_5mp', category: 'camera', tier: 3, minYear: 2007,
@@ -247,8 +227,7 @@ export const COMPONENTS = [
       costPerUnit: 48,
       stats: { camera: 48, quality: 42 },
       specs: { megapixels: 5.0, aperture: 'f/2.8', sensorSize: '1/2.5"', lensCount: 1, hasOIS: false, videoMax: 'VGA', flashType: 'xenon', techType: 'CMOS' },
-      realReference: 'Nokia N95 (2007)',
-      milestone: true,
+      realReference: 'Nokia N95 (2007)', milestone: true,
       requiresResearch: 'cam_5mp' },
 
     { id: 'cam_8mp', category: 'camera', tier: 3, minYear: 2010,
@@ -258,8 +237,7 @@ export const COMPONENTS = [
       costPerUnit: 72,
       stats: { camera: 62, quality: 54 },
       specs: { megapixels: 8.0, aperture: 'f/2.4', sensorSize: '1/3.2"', lensCount: 1, hasOIS: false, videoMax: '720p', flashType: 'LED', techType: 'BSI-CMOS' },
-      realReference: 'iPhone 4 (2010)',
-      milestone: false,
+      realReference: 'iPhone 4 (2010)', milestone: false,
       requiresResearch: 'cam_8mp' },
 
     { id: 'cam_8mp_ois', category: 'camera', tier: 3, minYear: 2011,
@@ -269,8 +247,7 @@ export const COMPONENTS = [
       costPerUnit: 85,
       stats: { camera: 68, quality: 60 },
       specs: { megapixels: 8.0, aperture: 'f/2.2', sensorSize: '1/3.2"', lensCount: 1, hasOIS: true, videoMax: '1080p', flashType: 'LED', techType: 'BSI-CMOS' },
-      realReference: 'iPhone 4S (2011)',
-      milestone: false,
+      realReference: 'iPhone 4S (2011)', milestone: false,
       requiresResearch: 'cam_8mp' },
 
     { id: 'cam_12mp', category: 'camera', tier: 4, minYear: 2013,
@@ -280,8 +257,7 @@ export const COMPONENTS = [
       costPerUnit: 120,
       stats: { camera: 78, quality: 68 },
       specs: { megapixels: 12.0, aperture: 'f/2.2', sensorSize: '1/3"', lensCount: 1, hasOIS: true, videoMax: '1080p', flashType: 'dual LED', techType: 'BSI-CMOS' },
-      realReference: 'iPhone 5s (2013)',
-      milestone: false,
+      realReference: 'iPhone 5s (2013)', milestone: false,
       requiresResearch: 'cam_12mp' },
 
     { id: 'cam_dual', category: 'camera', tier: 4, minYear: 2016,
@@ -291,8 +267,7 @@ export const COMPONENTS = [
       costPerUnit: 180,
       stats: { camera: 88, quality: 78 },
       specs: { megapixels: 12, aperture: 'f/1.8', sensorSize: '1/2.55"', lensCount: 2, hasOIS: true, videoMax: '4K', flashType: 'quad LED', techType: 'BSI-CMOS' },
-      realReference: 'iPhone 7 Plus (2016)',
-      milestone: true,
+      realReference: 'iPhone 7 Plus (2016)', milestone: true,
       requiresResearch: 'cam_dual' },
 
     { id: 'cam_triple', category: 'camera', tier: 4, minYear: 2017,
@@ -302,8 +277,7 @@ export const COMPONENTS = [
       costPerUnit: 220,
       stats: { camera: 90, quality: 82 },
       specs: { megapixels: 12, aperture: 'f/1.8', sensorSize: '1/2.55"', lensCount: 3, hasOIS: true, videoMax: '4K', flashType: 'quad LED', techType: 'Stacked CMOS' },
-      realReference: 'iPhone X (2017)',
-      milestone: false,
+      realReference: 'iPhone X (2017)', milestone: false,
       requiresResearch: 'cam_dual' },
 
     { id: 'cam_48mp', category: 'camera', tier: 5, minYear: 2019,
@@ -313,8 +287,7 @@ export const COMPONENTS = [
       costPerUnit: 260,
       stats: { camera: 96, quality: 90 },
       specs: { megapixels: 48, aperture: 'f/1.8', sensorSize: '1/2"', lensCount: 3, hasOIS: true, videoMax: '4K', flashType: 'quad LED', techType: 'Quad Bayer' },
-      realReference: 'Xiaomi Mi 9 (2019)',
-      milestone: true,
+      realReference: 'Xiaomi Mi 9 (2019)', milestone: true,
       requiresResearch: 'cam_48mp' },
 
     { id: 'cam_108mp', category: 'camera', tier: 5, minYear: 2020,
@@ -324,8 +297,7 @@ export const COMPONENTS = [
       costPerUnit: 320,
       stats: { camera: 98, quality: 94 },
       specs: { megapixels: 108, aperture: 'f/1.8', sensorSize: '1/1.33"', lensCount: 4, hasOIS: true, videoMax: '8K', flashType: 'quad LED', techType: 'ISOCELL' },
-      realReference: 'Samsung Galaxy S20 Ultra (2020)',
-      milestone: true,
+      realReference: 'Samsung Galaxy S20 Ultra (2020)', milestone: true,
       requiresResearch: 'cam_48mp' },
 
     { id: 'cam_200mp', category: 'camera', tier: 5, minYear: 2023,
@@ -335,32 +307,164 @@ export const COMPONENTS = [
       costPerUnit: 420,
       stats: { camera: 100, quality: 97 },
       specs: { megapixels: 200, aperture: 'f/1.7', sensorSize: '1/1.3"', lensCount: 4, hasOIS: true, videoMax: '8K', flashType: 'quad LED', techType: 'ISOCELL HP2' },
-      realReference: 'Samsung Galaxy S23 Ultra (2023)',
-      milestone: true,
+      realReference: 'Samsung Galaxy S23 Ultra (2023)', milestone: true,
       requiresResearch: 'cam_48mp' },
 
     // ============================================================
-    // BATERAI — versi lama (akan di-update Step 3)
+    // BATERAI — 15 komponen (2000-2026)
     // ============================================================
-    { id: 'bat_nimh', category: 'battery', tier: 1, minYear: 2000, name: 'Baterai NiMH',
-      costPerUnit: 4, stats: { battery: 8, quality: 5 }, requiresResearch: 'bat_nimh' },
-    { id: 'bat_liion', category: 'battery', tier: 1, minYear: 2000, name: 'Baterai Li-Ion',
-      costPerUnit: 8, stats: { battery: 18, quality: 12 }, requiresResearch: 'bat_liion' },
-    { id: 'bat_lipo', category: 'battery', tier: 2, minYear: 2004, name: 'Baterai Li-Po',
-      costPerUnit: 18, stats: { battery: 30, quality: 22 }, requiresResearch: 'bat_lipo' },
-    { id: 'bat_large', category: 'battery', tier: 3, minYear: 2012, name: 'Baterai 2500 mAh',
-      costPerUnit: 45, stats: { battery: 50, quality: 40 }, requiresResearch: 'bat_large' },
-    { id: 'bat_fast', category: 'battery', tier: 4, minYear: 2014, name: 'Fast Charging',
-      costPerUnit: 90, stats: { battery: 65, quality: 58 }, requiresResearch: 'bat_fast' },
-    { id: 'bat_wireless', category: 'battery', tier: 4, minYear: 2017, name: 'Wireless Charging',
-      costPerUnit: 150, stats: { battery: 78, quality: 72 }, requiresResearch: 'bat_wireless' },
-    { id: 'bat_5000', category: 'battery', tier: 5, minYear: 2020, name: 'Baterai 5000 mAh',
-      costPerUnit: 210, stats: { battery: 88, quality: 82 }, requiresResearch: 'bat_big5000' },
-    { id: 'bat_graphene', category: 'battery', tier: 5, minYear: 2024, name: 'Baterai Graphene',
-      costPerUnit: 400, stats: { battery: 100, quality: 95 }, requiresResearch: 'bat_graphene' },
+    { id: 'bat_nimh', category: 'battery', tier: 1, minYear: 2000,
+      name: 'NiMH 900 mAh',
+      icon: 'battery',
+      description: 'Nikel-Metal Hidrida — standar ponsel fitur awal, punya memory effect.',
+      costPerUnit: 4,
+      stats: { battery: 8, quality: 5 },
+      specs: { capacityMah: 900, weightG: 28, chargingW: 2, cycles: 500, voltageV: 1.2, techType: 'NiMH', removable: true },
+      realReference: 'Nokia BLS-2 (2000)', milestone: false,
+      requiresResearch: 'bat_nimh' },
+
+    { id: 'bat_liion', category: 'battery', tier: 1, minYear: 2000,
+      name: 'Li-Ion 900 mAh',
+      icon: 'battery',
+      description: 'Lithium-Ion pertama di ponsel — lebih ringan, tanpa memory effect.',
+      costPerUnit: 8,
+      stats: { battery: 18, quality: 12 },
+      specs: { capacityMah: 900, weightG: 22, chargingW: 2, cycles: 500, voltageV: 3.6, techType: 'Li-Ion', removable: true },
+      realReference: 'Nokia BLB-2 (2000)', milestone: true,
+      requiresResearch: 'bat_liion' },
+
+    { id: 'bat_liion_1000', category: 'battery', tier: 1, minYear: 2001,
+      name: 'Li-Ion 1000 mAh',
+      icon: 'battery',
+      description: 'Li-Ion generasi kedua — daya tahan lebih lama.',
+      costPerUnit: 10,
+      stats: { battery: 22, quality: 15 },
+      specs: { capacityMah: 1000, weightG: 22, chargingW: 2, cycles: 500, voltageV: 3.7, techType: 'Li-Ion', removable: true },
+      realReference: 'Nokia BLD-3 (2001)', milestone: false,
+      requiresResearch: 'bat_liion' },
+
+    { id: 'bat_liion_1200', category: 'battery', tier: 1, minYear: 2003,
+      name: 'Li-Ion 1200 mAh',
+      icon: 'battery',
+      description: 'Li-Ion 1200 mAh — standar ponsel multimedia era Symbian.',
+      costPerUnit: 12,
+      stats: { battery: 25, quality: 18 },
+      specs: { capacityMah: 1200, weightG: 25, chargingW: 2.5, cycles: 500, voltageV: 3.7, techType: 'Li-Ion', removable: true },
+      realReference: 'Nokia BP-6M (2003)', milestone: false,
+      requiresResearch: 'bat_liion' },
+
+    { id: 'bat_lipo', category: 'battery', tier: 2, minYear: 2004,
+      name: 'Li-Po 850 mAh Slim',
+      icon: 'battery',
+      description: 'Lithium-Polymer — tipis dan fleksibel, memungkinkan desain slim.',
+      costPerUnit: 18,
+      stats: { battery: 30, quality: 22 },
+      specs: { capacityMah: 850, weightG: 16, chargingW: 2.5, cycles: 400, voltageV: 3.7, techType: 'Li-Po', removable: true },
+      realReference: 'Motorola RAZR V3 (2004)', milestone: true,
+      requiresResearch: 'bat_lipo' },
+
+    { id: 'bat_lipo_1500', category: 'battery', tier: 2, minYear: 2007,
+      name: 'Li-Po 1500 mAh',
+      icon: 'battery',
+      description: 'Li-Po kapasitas naik — mendukung layar besar & fitur multimedia.',
+      costPerUnit: 24,
+      stats: { battery: 38, quality: 30 },
+      specs: { capacityMah: 1500, weightG: 28, chargingW: 3, cycles: 500, voltageV: 3.7, techType: 'Li-Po', removable: true },
+      realReference: 'iPhone (2007)', milestone: false,
+      requiresResearch: 'bat_lipo' },
+
+    { id: 'bat_sealed_2000', category: 'battery', tier: 3, minYear: 2010,
+      name: 'Li-Po 2000 mAh Sealed',
+      icon: 'battery',
+      description: 'Baterai tertanam (non-removable) — tren ponsel modern.',
+      costPerUnit: 35,
+      stats: { battery: 44, quality: 34 },
+      specs: { capacityMah: 2000, weightG: 35, chargingW: 5, cycles: 500, voltageV: 3.8, techType: 'Li-Po Sealed', removable: false },
+      realReference: 'iPhone 4 (2010)', milestone: false,
+      requiresResearch: 'bat_lipo' },
+
+    { id: 'bat_large', category: 'battery', tier: 3, minYear: 2012,
+      name: 'Li-Po 2500 mAh',
+      icon: 'battery',
+      description: 'Baterai 2500 mAh — standar smartphone layar besar era 2012.',
+      costPerUnit: 45,
+      stats: { battery: 50, quality: 40 },
+      specs: { capacityMah: 2500, weightG: 42, chargingW: 5, cycles: 500, voltageV: 3.8, techType: 'Li-Po', removable: false },
+      realReference: 'Samsung Galaxy S3 (2012)', milestone: false,
+      requiresResearch: 'bat_large' },
+
+    { id: 'bat_fast', category: 'battery', tier: 4, minYear: 2014,
+      name: 'Li-Po 3000 mAh + QC 2.0',
+      icon: 'battery',
+      description: 'Fast Charging pertama (18W) — mengisi 50% dalam 30 menit.',
+      costPerUnit: 90,
+      stats: { battery: 65, quality: 58 },
+      specs: { capacityMah: 3000, weightG: 48, chargingW: 18, cycles: 500, voltageV: 3.85, techType: 'Li-Po QC 2.0', removable: false },
+      realReference: 'Qualcomm Quick Charge 2.0 (2014)', milestone: true,
+      requiresResearch: 'bat_fast' },
+
+    { id: 'bat_wireless', category: 'battery', tier: 4, minYear: 2017,
+      name: 'Li-Po 3500 mAh + Qi 10W',
+      icon: 'battery',
+      description: 'Baterai dengan wireless charging Qi standar.',
+      costPerUnit: 150,
+      stats: { battery: 78, quality: 72 },
+      specs: { capacityMah: 3500, weightG: 45, chargingW: 15, wirelessW: 10, cycles: 500, voltageV: 3.85, techType: 'Li-Po Qi', removable: false },
+      realReference: 'iPhone X (2017)', milestone: true,
+      requiresResearch: 'bat_wireless' },
+
+    { id: 'bat_fast_40w', category: 'battery', tier: 4, minYear: 2018,
+      name: 'Li-Po 4000 mAh + 40W',
+      icon: 'battery',
+      description: 'Fast charging 40W — 70% dalam 30 menit.',
+      costPerUnit: 120,
+      stats: { battery: 72, quality: 65 },
+      specs: { capacityMah: 4000, weightG: 55, chargingW: 40, cycles: 600, voltageV: 3.85, techType: 'Li-Po USB-PD', removable: false },
+      realReference: 'Huawei SuperCharge 40W (2018)', milestone: false,
+      requiresResearch: 'bat_fast' },
+
+    { id: 'bat_5000', category: 'battery', tier: 5, minYear: 2020,
+      name: 'Li-Po 5000 mAh + 30W',
+      icon: 'battery',
+      description: 'Baterai 5000 mAh — daya tahan seharian, standar mid-range modern.',
+      costPerUnit: 210,
+      stats: { battery: 88, quality: 82 },
+      specs: { capacityMah: 5000, weightG: 62, chargingW: 30, cycles: 800, voltageV: 3.87, techType: 'Li-Po', removable: false },
+      realReference: 'Samsung Galaxy M51 (2020)', milestone: false,
+      requiresResearch: 'bat_big5000' },
+
+    { id: 'bat_100w', category: 'battery', tier: 5, minYear: 2022,
+      name: 'Li-Po 5000 mAh + 100W',
+      icon: 'battery',
+      description: 'Dual-cell 100W — mengisi penuh dalam ~18 menit.',
+      costPerUnit: 280,
+      stats: { battery: 95, quality: 88 },
+      specs: { capacityMah: 5000, weightG: 58, chargingW: 100, cycles: 800, voltageV: 3.87, techType: 'Li-Po Dual-cell', removable: false },
+      realReference: 'Xiaomi 12 Pro (2022)', milestone: true,
+      requiresResearch: 'bat_fast' },
+
+    { id: 'bat_sicarbon', category: 'battery', tier: 5, minYear: 2024,
+      name: 'Si-Carbon 5500 mAh',
+      icon: 'battery',
+      description: 'Silicon-Carbon anode — kapasitas besar di bodi tipis.',
+      costPerUnit: 380,
+      stats: { battery: 98, quality: 93 },
+      specs: { capacityMah: 5500, weightG: 48, chargingW: 80, cycles: 1000, voltageV: 3.9, techType: 'Si-Carbon', removable: false },
+      realReference: 'Xiaomi 14 Ultra (2024)', milestone: true,
+      requiresResearch: 'bat_big5000' },
+
+    { id: 'bat_graphene', category: 'battery', tier: 5, minYear: 2024,
+      name: 'Graphene / Solid-State 6000 mAh',
+      icon: 'battery',
+      description: 'Baterai solid-state / graphene — masa depan energi mobile.',
+      costPerUnit: 500,
+      stats: { battery: 100, quality: 97 },
+      specs: { capacityMah: 6000, weightG: 42, chargingW: 120, cycles: 1500, voltageV: 4.0, techType: 'Graphene / Solid-state', removable: false },
+      realReference: 'Prototipe industri (2025+)', milestone: true,
+      requiresResearch: 'bat_graphene' },
 
     // ============================================================
-    // CHIP — versi lama (akan di-update Step 4)
+    // CHIP — versi lama (Step 4)
     // ============================================================
     { id: 'chip_single', category: 'chip', tier: 1, minYear: 2000, name: 'Chip Single-core',
       costPerUnit: 8, stats: { performance: 8, quality: 6 }, requiresResearch: 'chip_single' },
@@ -380,7 +484,7 @@ export const COMPONENTS = [
       costPerUnit: 480, stats: { performance: 100, quality: 95 }, requiresResearch: 'chip_3nm' },
 
     // ============================================================
-    // JARINGAN — versi lama (akan di-update Step 4)
+    // JARINGAN — versi lama (Step 4)
     // ============================================================
     { id: 'net_gsm', category: 'network', tier: 1, minYear: 2000, name: 'GSM',
       costPerUnit: 3, stats: { connectivity: 8, quality: 5 }, requiresResearch: 'net_gsm' },
@@ -400,7 +504,7 @@ export const COMPONENTS = [
       costPerUnit: 160, stats: { connectivity: 100, quality: 92 }, requiresResearch: 'net_wifi6' },
 
     // ============================================================
-    // BODI — versi lama (akan di-update Step 5)
+    // BODI — versi lama (Step 5)
     // ============================================================
     { id: 'body_plastic',   category: 'body', tier: 1, minYear: 2000, name: 'Plastik',
       costPerUnit: 3,   stats: { quality: 5,  design: 4 },   requiresResearch: null },
@@ -414,7 +518,7 @@ export const COMPONENTS = [
       costPerUnit: 100, stats: { quality: 55, design: 62 },  requiresResearch: null },
 
     // ============================================================
-    // FORM FACTOR — versi lama (akan di-update Step 5)
+    // FORM FACTOR — versi lama (Step 5)
     // ============================================================
     { id: 'ff_candybar',  category: 'form_factor', tier: 1, minYear: 2000, name: 'Candybar',
       costPerUnit: 0, stats: { usability: 20, design: 15 }, requiresResearch: null,
@@ -457,4 +561,4 @@ export function getComponentsByCategory(catId) {
 }
 export function getBodyColorById(id) {
     return BODY_COLORS.find(c => c.id === id) || BODY_COLORS[0];
-                              }
+              }
