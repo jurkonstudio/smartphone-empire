@@ -1,12 +1,10 @@
 // FILE: src/ui/panels/DashboardPanel.js
-// Rework v2026.1 — 7 kartu hierarkis, timeline collapsible.
+// v2026.1 — 7 kartu hierarkis.
 // v2027.13a — i18n.
+// v2027.26a — Focus/News/Activity dipindah ke Home carousel.
 import { renderKpiCards } from './KpiCards.js';
-import { renderProgressPanel } from './ProgressPanel.js';
 import { renderTimelinePanel } from './TimelinePanel.js';
-import { renderLogPanel } from './LogPanel.js';
 import { renderCashChart } from './CashChart.js';
-import { renderNewsListPanel } from './NewsListPanel.js';
 import { t } from '../../core/LanguageService.js';
 
 function escapeHtml(s) {
@@ -60,10 +58,7 @@ function _renderTimelineCollapsible() {
 
 export function renderDashboard(state, timeSnapshot, researchSystem, teamSystem) {
     return renderKpiCards(state, timeSnapshot, teamSystem) +
-        renderProgressPanel(state, researchSystem) +
         renderCashChart(state) +
-        renderNewsListPanel(state) +
         _renderPublicHighlight(state) +
-        renderLogPanel(state, { limit: 5 }) +
         _renderTimelineCollapsible();
 }
