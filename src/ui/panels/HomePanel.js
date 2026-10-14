@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/HomePanel.js
-// v2027.18a — 3D map + carousel + dots indicator. Tanpa pill text.
+// v2027.19a — + refreshHomeSlides() untuk update real-time.
 import { t } from '../../core/LanguageService.js';
 import { renderCampusLoading } from '../campus/CampusFallback.js';
 import { renderProgressPanel } from './ProgressPanel.js';
@@ -15,21 +15,22 @@ let _intersectionObserver = null;
 // ============================================================
 // SLIDE RENDER
 // ============================================================
-function _renderSlide(tabId, state, research) {
-    let inner = '';
+function _renderSlideInner(tabId, state, research) {
     try {
-        if (tabId === 'focus') {
-            inner = renderProgressPanel(state, research);
-        } else if (tabId === 'news') {
-            inner = renderNewsListPanel(state);
-        } else if (tabId === 'activity') {
-            inner = renderLogPanel(state, { limit: 8 });
-        }
+        if (tabId === 'focus')    return renderProgressPanel(state, research);
+        if (tabId === 'news')     return renderNewsListPanel(state);
+        if (tabId === 'activity') return renderLogPanel(state, { limit: 8 });
     } catch (e) {
         console.error('[HomePanel] slide error:', tabId, e);
-        inner = '<div class="card"><div class="log-empty">Error</div></div>';
+        return '<div class="card"><div class="log-empty">Error</div></div>';
     }
-    return '<div class="home-slide" data-home-slide="' + tabId + '">' + inner + '</div>';
+    return '';
+}
+
+function _renderSlide(tabId, state, research) {
+    return '<div class="home-slide" data-home-slide="' + tabId + '">' +
+        _renderSlideInner(tabId, state, research) +
+        '</div>';
 }
 
 // ============================================================
@@ -39,8 +40,7 @@ function _renderDots() {
     return '<div class="home-dots" role="tablist">' +
         TABS.map(function (id) {
             return '<button class="home-dot ' + (id === _activeTab ? 'active' : '') + '" ' +
-                'data-home-dot="' + id + '" type="button" ' +
-                'aria-label="' + id + '"></button>';
+                'data-home-dot="' + id + '" type="button" aria-label="' + id + '"></button>';
         }).join('') +
         '</div>';
 }
@@ -73,22 +73,38 @@ export function initHomeTabs(rootEl) {
     const carousel = rootEl.querySelector('[data-home-carousel]');
     if (!carousel) return;
 
-    // Dots: tap untuk pindah tab
     rootEl.querySelectorAll('[data-home-dot]').forEach(function (btn) {
         btn.addEventListener('click', function () {
             _goToTab(carousel, btn.dataset.homeDot, true);
         });
     });
- 
-    // Biarkan browser menangani scroll horizontal secara native.
-// Cukup pastikan event tidak di-preventDefault oleh kode lain.
-carousel.style.touchAction = 'pan-x';
+
+    carousel.style.touchAction = 'pan-x';
 
     requestAnimationFrame(function () {
         const idx = TABS.indexOf(_activeTab);
         if (idx > 0) carousel.scrollLeft = idx * carousel.clientWidth;
         _observeScroll(carousel);
         _updateDots(carousel);
+    });
+}
+
+// ============================================================
+// REAL-TIME REFRESH — dipanggil main.js saat event berubah
+// Update inner tiap slide tanpa reset scroll / carousel.
+// ============================================================
+export function refreshHomeSlides() {
+    const root = document.querySelector('.home-wrapper');
+    if (!root) return;
+    const game = window.__game;
+    if (!game || !game.state) return;
+    const state = game.state.get();
+    const research = game.research || null;
+
+    TABS.forEach(function (id) {
+        const slide = root.querySelector('[data-home-slide="' + id + '"]');
+        if (!slide) return;
+        slide.innerHTML = _renderSlideInner(id, state, research);
     });
 }
 
@@ -122,7 +138,6 @@ function _observeScroll(carousel) {
     if (_intersectionObserver && _observedCarousel === carousel) return;
     if (_intersectionObserver) _intersectionObserver.disconnect();
     _observedCarousel = carousel;
-
     if (typeof IntersectionObserver === 'undefined') return;
 
     _intersectionObserver = new IntersectionObserver(function (entries) {
