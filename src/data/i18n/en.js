@@ -1,6 +1,6 @@
 // FILE: src/data/i18n/en.js
 // English dictionary. Flat keys with category prefix.
-// v2027.13b — fix: hapus kurung kurawal premature.
+// v2027.33b — tambah keys validasi nama.
 
 export const en = {
     // NAVIGATION
@@ -108,7 +108,11 @@ export const en = {
     'settings.edit_name.placeholder': 'E.g. Nova Tech',
     'settings.edit_name.save':     'Save',
     'settings.edit_name.error_empty': 'Name cannot be empty.',
-    'settings.edit_name.error_long':  'Maximum 32 characters.',
+    'settings.edit_name.error_long':  'Maximum 24 characters.',
+    'settings.edit_name.error_too_short': 'Name must be at least 2 characters.',
+    'settings.edit_name.error_competitor':'This name is used by a competitor. Pick another.',
+    'settings.edit_name.error_brand':     'This name is similar to a famous brand. Pick another.',
+    'settings.edit_name.error_profanity': 'Name contains inappropriate words. Pick another.',
     'settings.edit_name.success':  'Name updated.',
 
     'settings.difficulty.santai': 'Relaxed',
@@ -282,8 +286,8 @@ export const en = {
     'staff.detail.train_btn':     '📚 Intensive Training (+30 progress) — ${cost}',
     'staff.detail.fire_btn':      '⛔ Fire Staff (severance ${severance})',
     'staff.detail.close':         'Close',
-    
-        // RESEARCH
+
+    // RESEARCH
     'research.subtab.tech':    'Technology',
     'research.subtab.os':      'OS',
     'research.subtab.history': 'History',
@@ -714,6 +718,12 @@ export const en = {
     'onb.diff_sulit':         'Hard',
     'onb.diff_sulit_desc':    'Small capital, high costs, aggressive competitors.',
     'onb.submit':             'Start Playing',
+    'onb.name.error_empty':     'Company name cannot be empty.',
+    'onb.name.error_too_short': 'Name must be at least 2 characters.',
+    'onb.name.error_too_long':  'Name must be at most 24 characters.',
+    'onb.name.error_competitor':'This name is used by a competitor. Pick another.',
+    'onb.name.error_brand':     'This name is similar to a famous brand. Pick another.',
+    'onb.name.error_profanity': 'Name contains inappropriate words. Pick another.',
 
     // GAME OVER
     'gameover.title':         'Company Bankrupt',
@@ -868,60 +878,51 @@ export const en = {
     // TUTORIAL
     'tut.skip':               'Skip',
     'tut.next':               'Next',
-    
-// CAMPUS BUILDINGS
-'campus.building.hq':              'Headquarters',
-'campus.building.hq.desc':         'The company\'s main office.',
-'campus.building.lab_rnd':         'R&D Lab',
-'campus.building.lab_rnd.desc':    'Research and development hub.',
-'campus.building.marketing':       'Marketing Office',
-'campus.building.marketing.desc':  'Base of operations for the marketing team.',
-'campus.building.fab':             'Fabrication',
-'campus.building.fab.desc':        'Chip factory for mass production.',
-'campus.building.warehouse':       'Warehouse',
-'campus.building.warehouse.desc':  'Storage for finished product stock.',
-'campus.building.datacenter':      'Data Center',
-'campus.building.datacenter.desc': 'Cloud servers for OS and AI services.',
-'campus.building.cafeteria':       'Cafeteria',
-'campus.building.cafeteria.desc':  'Dining and break area for employees.',
-'campus.building.parking':         'Parking Lot',
-'campus.building.parking.desc':    'Parking area for staff and visitors.',
 
-'campus.req.start_research':   'Start your first research',
-'campus.req.hire_marketer':    'Hire your first marketer',
-'campus.req.build_fab':        'Build a fabrication plant',
-'campus.req.release_product':  'Release your first product',
-'campus.req.create_os':        'Create your first OS',
-'campus.req.staff_5':          'Have 5 staff',
-'campus.req.staff_3':          'Have 3 staff',
+    // CAMPUS BUILDINGS
+    'campus.building.hq':              'Headquarters',
+    'campus.building.hq.desc':         'The company\'s main office.',
+    'campus.building.lab_rnd':         'R&D Lab',
+    'campus.building.lab_rnd.desc':    'Research and development hub.',
+    'campus.building.marketing':       'Marketing Office',
+    'campus.building.marketing.desc':  'Base of operations for the marketing team.',
+    'campus.building.fab':             'Fabrication',
+    'campus.building.fab.desc':        'Chip factory for mass production.',
+    'campus.building.warehouse':       'Warehouse',
+    'campus.building.warehouse.desc':  'Storage for finished product stock.',
+    'campus.building.datacenter':      'Data Center',
+    'campus.building.datacenter.desc': 'Cloud servers for OS and AI services.',
+    'campus.building.cafeteria':       'Cafeteria',
+    'campus.building.cafeteria.desc':  'Dining and break area for employees.',
+    'campus.building.parking':         'Parking Lot',
+    'campus.building.parking.desc':    'Parking area for staff and visitors.',
 
-'campus.unit.staff':     'staff',
-'campus.unit.research':  'research',
-'campus.unit.marketer':  'marketers',
-'campus.unit.units':     'units',
-'campus.unit.osver':     'versions',
-'campus.unit.level':     'levels',
+    'campus.req.start_research':   'Start your first research',
+    'campus.req.hire_marketer':    'Hire your first marketer',
+    'campus.req.build_fab':        'Build a fabrication plant',
+    'campus.req.release_product':  'Release your first product',
+    'campus.req.create_os':        'Create your first OS',
+    'campus.req.staff_5':          'Have 5 staff',
+    'campus.req.staff_3':          'Have 3 staff',
 
-'campus.manager.title':      'Campus Buildings',
-'campus.manager.subtitle':   '{built} of {total} buildings built',
-'campus.manager.empty':      'No buildings available yet.',
-'campus.manager.not_built':  'Not built',
-'campus.manager.max_level':  'MAX',
-'campus.manager.level':      'Level {n}',
-'campus.manager.to_next':    '{cur}/{next} {unit}',
-'campus.manager.requirement':'Requires: {req}',
-'campus.manager.category.core':       'Core',
-'campus.manager.category.innovation': 'Innovation',
-'campus.manager.category.marketing':  'Marketing',
-'campus.manager.category.industry':   'Industry',
-'campus.manager.category.support':    'Facilities',
+    'campus.unit.staff':     'staff',
+    'campus.unit.research':  'research',
+    'campus.unit.marketer':  'marketers',
+    'campus.unit.units':     'units',
+    'campus.unit.osver':     'versions',
+    'campus.unit.level':     'levels',
 
-    // ONBOARDING — Name validation
-'onb.name.error_empty':    'Nama perusahaan tidak boleh kosong.',
-'onb.name.error_too_short':'Nama minimal 2 karakter.',
-'onb.name.error_too_long': 'Nama maksimal 24 karakter.',
-'onb.name.error_competitor':'Nama ini sudah dipakai kompetitor. Pilih nama lain.',
-'onb.name.error_profanity':'Nama mengandung kata yang tidak pantas. Pilih nama lain.',
-'onb.name.error_brand':    'Nama ini mirip merek terkenal. Pilih nama lain.',
-'onb.name.hint':           'Pilih nama yang unik untuk perusahaanmu.',
+    'campus.manager.title':      'Campus Buildings',
+    'campus.manager.subtitle':   '{built} of {total} buildings built',
+    'campus.manager.empty':      'No buildings available yet.',
+    'campus.manager.not_built':  'Not built',
+    'campus.manager.max_level':  'MAX',
+    'campus.manager.level':      'Level {n}',
+    'campus.manager.to_next':    '{cur}/{next} {unit}',
+    'campus.manager.requirement':'Requires: {req}',
+    'campus.manager.category.core':       'Core',
+    'campus.manager.category.innovation': 'Innovation',
+    'campus.manager.category.marketing':  'Marketing',
+    'campus.manager.category.industry':   'Industry',
+    'campus.manager.category.support':    'Facilities',
 };
