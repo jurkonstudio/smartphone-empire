@@ -1,8 +1,8 @@
 // FILE: src/ui/panels/DesignWizard.js
-// v2027.4a — fix 3 kritis:
-//   1. Default harga adaptif (unitCost × 2, bulat 50)
-//   2. Kategori pakai renderIcon (bukan emoji string)
-//   3. Tombol Rilis disabled saat margin negatif
+// v2027.11a — Fase 1 mockup polish:
+//   1. Mockup size adaptive (200/220) untuk HP sempit
+//   2. Tambah spec strip di bawah mockup (Nama, Harga, Skor, Margin, Layar, Chip)
+//   3. Logika step, validasi, dan API renderPhoneMockup TIDAK diubah
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
 import { state } from '../../core/GameState.js';
@@ -138,6 +138,7 @@ function _render() {
         </div>
 
         <div class="wiz-mockup-live" data-wiz-mockup-container></div>
+        <div class="wiz-spec-strip" data-wiz-spec-strip></div>
         <div class="wiz-mockup-actions">
             <button class="btn-secondary" data-wiz-detail style="font-size:12px;min-height:34px;padding:6px 12px;">Lihat Detail</button>
         </div>
@@ -198,7 +199,6 @@ function _bindStep() {
             _wizardState.price = parseInt(e.target.value, 10) || 0;
             _wizardState.priceManuallyEdited = true;
             _refreshPreview();
-            // Update tombol disabled state via re-render step 4
             _updateConfirmButtonState();
         });
     }
@@ -223,12 +223,11 @@ function _bindStep() {
     const detailBtn = root.querySelector('[data-wiz-detail]');
     if (detailBtn) detailBtn.addEventListener('click', () => _openDetailModal());
 
-    // Update tombol confirm state saat pertama render step 4
     if (_wizardState.step === 4) _updateConfirmButtonState();
 }
 
 // ============================================================
-// UPDATE CONFIRM BUTTON STATE (v2027.4a)
+// UPDATE CONFIRM BUTTON STATE
 // ============================================================
 function _updateConfirmButtonState() {
     const root = document.querySelector('[data-modal-id="design-wizard"]');
@@ -279,13 +278,11 @@ function _next() {
             ToastService.warning('Pilih OS, bodi, dan warna.');
             return;
         }
-        // [v2027.4a] Auto-set harga default kalau user belum pernah ubah.
         if (!s.priceManuallyEdited) {
             const ps = window.__game && window.__game.products;
             let unitCost = 0;
             try { unitCost = ps && ps.computeUnitCost ? ps.computeUnitCost(s) : 0; } catch (e) {}
             if (unitCost > 0) {
-                // Harga = unitCost × 2, bulatkan ke atas kelipatan 50, minimum 200.
                 const raw = unitCost * 2;
                 const rounded = Math.ceil(raw / 50) * 50;
                 s.price = Math.max(200, rounded);
@@ -412,7 +409,6 @@ function _step2(s) {
             options = `<div class="wiz-empty">Belum ada komponen — riset dulu atau tunggu tahun berikutnya.</div>`;
         }
 
-        // [v2027.4a] Icon via renderIcon, bukan string emoji
         const iconHtml = cat ? renderIcon(cat.icon, 14, 'style="vertical-align:middle;margin-right:5px;"') : '';
 
         return `
@@ -533,6 +529,11 @@ function _step4(s) {
 // ============================================================
 // LIVE PREVIEW
 // ============================================================
+function _getAdaptiveSize() {
+    if (typeof window === 'undefined') return 220;
+    return window.innerWidth < 380 ? 200 : 220;
+}
+
 function _refreshPreview() {
     const root = document.querySelector('[data-modal-id="design-wizard"]');
     if (!root) return;
@@ -540,10 +541,21 @@ function _refreshPreview() {
     const mockupContainer = root.querySelector('[data-wiz-mockup-container]');
     if (mockupContainer) {
         try {
-            mockupContainer.innerHTML = renderPhoneMockup(_wizardState, { size: 180 });
+            const size = _getAdaptiveSize();
+            mockupContainer.innerHTML = renderPhoneMockup(_wizardState, { size: size });
         } catch (e) {
             console.error('[DesignWizard] Mockup error:', e);
             mockupContainer.innerHTML = '<div style="color:var(--text-mute);font-size:11px;">Mockup error</div>';
+        }
+    }
+
+    const specStrip = root.querySelector('[data-wiz-spec-strip]');
+    if (specStrip) {
+        try {
+            specStrip.innerHTML = _specStripHtml(_wizardState);
+        } catch (e) {
+            console.error('[DesignWizard] Spec strip error:', e);
+            specStrip.innerHTML = '';
         }
     }
 
@@ -575,6 +587,60 @@ function _computeStats(s) {
         stat[k] = Math.max(0, Math.min(100, Math.round(stat[k])));
     });
     return stat;
+}
+
+// ============================================================
+// SPEC STRIP (v2027.11a)
+// ============================================================
+function _specStripHtml(s) {
+    const ps = window.__game && window.__game.products;
+    if (!ps) return '';
+
+    const name = (s.name || '').trim();
+    const displayName = name ? escapeHtml(name) : '<span style="opacity:0.5;">Tanpa Nama</span>';
+    const price = s.price || 0;
+
+    let unitCost = 0;
+    let qualityScore = 0;
+    try {
+        unitCost = ps.computeUnitCost ? ps.computeUnitCost(s) : 0;
+        const stats = _computeStats(s);
+        qualityScore = stats.qualityScore || 0;
+    } catch (e) {}
+
+    const margin = price - unitCost;
+    const marginPct = price > 0 ? Math.round((margin / price) * 100) : 0;
+    const marginColor = margin >= 0 ? 'var(--success)' : 'var(--danger)';
+
+    const displayComp = s.displayId ? getComponentById(s.displayId) : null;
+    const chipComp = s.chipId ? getComponentById(s.chipId) : null;
+    const displayLabel = displayComp ? displayComp.name : '—';
+    const chipLabel = chipComp ? chipComp.name : '—';
+
+    return `
+        <div class="wiz-spec-head">
+            <span class="wiz-spec-name">${displayName}</span>
+            <span class="wiz-spec-price">$${price}</span>
+        </div>
+        <div class="wiz-spec-meta">
+            <div class="wiz-spec-item">
+                <span class="wiz-spec-label">Skor</span>
+                <span class="wiz-spec-value">${qualityScore}/100</span>
+            </div>
+            <div class="wiz-spec-item">
+                <span class="wiz-spec-label">Margin</span>
+                <span class="wiz-spec-value" style="color:${marginColor};">$${margin} (${marginPct}%)</span>
+            </div>
+            <div class="wiz-spec-item">
+                <span class="wiz-spec-label">Layar</span>
+                <span class="wiz-spec-value wiz-spec-trunc" title="${escapeHtml(displayLabel)}">${escapeHtml(displayLabel)}</span>
+            </div>
+            <div class="wiz-spec-item">
+                <span class="wiz-spec-label">Chip</span>
+                <span class="wiz-spec-value wiz-spec-trunc" title="${escapeHtml(chipLabel)}">${escapeHtml(chipLabel)}</span>
+            </div>
+        </div>
+    `;
 }
 
 function _previewHtml(s) {
@@ -666,4 +732,4 @@ function _openDetailModal() {
     `;
 
     Modal.open('design-wizard-detail', html);
-}
+            }
