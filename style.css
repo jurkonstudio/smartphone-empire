@@ -3270,3 +3270,88 @@ body {
     .home-slide { max-height: 38vh; }
     .home-tab { font-size: var(--fs-xs); padding: 8px 4px; }
 }
+/* ============================================================================
+   64. HOME — MAP + CAROUSEL + DOTS (v2027.18a)
+   ============================================================================ */
+
+.home-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.home-map {
+    padding: 0;
+    height: min(45vh, 400px);
+    min-height: 260px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+/* ---------- CAROUSEL ---------- */
+.home-carousel {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    touch-action: pan-x;
+    gap: 0;
+    flex: 1;
+}
+.home-carousel::-webkit-scrollbar { display: none; }
+
+.home-slide {
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    padding: 0;
+    box-sizing: border-box;
+    max-height: 45vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+.home-slide > .card:first-child { margin-top: 0; }
+.home-slide > .card:last-child { margin-bottom: 0; }
+
+/* ---------- DOTS ---------- */
+.home-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 0 6px;
+    flex-shrink: 0;
+}
+
+.home-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--bg-4);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: background 0.25s, transform 0.25s, width 0.25s;
+    -webkit-tap-highlight-color: transparent;
+}
+.home-dot.active {
+    background: var(--accent);
+    width: 22px;
+    border-radius: 4px;
+    transform: none;
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+@media (max-width: 380px) {
+    .home-map { height: min(42vh, 340px); min-height: 220px; }
+    .home-slide { max-height: 42vh; }
+    .home-dots { padding: 10px 0 4px; }
+}
