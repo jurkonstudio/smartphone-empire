@@ -3948,3 +3948,40 @@ body {
     color: var(--warn);
     margin-top: 1px;
 }
+/* ============================================================
+   HQ PANEL v2027.8a — Section dividers (scroll)
+   ============================================================ */
+
+.hq-section-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 18px 2px 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+}
+.hq-section-divider:first-child {
+    padding-top: 4px;
+    border-top: none;
+    margin-top: 4px;
+}
+.hq-section-icon {
+    color: var(--text-tertiary);
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+.hq-section-label {
+    font-size: 10.5px;
+    font-weight: var(--fw-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.hq-section-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
