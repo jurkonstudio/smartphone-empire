@@ -1,4 +1,5 @@
 // FILE: src/core/GameState.js
+// v2027.1f — jamin starter research selalu ada di save lama.
 import { TIME_CONFIG } from '../config/time.config.js';
 import { BALANCE } from '../data/balance.data.js';
 import { DIFFICULTY, LOG_TYPES } from '../config/constants.js';
@@ -47,8 +48,6 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             totalCompleted: (BALANCE.starterResearch || []).length
         },
 
-        // V6d — riset chip TERPISAH dari riset biasa.
-        // Node chip dari chip-research.data.js disimpan di sini.
         chipResearch: {
             active: [],
             completed: [],
@@ -96,11 +95,11 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
         marketing: { activeCampaigns: [] },
         reviews: { feed: [] },
 
-        // [V7a-2] tambah headlineHistory untuk dedupe headline bulanan
         news: {
             articles: [],
             lastMilestone: {},
-            headlineHistory: []
+            headlineHistory: [],
+            recapSeeded: false
         },
 
         market: {
@@ -219,6 +218,30 @@ function _skillTierDef(tier) {
         { tier: 5, salaryMult: 4.0 }
     ];
     return tiers.find(t => t.tier === tier) || tiers[0];
+}
+
+// [v2027.1f] Union starter research dari BALANCE ke completed.
+// Idempotent — aman dipanggil berkali-kali. Digunakan saat hydrate
+// untuk save lama yang tidak punya starter.
+function _ensureStarterResearch(data) {
+    if (!data || !data.research) return;
+    if (!Array.isArray(data.research.completed)) data.research.completed = [];
+
+    const starters = BALANCE.starterResearch || [];
+    const missing = starters.filter(function (id) {
+        return data.research.completed.indexOf(id) === -1;
+    });
+
+    if (missing.length) {
+        data.research.completed = data.research.completed.concat(missing);
+        console.info('[GameState] Starter research ditambahkan:', missing.join(', '));
+    }
+
+    // Pastikan totalCompleted sinkron.
+    const total = data.research.completed.length;
+    if (typeof data.research.totalCompleted !== 'number' || data.research.totalCompleted < total) {
+        data.research.totalCompleted = total;
+    }
 }
 
 class GameState {
@@ -362,7 +385,6 @@ class GameState {
             candidatePool: { ...base.candidatePool, ...(incoming.candidatePool || {}) },
             research: { ...base.research, ...(incoming.research || {}) },
 
-            // V6d — merge chipResearch dengan base defaults.
             chipResearch: {
                 ...base.chipResearch,
                 ...(incoming.chipResearch || {}),
@@ -394,12 +416,12 @@ class GameState {
                 ...base.reviews, ...(incoming.reviews || {}),
                 feed: Array.isArray(incoming.reviews && incoming.reviews.feed) ? incoming.reviews.feed : []
             },
-            // [V7a-2] merge headlineHistory
             news: {
                 ...base.news, ...(incoming.news || {}),
                 articles: Array.isArray(incoming.news && incoming.news.articles) ? incoming.news.articles : [],
                 lastMilestone: (incoming.news && incoming.news.lastMilestone) ? incoming.news.lastMilestone : {},
-                headlineHistory: Array.isArray(incoming.news && incoming.news.headlineHistory) ? incoming.news.headlineHistory : []
+                headlineHistory: Array.isArray(incoming.news && incoming.news.headlineHistory) ? incoming.news.headlineHistory : [],
+                recapSeeded: !!(incoming.news && incoming.news.recapSeeded)
             },
             market: {
                 ...base.market, ...(incoming.market || {}),
@@ -425,6 +447,9 @@ class GameState {
             tutorial: { ...base.tutorial, ...(incoming.tutorial || {}) },
             settings: { ...base.settings, ...(incoming.settings || {}) }
         };
+
+        // [v2027.1f] Jamin starter research selalu ada setelah hydrate.
+        _ensureStarterResearch(this.data);
 
         if (typeof this.data.research.totalCompleted !== 'number') this.data.research.totalCompleted = this.data.research.completed.length;
         if (!this.data.market.trends) this.data.market.trends = { ...BALANCE.market.trendsByEra.feature_phone };
