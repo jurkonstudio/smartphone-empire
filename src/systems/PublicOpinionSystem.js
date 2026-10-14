@@ -1,5 +1,5 @@
 // FILE: src/systems/PublicOpinionSystem.js
-// FIX: sentimen tetap 50 saat belum ada produk rilis.
+// v2027.1a — fix reputasi ganda di _startViralEvent & respondToViral.
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
@@ -60,7 +60,6 @@ export class PublicOpinionSystem {
         if (!Array.isArray(fb.suggestions)) fb.suggestions = [];
         if (!fb.perProductSatisfaction) fb.perProductSatisfaction = {};
         if (!fb.competitorSentiment) fb.competitorSentiment = {};
-        // Paksa recompute setelah hydrate (fix save lama)
         this._recomputeSentiment();
         this._updateSuggestions();
         bus.emit('state:changed', this.state.data);
@@ -114,13 +113,12 @@ export class PublicOpinionSystem {
     }
 
     // ============================================================
-    // SENTIMEN — default 50 saat belum ada produk
+    // SENTIMEN
     // ============================================================
     _recomputeSentiment() {
         const data = this.state.data;
         const fb = data.feedback;
 
-        // GUARD KRITIS: kalau belum ada produk rilis → reset semua ke 50
         if (!this._hasReleasedProducts()) {
             fb.sentiment = 50;
             fb.aspectSentiment = {
@@ -325,7 +323,7 @@ export class PublicOpinionSystem {
     }
 
     // ============================================================
-    // VIRAL — guard ketat
+    // VIRAL
     // ============================================================
     _rollForViralEvent() {
         const fb = this.state.data.feedback;
@@ -358,7 +356,8 @@ export class PublicOpinionSystem {
             endsAtMinute: data.time.elapsedGameMinutes + dur * MINUTES_PER_DAY
         };
         fb.activeViral.push(viral);
-        if (ev.effects.reputation) this.state.addReputation((data.market.reputation || 0) + ev.effects.reputation);
+        // [v2027.1a] fix reputasi ganda: kirim delta, bukan current+delta.
+        if (ev.effects.reputation) this.state.addReputation(ev.effects.reputation);
 
         const isPos = ev.type === 'positive';
         ToastService[isPos ? 'success' : 'warning']((isPos ? '✨ ' : '⚠ ') + ev.title);
@@ -391,7 +390,8 @@ export class PublicOpinionSystem {
         if (!resp) return { ok: false, reason: 'Respons tidak valid.' };
         if (data.cash < resp.cost) return { ok: false, reason: 'Uang tidak cukup.' };
         if (resp.cost > 0) this.state.setCash(data.cash - resp.cost);
-        if (resp.effect.reputation) this.state.addReputation((data.market.reputation || 0) + resp.effect.reputation);
+        // [v2027.1a] fix reputasi ganda: kirim delta, bukan current+delta.
+        if (resp.effect.reputation) this.state.addReputation(resp.effect.reputation);
         this._recomputeSentiment();
         if (responseId !== 'ignore') fb.activeViral = fb.activeViral.filter(v => v.id !== viralId);
         this.state.addLog('Respons publik: ' + resp.label + '.', LOG_TYPES.info);
@@ -438,4 +438,4 @@ export class PublicOpinionSystem {
         bus.emit('state:changed', this.state.data);
         return { ok: true, review: rv };
     }
-}
+                }
