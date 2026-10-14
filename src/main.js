@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2027.9 — Team dropdown selector (Tim Aktif / Rekrut / Info).
+// v2027.17a — Home tab carousel + fix header tick i18n.
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -26,7 +26,6 @@ import { FabSystem } from './systems/FabSystem.js';
 import { NewsSystem } from './systems/NewsSystem.js';
 import { renderHeader } from './ui/layout/Header.js';
 import { renderMobileNav } from './ui/layout/MobileNav.js';
-import { renderDashboard } from './ui/panels/DashboardPanel.js';
 import { renderEmptyState } from './ui/panels/EmptyState.js';
 import { renderSettingsPanel, bindSettingsActions } from './ui/panels/SettingsPanel.js';
 import { renderGuidePanel } from './ui/panels/GuidePanel.js';
@@ -47,7 +46,7 @@ import { openViralResponseModal } from './ui/panels/PublicOpinionPanel.js';
 import { drawSalesChart } from './ui/panels/SalesChart.js';
 import { openCandidateDetailModal, setRecruitFilter, setTeamMode } from './ui/panels/TeamPanel.js';
 import { renderHqPanel } from './ui/panels/HqPanel.js';
-import { renderHomePanel } from './ui/panels/HomePanel.js';
+import { renderHomePanel, initHomeTabs } from './ui/panels/HomePanel.js';
 import { mountCampusMap, unmountCampusMap } from './ui/campus/CampusMap.js';
 import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
 import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
@@ -189,7 +188,7 @@ function renderView(opts) {
         console.error('[renderView] Error:', err);
         html = '<div class="card" style="border-color:var(--danger);margin-top:20px;"><div class="card-title" style="color:var(--danger);">Error Render</div><div style="font-size:13px;line-height:1.6;word-break:break-word;"><b>View:</b> ' + activeView + '<br><b>Error:</b> ' + (err && err.message ? err.message : 'Unknown') + '</div></div>';
     }
-    unmountCampusMap(); // bersihkan scene 3D sebelum DOM view diganti
+    unmountCampusMap();
     els.view.innerHTML = html;
 
     if (!soft) {
@@ -216,6 +215,8 @@ function renderView(opts) {
         if (activeView === 'dashboard') {
             var campusEl = els.view.querySelector('#campus-map');
             if (campusEl) mountCampusMap(campusEl, state.get());
+            var wrapperEl = els.view.querySelector('.home-wrapper');
+            if (wrapperEl) initHomeTabs(wrapperEl);
         }
     } catch (err) { console.error('[renderView] Post:', err); }
 }
@@ -279,7 +280,6 @@ function vibrate(ms) {
 // ============ CLICKS ============
 function bindGlobalClicks() {
     document.body.addEventListener('click', function (e) {
-        // ---- Sound feedback ----
         try {
             var clickable = e.target.closest('button, [role="button"], .nav-btn, .chip, .chip-small, .subtab-btn, .wiz-option, .wiz-color, .staff-row, .cand-row');
             if (clickable && !clickable.disabled) {
@@ -357,11 +357,9 @@ function bindGlobalClicks() {
             return;
         }
 
-        // ============ HQ SUB-TAB ============
         var hqSubBtn = e.target.closest('[data-hq-subtab]');
         if (hqSubBtn) { e.preventDefault(); activeHqSubtab = hqSubBtn.dataset.hqSubtab; renderView(); return; }
 
-        // ============ TEAM DROPDOWN MODE ============
         var teamModeBtn = e.target.closest('[data-team-mode]');
         if (teamModeBtn) {
             e.preventDefault();
@@ -603,19 +601,19 @@ function bindProgressEvents() {
 // ============ TIME ============
 function bindTimeEvents() {
     bus.on('time:tick', function () {
-    var meta = els.header && els.header.querySelector('.header-meta');
-    if (!meta) return;
-    var snap = getTime();
-    var hh = String(Math.floor(snap.currentHour)).padStart(2, '0');
-    var mm = String(Math.floor(snap.currentMinute)).padStart(2, '0');
-    var mKey = 'date.month.' + (snap.currentMonth || 1);
-    var mShort = LanguageService.t(mKey);
-    if (mShort === mKey) mShort = String(snap.currentMonth || 1);
-    var d = meta.querySelector('[data-time-date]');
-    if (d) d.textContent = LanguageService.t('header.day_prefix') + ' ' + snap.currentDay + ' ' + mShort + ' ' + snap.currentYear;
-    var c = meta.querySelector('[data-time-clock]'); if (c) c.textContent = hh + ':' + mm;
-    var s = meta.querySelector('[data-time-status]'); if (s) { s.textContent = snap.isPaused ? 'Paused' : (snap.gameSpeed + 'x'); s.classList.toggle('running', !snap.isPaused); }
-});
+        var meta = els.header && els.header.querySelector('.header-meta');
+        if (!meta) return;
+        var snap = getTime();
+        var hh = String(Math.floor(snap.currentHour)).padStart(2, '0');
+        var mm = String(Math.floor(snap.currentMinute)).padStart(2, '0');
+        var mKey = 'date.month.' + (snap.currentMonth || 1);
+        var mShort = LanguageService.t(mKey);
+        if (mShort === mKey) mShort = String(snap.currentMonth || 1);
+        var d = meta.querySelector('[data-time-date]');
+        if (d) d.textContent = LanguageService.t('header.day_prefix') + ' ' + snap.currentDay + ' ' + mShort + ' ' + snap.currentYear;
+        var c = meta.querySelector('[data-time-clock]'); if (c) c.textContent = hh + ':' + mm;
+        var s = meta.querySelector('[data-time-status]'); if (s) { s.textContent = snap.isPaused ? 'Paused' : (snap.gameSpeed + 'x'); s.classList.toggle('running', !snap.isPaused); }
+    });
     bus.on('time:day-changed', function () { if (activeView === 'team' && activeHqSubtab === 'overview') updateDashboardLive(); });
     bus.on('time:speed-changed', function () { renderHeaderOnly(); });
 }
@@ -639,10 +637,10 @@ function bindStateEvents() {
         else { ToastService.success('Pinjaman diterima.'); renderView(); }
     });
     bus.on('settings:changed', function (settings) {
-    if (settings && typeof settings.sound === 'boolean') {
-        AudioService.setEnabled(settings.sound);
-    }
-});
+        if (settings && typeof settings.sound === 'boolean') {
+            AudioService.setEnabled(settings.sound);
+        }
+    });
     bus.on('tutorial:restart', function () { tutorial.restart(); });
     bus.on('era:changed', function () { renderAll(); });
     bus.on('team:changed', function () { if (activeView === 'team') renderView({ soft: true }); });
@@ -676,10 +674,10 @@ async function boot() {
     try {
         if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML utama tidak ditemukan.');
         ThemeService.init();
-LanguageService.init();
-AudioService.init();
-AudioService.setEnabled(!!state.get().settings.sound);
-mountToastContainer(els.toast);
+        LanguageService.init();
+        AudioService.init();
+        AudioService.setEnabled(!!state.get().settings.sound);
+        mountToastContainer(els.toast);
         initTutorialOverlay();
         initMonthlySummary();
         initGameOverScreen();
