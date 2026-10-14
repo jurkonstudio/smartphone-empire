@@ -1,16 +1,11 @@
 // FILE: src/core/SwipeService.js
+// v2027.32a — tambah blacklist untuk carousel home
 // ============================================================
 // SwipeService — swipe horizontal untuk pindah sub-tab.
 // View -> daftar sub-tab (urutan sesuai urutan tampil di UI).
-//
-// CATATAN: research punya chip subtab KONDISIONAL — muncul otomatis
-// kalau 'chip_design_tool' sudah ada di research.completed.
-// ResearchPanel.js harus support rendering 'chip' sebelum ini aktif
-// sepenuhnya. Kalau belum, swipe ke 'chip' akan fallback ke Teknologi.
 // ============================================================
 
 var SUBTABS = {
-    // research: dinamis, lihat _getSubtabsForView()
     products: ['design', 'catalog', 'sales'],
     market:   ['share', 'competitors', 'trends', 'public'],
     team:     ['active', 'recruit', 'info']
@@ -33,11 +28,16 @@ var MAX_DURATION_MS = 900;
 var THROTTLE_MS = 220;
 var VERTICAL_TOLERANCE = 15;
 
+// v2027.32a: tambah .home-carousel, .home-slide, .home-dots, .home-map
+// supaya swipe carousel home tidak mengganggu swipe sub-tab.
 var BLACKLIST_SELECTORS = [
     '.chip-bar',
     '.wiz-options-row',
     '.subtab-bar',
-    '.home-carousel',       
+    '.home-carousel',
+    '.home-slide',
+    '.home-dots',
+    '.home-map',
     'canvas',
     'input',
     'textarea',
@@ -91,9 +91,6 @@ function _isBlacklisted(target) {
     return false;
 }
 
-// Ambil daftar sub-tab untuk view tertentu.
-// Research & Products punya item KONDISIONAL yang muncul kalau
-// 'chip_design_tool' sudah selesai (chip lab terbuka).
 function _getSubtabsForView(view) {
     if (!view) return null;
 
