@@ -304,7 +304,8 @@ export const MONTHLY_HEADLINES_EN = {
     '2005-12': {
         headline: 'Samsung consolidates second position, threatens Nokia',
         text: 'Samsung closes the year with strong market share. Competition heading into 2006 is predicted to intensify.'
-    }
+    },
+    
     // ==================== 2005 ====================
     '2005-1': {
         headline: '2005: The year Symbian ruled and the iPhone was still a secret',
