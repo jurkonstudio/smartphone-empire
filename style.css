@@ -3536,3 +3536,70 @@ body {
     .settings-row { padding: 11px 12px; }
     .settings-row-label { font-size: 13px; }
 }
+/* ============================================================
+   SETTINGS LANGUAGE TAB (v2027.6a)
+   ============================================================ */
+
+.settings-list-langs {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    overflow: hidden;
+}
+
+.settings-lang-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    color: inherit;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    min-height: 56px;
+    transition: background 0.12s;
+}
+.settings-lang-row:last-child { border-bottom: none; }
+.settings-lang-row:hover { background: var(--bg-3); }
+.settings-lang-row:active { background: var(--bg-4); }
+.settings-lang-row.active { background: var(--accent-soft); }
+
+.settings-lang-main { flex: 1; min-width: 0; }
+.settings-lang-label {
+    font-size: 14px;
+    font-weight: var(--fw-semibold);
+    color: var(--text-primary);
+    letter-spacing: -0.005em;
+    line-height: 1.3;
+}
+.settings-lang-row.active .settings-lang-label {
+    color: var(--accent);
+    font-weight: var(--fw-bold);
+}
+.settings-lang-meta {
+    font-size: 11px;
+    color: var(--accent);
+    margin-top: 3px;
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.settings-lang-check {
+    flex-shrink: 0;
+    font-size: 16px;
+    font-weight: var(--fw-bold);
+    color: var(--accent);
+    line-height: 1;
+}
+
+.settings-lang-hint {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    line-height: 1.5;
+    padding: 8px 6px 0;
+}
