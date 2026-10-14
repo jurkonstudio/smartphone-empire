@@ -96,9 +96,11 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
         marketing: { activeCampaigns: [] },
         reviews: { feed: [] },
 
+        // [V7a-2] tambah headlineHistory untuk dedupe headline bulanan
         news: {
             articles: [],
-            lastMilestone: {}
+            lastMilestone: {},
+            headlineHistory: []
         },
 
         market: {
@@ -392,10 +394,12 @@ class GameState {
                 ...base.reviews, ...(incoming.reviews || {}),
                 feed: Array.isArray(incoming.reviews && incoming.reviews.feed) ? incoming.reviews.feed : []
             },
+            // [V7a-2] merge headlineHistory
             news: {
                 ...base.news, ...(incoming.news || {}),
                 articles: Array.isArray(incoming.news && incoming.news.articles) ? incoming.news.articles : [],
-                lastMilestone: (incoming.news && incoming.news.lastMilestone) ? incoming.news.lastMilestone : {}
+                lastMilestone: (incoming.news && incoming.news.lastMilestone) ? incoming.news.lastMilestone : {},
+                headlineHistory: Array.isArray(incoming.news && incoming.news.headlineHistory) ? incoming.news.headlineHistory : []
             },
             market: {
                 ...base.market, ...(incoming.market || {}),
