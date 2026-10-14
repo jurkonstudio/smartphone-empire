@@ -1,4 +1,5 @@
 // FILE: src/systems/OSSystem.js
+// v2026.4 — fitur dasar (SMS, Kontak, Kalender) otomatis dimiliki.
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
@@ -22,6 +23,10 @@ function escapeHtml(s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
+function _getStarterFeatureIds() {
+    return OS_FEATURES.filter(function (f) { return f.starter === true; }).map(function (f) { return f.id; });
+}
+
 export class OSSystem {
     constructor(gameState) {
         this.state = gameState;
@@ -32,6 +37,8 @@ export class OSSystem {
         this._unsubs.push(bus.on('time:day-changed',   (s) => this._onDayChanged(s)));
         this._unsubs.push(bus.on('time:month-changed', (s) => this._onMonthChanged(s)));
         this._unsubs.push(bus.on('state:hydrated',     () => this._onHydrated()));
+        // [v2026.4] Jalankan sekali saat boot untuk migrasi save lama.
+        this._onHydrated();
         console.info('[OSSystem] siap.');
     }
 
@@ -53,6 +60,43 @@ export class OSSystem {
             if (typeof d.lastProcessedMinute !== 'number') d.lastProcessedMinute = data.time.elapsedGameMinutes;
             if (typeof d.startedAtGameMinute !== 'number') d.startedAtGameMinute = data.time.elapsedGameMinutes;
         }
+
+        // [v2026.4] Migrasi: starter features tidak boleh ada di developing.
+        // Fitur dasar kini dimiliki otomatis — buang dari pengembangan + refund.
+        this._migrateStarterInDeveloping(data);
+    }
+
+    _migrateStarterInDeveloping(data) {
+        const d = data.os.developing;
+        if (!d || !Array.isArray(d.features) || !d.features.length) return;
+
+        const starterIds = _getStarterFeatureIds();
+        if (!starterIds.length) return;
+
+        const filtered = d.features.filter(function (id) { return starterIds.indexOf(id) === -1; });
+        if (filtered.length === d.features.length) return; // tidak ada yang perlu diubah
+
+        let newCost = 0, newDays = 0;
+        filtered.forEach(function (id) {
+            const f = getOsFeatureById(id);
+            if (f) { newCost += f.devCost; newDays += f.devDays; }
+        });
+
+        const refundedCost = (d.cost || 0) - newCost;
+        const refund = Math.max(0, Math.floor(refundedCost * (BALANCE.os.refundPercent || 0)));
+
+        if (filtered.length === 0) {
+            data.os.developing = null;
+            if (refund > 0) this.state.addCash(refund);
+            this.state.addLog('Pengembangan OS dibatalkan: fitur dasar kini dimiliki otomatis. Refund $' + refund.toLocaleString('en-US') + '.', LOG_TYPES.info);
+        } else {
+            d.features = filtered;
+            d.cost = newCost;
+            d.durationDays = newDays;
+            if (refund > 0) this.state.addCash(refund);
+            this.state.addLog('Fitur dasar kini dimiliki otomatis — dikeluarkan dari pengembangan. Refund $' + refund.toLocaleString('en-US') + '.', LOG_TYPES.info);
+        }
+        bus.emit('state:changed', data);
     }
 
     // ---------- PROGRESS HARIAN ----------
@@ -175,7 +219,7 @@ export class OSSystem {
         }
     }
 
-    // ---------- APLIKASI (ekosistem) ----------
+    // ---------- APLIKASI ----------
     _onMonthChanged(_snap) {
         const data = this.state.data;
         if (!this.hasFeature('fw_appstore')) return;
@@ -201,16 +245,21 @@ export class OSSystem {
 
     // ---------- HELPER ----------
     _calculateStats(featureIds) {
+        // [v2026.4] Starter features selalu dihitung, dedupe dengan input.
+        const merged = new Set(_getStarterFeatureIds());
+        (featureIds || []).forEach(function (id) { merged.add(id); });
+
         const stats = { stability: 20, speed: 20, features: 20, security: 20, design: 20 };
-        for (const fid of featureIds) {
+        merged.forEach(function (fid) {
             const f = getOsFeatureById(fid);
-            if (!f || !f.statEffects) continue;
+            if (!f || !f.statEffects) return;
             stats.stability += f.statEffects.stability || 0;
             stats.speed     += f.statEffects.speed     || 0;
             stats.features  += f.statEffects.features  || 0;
             stats.security  += f.statEffects.security  || 0;
             stats.design    += f.statEffects.design    || 0;
-        }
+        });
+
         const engBonus = Math.min(20, (this.state.data.team.engineers || 0) * 1);
         for (const k in stats) stats[k] += engBonus;
 
@@ -314,7 +363,7 @@ export class OSSystem {
         const data = this.state.data;
         const d = data.os.developing;
         if (!d) return { ok: false, reason: 'Tidak ada versi yang dikembangkan.' };
-        const refund = Math.floor(d.cost * (BALANCE.os.refundPercent || 0));
+        const refund = Math.floor((d.cost || 0) * (BALANCE.os.refundPercent || 0));
         if (refund > 0) this.state.addCash(refund);
         data.os.developing = null;
         this.state.addLog('Pengembangan OS dibatalkan (refund $' + refund.toLocaleString('en-US') + ').', LOG_TYPES.warning);
@@ -328,8 +377,6 @@ export class OSSystem {
         return v ? { ...v.stats } : null;
     }
 
-    // Preview statistik jika fitur2 ini ditambahkan ke versi berikutnya.
-    // Mengembalikan hasil yang akan sama dengan _calculateStats saat versi dirilis.
     previewStats(featureIds) {
         const ids = Array.isArray(featureIds) ? featureIds.slice() : [];
         return this._calculateStats(ids);
@@ -343,6 +390,9 @@ export class OSSystem {
         const data = this.state.data;
         const f = getOsFeatureById(featureId);
         if (!f) return { status: 'locked', reason: 'Fitur tidak ditemukan.' };
+
+        // [v2026.4] Starter features selalu dimiliki (SMS, Kontak, Kalender).
+        if (f.starter === true) return { status: 'owned', reason: null };
 
         const currentVersion = this.getCurrentVersionObject();
         if (currentVersion && currentVersion.features.includes(featureId)) return { status: 'owned', reason: null };
@@ -370,6 +420,9 @@ export class OSSystem {
 
     hasFeature(featureId) {
         if (!featureId) return false;
+        // [v2026.4] Starter features selalu true.
+        const f = getOsFeatureById(featureId);
+        if (f && f.starter === true) return true;
         const v = this.getCurrentVersionObject();
         return v ? v.features.includes(featureId) : false;
     }
@@ -479,7 +532,7 @@ export class OSSystem {
     quickSetup(featuresList) {
         const data = this.state.data;
         if (!data.os.name) this.createOs('CheatOS');
-        const ids = featuresList || ['fw_sms', 'fw_contacts'];
+        const ids = featuresList || ['fw_j2me', 'fw_poly_ringtone'];
         const versionString = this._nextVersionString();
         const stats = this._calculateStats(ids);
         data.os.versions.push({
