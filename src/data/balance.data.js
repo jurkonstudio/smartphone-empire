@@ -1,5 +1,6 @@
 // FILE: src/data/balance.data.js
 // Semua angka balancing di sini — ubah tanpa menyentuh logika.
+// v2027.1e — tambah feedback.reputationDrift untuk drift reputasi bulanan.
 
 export const BALANCE = {
     startingCash: {
@@ -24,10 +25,8 @@ export const BALANCE = {
 
     monthly: { rentHQ: 5000, utilities: 500, baseAdmin: 300 },
 
-    // ---- Gaji dasar per role (dasar Tier 1, diperbanyak oleh skill tier) ----
     salary: { engineer: 2500, designer: 2300, marketer: 2000 },
 
-    // ---- Biaya rekrut awal per role (one-time, dasar Tier 1) ----
     recruitCost: { engineer: 2000, designer: 1800, marketer: 1500 },
 
     teamCap: { engineer: 20, designer: 20, marketer: 20 },
@@ -53,75 +52,64 @@ export const BALANCE = {
     },
 
     // ============================================================
-    // TEAM — Batch D (Rekrut Tim)
+    // TEAM
     // ============================================================
     team: {
-        // Kandidat direkrut dari pool. Pool refresh tiap X hari.
         candidatePoolSize: 6,
         poolRefreshDays: 30,
 
-        // Distribusi skill kandidat (peluang per tier)
         skillWeightsByYear: {
-            // Semakin tua tahun, semakin besar peluang kandidat skill tinggi
-            early:    { 1: 0.55, 2: 0.30, 3: 0.12, 4: 0.03, 5: 0.00 }, // ≤2005
-            mid:      { 1: 0.35, 2: 0.35, 3: 0.20, 4: 0.08, 5: 0.02 }, // 2006-2015
-            late:     { 1: 0.20, 2: 0.30, 3: 0.30, 4: 0.15, 5: 0.05 }, // 2016-2025
-            modern:   { 1: 0.15, 2: 0.25, 3: 0.30, 4: 0.20, 5: 0.10 }  // 2026+
+            early:    { 1: 0.55, 2: 0.30, 3: 0.12, 4: 0.03, 5: 0.00 },
+            mid:      { 1: 0.35, 2: 0.35, 3: 0.20, 4: 0.08, 5: 0.02 },
+            late:     { 1: 0.20, 2: 0.30, 3: 0.30, 4: 0.15, 5: 0.05 },
+            modern:   { 1: 0.15, 2: 0.25, 3: 0.30, 4: 0.20, 5: 0.10 }
         },
 
-        // Gaji bulanan = baseSalary × skillTier.salaryMult + traitBonus + noise
         traitSalaryBonus: {
             fast_learner: 0,
             productive:   0.10,
             team_player:  0.05,
             innovative:   0.15,
-            loyal:        -0.05,   // loyal = minta lebih sedikit
+            loyal:        -0.05,
             demanding:    0.25,
             specialist:   0.20,
             mentor:       0.15
         },
 
-        // Tanda tangan awal (one-time signing bonus)
-        signingBonusMult: 0.6,    // 60% dari gaji bulanan × 3 (default)
-
-        // Severance saat fire (pesangon)
+        signingBonusMult: 0.6,
         severanceMonths: 2,
 
-        // Moral
         moraleStart: 75,
         moraleMax: 100,
         moraleMin: 0,
         moraleDecayPerMonth: 2,
-        moraleFromExtraPay: 15,   // bonus moral jika kas tim kuat (opsional masa depan)
+        moraleFromExtraPay: 15,
 
-        // Skill progression
-        skillProgressPerMonth: 1.5,       // poin menuju skill berikutnya (100 poin = naik 1 tier)
-        skillFastLearnerBonus: 0.5,       // +50% untuk trait fast_learner
-        skillMentorBonus: 0.25,           // +25% untuk semua anggota jika ada 1 mentor
+        skillProgressPerMonth: 1.5,
+        skillFastLearnerBonus: 0.5,
+        skillMentorBonus: 0.25,
 
-        // Bonus agregat
         engineer: {
-            researchSpeedPerEngineer: 0.08,   // +8% kecepatan riset
+            researchSpeedPerEngineer: 0.08,
             maxResearchSpeed: 2.5,
-            researchSlotPer2Engineers: 0.5,   // tiap 2 engineer = +1 slot (maks 3)
+            researchSlotPer2Engineers: 0.5,
             maxResearchSlots: 3,
             osDevSpeedPerEngineer: 0.06,
             maxOsDevSpeed: 2.0
         },
         designer: {
-            productDevSpeedPerDesigner: 0.10, // +10% kecepatan pengembangan
+            productDevSpeedPerDesigner: 0.10,
             maxProductDevSpeed: 3.0,
-            qualityBonusPerDesigner: 0.5,     // +0.5 poin kualitas per designer
-            maxQualityBonus: 15               // maks +15 poin
+            qualityBonusPerDesigner: 0.5,
+            maxQualityBonus: 15
         },
         marketer: {
-            marketingBonusPerMarketer: 0.10,  // +10% efektivitas kampanye
-            maxMarketingBonus: 2.0            // maks 2x
+            marketingBonusPerMarketer: 0.10,
+            maxMarketingBonus: 2.0
         },
 
-        // Batas
-        minStaffForFullBonus: 1,     // minimal 1 untuk bonus aktif
-        maxStaffBonusScale: 1.5      // bonus diskalakan turun jika tim besar (diminishing returns)
+        minStaffForFullBonus: 1,
+        maxStaffBonusScale: 1.5
     },
 
     research: {
@@ -236,6 +224,16 @@ export const BALANCE = {
         },
         reviewsPerMonthBase: 8,
         suggestionBonus: 5,
-        viralEventImpact: 0.3
+        viralEventImpact: 0.3,
+
+        // [v2027.1e] Reputasi drift menuju sentimen publik tiap bulan.
+        // pullPerMonth: pecahan gap yang ditutup (0.2 = 20% gap per bulan).
+        // maxPerMonth:  batas absolut perubahan (biar tidak loncat).
+        // minThreshold: gap minimal agar drift aktif (biar tidak jitter).
+        reputationDrift: {
+            pullPerMonth: 0.2,
+            maxPerMonth: 2,
+            minThreshold: 0.5
+        }
     }
 };
