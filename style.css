@@ -3948,3 +3948,130 @@ body {
     color: var(--warn);
     margin-top: 1px;
 }
+/* ============================================================
+   APPEND v2027.8a + v2027.8c — HQ & Team accordion
+   ============================================================ */
+
+/* ---- HQ SECTION DIVIDER (v2027.8a) ---- */
+.hq-section-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 18px 2px 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+}
+.hq-section-divider:first-child {
+    padding-top: 4px;
+    border-top: none;
+    margin-top: 4px;
+}
+.hq-section-icon {
+    color: var(--text-tertiary);
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+.hq-section-label {
+    font-size: 10.5px;
+    font-weight: var(--fw-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.hq-section-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+/* ---- TEAM FOLD — accordion Rekrut & Info (v2027.8c) ---- */
+.team-fold {
+    margin-top: 14px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    overflow: hidden;
+}
+.team-fold-summary {
+    list-style: none;
+    cursor: pointer;
+    display: block;
+    padding: 0;
+    margin: 0;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+.team-fold-summary::-webkit-details-marker { display: none; }
+.team-fold-summary::marker { display: none; content: ''; }
+
+.team-fold-summary-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    transition: background 0.12s;
+}
+.team-fold-summary:hover .team-fold-summary-inner { background: var(--bg-3); }
+.team-fold-summary:active .team-fold-summary-inner { background: var(--bg-4); }
+
+.team-fold-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    flex-shrink: 0;
+}
+.team-fold-label {
+    font-size: 13.5px;
+    font-weight: var(--fw-bold);
+    color: var(--text-primary);
+    letter-spacing: -0.005em;
+    flex-shrink: 0;
+}
+.team-fold-meta {
+    font-size: 11.5px;
+    color: var(--text-tertiary);
+    font-weight: var(--fw-medium);
+    letter-spacing: -0.005em;
+    margin-left: auto;
+    padding-right: 6px;
+}
+.team-fold-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    color: var(--text-tertiary);
+    font-size: 14px;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-left: auto;
+}
+.team-fold-meta + .team-fold-chevron { margin-left: 0; }
+.team-fold-chevron::before {
+    content: "▸";
+    display: inline-block;
+}
+.team-fold[open] .team-fold-chevron {
+    transform: rotate(90deg);
+}
+.team-fold-body {
+    padding: 4px 14px 14px;
+    animation: teamFoldOpen 0.22s ease-out;
+}
+
+@keyframes teamFoldOpen {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 380px) {
+    .team-fold-summary-inner { padding: 12px 14px; }
+    .team-fold-label { font-size: 13px; }
+    .team-fold-meta { font-size: 11px; }
+}
