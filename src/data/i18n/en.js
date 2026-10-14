@@ -142,6 +142,8 @@ export const en = {
     'hq.tab.team':     'Team',
     'home.placeholder.title': 'Campus Map',
     'home.placeholder.body':  'The 3D headquarters map will appear here. For now, open the HQ tab to manage your company.',
+    'home.campus.aria':    'Interactive 3D campus map. Drag to move, pinch to zoom.',
+    'home.campus.loading': 'Loading campus map…',
     'campus.placeholder.title': 'Campus 3D Map',
     'campus.placeholder.body':  'The 3D headquarters map and building upgrade system will be available in a future update.',
 
