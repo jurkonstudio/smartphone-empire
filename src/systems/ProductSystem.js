@@ -1,6 +1,8 @@
 // FILE: src/systems/ProductSystem.js
 // Versi lengkap — dengan _checkSalesMilestones untuk trigger berita milestone.
-// v2027.1a — fix reputasi ganda di _releaseProduct & _maybeAddRandomReviews.
+// v2027.1d — bersih-bersih: hapus data.reviews.feed (dead data, tidak dibaca UI).
+//              Review editor tetap di p.reviews (dipakai ProductPanel).
+//              Feedback publik dikelola PublicOpinionSystem.
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
@@ -45,7 +47,7 @@ export class ProductSystem {
         var data = this.state.data;
         if (!data.products.catalog) data.products.catalog = [];
         if (!data.marketing.activeCampaigns) data.marketing.activeCampaigns = [];
-        if (!data.reviews.feed) data.reviews.feed = [];
+        // [v2027.1d] data.reviews.feed tidak lagi diinisialisasi (dead data).
 
         var defThreshold = (BALANCE.products.autoRestock && BALANCE.products.autoRestock.defaultThresholdPercent) || 20;
 
@@ -381,7 +383,7 @@ export class ProductSystem {
 
         var rv = this._generateReview(product, true);
         product.reviews.push(rv);
-        this._pushReviewToFeed(product, rv);
+        // [v2027.1d] _pushReviewToFeed dihapus — data.reviews.feed dead data.
 
         // [v2027.1a] fix reputasi ganda: kirim delta, bukan current+delta.
         var repDelta = (rv.score - 5) * BALANCE.products.reputationPerReviewPoint;
@@ -695,7 +697,7 @@ export class ProductSystem {
     }
 
     // ============================================================
-    // ULASAN
+    // ULASAN (editor review embedded di p.reviews)
     // ============================================================
     _generateReview(product, isInitial) {
         var era = this.state.data.era || 'feature_phone';
@@ -768,15 +770,6 @@ export class ProductSystem {
         };
     }
 
-    _pushReviewToFeed(product, review) {
-        var data = this.state.data;
-        data.reviews.feed.unshift(Object.assign({}, review, { productId: product.id, productName: product.name }));
-        if (data.reviews.feed.length > BALANCE.reviews.maxReviewsInFeed) {
-            data.reviews.feed.length = BALANCE.reviews.maxReviewsInFeed;
-        }
-        bus.emit('review:received', { productId: product.id, review: review });
-    }
-
     _maybeAddRandomReviews() {
         var data = this.state.data;
         var active = data.products.catalog.filter(function (p) { return p.status === 'selling'; });
@@ -786,7 +779,7 @@ export class ProductSystem {
                 var rv = this._generateReview(p, false);
                 p.reviews.push(rv);
                 if (p.reviews.length > 10) p.reviews.shift();
-                this._pushReviewToFeed(p, rv);
+                // [v2027.1d] _pushReviewToFeed dihapus — data.reviews.feed dead data.
                 // [v2027.1a] fix reputasi ganda: kirim delta, bukan current+delta.
                 var repDelta = (rv.score - 5) * BALANCE.products.reputationPerReviewPoint * 0.5;
                 if (repDelta !== 0) this.state.addReputation(repDelta);
