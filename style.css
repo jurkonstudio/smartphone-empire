@@ -3378,3 +3378,36 @@ body {
     scroll-snap-stop: always;
     box-sizing: border-box;
 }
+/* ============================================================================
+   HOMEPANEL FIX v2027.31a — Chrome swipe + Samsung smooth
+   ============================================================================ */
+
+/* Paksa parent izinkan horizontal — override .app-view { touch-action: pan-y } */
+.app-view {
+    touch-action: manipulation !important;
+}
+
+.home-carousel {
+    touch-action: pan-x !important;
+    /* Paksa carousel ke GPU layer terpisah */
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    will-change: scroll-position;
+}
+
+.home-slide {
+    /* Isolasi render slide — jangan reflow elemen lain */
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    contain: layout paint style;
+}
+
+/* Saat scroll, freeze 3D map — GPU full untuk carousel */
+.home-map.scrolling {
+    content-visibility: hidden;
+    pointer-events: none;
+}
