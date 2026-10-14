@@ -1,111 +1,99 @@
 // FILE: src/data/name-blocklist.data.js
-// v2027.33a — Blocklist untuk nama perusahaan
+// v2027.33b — fix false positive: kata < 4 huruf = exact match
 // Sumber: LDNOOBW V2, censor-text, riset akademis ID
 
 // ============================================================
-// 1. KOMPETITOR (exact + partial, case-insensitive)
+// 1. KOMPETITOR (exact match, case-insensitive)
 // ============================================================
 export const COMPETITOR_NAMES = [
-    // Dari competitors.data.js
-    'nokia', 'motorola', 'sony', 'ericsson', 'sony ericsson',
+    'nokia', 'motorola', 'sony', 'ericsson', 'sonyericsson',
     'samsung', 'lg', 'siemens', 'palm', 'blackberry', 'rim',
     'apple', 'htc', 'google', 'android', 'huawei', 'xiaomi',
     'oppo', 'vivo', 'microsoft', 'lumia', 'honor', 'nothing',
-    // Fiktif (opsional, biar gak loophole)
     'nokio', 'motora', 'samsul', 'apel', 'huawaei', 'xioami'
 ];
 
 // ============================================================
-// 2. KATA KOTOR INDONESIA (partial match, case-insensitive)
+// 2. KATA KOTOR INDONESIA (partial match)
 // ============================================================
 export const PROFANITY_ID = [
-    // --- Keadaan mental ---
-    'goblok', 'goblog', 'tolol', 'bego', 'bego', 'idiot', 'sinting',
+    // Keadaan mental
+    'goblok', 'goblog', 'tolol', 'bego', 'idiot', 'sinting',
     'gila', 'sarap', 'edan', 'ontohod', 'dungu', 'bodoh',
-    // --- Aktivitas seksual / organ ---
-    'ngentot', 'entot', 'memek', 'kontol', 'kntl', 'pepek', 'pepe',
-    'jembut', 'tetek', 'tete', 'nenen', 'sange', 'sangean', 'cabul',
+    // Seksual
+    'ngentot', 'entot', 'memek', 'kontol', 'kntl', 'pepek',
+    'jembut', 'tetek', 'nenen', 'sange', 'cabul',
     'coli', 'colmek', 'masturbasi', 'bokep', 'porno',
-    // --- Hewan (umpatan) ---
+    // Hewan (umpatan)
     'anjing', 'anjg', 'anjeng', 'asu', 'babi', 'bangsat', 'bajingan',
     'monyet', 'kunyuk', 'kampret', 'keparat',
-    // --- Benda kotor ---
-    'tai', 'taik', 'sampah', 'bangke', 'bangkai', 'najis',
-    // --- Makhluk halus ---
+    // Benda kotor
+    'taik', 'sampah', 'bangke', 'bangkai', 'najis',
+    // Makhluk halus
     'setan', 'iblis', 'tuyul', 'jahanam',
-    // --- Kekerabatan (dengan suffix -mu) ---
+    // Kekerabatan
     'ibumu', 'bapakmu', 'emakmu', 'nenekmu', 'kakekmu',
-    'ibumu', 'bapaklu', 'emaklu',
-    // --- Kata sifat negatif ---
+    'bapaklu', 'emaklu',
+    // Sifat negatif
     'sialan', 'modar', 'mampus', 'matilu', 'brengsek', 'bejat',
     'kampungan', 'ndeso', 'norak',
-    // --- Singkatan chat/leetspeak ---
-    'anjg', 'anj', 'bgsd', 'bgst', 'peler', 'pler', 'mmk', 'ktl',
-    'pnt', 'ngehe', 'jancok', 'dancok', 'cok', 'cuk'
+    // Singkatan chat
+    'bgsd', 'bgst', 'peler', 'pler', 'ngehe', 'jancok', 'dancok'
 ];
 
 // ============================================================
-// 3. KATA KOTOR INGGRIS (partial match, case-insensitive)
+// 3. KATA KOTOR INGGRIS (partial match, kata >= 4 huruf)
 // ============================================================
 export const PROFANITY_EN = [
-    // --- Sexual ---
-    'fuck', 'fuk', 'fck', 'f*ck', 'shit', 'sh1t', 'ass', 'arse',
+    'fuck', 'fuk', 'fck', 'shit', 'sh1t', 'arse',
     'asshole', 'bastard', 'bitch', 'b1tch', 'dick', 'cock', 'pussy',
-    'cunt', 'whore', 'slut', 'boobs', 'tits', 'porn', 'sex',
-    'masturbat', 'orgasm', 'cum', 'sperm', 'penis', 'vagina',
-    // --- Insults ---
+    'cunt', 'whore', 'slut', 'boobs', 'tits', 'porn',
+    'masturbat', 'orgasm', 'sperm', 'penis', 'vagina',
     'idiot', 'stupid', 'dumb', 'moron', 'retard', 'imbecile',
-    'loser', 'fool', 'jerk', 'jerkoff', 'jackass', 'dumbass',
-    // --- Animals (insults) ---
-    'dog', 'pig', 'monkey', 'donkey', 'cow', 'bitch',
-    // --- Religion-based ---
-    'damn', 'goddamn', 'hell', 'jesus', 'christ',
-    // --- Racial/derogatory (sangat sensitif) ---
-    'nigger', 'nigga', 'fag', 'faggot', 'retard', 'chink',
-    'spic', 'kike', 'wetback', 'gook', 'jap', 'raghead',
-    // --- General ---
-    'crap', 'piss', 'fart', 'butt', 'anus', 'rectum'
+    'loser', 'jerkoff', 'jackass', 'dumbass',
+    'nigger', 'nigga', 'faggot',
+    'chink', 'wetback', 'raghead',
+    'crap', 'anus', 'rectum'
 ];
 
 // ============================================================
-// 4. KATA KOTOR MULTI-BAHASA (partial match)
+// 4. KATA KOTOR MULTI-BAHASA (partial match, kata >= 4 huruf)
 // ============================================================
 export const PROFANITY_MULTI = [
     // Jerman
-    'scheiße', 'scheisse', 'arsch', 'wichser', 'hure', 'ficker',
-    'fotze', 'kacke', 'dumm', 'blöd',
+    'scheisse', 'arsch', 'wichser', 'ficker', 'fotze', 'kacke',
     // Belanda
-    'kut', 'lul', 'kloten', 'godverdomme', 'kanker', 'tyfus',
+    'kloten', 'godverdomme', 'kanker', 'tyfus',
     // Spanyol
-    'puta', 'joder', 'mierda', 'coño', 'cabron', 'pendejo',
-    'estupido', 'idiota', 'gilipollas',
+    'puta', 'joder', 'mierda', 'cabron', 'pendejo', 'estupido',
+    'gilipollas',
     // Prancis
-    'merde', 'putain', 'connard', 'salaud', 'enculé', 'bordel',
+    'merde', 'putain', 'connard', 'salaud', 'bordel',
     // Italia
-    'cazzo', 'merda', 'stronzo', 'puttana', 'figa', 'minchia',
-    // Rusia (transliterasi)
-    'blyad', 'suka', 'khuy', 'pizda', 'yebat', 'mudak',
-    // Jepang (romaji)
-    'kuso', 'chikusho', 'shine', 'baka', 'aho',
-    // Korea (romaji)
+    'cazzo', 'merda', 'stronzo', 'puttana', 'minchia',
+    // Rusia
+    'blyad', 'khuy', 'pizda', 'yebat', 'mudak',
+    // Jepang
+    'kuso', 'chikusho', 'shine', 'baka',
+    // Korea
     'shibal', 'ssibal', 'gaesaekki', 'byeongsin',
-    // Thai (romaji)
-    'hia', 'kuay', 'sat', 'kwai',
-    // Arab (transliterasi)
-    'kuss', 'sharmouta', 'kalb', 'himar', 'zibi'
+    // Thai
+    'kuay',
+    // Arab
+    'sharmouta', 'himar'
 ];
 
 // ============================================================
-// 5. BRAND TERKENAL LAIN (biar gak ada loophole)
+// 5. BRAND LAIN (exact match)
 // ============================================================
 export const OTHER_BRANDS = [
-    'iphone', 'ipad', 'macbook', 'windows', 'windows phone',
-    'symbian', 'blackberry', 'miui', 'coloros', 'funtouch',
-    'harmonyos', 'ios', 'android', 'pixel', 'galaxy',
-    'redmi', 'poco', 'realme', 'oneplus', 'asus', 'acer',
-    'lenovo', 'dell', 'hp', 'sony', 'panasonic', 'sharp',
+    'iphone', 'ipad', 'macbook', 'windows', 'windowsphone',
+    'symbian', 'miui', 'coloros', 'funtouch',
+    'harmonyos', 'ios', 'pixel', 'galaxy',
+    'redmi', 'poco', 'realme', 'oneplus', 'acer',
+    'lenovo', 'dell', 'panasonic',
     'toshiba', 'fujitsu', 'nec', 'alcatel', 'zte', 'meizu',
-    'smartisan', 'black shark', 'nubia', 'tecno', 'infinix',
+    'smartisan', 'blackshark', 'nubia', 'tecno', 'infinix',
     'itel', 'lava', 'micromax', 'karbonn'
 ];
 
@@ -117,7 +105,6 @@ export function normalizeText(text) {
     return text
         .toLowerCase()
         .trim()
-        // Leetspeak common substitutions
         .replace(/0/g, 'o')
         .replace(/1/g, 'i')
         .replace(/3/g, 'e')
@@ -128,64 +115,70 @@ export function normalizeText(text) {
         .replace(/@/g, 'a')
         .replace(/\$/g, 's')
         .replace(/!/g, 'i')
-        // Hapus separator umum
         .replace(/[\s\-_.]+/g, '')
-        // Hapus karakter berulang (gobloooook -> goblok)
         .replace(/(.)\1{2,}/g, '$1');
 }
 
 // ============================================================
-// 7. VALIDASI
+// 7. HELPER MATCH
+// Kata < 4 huruf = exact match (hindari false positive kaya "Hello")
+// Kata >= 4 huruf = partial match
+// ============================================================
+function _matchWord(norm, rawWord) {
+    const w = normalizeText(rawWord);
+    if (w.length < 4) return norm === w;
+    return norm.includes(w);
+}
+
+// ============================================================
+// 8. VALIDASI UTAMA
 // ============================================================
 export function validateCompanyName(name) {
     if (!name || !name.trim()) {
         return { ok: false, reason: 'empty' };
     }
 
-    const normalized = normalizeText(name);
+    const trimmed = name.trim();
+    const normalized = normalizeText(trimmed);
 
-    // Cek kompetitor (exact di normalized)
+    // Kompetitor — exact match
     for (const comp of COMPETITOR_NAMES) {
         if (normalizeText(comp) === normalized) {
             return { ok: false, reason: 'competitor', matched: comp };
         }
     }
 
-    // Cek partial profanity ID
-    for (const word of PROFANITY_ID) {
-        if (normalized.includes(normalizeText(word))) {
-            return { ok: false, reason: 'profanity', lang: 'id', matched: word };
-        }
-    }
-
-    // Cek partial profanity EN
-    for (const word of PROFANITY_EN) {
-        if (normalized.includes(normalizeText(word))) {
-            return { ok: false, reason: 'profanity', lang: 'en', matched: word };
-        }
-    }
-
-    // Cek partial profanity multi
-    for (const word of PROFANITY_MULTI) {
-        if (normalized.includes(normalizeText(word))) {
-            return { ok: false, reason: 'profanity', lang: 'multi', matched: word };
-        }
-    }
-
-    // Cek other brands
+    // Other brands — exact match
     for (const brand of OTHER_BRANDS) {
         if (normalizeText(brand) === normalized) {
             return { ok: false, reason: 'brand', matched: brand };
         }
     }
 
-    // Cek panjang minimum/maksimum
-    if (name.trim().length < 2) {
-        return { ok: false, reason: 'too_short' };
+    // Profanity ID
+    for (const word of PROFANITY_ID) {
+        if (_matchWord(normalized, word)) {
+            return { ok: false, reason: 'profanity', lang: 'id', matched: word };
+        }
     }
-    if (name.trim().length > 24) {
-        return { ok: false, reason: 'too_long' };
+
+    // Profanity EN
+    for (const word of PROFANITY_EN) {
+        if (_matchWord(normalized, word)) {
+            return { ok: false, reason: 'profanity', lang: 'en', matched: word };
+        }
     }
+
+    // Profanity multi
+    for (const word of PROFANITY_MULTI) {
+        if (_matchWord(normalized, word)) {
+            return { ok: false, reason: 'profanity', lang: 'multi', matched: word };
+        }
+    }
+
+    // Panjang
+    if (trimmed.length < 2) return { ok: false, reason: 'too_short' };
+    if (trimmed.length > 24) return { ok: false, reason: 'too_long' };
 
     return { ok: true };
 }
