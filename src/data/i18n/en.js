@@ -279,6 +279,7 @@ export const en = {
     'staff.detail.train_btn':     '📚 Intensive Training (+30 progress) — ${cost}',
     'staff.detail.fire_btn':      '⛔ Fire Staff (severance ${severance})',
     'staff.detail.close':         'Close',
+    
         // RESEARCH
     'research.subtab.tech':    'Technology',
     'research.subtab.os':      'OS',
