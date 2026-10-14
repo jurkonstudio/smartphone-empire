@@ -1,5 +1,6 @@
 // FILE: src/data/i18n/en.js
 // English dictionary. Flat keys with category prefix.
+// v2027.13a — Adds: date.month.*, kpi.*, dashboard.*, log.*, news.*, timeline.*
 
 export const en = {
     // ============================================================
@@ -20,6 +21,35 @@ export const en = {
     'header.play_aria':    'Play',
     'header.speed_aria':   'Speed',
     'header.paused':       'Paused',
+
+    // ============================================================
+    // CALENDAR
+    // ============================================================
+    'date.month.1':  'Jan',
+    'date.month.2':  'Feb',
+    'date.month.3':  'Mar',
+    'date.month.4':  'Apr',
+    'date.month.5':  'May',
+    'date.month.6':  'Jun',
+    'date.month.7':  'Jul',
+    'date.month.8':  'Aug',
+    'date.month.9':  'Sep',
+    'date.month.10': 'Oct',
+    'date.month.11': 'Nov',
+    'date.month.12': 'Dec',
+
+    'date.month_full.1':  'January',
+    'date.month_full.2':  'February',
+    'date.month_full.3':  'March',
+    'date.month_full.4':  'April',
+    'date.month_full.5':  'May',
+    'date.month_full.6':  'June',
+    'date.month_full.7':  'July',
+    'date.month_full.8':  'August',
+    'date.month_full.9':  'September',
+    'date.month_full.10': 'October',
+    'date.month_full.11': 'November',
+    'date.month_full.12': 'December',
 
     // ============================================================
     // SETTINGS
@@ -49,6 +79,8 @@ export const en = {
     'settings.row.guide_hint':  'How to play & tips',
     'settings.row.tutorial':    'Restart Tutorial',
     'settings.row.tutorial_hint': 'Start from the first step',
+    'settings.row.theme_dark':  'Dark',
+    'settings.row.theme_light': 'Light',
 
     'settings.row.sound':       'Sound',
     'settings.row.vibrate':     'Vibration',
@@ -97,6 +129,12 @@ export const en = {
     'common.load':    'Load',
     'common.import':  'Import',
     'common.export':  'Export',
+    'common.close':   'Close',
+    'common.back':    'Back',
+    'common.next':    'Next',
+    'common.confirm': 'Confirm',
+    'common.yes':     'Yes',
+    'common.no':      'No',
 
     'toast.theme_changed':   'Theme: {value}',
     'toast.accent_changed':  'Accent color updated.',
@@ -118,6 +156,74 @@ export const en = {
     'campus.placeholder.body':  'The 3D headquarters map and building upgrade system will be available in a future update.',
 
     // ============================================================
+    // KPI CARDS (Dashboard)
+    // ============================================================
+    'kpi.cash':          'Cash',
+    'kpi.reputation':    'Reputation',
+    'kpi.rep_high':      'Good',
+    'kpi.rep_mid':       'Fair',
+    'kpi.rep_low':       'Low',
+    'kpi.team':          'Team',
+    'kpi.team_empty':    'No team yet',
+    'kpi.team_morale':   'Morale {n}/100',
+    'kpi.date':          'Date',
+
+    // ============================================================
+    // DASHBOARD
+    // ============================================================
+    'dashboard.public_highlight': 'Public Highlight',
+    'dashboard.sentiment':        'Sentiment',
+    'dashboard.view_feedback':    'View Public Feedback',
+    'dashboard.timeline_title':   'History Timeline 2000–2026',
+    'dashboard.focus_title':      'Today\'s Focus',
+    'dashboard.focus_empty_title':'All running smoothly',
+    'dashboard.focus_empty_desc': 'Research new tech, hire staff, or release a product to speed up growth.',
+    'dashboard.focus_open_research': 'Open Research Tab',
+    'dashboard.focus_active_research': 'Active Research',
+    'dashboard.focus_slots':      '{n}/{max} slots used',
+    'dashboard.focus_quest':      'Quests',
+
+    // ============================================================
+    // LOG / ACTIVITY
+    // ============================================================
+    'log.title':       'Recent Activity',
+    'log.empty':       'No activity yet.',
+    'log.type.info':   'Info',
+    'log.type.success':'Success',
+    'log.type.warning':'Warning',
+    'log.type.danger': 'Danger',
+
+    // ============================================================
+    // NEWS
+    // ============================================================
+    'news.panel_title':     'International News',
+    'news.panel_empty':     'No news yet. Release a product to see press reviews.',
+    'news.new_badge':       '{n} new',
+    'news.read_latest':     'Read Latest News',
+    'news.score':           'Score {n}/10',
+    'news.sentiment.positive': 'Positive',
+    'news.sentiment.negative': 'Negative',
+    'news.sentiment.mixed':    'Mixed',
+    'news.article.by':         'By',
+    'news.article.editor_score': 'Editor Score',
+    'news.article.from':       'Article from {source} ({type})',
+    'news.article.close':      'Close Article',
+
+    // ============================================================
+    // TIMELINE
+    // ============================================================
+    'timeline.header.era':      'Era',
+    'timeline.filter.all':      'All',
+    'timeline.filter.phone':    'Phones',
+    'timeline.filter.os':       'OS',
+    'timeline.kind.phone':      'Phone',
+    'timeline.kind.os':         'OS',
+    'timeline.speculative':     'Speculative',
+    'timeline.now':             'Now · {year}',
+    'timeline.empty_title':     'No timeline data yet',
+    'timeline.empty_desc':      'Historical data will appear as time progresses.',
+
+    // ============================================================
     // TEAM — dropdown, roster, recruit, info
     // ============================================================
     'team.mode.roster':  'Roster',
@@ -125,6 +231,9 @@ export const en = {
     'team.mode.info':    'Info',
 
     'team.kpi.salary':   'Salary/Mo',
+    'team.kpi.engineer': 'Engineer',
+    'team.kpi.designer': 'Designer',
+    'team.kpi.marketer': 'Marketer',
 
     'team.roster.empty_title': 'No staff yet',
     'team.roster.empty_desc':  'Open the Recruit menu above to find candidates.',
@@ -189,4 +298,695 @@ export const en = {
     'team.tips.l2':    'Fast Learner trait speeds up tier progression.',
     'team.tips.l3':    'Specialist trait gives +25% bonus in its field.',
     'team.tips.l4':    'Low morale reduces productivity.',
+
+    // ============================================================
+    // STAFF DETAIL MODAL
+    // ============================================================
+    'staff.detail.role_joined': '{role} • Joined {day}/{month}/{year}',
+    'staff.detail.months_worked': '{n} months working',
+    'staff.detail.tier_label':    'Tier {n}',
+    'staff.detail.progress_to':   'Progress to Tier {n}',
+    'staff.detail.max_tier':      'Already at max tier',
+    'staff.detail.salary':        'Monthly salary',
+    'staff.detail.morale':        'Morale',
+    'staff.detail.traits_title':  'Traits',
+    'staff.detail.no_traits':     'No special traits.',
+    'staff.detail.train_btn':     '📚 Intensive Training (+30 progress) — ${cost}',
+    'staff.detail.fire_btn':      '⛔ Fire Staff (severance ${severance})',
+    'staff.detail.close':         'Close',
+};
+    // ============================================================
+    // RESEARCH PANEL
+    // ============================================================
+    'research.subtab.tech':    'Technology',
+    'research.subtab.os':      'OS',
+    'research.subtab.history': 'History',
+    'research.subtab.chip':    'Chip',
+
+    'research.section.running':   'Running',
+    'research.section.available': 'Available',
+    'research.section.done':      'Done',
+    'research.section.locked':    'Locked',
+    'research.section.empty':     'No nodes in this category',
+
+    'research.slot.title':       'Active Research',
+    'research.slot.hint':        'No research running. Pick a node below.',
+    'research.slot.eta':         '~{n} days left',
+
+    'research.node.category':    'Category',
+    'research.node.tier':        'Tier',
+    'research.node.available_year': 'Available year',
+    'research.node.cost':        'Cost',
+    'research.node.duration':    'Duration',
+    'research.node.duration_days': '{n} days',
+    'research.node.prereq':      'Prerequisites',
+    'research.node.prereq_none': 'No prerequisites.',
+    'research.node.effects':     'Effects',
+    'research.node.effects_comp': 'Components: {list}',
+    'research.node.effects_feat': 'OS Features: {list}',
+    'research.node.status':      'Status',
+    'research.node.start':       'Start Research',
+    'research.node.cancel':      'Cancel Research',
+    'research.node.not_available': 'Not available',
+
+    // ============================================================
+    // OS PANEL
+    // ============================================================
+    'os.empty.title':       'No OS yet',
+    'os.empty.desc':        'Build your own operating system or license a third-party OS.',
+    'os.empty.create':      'Create OS',
+
+    'os.hero.version':      'Version {v}',
+    'os.hero.no_version':   'No released version yet',
+    'os.hero.dev_new':      'Develop New Version',
+    'os.hero.dev_empty':    'Develop the first version (v1.0) to see stats.',
+
+    'os.dev.title':         'In Development',
+    'os.dev.features_count': '{n} new features',
+    'os.dev.cancel':        'Cancel Development',
+    'os.dev.progress':      'Progress',
+    'os.dev.eta_calc':      'Calculating estimate...',
+
+    'os.bug.title':         'Active Bugs · {n}',
+    'os.bug.severity':      'Sev {n}',
+    'os.bug.patch':         'Patch',
+    'os.bug.ignore':        'Ignore',
+    'os.bug.patching':      'PATCHING',
+
+    'os.features.section_available': 'Available',
+    'os.features.section_deving':    'In Development',
+    'os.features.section_owned':     'Owned',
+    'os.features.section_locked':    'Locked',
+
+    'os.feature.badge_owned':      'OWNED',
+    'os.feature.badge_deving':     'IN DEV',
+    'os.feature.badge_available':  'AVAILABLE',
+    'os.feature.badge_locked':     'LOCKED',
+
+    'os.apps.section':      'App Ecosystem · {owned}/{total}',
+    'os.apps.third_party':  'Third-party apps: {n}',
+    'os.apps.owned_badge':  'OWNED',
+    'os.apps.locked_badge': 'LOCKED',
+    'os.apps.build':        'Build',
+    'os.apps.invite':       'Invite Developers (+apps)',
+    'os.apps.appeal_bonus': '+{n} appeal',
+
+    'os.licenses.section':  'Third-Party OS Licenses',
+    'os.licenses.per_unit': '${cost}/unit',
+    'os.licenses.available':'Available',
+    'os.licenses.available_from': 'Available {year}',
+
+    'os.stat.stability':    'Stability',
+    'os.stat.speed':        'Speed',
+    'os.stat.features':     'Features',
+    'os.stat.security':     'Security',
+    'os.stat.design':       'Design',
+    'os.stat.stab_short':   'Stab',
+    'os.stat.cepat_short':  'Speed',
+    'os.stat.fitur_short':  'Feat',
+    'os.stat.aman_short':   'Sec',
+    'os.stat.desain_short': 'Design',
+
+    'os.wizard.title':      'Develop New Version',
+    'os.wizard.sub':        'Select up to {n} features. Stats will be recomputed.',
+    'os.wizard.preview':    'Stats Preview',
+    'os.wizard.total_cost': 'Total cost',
+    'os.wizard.duration':   'Duration',
+    'os.wizard.start':      'Start Development',
+    'os.wizard.cancel':     'Cancel',
+    'os.wizard.no_features':'No new features available.',
+    'os.wizard.select_min': 'Select at least 1 feature.',
+    'os.wizard.max_features':'Max {n} features per version.',
+
+    'os.create.title':      'Create New OS',
+    'os.create.sub':        'Give your operating system a name.',
+    'os.create.label':      'OS Name',
+    'os.create.placeholder':'E.g. MyOS, Aurora, ...',
+    'os.create.btn':        'Create',
+    'os.create.cancel':     'Cancel',
+
+    'os.feature_detail.era':       'Era',
+    'os.feature_detail.min_year':  'Min year',
+    'os.feature_detail.cost':      'Cost',
+    'os.feature_detail.duration':  'Duration',
+    'os.feature_detail.effects':   'Stat Effects',
+    'os.feature_detail.status':    'Status',
+    'os.feature_detail.status_owned':     'Already owned',
+    'os.feature_detail.status_deving':    'In development',
+    'os.feature_detail.status_available': 'Available for next version',
+    'os.feature_detail.close':     'Close',
+
+    // ============================================================
+    // CHIP / CHIP DESIGNER
+    // ============================================================
+    'chip.lab.title':       'Chip Lab',
+    'chip.lab.arch_avail':  'Architectures available',
+    'chip.lab.node_avail':  'Nodes available',
+    'chip.lab.feat_avail':  'Features available',
+    'chip.lab.catalog':     'Chips in catalog',
+
+    'chip.design.title':    'Design New Chip',
+    'chip.design.desc':     'Design silicon: pick architecture, node, cores, clock, and features.',
+    'chip.design.start':    'Start Chip Design',
+    'chip.design.designing':'Currently Designing',
+    'chip.design.progress': 'Progress',
+    'chip.design.days_left':'{n} days left',
+    'chip.design.cancel':   'Cancel',
+
+    'chip.catalog.title':   'Chip Catalog ({n})',
+    'chip.catalog.empty':   'No chips yet',
+    'chip.catalog.empty_desc': 'Design your first chip in Chip Designer.',
+    'chip.catalog.perf':    'Perf',
+    'chip.catalog.eff':     'Eff',
+
+    'chip.fab.title':       'Fabrication',
+    'chip.fab.level':       'Level',
+    'chip.fab.capacity':    'Capacity',
+    'chip.fab.stock':       'Chip stock',
+    'chip.fab.manage':      'Manage Fab',
+    'chip.fab.build_desc':  'Build your own chip factory for mass production.',
+    'chip.fab.need_research': 'Requires Fab Construction research to build your own factory.',
+    'chip.fab.build':       'Build Fab',
+    'chip.fab.need_research_btn': 'Needs Fab Research',
+    'chip.fab.system_not_ready': 'Chip System not ready',
+    'chip.fab.per_month':   '/mo',
+    'chip.fab.unit':        'units',
+
+    'chip.wiz.title':       'Chip Designer',
+    'chip.wiz.sub':         'Design your own silicon',
+    'chip.wiz.step1':       'Name & Architecture',
+    'chip.wiz.step2':       'Specifications',
+    'chip.wiz.step3':       'Features & Budget',
+    'chip.wiz.step4':       'Preview & Release',
+    'chip.wiz.name_label':  'Chip Name',
+    'chip.wiz.name_ph':     'E.g. X1 Nano, Titan A1, ...',
+    'chip.wiz.arch_label':  'Architecture',
+    'chip.wiz.tier':        'Tier {t} • Max {max} cores • {year}',
+    'chip.wiz.node':        'Process Node',
+    'chip.wiz.cores':       'Number of Cores',
+    'chip.wiz.cores_max':   '(max {n})',
+    'chip.wiz.clock':       'Clock Speed (GHz)',
+    'chip.wiz.cache':       'Cache Size',
+    'chip.wiz.budget':      'R&D Budget',
+    'chip.wiz.features':    'Features',
+    'chip.wiz.features_count': '({n} selected)',
+    'chip.wiz.preview':     'Preview',
+    'chip.wiz.btn_cancel':  'Cancel',
+    'chip.wiz.btn_next':    'Next →',
+    'chip.wiz.btn_back':    '← Back',
+    'chip.wiz.btn_confirm': 'Start Design ✓',
+    'chip.wiz.err_name':    'Enter chip name.',
+    'chip.wiz.err_name_long': 'Name max 24 characters.',
+    'chip.wiz.err_arch':    'Pick an architecture.',
+    'chip.wiz.err_node':    'Pick a process node.',
+    'chip.wiz.goto_research': 'Open Chip Research →',
+    'chip.wiz.no_arch':     'No architectures available. Research chip architecture first.',
+
+    'chip.research.slot_title':  'Chip Research',
+    'chip.research.done_summary': 'Done: <b>{n}</b> / {total} nodes',
+    'chip.research.empty_active': 'No research running.',
+    'chip.research.section_running':   'Running',
+    'chip.research.section_available': 'Available',
+    'chip.research.section_done':      'Done',
+    'chip.research.section_locked':    'Locked',
+
+    // ============================================================
+    // PRODUCT PANEL & DESIGN WIZARD
+    // ============================================================
+    'prod.subtab.design':  'Design',
+    'prod.subtab.catalog': 'Catalog',
+    'prod.subtab.sales':   'Sales',
+    'prod.subtab.chip':    'Chip',
+
+    'prod.design.title':    'Design New Product',
+    'prod.design.desc':     'Design a phone: pick components, choose OS, set price and production quantity.',
+    'prod.design.start':    'Start Phone Design',
+    'prod.design.dev_title':'Active Development',
+    'prod.design.dev_phase':'Phase: <b>{phase}</b> - Total {days} game days',
+    'prod.design.dev_eta':  'Waiting for time to advance...',
+    'prod.design.cancel':   'Cancel Project',
+
+    'prod.phase.design':    'Design',
+    'prod.phase.prototype': 'Prototype',
+    'prod.phase.production':'Production',
+    'prod.phase.released':  'Released',
+
+    'prod.catalog.empty':   'No products yet',
+    'prod.catalog.empty_desc': 'Release your first phone in the Design sub-tab.',
+    'prod.catalog.status_selling': 'Selling',
+    'prod.catalog.status_discontinued': 'Discontinued',
+    'prod.catalog.auto_tag': '[AUTO]',
+    'prod.catalog.review':  '⭐ {n}/10',
+    'prod.catalog.stock':   '📦 {n} stock',
+    'prod.catalog.revenue': '💰 ${n}',
+    'prod.catalog.sold':    'Sold: {n}',
+    'prod.catalog.price':   'Price: ${n}',
+    'prod.catalog.quality': 'Quality: {n}',
+
+    'prod.sales.total_revenue': 'Total Revenue',
+    'prod.sales.total_sold':    'Total Sold',
+    'prod.sales.active_products':'Active Products',
+    'prod.sales.best_seller':   'Best Seller',
+    'prod.sales.list_title':    'Product List',
+    'prod.sales.list_empty':    'No products yet.',
+
+    'prod.detail.title':         'Phone Detail',
+    'prod.detail.release':       'Released {day}/{month}/{year}',
+    'prod.detail.section_sales': 'Sales',
+    'prod.detail.total_sold':    'Total sold',
+    'prod.detail.revenue':       'Revenue',
+    'prod.detail.stock':         'Current stock',
+    'prod.detail.review_avg':    'Average review',
+    'prod.detail.unit':          'units',
+    'prod.detail.section_spec':  'Specifications',
+    'prod.detail.spec_screen':   'Screen',
+    'prod.detail.spec_camera':   'Camera',
+    'prod.detail.spec_battery':  'Battery',
+    'prod.detail.spec_chip':     'Chip',
+    'prod.detail.spec_network':  'Network',
+    'prod.detail.spec_body':     'Body',
+    'prod.detail.spec_os':       'OS',
+    'prod.detail.auto_title':    'Automatic Restock',
+    'prod.detail.auto_label':    'Enable Auto-Restock',
+    'prod.detail.auto_on':       'System will restock automatically',
+    'prod.detail.auto_off':      'Manual restock',
+    'prod.detail.actions_title': 'Actions',
+    'prod.detail.order_btn':     'Order Additional Production',
+    'prod.detail.campaign_btn':  'Marketing Campaign',
+    'prod.detail.discontinue_btn':'Discontinue Product',
+    'prod.detail.discontinued':  'Product has been discontinued.',
+    'prod.detail.close':         'Close',
+
+    'prod.campaign.title':   'Pick Campaign',
+    'prod.campaign.sub':     'Effect is amplified by Marketer count.',
+    'prod.campaign.cancel':  'Cancel',
+
+    'prod.order.title':      'Additional Production',
+    'prod.order.qty_label':  'Number of units',
+    'prod.order.cost_unit':  'Cost per unit',
+    'prod.order.setup':      'Setup cost',
+    'prod.order.total':      'Estimated total',
+    'prod.order.submit':     'Order',
+    'prod.order.cancel':     'Cancel',
+
+    'wiz.era_banner_year':   '{year}',
+    'wiz.step_of':           'Step {n} of 4 — {title}',
+    'wiz.step1.title':       'Name & Form',
+    'wiz.step2.title':       'Components',
+    'wiz.step3.title':       'OS & Body',
+    'wiz.step4.title':       'Price & Production',
+
+    'wiz.step1.name_label':  'Phone Name',
+    'wiz.step1.name_ph':     'E.g. X1, Nova, ...',
+    'wiz.step1.autofill_btn':'Auto-fill Recommendation',
+    'wiz.step1.autofill_hint':'Pick the best components this year & jump to Summary.',
+    'wiz.step1.ff_label':    'Form Factor',
+    'wiz.step1.ff_tier':     'Tier {tier} • {year}',
+    'wiz.step1.cancel':      'Cancel',
+    'wiz.step1.next':        'Next →',
+    'wiz.step1.no_ff':       'No form factors available this year. Research first.',
+
+    'wiz.step2.cat_count':   '({n})',
+    'wiz.step2.cat_count_opt':'({n} + optional)',
+    'wiz.step2.no_camera':   'No Camera',
+    'wiz.step2.no_camera_hint': 'Saves production cost',
+    'wiz.step2.no_item':     'No {name}',
+    'wiz.step2.optional':    'Optional',
+    'wiz.step2.empty':       'No components yet — research first or wait for next year.',
+    'wiz.step2.back':        '← Back',
+    'wiz.step2.next':        'Next →',
+
+    'wiz.step3.os_label':    'Operating System',
+    'wiz.step3.body_label':  'Body',
+    'wiz.step3.color_label': 'Color',
+    'wiz.step3.os_empty':    'No OS yet. Create an OS in the Research tab.',
+    'wiz.step3.body_empty':  'No body available.',
+    'wiz.step3.color_empty': 'No color available.',
+    'wiz.step3.os_free':     'Free',
+    'wiz.step3.back':        '← Back',
+    'wiz.step3.next':        'Next →',
+
+    'wiz.step4.price_label': 'Sale Price (USD)',
+    'wiz.step4.qty_label':   'Initial Production Quantity',
+    'wiz.step4.summary':     'Summary',
+    'wiz.step4.back':        '← Back',
+    'wiz.step4.release':     'Release Product ✓',
+    'wiz.step4.price_low':   'Price < Cost',
+
+    'wiz.preview.quality':    'Quality Score',
+    'wiz.preview.unit_cost':  'Cost per unit',
+    'wiz.preview.total_cost': 'Total cost',
+    'wiz.preview.margin':     'Margin',
+    'wiz.preview.demand':     'Estimated demand/day',
+    'wiz.preview.demand_unit':'~{n} units',
+    'wiz.preview.no_camera':  'ℹ This phone has no camera — the market may be less interested.',
+    'wiz.preview.warn_chip_bat': 'Strong chip but small battery.',
+    'wiz.preview.warn_cam_disp': 'Good camera but poor screen.',
+    'wiz.preview.warn_margin':   'Price is below production cost!',
+
+    'wiz.detail.title':       'Phone Detail',
+    'wiz.detail.sub':         '{name} — {year}',
+    'wiz.detail.era':         'Design Era',
+    'wiz.detail.milestone':   'Milestone',
+    'wiz.detail.section_comp':'Components',
+    'wiz.detail.spec_ff':     'Form Factor',
+    'wiz.detail.spec_screen': 'Screen',
+    'wiz.detail.spec_camera': 'Camera',
+    'wiz.detail.spec_battery':'Battery',
+    'wiz.detail.spec_chip':   'Chip',
+    'wiz.detail.spec_network':'Network',
+    'wiz.detail.spec_body':   'Body',
+    'wiz.detail.spec_color':  'Color',
+    'wiz.detail.close':       'Close',
+    'wiz.detail.btn_show':    'View Detail',
+
+    'wiz.err.need_name':      'Enter product name.',
+    'wiz.err.need_ff':        'Pick a form factor.',
+    'wiz.err.need_comp':      'Complete the required components (screen, battery, chip, network).',
+    'wiz.err.need_os_body':   'Pick OS, body, and color.',
+    'wiz.err.not_ready':      'System not ready.',
+    'wiz.err.confirm_fail':   'Failed.',
+    'wiz.success.dev_start':  'Development started!',
+    'wiz.success.autofill':   'Best recommendation applied!',
+    'wiz.warn.autofill_missing': 'Not available this year: {list}',
+    'wiz.err.dev_active':     'A product is already in development.',
+
+    'wiz.spec.quality':       'Score',
+    'wiz.spec.margin':        'Margin',
+    'wiz.spec.screen':        'Screen',
+    'wiz.spec.chip':          'Chip',
+    'wiz.spec.no_name':       'Unnamed',
+
+    // ============================================================
+    // MARKET PANEL
+    // ============================================================
+    'market.subtab.share':       'Share',
+    'market.subtab.competitors': 'Competitors',
+    'market.subtab.trends':      'Trends',
+    'market.subtab.public':      'Public',
+
+    'market.share.title':        'Your Market Share',
+    'market.share.updated':      'Data updated monthly',
+    'market.share.chart_title':  'Share Chart (24 Months)',
+    'market.share.chart_empty':  'Data appears after 2 months of simulation.',
+    'market.share.rank_title':   'Ranking',
+    'market.share.you':          'You',
+    'market.share.others':       'Other players',
+
+    'market.competitors.empty':  'No competitors yet',
+    'market.competitors.not_ready': 'Competitor system not ready',
+    'market.comp.share_label':   'share',
+    'market.comp.latest':        '📱 Latest: {name} ({year})',
+    'market.comp.os_tier':       'OS: {os} • Tier {tier}',
+
+    'market.trends.title':       'Market Highlight',
+    'market.trends.likes':       'The market is currently favoring <b>{name}</b>.',
+    'market.trends.taste':       'Market Taste',
+    'market.trends.note_title':  'Note',
+    'market.trends.note_desc':   'Market taste shifts slowly each month. Products aligned with trends sell better.',
+
+    'market.trend.camera':      'Camera',
+    'market.trend.battery':     'Battery',
+    'market.trend.screen':      'Screen',
+    'market.trend.performance': 'Performance',
+    'market.trend.design':      'Design',
+
+    'market.personality.aggressive': '⚔️ Aggressive Pricing',
+    'market.personality.premium':    '💎 Premium',
+    'market.personality.innovator':  '💡 Innovator',
+    'market.personality.follower':   '🔄 Follower',
+    'market.personality.dominant':   '👑 Dominant',
+    'market.personality.declining':  '📉 Declining',
+
+    'market.comp_detail.title':      'Competitor Detail',
+    'market.comp_detail.os':         'OS',
+    'market.comp_detail.share':      'Current share',
+    'market.comp_detail.tier':       'Research tier',
+    'market.comp_detail.active':     'Active since',
+    'market.comp_detail.latest':     'Latest release',
+    'market.comp_detail.str_weak':   'Strengths & Weaknesses',
+    'market.comp_detail.signature':  'Signature Products',
+    'market.comp_detail.no_sig':     'No signature products yet.',
+    'market.comp_detail.close':      'Close',
+
+    // ============================================================
+    // PUBLIC OPINION
+    // ============================================================
+    'opinion.sentiment.title':       'Public Sentiment',
+    'opinion.sentiment.very_good':   'Very Good',
+    'opinion.sentiment.good':        'Good',
+    'opinion.sentiment.neutral':     'Neutral',
+    'opinion.sentiment.bad':         'Bad',
+    'opinion.sentiment.very_bad':    'Very Bad',
+
+    'opinion.aspects.title':         'By Aspect',
+    'opinion.aspect.design':         'Design',
+    'opinion.aspect.camera':         'Camera',
+    'opinion.aspect.battery':        'Battery',
+    'opinion.aspect.performance':    'Performance',
+    'opinion.aspect.price':          'Price/Value',
+    'opinion.aspect.reliability':    'Reliability',
+    'opinion.aspect.os':             'OS/Software',
+    'opinion.aspect.support':        'After-sales',
+
+    'opinion.comparison.title':      'Satisfaction Comparison',
+    'opinion.comparison.you':        'You',
+
+    'opinion.viral.positive':        '✨ Positive Viral',
+    'opinion.viral.negative':        '⚠ Negative Viral',
+    'opinion.viral.expires':         'Ends in ~{n} days',
+    'opinion.viral.respond':        'Choose Response',
+
+    'opinion.suggestions.title':     'Customer Suggestions',
+    'opinion.suggestions.score':     'Aspect score: {n}/100',
+
+    'opinion.per_product.title':     'Satisfaction per Product',
+
+    'opinion.feed.title':            'Review Feed ({n})',
+    'opinion.feed.empty':            'No reviews yet',
+    'opinion.feed.empty_desc':       'Release a phone first so the public starts commenting.',
+
+    'opinion.viral_modal.title':     'Negative Viral Response',
+    'opinion.viral_modal.sub':       'Choose how to respond. Strong responses cost money.',
+    'opinion.viral_modal.free':      'Free',
+    'opinion.viral_modal.cancel':    'Cancel',
+
+    // ============================================================
+    // NEWS ARTICLE MODAL
+    // ============================================================
+    'news_article.by':        'By',
+    'news_article.score':     'Editor Score',
+    'news_article.from':      'Article from {source} ({type})',
+    'news_article.close':     'Close Article',
+    'news_article.redaksi':   'Editorial',
+    'news_article.global':    'Global',
+
+    // ============================================================
+    // MONTHLY SUMMARY
+    // ============================================================
+    'monthly.title':          'Report for {month}/{year}',
+    'monthly.sub':            'Automatic financial summary.',
+    'monthly.income':         'Income',
+    'monthly.salary':         'Team salary',
+    'monthly.fixed':          'Rent & utilities',
+    'monthly.loan_interest':  'Loan interest',
+    'monthly.tax':            'Tax',
+    'monthly.net':            'Net Profit',
+    'monthly.cash_end':       'Ending balance',
+    'monthly.close':          'Close',
+
+    // ============================================================
+    // ONBOARDING
+    // ============================================================
+    'onb.title':              'Welcome',
+    'onb.sub':                'Let\'s found your first phone company.',
+    'onb.name_label':         'Company name',
+    'onb.diff_label':         'Difficulty level',
+    'onb.diff_santai':        'Relaxed',
+    'onb.diff_santai_desc':   'Big capital, low costs, friendly competitors.',
+    'onb.diff_normal':        'Normal',
+    'onb.diff_normal_desc':   'Standard, balanced experience.',
+    'onb.diff_sulit':         'Hard',
+    'onb.diff_sulit_desc':    'Small capital, high costs, aggressive competitors.',
+    'onb.submit':             'Start Playing',
+
+    // ============================================================
+    // GAME OVER
+    // ============================================================
+    'gameover.title':         'Company Bankrupt',
+    'gameover.sub':           '{company} couldn\'t survive.',
+    'gameover.reason':        'Negative cash for {n} consecutive months.',
+    'gameover.end_year':      'Ended: Year {year} Month {month}',
+    'gameover.phones':        'Phones released: {n}',
+    'gameover.milestones':    'Milestones reached: {n}',
+    'gameover.restart':       'Start Over',
+
+    // ============================================================
+    // COMPANY PROFILE
+    // ============================================================
+    'profile.founded':        'Founded 2000',
+    'profile.era_year':       '{era} • Year {year}',
+    'profile.kpi_revenue':    'Total Revenue',
+    'profile.kpi_sold':       'Units Sold',
+    'profile.kpi_rank':       'Market Rank',
+    'profile.kpi_share':      'Market Share',
+    'profile.ops_title':      'Operational Summary',
+    'profile.ops_cash':       'Cash',
+    'profile.ops_active':     'Active products',
+    'profile.ops_staff':      'Total staff',
+    'profile.ops_staff_unit': '{n} people',
+    'profile.ops_salary':     'Monthly salary',
+    'profile.ops_morale':     'Average morale',
+    'profile.ops_rep':        'Reputation',
+    'profile.ops_sentiment':  'Public sentiment',
+    'profile.milestones':     'Achievements ({n})',
+    'profile.milestones_empty':'No achievements yet. Keep growing the company!',
+    'profile.cloud_title':    '☁️ Cloud Sync',
+    'profile.cloud_status':   'Status',
+    'profile.cloud_disconnected': 'Not connected',
+    'profile.cloud_connecting':   'Connecting...',
+    'profile.cloud_connected':    'Synced',
+    'profile.cloud_error':        'Connection failed',
+    'profile.cloud_desc':     'Cloud sync will arrive in a future update. Your save is currently stored locally on your device.',
+    'profile.cloud_btn':      'Set Up Cloud (Coming Soon)',
+
+    'profile.era.feature_phone':     'Feature Phone',
+    'profile.era.touch_revolution':  'Touch Revolution',
+    'profile.era.modern_smartphone': 'Modern Smartphone',
+    'profile.era.ai_ecosystem':      'AI & Ecosystem',
+
+    // ============================================================
+    // CLOUD STATUS CARD
+    // ============================================================
+    'cloud.card_title':       'Storage',
+    'cloud.autosave':         '💾 Local auto-save active (every 30 seconds).',
+    'cloud.sync_unavailable': '☁️ Cloud sync: Not available yet',
+
+    // ============================================================
+    // QUESTS PANEL
+    // ============================================================
+    'quests.title':           'Quests ({n} done)',
+    'quests.empty':           'All initial quests completed 🎉',
+
+    // ============================================================
+    // TIME PANEL
+    // ============================================================
+    'time.title':             'Simulation Time',
+    'time.clock':             'At <b>{hh}:{mm}</b>',
+    'time.elapsed':           'Total {n} game minutes elapsed',
+    'time.paused':            'Paused',
+
+    // ============================================================
+    // GUIDE PANEL
+    // ============================================================
+    'guide.glossary_title':   'Glossary',
+    'guide.tips_title':       'General Tips',
+    'guide.shortcuts_title':  'Shortcuts',
+    'guide.back':             '← Back',
+
+    'guide.term.reputation':  'Reputation',
+    'guide.def.reputation':   'Market trust in your company. Affects demand.',
+    'guide.term.share':       'Market Share',
+    'guide.def.share':        'Your sales as a percentage of the total market.',
+    'guide.term.quality':     'Quality',
+    'guide.def.quality':      'Combined score from phone components & OS.',
+    'guide.term.burnrate':    'Burn Rate',
+    'guide.def.burnrate':     'Average monthly cost. If cash < 2x burn rate, you\'re in danger.',
+    'guide.term.rnd':         'R&D',
+    'guide.def.rnd':          'Research & Development — technology research activity.',
+    'guide.term.era':         'Era',
+    'guide.def.era':          'Technology period: Feature Phone, Touch, Modern, AI.',
+    'guide.term.os':          'OS',
+    'guide.def.os':           'Operating system. Can be self-developed or licensed.',
+    'guide.term.prototype':   'Prototype',
+    'guide.def.prototype':    'Testing phase before mass production.',
+    'guide.term.lifecycle':   'Lifecycle',
+    'guide.def.lifecycle':    'Product life cycle: rise, peak, decline.',
+
+    'guide.tip.1':            'Keep cash above 3 months of operating costs.',
+    'guide.tip.2':            'Early research unlocks cheaper high-quality components.',
+    'guide.tip.3':            'Hire Engineers to speed up research; Designers to boost product quality.',
+    'guide.tip.4':            'Don\'t forget marketing when releasing a phone.',
+    'guide.tip.5':            'Follow era trends so your product doesn\'t feel outdated.',
+
+    // ============================================================
+    // FAB PANEL
+    // ============================================================
+    'fab.title':              '🏭 Fab Panel',
+    'fab.sub':                'Manage your chip factory',
+    'fab.build_title':        '🏭 Build Chip Fabrication',
+    'fab.build_sub':          'Your own chip factory = lower per-unit cost & full control.',
+    'fab.need_research':      '⚠ Requires <b>Fab Construction</b> research to build the factory. Research available in 2010.',
+    'fab.building':           '🏗️ Building',
+    'fab.upgrade':            '⬆️ Upgrade',
+    'fab.upgrade_target':     '⬆️ Upgrade to Level {n}',
+    'fab.progress':           'Progress',
+    'fab.days_left':          '{n} days left',
+    'fab.cancel_upgrade':     'Cancel',
+    'fab.producing':          '⚙️ Producing: {name}',
+    'fab.producing_units':    '{done} / {total} units',
+    'fab.producing_info':     'Yield {yield}% • {days} days left',
+    'fab.cancel_prod':        'Cancel Production',
+    'fab.info_level':         'Level',
+    'fab.info_capacity':      'Capacity',
+    'fab.info_stock':         'Ready-to-use chip stock',
+    'fab.info_total':         'Total produced',
+    'fab.capacity_unit':      '{n} units/month',
+    'fab.unit':               'units',
+    'fab.start_prod':         'Start Production',
+    'fab.start_prod_desc':    'Pick a chip for mass production. Fab capacity: {cap} units/month.',
+    'fab.no_chip':            'No chips in catalog. Design a chip in Chip Designer first.',
+    'fab.upgrade_title':      '⬆️ Upgrade Fab',
+    'fab.upgrade_target_lbl': 'Target',
+    'fab.upgrade_cost':       'Cost',
+    'fab.upgrade_duration':   'Duration',
+    'fab.upgrade_btn':        'Upgrade Fab',
+    'fab.upgrade_max':        'Fab is at max level.',
+    'fab.upgrade_disabled':   'Insufficient Funds',
+    'fab.history_title':      'Production History',
+    'fab.close':              'Close',
+    'fab.stat_cost':          'Cost',
+    'fab.stat_duration':      'Duration',
+    'fab.stat_capacity':      'Capacity',
+    'fab.build_btn':          'Build {name}',
+    'fab.need_research_btn':  'Needs Fab Research',
+    'fab.no_money':           'Insufficient funds',
+
+    'fab.prod_qty_title':     '🏭 Production: {name}',
+    'fab.prod_qty_sub':       'Chip output target',
+    'fab.prod_qty_label':     'Number of Units',
+    'fab.prod_qty_capacity':  'Fab capacity',
+    'fab.prod_qty_cost':      'Cost per unit',
+    'fab.prod_qty_yield':     'Yield rate',
+    'fab.prod_qty_estimate':  'Estimated cost',
+    'fab.prod_qty_cancel':    'Cancel',
+    'fab.prod_qty_confirm':   'Produce',
+
+    // ============================================================
+    // CHIP MISC
+    // ============================================================
+    'chip.arch.tier_desc':    'Tier {tier} • Max {max} cores • {year}',
+    'chip.node.perf':         'Perf ×{n} • Yield {y}%',
+
+    // ============================================================
+    // ACTIVITY PANEL (legacy)
+    // ============================================================
+    'activity.title':         'Recent Activity',
+    'activity.founded':       'Day 1: Company <b>{name}</b> was founded.',
+    'activity.waiting':       'Waiting for the next milestone.',
+
+    // ============================================================
+    // CHART
+    // ============================================================
+    'chart.sales_title':      'Sales Chart',
+    'chart.sales_empty':      'No sales yet. Release a product first.',
+    'chart.sales_x':          'Last 30 days',
+    'chart.cash_title':       'Finance — 24 Months',
+    'chart.cash_empty':       'Data appears after 2 months of simulation.',
+
+    // ============================================================
+    // TUTORIAL OVERLAY
+    // ============================================================
+    'tut.skip':               'Skip',
+    'tut.next':               'Next',
 };
