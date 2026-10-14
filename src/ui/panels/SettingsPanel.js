@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SettingsPanel.js
-// v2027.6a — Executive Console + i18n + tab Bahasa.
+// v2027.6b — fix toggle data-toggle attribute.
 import { state } from '../../core/GameState.js';
 import { SaveService } from '../../core/SaveService.js';
 import { ToastService } from '../../core/ToastService.js';
@@ -32,17 +32,11 @@ function escapeHtml(s) {
             .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
-// ============================================================
-// MAIN RENDER
-// ============================================================
 export function renderSettingsPanel() {
     const s = state.get();
     return _heroCard(s) + _tabBar() + _tabContent(s);
 }
 
-// ============================================================
-// HERO
-// ============================================================
 function _heroCard(s) {
     const time = s.time || {};
     const monthShort = MONTH_SHORT[(time.currentMonth || 1) - 1] || '';
@@ -76,9 +70,6 @@ function _kpi(label, value) {
         '</div>';
 }
 
-// ============================================================
-// TABS
-// ============================================================
 function _tabBar() {
     return '<div class="settings-tabs">' +
         TABS.map(function (tab) {
@@ -102,9 +93,6 @@ function _tabContent(s) {
     }
 }
 
-// ============================================================
-// TAB — UMUM
-// ============================================================
 function _tabUmum(s) {
     return _section('settings', t('settings.section.company'),
         _row({ label: t('settings.row.name'), value: escapeHtml(s.companyName || '—'), action: true, attrs: 'data-set="edit-name"', chevron: true }) +
@@ -123,9 +111,6 @@ function _formatFounded(s) {
     return time.currentDay + ' ' + monthShort + ' ' + time.currentYear;
 }
 
-// ============================================================
-// TAB — TAMPILAN
-// ============================================================
 function _tabTampilan() {
     const currentTheme  = ThemeService.getTheme();
     const currentAccent = ThemeService.getAccent();
@@ -160,9 +145,6 @@ function _tabTampilan() {
         '</div>';
 }
 
-// ============================================================
-// TAB — AUDIO
-// ============================================================
 function _tabAudio(s) {
     const vib = !!(s.settings && s.settings.vibrate);
     const snd = !!(s.settings && s.settings.sound);
@@ -173,9 +155,6 @@ function _tabAudio(s) {
     );
 }
 
-// ============================================================
-// TAB — KEUANGAN
-// ============================================================
 function _tabKeuangan(s) {
     const activeLoans = (s.finance && s.finance.loans) ? s.finance.loans : [];
 
@@ -205,9 +184,6 @@ function _tabKeuangan(s) {
            _section('coin', t('settings.section.loans_take'), offersHtml);
 }
 
-// ============================================================
-// TAB — BAHASA
-// ============================================================
 function _tabBahasa() {
     const current = LanguageService.getLang();
     const langs = LanguageService.getSupported();
@@ -231,9 +207,6 @@ function _tabBahasa() {
         '</div>';
 }
 
-// ============================================================
-// TAB — DATA
-// ============================================================
 function _tabData() {
     const version = (APP_CONFIG && APP_CONFIG.version) ? APP_CONFIG.version : 'dev';
 
@@ -249,9 +222,6 @@ function _tabData() {
     '<div class="settings-footer">' + escapeHtml(APP_CONFIG.name || 'Smartphone Empire') + ' · v' + escapeHtml(version) + '</div>';
 }
 
-// ============================================================
-// COMPONENTS
-// ============================================================
 function _section(iconId, title, contentHtml) {
     var icon = iconId ? renderIcon(iconId, 12) : '';
     return '<div class="settings-section">' +
@@ -283,8 +253,8 @@ function _row(opts) {
     var rightHtml = '<div class="settings-row-right">';
 
     if (opts.switchOn != null) {
+        // FIX: jangan clear attrs di sini
         rightHtml += '<button class="toggle-switch' + (opts.switchOn ? ' on' : '') + '" ' + attrs + ' type="button" aria-label="Toggle"><span class="toggle-thumb"></span></button>';
-        attrs = '';
     } else if (opts.value != null && opts.value !== '') {
         rightHtml += '<span class="settings-row-value">' + opts.value + '</span>';
     }
@@ -298,9 +268,6 @@ function _row(opts) {
     return '<div class="' + cls + '" ' + attrs + '>' + labelHtml + rightHtml + '</div>';
 }
 
-// ============================================================
-// BIND
-// ============================================================
 export function bindSettingsActions(root) {
     if (!root) return;
 
@@ -321,7 +288,6 @@ export function bindSettingsActions(root) {
             if (ok) {
                 var label = newLang === 'id' ? t('settings.lang.indonesian') : t('settings.lang.english');
                 ToastService.info(t('toast.lang_changed', { value: label }));
-                // renderAll akan dipicu dari main.js via bus 'lang:changed'
             }
             return;
         }
@@ -355,9 +321,6 @@ export function bindSettingsActions(root) {
     });
 }
 
-// ============================================================
-// HANDLERS
-// ============================================================
 function _handleSet(action) {
     switch (action) {
         case 'save':
@@ -383,9 +346,6 @@ function _handleToggle(key) {
     window.__game.render();
 }
 
-// ============================================================
-// MODAL — EDIT NAMA
-// ============================================================
 function _openEditName() {
     const s = state.get();
     const html = '<div class="modal-title">' + escapeHtml(t('settings.edit_name.title')) + '</div>' +
@@ -415,9 +375,6 @@ function _openEditName() {
     });
 }
 
-// ============================================================
-// MODAL — EXPORT / IMPORT / LOAD / RESET
-// ============================================================
 function _openExport() {
     const json = SaveService.export(state);
     if (!json) { ToastService.error('Export failed.'); return; }
@@ -481,4 +438,4 @@ function _confirmReset() {
         SaveService.stopAutoSave();
         window.location.reload();
     });
-    }
+}
