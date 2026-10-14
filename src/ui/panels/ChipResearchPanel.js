@@ -1,6 +1,7 @@
 // FILE: src/ui/panels/ChipResearchPanel.js
 // Sub-tab "Chip" dalam tab Riset.
 // v2026.2 — Row-based, section-grouped (konsisten dengan Tech panel).
+// v2027.13c — i18n.
 import {
     CHIP_RESEARCH_CATEGORIES,
     CHIP_RESEARCH_NODES,
@@ -8,6 +9,7 @@ import {
 } from '../../data/chip-research.data.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { renderTechNodeRow } from '../components/TechNodeCard.js';
+import { t } from '../../core/LanguageService.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -22,7 +24,8 @@ export function setChipResearchFilter(cat) { _filterCategory = cat; }
 // ============================================================
 // MAIN RENDER
 // ============================================================
-export function renderChipResearchPanel({ chipResearchSystem }) {
+export function renderChipResearchPanel(params) {
+    var chipResearchSystem = params.chipResearchSystem;
     const data = window.__game.state.get();
     const cr = data.chipResearch || { active: [], completed: [], maxSlots: 1, totalCompleted: 0 };
     const active = cr.active || [];
@@ -54,21 +57,21 @@ export function renderChipResearchPanel({ chipResearchSystem }) {
     let html = slotBar + chipBar;
 
     if (groups.running.length) {
-        html += _renderNodeGroup('Berjalan', groups.running, active);
+        html += _renderNodeGroup(t('chip.research.section_running'), groups.running, active);
     }
     if (groups.available.length) {
-        html += _renderNodeGroup('Tersedia', groups.available, active);
+        html += _renderNodeGroup(t('chip.research.section_available'), groups.available, active);
     }
     if (groups.done.length) {
-        html += _renderCollapsibleGroup('Selesai', groups.done, active);
+        html += _renderCollapsibleGroup(t('chip.research.section_done'), groups.done, active);
     }
     if (groups.locked.length) {
-        html += _renderCollapsibleGroup('Terkunci', groups.locked, active);
+        html += _renderCollapsibleGroup(t('chip.research.section_locked'), groups.locked, active);
     }
 
     if (!groups.running.length && !groups.available.length &&
         !groups.done.length && !groups.locked.length) {
-        html += '<div class="empty"><div class="empty-title">Tidak ada node di kategori ini</div></div>';
+        html += '<div class="empty"><div class="empty-title">' + t('research.section.empty') + '</div></div>';
     }
 
     return html;
@@ -78,15 +81,15 @@ export function renderChipResearchPanel({ chipResearchSystem }) {
 // SLOT BAR
 // ============================================================
 function _renderSlotBar(active, maxSlots, completedCount, total) {
-    var summaryLine = 'Selesai: <b>' + completedCount + '</b> / ' + total + ' node';
+    var summaryLine = t('chip.research.done_summary', { n: completedCount, total: total });
 
     if (!active.length) {
         return '<div class="slot-strip slot-strip-empty">' +
             '<div class="slot-strip-top">' +
-                '<span class="slot-strip-label">Riset Chip</span>' +
+                '<span class="slot-strip-label">' + t('chip.research.slot_title') + '</span>' +
                 '<span class="slot-strip-count" data-chip-research-slots>0/' + maxSlots + '</span>' +
             '</div>' +
-            '<div class="slot-strip-hint">' + summaryLine + '. Belum ada riset berjalan.</div>' +
+            '<div class="slot-strip-hint">' + summaryLine + '. ' + t('chip.research.empty_active') + '</div>' +
             '</div>';
     }
 
@@ -105,7 +108,7 @@ function _renderSlotBar(active, maxSlots, completedCount, total) {
 
     return '<div class="slot-strip">' +
         '<div class="slot-strip-top">' +
-            '<span class="slot-strip-label">Riset Chip</span>' +
+            '<span class="slot-strip-label">' + t('chip.research.slot_title') + '</span>' +
             '<span class="slot-strip-count" data-chip-research-slots>' + active.length + '/' + maxSlots + '</span>' +
         '</div>' +
         '<div class="slot-strip-hint">' + summaryLine + '</div>' +
@@ -125,7 +128,7 @@ function _renderChipFilter() {
     }).join('');
 
     return '<div class="chip-bar">' +
-        '<button class="chip ' + (_filterCategory === 'all' ? 'active' : '') + '" data-chip-filter-cat="all">Semua</button>' +
+        '<button class="chip ' + (_filterCategory === 'all' ? 'active' : '') + '" data-chip-filter-cat="all">' + t('timeline.filter.all') + '</button>' +
         chips +
         '</div>';
 }
@@ -165,7 +168,7 @@ function _renderRow(it, active) {
         var entry = (active || []).find(function (e) { return e.nodeId === it.node.id; });
         if (entry) {
             pct = Math.round(entry.percent * 100);
-            eta = 'Sisa ~' + Math.ceil(entry.remainingDays) + ' hari';
+            eta = t('research.slot.eta', { n: Math.ceil(entry.remainingDays) });
         }
     }
 
@@ -182,9 +185,12 @@ function _renderRow(it, active) {
 }
 
 // ============================================================
-// MODAL DETAIL NODE CHIP (tidak berubah)
+// MODAL DETAIL NODE CHIP
 // ============================================================
-export function openChipNodeModal({ nodeId, chipResearchSystem }) {
+export function openChipNodeModal(params) {
+    var nodeId = params.nodeId;
+    var chipResearchSystem = params.chipResearchSystem;
+
     const node = getChipResearchById(nodeId);
     if (!node) return;
     const st = chipResearchSystem.getNodeStatus(nodeId);
@@ -197,18 +203,18 @@ export function openChipNodeModal({ nodeId, chipResearchSystem }) {
             const done = (cr.completed || []).indexOf(p) !== -1;
             return `<div class="sum-row"><span>${done ? '✓' : '○'} ${pn ? escapeHtml(pn.name) : p}</span><b></b></div>`;
         }).join('')
-        : '<div style="font-size:12px;color:var(--text-mute);">Tidak ada prasyarat.</div>';
+        : '<div style="font-size:12px;color:var(--text-mute);">' + t('research.node.prereq_none') + '</div>';
 
     const unlock = node.unlock || {};
     let unlockHtml = '';
     if (unlock.type === 'architecture') {
-        unlockHtml = `<div style="font-size:12px;color:var(--text-dim);">Membuka arsitektur: <b>${escapeHtml(unlock.id)}</b></div>`;
+        unlockHtml = `<div style="font-size:12px;color:var(--text-dim);">Architecture: <b>${escapeHtml(unlock.id)}</b></div>`;
     } else if (unlock.type === 'node') {
-        unlockHtml = `<div style="font-size:12px;color:var(--text-dim);">Membuka process node: <b>${escapeHtml(unlock.id)}</b></div>`;
+        unlockHtml = `<div style="font-size:12px;color:var(--text-dim);">Process node: <b>${escapeHtml(unlock.id)}</b></div>`;
     } else if (unlock.type === 'feature') {
-        unlockHtml = `<div style="font-size:12px;color:var(--text-dim);">Membuka fitur chip: <b>${escapeHtml(unlock.id)}</b></div>`;
+        unlockHtml = `<div style="font-size:12px;color:var(--text-dim);">Chip feature: <b>${escapeHtml(unlock.id)}</b></div>`;
     } else if (unlock.type === 'fab') {
-        unlockHtml = `<div style="font-size:12px;color:var(--text-dim);">Membuka: <b>${escapeHtml(unlock.id)}</b></div>`;
+        unlockHtml = `<div style="font-size:12px;color:var(--text-dim);">Unlocks: <b>${escapeHtml(unlock.id)}</b></div>`;
     } else if (unlock.type === 'bonus') {
         unlockHtml = `<div style="font-size:12px;color:var(--text-dim);">Bonus: <b>${escapeHtml(unlock.id)}</b></div>`;
     }
@@ -218,22 +224,22 @@ export function openChipNodeModal({ nodeId, chipResearchSystem }) {
     const html = `
         <div class="modal-title">${escapeHtml(node.name)}</div>
         <div class="modal-sub">${escapeHtml(node.description)}</div>
-        <div class="sum-row"><span>Kategori</span><b>${cat ? cat.name : node.category}</b></div>
-        <div class="sum-row"><span>Tier</span><b>${node.tier}</b></div>
-        <div class="sum-row"><span>Tersedia tahun</span><b>${node.minYear}</b></div>
-        <div class="sum-row"><span>Biaya</span><b>$${node.cost.toLocaleString('en-US')}</b></div>
-        <div class="sum-row"><span>Durasi</span><b>${node.durationDays} hari</b></div>
-        <div class="card-title" style="margin-top:12px;">Prasyarat</div>
+        <div class="sum-row"><span>${t('research.node.category')}</span><b>${cat ? cat.name : node.category}</b></div>
+        <div class="sum-row"><span>${t('research.node.tier')}</span><b>${node.tier}</b></div>
+        <div class="sum-row"><span>${t('research.node.available_year')}</span><b>${node.minYear}</b></div>
+        <div class="sum-row"><span>${t('research.node.cost')}</span><b>$${node.cost.toLocaleString('en-US')}</b></div>
+        <div class="sum-row"><span>${t('research.node.duration')}</span><b>${t('research.node.duration_days', { n: node.durationDays })}</b></div>
+        <div class="card-title" style="margin-top:12px;">${t('research.node.prereq')}</div>
         ${prereqHtml}
-        ${unlockHtml ? '<div class="card-title" style="margin-top:12px;">Efek</div>' + unlockHtml : ''}
-        <div class="sum-row" style="margin-top:12px;"><span>Status</span><b>${st.reason || st.status}</b></div>
+        ${unlockHtml ? '<div class="card-title" style="margin-top:12px;">' + t('research.node.effects') + '</div>' + unlockHtml : ''}
+        <div class="sum-row" style="margin-top:12px;"><span>${t('research.node.status')}</span><b>${st.reason || st.status}</b></div>
         ${canStart
-            ? `<button class="btn-primary" data-chip-research-action="start" data-node-id="${nodeId}" style="width:100%;margin-top:12px;">Mulai Riset Chip</button>`
+            ? `<button class="btn-primary" data-chip-research-action="start" data-node-id="${nodeId}" style="width:100%;margin-top:12px;">${t('research.node.start')}</button>`
             : st.status === 'running'
-                ? `<button class="btn-danger" data-chip-research-action="cancel" data-node-id="${nodeId}" style="width:100%;margin-top:12px;">Batalkan Riset</button>`
-                : `<button class="btn-secondary" disabled style="width:100%;margin-top:12px;opacity:0.5;">${escapeHtml(st.reason || 'Tidak tersedia')}</button>`
+                ? `<button class="btn-danger" data-chip-research-action="cancel" data-node-id="${nodeId}" style="width:100%;margin-top:12px;">${t('research.node.cancel')}</button>`
+                : `<button class="btn-secondary" disabled style="width:100%;margin-top:12px;opacity:0.5;">${escapeHtml(st.reason || t('research.node.not_available'))}</button>`
         }
-        <button class="btn-secondary" data-modal-close style="width:100%;margin-top:8px;">Tutup</button>
+        <button class="btn-secondary" data-modal-close style="width:100%;margin-top:8px;">${t('common.close')}</button>
     `;
     window.__game.Modal.open('chip-node-detail', html);
 }
