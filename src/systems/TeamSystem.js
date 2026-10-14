@@ -1,12 +1,5 @@
 // FILE: src/systems/TeamSystem.js
-// ============================================================
-// TeamSystem — manajemen staff individu.
-// Tanggung jawab:
-//   - Generate pool kandidat & refresh tiap 30 hari
-//   - Hire & fire staff
-//   - Skill progression (tiap hari)
-//   - Morale decay (tiap bulan)
-//   - Bonus agregat untuk sistem lain (static methods)
+// v2027.7a — generate kandidat dengan profil lengkap (country, specialty, exp, age, background).
 // ============================================================
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
@@ -19,7 +12,14 @@ import {
     getRoleById,
     getSkillTier,
     getTraitById,
+    getCountryById,
+    pickRegionForYear,
+    generateNameForRegion,
     generateRandomName,
+    pickSpecialty,
+    pickBackground,
+    rollExperience,
+    rollAge,
     rollTraits
 } from '../data/staff.data.js';
 
@@ -74,12 +74,8 @@ export class TeamSystem {
         for (const s of data.staff) {
             if (s.skill >= 5) continue;
             let progress = perDay;
-            if (s.traits && s.traits.includes('fast_learner')) {
-                progress *= (1 + fastBonus);
-            }
-            if (mentorCount > 0 && (!s.traits || !s.traits.includes('mentor'))) {
-                progress *= (1 + mentorBonus);
-            }
+            if (s.traits && s.traits.includes('fast_learner')) progress *= (1 + fastBonus);
+            if (mentorCount > 0 && (!s.traits || !s.traits.includes('mentor'))) progress *= (1 + mentorBonus);
             s.skillProgress = (s.skillProgress || 0) + progress;
             changed = true;
             while (s.skillProgress >= 100 && s.skill < 5) {
@@ -99,7 +95,7 @@ export class TeamSystem {
         staff.salary = Math.round(roleBase * skillDef.salaryMult * traitMult);
 
         const label = skillDef ? skillDef.label : ('Tier ' + staff.skill);
-        this.state.addLog(staff.name + ' naik ke Tier ' + staff.skill + ' (' + label + ').', LOG_TYPES.success);
+        this.state.addLog(staff.name + ' naik ke ' + label + '.', LOG_TYPES.success);
         ToastService.success('⬆ ' + staff.name + ' → ' + label);
         bus.emit('team:skill-up', { staffId: staff.id, skill: staff.skill });
     }
@@ -128,7 +124,6 @@ export class TeamSystem {
         }
         if (moraleChanged) bus.emit('state:changed', data);
 
-        // Refresh pool tiap 30 hari
         const now = data.time.elapsedGameMinutes;
         const last = (data.candidatePool && data.candidatePool.lastRefreshMinute) || 0;
         const interval = (cfg.poolRefreshDays || 30) * MINUTES_PER_DAY;
@@ -163,21 +158,45 @@ export class TeamSystem {
     }
 
     _generateCandidate(year, idx) {
+        // [v2027.7a] Profil lengkap: region, specialty, experience, age, background.
+        const region = pickRegionForYear(year);
+        const countryInfo = getCountryById(region);
+        const name = generateNameForRegion(region);
+
         const role = ROLES[Math.floor(Math.random() * ROLES.length)];
         const skill = this._rollSkill(year);
         const traits = rollTraits();
+        const specialty = pickSpecialty(role.id);
+        const yearsExperience = rollExperience(skill);
+        const age = rollAge(skill, yearsExperience);
+        const background = pickBackground();
+
         const skillDef = getSkillTier(skill);
         const roleBase = (BALANCE.salary && BALANCE.salary[role.id]) || 2500;
         const traitMult = this._traitSalaryMultiplier(traits);
         const salary = Math.round(roleBase * skillDef.salaryMult * traitMult);
 
+        const signingMult = (BALANCE.team && BALANCE.team.signingBonusMult) || 0.6;
+        const signingBonus = Math.round(salary * signingMult * 3);
+        const roleRecruitCost = (BALANCE.recruitCost && BALANCE.recruitCost[role.id]) || 2000;
+        const totalCost = roleRecruitCost + signingBonus;
+
         return {
             id: 'cand_' + Date.now() + '_' + idx + '_' + Math.floor(Math.random() * 1000),
-            name: generateRandomName(),
+            name: name,
+            country: region,
+            countryLabel: countryInfo.label,
+            countryFlag: countryInfo.flag,
             role: role.id,
             skill: skill,
+            specialty: specialty,
+            yearsExperience: yearsExperience,
+            age: age,
+            background: background,
             traits: traits,
             salary: salary,
+            signingBonus: signingBonus,
+            totalCost: totalCost,
             generatedAtMinute: this.state.data.time.elapsedGameMinutes
         };
     }
@@ -216,10 +235,14 @@ export class TeamSystem {
             return { ok: false, reason: 'Kapasitas ' + cand.role + ' penuh (maks ' + cap + ').' };
         }
 
-        const roleBase = (BALANCE.recruitCost && BALANCE.recruitCost[cand.role]) || 2000;
+        const roleRecruitCost = (BALANCE.recruitCost && BALANCE.recruitCost[cand.role]) || 2000;
         const signingMult = (BALANCE.team && BALANCE.team.signingBonusMult) || 0.6;
-        const signingBonus = Math.round(cand.salary * signingMult * 3);
-        const totalCost = roleBase + signingBonus;
+        const signingBonus = cand.signingBonus != null
+            ? cand.signingBonus
+            : Math.round(cand.salary * signingMult * 3);
+        const totalCost = cand.totalCost != null
+            ? cand.totalCost
+            : (roleRecruitCost + signingBonus);
 
         if (data.cash < totalCost) {
             return { ok: false, reason: 'Uang tidak cukup. Butuh $' + totalCost.toLocaleString('en-US') + '.' };
@@ -230,8 +253,15 @@ export class TeamSystem {
         const newStaff = {
             id: 'staff_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
             name: cand.name,
+            country: cand.country || null,
+            countryLabel: cand.countryLabel || null,
+            countryFlag: cand.countryFlag || null,
             role: cand.role,
             skill: cand.skill,
+            specialty: cand.specialty || null,
+            yearsExperience: cand.yearsExperience || 0,
+            age: cand.age || null,
+            background: cand.background || null,
             salary: cand.salary,
             morale: (BALANCE.team && BALANCE.team.moraleStart) || 75,
             traits: Array.isArray(cand.traits) ? cand.traits.slice() : [],
@@ -247,11 +277,10 @@ export class TeamSystem {
 
         data.staff.push(newStaff);
         data.candidates = data.candidates.filter(c => c.id !== candidateId);
-
         this.state.syncTeamCounters();
 
         const roleLabel = getRoleById(cand.role).label;
-        this.state.addLog(cand.name + ' direkrut sebagai ' + roleLabel + ' (Tier ' + cand.skill + ', $' + cand.salary.toLocaleString('en-US') + '/bln).', LOG_TYPES.success);
+        this.state.addLog(cand.name + ' direkrut sebagai ' + roleLabel + ' ($' + cand.salary.toLocaleString('en-US') + '/bln).', LOG_TYPES.success);
         ToastService.success('🎉 ' + cand.name + ' bergabung!');
         if (data.settings.vibrate) { try { if (navigator.vibrate) navigator.vibrate([20, 40, 20]); } catch (e) {} }
 
@@ -272,11 +301,8 @@ export class TeamSystem {
         const severanceMonths = (BALANCE.team && BALANCE.team.severanceMonths) || 2;
         const severance = staff.salary * severanceMonths;
 
-        // Moral tim turun karena PHK
         data.staff.forEach(s => {
-            if (s.id !== staffId) {
-                s.morale = Math.max(0, (s.morale || 75) - 5);
-            }
+            if (s.id !== staffId) s.morale = Math.max(0, (s.morale || 75) - 5);
         });
 
         this.state.setCash(data.cash - severance);
@@ -296,7 +322,7 @@ export class TeamSystem {
         const data = this.state.data;
         const s = data.staff.find(x => x.id === staffId);
         if (!s) return { ok: false, reason: 'Staff tidak ditemukan.' };
-        if (s.skill >= 5) return { ok: false, reason: 'Sudah Tier 5 (maks).' };
+        if (s.skill >= 5) return { ok: false, reason: 'Sudah tier tertinggi.' };
 
         const cost = s.salary * 2;
         if (data.cash < cost) {
@@ -304,7 +330,6 @@ export class TeamSystem {
         }
 
         this.state.setCash(data.cash - cost);
-
         s.skillProgress = (s.skillProgress || 0) + 30;
         while (s.skillProgress >= 100 && s.skill < 5) {
             s.skillProgress -= 100;
@@ -344,7 +369,7 @@ export class TeamSystem {
         return Math.round(sum / list.length);
     }
 
-    // ============ STATIC BONUS (dipakai sistem lain) ============
+    // ============ STATIC BONUS ============
     static getResearchBonusFromStaff(staffList) {
         const engineers = (staffList || []).filter(s => s.role === 'engineer');
         const cfg = BALANCE.team && BALANCE.team.engineer ? BALANCE.team.engineer : {};
@@ -431,8 +456,15 @@ export class TeamSystem {
         const newStaff = {
             id: 'staff_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
             name: cand.name,
+            country: cand.country,
+            countryLabel: cand.countryLabel,
+            countryFlag: cand.countryFlag,
             role: cand.role,
             skill: cand.skill,
+            specialty: cand.specialty,
+            yearsExperience: cand.yearsExperience,
+            age: cand.age,
+            background: cand.background,
             salary: cand.salary,
             morale: 75,
             traits: cand.traits || [],
