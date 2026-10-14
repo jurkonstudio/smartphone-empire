@@ -1,18 +1,19 @@
 // FILE: src/ui/panels/TeamPanel.js
-// v2027.9 — Dropdown selector Tim Aktif / Rekrut / Info.
+// v2027.10a — i18n: pakai t() untuk semua string UI.
 import { ROLES, getRoleById, getSkillTier, getTraitById } from '../../data/staff.data.js';
 import { BALANCE } from '../../data/balance.data.js';
 import { generateAvatar } from '../avatars/AvatarGenerator.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { Modal } from '../modal.js';
+import { t } from '../../core/LanguageService.js';
 
 let _recruitFilter = 'all';
-let _teamMode = 'roster'; // 'roster' | 'recruit' | 'info'
+let _teamMode = 'roster';
 
 const TEAM_MODES = [
-    { id: 'roster',  label: 'Tim Aktif', icon: 'users' },
-    { id: 'recruit', label: 'Rekrut',    icon: 'plus' },
-    { id: 'info',    label: 'Info',      icon: 'settings' }
+    { id: 'roster',  key: 'team.mode.roster',  icon: 'users' },
+    { id: 'recruit', key: 'team.mode.recruit', icon: 'plus' },
+    { id: 'info',    key: 'team.mode.info',    icon: 'settings' }
 ];
 
 function escapeHtml(s) {
@@ -25,12 +26,12 @@ function safe(fn, fallback) {
     try { return fn(); }
     catch (err) {
         console.error('[TeamPanel] section error:', err);
-        return fallback || '<div class="card" style="border-color:var(--danger);"><div class="card-title" style="color:var(--danger);">⚠ Error</div><div style="font-size:12px;color:var(--text-dim);">' + escapeHtml(err.message || 'unknown') + '</div></div>';
+        return fallback || '<div class="card" style="border-color:var(--danger);"><div class="card-title" style="color:var(--danger);">⚠ ' + escapeHtml(t('team.roster.error')) + '</div><div style="font-size:12px;color:var(--text-dim);">' + escapeHtml(err.message || 'unknown') + '</div></div>';
     }
 }
 
 // ============================================================
-// MAIN RENDER — dropdown + konten sesuai mode
+// MAIN RENDER
 // ============================================================
 export function renderTeamPanel({ teamSystem }) {
     const data = window.__game.state.get();
@@ -57,7 +58,7 @@ function _renderDropdown() {
         return '<button class="team-dropdown-item' + (isActive ? ' active' : '') + '" ' +
             'data-team-mode="' + m.id + '" type="button">' +
             renderIcon(m.icon, 13) +
-            '<span class="team-dropdown-item-label">' + escapeHtml(m.label) + '</span>' +
+            '<span class="team-dropdown-item-label">' + escapeHtml(t(m.key)) + '</span>' +
             (isActive ? '<span class="team-dropdown-check">✓</span>' : '') +
             '</button>';
     }).join('');
@@ -65,7 +66,7 @@ function _renderDropdown() {
     return '<details class="team-dropdown">' +
         '<summary class="team-dropdown-trigger">' +
             renderIcon(current.icon, 13) +
-            '<span class="team-dropdown-current">' + escapeHtml(current.label) + '</span>' +
+            '<span class="team-dropdown-current">' + escapeHtml(t(current.key)) + '</span>' +
             '<span class="team-dropdown-chevron"></span>' +
         '</summary>' +
         '<div class="team-dropdown-menu">' + items + '</div>' +
@@ -110,7 +111,7 @@ function _renderActive(data, teamSystem) {
                 <div class="kpi-value" style="color:#34d399;">${counts.marketers || 0}</div>
             </div>
             <div class="kpi">
-                <div class="kpi-label">Gaji/Bln</div>
+                <div class="kpi-label">${escapeHtml(t('team.kpi.salary'))}</div>
                 <div class="kpi-value" style="font-size:15px;">$${(totalSalary || 0).toLocaleString('en-US')}</div>
             </div>
         </div>
@@ -120,8 +121,8 @@ function _renderActive(data, teamSystem) {
         return summary + `
             <div class="empty">
                 <div class="empty-ico">${renderIcon('users', 48)}</div>
-                <div class="empty-title">Belum ada tim</div>
-                <div class="empty-desc">Pilih menu <b>Rekrut</b> di dropdown atas untuk mencari kandidat.</div>
+                <div class="empty-title">${escapeHtml(t('team.roster.empty_title'))}</div>
+                <div class="empty-desc">${escapeHtml(t('team.roster.empty_desc'))}</div>
             </div>
         `;
     }
@@ -138,7 +139,7 @@ function _renderActive(data, teamSystem) {
             try { return _renderStaffRow(s); }
             catch (err) {
                 console.error('[TeamPanel] staff row error:', err, s);
-                return '<div class="staff-row" style="opacity:0.5;"><div style="flex:1;">Data staff korup</div></div>';
+                return '<div class="staff-row" style="opacity:0.5;"><div style="flex:1;">' + escapeHtml(t('team.roster.corrupt')) + '</div></div>';
             }
         }).join('');
         return `
@@ -175,21 +176,22 @@ function _renderStaffRow(s) {
     catch (e) { avatar = '<div class="staff-avatar" style="background:' + (role.color || '#666') + ';"></div>'; }
 
     const country = s.countryFlag ? '<span class="staff-country">' + s.countryFlag + '</span>' : '';
+    const nameLabel = s.name || t('team.roster.unnamed');
 
     return `
         <div class="staff-row" data-staff-detail="${s.id || ''}">
             ${avatar}
             <div class="staff-info">
                 <div class="staff-name-row">
-                    <span class="staff-name">${escapeHtml(s.name || 'Tanpa Nama')}</span>
+                    <span class="staff-name">${escapeHtml(nameLabel)}</span>
                     ${country}
                     <span class="staff-tier" style="color:${tier.color || '#999'};">${escapeHtml(tier.label || ('T' + s.skill))}</span>
                     <span class="staff-traits">${traitIcons}</span>
                 </div>
                 <div class="staff-meta-row">
-                    <span>$${salary.toLocaleString('en-US')}/bln</span>
+                    <span>$${salary.toLocaleString('en-US')}${escapeHtml(t('team.recruit.per_month'))}</span>
                     <span>•</span>
-                    <span style="color:${moraleColor};">Morale ${morale}</span>
+                    <span style="color:${moraleColor};">${escapeHtml(t('team.roster.morale'))} ${morale}</span>
                 </div>
             </div>
             <div class="staff-arrow">›</div>
@@ -217,16 +219,16 @@ function _renderRecruit(data, teamSystem) {
         <div class="recruit-header">
             <div class="recruit-header-line">
                 <span class="recruit-header-count">${allCandidates.length}</span>
-                <span class="recruit-header-label">kandidat tersedia</span>
+                <span class="recruit-header-label">${escapeHtml(t('team.recruit.candidates_avail'))}</span>
                 <span class="recruit-header-dot">·</span>
-                <span class="recruit-header-label">refresh dalam ${refreshIn} hari</span>
+                <span class="recruit-header-label">${escapeHtml(t('team.recruit.refresh_in', { n: refreshIn }))}</span>
             </div>
         </div>
     `;
 
     const filterChips = `
         <div class="chip-bar" style="margin-bottom:8px;">
-            <button class="chip ${_recruitFilter === 'all' ? 'active' : ''}" data-recruit-filter="all">Semua (${allCandidates.length})</button>
+            <button class="chip ${_recruitFilter === 'all' ? 'active' : ''}" data-recruit-filter="all">${escapeHtml(t('team.recruit.filter_all'))} (${allCandidates.length})</button>
             ${ROLES.map(function(r) {
                 var count = allCandidates.filter(c => c.role === r.id).length;
                 return '<button class="chip ' + (_recruitFilter === r.id ? 'active' : '') + '" data-recruit-filter="' + r.id + '">' +
@@ -239,9 +241,9 @@ function _renderRecruit(data, teamSystem) {
     if (!candidates.length) {
         return header + filterChips + `
             <div class="empty">
-                <div class="empty-title">Tidak ada kandidat</div>
-                <div class="empty-desc">${allCandidates.length ? 'Coba filter role lain.' : 'Tunggu beberapa hari atau refresh pool.'}</div>
-                ${allCandidates.length ? '' : '<button class="btn-secondary" data-team-action="refresh-pool" style="max-width:240px;margin:0 auto;">Refresh Pool Sekarang</button>'}
+                <div class="empty-title">${escapeHtml(t('team.recruit.empty_title'))}</div>
+                <div class="empty-desc">${escapeHtml(allCandidates.length ? t('team.recruit.empty_hint_filter') : t('team.recruit.empty_hint_wait'))}</div>
+                ${allCandidates.length ? '' : '<button class="btn-secondary" data-team-action="refresh-pool" style="max-width:240px;margin:0 auto;">' + escapeHtml(t('team.recruit.refresh_btn')) + '</button>'}
             </div>
         `;
     }
@@ -270,29 +272,31 @@ function _renderCandidateRow(c) {
     try { avatar = generateAvatar(c.name || 'Unknown', { size: 44 }); }
     catch (e) { avatar = '<div class="staff-avatar" style="background:' + (role.color || '#666') + ';"></div>'; }
 
+    const nameLabel = c.name || t('team.roster.unnamed');
+
     return `
         <div class="cand-row" data-team-action="open-candidate" data-candidate-id="${c.id}">
             <div class="cand-row-avatar">${avatar}</div>
             <div class="cand-row-main">
                 <div class="cand-row-head">
-                    <span class="cand-row-name">${escapeHtml(c.name || 'Tanpa Nama')}</span>
+                    <span class="cand-row-name">${escapeHtml(nameLabel)}</span>
                     ${flag ? '<span class="cand-row-flag">' + flag + '</span>' : ''}
                     <span class="trait-dots">${traitDots}</span>
                 </div>
                 <div class="cand-row-meta">
                     <span style="color:${role.color || 'inherit'};font-weight:600;">${escapeHtml(role.label)}</span>
                     <span class="cand-row-dot">·</span>
-                    <span>${escapeHtml(tier.label || 'Tier ' + c.skill)}</span>
+                    <span>${escapeHtml(tier.label || ('Tier ' + c.skill))}</span>
                     ${specialty ? '<span class="cand-row-dot">·</span><span>' + escapeHtml(specialty) + '</span>' : ''}
                 </div>
                 <div class="cand-row-foot">
-                    <span class="cand-row-salary">$${salary.toLocaleString('en-US')}<span class="cand-row-salary-unit">/bln</span></span>
+                    <span class="cand-row-salary">$${salary.toLocaleString('en-US')}<span class="cand-row-salary-unit">${escapeHtml(t('team.recruit.per_month'))}</span></span>
                     <span class="cand-row-dot">·</span>
-                    <span class="cand-row-total">Total $${totalCost.toLocaleString('en-US')}</span>
+                    <span class="cand-row-total">${escapeHtml(t('team.recruit.total'))} $${totalCost.toLocaleString('en-US')}</span>
                 </div>
             </div>
             <div class="cand-row-actions">
-                <button class="cand-cta" data-team-action="hire" data-candidate-id="${c.id}" aria-label="Rekrut">
+                <button class="cand-cta" data-team-action="hire" data-candidate-id="${c.id}" aria-label="${escapeHtml(t('team.modal.aria_hire'))}">
                     ${renderIcon('plus', 16)}
                 </button>
             </div>
@@ -330,13 +334,14 @@ export function openCandidateDetailModal({ candidateId }) {
                 '</div>' +
                 '</div>';
         }).join('')
-        : '<div class="cand-modal-empty">Tidak ada trait khusus.</div>';
+        : '<div class="cand-modal-empty">' + escapeHtml(t('team.modal.traits_empty')) + '</div>';
 
+    const yearsLabel = t('team.modal.years');
     const detailCandidates = [
-        { label: 'Spesialisasi', value: c.specialty },
-        { label: 'Pengalaman',   value: (typeof c.yearsExperience === 'number' && c.yearsExperience > 0) ? (c.yearsExperience + ' tahun') : null },
-        { label: 'Usia',         value: c.age ? (c.age + ' tahun') : null },
-        { label: 'Latar Belakang', value: c.background }
+        { label: t('team.modal.detail_specialty'), value: c.specialty },
+        { label: t('team.modal.detail_exp'), value: (typeof c.yearsExperience === 'number' && c.yearsExperience > 0) ? (c.yearsExperience + ' ' + yearsLabel) : null },
+        { label: t('team.modal.detail_age'), value: c.age ? (c.age + ' ' + yearsLabel) : null },
+        { label: t('team.modal.detail_bg'), value: c.background }
     ];
     const filledDetails = detailCandidates.filter(d => d.value != null && d.value !== '');
 
@@ -349,14 +354,14 @@ export function openCandidateDetailModal({ candidateId }) {
                 '</div>';
         }).join('');
         detailSectionHtml =
-            '<div class="cand-modal-section-title">' + renderIcon('question', 11) + 'Detail</div>' +
+            '<div class="cand-modal-section-title">' + renderIcon('question', 11) + escapeHtml(t('team.modal.detail')) + '</div>' +
             '<div class="cand-modal-details">' + rows + '</div>';
     } else {
         detailSectionHtml =
-            '<div class="cand-modal-section-title">' + renderIcon('question', 11) + 'Detail</div>' +
+            '<div class="cand-modal-section-title">' + renderIcon('question', 11) + escapeHtml(t('team.modal.detail')) + '</div>' +
             '<div class="cand-modal-note">' +
                 renderIcon('warn', 14) +
-                '<span>Profil terbatas — kandidat ini belum memiliki data lengkap. Kandidat dengan profil penuh akan muncul setelah pool refresh.</span>' +
+                '<span>' + escapeHtml(t('team.modal.detail_limit')) + '</span>' +
             '</div>';
     }
 
@@ -367,12 +372,14 @@ export function openCandidateDetailModal({ candidateId }) {
             '</div>'
         : '';
 
+    const nameLabel = c.name || t('team.roster.unnamed');
+
     const html =
         '<div class="cand-modal">' +
             '<div class="cand-modal-header">' +
                 '<div class="cand-modal-avatar">' + avatar + '</div>' +
                 '<div class="cand-modal-identity">' +
-                    '<div class="cand-modal-name">' + escapeHtml(c.name || 'Tanpa Nama') + '</div>' +
+                    '<div class="cand-modal-name">' + escapeHtml(nameLabel) + '</div>' +
                     countryHtml +
                     '<div class="cand-modal-role" style="color:' + role.color + ';">' +
                         renderIcon(role.icon || 'cpu', 12) +
@@ -382,27 +389,27 @@ export function openCandidateDetailModal({ candidateId }) {
                     '</div>' +
                 '</div>' +
             '</div>' +
-            '<div class="cand-modal-section-title">' + renderIcon('sparkles', 11) + 'Traits</div>' +
+            '<div class="cand-modal-section-title">' + renderIcon('sparkles', 11) + escapeHtml(t('team.modal.traits')) + '</div>' +
             '<div class="cand-modal-traits">' + traitHtml + '</div>' +
             detailSectionHtml +
-            '<div class="cand-modal-section-title">' + renderIcon('coin', 11) + 'Biaya</div>' +
+            '<div class="cand-modal-section-title">' + renderIcon('coin', 11) + escapeHtml(t('team.modal.cost')) + '</div>' +
             '<div class="cand-modal-costs">' +
                 '<div class="cand-modal-cost-row">' +
-                    '<span>Gaji per bulan</span>' +
+                    '<span>' + escapeHtml(t('team.modal.cost_salary')) + '</span>' +
                     '<b>$' + salary.toLocaleString('en-US') + '</b>' +
                 '</div>' +
                 '<div class="cand-modal-cost-row">' +
-                    '<span>Signing bonus</span>' +
+                    '<span>' + escapeHtml(t('team.modal.cost_signing')) + '</span>' +
                     '<b>$' + signing.toLocaleString('en-US') + '</b>' +
                 '</div>' +
                 '<div class="cand-modal-cost-row cand-modal-cost-total">' +
-                    '<span>Total bulan pertama</span>' +
+                    '<span>' + escapeHtml(t('team.modal.cost_total')) + '</span>' +
                     '<b>$' + total.toLocaleString('en-US') + '</b>' +
                 '</div>' +
             '</div>' +
             '<div class="cand-modal-actions">' +
-                '<button class="btn-secondary" data-modal-close style="flex:1;">Batal</button>' +
-                '<button class="btn-primary" data-team-action="hire" data-candidate-id="' + c.id + '" style="flex:2;">Rekrut</button>' +
+                '<button class="btn-secondary" data-modal-close style="flex:1;">' + escapeHtml(t('team.modal.btn_cancel')) + '</button>' +
+                '<button class="btn-primary" data-team-action="hire" data-candidate-id="' + c.id + '" style="flex:2;">' + escapeHtml(t('team.modal.btn_hire')) + '</button>' +
             '</div>' +
         '</div>';
 
@@ -419,7 +426,7 @@ function _renderInfo(data, teamSystem) {
         : null;
 
     if (!TeamSystemCtor) {
-        return '<div class="empty"><div class="empty-title">TeamSystem belum siap</div></div>';
+        return '<div class="empty"><div class="empty-title">' + escapeHtml(t('team.info.system_not_ready')) + '</div></div>';
     }
 
     function safeCall(fn, fallback) { try { return fn(); } catch (e) { return fallback; } }
@@ -445,47 +452,49 @@ function _renderInfo(data, teamSystem) {
                 renderIcon(iconId, 12) + title.toUpperCase() +
             '</div>' +
             rows.map(function(r) {
-                return '<div class="sum-row"><span>' + r.label + '</span><b style="color:' + (r.valueColor || 'var(--text)') + ';">' + r.value + '</b></div>';
+                return '<div class="sum-row"><span>' + escapeHtml(r.label) + '</span><b style="color:' + (r.valueColor || 'var(--text)') + ';">' + escapeHtml(String(r.value)) + '</b></div>';
             }).join('') +
             '</div>';
     }
 
-    const engSec = section('Engineer Bonus', 'cpu', '#60a5fa', [
-        { label: 'Jumlah Engineer', value: counts.engineers || 0 },
-        { label: 'Kecepatan Riset', value: '× ' + (engineerBonus.speedMult || 1).toFixed(2), valueColor: engineerBonus.speedMult > 1 ? 'var(--success)' : 'var(--text-dim)' },
-        { label: 'Slot Riset Ekstra', value: '+' + (engineerBonus.extraSlots || 0), valueColor: engineerBonus.extraSlots > 0 ? 'var(--success)' : 'var(--text-dim)' },
-        { label: 'Kecepatan Dev OS', value: '× ' + (osBonus || 1).toFixed(2), valueColor: osBonus > 1 ? 'var(--success)' : 'var(--text-dim)' },
-        { label: 'Slot Fitur OS Ekstra', value: '+' + (osSlots || 0), valueColor: osSlots > 0 ? 'var(--success)' : 'var(--text-dim)' }
+    const pointsUnit = t('team.info.points_unit');
+
+    const engSec = section(t('team.info.eng_section'), 'cpu', '#60a5fa', [
+        { label: t('team.info.eng_count'), value: counts.engineers || 0 },
+        { label: t('team.info.research_speed'), value: '× ' + (engineerBonus.speedMult || 1).toFixed(2), valueColor: engineerBonus.speedMult > 1 ? 'var(--success)' : 'var(--text-dim)' },
+        { label: t('team.info.extra_res_slots'), value: '+' + (engineerBonus.extraSlots || 0), valueColor: engineerBonus.extraSlots > 0 ? 'var(--success)' : 'var(--text-dim)' },
+        { label: t('team.info.os_speed'), value: '× ' + (osBonus || 1).toFixed(2), valueColor: osBonus > 1 ? 'var(--success)' : 'var(--text-dim)' },
+        { label: t('team.info.extra_os_slots'), value: '+' + (osSlots || 0), valueColor: osSlots > 0 ? 'var(--success)' : 'var(--text-dim)' }
     ]);
 
-    const desSec = section('Designer Bonus', 'palette', '#a78bfa', [
-        { label: 'Jumlah Designer', value: counts.designers || 0 },
-        { label: 'Kecepatan Desain Produk', value: '× ' + (designerBonus.speedMult || 1).toFixed(2), valueColor: designerBonus.speedMult > 1 ? 'var(--success)' : 'var(--text-dim)' },
-        { label: 'Bonus Kualitas Produk', value: '+' + (designerBonus.qualityBonus || 0).toFixed(1) + ' poin', valueColor: designerBonus.qualityBonus > 0 ? 'var(--success)' : 'var(--text-dim)' }
+    const desSec = section(t('team.info.des_section'), 'palette', '#a78bfa', [
+        { label: t('team.info.des_count'), value: counts.designers || 0 },
+        { label: t('team.info.product_speed'), value: '× ' + (designerBonus.speedMult || 1).toFixed(2), valueColor: designerBonus.speedMult > 1 ? 'var(--success)' : 'var(--text-dim)' },
+        { label: t('team.info.quality_bonus'), value: '+' + (designerBonus.qualityBonus || 0).toFixed(1) + ' ' + pointsUnit, valueColor: designerBonus.qualityBonus > 0 ? 'var(--success)' : 'var(--text-dim)' }
     ]);
 
-    const mktSec = section('Marketer Bonus', 'signal', '#34d399', [
-        { label: 'Jumlah Marketer', value: counts.marketers || 0 },
-        { label: 'Efektivitas Kampanye', value: '× ' + (marketerBonus || 1).toFixed(2), valueColor: marketerBonus > 1 ? 'var(--success)' : 'var(--text-dim)' }
+    const mktSec = section(t('team.info.mkt_section'), 'signal', '#34d399', [
+        { label: t('team.info.mkt_count'), value: counts.marketers || 0 },
+        { label: t('team.info.campaign_bonus'), value: '× ' + (marketerBonus || 1).toFixed(2), valueColor: marketerBonus > 1 ? 'var(--success)' : 'var(--text-dim)' }
     ]);
 
     const moraleColor = moraleAvg >= 70 ? 'var(--success)' : moraleAvg >= 40 ? 'var(--warn)' : 'var(--danger)';
 
-    const extraSec = section('Ringkasan Tim', 'activity', 'var(--accent)', [
-        { label: 'Total Staff', value: staff.length },
-        { label: 'Total Gaji / Bulan', value: '$' + (totalSalary || 0).toLocaleString('en-US') },
-        { label: 'Rata-rata Moral', value: moraleAvg + '/100', valueColor: moraleColor }
+    const extraSec = section(t('team.info.summary_section'), 'activity', 'var(--accent)', [
+        { label: t('team.info.total_staff'), value: staff.length },
+        { label: t('team.info.total_salary'), value: '$' + (totalSalary || 0).toLocaleString('en-US') },
+        { label: t('team.info.avg_morale'), value: moraleAvg + '/100', valueColor: moraleColor }
     ]);
 
     const tips = '<div class="card">' +
-        '<div class="card-title" style="display:flex;align-items:center;gap:6px;">' + renderIcon('sparkles', 12) + 'TIPS</div>' +
+        '<div class="card-title" style="display:flex;align-items:center;gap:6px;">' + renderIcon('sparkles', 12) + escapeHtml(t('team.tips.title')) + '</div>' +
         '<div style="font-size:12px;color:var(--text-dim);line-height:1.6;">' +
-            '• Staff <b>tier tinggi</b> memberi bonus lebih besar tapi gaji lebih mahal.<br>' +
-            '• Trait <b>Fast Learner</b> mempercepat naik tier.<br>' +
-            '• Trait <b>Specialist</b> memberi bonus +25% di bidangnya.<br>' +
-            '• <b>Moral rendah</b> menurunkan produktivitas.' +
+            '• ' + escapeHtml(t('team.tips.l1')) + '<br>' +
+            '• ' + escapeHtml(t('team.tips.l2')) + '<br>' +
+            '• ' + escapeHtml(t('team.tips.l3')) + '<br>' +
+            '• ' + escapeHtml(t('team.tips.l4')) +
         '</div>' +
         '</div>';
 
     return engSec + desSec + mktSec + extraSec + tips;
-}
+         }
