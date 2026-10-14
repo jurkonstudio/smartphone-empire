@@ -1,6 +1,7 @@
 // FILE: src/ui/phone/PhoneMockup.js
 // ============================================================
-// PhoneMockup — SVG render ponsel era-aware + spec-layer V2.2b.
+// PhoneMockup — SVG render ponsel era-aware + spec-layer V2.3a.
+// Fase 2: screen content realistis untuk era 2015+ (amoled, hdr, flexible).
 // Setiap detail visual (bezel, notch, kamera, tombol) gated
 // oleh spec milestone (tahun) + research completed (override).
 // ============================================================
@@ -68,7 +69,7 @@ function getScreenRect(spec, formFactor) {
 }
 
 // ============================================================
-// SCREEN CONTENT (era-based style, now using explicit rect)
+// SCREEN CONTENT — era-based
 // ============================================================
 function screenContent(screenStyle, rect) {
     const x0 = rect.x, y0 = rect.y, w = rect.w, h = rect.h;
@@ -157,59 +158,143 @@ function screenContent(screenStyle, rect) {
         `;
     }
 
+    // ============================================================
+    // ERA 2015-2018: AMOLED Premium — Always-On Display
+    // ============================================================
     if (screenStyle === 'amoled') {
+        const widgetY = cy + 6;
+        const widgetW = (w - 10) / 3;
         return `
             <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#000000"/>
-            <text x="${x0 + 2}" y="${y0 + 3}" font-size="1.6" font-family="sans-serif" fill="#c9a961" font-weight="600">11:11</text>
-            <text x="${x0 + w - 2}" y="${y0 + 3}" text-anchor="end" font-size="1.6" font-family="sans-serif" fill="#c9a961">4G ▮▮</text>
-            <rect x="${x0 + 3}" y="${y0 + 6}" width="${w - 6}" height="5" rx="2" fill="#1a1a1a" stroke="#c9a961" stroke-width="0.15" opacity="0.8"/>
-            <text x="${cx}" y="${cy + 3}" text-anchor="middle" font-size="9" font-family="sans-serif" fill="#f0ede8" font-weight="200" letter-spacing="-0.4">11:11</text>
-            <text x="${cx}" y="${cy + 8}" text-anchor="middle" font-size="1.7" font-family="sans-serif" fill="#c9a961" letter-spacing="0.5">DESIGN STUDIO</text>
-            <rect x="${cx - 4}" y="${y0 + h - 2.5}" width="8" height="0.5" rx="0.25" fill="#c9a961" opacity="0.5"/>
+            <text x="${x0 + 2}" y="${y0 + 3.2}" font-size="1.5" font-family="sans-serif" fill="#c9a961" font-weight="600">11:11</text>
+            <text x="${x0 + w - 2}" y="${y0 + 3.2}" text-anchor="end" font-size="1.5" font-family="sans-serif" fill="#c9a961">4G ▮▮</text>
+
+            <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#f0ede8" font-weight="200" letter-spacing="-0.5">11:11</text>
+            <text x="${cx}" y="${cy + 1}" text-anchor="middle" font-size="1.8" font-family="sans-serif" fill="#c9a961" letter-spacing="0.4">Senin, 12 Oktober</text>
+
+            <rect x="${x0 + 5}" y="${widgetY}" width="${widgetW}" height="5" rx="1.2" fill="#1a1a1a" stroke="#c9a961" stroke-width="0.1" opacity="0.7"/>
+            <text x="${x0 + 5 + widgetW/2}" y="${widgetY + 3.2}" text-anchor="middle" font-size="1.5" font-family="sans-serif" fill="#c9a961" opacity="0.9">24°</text>
+
+            <rect x="${x0 + 5 + widgetW + 2.5}" y="${widgetY}" width="${widgetW}" height="5" rx="1.2" fill="#1a1a1a" stroke="#c9a961" stroke-width="0.1" opacity="0.7"/>
+            <text x="${x0 + 5 + widgetW + 2.5 + widgetW/2}" y="${widgetY + 3.2}" text-anchor="middle" font-size="1.5" font-family="sans-serif" fill="#c9a961" opacity="0.9">3 Baru</text>
+
+            <rect x="${x0 + 5 + (widgetW + 2.5)*2}" y="${widgetY}" width="${widgetW}" height="5" rx="1.2" fill="#1a1a1a" stroke="#c9a961" stroke-width="0.1" opacity="0.7"/>
+            <text x="${x0 + 5 + (widgetW + 2.5)*2 + widgetW/2}" y="${widgetY + 3.2}" text-anchor="middle" font-size="1.5" font-family="sans-serif" fill="#c9a961" opacity="0.9">78%</text>
+
+            <rect x="${cx - 6}" y="${y0 + h - 4}" width="12" height="1.6" rx="0.8" fill="#1a1a1a" stroke="#c9a961" stroke-width="0.1" opacity="0.6"/>
+            <rect x="${cx - 4}" y="${y0 + h - 3.7}" width="8" height="1" rx="0.5" fill="#c9a961" opacity="0.55"/>
         `;
     }
 
+    // ============================================================
+    // ERA 2019-2022: HDR / AI — Jam Besar + Notif + Dock
+    // ============================================================
     if (screenStyle === 'hdr') {
         const gradId = 'hdrMesh_' + Math.random().toString(36).slice(2, 6);
+        const notifY = cy + 2;
+        const dockY = y0 + h - 12;
+        const dockColors = ['#00d4ff', '#a855f7', '#ec4899', '#10b981'];
         return `
             <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#080c14"/>
-            <text x="${x0 + 2}" y="${y0 + 3}" font-size="1.6" font-family="sans-serif" fill="#00d4ff" font-weight="600">12:30</text>
-            <text x="${x0 + w - 2}" y="${y0 + 3}" text-anchor="end" font-size="1.6" font-family="sans-serif" fill="#00d4ff">5G ▮▮</text>
             <defs>
                 <radialGradient id="${gradId}" cx="30%" cy="40%">
-                    <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.35"/>
+                    <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.40"/>
+                    <stop offset="55%" stop-color="#a855f7" stop-opacity="0.10"/>
                     <stop offset="100%" stop-color="#080c14" stop-opacity="0"/>
                 </radialGradient>
             </defs>
-            <rect x="${x0}" y="${y0 + 5}" width="${w}" height="${h - 5}" fill="url(#${gradId})"/>
-            <rect x="${x0 + 3}" y="${cy - 7}" width="${w - 6}" height="12" rx="3" fill="#0f1420" stroke="#00d4ff" stroke-width="0.15" opacity="0.8"/>
-            <text x="${cx}" y="${cy - 2}" text-anchor="middle" font-size="2" font-family="sans-serif" fill="#ffffff" font-weight="600">New Design</text>
-            <text x="${cx}" y="${cy + 3}" text-anchor="middle" font-size="1.6" font-family="sans-serif" fill="#00d4ff" opacity="0.7">AI assisted</text>
-            <rect x="${cx - 4}" y="${y0 + h - 2.5}" width="8" height="0.5" rx="0.25" fill="#ffffff" opacity="0.5"/>
+            <rect x="${x0}" y="${y0 + 4}" width="${w}" height="${h - 4}" fill="url(#${gradId})"/>
+
+            <text x="${x0 + 2}" y="${y0 + 3.2}" font-size="1.5" font-family="sans-serif" fill="#00d4ff" font-weight="600">12:30</text>
+            <text x="${x0 + w - 2}" y="${y0 + 3.2}" text-anchor="end" font-size="1.5" font-family="sans-serif" fill="#00d4ff">5G ▮▮</text>
+
+            <text x="${cx}" y="${cy - 5}" text-anchor="middle" font-size="10" font-family="sans-serif" fill="#ffffff" font-weight="200" letter-spacing="-0.5">12:30</text>
+            <text x="${cx}" y="${cy - 0.5}" text-anchor="middle" font-size="1.7" font-family="sans-serif" fill="#00d4ff" opacity="0.9" letter-spacing="0.3">Sen, 12 Okt 2021</text>
+
+            <rect x="${x0 + 4}" y="${notifY + 3}" width="${w - 8}" height="4.5" rx="1.8" fill="#0f1420" stroke="#00d4ff" stroke-width="0.1" opacity="0.85"/>
+            <circle cx="${x0 + 6.5}" cy="${notifY + 5.25}" r="1" fill="#00d4ff" opacity="0.9"/>
+            <rect x="${x0 + 8.5}" y="${notifY + 4.5}" width="${w * 0.55}" height="0.6" rx="0.3" fill="#ffffff" opacity="0.75"/>
+            <rect x="${x0 + 8.5}" y="${notifY + 6}" width="${w * 0.38}" height="0.5" rx="0.25" fill="#00d4ff" opacity="0.55"/>
+
+            <g opacity="0.92">
+                ${Array.from({length: 4}, (_, i) => {
+                    const ix = x0 + 4 + i * ((w - 8) / 4);
+                    const sz = (w - 8) / 4 - 2;
+                    return `
+                        <rect x="${ix}" y="${dockY}" width="${sz}" height="${sz}" rx="2" fill="${dockColors[i]}" opacity="0.85"/>
+                        <rect x="${ix + 1}" y="${dockY + 1}" width="${sz - 2}" height="${sz - 2}" rx="1.5" fill="#0f1420" opacity="0.35"/>
+                    `;
+                }).join('')}
+            </g>
+
+            <circle cx="${cx - 3}" cy="${y0 + h - 2.8}" r="0.6" fill="#ffffff" opacity="0.9"/>
+            <circle cx="${cx}" cy="${y0 + h - 2.8}" r="0.5" fill="#ffffff" opacity="0.5"/>
+            <circle cx="${cx + 3}" cy="${y0 + h - 2.8}" r="0.5" fill="#ffffff" opacity="0.5"/>
         `;
     }
 
+    // ============================================================
+    // ERA 2023+: FLEXIBLE / FUTURE — Aurora + App Grid + Dock
+    // ============================================================
     if (screenStyle === 'flexible') {
         const gradId = 'auroraGrad_' + Math.random().toString(36).slice(2, 6);
         const blurId = 'auroraBlur_' + Math.random().toString(36).slice(2, 6);
+        const appColors = ['#a855f7', '#06b6d4', '#ec4899', '#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#14b8a6'];
+        const dockColors = ['#ffffff', '#a855f7', '#06b6d4', '#ec4899'];
+        const cols = 4, rows = 2;
+        const gridTop = cy + 5;
+        const gridH = h - (gridTop - y0) - 18;
+        const cellW = (w - 8) / cols;
+        const cellH = gridH / rows;
+        const iconSize = Math.min(cellW, cellH) - 2.5;
+        const dockY = y0 + h - 12;
+
         return `
             <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#04040a"/>
             <defs>
                 <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#a855f7" stop-opacity="0.5"/>
-                    <stop offset="50%" stop-color="#06b6d4" stop-opacity="0.3"/>
-                    <stop offset="100%" stop-color="#ec4899" stop-opacity="0.4"/>
+                    <stop offset="0%" stop-color="#a855f7" stop-opacity="0.55"/>
+                    <stop offset="50%" stop-color="#06b6d4" stop-opacity="0.35"/>
+                    <stop offset="100%" stop-color="#ec4899" stop-opacity="0.45"/>
                 </linearGradient>
                 <filter id="${blurId}">
-                    <feGaussianBlur stdDeviation="2"/>
+                    <feGaussianBlur stdDeviation="2.5"/>
                 </filter>
             </defs>
-            <ellipse cx="${cx}" cy="${cy}" rx="${w*0.5}" ry="${h*0.35}" fill="url(#${gradId})" filter="url(#${blurId})" opacity="0.6"/>
-            <text x="${x0 + 2}" y="${y0 + 3}" font-size="1.6" font-family="sans-serif" fill="#ffffff" font-weight="600">12:30</text>
-            <text x="${x0 + w - 2}" y="${y0 + 3}" text-anchor="end" font-size="1.6" font-family="sans-serif" fill="#a855f7">6G ▮▮</text>
-            <text x="${cx}" y="${cy + 2}" text-anchor="middle" font-size="10" font-family="sans-serif" fill="#ffffff" font-weight="200" letter-spacing="-0.4">2025</text>
-            <text x="${cx}" y="${cy + 7}" text-anchor="middle" font-size="1.6" font-family="sans-serif" fill="#a855f7" letter-spacing="0.6" font-weight="600">FUTURE DESIGN</text>
-            <rect x="${cx - 4}" y="${y0 + h - 2.5}" width="8" height="0.5" rx="0.25" fill="#a855f7" opacity="0.6"/>
+            <ellipse cx="${cx}" cy="${y0 + 30}" rx="${w * 0.55}" ry="${h * 0.28}" fill="url(#${gradId})" filter="url(#${blurId})" opacity="0.7"/>
+            <ellipse cx="${cx}" cy="${y0 + h - 20}" rx="${w * 0.5}" ry="${h * 0.22}" fill="url(#${gradId})" filter="url(#${blurId})" opacity="0.5"/>
+
+            <text x="${x0 + 2}" y="${y0 + 3.2}" font-size="1.5" font-family="sans-serif" fill="#ffffff" font-weight="600">12:30</text>
+            <text x="${x0 + w - 2}" y="${y0 + 3.2}" text-anchor="end" font-size="1.5" font-family="sans-serif" fill="#a855f7">6G ▮▮</text>
+
+            <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#ffffff" font-weight="200" letter-spacing="-0.5">12:30</text>
+            <text x="${cx}" y="${cy - 1}" text-anchor="middle" font-size="1.7" font-family="sans-serif" fill="#ffffff" opacity="0.75" letter-spacing="0.4">12 Oktober</text>
+
+            <g opacity="0.95">
+                ${Array.from({length: cols * rows}, (_, i) => {
+                    const col = i % cols, row = Math.floor(i / cols);
+                    const ix = x0 + 4 + col * cellW + (cellW - iconSize) / 2;
+                    const iy = gridTop + row * cellH + (cellH - iconSize) / 2;
+                    return `
+                        <rect x="${ix}" y="${iy}" width="${iconSize}" height="${iconSize}" rx="${iconSize * 0.25}" fill="${appColors[i % appColors.length]}" opacity="0.92"/>
+                        <rect x="${ix + 0.5}" y="${iy + 0.5}" width="${iconSize - 1}" height="${iconSize - 1}" rx="${iconSize * 0.22}" fill="none" stroke="#ffffff" stroke-opacity="0.15" stroke-width="0.1"/>
+                    `;
+                }).join('')}
+            </g>
+
+            <g opacity="0.85">
+                ${Array.from({length: 4}, (_, i) => {
+                    const ix = x0 + 4 + i * ((w - 8) / 4);
+                    const sz = (w - 8) / 4 - 2;
+                    return `
+                        <rect x="${ix}" y="${dockY}" width="${sz}" height="${sz}" rx="${sz * 0.28}" fill="${dockColors[i]}" opacity="0.9"/>
+                    `;
+                }).join('')}
+            </g>
+
+            <circle cx="${cx - 3}" cy="${y0 + h - 2.8}" r="0.6" fill="#ffffff" opacity="0.95"/>
+            <circle cx="${cx}" cy="${y0 + h - 2.8}" r="0.5" fill="#ffffff" opacity="0.5"/>
+            <circle cx="${cx + 3}" cy="${y0 + h - 2.8}" r="0.5" fill="#ffffff" opacity="0.5"/>
         `;
     }
 
@@ -263,14 +348,11 @@ function renderSideButtons(spec, formFactor) {
     const btnH = 6;
 
     let out = '';
-    // Power (kanan)
     if (isModern) {
         out += `<rect x="${body.x + body.w + 0.3}" y="${powerY}" width="${btnW}" height="${btnH}" rx="0.4" fill="${shadeHex('#888', -20)}"/>`;
     } else {
-        // Legacy: tombol atas
         out += `<rect x="${body.x + body.w * 0.3}" y="${body.y - 0.5}" width="${btnH}" height="${btnW}" rx="0.4" fill="${shadeHex('#888', -20)}"/>`;
     }
-    // Volume (kiri)
     if (isModern) {
         out += `<rect x="${body.x - 1.5}" y="${volY}" width="${btnW}" height="${btnH}" rx="0.4" fill="${shadeHex('#888', -20)}"/>
             <rect x="${body.x - 1.5}" y="${volY + btnH + 2}" width="${btnW}" height="${btnH}" rx="0.4" fill="${shadeHex('#888', -20)}"/>`;
@@ -316,7 +398,6 @@ function renderCameraLayer(spec, cameraId, formFactor) {
             `).join('')}
         `;
     }
-    // Flush / slight: lingkaran kecil
     const size = cams.bump === 'slight' ? 4.5 : 3.5;
     return `
         <rect x="${baseX}" y="${baseY}" width="${size}" height="${size * 0.75}" rx="${size*0.25}" fill="#000" opacity="0.7"/>
@@ -359,7 +440,6 @@ function renderNotchLayer(spec, screenRect) {
             <circle cx="${cx + w/2 - 1}" cy="${top + 1 + h/2}" r="0.5" fill="#1a1a1a"/>
         `;
     }
-    // under_display: tidak ada notch, screen full
     return '';
 }
 
@@ -453,7 +533,6 @@ function renderHomeLayer(spec, screenRect, formFactor) {
         return `<rect x="${cx - 5}" y="${cy}" width="10" height="0.6" rx="0.3" fill="#ffffff" opacity="0.55"/>`;
     }
     if (hb === 'row') {
-        // Candybar: tiga tombol fisik di bawah layar
         const cy = body.y + body.h - 22;
         const cx = body.x + body.w / 2;
         return `
@@ -543,4 +622,4 @@ export function getMockupSpec() {
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-                                               }
+                                                        }
