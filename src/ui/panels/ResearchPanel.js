@@ -1,6 +1,6 @@
 // FILE: src/ui/panels/ResearchPanel.js
 // Tab Riset: sub-tab Teknologi | OS | Sejarah | Chip.
-// Node riset diurutkan: Berjalan → Tersedia → Selesai → Terkunci.
+// v2026.2 — Row-based, section-grouped (Sim Companies style).
 import { RESEARCH_CATEGORIES, getNodeById } from '../../data/research.data.js';
 import { renderOSPanel, openOsWizardModal, openCreateOsModal, openFeatureDetailModal } from './OSPanel.js';
 import { renderTimelinePanel, getTimelineFilter, setTimelineFilter } from './TimelinePanel.js';
@@ -11,6 +11,7 @@ import {
     openChipNodeModal
 } from './ChipResearchPanel.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
+import { renderTechNodeRow } from '../components/TechNodeCard.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -19,13 +20,9 @@ function escapeHtml(s) {
 }
 
 let _filterCategory = 'all';
-
 export function getFilterCategory() { return _filterCategory; }
 export function setFilterCategory(cat) { _filterCategory = cat; }
 
-// ============================================================
-// CHIP TAB VISIBILITY
-// ============================================================
 function _isChipTabVisible() {
     try {
         const data = window.__game.state.get();
@@ -36,9 +33,6 @@ function _isChipTabVisible() {
     } catch (e) { return false; }
 }
 
-// ============================================================
-// MAIN RENDER
-// ============================================================
 export function renderResearchPanel({ subtab, researchSystem, osSystem, chipResearchSystem }) {
     const chipTabVisible = _isChipTabVisible();
 
@@ -50,6 +44,7 @@ export function renderResearchPanel({ subtab, researchSystem, osSystem, chipRese
             ${chipTabVisible ? `<button class="subtab-btn ${subtab === 'chip' ? 'active' : ''}" data-subtab="chip">Chip</button>` : ''}
         </div>
     `;
+
     let body = '';
     if (subtab === 'os') {
         body = renderOSPanel({ osSystem, researchSystem });
@@ -64,140 +59,154 @@ export function renderResearchPanel({ subtab, researchSystem, osSystem, chipRese
 }
 
 // ============================================================
-// PRIORITAS STATUS (untuk sorting)
-// ============================================================
-function _statusPriority(status) {
-    if (status === 'running')   return 1;
-    if (status === 'available') return 2;
-    if (status === 'done')      return 3;
-    return 4; // locked
-}
-
-function _sortNodesByStatus(nodes, researchSystem) {
-    const withStatus = nodes.map(n => {
-        const st = researchSystem.getNodeStatus(n.id);
-        return { node: n, status: st.status };
-    });
-
-    withStatus.sort((a, b) => {
-        const pa = _statusPriority(a.status);
-        const pb = _statusPriority(b.status);
-        if (pa !== pb) return pa - pb;
-        if (a.node.tier !== b.node.tier) return a.node.tier - b.node.tier;
-        return (a.node.minYear || 0) - (b.node.minYear || 0);
-    });
-
-    return withStatus.map(x => x.node);
-}
-
-// ============================================================
-// SUB-TAB TEKNOLOGI
+// TECH SECTION
 // ============================================================
 function renderTechSection({ researchSystem }) {
     const data = window.__game.state.get();
-    const active = data.research.active;
-    const maxSlots = data.research.maxSlots;
+    const active = data.research.active || [];
+    const maxSlots = data.research.maxSlots || 1;
 
-    const slotHeader = `
-        <div class="card" style="padding:12px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div style="font-size:13px;color:var(--text-dim);">Slot Riset Aktif</div>
-                <div style="font-size:16px;font-weight:700;color:var(--accent);" data-research-slots>
-                    ${active.length}/${maxSlots}
-                </div>
-            </div>
-            ${active.length === 0
-                ? '<div style="font-size:11.5px;color:var(--text-mute);margin-top:6px;">Pilih node di bawah untuk memulai riset.</div>'
-                : active.map(e => `
-                    <div class="active-research-row">
-                        <div style="flex:1;">
-                            <div style="font-size:12.5px;font-weight:600;">${escapeHtml(e.name)}</div>
-                            <div style="font-size:11px;color:var(--text-dim);" data-research-eta="${e.nodeId}">
-                                Menghitung...
-                            </div>
-                        </div>
-                        <div style="font-size:12px;font-weight:600;color:var(--accent);" data-research-pct="${e.nodeId}">0%</div>
-                    </div>
-                    <div class="progress" style="margin-bottom:8px;height:6px;">
-                        <div class="progress-bar" data-research-bar="${e.nodeId}" style="width:0%;"></div>
-                    </div>
-                `).join('')
-            }
-        </div>
-    `;
-
-    const chipBar = `
-        <div class="chip-bar">
-            <button class="chip ${_filterCategory === 'all' ? 'active' : ''}" data-filter-cat="all">Semua</button>
-            ${RESEARCH_CATEGORIES.map(c => `
-                <button class="chip ${_filterCategory === c.id ? 'active' : ''}" data-filter-cat="${c.id}">
-                    ${renderIcon(c.icon, 14, 'style="vertical-align:middle;margin-right:4px;"')} ${c.name}
-                </button>
-            `).join('')}
-        </div>
-    `;
+    const slotBar = _renderSlotBar(active, maxSlots);
+    const chipBar = _renderChipFilter();
 
     const allNodes = _filterCategory === 'all'
         ? RESEARCH_CATEGORIES.flatMap(c => researchSystem.getNodesByCategory(c.id))
         : researchSystem.getNodesByCategory(_filterCategory);
 
-    const sortedNodes = _sortNodesByStatus(allNodes, researchSystem);
-
-    let countAvailable = 0, countRunning = 0, countDone = 0, countLocked = 0;
-    sortedNodes.forEach(n => {
-        const s = researchSystem.getNodeStatus(n.id).status;
-        if (s === 'available') countAvailable++;
-        else if (s === 'running') countRunning++;
-        else if (s === 'done') countDone++;
-        else countLocked++;
+    const groups = { running: [], available: [], done: [], locked: [] };
+    allNodes.forEach(function (n) {
+        const st = researchSystem.getNodeStatus(n.id);
+        const bucket = groups[st.status] || groups.locked;
+        bucket.push({ node: n, status: st.status, reason: st.reason });
     });
 
-    const counterBar = `
-        <div class="card" style="padding:10px 12px;display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px;">
-            <span><b style="color:var(--info);font-size:13px;">${countAvailable}</b> <span style="color:var(--text-dim);">tersedia</span></span>
-            ${countRunning > 0 ? `<span><b style="color:var(--warn);font-size:13px;">${countRunning}</b> <span style="color:var(--text-dim);">berjalan</span></span>` : ''}
-            ${countDone > 0 ? `<span><b style="color:var(--accent);font-size:13px;">${countDone}</b> <span style="color:var(--text-dim);">selesai</span></span>` : ''}
-            <span><b style="color:var(--text-mute);font-size:13px;">${countLocked}</b> <span style="color:var(--text-dim);">terkunci</span></span>
-        </div>
-    `;
+    Object.keys(groups).forEach(function (k) {
+        groups[k].sort(function (a, b) {
+            if (a.node.tier !== b.node.tier) return a.node.tier - b.node.tier;
+            return (a.node.minYear || 0) - (b.node.minYear || 0);
+        });
+    });
 
-    const nodeList = sortedNodes.map(n => renderTechNodeCard(n, researchSystem)).join('');
+    let html = slotBar + chipBar;
 
-    return slotHeader + counterBar + chipBar + `<div class="tech-node-list">${nodeList}</div>`;
+    if (groups.running.length) {
+        html += _renderNodeGroup('Berjalan', groups.running, active);
+    }
+    if (groups.available.length) {
+        html += _renderNodeGroup('Tersedia', groups.available, active);
+    }
+    if (groups.done.length) {
+        html += _renderCollapsibleGroup('Selesai', groups.done, active);
+    }
+    if (groups.locked.length) {
+        html += _renderCollapsibleGroup('Terkunci', groups.locked, active);
+    }
+
+    if (!groups.running.length && !groups.available.length &&
+        !groups.done.length && !groups.locked.length) {
+        html += '<div class="empty"><div class="empty-title">Tidak ada node di kategori ini</div></div>';
+    }
+
+    return html;
 }
 
-function renderTechNodeCard(node, researchSystem) {
-    const st = researchSystem.getNodeStatus(node.id);
-    const cat = RESEARCH_CATEGORIES.find(c => c.id === node.category);
+function _renderSlotBar(active, maxSlots) {
+    if (!active.length) {
+        return '<div class="slot-strip slot-strip-empty">' +
+            '<div class="slot-strip-top">' +
+                '<span class="slot-strip-label">Riset Aktif</span>' +
+                '<span class="slot-strip-count" data-research-slots>0/' + maxSlots + '</span>' +
+            '</div>' +
+            '<div class="slot-strip-hint">Belum ada riset berjalan. Pilih node di bawah.</div>' +
+            '</div>';
+    }
 
-    return `
-        <div class="tech-node tech-${st.status}" data-node-detail="${node.id}">
-            <div class="tech-node-head">
-                <div style="flex:1;min-width:0;">
-                    <div class="tech-node-title">${escapeHtml(node.name)}</div>
-                    <div class="tech-node-cat">${cat ? renderIcon(cat.icon, 12, 'style="vertical-align:middle;margin-right:3px;"') + cat.name : node.category} • Tier ${node.tier} • ${node.minYear}</div>
-                </div>
-                <div class="tech-status-badge badge-${st.status}">${_statusBadge(st.status)}</div>
-            </div>
-            <div class="tech-node-desc">${escapeHtml(node.description)}</div>
-            <div class="tech-node-foot">
-                <span>💰 $${node.cost.toLocaleString('en-US')}</span>
-                <span>⏱ ${node.durationDays} hari</span>
-                ${st.reason ? `<span class="tech-node-reason">${escapeHtml(st.reason)}</span>` : ''}
-            </div>
-        </div>
-    `;
+    var rows = active.map(function (e) {
+        return '<div class="slot-strip-item">' +
+            '<div class="slot-strip-item-head">' +
+                '<span class="slot-strip-item-name">' + escapeHtml(e.name) + '</span>' +
+                '<span class="slot-strip-item-pct" data-research-pct="' + e.nodeId + '">0%</span>' +
+            '</div>' +
+            '<div class="progress slot-strip-item-progress">' +
+                '<div class="progress-bar" data-research-bar="' + e.nodeId + '" style="width:0%;"></div>' +
+            '</div>' +
+            '<div class="slot-strip-item-eta" data-research-eta="' + e.nodeId + '">—</div>' +
+            '</div>';
+    }).join('');
+
+    return '<div class="slot-strip">' +
+        '<div class="slot-strip-top">' +
+            '<span class="slot-strip-label">Riset Aktif</span>' +
+            '<span class="slot-strip-count" data-research-slots>' + active.length + '/' + maxSlots + '</span>' +
+        '</div>' +
+        rows +
+        '</div>';
 }
 
-function _statusBadge(s) {
-    if (s === 'done') return '✓ Selesai';
-    if (s === 'running') return '⏳ Berjalan';
-    if (s === 'available') return '+ Mulai';
-    return '🔒 Terkunci';
+function _renderChipFilter() {
+    var chips = RESEARCH_CATEGORIES.map(function (c) {
+        var cls = 'chip ' + (_filterCategory === c.id ? 'active' : '');
+        return '<button class="' + cls + '" data-filter-cat="' + c.id + '">' +
+            renderIcon(c.icon, 12) + ' ' + escapeHtml(c.name) +
+            '</button>';
+    }).join('');
+
+    return '<div class="chip-bar">' +
+        '<button class="chip ' + (_filterCategory === 'all' ? 'active' : '') + '" data-filter-cat="all">Semua</button>' +
+        chips +
+        '</div>';
+}
+
+function _renderNodeGroup(label, items, active) {
+    var header = '<div class="section-label">' +
+        '<span class="section-label-text">' + label + ' · ' + items.length + '</span>' +
+        '<span class="section-label-line"></span>' +
+        '</div>';
+
+    var rows = items.map(function (it) { return _renderRow(it, active); }).join('');
+
+    return header + '<div class="node-list">' + rows + '</div>';
+}
+
+function _renderCollapsibleGroup(label, items, active) {
+    var header = '<summary class="section-summary">' +
+        '<span class="section-summary-text">' + label + ' · ' + items.length + '</span>' +
+        '<span class="section-summary-line"></span>' +
+        '</summary>';
+
+    var rows = items.map(function (it) { return _renderRow(it, active); }).join('');
+
+    return '<details class="section-collapsible">' + header +
+        '<div class="node-list">' + rows + '</div>' +
+        '</details>';
+}
+
+function _renderRow(it, active) {
+    var cat = RESEARCH_CATEGORIES.find(function (c) { return c.id === it.node.category; });
+
+    var pct = null, eta = null;
+    if (it.status === 'running') {
+        var entry = (active || []).find(function (e) { return e.nodeId === it.node.id; });
+        if (entry) {
+            pct = Math.round(entry.percent * 100);
+            eta = 'Sisa ~' + Math.ceil(entry.remainingDays) + ' hari';
+        }
+    }
+
+    return renderTechNodeRow({
+        node: it.node,
+        status: it.status,
+        categoryInfo: cat,
+        detailAttr: 'data-node-detail',
+        actionAttr: 'data-research-action',
+        progressPct: pct,
+        progressEta: eta,
+        reason: it.reason
+    });
 }
 
 // ============================================================
-// MODAL DETAIL NODE (riset umum)
+// MODAL DETAIL NODE (tidak berubah)
 // ============================================================
 export function openNodeDetailModal({ nodeId, researchSystem }) {
     const node = getNodeById(nodeId);
@@ -244,7 +253,6 @@ export function openNodeDetailModal({ nodeId, researchSystem }) {
     window.__game.Modal.open('node-detail', html);
 }
 
-// Re-export untuk main.js
 export {
     openOsWizardModal,
     openCreateOsModal,
