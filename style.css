@@ -4027,38 +4027,3 @@ body {
         animation: none !important;
     }
 }
-
-
-/* ============================================================
-   SCREENSHOT FIX — Android Chrome
-   backdrop-filter memaksa GPU layer yang di beberapa HP
-   tidak ter-screenshot (area header/nav jadi hitam).
-   Fix: ganti dengan background solid + border halus.
-   Efek visual hampir sama, screenshot jadi normal.
-   ============================================================ */
-
-.app-header {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    background: var(--bg-1) !important;
-    border-bottom: 1px solid var(--border-strong);
-}
-
-.mobile-nav {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    background: var(--bg-1) !important;
-    border-top: 1px solid var(--border-strong);
-}
-
-.modal-backdrop {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    background: rgba(0, 0, 0, 0.78) !important;
-}
-
-.nav-slider {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    background: rgba(255, 255, 255, 0.16) !important;
-}
