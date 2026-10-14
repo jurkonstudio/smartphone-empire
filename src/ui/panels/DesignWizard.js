@@ -1,8 +1,9 @@
 // FILE: src/ui/panels/DesignWizard.js
-// v2027.11a — Fase 1 mockup polish:
-//   1. Mockup size adaptive (200/220) untuk HP sempit
-//   2. Tambah spec strip di bawah mockup (Nama, Harga, Skor, Margin, Layar, Chip)
-//   3. Logika step, validasi, dan API renderPhoneMockup TIDAK diubah
+// v2027.12a — Auto-fill "Isi Rekomendasi":
+//   1. Tombol di Langkah 1 → auto-isi semua field (kriteria: costPerUnit tertinggi)
+//   2. Loncat langsung ke Langkah 4 (Ringkasan + Rilis)
+//   3. Validasi ringan: kalau ada yang belum tersedia tahun ini, batal loncat
+//   4. Logika step manual TIDAK diubah — pemain bisa tetap kustom
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
 import { state } from '../../core/GameState.js';
@@ -96,6 +97,108 @@ function currentEraInfo() {
 }
 
 // ============================================================
+// AUTO-FILL HELPERS (v2027.12a)
+// ============================================================
+function _pickMostExpensive(list) {
+    if (!list || !list.length) return null;
+    let best = list[0];
+    for (let i = 1; i < list.length; i++) {
+        const cost = list[i].costPerUnit || 0;
+        const bestCost = best.costPerUnit || 0;
+        if (cost > bestCost) best = list[i];
+    }
+    return best;
+}
+
+function _autoFillBest(s) {
+    const ffs = filterFormFactorsByEra();
+    const bestFf = _pickMostExpensive(ffs);
+    if (bestFf) s.formFactorId = bestFf.id;
+
+    const catMap = {
+        display: 'displayId',
+        camera: 'cameraId',
+        battery: 'batteryId',
+        chip: 'chipId',
+        network: 'networkId'
+    };
+    for (const catId in catMap) {
+        const list = filterComponentsByEra(catId);
+        const best = _pickMostExpensive(list);
+        if (best) s[catMap[catId]] = best.id;
+    }
+    // Kalau camera kosong, biarkan null agar tetap "Tanpa Kamera"
+    if (!s.cameraId) s.cameraId = 'none';
+
+    const osOptions = (window.__game && window.__game.os && window.__game.os.getOsOptionsForPhone)
+        ? window.__game.os.getOsOptionsForPhone()
+        : [];
+    if (osOptions.length) {
+        let bestOs = osOptions[0];
+        for (let i = 1; i < osOptions.length; i++) {
+            const cost = osOptions[i].costPerUnit || 0;
+            const bestCost = bestOs.costPerUnit || 0;
+            if (cost > bestCost) bestOs = osOptions[i];
+        }
+        s.osOptionId = bestOs.id;
+    }
+
+    const bodies = filterBodiesByEra();
+    const bestBody = _pickMostExpensive(bodies);
+    if (bestBody) s.bodyId = bestBody.id;
+
+    const colors = filterBodyColorsByEra();
+    if (colors.length) s.bodyColorId = colors[0].id;
+
+    const ps = window.__game && window.__game.products;
+    if (ps && ps.computeUnitCost) {
+        let unitCost = 0;
+        try { unitCost = ps.computeUnitCost(s); } catch (e) {}
+        if (unitCost > 0) {
+            const raw = unitCost * 2;
+            const rounded = Math.ceil(raw / 50) * 50;
+            s.price = Math.max(200, rounded);
+        }
+    }
+    s.priceManuallyEdited = false;
+}
+
+function _validateComplete(s) {
+    const missing = [];
+    if (!s.formFactorId) missing.push('bentuk');
+    if (!s.displayId) missing.push('layar');
+    if (!s.batteryId) missing.push('baterai');
+    if (!s.chipId) missing.push('chip');
+    if (!s.networkId) missing.push('jaringan');
+    if (!s.osOptionId) missing.push('OS');
+    if (!s.bodyId) missing.push('bodi');
+    if (!s.bodyColorId) missing.push('warna');
+    return missing;
+}
+
+function _handleAutoFill() {
+    const s = _wizardState;
+    if (!s) return;
+
+    if (!s.name.trim()) {
+        s.name = 'Model ' + DesignEraService.getCurrentYear();
+    }
+
+    _autoFillBest(s);
+
+    const missing = _validateComplete(s);
+    if (missing.length) {
+        ToastService.warning('Belum tersedia tahun ini: ' + missing.join(', '));
+        _render();
+        return;
+    }
+
+    s.step = 4;
+    _render();
+    ToastService.success('Rekomendasi terbaik diterapkan!');
+}
+
+// ============================================================
 // OPEN WIZARD
 // ============================================================
 export function openDesignWizard({ researchSystem, osSystem, productSystem }) {
@@ -181,6 +284,9 @@ function _bindStep() {
         nameInput.value = _wizardState.name;
         nameInput.addEventListener('input', (e) => { _wizardState.name = e.target.value; });
     }
+
+    const autofillBtn = root.querySelector('[data-wiz-autofill]');
+    if (autofillBtn) autofillBtn.addEventListener('click', () => _handleAutoFill());
 
     root.querySelectorAll('[data-wiz-pick]').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -348,7 +454,13 @@ function _step1(s) {
         <label class="field-label">Nama Ponsel</label>
         <input class="field-input" data-wiz-name maxlength="24" placeholder="Contoh: X1, Nova, ..." autocomplete="off" />
 
-        <label class="field-label" style="margin-top:12px;">Bentuk (Form Factor)</label>
+        <button class="wiz-autofill-btn" data-wiz-autofill>
+            <span class="wiz-autofill-ico">✨</span>
+            <span>Isi Rekomendasi Otomatis</span>
+        </button>
+        <div class="wiz-autofill-hint">Pilih komponen terbaik tahun ini &amp; langsung ke Ringkasan.</div>
+
+        <label class="field-label" style="margin-top:16px;">Bentuk (Form Factor)</label>
         <div class="wiz-options">
             ${ffs.map(f => `
                 <button class="wiz-option ${s.formFactorId === f.id ? 'selected' : ''}" data-wiz-pick="formFactorId:${f.id}">
@@ -590,7 +702,7 @@ function _computeStats(s) {
 }
 
 // ============================================================
-// SPEC STRIP (v2027.11a)
+// SPEC STRIP
 // ============================================================
 function _specStripHtml(s) {
     const ps = window.__game && window.__game.products;
@@ -732,4 +844,4 @@ function _openDetailModal() {
     `;
 
     Modal.open('design-wizard-detail', html);
-            }
+                                                                                     }
