@@ -1,8 +1,7 @@
 // FILE: src/ui/campus/CampusScene.js
-// v2027.37a — anti-flicker: pause render saat carousel di-swipe
+// v2027.38a — preserveDrawingBuffer untuk cegah texture discard saat scroll
 import { createAssets, buildGround, buildTree, buildHQ, getHqLevel, PALETTES, TREE_SPOTS } from './CampusBuildings.js';
 import { createCampusControls } from './CampusControls.js';
-import { bus } from '../../core/EventBus.js';
 
 var BASE_VIEW = 16;
 var MAX_DPR = 1.5;
@@ -20,7 +19,8 @@ export function createCampusScene(THREE, container, gameState) {
     var renderer = new THREE.WebGLRenderer({
         antialias: true,
         alpha: true,
-        powerPreference: 'low-power'
+        powerPreference: 'low-power',
+        preserveDrawingBuffer: true   // v2027.38a — cegah texture discard saat scroll
     });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
     renderer.setClearColor(0x000000, 0);
@@ -44,7 +44,6 @@ export function createCampusScene(THREE, container, gameState) {
     var aspect = 1, raf = 0, disposed = false;
     var lastW = 0, lastH = 0;
     var resizeScheduled = false;
-    var paused = false;   // v2027.37a — skip render saat carousel swipe
 
     function applyCamera() {
         var v = controls.view;
@@ -56,10 +55,10 @@ export function createCampusScene(THREE, container, gameState) {
     }
 
     function requestRender() {
-        if (raf || disposed || paused) return;
+        if (raf || disposed) return;
         raf = requestAnimationFrame(function () {
             raf = 0;
-            if (disposed || document.hidden || paused) return;
+            if (disposed || document.hidden) return;
             renderer.render(scene, camera);
         });
     }
@@ -111,16 +110,6 @@ export function createCampusScene(THREE, container, gameState) {
     function onVis() { if (!document.hidden) requestRender(); }
     document.addEventListener('visibilitychange', onVis);
 
-    // === v2027.37a — pause saat carousel scroll ===
-    function onCarouselStart() { paused = true; }
-    function onCarouselEnd() {
-        paused = false;
-        // Render sekali supaya state terbaru muncul
-        requestRender();
-    }
-    var unsubScrollStart = bus.on('home:carousel-scroll-start', onCarouselStart);
-    var unsubScrollEnd   = bus.on('home:carousel-scroll-end',   onCarouselEnd);
-
     var ro = null;
     if (typeof ResizeObserver !== 'undefined') {
         ro = new ResizeObserver(resize);
@@ -141,8 +130,6 @@ export function createCampusScene(THREE, container, gameState) {
             if (raf) cancelAnimationFrame(raf);
             if (ro) ro.disconnect(); else window.removeEventListener('resize', resize);
             document.removeEventListener('visibilitychange', onVis);
-            if (typeof unsubScrollStart === 'function') unsubScrollStart();
-            if (typeof unsubScrollEnd === 'function')   unsubScrollEnd();
             controls.dispose();
             A.dispose();
             renderer.dispose();
