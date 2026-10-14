@@ -1,6 +1,5 @@
 // FILE: src/ui/panels/TeamPanel.js
-// v2027.8a — Render 3 section scroll (Tim Aktif, Rekrut, Info).
-// Sub-tab bar dihapus — dipanggil dari HqPanel.
+// v2027.8b — Team = roster saja. Rekrut & Info jadi collapsible folder.
 import { ROLES, getRoleById, getSkillTier, getTraitById } from '../../data/staff.data.js';
 import { BALANCE } from '../../data/balance.data.js';
 import { generateAvatar } from '../avatars/AvatarGenerator.js';
@@ -24,7 +23,7 @@ function safe(fn, fallback) {
 }
 
 // ============================================================
-// MAIN RENDER — 3 section scroll
+// MAIN RENDER — Tim Aktif + folder Rekrut + folder Info
 // ============================================================
 export function renderTeamPanel({ teamSystem }) {
     const data = window.__game.state.get();
@@ -42,18 +41,27 @@ export function renderTeamPanel({ teamSystem }) {
         '<div class="empty"><div class="empty-title">Gagal render Info</div></div>'
     );
 
-    return _sectionDivider('Tim Aktif', 'users') + activeHtml +
-           '<div data-hq-anchor="team-recruit"></div>' +
-           _sectionDivider('Rekrut', 'plus') + recruitHtml +
-           _sectionDivider('Info', 'info') + infoHtml;
+    const staffCount = (data.staff || []).length;
+    const candidateCount = (data.candidates || []).length;
+
+    return activeHtml +
+        _foldSection('rekrut', 'Rekrut', 'plus', candidateCount + ' kandidat') +
+        '<div class="team-fold-body">' + recruitHtml + '</div>' +
+        '</details>' +
+
+        _foldSection('info', 'Info', 'info', null) +
+        '<div class="team-fold-body">' + infoHtml + '</div>' +
+        '</details>';
 }
 
-function _sectionDivider(label, iconId) {
-    return '<div class="hq-section-divider">' +
-        '<span class="hq-section-icon">' + renderIcon(iconId, 11) + '</span>' +
-        '<span class="hq-section-label">' + label + '</span>' +
-        '<span class="hq-section-line"></span>' +
-        '</div>';
+function _foldSection(id, label, iconId, meta) {
+    return '<details class="team-fold" data-team-fold="' + id + '">' +
+        '<summary class="team-fold-summary">' +
+            '<span class="team-fold-icon">' + renderIcon(iconId, 13) + '</span>' +
+            '<span class="team-fold-label">' + escapeHtml(label) + '</span>' +
+            (meta ? '<span class="team-fold-meta">' + escapeHtml(meta) + '</span>' : '') +
+            '<span class="team-fold-chevron">' + renderIcon('chevron-right', 14) + '</span>' +
+        '</summary>';
 }
 
 // ============================================================
@@ -95,8 +103,7 @@ function _renderActive(data, teamSystem) {
             <div class="empty">
                 <div class="empty-ico">${renderIcon('users', 48)}</div>
                 <div class="empty-title">Belum ada tim</div>
-                <div class="empty-desc">Rekrut engineer, designer, dan marketer untuk mempercepat perusahaan.</div>
-                <button class="btn-primary" data-team-action="goto-recruit" style="max-width:200px;margin:0 auto;">Rekrut Sekarang</button>
+                <div class="empty-desc">Buka folder <b>Rekrut</b> di bawah untuk mencari kandidat.</div>
             </div>
         `;
     }
