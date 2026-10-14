@@ -1,4 +1,5 @@
 // FILE: src/main.js
+// v2027.6a — tambah LanguageService (i18n). Perubahan minimal.
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -7,6 +8,7 @@ import { TimeSystem } from './core/TimeSystem.js';
 import { SaveService } from './core/SaveService.js';
 import { ToastService } from './core/ToastService.js';
 import { ThemeService } from './core/ThemeService.js';
+import { LanguageService } from './core/LanguageService.js';   // [v2027.6a]
 import { ChipResearchSystem } from './core/ChipResearchSystem.js';
 import { EconomySystem } from './systems/EconomySystem.js';
 import { QuestSystem } from './systems/QuestSystem.js';
@@ -115,6 +117,8 @@ function renderNavOnly() {
             requestAnimationFrame(function () { updateNavSlider(false); });
         });
     } else {
+        // [v2027.6a] Re-render nav saat bahasa berubah untuk update label.
+        // Cek apakah jumlah tombol masih sama (kalau ya, hanya update active state).
         var buttons = els.nav.querySelectorAll('.nav-btn');
         for (var i = 0; i < buttons.length; i++) {
             var isActive = buttons[i].dataset.nav === activeView;
@@ -518,7 +522,6 @@ function bindProgressEvents() {
         var etaEl = els.view.querySelector('[data-prod-dev-eta]'); if (etaEl) etaEl.textContent = 'Sisa ~' + data.remainingDays + ' hari';
     });
 
-    // Chip research progress
     bus.on('chip-research:progress', function (data) {
         if (activeView !== 'research' || activeSubtab !== 'chip') return;
         var slotsEl = els.view.querySelector('[data-chip-research-slots]');
@@ -585,6 +588,11 @@ function bindStateEvents() {
     bus.on('team:recruited', function () { if (activeView === 'team') renderView({ soft: true }); });
     bus.on('team:fired', function () { if (activeView === 'team') renderView({ soft: true }); });
 
+    // [v2027.6a] Re-render saat bahasa berubah.
+    bus.on('lang:changed', function () {
+        renderAll();
+    });
+
     bus.on('news:published', function (data) {
         try {
             var article = data && data.article;
@@ -610,6 +618,7 @@ async function boot() {
     try {
         if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML utama tidak ditemukan.');
         ThemeService.init();
+        LanguageService.init();   // [v2027.6a]
         mountToastContainer(els.toast);
         initTutorialOverlay();
         initMonthlySummary();
@@ -653,6 +662,7 @@ async function boot() {
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, news: NewsSystem, ThemeService: ThemeService,
+            LanguageService: LanguageService,
             SaveService: SaveService, ToastService: ToastService, Modal: Modal, navigate: navigate, render: renderAll,
             modules: { marketing: marketingModule, feedbackData: feedbackModule },
             cheat: {
@@ -674,6 +684,7 @@ async function boot() {
                 forceEra: function (eraId) { state.get().era = eraId; bus.emit('state:changed', state.get()); renderAll(); return { era: eraId }; },
                 setTheme: function (id) { ThemeService.setTheme(id); renderAll(); return { theme: id }; },
                 setAccent: function (id) { ThemeService.setAccent(id); renderAll(); return { accent: id }; },
+                setLang: function (id) { LanguageService.setLang(id); renderAll(); return { lang: id }; },
                 unlockChipDesign: function () { ['chip_design_tool','chip_arch_arm_a','node_180','node_130','node_90','chip_isp_basic','chip_dvfs','fab_construction'].forEach(function (id) { research.completeResearch(id); chipResearch.completeResearch(id); }); return { ok: true }; },
                 quickDesignChip: function (cfg) { return chipSystem.quickDesignChip(cfg); },
                 buildFab: function (lvl) { return fabSystem.quickBuildFab(lvl || 1); },
@@ -734,7 +745,7 @@ async function boot() {
             }
         });
 
-        console.info('[' + APP_CONFIG.name + '] siap. Era: ' + state.get().era);
+        console.info('[' + APP_CONFIG.name + '] siap. Era: ' + state.get().era + ', Lang: ' + LanguageService.getLang());
     } catch (err) {
         console.error('[boot] gagal:', err);
         hideLoading();
