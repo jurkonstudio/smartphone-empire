@@ -24,9 +24,16 @@ export async function mountCampusMap(containerEl, gameState) {
         // Batal kalau sudah pindah tab / container sudah dibuang saat menunggu.
         if (token !== _token || !containerEl.isConnected) return;
         var scene = createCampusScene(THREE, containerEl, gameState);
+        // Data terkini: state bisa diganti (hydrate/reset), jadi baca ulang saat dibutuhkan.
+        function currentData() {
+            var g = window.__game;
+            return (g && g.state && g.state.get()) || gameState;
+        }
         var unsubs = [
             bus.on('theme:changed', function () { scene.refreshTheme(); }),
-            bus.on('state:changed', function (data) { scene.update(data); })
+            bus.on('state:changed', function (data) { scene.update(data); }),
+            // Pergantian tahun bisa mengganti era desain walau state:changed tidak terpicu.
+            bus.on('time:year-changed', function () { scene.update(currentData()); })
         ];
         _active = { scene: scene, unsubs: unsubs };
     } catch (err) {

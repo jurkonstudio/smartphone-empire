@@ -1,12 +1,18 @@
 // FILE: src/ui/campus/CampusScene.js
-// v2027.38b — force render saat carousel scroll (anti hitam mid-swipe)
-import { createAssets, buildGround, buildTree, buildHQ, getHqLevel, PALETTES, TREE_SPOTS } from './CampusBuildings.js';
+// v2027.35a — kampus tumbuh: bangunan muncul/naik level otomatis, gaya ikut era,
+// animasi tumbuh singkat, tap bangunan untuk info. Tetap render-on-demand.
+import {
+    createAssets, buildGround, buildTree, buildHQ, buildSlot, buildSprawl,
+    computePlan, rememberPeak, describeBuilding,
+    PALETTES, TREE_SPOTS, ERA_WINDOWS, SLOT_ORDER, SPRAWL_SPOTS
+} from './CampusBuildings.js';
 import { createCampusControls } from './CampusControls.js';
-import { bus } from '../../core/EventBus.js';
 
 var BASE_VIEW = 16;
-var MAX_DPR = 1.5;
-var MIN_RESIZE_DELTA = 2;
+var MAX_DPR = 1.5;              // hemat GPU di HP DPR 3+
+var MIN_RESIZE_DELTA = 2;       // piksel — skip resize kalau perubahan < 2px
+var GROW_MS = 650;              // durasi animasi bangunan tumbuh
+var TIP_MS = 2800;              // lama tooltip tampil
 
 function readAccent() {
     try {
@@ -16,12 +22,21 @@ function readAccent() {
     return '#2563eb';
 }
 
+function easeOutBack(t) {
+    var c1 = 1.70158, c3 = c1 + 1;
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+
+function prefersReducedMotion() {
+    try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+    catch (e) { return false; }
+}
+
 export function createCampusScene(THREE, container, gameState) {
     var renderer = new THREE.WebGLRenderer({
         antialias: true,
         alpha: true,
-        powerPreference: 'low-power',
-        preserveDrawingBuffer: true
+        powerPreference: 'low-power'
     });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
     renderer.setClearColor(0x000000, 0);
@@ -29,6 +44,16 @@ export function createCampusScene(THREE, container, gameState) {
     canvas.style.cssText = 'width:100%;height:100%;display:block;';
     container.innerHTML = '';
     container.appendChild(canvas);
+
+    // Tooltip kecil (pointer-events none supaya tidak mengganggu drag/pinch peta).
+    var tip = document.createElement('div');
+    tip.style.cssText = 'position:absolute;left:50%;top:10px;transform:translateX(-50%);' +
+        'max-width:90%;padding:6px 12px;border-radius:10px;text-align:center;font-size:12px;' +
+        'line-height:1.35;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .2s;z-index:2;' +
+        'background:var(--bg-2);color:var(--text-primary);border:1px solid var(--border);' +
+        'box-shadow:var(--shadow-sm);';
+    container.appendChild(tip);
+    var tipTimer = null;
 
     var scene = new THREE.Scene();
     var camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
@@ -41,10 +66,17 @@ export function createCampusScene(THREE, container, gameState) {
     scene.add(buildGround(A, THREE));
     TREE_SPOTS.forEach(function (p) { scene.add(buildTree(A, THREE, p[0], p[1])); });
 
-    var hq = null, hqLevel = 0;
+    var dyn = {};                 // key -> { group, level, era }
+    var eraIdx = -1;              // era desain yang sedang dipakai
+    var appliedSig = '';
+    var hasApplied = false;
+    var lastPlan = null, lastData = null;
+    var animList = [], animRaf = 0;
     var aspect = 1, raf = 0, disposed = false;
     var lastW = 0, lastH = 0;
     var resizeScheduled = false;
+    var raycaster = new THREE.Raycaster();
+    var ndc = new THREE.Vector2();
 
     function applyCamera() {
         var v = controls.view;
@@ -64,15 +96,101 @@ export function createCampusScene(THREE, container, gameState) {
         });
     }
 
-    // v2027.38b — render langsung tanpa debounce (untuk scroll force render)
-    function forceRender() {
-        if (disposed || document.hidden) return;
-        renderer.render(scene, camera);
+    // ---------- animasi tumbuh (hanya jalan selama ada yang beranimasi) ----------
+    function tick(now) {
+        animRaf = 0;
+        if (disposed) return;
+        var live = [];
+        for (var i = 0; i < animList.length; i++) {
+            var a = animList[i];
+            var p = Math.min(1, (now - a.t0) / GROW_MS);
+            a.o.scale.y = p >= 1 ? 1 : Math.max(0.001, easeOutBack(p));
+            if (p < 1) live.push(a);
+        }
+        animList = live;
+        if (!document.hidden) renderer.render(scene, camera);
+        if (animList.length) animRaf = requestAnimationFrame(tick);
+    }
+
+    function grow(obj) {
+        obj.scale.y = 0.001;
+        animList.push({ o: obj, t0: performance.now() });
+        if (!animRaf) animRaf = requestAnimationFrame(tick);
+    }
+
+    // ---------- kelola bangunan dinamis ----------
+    function setBuilding(key, level, make, animate) {
+        var cur = dyn[key];
+        if (!level) {
+            if (cur) { scene.remove(cur.group); delete dyn[key]; }
+            return;
+        }
+        if (cur && cur.level === level && cur.era === eraIdx) return;
+        var g = make();
+        if (!g) return;
+        var isUpgrade = !cur || level > cur.level;
+        if (cur) scene.remove(cur.group);
+        scene.add(g);
+        dyn[key] = { group: g, level: level, era: eraIdx };
+        if (animate && isUpgrade) grow(g);
+    }
+
+    function syncBuildings(plan, animate) {
+        var lv = plan.levels;
+        setBuilding('hq', lv.hq, function () { return buildHQ(A, THREE, lv.hq, eraIdx); }, animate);
+        SLOT_ORDER.forEach(function (id) {
+            setBuilding(id, lv[id], function () { return buildSlot(A, THREE, id, lv[id], eraIdx); }, animate);
+        });
+        for (var i = 0; i < SPRAWL_SPOTS.length; i++) {
+            (function (idx) {
+                setBuilding('blk' + idx, idx < plan.sprawl ? 1 : 0,
+                    function () { return buildSprawl(A, THREE, idx, eraIdx); }, animate);
+            })(i);
+        }
+    }
+
+    // ---------- tap bangunan -> info ----------
+    function hideTip() {
+        if (tipTimer) { clearTimeout(tipTimer); tipTimer = null; }
+        tip.style.opacity = '0';
+    }
+
+    function showTip(info) {
+        if (!info) { hideTip(); return; }
+        tip.innerHTML = '';
+        var t1 = document.createElement('div');
+        t1.style.fontWeight = '700';
+        t1.textContent = info.title;
+        var t2 = document.createElement('div');
+        t2.style.cssText = 'font-size:11px;color:var(--text-tertiary);';
+        t2.textContent = info.sub;
+        tip.appendChild(t1);
+        tip.appendChild(t2);
+        tip.style.opacity = '1';
+        if (tipTimer) clearTimeout(tipTimer);
+        tipTimer = setTimeout(hideTip, TIP_MS);
+    }
+
+    function handleTap(cx, cy) {
+        if (disposed || !lastPlan) return;
+        var rect = canvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        ndc.set(((cx - rect.left) / rect.width) * 2 - 1, -((cy - rect.top) / rect.height) * 2 + 1);
+        scene.updateMatrixWorld(true);
+        camera.updateMatrixWorld(true);
+        raycaster.setFromCamera(ndc, camera);
+        var groups = Object.keys(dyn).map(function (k) { return dyn[k].group; });
+        var hits = raycaster.intersectObjects(groups, true);
+        if (!hits.length) { hideTip(); return; }
+        var o = hits[0].object;
+        while (o && !(o.userData && o.userData.id)) o = o.parent;
+        showTip(o ? describeBuilding(o.userData.id, lastPlan, lastData) : null);
     }
 
     var controls = createCampusControls(canvas, {
         unitsPerPixel: function (zoom) { return (BASE_VIEW / zoom) / Math.max(1, container.clientHeight); },
-        onChange: function () { applyCamera(); requestRender(); }
+        onChange: function () { applyCamera(); requestRender(); },
+        onTap: handleTap
     });
 
     function resize() {
@@ -96,7 +214,10 @@ export function createCampusScene(THREE, container, gameState) {
 
     function applyTheme() {
         var dark = document.documentElement.getAttribute('data-theme') === 'dark';
-        var p = dark ? PALETTES.dark : PALETTES.light;
+        var base = dark ? PALETTES.dark : PALETTES.light;
+        var p = Object.assign({}, base);
+        var w = ERA_WINDOWS[Math.max(0, eraIdx)];
+        if (w) p.window = dark ? w.dark : w.light;     // warna jendela ikut era
         A.applyPalette(p, readAccent());
         hemi.color.setHex(p.hemiSky);
         hemi.groundColor.setHex(p.hemiGround);
@@ -104,22 +225,28 @@ export function createCampusScene(THREE, container, gameState) {
         sun.intensity = p.dirI;
     }
 
+    // Dipanggil sering (setiap state:changed) — murah: keluar cepat kalau plan sama.
     function update(data) {
-        var lvl = getHqLevel(data);
-        if (lvl === hqLevel) return;
-        if (hq) scene.remove(hq);
-        hq = buildHQ(A, THREE, lvl);
-        scene.add(hq);
-        hqLevel = lvl;
+        if (disposed || !data) return;
+        var plan = computePlan(data);
+        rememberPeak(data, plan);
+        lastData = data;
+        if (plan.sig === appliedSig) return;
+
+        var animate = hasApplied && !prefersReducedMotion();
+        if (plan.eraIdx !== eraIdx) {
+            eraIdx = plan.eraIdx;
+            applyTheme();
+        }
+        syncBuildings(plan, animate);
+        appliedSig = plan.sig;
+        hasApplied = true;
+        lastPlan = plan;
         requestRender();
     }
 
     function onVis() { if (!document.hidden) requestRender(); }
     document.addEventListener('visibilitychange', onVis);
-
-    // v2027.38b — listen event dari main.js, force render selama swipe
-    var unsubScroll = bus.on('home:carousel-scroll', forceRender);
-    var unsubScrollEnd = bus.on('home:carousel-scroll-end', requestRender);
 
     var ro = null;
     if (typeof ResizeObserver !== 'undefined') {
@@ -135,19 +262,19 @@ export function createCampusScene(THREE, container, gameState) {
 
     return {
         update: update,
-        forceRender: forceRender,
         refreshTheme: function () { applyTheme(); requestRender(); },
         dispose: function () {
             disposed = true;
             if (raf) cancelAnimationFrame(raf);
+            if (animRaf) cancelAnimationFrame(animRaf);
+            if (tipTimer) clearTimeout(tipTimer);
             if (ro) ro.disconnect(); else window.removeEventListener('resize', resize);
             document.removeEventListener('visibilitychange', onVis);
-            if (typeof unsubScroll === 'function') unsubScroll();
-            if (typeof unsubScrollEnd === 'function') unsubScrollEnd();
             controls.dispose();
             A.dispose();
             renderer.dispose();
             try { renderer.forceContextLoss(); } catch (e) {}
+            if (tip.parentNode) tip.parentNode.removeChild(tip);
             if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
         }
     };
