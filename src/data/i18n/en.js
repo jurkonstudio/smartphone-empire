@@ -915,4 +915,12 @@ export const en = {
 'campus.manager.category.marketing':  'Marketing',
 'campus.manager.category.industry':   'Industry',
 'campus.manager.category.support':    'Facilities',
+// ONBOARDING — Name validation
+'onb.name.error_empty':    'Nama perusahaan tidak boleh kosong.',
+'onb.name.error_too_short':'Nama minimal 2 karakter.',
+'onb.name.error_too_long': 'Nama maksimal 24 karakter.',
+'onb.name.error_competitor':'Nama ini sudah dipakai kompetitor. Pilih nama lain.',
+'onb.name.error_profanity':'Nama mengandung kata yang tidak pantas. Pilih nama lain.',
+'onb.name.error_brand':    'Nama ini mirip merek terkenal. Pilih nama lain.',
+'onb.name.hint':           'Pilih nama yang unik untuk perusahaanmu.',
 };
