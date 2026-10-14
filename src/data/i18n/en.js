@@ -866,6 +866,7 @@ export const en = {
     // TUTORIAL
     'tut.skip':               'Skip',
     'tut.next':               'Next',
+    
 // CAMPUS BUILDINGS
 'campus.building.hq':              'Headquarters',
 'campus.building.hq.desc':         'The company\'s main office.',
