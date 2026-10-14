@@ -3355,3 +3355,26 @@ body {
     .home-slide { max-height: 42vh; }
     .home-dots { padding: 10px 0 4px; }
 }
+/* ============================================================================
+   HOME — CAROUSEL (FIX SLIDE)
+   ============================================================================ */
+.home-carousel {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;      /* wajib: mengunci slide per halaman */
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;  /* momentum scroll di iOS */
+    scrollbar-width: none;
+    touch-action: pan-x;                /* izinkan geser horizontal, blokir vertikal */
+    gap: 0;
+}
+.home-carousel::-webkit-scrollbar { display: none; }
+
+.home-slide {
+    flex: 0 0 100%;
+    width: 100%;
+    scroll-snap-align: start;           /* setiap slide “menempel” di kiri */
+    scroll-snap-stop: always;
+    box-sizing: border-box;
+}
