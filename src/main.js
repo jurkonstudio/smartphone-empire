@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2027.7a — Team redesign: candidate modal + recruit filter.
+// v2027.8a — Restrukturisasi HQ + sub-tab (Overview, Campus, Team).
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -45,7 +45,8 @@ import { renderMarketPanel, drawShareChart } from './ui/panels/MarketPanel.js';
 import { openCompetitorDetailModal } from './ui/panels/CompetitorDetailModal.js';
 import { openViralResponseModal } from './ui/panels/PublicOpinionPanel.js';
 import { drawSalesChart } from './ui/panels/SalesChart.js';
-import { renderTeamPanel, openCandidateDetailModal, setRecruitFilter } from './ui/panels/TeamPanel.js';   // [v2027.7a]
+import { openCandidateDetailModal, setRecruitFilter } from './ui/panels/TeamPanel.js';
+import { renderHqPanel } from './ui/panels/HqPanel.js';
 import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
 import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
@@ -53,6 +54,7 @@ import { openNewsArticleModal } from './ui/panels/NewsArticleModal.js';
 import { handleNewsListClick } from './ui/panels/NewsListPanel.js';
 import { renderChipMockup } from './ui/phone/ChipMockup.js';
 import { renderChipRadarChart } from './ui/charts/ChipRadarChart.js';
+import { renderIcon } from './ui/icons/FeatureIcons.js';
 import * as marketingModule from './data/marketing.data.js';
 import * as feedbackModule from './data/feedback.data.js';
 import { getActiveRendererIdPublic } from './ui/notifications/NotificationRenderer.js';
@@ -83,7 +85,7 @@ var activeView = 'dashboard';
 var activeSubtab = 'tech';
 var activeProdSubtab = 'design';
 var activeMarketSubtab = 'share';
-var activeTeamSubtab = 'active';
+var activeHqSubtab = 'overview';
 var _burnWarn = null;
 
 var els = {
@@ -163,6 +165,19 @@ function updateNavSlider(animated) {
     }
 }
 
+// ============ HOME PLACEHOLDER ============
+function _renderHomePlaceholder() {
+    return '<div class="card" style="text-align:center;padding:60px 20px;">' +
+        '<div style="display:inline-flex;align-items:center;justify-content:center;width:88px;height:88px;border-radius:24px;background:var(--accent-soft);color:var(--accent);margin-bottom:18px;">' +
+            renderIcon('layers', 44) +
+        '</div>' +
+        '<div style="font-size:17px;font-weight:700;margin-bottom:8px;letter-spacing:-0.01em;">Campus Map</div>' +
+        '<div style="font-size:13px;color:var(--text-tertiary);line-height:1.6;max-width:300px;margin:0 auto;">' +
+            'Peta 3D kantor pusat akan muncul di sini. Untuk sekarang, buka tab <b>HQ</b> untuk mengelola perusahaan.' +
+        '</div>' +
+        '</div>';
+}
+
 // ============ RENDER VIEW ============
 function renderView(opts) {
     if (!els.view) return;
@@ -172,9 +187,9 @@ function renderView(opts) {
 
     var html = '';
     try {
-        if (activeView === 'dashboard') html = renderDashboard(state.get(), getTime(), research, teamSystem);
+        if (activeView === 'dashboard') html = _renderHomePlaceholder();
         else if (activeView === 'profile') html = renderCompanyProfilePanel({ teamSystem: teamSystem, marketSystem: market, competitors: competitors, opinionSystem: opinion });
-        else if (activeView === 'team') html = renderTeamPanel({ subtab: activeTeamSubtab, teamSystem: teamSystem });
+        else if (activeView === 'team') html = renderHqPanel({ subtab: activeHqSubtab, state: state.get(), timeSnapshot: getTime(), researchSystem: research, teamSystem: teamSystem });
         else if (activeView === 'research') html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os, chipResearchSystem: chipResearch });
         else if (activeView === 'products') html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os });
         else if (activeView === 'market') html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion });
@@ -202,7 +217,9 @@ function renderView(opts) {
         els.view.scrollTop = 0;
     }
     try {
-        if (activeView === 'dashboard') { var chart = els.view.querySelector('.chart-wrap'); if (chart) drawCashChart(chart); }
+        if (activeView === 'team' && activeHqSubtab === 'overview') {
+            var chart = els.view.querySelector('.chart-wrap'); if (chart) drawCashChart(chart);
+        }
         if (activeView === 'products' && activeProdSubtab === 'sales') { var sc = els.view.querySelector('.chart-wrap'); if (sc) drawSalesChart(sc); }
         if (activeView === 'market' && activeMarketSubtab === 'share') { var sc2 = els.view.querySelector('.chart-wrap'); if (sc2) drawShareChart(sc2); }
         if (activeView === 'settings') bindSettingsActions(els.view);
@@ -328,9 +345,9 @@ function bindGlobalClicks() {
             return;
         }
 
-        // ============ TEAM ============
-        var teamSub = e.target.closest('[data-team-subtab]');
-        if (teamSub) { e.preventDefault(); activeTeamSubtab = teamSub.dataset.teamSubtab; renderView(); return; }
+        // ============ HQ SUB-TAB ============
+        var hqSubBtn = e.target.closest('[data-hq-subtab]');
+        if (hqSubBtn) { e.preventDefault(); activeHqSubtab = hqSubBtn.dataset.hqSubtab; renderView(); return; }
 
         var recruitFilterBtn = e.target.closest('[data-recruit-filter]');
         if (recruitFilterBtn) {
@@ -351,7 +368,11 @@ function bindGlobalClicks() {
                 return;
             }
             if (a === 'refresh-pool') { teamSystem.refreshCandidates(); ToastService.success('Pool diperbarui.'); renderAll(); return; }
-            if (a === 'goto-recruit') { activeTeamSubtab = 'recruit'; renderView(); return; }
+            if (a === 'goto-recruit') {
+                var recruitAnchor = document.querySelector('[data-hq-anchor="team-recruit"]');
+                if (recruitAnchor && recruitAnchor.scrollIntoView) recruitAnchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                return;
+            }
             if (a === 'open-candidate') { openCandidateDetailModal({ candidateId: teamAction.dataset.candidateId }); return; }
         }
 
@@ -574,17 +595,17 @@ function bindTimeEvents() {
         var c = meta.querySelector('[data-time-clock]'); if (c) c.textContent = hh + ':' + mm;
         var s = meta.querySelector('[data-time-status]'); if (s) { s.textContent = t.isPaused ? 'Paused' : (t.gameSpeed + 'x'); s.classList.toggle('running', !t.isPaused); }
     });
-    bus.on('time:day-changed', function () { if (activeView === 'dashboard') updateDashboardLive(); });
+    bus.on('time:day-changed', function () { if (activeView === 'team' && activeHqSubtab === 'overview') updateDashboardLive(); });
     bus.on('time:speed-changed', function () { renderHeaderOnly(); });
 }
 
 // ============ STATE ============
 function bindStateEvents() {
     bus.on('state:cash-changed', function (data) { animateCash(data.prev, data.next); });
-    bus.on('state:log-changed', function () { if (activeView === 'dashboard') renderView({ soft: true }); });
-    bus.on('state:milestone-added', function () { if (activeView === 'dashboard') renderView({ soft: true }); });
+    bus.on('state:log-changed', function () { if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true }); });
+    bus.on('state:milestone-added', function () { if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true }); });
     bus.on('quest:completed', function (data) { ToastService.success('Quest selesai: ' + data.title); vibrate(20); });
-    bus.on('quest:activated', function () { if (activeView === 'dashboard') renderView({ soft: true }); });
+    bus.on('quest:activated', function () { if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true }); });
     bus.on('economy:warn-burnrate', function (data) {
         _burnWarn = 'Sisa ' + data.monthsLeft + ' bln';
         renderHeaderOnly();
@@ -599,7 +620,7 @@ function bindStateEvents() {
     bus.on('settings:changed', function () {});
     bus.on('tutorial:restart', function () { tutorial.restart(); });
     bus.on('era:changed', function () { renderAll(); });
-    bus.on('team:changed', function () { if (activeView === 'dashboard' || activeView === 'team') renderView({ soft: true }); });
+    bus.on('team:changed', function () { if (activeView === 'team') renderView({ soft: true }); });
     bus.on('team:recruited', function () { if (activeView === 'team') renderView({ soft: true }); });
     bus.on('team:fired', function () { if (activeView === 'team') renderView({ soft: true }); });
 
@@ -619,7 +640,7 @@ function bindStateEvents() {
                     onClick: function () { openNewsArticleModal(article); }
                 }
             });
-            if (activeView === 'dashboard') renderView({ soft: true });
+            if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true });
             vibrate(15);
         } catch (err) {
             console.error('[main] news:published handler error:', err);
@@ -699,6 +720,7 @@ async function boot() {
                 setTheme: function (id) { ThemeService.setTheme(id); renderAll(); return { theme: id }; },
                 setAccent: function (id) { ThemeService.setAccent(id); renderAll(); return { accent: id }; },
                 setLang: function (id) { LanguageService.setLang(id); renderAll(); return { lang: id }; },
+                setHqSubtab: function (id) { activeHqSubtab = id; renderAll(); return { subtab: id }; },
                 unlockChipDesign: function () { ['chip_design_tool','chip_arch_arm_a','node_180','node_130','node_90','chip_isp_basic','chip_dvfs','fab_construction'].forEach(function (id) { research.completeResearch(id); chipResearch.completeResearch(id); }); return { ok: true }; },
                 quickDesignChip: function (cfg) { return chipSystem.quickDesignChip(cfg); },
                 buildFab: function (lvl) { return fabSystem.quickBuildFab(lvl || 1); },
@@ -746,14 +768,14 @@ async function boot() {
                 if (activeView === 'research') return activeSubtab;
                 if (activeView === 'products') return activeProdSubtab;
                 if (activeView === 'market')   return activeMarketSubtab;
-                if (activeView === 'team')     return activeTeamSubtab;
+                if (activeView === 'team')     return activeHqSubtab;
                 return null;
             },
             setSubtab: function (id, direction) {
                 if (activeView === 'research') activeSubtab = id;
                 else if (activeView === 'products') activeProdSubtab = id;
                 else if (activeView === 'market')   activeMarketSubtab = id;
-                else if (activeView === 'team')     activeTeamSubtab = id;
+                else if (activeView === 'team')     activeHqSubtab = id;
                 renderView();
                 showSwipeAnimation(direction);
             }
