@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2027.17a — Home tab carousel + fix header tick i18n.
+// v2027.19a — Home real-time refresh.
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -46,7 +46,7 @@ import { openViralResponseModal } from './ui/panels/PublicOpinionPanel.js';
 import { drawSalesChart } from './ui/panels/SalesChart.js';
 import { openCandidateDetailModal, setRecruitFilter, setTeamMode } from './ui/panels/TeamPanel.js';
 import { renderHqPanel } from './ui/panels/HqPanel.js';
-import { renderHomePanel, initHomeTabs } from './ui/panels/HomePanel.js';
+import { renderHomePanel, initHomeTabs, refreshHomeSlides } from './ui/panels/HomePanel.js';
 import { mountCampusMap, unmountCampusMap } from './ui/campus/CampusMap.js';
 import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
 import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
@@ -662,11 +662,33 @@ function bindStateEvents() {
                 }
             });
             if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true });
+            if (activeView === 'dashboard') refreshHomeSlides();
             vibrate(15);
         } catch (err) {
             console.error('[main] news:published handler error:', err);
         }
     });
+
+    // ---- Real-time refresh Home slides saat event berubah ----
+    function _refreshHomeIfActive() {
+        if (activeView === 'dashboard') {
+            try { refreshHomeSlides(); } catch (e) { console.error('[home] refresh error:', e); }
+        }
+    }
+
+    bus.on('state:log-changed',      function () { _refreshHomeIfActive(); });
+    bus.on('state:milestone-added',  function () { _refreshHomeIfActive(); });
+    bus.on('quest:activated',        function () { _refreshHomeIfActive(); });
+    bus.on('quest:completed',        function () { _refreshHomeIfActive(); });
+    bus.on('research:started',       function () { _refreshHomeIfActive(); });
+    bus.on('research:completed',     function () { _refreshHomeIfActive(); });
+    bus.on('research:cancelled',     function () { _refreshHomeIfActive(); });
+    bus.on('chip-research:started',   function () { _refreshHomeIfActive(); });
+    bus.on('chip-research:completed', function () { _refreshHomeIfActive(); });
+    bus.on('chip-research:cancelled', function () { _refreshHomeIfActive(); });
+    bus.on('product:development-started',   function () { _refreshHomeIfActive(); });
+    bus.on('product:released',              function () { _refreshHomeIfActive(); });
+    bus.on('product:development-cancelled', function () { _refreshHomeIfActive(); });
 }
 
 // ============ BOOT ============
