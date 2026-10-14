@@ -60,6 +60,7 @@ import * as feedbackModule from './data/feedback.data.js';
 import { getActiveRendererIdPublic } from './ui/notifications/NotificationRenderer.js';
 import { initSwipe, showSwipeAnimation } from './core/SwipeService.js';
 import { initNavSliderDrag } from './core/NavSliderDrag.js';
+import { AudioService } from './core/AudioService.js';
 
 // ============ INSTANCE ============
 var timeSystem        = new TimeSystem(state);
@@ -272,6 +273,24 @@ function vibrate(ms) {
 // ============ CLICKS ============
 function bindGlobalClicks() {
     document.body.addEventListener('click', function (e) {
+        // ---- Sound feedback ----
+        try {
+            var clickable = e.target.closest('button, [role="button"], .nav-btn, .chip, .chip-small, .subtab-btn, .wiz-option, .wiz-color, .staff-row, .cand-row');
+            if (clickable && !clickable.disabled) {
+                if (clickable.classList.contains('toggle-switch') || clickable.hasAttribute('data-toggle')) {
+                    AudioService.play('toggle');
+                } else if (clickable.classList.contains('chip') ||
+                           clickable.classList.contains('chip-small') ||
+                           clickable.classList.contains('subtab-btn') ||
+                           clickable.classList.contains('wiz-option') ||
+                           clickable.classList.contains('wiz-color')) {
+                    AudioService.play('select');
+                } else {
+                    AudioService.play('tap');
+                }
+            }
+        } catch (err) {}
+
         var autoToggle = e.target.closest('[data-auto-toggle]');
         if (autoToggle) {
             e.preventDefault(); vibrate(8);
@@ -609,7 +628,11 @@ function bindStateEvents() {
         if (!res.ok) ToastService.error(res.error);
         else { ToastService.success('Pinjaman diterima.'); renderView(); }
     });
-    bus.on('settings:changed', function () {});
+    bus.on('settings:changed', function (settings) {
+    if (settings && typeof settings.sound === 'boolean') {
+        AudioService.setEnabled(settings.sound);
+    }
+});
     bus.on('tutorial:restart', function () { tutorial.restart(); });
     bus.on('era:changed', function () { renderAll(); });
     bus.on('team:changed', function () { if (activeView === 'team') renderView({ soft: true }); });
@@ -643,8 +666,10 @@ async function boot() {
     try {
         if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML utama tidak ditemukan.');
         ThemeService.init();
-        LanguageService.init();
-        mountToastContainer(els.toast);
+LanguageService.init();
+AudioService.init();
+AudioService.setEnabled(!!state.get().settings.sound);
+mountToastContainer(els.toast);
         initTutorialOverlay();
         initMonthlySummary();
         initGameOverScreen();
