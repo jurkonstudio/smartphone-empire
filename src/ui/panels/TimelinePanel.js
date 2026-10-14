@@ -1,8 +1,6 @@
 // FILE: src/ui/panels/TimelinePanel.js
-// ============================================================
-// TimelinePanel — timeline vertikal ponsel & OS ikonik 2000-2026.
 // v2026.2 — header compact, marker garis, no emoji.
-// ============================================================
+// v2027.13a — i18n.
 import {
     TIMELINE_ERAS,
     ICONIC_PHONES,
@@ -11,6 +9,7 @@ import {
 } from '../../data/historical-timeline.data.js';
 import { state } from '../../core/GameState.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
+import { t } from '../../core/LanguageService.js';
 
 let _filter = 'all'; // 'all' | 'phone' | 'os'
 
@@ -38,12 +37,12 @@ export function renderTimelinePanel() {
             '<span class="tl-header-era">' + escapeHtml(currentEra ? currentEra.name : '—') + '</span>' +
         '</div>' +
         '<div class="chip-bar tl-header-chips">' +
-            '<button class="chip ' + (_filter === 'all'   ? 'active' : '') + '" data-timeline-filter="all">Semua</button>' +
+            '<button class="chip ' + (_filter === 'all'   ? 'active' : '') + '" data-timeline-filter="all">' + t('timeline.filter.all') + '</button>' +
             '<button class="chip ' + (_filter === 'phone' ? 'active' : '') + '" data-timeline-filter="phone">' +
-                renderIcon('phone', 12) + ' Ponsel' +
+                renderIcon('phone', 12) + ' ' + t('timeline.filter.phone') +
             '</button>' +
             '<button class="chip ' + (_filter === 'os'    ? 'active' : '') + '" data-timeline-filter="os">' +
-                renderIcon('disc', 12) + ' OS' +
+                renderIcon('disc', 12) + ' ' + t('timeline.filter.os') +
             '</button>' +
         '</div>' +
         '</div>';
@@ -103,8 +102,8 @@ function buildItems() {
 function renderTimelineList(items, currentYear) {
     if (!items.length) {
         return '<div class="empty">' +
-            '<div class="empty-title">Belum ada data timeline</div>' +
-            '<div class="empty-desc">Data sejarah akan muncul seiring waktu berjalan.</div>' +
+            '<div class="empty-title">' + t('timeline.empty_title') + '</div>' +
+            '<div class="empty-desc">' + t('timeline.empty_desc') + '</div>' +
             '</div>';
     }
 
@@ -134,18 +133,18 @@ function renderTimelineItem(it, currentYear) {
     const isPast = it.year <= currentYear;
     const isCurrent = it.year === currentYear;
     const iconId = it.kind === 'phone' ? 'phone' : 'disc';
-    const kindLabel = it.kind === 'phone' ? 'Ponsel' : 'OS';
+    const kindLabel = it.kind === 'phone' ? t('timeline.kind.phone') : t('timeline.kind.os');
 
     const stateClass = isCurrent ? 'tl-current' : (isPast ? 'tl-past' : 'tl-future');
 
     const tagsHtml = it.tags && it.tags.length
-        ? '<div class="tl-tags">' + it.tags.map(function (t) {
-            return '<span class="tl-tag">' + escapeHtml(t) + '</span>';
+        ? '<div class="tl-tags">' + it.tags.map(function (tag) {
+            return '<span class="tl-tag">' + escapeHtml(tag) + '</span>';
         }).join('') + '</div>'
         : '';
 
     const specBadge = it.speculative
-        ? '<span class="tl-spec-badge">Spekulatif</span>'
+        ? '<span class="tl-spec-badge">' + t('timeline.speculative') + '</span>'
         : '';
 
     return `
@@ -170,7 +169,7 @@ function renderTimelineItem(it, currentYear) {
 
 function renderNowMarker(currentYear) {
     return '<div class="tl-now-line">' +
-        '<span class="tl-now-line-text">Sekarang · ' + currentYear + '</span>' +
+        '<span class="tl-now-line-text">' + t('timeline.now', { year: currentYear }) + '</span>' +
         '<span class="tl-now-line-fill"></span>' +
         '</div>';
 }
