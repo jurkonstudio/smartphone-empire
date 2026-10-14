@@ -2437,3 +2437,158 @@ body {
         transform: none !important;
     }
                     }
+/* ============================================================================
+   DASHBOARD REDESIGN — v2026.1
+   Blok baru; append-only. Tidak mengubah rule lama.
+   ============================================================================ */
+
+/* KPI sub-label (reputasi, tim) */
+.kpi-sub {
+    font-size: 10px;
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.2px;
+    margin-top: 3px;
+    color: var(--text-tertiary);
+}
+
+/* Fokus Hari Ini */
+.focus-section-label {
+    font-size: var(--fs-2xs);
+    font-weight: var(--fw-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    margin-bottom: 6px;
+}
+.focus-section-label:not(:first-child) {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+.focus-section-meta {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    margin-bottom: 8px;
+    font-variant-numeric: tabular-nums;
+}
+.focus-item { margin-bottom: 10px; }
+.focus-item:last-child { margin-bottom: 0; }
+
+.focus-quest {
+    display: flex;
+    gap: 10px;
+    padding: 8px 0;
+    align-items: flex-start;
+}
+.focus-quest + .focus-quest {
+    border-top: 1px solid var(--border);
+}
+.focus-quest-title {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    color: var(--text-primary);
+    letter-spacing: -0.005em;
+    margin-bottom: 2px;
+}
+.focus-quest-desc {
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+    line-height: var(--lh-base);
+}
+
+.focus-empty { padding: 6px 0 2px; text-align: center; }
+.focus-empty-title {
+    font-size: var(--fs-base);
+    font-weight: var(--fw-bold);
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    margin-bottom: 4px;
+}
+.focus-empty-desc {
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+    line-height: var(--lh-base);
+}
+
+/* Sorotan Publik — quote & viral line */
+.viral-line {
+    font-size: 12px;
+    font-weight: var(--fw-semibold);
+    margin: 6px 0 4px;
+}
+.feedback-quote {
+    padding: 8px 0 4px;
+    border-top: 1px dashed var(--border);
+    margin-top: 6px;
+}
+.feedback-quote-meta {
+    font-size: 10.5px;
+    color: var(--text-tertiary);
+    margin-bottom: 3px;
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.2px;
+}
+.feedback-quote-text {
+    font-size: var(--fs-sm);
+    color: var(--text-primary);
+    line-height: 1.5;
+    font-style: italic;
+}
+
+/* Timeline collapsible */
+.collapsible-card {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    margin-bottom: 10px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: background 0.15s, border-color 0.15s;
+}
+.collapsible-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    font-size: var(--fs-2xs);
+    font-weight: var(--fw-bold);
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    transition: color 0.15s;
+}
+.collapsible-summary::-webkit-details-marker { display: none; }
+.collapsible-summary::after {
+    content: "▼";
+    font-size: 10px;
+    color: var(--text-tertiary);
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.collapsible-card[open] .collapsible-summary::after {
+    transform: rotate(180deg);
+}
+.collapsible-summary:hover { color: var(--text-primary); }
+.collapsible-body {
+    padding: 0 16px 16px;
+    animation: fadeIn 0.22s ease-out;
+}
+
+/* Timeline panel di dalam collapsible — kurangi padding card dalam */
+.collapsible-body > .card:first-child {
+    padding: 0 0 10px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 10px;
+}
+
+/* Desktop fine-tune */
+@media (min-width: 768px) {
+    .kpi-sub { font-size: 11px; }
+}
