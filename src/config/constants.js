@@ -2,7 +2,7 @@
 
 export const NAV_ITEMS = [
     { id: 'dashboard', label: 'Home',    icon: '🏠' },
-    { id: 'team',      label: 'Tim',     icon: '👥' },
+    { id: 'team',      label: 'HQ',      icon: '🏢' },
     { id: 'research',  label: 'Riset',   icon: '🔬' },
     { id: 'products',  label: 'Produk',  icon: '📱' },
     { id: 'market',    label: 'Pasar',   icon: '📈' },
@@ -11,7 +11,7 @@ export const NAV_ITEMS = [
 
 export const VIEW_TITLES = {
     dashboard: { title: 'Home' },
-    team:      { title: 'Tim' },
+    team:      { title: 'HQ' },
     research:  { title: 'Riset' },
     products:  { title: 'Produk' },
     market:    { title: 'Pasar' },
