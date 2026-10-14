@@ -1,8 +1,8 @@
 // FILE: src/systems/NewsSystem.js
 // ============================================================
 // NewsSystem — generator artikel media internasional.
-// Trigger: product:released, milestone penjualan, event viral,
-//          headline bulanan historis (time:month-changed).
+// Trigger: product:released, milestone penjualan,
+//          time:day-changed (headline bulanan mulai hari ke-2).
 // ============================================================
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
@@ -13,8 +13,8 @@ import {
     BODY_TEMPLATES, PULL_QUOTE_TEMPLATES,
     getOutletsForYear, getJournalistForCountry, getDatelineForRegion, getRandomFrom
 } from '../data/news.data.js';
-// [V7a-2] import helper headline bulanan
 import { getHeadlineForMonth } from '../data/news-headlines.data.js';
+import { getPrehistoryHeadlines } from '../data/news-prehistory.data.js';
 
 var MAX_ARTICLES = 30;
 var _articleSeq = 1;
@@ -125,7 +125,7 @@ function _generateArticle(options) {
 }
 
 // ============================================================
-// [V7a-2] _toneToScore — mapping tone headline → skor numerik
+// [V7a-3] _toneToScore — mapping tone headline → skor numerik
 // ============================================================
 function _toneToScore(tone) {
     if (tone === 'positive') return 7.5;
@@ -134,7 +134,7 @@ function _toneToScore(tone) {
 }
 
 // ============================================================
-// [V7a-2] _makeHeadlineArticle — bangun artikel dari headline
+// [V7a-3] _makeHeadlineArticle — bangun artikel dari headline
 // historis. Struktur kompatibel NewsListPanel + NewsArticleModal.
 // ============================================================
 function _makeHeadlineArticle(h) {
@@ -201,6 +201,66 @@ function _makeHeadlineArticle(h) {
     };
 }
 
+// ============================================================
+// [V7a-3] _makeRecapArticle — artikel arsip pra-2000.
+// ============================================================
+function _makeRecapArticle(h) {
+    if (!h) return null;
+    var day = h.day || 1;
+    return {
+        id: 'recap_' + h.year + '_' + h.month + '_' + day,
+        headline: h.headline || '',
+        subheadline: '',
+        byline: 'Redaksi Arsip',
+        dateline: h.dateline || 'Global',
+        paragraphs: h.text ? [h.text] : [],
+        pullQuote: '',
+        source: h.source || 'Arsip',
+        sourceId: h.sourceId || null,
+        sourceCountry: null,
+        sourceRegion: null,
+        sourceType: 'archive',
+        score: _toneToScore(h.tone),
+        sentiment: h.tone || 'mixed',
+        articleType: 'recap',
+        isRecap: true,
+        productId: null,
+        productName: null,
+        createdAt: {
+            year: h.year,
+            month: h.month,
+            day: day,
+            gameMinute: 0
+        },
+        era: h.era || 'firmware',
+        read: true,
+        headlineYear: h.year,
+        headlineMonth: h.month,
+        tags: Array.isArray(h.tags) ? h.tags.slice() : []
+    };
+}
+
+// ============================================================
+// [V7a-4] _trimArticles — buang artikel non-recap terlama.
+// Arsip (isRecap: true) selalu dipertahankan.
+// ============================================================
+function _trimArticles(articles, max) {
+    if (!Array.isArray(articles) || articles.length <= max) return;
+    var safety = 0;
+    while (articles.length > max && safety < 200) {
+        safety++;
+        var removed = false;
+        for (var i = articles.length - 1; i >= 0; i--) {
+            if (!articles[i].isRecap) {
+                articles.splice(i, 1);
+                removed = true;
+                break;
+            }
+        }
+        if (!removed) break; // semua sisa adalah recap — biarkan
+    }
+}
+
 export var NewsSystem = {
     start: function () {
         bus.on('product:released', function (payload) {
@@ -209,8 +269,9 @@ export var NewsSystem = {
         bus.on('product:milestone-sales', function (payload) {
             NewsSystem._onMilestoneSales(payload);
         });
-        // [V7a-2] listener headline bulanan
-        bus.on('time:month-changed', function (snapshot) {
+        // [V7a-4] Headline bulanan dicek setiap pergantian hari.
+        // Muncul mulai hari ke-2 bulan berjalan.
+        bus.on('time:day-changed', function (snapshot) {
             NewsSystem._onMonthlyHeadline(snapshot);
         });
         console.info('[NewsSystem] siap.');
@@ -220,7 +281,7 @@ export var NewsSystem = {
         if (!payload) return;
         try {
             var data = state.get();
-            if (!data.news) data.news = { articles: [], lastMilestone: {}, headlineHistory: [] };
+            if (!data.news) data.news = { articles: [], lastMilestone: {}, headlineHistory: [], recapSeeded: false };
 
             var product = null;
             for (var i = 0; i < data.products.catalog.length; i++) {
@@ -272,9 +333,7 @@ export var NewsSystem = {
             for (var m = 0; m < articles.length; m++) {
                 data.news.articles.unshift(articles[m]);
             }
-            if (data.news.articles.length > MAX_ARTICLES) {
-                data.news.articles.length = MAX_ARTICLES;
-            }
+            _trimArticles(data.news.articles, MAX_ARTICLES);
 
             for (var n = 0; n < articles.length; n++) {
                 bus.emit('news:published', { article: articles[n] });
@@ -291,7 +350,7 @@ export var NewsSystem = {
         if (!payload) return;
         try {
             var data = state.get();
-            if (!data.news) data.news = { articles: [], lastMilestone: {}, headlineHistory: [] };
+            if (!data.news) data.news = { articles: [], lastMilestone: {}, headlineHistory: [], recapSeeded: false };
             if (!data.news.lastMilestone) data.news.lastMilestone = {};
 
             var productId = payload.productId;
@@ -311,9 +370,7 @@ export var NewsSystem = {
 
             if (art) {
                 data.news.articles.unshift(art);
-                if (data.news.articles.length > MAX_ARTICLES) {
-                    data.news.articles.length = MAX_ARTICLES;
-                }
+                _trimArticles(data.news.articles, MAX_ARTICLES);
                 bus.emit('news:published', { article: art });
                 state.addLog('Berita global: ' + art.headline, LOG_TYPES.success);
                 bus.emit('state:changed', data);
@@ -323,15 +380,20 @@ export var NewsSystem = {
         }
     },
 
-    // [V7a-2] Handler headline bulanan historis.
+    // [V7a-4] Handler headline bulanan. Trigger tiap pergantian hari;
+    // hanya benar-benar menambahkan artikel saat hari >= 2 dan belum ada.
     _onMonthlyHeadline: function (snapshot) {
         try {
             var data = state.get();
-            if (!data.news) data.news = { articles: [], lastMilestone: {}, headlineHistory: [] };
+            if (!data.news) data.news = { articles: [], lastMilestone: {}, headlineHistory: [], recapSeeded: false };
             if (!Array.isArray(data.news.headlineHistory)) data.news.headlineHistory = [];
 
             var year = (snapshot && snapshot.currentYear) || data.time.currentYear;
             var month = (snapshot && snapshot.currentMonth) || data.time.currentMonth;
+            var day = (snapshot && snapshot.currentDay) || data.time.currentDay;
+
+            // Headline muncul mulai hari ke-2 bulan berjalan.
+            if (day < 2) return;
 
             var h = getHeadlineForMonth(year, month);
             if (!h) return;
@@ -355,15 +417,39 @@ export var NewsSystem = {
 
             data.news.headlineHistory.push(key);
             data.news.articles.unshift(art);
-            if (data.news.articles.length > MAX_ARTICLES) {
-                data.news.articles.length = MAX_ARTICLES;
-            }
+            _trimArticles(data.news.articles, MAX_ARTICLES);
 
             bus.emit('news:published', { article: art });
             state.addLog('Headline: ' + art.headline, LOG_TYPES.info);
             bus.emit('state:changed', data);
         } catch (err) {
             console.error('[NewsSystem] _onMonthlyHeadline error:', err);
+        }
+    },
+
+    // [V7a-3] Seed arsip pra-2000. Idempotent via recapSeeded.
+    // Push ke belakang array agar di bawah headline bulanan.
+    seedPreHistory: function () {
+        try {
+            var data = state.get();
+            if (!data.news) data.news = { articles: [], lastMilestone: {}, headlineHistory: [], recapSeeded: false };
+            if (data.news.recapSeeded) return;
+
+            var list = getPrehistoryHeadlines();
+            var added = 0;
+            for (var i = 0; i < list.length; i++) {
+                var art = _makeRecapArticle(list[i]);
+                if (art) {
+                    data.news.articles.push(art);
+                    added++;
+                }
+            }
+
+            data.news.recapSeeded = true;
+            bus.emit('state:changed', data);
+            console.info('[NewsSystem] ' + added + ' arsip pra-2000 dimuat.');
+        } catch (err) {
+            console.error('[NewsSystem] seedPreHistory error:', err);
         }
     },
 
