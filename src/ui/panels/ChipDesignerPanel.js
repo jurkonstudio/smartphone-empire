@@ -1,4 +1,5 @@
 // FILE: src/ui/panels/ChipDesignerPanel.js
+// v2027.4a — Tambah tombol CTA "Buka Riset Chip" saat arsitektur kosong.
 // ============================================================
 // ChipDesignerPanel — Wizard desain chip. 4 langkah:
 //   1. Nama + Arsitektur
@@ -135,7 +136,6 @@ function _bindStep() {
             const key = parts[0];
             const value = parts.slice(1).join(':');
             if (key === 'features') {
-                // toggle
                 const arr = _wiz.features || [];
                 const idx = arr.indexOf(value);
                 if (idx >= 0) arr.splice(idx, 1);
@@ -158,6 +158,23 @@ function _bindStep() {
     if (cancelBtn) cancelBtn.addEventListener('click', () => { _wiz = null; Modal.close('chip-designer', true); });
     const confirmBtn = root.querySelector('[data-chip-confirm]');
     if (confirmBtn) confirmBtn.addEventListener('click', () => _confirm());
+
+    // [v2027.4a] Tombol CTA ke tab Riset -> Chip
+    const gotoResearchBtn = root.querySelector('[data-chip-goto-research]');
+    if (gotoResearchBtn) {
+        gotoResearchBtn.addEventListener('click', () => {
+            _wiz = null;
+            Modal.close('chip-designer', true);
+            const game = window.__game;
+            if (game && game.navigate) {
+                game.navigate('research');
+                setTimeout(() => {
+                    const chipTab = document.querySelector('[data-subtab="chip"]');
+                    if (chipTab) chipTab.click();
+                }, 60);
+            }
+        });
+    }
 
     if (_wiz.step === 4) {
         setTimeout(_refreshPreview, 40);
@@ -220,7 +237,10 @@ function _step1(s) {
     const archs = chipSystem() ? chipSystem().getAvailableArchitectures() : [];
     if (!archs.length) {
         return `<div class="empty-hint" style="margin:20px 0;">Belum ada arsitektur tersedia. Riset chip architecture dulu.</div>
-            <div class="wiz-nav"><button class="btn-secondary" data-chip-cancel style="flex:1;">Tutup</button></div>`;
+            <div class="wiz-nav">
+                <button class="btn-secondary" data-chip-cancel style="flex:1;">Tutup</button>
+                <button class="btn-primary" data-chip-goto-research style="flex:2;">Buka Riset Chip →</button>
+            </div>`;
     }
 
     return `
@@ -253,13 +273,8 @@ function _step2(s) {
     const arch = getArchitectureById(s.architectureId);
     const coresMax = arch ? arch.coresMax : 8;
 
-    // Core options
     const coreOptions = [1, 2, 4, 6, 8, 12, 16].filter(c => c <= coresMax);
-
-    // Clock options
     const clockOptions = [0.2, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0];
-
-    // Cache options
     const cacheOptions = [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384];
 
     return `
@@ -331,7 +346,6 @@ function _step3(s) {
     const feats = chipSystem() ? chipSystem().getAvailableFeatures() : [];
     const budgets = chipSystem() ? chipSystem().getBudgetTiers() : [];
 
-    // Group by category
     const byCat = {};
     feats.forEach(f => {
         if (!byCat[f.category]) byCat[f.category] = [];
@@ -438,7 +452,7 @@ function _refreshPreview() {
 }
 
 // ============================================================
-// COMPUTE (mirror dari ChipSystem, tapi aman kalau system belum siap)
+// COMPUTE
 // ============================================================
 function _computeStats(s) {
     const cs = chipSystem();
@@ -485,4 +499,4 @@ function _previewHtml(s) {
     } catch (e) {
         return '<div style="font-size:12px;color:var(--danger);">Preview error: ' + escapeHtml(e.message) + '</div>';
     }
-      }
+                }
