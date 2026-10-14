@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/HomePanel.js
-// v2027.24a — JUMP mode swipe. Ringan + snap smooth saat lepas jari.
+// v2027.30a — Native scroll-snap. Hapus JS swipe handler.
 import { t } from '../../core/LanguageService.js';
 import { renderCampusLoading } from '../campus/CampusFallback.js';
 import { renderProgressPanel } from './ProgressPanel.js';
@@ -7,13 +7,10 @@ import { renderNewsListPanel } from './NewsListPanel.js';
 import { renderLogPanel } from './LogPanel.js';
 
 const TABS = ['focus', 'news', 'activity'];
-const SWIPE_MIN_PX = 25;
-const VELOCITY_MIN = 0.25;   // px/ms — swipes cepat terdeteksi ringan
 
 let _activeTab = 'focus';
-let _observedCarousel = null;
 let _intersectionObserver = null;
-let _swipeBound = null;
+let _observedCarousel = null;
 
 // ============================================================
 // SLIDE RENDER
@@ -66,125 +63,38 @@ export function renderHomePanel() {
 }
 
 // ============================================================
-// MOUNT
+// MOUNT — hanya untuk dots sync, tidak intervensi scroll
 // ============================================================
 export function initHomeTabs(rootEl) {
     if (!rootEl) return;
     const carousel = rootEl.querySelector('[data-home-carousel]');
     if (!carousel) return;
 
+    // Tap dot → scroll ke slide
     rootEl.querySelectorAll('[data-home-dot]').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            _goToTab(carousel, btn.dataset.homeDot, true);
+            _goToTab(carousel, btn.dataset.homeDot);
         });
     });
 
-    _swipeBound = null;
-    _bindSwipe(carousel);
+    // Observer untuk sync dot aktif saat user scroll manual
     _bindScrollObserver(carousel);
 
+    // Set posisi awal tanpa animation
     requestAnimationFrame(function () {
         const idx = TABS.indexOf(_activeTab);
-        if (idx > 0) carousel.scrollLeft = idx * carousel.clientWidth;
+        if (idx > 0) {
+            const prev = carousel.style.scrollBehavior;
+            carousel.style.scrollBehavior = 'auto';
+            carousel.scrollLeft = idx * carousel.clientWidth;
+            carousel.style.scrollBehavior = prev || '';
+        }
         _updateDots(carousel);
     });
 }
 
 // ============================================================
-// JUMP SWIPE — ringan, tidak drag-follow
-// ============================================================
-function _bindSwipe(carousel) {
-    if (_swipeBound === carousel) return;
-    _swipeBound = carousel;
-
-    let startX = 0, startY = 0, startTime = 0;
-    let tracking = false;
-    let locked = null;      // null | 'h' | 'v'
-    let lastX = 0, lastT = 0;
-    let velocity = 0;
-
-    function onStart(e) {
-        if (!e.touches || !e.touches[0]) return;
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        startTime = Date.now();
-        lastX = startX;
-        lastT = startTime;
-        velocity = 0;
-        tracking = true;
-        locked = null;
-    }
-
-    function onMove(e) {
-        if (!tracking || !e.touches || !e.touches[0]) return;
-        const x = e.touches[0].clientX;
-        const y = e.touches[0].clientY;
-        const dx = x - startX;
-        const dy = y - startY;
-
-        // Tentukan arah sekali saja
-        if (locked === null) {
-            if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-                locked = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
-                if (locked === 'h' && e.cancelable) {
-                    try { e.preventDefault(); } catch (err) {}
-                }
-            }
-        }
-
-        if (locked === 'h') {
-            const now = Date.now();
-            const dt = now - lastT;
-            if (dt > 0) velocity = (x - lastX) / dt;
-            lastX = x;
-            lastT = now;
-            // TIDAK update scrollLeft — biarkan browser native
-        }
-    }
-
-    function onEnd(e) {
-        if (!tracking) return;
-        const wasHorizontal = locked === 'h';
-        tracking = false;
-        locked = null;
-        if (!wasHorizontal) return;
-        if (!e.changedTouches || !e.changedTouches[0]) return;
-
-        const x = e.changedTouches[0].clientX;
-        const dx = x - startX;
-        const dt = Date.now() - startTime;
-        if (dt > 800) return;
-
-        const idx = TABS.indexOf(_activeTab);
-        const fastLeft  = velocity < -VELOCITY_MIN;
-        const fastRight = velocity > VELOCITY_MIN;
-        const farLeft   = dx < -SWIPE_MIN_PX;
-        const farRight  = dx > SWIPE_MIN_PX;
-
-        let next = idx;
-        if (fastLeft || farLeft) next = Math.min(TABS.length - 1, idx + 1);
-        else if (fastRight || farRight) next = Math.max(0, idx - 1);
-        if (next === idx) return;
-
-        _goToTab(carousel, TABS[next], true);
-    }
-
-    function onCancel() {
-        tracking = false;
-        locked = null;
-    }
-
-    carousel._seSwipe = { onStart: onStart, onMove: onMove, onEnd: onEnd, onCancel: onCancel };
-
-    // touchmove non-passive agar preventDefault bisa
-    carousel.addEventListener('touchstart', onStart, { passive: true });
-    carousel.addEventListener('touchmove', onMove, { passive: false });
-    carousel.addEventListener('touchend', onEnd, { passive: true });
-    carousel.addEventListener('touchcancel', onCancel, { passive: true });
-}
-
-// ============================================================
-// SCROLL OBSERVER
+// SCROLL OBSERVER — deteksi slide aktif
 // ============================================================
 function _bindScrollObserver(carousel) {
     if (_intersectionObserver) _intersectionObserver.disconnect();
@@ -202,7 +112,10 @@ function _bindScrollObserver(carousel) {
                 }
             }
         });
-    }, { root: carousel, threshold: [0.6] });
+    }, {
+        root: carousel,
+        threshold: [0.6]
+    });
 
     carousel.querySelectorAll('[data-home-slide]').forEach(function (slide) {
         _intersectionObserver.observe(slide);
@@ -210,15 +123,15 @@ function _bindScrollObserver(carousel) {
 }
 
 // ============================================================
-// NAVIGATION
+// NAV
 // ============================================================
-function _goToTab(carousel, tabId, smooth) {
+function _goToTab(carousel, tabId) {
     const idx = TABS.indexOf(tabId);
     if (idx < 0) return;
     _activeTab = tabId;
     const target = idx * carousel.clientWidth;
     try {
-        carousel.scrollTo({ left: target, behavior: smooth ? 'smooth' : 'auto' });
+        carousel.scrollTo({ left: target, behavior: 'smooth' });
     } catch (e) {
         carousel.scrollLeft = target;
     }
