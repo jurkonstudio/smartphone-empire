@@ -37,6 +37,7 @@ var BLACKLIST_SELECTORS = [
     '.chip-bar',
     '.wiz-options-row',
     '.subtab-bar',
+    '.home-carousel',       // ← tambah ini
     'canvas',
     'input',
     'textarea',
