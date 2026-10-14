@@ -2963,3 +2963,75 @@ body {
         transform: none !important;
     }
                              }
+/* ============================================================================
+   60. WIZ SPEC STRIP (v2027.11a)
+   ============================================================================ */
+.wiz-spec-strip {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 10px 12px;
+    margin-bottom: 12px;
+}
+.wiz-spec-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+.wiz-spec-name {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-bold);
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.wiz-spec-price {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-black);
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+.wiz-spec-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+}
+.wiz-spec-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+    font-size: var(--fs-xs);
+}
+.wiz-spec-label {
+    color: var(--text-tertiary);
+    font-weight: var(--fw-semibold);
+    flex-shrink: 0;
+}
+.wiz-spec-value {
+    color: var(--text-primary);
+    font-weight: var(--fw-semibold);
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    text-align: right;
+}
+.wiz-spec-trunc {
+    max-width: 110px;
+}
+@media (max-width: 380px) {
+    .wiz-spec-trunc { max-width: 90px; }
+    .wiz-spec-meta { grid-template-columns: 1fr; }
+}
