@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/TeamPanel.js
-// v2027.8b — Team = roster saja. Rekrut & Info jadi collapsible folder.
+// v2027.8c — Fix accordion: summary tanpa flex + chevron CSS.
 import { ROLES, getRoleById, getSkillTier, getTraitById } from '../../data/staff.data.js';
 import { BALANCE } from '../../data/balance.data.js';
 import { generateAvatar } from '../avatars/AvatarGenerator.js';
@@ -41,27 +41,30 @@ export function renderTeamPanel({ teamSystem }) {
         '<div class="empty"><div class="empty-title">Gagal render Info</div></div>'
     );
 
-    const staffCount = (data.staff || []).length;
     const candidateCount = (data.candidates || []).length;
 
     return activeHtml +
-        _foldSection('rekrut', 'Rekrut', 'plus', candidateCount + ' kandidat') +
-        '<div class="team-fold-body">' + recruitHtml + '</div>' +
+        _foldOpen('rekrut', 'Rekrut', 'plus', candidateCount + ' kandidat') +
+            recruitHtml +
         '</details>' +
-
-        _foldSection('info', 'Info', 'info', null) +
-        '<div class="team-fold-body">' + infoHtml + '</div>' +
+        _foldOpen('info', 'Info', 'settings', null) +
+            infoHtml +
         '</details>';
 }
 
-function _foldSection(id, label, iconId, meta) {
+// Chevron pakai karakter CSS (tidak butuh ikon).
+// Konten summary dibungkus <div> — flex di dalam div, bukan di summary.
+function _foldOpen(id, label, iconId, meta) {
     return '<details class="team-fold" data-team-fold="' + id + '">' +
         '<summary class="team-fold-summary">' +
-            '<span class="team-fold-icon">' + renderIcon(iconId, 13) + '</span>' +
-            '<span class="team-fold-label">' + escapeHtml(label) + '</span>' +
-            (meta ? '<span class="team-fold-meta">' + escapeHtml(meta) + '</span>' : '') +
-            '<span class="team-fold-chevron">' + renderIcon('chevron-right', 14) + '</span>' +
-        '</summary>';
+            '<div class="team-fold-summary-inner">' +
+                '<span class="team-fold-icon">' + renderIcon(iconId, 13) + '</span>' +
+                '<span class="team-fold-label">' + escapeHtml(label) + '</span>' +
+                (meta ? '<span class="team-fold-meta">' + escapeHtml(meta) + '</span>' : '') +
+                '<span class="team-fold-chevron"></span>' +
+            '</div>' +
+        '</summary>' +
+        '<div class="team-fold-body">';
 }
 
 // ============================================================
@@ -332,11 +335,11 @@ export function openCandidateDetailModal({ candidateId }) {
                 '</div>';
         }).join('');
         detailSectionHtml =
-            '<div class="cand-modal-section-title">' + renderIcon('info', 11) + 'Detail</div>' +
+            '<div class="cand-modal-section-title">' + renderIcon('question', 11) + 'Detail</div>' +
             '<div class="cand-modal-details">' + rows + '</div>';
     } else {
         detailSectionHtml =
-            '<div class="cand-modal-section-title">' + renderIcon('info', 11) + 'Detail</div>' +
+            '<div class="cand-modal-section-title">' + renderIcon('question', 11) + 'Detail</div>' +
             '<div class="cand-modal-note">' +
                 renderIcon('warn', 14) +
                 '<span>Profil terbatas — kandidat ini belum memiliki data lengkap. Kandidat dengan profil penuh akan muncul setelah pool refresh.</span>' +
@@ -458,7 +461,7 @@ function _renderInfo(data, teamSystem) {
 
     const moraleColor = moraleAvg >= 70 ? 'var(--success)' : moraleAvg >= 40 ? 'var(--warn)' : 'var(--danger)';
 
-    const extraSec = section('Ringkasan Tim', 'info', 'var(--accent)', [
+    const extraSec = section('Ringkasan Tim', 'activity', 'var(--accent)', [
         { label: 'Total Staff', value: staff.length },
         { label: 'Total Gaji / Bulan', value: '$' + (totalSalary || 0).toLocaleString('en-US') },
         { label: 'Rata-rata Moral', value: moraleAvg + '/100', valueColor: moraleColor }
