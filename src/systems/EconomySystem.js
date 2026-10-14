@@ -1,4 +1,5 @@
 // FILE: src/systems/EconomySystem.js
+// v2027.1b — fix revenue ganda: cash tidak di-add income lagi di bulanan.
 import { bus } from '../core/EventBus.js';
 import { BALANCE } from '../data/balance.data.js';
 import { LOG_TYPES } from '../config/constants.js';
@@ -9,11 +10,16 @@ import { LOG_TYPES } from '../config/constants.js';
 //   3. Simpan ringkasan ke finance.history (maks 24 bulan).
 //   4. Cek game over (cash negatif N bulan berturut).
 //   5. Cek peringatan burn rate.
+//
+// Catatan alur uang (v2027.1b):
+//   - Revenue harian ditambahkan ke cash oleh ProductSystem._processDailySales.
+//   - EconomySystem HANYA memotong pengeluaran (salary, fixed, loan, tax).
+//   - Laporan bulanan tetap menampilkan income & net untuk informasi, tapi
+//     tidak lagi meng-update cash — sudah di-update harian.
 export class EconomySystem {
     constructor(gameState) {
         this.state = gameState;
         this._unsubMonth = null;
-        // Revenue bulan ini dikumpulkan dari sistem lain via bus
         this._monthRevenue = 0;
     }
 
@@ -21,7 +27,6 @@ export class EconomySystem {
         this._unsubMonth = bus.on('time:month-changed', (snapshot) => {
             this._processMonth(snapshot);
         });
-        // Kumpulkan revenue dari ProductSystem di Fase 3
         bus.on('economy:add-revenue', ({ amount }) => {
             if (typeof amount === 'number') this._monthRevenue += amount;
         });
@@ -35,7 +40,6 @@ export class EconomySystem {
         const data = this.state.data;
         if (data.gameOver) return;
 
-        // Cegah double-process bulan yang sama (mis. setelah reload)
         const last = data.finance.lastProcessed;
         if (last && last.year === snapshot.currentYear && last.month === snapshot.currentMonth) {
             return;
@@ -51,22 +55,23 @@ export class EconomySystem {
         const expenseBase = salary + fixed + loanInterest;
         const expense = Math.round(expenseBase * mul);
 
-        // ---- Pemasukan ----
+        // ---- Pemasukan (info saja, sudah masuk cash via harian) ----
         const income = Math.round(this._monthRevenue);
 
         // ---- Laba sebelum pajak ----
         const preTax = income - expense;
 
-        // ---- Pajak (hanya jika laba positif) ----
+        // ---- Pajak ----
         const taxRate = diff.taxRate ?? BALANCE.taxRate;
         const tax = preTax > 0 ? Math.round(preTax * taxRate) : 0;
 
-        // ---- Net ----
+        // ---- Net (info saja) ----
         const net = preTax - tax;
 
         // ---- Update cash ----
+        // [v2027.1b] Revenue harian sudah menambah cash. Hanya potong expense + tax.
         const cashBefore = data.cash;
-        const cashAfter = cashBefore + net;
+        const cashAfter = cashBefore - expense - tax;
         this.state.setCash(cashAfter);
 
         // ---- Riwayat ----
@@ -88,7 +93,6 @@ export class EconomySystem {
         if (data.finance.history.length > 24) data.finance.history.length = 24;
         data.finance.lastProcessed = { year: snapshot.currentYear, month: snapshot.currentMonth };
 
-        // Reset revenue untuk bulan berikutnya
         this._monthRevenue = 0;
 
         // ---- Game over check ----
@@ -107,7 +111,6 @@ export class EconomySystem {
                 negativeMonths: data.finance.negativeMonths
             });
         } else {
-            // Log & emit
             const sign = net >= 0 ? '+' : '';
             this.state.addLog(
                 `Laporan bulan ${snapshot.currentMonth}/${snapshot.currentYear}: ${sign}$${net.toLocaleString('en-US')} (pemasukan $${income.toLocaleString('en-US')}, pengeluaran $${expense.toLocaleString('en-US')}).`,
@@ -118,7 +121,7 @@ export class EconomySystem {
         bus.emit('economy:month-processed', entry);
         bus.emit('state:changed', data);
 
-        // ---- Cek burn rate ----
+        // ---- Burn rate warning ----
         const monthlyCost = expenseBase * mul;
         if (monthlyCost > 0 && cashAfter >= 0) {
             const monthsLeft = cashAfter / monthlyCost;
@@ -162,7 +165,6 @@ export class EconomySystem {
         return { ok: true, loan };
     }
 
-    // Dipanggil dari UI untuk melunasi lebih cepat (opsional)
     repayLoan(loanId) {
         const data = this.state.data;
         const idx = data.finance.loans.findIndex(l => l.id === loanId);
@@ -176,7 +178,6 @@ export class EconomySystem {
         return { ok: true };
     }
 
-    // Total biaya tetap bulan ini (untuk burn rate di UI)
     getMonthlyCostEstimate() {
         const diff = BALANCE.difficultyMultiplier[this.state.data.difficulty] || BALANCE.difficultyMultiplier.normal;
         const base = this.state.getMonthlySalary() + this.state.getMonthlyFixedCost() + this._calcMonthlyLoanInterest();
