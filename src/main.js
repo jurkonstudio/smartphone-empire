@@ -264,7 +264,7 @@ function animateCash(from, to) {
     }
     _cashRaf = requestAnimationFrame(step);
     _showCashDelta(to - from);
-}}
+}
 
 // ============ NAV ============
 function navigate(id) {
