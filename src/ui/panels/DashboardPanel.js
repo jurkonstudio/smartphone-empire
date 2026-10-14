@@ -1,12 +1,10 @@
 // FILE: src/ui/panels/DashboardPanel.js
+// Rework v2026.1 — 7 kartu hierarkis, timeline collapsible.
 import { renderKpiCards } from './KpiCards.js';
-import { renderTimePanel } from './TimePanel.js';
 import { renderProgressPanel } from './ProgressPanel.js';
 import { renderTimelinePanel } from './TimelinePanel.js';
 import { renderLogPanel } from './LogPanel.js';
-import { renderQuestsPanel } from './QuestsPanel.js';
 import { renderCashChart } from './CashChart.js';
-import { renderCloudStatus } from './CloudStatus.js';
 import { renderNewsListPanel } from './NewsListPanel.js';
 
 function escapeHtml(s) {
@@ -23,53 +21,47 @@ function _renderPublicHighlight(state) {
 
     if (!feed.length && !viral) return '';
 
-    var sentColor = sentiment >= 70 ? 'var(--success)' : sentiment >= 45 ? 'var(--info)' : sentiment >= 30 ? 'var(--warn)' : 'var(--danger)';
+    var sentColor = sentiment >= 70 ? 'var(--success)'
+        : sentiment >= 45 ? 'var(--info)'
+        : sentiment >= 30 ? 'var(--warn)'
+        : 'var(--danger)';
     var latest = feed[0];
 
     return '<div class="card">' +
         '<div class="card-title">Sorotan Publik</div>' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
-        '<div style="font-size:13px;color:var(--text-dim);">Sentimen</div>' +
-        '<div style="font-size:16px;font-weight:700;color:' + sentColor + ';">' + sentiment + '/100</div>' +
-        '</div>' +
-        (viral ? '<div style="font-size:12px;color:' + (viral.type === 'positive' ? 'var(--success)' : 'var(--danger)') + ';margin-bottom:8px;">' +
-            (viral.type === 'positive' ? '✨' : '⚠') + ' ' + escapeHtml(viral.title) + '</div>' : '') +
-        (latest ? '<div style="font-size:11.5px;color:var(--text-mute);margin-bottom:4px;">' + escapeHtml(latest.source) + ' - ' + latest.score + '/10</div>' +
-            '<div style="font-size:12.5px;color:var(--text);line-height:1.5;">"' + escapeHtml(latest.text) + '"</div>' : '') +
+        '<div class="sum-row"><span>Sentimen</span><b style="color:' + sentColor + ';">' + sentiment + ' / 100</b></div>' +
+        (viral
+            ? '<div class="viral-line" style="color:' + (viral.type === 'positive' ? 'var(--success)' : 'var(--danger)') + ';">' +
+              (viral.type === 'positive' ? '✨' : '⚠') + ' ' + escapeHtml(viral.title) +
+              '</div>'
+            : '') +
+        (latest
+            ? '<div class="feedback-quote">' +
+              '<div class="feedback-quote-meta">' + escapeHtml(latest.source) + ' • ' + latest.score + '/10</div>' +
+              '<div class="feedback-quote-text">"' + escapeHtml(latest.text) + '"</div>' +
+              '</div>'
+            : '') +
         '<button class="btn-secondary" data-nav="market" style="width:100%;margin-top:10px;font-size:12px;padding:8px;">Lihat Feedback Publik</button>' +
         '</div>';
 }
 
-function _renderTeamQuick(state, teamSystem) {
-    if (!teamSystem) return '';
-    var counts = teamSystem.getTeamCounts();
-    var total = counts.engineers + counts.designers + counts.marketers;
-    var morale = teamSystem.getAverageMorale();
-    var moraleColor = morale >= 70 ? 'var(--success)' : morale >= 40 ? 'var(--warn)' : 'var(--danger)';
-
-    return '<div class="card">' +
-        '<div class="card-title">Tim</div>' +
-        (total === 0
-            ? '<div style="font-size:12px;color:var(--text-mute);margin-bottom:10px;">Belum ada tim. Rekrut untuk mempercepat riset dan produksi.</div>'
-            : '<div class="sum-row"><span>Engineer</span><b>' + counts.engineers + '</b></div>' +
-              '<div class="sum-row"><span>Designer</span><b>' + counts.designers + '</b></div>' +
-              '<div class="sum-row"><span>Marketer</span><b>' + counts.marketers + '</b></div>' +
-              '<div class="sum-row"><span>Moral Rata-rata</span><b style="color:' + moraleColor + ';">' + morale + '/100</b></div>') +
-        '<button class="btn-secondary" data-nav="team" style="width:100%;margin-top:10px;font-size:12px;padding:8px;">' +
-        (total === 0 ? 'Buka Rekrutmen' : 'Kelola Tim') + '</button>' +
-        '</div>';
+function _renderTimelineCollapsible() {
+    return '<details class="collapsible-card">' +
+        '<summary class="collapsible-summary">' +
+        '<span>Timeline Sejarah 2000–2026</span>' +
+        '</summary>' +
+        '<div class="collapsible-body">' +
+        renderTimelinePanel() +
+        '</div>' +
+        '</details>';
 }
 
 export function renderDashboard(state, timeSnapshot, researchSystem, teamSystem) {
-    return renderKpiCards(state, timeSnapshot) +
-        renderTimePanel(timeSnapshot) +
-        renderQuestsPanel(state) +
-        _renderTeamQuick(state, teamSystem) +
-        _renderPublicHighlight(state) +
-        renderNewsListPanel(state) +
-        renderCashChart(state) +
+    return renderKpiCards(state, timeSnapshot, teamSystem) +
         renderProgressPanel(state, researchSystem) +
-        renderTimelinePanel(state, timeSnapshot) +
-        renderLogPanel(state) +
-        renderCloudStatus();
+        renderCashChart(state) +
+        renderNewsListPanel(state) +
+        _renderPublicHighlight(state) +
+        renderLogPanel(state, { limit: 5 }) +
+        _renderTimelineCollapsible();
 }
