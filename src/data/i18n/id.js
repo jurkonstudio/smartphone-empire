@@ -281,6 +281,7 @@ export const id = {
     'staff.detail.train_btn':     '📚 Training Intensif (+30 progress) — ${cost}',
     'staff.detail.fire_btn':      '⛔ PHK Staff (pesangon ${severance})',
     'staff.detail.close':         'Tutup',
+    
         // RESEARCH
     'research.subtab.tech':    'Teknologi',
     'research.subtab.os':      'OS',
