@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/HomePanel.js
-// v2027.23a — drag-follow swipe: carousel ikut geser mengikuti jari.
+// v2027.24a — JUMP mode swipe. Ringan + snap smooth saat lepas jari.
 import { t } from '../../core/LanguageService.js';
 import { renderCampusLoading } from '../campus/CampusFallback.js';
 import { renderProgressPanel } from './ProgressPanel.js';
@@ -7,8 +7,8 @@ import { renderNewsListPanel } from './NewsListPanel.js';
 import { renderLogPanel } from './LogPanel.js';
 
 const TABS = ['focus', 'news', 'activity'];
-const SWIPE_THRESHOLD_PX = 25;
-const VELOCITY_THRESHOLD = 0.3;   // px/ms — swipe cepat
+const SWIPE_MIN_PX = 25;
+const VELOCITY_MIN = 0.25;   // px/ms — swipes cepat terdeteksi ringan
 
 let _activeTab = 'focus';
 let _observedCarousel = null;
@@ -91,16 +91,15 @@ export function initHomeTabs(rootEl) {
 }
 
 // ============================================================
-// DRAG-FOLLOW SWIPE
+// JUMP SWIPE — ringan, tidak drag-follow
 // ============================================================
 function _bindSwipe(carousel) {
     if (_swipeBound === carousel) return;
     _swipeBound = carousel;
 
     let startX = 0, startY = 0, startTime = 0;
-    let startScrollLeft = 0;
     let tracking = false;
-    let locked = null;        // null | 'h' | 'v'
+    let locked = null;      // null | 'h' | 'v'
     let lastX = 0, lastT = 0;
     let velocity = 0;
 
@@ -109,14 +108,11 @@ function _bindSwipe(carousel) {
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
         startTime = Date.now();
-        startScrollLeft = carousel.scrollLeft;
         lastX = startX;
         lastT = startTime;
         velocity = 0;
         tracking = true;
         locked = null;
-        // Matikan smooth agar drag terasa instant
-        carousel.style.scrollBehavior = 'auto';
     }
 
     function onMove(e) {
@@ -126,25 +122,23 @@ function _bindSwipe(carousel) {
         const dx = x - startX;
         const dy = y - startY;
 
+        // Tentukan arah sekali saja
         if (locked === null) {
             if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
                 locked = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+                if (locked === 'h' && e.cancelable) {
+                    try { e.preventDefault(); } catch (err) {}
+                }
             }
         }
 
         if (locked === 'h') {
-            // Block SwipeService global
-            if (e.cancelable) e.preventDefault();
-            e.stopPropagation();
-
             const now = Date.now();
             const dt = now - lastT;
             if (dt > 0) velocity = (x - lastX) / dt;
             lastX = x;
             lastT = now;
-
-            // Drag-follow: geser scroll sesuai pergerakan jari
-            carousel.scrollLeft = startScrollLeft - dx;
+            // TIDAK update scrollLeft — biarkan browser native
         }
     }
 
@@ -152,35 +146,25 @@ function _bindSwipe(carousel) {
         if (!tracking) return;
         const wasHorizontal = locked === 'h';
         tracking = false;
-
-        // Kembalikan smooth untuk snap
-        carousel.style.scrollBehavior = 'smooth';
-
+        locked = null;
         if (!wasHorizontal) return;
         if (!e.changedTouches || !e.changedTouches[0]) return;
 
         const x = e.changedTouches[0].clientX;
         const dx = x - startX;
         const dt = Date.now() - startTime;
-        if (dt > 1000) return;
+        if (dt > 800) return;
 
         const idx = TABS.indexOf(_activeTab);
-        const w = carousel.clientWidth || 1;
-
-        // Velocity dalam px/ms. Geser < threshold tapi cepat → tetap pindah.
-        const fastLeft = velocity < -VELOCITY_THRESHOLD;
-        const fastRight = velocity > VELOCITY_THRESHOLD;
-        const farLeft = dx < -SWIPE_THRESHOLD_PX;
-        const farRight = dx > SWIPE_THRESHOLD_PX;
+        const fastLeft  = velocity < -VELOCITY_MIN;
+        const fastRight = velocity > VELOCITY_MIN;
+        const farLeft   = dx < -SWIPE_MIN_PX;
+        const farRight  = dx > SWIPE_MIN_PX;
 
         let next = idx;
         if (fastLeft || farLeft) next = Math.min(TABS.length - 1, idx + 1);
         else if (fastRight || farRight) next = Math.max(0, idx - 1);
-        if (next === idx) {
-            // Snap kembali ke posisi semula
-            carousel.scrollTo({ left: idx * w, behavior: 'smooth' });
-            return;
-        }
+        if (next === idx) return;
 
         _goToTab(carousel, TABS[next], true);
     }
@@ -188,12 +172,11 @@ function _bindSwipe(carousel) {
     function onCancel() {
         tracking = false;
         locked = null;
-        carousel.style.scrollBehavior = 'smooth';
     }
 
     carousel._seSwipe = { onStart: onStart, onMove: onMove, onEnd: onEnd, onCancel: onCancel };
 
-    // touchmove harus non-passive agar preventDefault bisa bekerja
+    // touchmove non-passive agar preventDefault bisa
     carousel.addEventListener('touchstart', onStart, { passive: true });
     carousel.addEventListener('touchmove', onMove, { passive: false });
     carousel.addEventListener('touchend', onEnd, { passive: true });
@@ -211,7 +194,7 @@ function _bindScrollObserver(carousel) {
 
     _intersectionObserver = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
-            if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
                 const id = entry.target.dataset.homeSlide;
                 if (id && id !== _activeTab) {
                     _activeTab = id;
@@ -219,7 +202,7 @@ function _bindScrollObserver(carousel) {
                 }
             }
         });
-    }, { root: carousel, threshold: [0.5, 0.75] });
+    }, { root: carousel, threshold: [0.6] });
 
     carousel.querySelectorAll('[data-home-slide]').forEach(function (slide) {
         _intersectionObserver.observe(slide);
