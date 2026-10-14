@@ -48,6 +48,7 @@ import { drawSalesChart } from './ui/panels/SalesChart.js';
 import { openCandidateDetailModal, setRecruitFilter, setTeamMode } from './ui/panels/TeamPanel.js';
 import { renderHqPanel } from './ui/panels/HqPanel.js';
 import { renderHomePanel } from './ui/panels/HomePanel.js';
+import { mountCampusMap, unmountCampusMap } from './ui/campus/CampusMap.js';
 import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
 import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
@@ -188,6 +189,7 @@ function renderView(opts) {
         console.error('[renderView] Error:', err);
         html = '<div class="card" style="border-color:var(--danger);margin-top:20px;"><div class="card-title" style="color:var(--danger);">Error Render</div><div style="font-size:13px;line-height:1.6;word-break:break-word;"><b>View:</b> ' + activeView + '<br><b>Error:</b> ' + (err && err.message ? err.message : 'Unknown') + '</div></div>';
     }
+    unmountCampusMap(); // bersihkan scene 3D sebelum DOM view diganti
     els.view.innerHTML = html;
 
     if (!soft) {
@@ -211,6 +213,10 @@ function renderView(opts) {
         if (activeView === 'products' && activeProdSubtab === 'sales') { var sc = els.view.querySelector('.chart-wrap'); if (sc) drawSalesChart(sc); }
         if (activeView === 'market' && activeMarketSubtab === 'share') { var sc2 = els.view.querySelector('.chart-wrap'); if (sc2) drawShareChart(sc2); }
         if (activeView === 'settings') bindSettingsActions(els.view);
+        if (activeView === 'dashboard') {
+            var campusEl = els.view.querySelector('#campus-map');
+            if (campusEl) mountCampusMap(campusEl, state.get());
+        }
     } catch (err) { console.error('[renderView] Post:', err); }
 }
 
