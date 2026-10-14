@@ -1,5 +1,6 @@
 // FILE: src/ui/panels/ProductPanel.js
 // Versi LENGKAP — V6c-2 gate chip berbasis chipResearch + grandfather rule.
+// v2027.13c — i18n.
 import { renderSalesChart } from './SalesChart.js';
 import { getComponentById } from '../../data/components.data.js';
 import { state } from '../../core/GameState.js';
@@ -7,6 +8,7 @@ import { ToastService } from '../../core/ToastService.js';
 import { openChipDesigner } from './ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './FabPanel.js';
 import { renderChipMockup } from '../phone/ChipMockup.js';
+import { t } from '../../core/LanguageService.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -23,30 +25,17 @@ function safe(fn, fallback) {
 }
 
 // ============================================================
-// GATE CHIP LAB — V6c-2
-// Syarat buka Chip Lab (dalam urutan prioritas):
-//   1. Grandfather rule: pemain sudah punya chip di katalog → unlock
-//   2. ChipResearch: chip_design_tool sudah selesai → unlock
-//   3. Fallback backward-compat: chipResearch belum ada sama sekali
-//      (save lama sebelum V6) → pakai gate tahun >= 2003
+// GATE CHIP LAB
 // ============================================================
 function isChipLabUnlocked() {
     try {
         var data = state.get();
         if (!data) return false;
-
-        // 1. Grandfather rule
-        if (data.chips && Array.isArray(data.chips.catalog) && data.chips.catalog.length > 0) {
-            return true;
-        }
-
-        // 2. ChipResearch gate
+        if (data.chips && Array.isArray(data.chips.catalog) && data.chips.catalog.length > 0) return true;
         var cr = data.chipResearch;
         if (cr && Array.isArray(cr.completed) && cr.completed.length > 0) {
             return cr.completed.indexOf('chip_design_tool') !== -1;
         }
-
-        // 3. Fallback: chipResearch belum ada → gate tahun
         if (!data.time) return false;
         return (data.time.currentYear >= 2003);
     } catch (e) {
@@ -55,28 +44,20 @@ function isChipLabUnlocked() {
 }
 
 // ============================================================
-// GATE FAB — V6c-2
-// Cek fab_construction di chipResearch.completed.
-// Fallback ke research.completed (save lama).
+// GATE FAB
 // ============================================================
 function isFabUnlocked() {
     try {
         var data = state.get();
         if (!data) return false;
-
-        // Fab sudah dibangun → unlock
         if (data.fab && data.fab.built) return true;
-
         var cr = data.chipResearch;
         if (cr && Array.isArray(cr.completed)) {
             if (cr.completed.indexOf('fab_construction') !== -1) return true;
         }
-
-        // Fallback save lama
         if (data.research && Array.isArray(data.research.completed)) {
             if (data.research.completed.indexOf('fab_construction') !== -1) return true;
         }
-
         return false;
     } catch (e) {
         return false;
@@ -97,28 +78,28 @@ export function renderProductPanel(params) {
     if (subtab === 'chip' && !chipUnlocked) subtab = 'design';
 
     var subtabs = [
-        { id: 'design',  label: 'Desain' },
-        { id: 'catalog', label: 'Katalog' },
-        { id: 'sales',   label: 'Penjualan' }
+        { id: 'design',  label: t('prod.subtab.design') },
+        { id: 'catalog', label: t('prod.subtab.catalog') },
+        { id: 'sales',   label: t('prod.subtab.sales') }
     ];
-    if (chipUnlocked) subtabs.push({ id: 'chip', label: 'Chip' });
+    if (chipUnlocked) subtabs.push({ id: 'chip', label: t('prod.subtab.chip') });
 
     var subtabBar = '<div class="subtab-bar">';
     for (var i = 0; i < subtabs.length; i++) {
-        var t = subtabs[i];
-        subtabBar += '<button class="subtab-btn ' + (subtab === t.id ? 'active' : '') + '" data-prod-subtab="' + t.id + '">' + t.label + '</button>';
+        var tb = subtabs[i];
+        subtabBar += '<button class="subtab-btn ' + (subtab === tb.id ? 'active' : '') + '" data-prod-subtab="' + tb.id + '">' + tb.label + '</button>';
     }
     subtabBar += '</div>';
 
     var body = '';
     if (subtab === 'catalog') {
-        body = safe(function () { return _renderCatalog(); }, '<div class="empty"><div class="empty-title">Gagal render Katalog</div></div>');
+        body = safe(function () { return _renderCatalog(); }, '<div class="empty"><div class="empty-title">Error</div></div>');
     } else if (subtab === 'sales') {
-        body = safe(function () { return _renderSales(); }, '<div class="empty"><div class="empty-title">Gagal render Penjualan</div></div>');
+        body = safe(function () { return _renderSales(); }, '<div class="empty"><div class="empty-title">Error</div></div>');
     } else if (subtab === 'chip') {
-        body = safe(function () { return _renderChipTab(); }, '<div class="empty"><div class="empty-title">Gagal render Chip</div></div>');
+        body = safe(function () { return _renderChipTab(); }, '<div class="empty"><div class="empty-title">Error</div></div>');
     } else {
-        body = safe(function () { return _renderDesignTab(productSystem); }, '<div class="empty"><div class="empty-title">Gagal render Desain</div></div>');
+        body = safe(function () { return _renderDesignTab(productSystem); }, '<div class="empty"><div class="empty-title">Error</div></div>');
     }
 
     return subtabBar + body;
@@ -132,25 +113,31 @@ function _renderDesignTab(productSystem) {
     var dev = data.products ? data.products.development : null;
 
     if (dev) {
-        var phaseLabel = { design: 'Desain', prototype: 'Prototipe', production: 'Produksi', released: 'Rilis' }[dev.phase] || dev.phase;
+        var phaseKey = {
+            design: 'prod.phase.design',
+            prototype: 'prod.phase.prototype',
+            production: 'prod.phase.production',
+            released: 'prod.phase.released'
+        }[dev.phase] || dev.phase;
+        var phaseLabel = t(phaseKey);
         var phaseIndex = { design: 1, prototype: 2, production: 3, released: 4 };
         var percent = ((phaseIndex[dev.phase] - 1) * 25) + Math.min(25, (dev.phaseProgressDays / dev.phaseDurationDays) * 25);
 
         return '<div class="card">' +
-            '<div class="card-title">Pengembangan Aktif</div>' +
+            '<div class="card-title">' + t('prod.design.dev_title') + '</div>' +
             '<div style="font-size:16px;font-weight:700;margin-bottom:6px;">' + escapeHtml(dev.name) + '</div>' +
-            '<div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">Tahap: <b>' + phaseLabel + '</b> - Total ' + dev.totalDurationDays + ' hari game</div>' +
+            '<div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">' + t('prod.design.dev_phase', { phase: phaseLabel, days: dev.totalDurationDays }) + '</div>' +
             '<div class="progress-label"><span data-prod-dev-phase>' + phaseLabel + '</span><span data-prod-dev-pct>' + Math.round(percent) + '%</span></div>' +
             '<div class="progress"><div class="progress-bar" data-prod-dev-bar style="width:' + Math.round(percent) + '%;"></div></div>' +
-            '<div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;" data-prod-dev-eta>Menunggu waktu berjalan...</div>' +
-            '<button class="btn-danger" data-prod-action="cancel-dev" style="margin-top:12px;width:100%;">Batalkan Proyek</button>' +
+            '<div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;" data-prod-dev-eta>' + t('prod.design.dev_eta') + '</div>' +
+            '<button class="btn-danger" data-prod-action="cancel-dev" style="margin-top:12px;width:100%;">' + t('prod.design.cancel') + '</button>' +
             '</div>';
     }
 
     return '<div class="card">' +
-        '<div class="card-title">Desain Produk Baru</div>' +
-        '<div style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;">Rancang ponsel: pilih komponen, tentukan OS, harga, dan jumlah produksi.</div>' +
-        '<button class="btn-primary" data-prod-action="open-wizard" style="width:100%;">Mulai Desain Ponsel</button>' +
+        '<div class="card-title">' + t('prod.design.title') + '</div>' +
+        '<div style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;">' + t('prod.design.desc') + '</div>' +
+        '<button class="btn-primary" data-prod-action="open-wizard" style="width:100%;">' + t('prod.design.start') + '</button>' +
         '</div>';
 }
 
@@ -161,24 +148,24 @@ function _renderCatalog() {
     var data = state.get();
     var catalog = (data.products && data.products.catalog) ? data.products.catalog : [];
     if (!catalog.length) {
-        return '<div class="empty"><div class="empty-ico">📦</div><div class="empty-title">Belum ada produk</div><div class="empty-desc">Rilis ponsel pertamamu di sub-tab Desain.</div></div>';
+        return '<div class="empty"><div class="empty-ico">📦</div><div class="empty-title">' + t('prod.catalog.empty') + '</div><div class="empty-desc">' + t('prod.catalog.empty_desc') + '</div></div>';
     }
     var cards = '';
     for (var i = 0; i < catalog.length; i++) {
         var p = catalog[i];
         var avgReview = (p.reviews && p.reviews.length) ? (p.reviews.reduce(function (s, r) { return s + r.score; }, 0) / p.reviews.length).toFixed(1) : '-';
-        var statusLabel = { selling: 'Dijual', discontinued: 'Dihentikan' }[p.status] || p.status;
+        var statusLabel = p.status === 'selling' ? t('prod.catalog.status_selling') : t('prod.catalog.status_discontinued');
         var autoActive = p.autoRestock && p.autoRestock.enabled;
         cards += '<div class="card prod-card" data-prod-detail="' + p.id + '">' +
             '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
             '<div style="flex:1;min-width:0;">' +
-            '<div style="font-size:14px;font-weight:700;">' + escapeHtml(p.name) + (autoActive ? ' <span style="color:var(--accent);font-size:12px;">[AUTO]</span>' : '') + '</div>' +
+            '<div style="font-size:14px;font-weight:700;">' + escapeHtml(p.name) + (autoActive ? ' <span style="color:var(--accent);font-size:12px;">' + t('prod.catalog.auto_tag') + '</span>' : '') + '</div>' +
             '<div style="font-size:11px;color:var(--text-mute);">' + p.releaseDate.day + '/' + p.releaseDate.month + '/' + p.releaseDate.year + ' - ' + statusLabel + '</div>' +
             '</div>' +
             '<div class="prod-badge ' + (p.status === 'selling' ? 'selling' : 'disc') + '">' + statusLabel + '</div>' +
             '</div>' +
-            '<div class="prod-stats-mini"><span>⭐ ' + avgReview + '/10</span><span>📦 ' + p.stock.toLocaleString('en-US') + ' stok</span><span>💰 $' + p.totalRevenue.toLocaleString('en-US') + '</span></div>' +
-            '<div class="prod-stats-mini"><span>Terjual: ' + p.totalSold.toLocaleString('en-US') + '</span><span>Harga: $' + p.price + '</span><span>Kualitas: ' + p.stats.qualityScore + '</span></div>' +
+            '<div class="prod-stats-mini"><span>' + t('prod.catalog.review', { n: avgReview }) + '</span><span>' + t('prod.catalog.stock', { n: p.stock.toLocaleString('en-US') }) + '</span><span>' + t('prod.catalog.revenue', { n: p.totalRevenue.toLocaleString('en-US') }) + '</span></div>' +
+            '<div class="prod-stats-mini"><span>' + t('prod.catalog.sold', { n: p.totalSold.toLocaleString('en-US') }) + '</span><span>' + t('prod.catalog.price', { n: p.price }) + '</span><span>' + t('prod.catalog.quality', { n: p.stats.qualityScore }) + '</span></div>' +
             '</div>';
     }
     return '<div class="prod-list">' + cards + '</div>';
@@ -196,23 +183,23 @@ function _renderSales() {
     var topProduct = catalog.slice().sort(function (a, b) { return b.totalSold - a.totalSold; })[0];
 
     var kpiGrid = '<div class="kpi-grid">' +
-        '<div class="kpi"><div class="kpi-label">Total Pendapatan</div><div class="kpi-value" style="color:var(--accent);font-size:15px;">$' + totalRevenue.toLocaleString('en-US') + '</div></div>' +
-        '<div class="kpi blue"><div class="kpi-label">Total Terjual</div><div class="kpi-value">' + totalSold.toLocaleString('en-US') + '</div></div>' +
-        '<div class="kpi warn"><div class="kpi-label">Produk Aktif</div><div class="kpi-value">' + activeProducts + '</div></div>' +
-        '<div class="kpi"><div class="kpi-label">Terlaris</div><div class="kpi-value" style="font-size:12px;">' + (topProduct ? escapeHtml(topProduct.name) : '-') + '</div></div>' +
+        '<div class="kpi"><div class="kpi-label">' + t('prod.sales.total_revenue') + '</div><div class="kpi-value" style="color:var(--accent);font-size:15px;">$' + totalRevenue.toLocaleString('en-US') + '</div></div>' +
+        '<div class="kpi blue"><div class="kpi-label">' + t('prod.sales.total_sold') + '</div><div class="kpi-value">' + totalSold.toLocaleString('en-US') + '</div></div>' +
+        '<div class="kpi warn"><div class="kpi-label">' + t('prod.sales.active_products') + '</div><div class="kpi-value">' + activeProducts + '</div></div>' +
+        '<div class="kpi"><div class="kpi-label">' + t('prod.sales.best_seller') + '</div><div class="kpi-value" style="font-size:12px;">' + (topProduct ? escapeHtml(topProduct.name) : '-') + '</div></div>' +
         '</div>';
 
     var chartHtml = '';
     try { chartHtml = renderSalesChart(data); } catch (e) { chartHtml = ''; }
 
-    var listHtml = '<div class="card"><div class="card-title">Daftar Produk</div>';
+    var listHtml = '<div class="card"><div class="card-title">' + t('prod.sales.list_title') + '</div>';
     if (catalog.length) {
         for (var i = 0; i < catalog.length; i++) {
             var p = catalog[i];
-            listHtml += '<div class="sum-row"><span>' + escapeHtml(p.name) + '</span><b>' + p.totalSold.toLocaleString('en-US') + ' unit</b></div>';
+            listHtml += '<div class="sum-row"><span>' + escapeHtml(p.name) + '</span><b>' + p.totalSold.toLocaleString('en-US') + ' ' + t('prod.detail.unit') + '</b></div>';
         }
     } else {
-        listHtml += '<div class="log-empty">Belum ada produk.</div>';
+        listHtml += '<div class="log-empty">' + t('prod.sales.list_empty') + '</div>';
     }
     listHtml += '</div>';
 
@@ -229,7 +216,7 @@ function _renderChipTab() {
     var fs = game.fab || null;
 
     if (!cs) {
-        return '<div class="empty"><div class="empty-ico">🧩</div><div class="empty-title">Chip System belum siap</div></div>';
+        return '<div class="empty"><div class="empty-ico">🧩</div><div class="empty-title">' + t('chip.fab.system_not_ready') + '</div></div>';
     }
 
     var chips = (data.chips && data.chips.catalog) ? data.chips.catalog : [];
@@ -241,29 +228,29 @@ function _renderChipTab() {
     var feats = safe(function () { return cs.getAvailableFeatures(); }, []);
 
     var labHeader = '<div class="card">' +
-        '<div class="card-title">Chip Lab</div>' +
-        '<div class="sum-row"><span>Arsitektur tersedia</span><b>' + archs.length + '</b></div>' +
-        '<div class="sum-row"><span>Node tersedia</span><b>' + nodes.length + '</b></div>' +
-        '<div class="sum-row"><span>Fitur tersedia</span><b>' + feats.length + '</b></div>' +
-        '<div class="sum-row"><span>Chip di katalog</span><b>' + chips.length + '</b></div>' +
+        '<div class="card-title">' + t('chip.lab.title') + '</div>' +
+        '<div class="sum-row"><span>' + t('chip.lab.arch_avail') + '</span><b>' + archs.length + '</b></div>' +
+        '<div class="sum-row"><span>' + t('chip.lab.node_avail') + '</span><b>' + nodes.length + '</b></div>' +
+        '<div class="sum-row"><span>' + t('chip.lab.feat_avail') + '</span><b>' + feats.length + '</b></div>' +
+        '<div class="sum-row"><span>' + t('chip.lab.catalog') + '</span><b>' + chips.length + '</b></div>' +
         '</div>';
 
     var designHtml = '';
     if (designing) {
         var pct = Math.round((designing.progressDays / designing.durationDays) * 100);
         designHtml = '<div class="card" style="border-color:var(--info);">' +
-            '<div class="card-title" style="color:var(--info);">Sedang Didesain</div>' +
+            '<div class="card-title" style="color:var(--info);">' + t('chip.design.designing') + '</div>' +
             '<div style="font-size:14px;font-weight:700;margin-bottom:6px;">' + escapeHtml(designing.name) + '</div>' +
-            '<div class="progress-label"><span>Progress</span><span>' + pct + '%</span></div>' +
+            '<div class="progress-label"><span>' + t('chip.design.progress') + '</span><span>' + pct + '%</span></div>' +
             '<div class="progress"><div class="progress-bar" style="width:' + pct + '%;"></div></div>' +
-            '<div style="font-size:11.5px;color:var(--text-mute);margin-top:6px;">' + Math.max(0, Math.ceil(designing.durationDays - designing.progressDays)) + ' hari tersisa</div>' +
-            '<button class="btn-danger" data-chip-action="cancel-design" style="width:100%;margin-top:10px;font-size:12px;">Batalkan</button>' +
+            '<div style="font-size:11.5px;color:var(--text-mute);margin-top:6px;">' + t('chip.design.days_left', { n: Math.max(0, Math.ceil(designing.durationDays - designing.progressDays)) }) + '</div>' +
+            '<button class="btn-danger" data-chip-action="cancel-design" style="width:100%;margin-top:10px;font-size:12px;">' + t('chip.design.cancel') + '</button>' +
             '</div>';
     } else {
         designHtml = '<div class="card">' +
-            '<div class="card-title">Desain Chip Baru</div>' +
-            '<div style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;">Rancang silicon: pilih arsitektur, node, core, clock, dan fitur.</div>' +
-            '<button class="btn-primary" data-chip-action="new" style="width:100%;">Mulai Desain Chip</button>' +
+            '<div class="card-title">' + t('chip.design.title') + '</div>' +
+            '<div style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;">' + t('chip.design.desc') + '</div>' +
+            '<button class="btn-primary" data-chip-action="new" style="width:100%;">' + t('chip.design.start') + '</button>' +
             '</div>';
     }
 
@@ -279,14 +266,14 @@ function _renderChipTab() {
                 '<div class="chip-row-mockup">' + mockup + '</div>' +
                 '<div class="chip-row-info">' +
                 '<div class="chip-row-name">' + escapeHtml(c.name) + '</div>' +
-                '<div class="chip-row-meta">Perf <b>' + c.stats.performance + '</b> - Eff <b>' + c.stats.efficiency + '</b> - $' + c.stats.costPerUnit + '/unit</div>' +
+                '<div class="chip-row-meta">' + t('chip.catalog.perf') + ' <b>' + c.stats.performance + '</b> - ' + t('chip.catalog.eff') + ' <b>' + c.stats.efficiency + '</b> - $' + c.stats.costPerUnit + '/unit</div>' +
                 (lifecycle ? '<div class="chip-lifecycle" style="color:' + lifecycle.color + ';">' + lifecycle.label + ' (x' + lifecycle.multiplier.toFixed(2) + ')</div>' : '') +
                 '</div>' +
                 '</div>';
         }
-        catalogHtml = '<div class="card"><div class="card-title">Katalog Chip (' + chips.length + ')</div><div class="chip-list">' + rows + '</div></div>';
+        catalogHtml = '<div class="card"><div class="card-title">' + t('chip.catalog.title', { n: chips.length }) + '</div><div class="chip-list">' + rows + '</div></div>';
     } else if (!designing) {
-        catalogHtml = '<div class="empty"><div class="empty-ico">🧩</div><div class="empty-title">Belum ada chip</div><div class="empty-desc">Desain chip pertama Anda di Chip Designer.</div></div>';
+        catalogHtml = '<div class="empty"><div class="empty-ico">🧩</div><div class="empty-title">' + t('chip.catalog.empty') + '</div><div class="empty-desc">' + t('chip.catalog.empty_desc') + '</div></div>';
     }
 
     var fabHtml = '';
@@ -295,17 +282,17 @@ function _renderChipTab() {
         var levelInfo = (fs && fs.getFabLevelInfo) ? safe(function () { return fs.getFabLevelInfo(fab.level); }, null) : null;
         var capacity = levelInfo ? levelInfo.capacityMonthly : 0;
         fabHtml = '<div class="card">' +
-            '<div class="card-title">Fabrikasi</div>' +
-            '<div class="sum-row"><span>Level</span><b>' + fab.level + ' - ' + (levelInfo ? escapeHtml(levelInfo.name) : 'Fab') + '</b></div>' +
-            '<div class="sum-row"><span>Kapasitas</span><b>' + capacity.toLocaleString('en-US') + '/bln</b></div>' +
-            '<div class="sum-row"><span>Stok chip</span><b style="color:var(--accent);">' + (fab.inventory || 0).toLocaleString('en-US') + ' unit</b></div>' +
-            '<button class="btn-secondary" data-chip-action="fab" style="width:100%;margin-top:10px;">Kelola Fab</button>' +
+            '<div class="card-title">' + t('chip.fab.title') + '</div>' +
+            '<div class="sum-row"><span>' + t('chip.fab.level') + '</span><b>' + fab.level + ' - ' + (levelInfo ? escapeHtml(levelInfo.name) : 'Fab') + '</b></div>' +
+            '<div class="sum-row"><span>' + t('chip.fab.capacity') + '</span><b>' + capacity.toLocaleString('en-US') + t('chip.fab.per_month') + '</b></div>' +
+            '<div class="sum-row"><span>' + t('chip.fab.stock') + '</span><b style="color:var(--accent);">' + (fab.inventory || 0).toLocaleString('en-US') + ' ' + t('chip.fab.unit') + '</b></div>' +
+            '<button class="btn-secondary" data-chip-action="fab" style="width:100%;margin-top:10px;">' + t('chip.fab.manage') + '</button>' +
             '</div>';
     } else {
         fabHtml = '<div class="card">' +
-            '<div class="card-title">Fabrikasi</div>' +
-            '<div style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:10px;">' + (fabUnlocked ? 'Bangun pabrik chip sendiri untuk produksi massal.' : 'Butuh riset Konstruksi Fab untuk membangun pabrik sendiri.') + '</div>' +
-            '<button class="btn-primary" data-chip-action="fab" style="width:100%;"' + (!fabUnlocked ? ' disabled style="opacity:0.5;width:100%;"' : '') + '>' + (fabUnlocked ? 'Bangun Fab' : 'Butuh Riset Fab') + '</button>' +
+            '<div class="card-title">' + t('chip.fab.title') + '</div>' +
+            '<div style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:10px;">' + (fabUnlocked ? t('chip.fab.build_desc') : t('chip.fab.need_research')) + '</div>' +
+            '<button class="btn-primary" data-chip-action="fab" style="width:100%;"' + (!fabUnlocked ? ' disabled style="opacity:0.5;width:100%;"' : '') + '>' + (fabUnlocked ? t('chip.fab.build') : t('chip.fab.need_research_btn')) + '</button>' +
             '</div>';
     }
 
@@ -326,13 +313,13 @@ export function openProductDetailModal(params) {
 
         var specRows = '';
         var specs = [
-            ['Layar', p.config.displayId],
-            ['Kamera', p.config.cameraId],
-            ['Baterai', p.config.batteryId],
-            ['Chip', p.config.chipId],
-            ['Jaringan', p.config.networkId],
-            ['Bodi', p.config.bodyId],
-            ['OS', p.config.osOptionId]
+            [t('prod.detail.spec_screen'), p.config.displayId],
+            [t('prod.detail.spec_camera'), p.config.cameraId],
+            [t('prod.detail.spec_battery'), p.config.batteryId],
+            [t('prod.detail.spec_chip'), p.config.chipId],
+            [t('prod.detail.spec_network'), p.config.networkId],
+            [t('prod.detail.spec_body'), p.config.bodyId],
+            [t('prod.detail.spec_os'), p.config.osOptionId]
         ];
         for (var i = 0; i < specs.length; i++) {
             var comp = getComponentById(specs[i][1]);
@@ -342,35 +329,35 @@ export function openProductDetailModal(params) {
 
         var autoRestock = p.autoRestock || { enabled: false, thresholdPercent: 20 };
         var autoSection = p.status === 'selling'
-            ? '<div class="card-title" style="margin-top:14px;">Pengisian Stok Otomatis</div>' +
+            ? '<div class="card-title" style="margin-top:14px;">' + t('prod.detail.auto_title') + '</div>' +
               '<div class="auto-restock-row">' +
               '<div style="flex:1;">' +
-              '<div style="font-size:13px;font-weight:600;">Aktifkan Auto-Restock</div>' +
-              '<div style="font-size:11px;color:var(--text-mute);margin-top:2px;">' + (autoRestock.enabled ? 'Sistem akan restock otomatis' : 'Restock manual') + '</div>' +
+              '<div style="font-size:13px;font-weight:600;">' + t('prod.detail.auto_label') + '</div>' +
+              '<div style="font-size:11px;color:var(--text-mute);margin-top:2px;">' + (autoRestock.enabled ? t('prod.detail.auto_on') : t('prod.detail.auto_off')) + '</div>' +
               '</div>' +
               '<button class="toggle-switch ' + (autoRestock.enabled ? 'on' : '') + '" data-auto-toggle data-prod-id="' + p.id + '"><span class="toggle-thumb"></span></button>' +
               '</div>'
             : '';
 
         var actionsHtml = p.status === 'selling'
-            ? '<div class="card-title" style="margin-top:14px;">Aksi</div>' +
-              '<button class="btn-secondary" data-prod-action="order-prod" data-prod-id="' + p.id + '" style="width:100%;margin-bottom:6px;">Pesan Produksi Tambahan</button>' +
-              '<button class="btn-secondary" data-prod-action="campaign" data-prod-id="' + p.id + '" style="width:100%;margin-bottom:6px;">Kampanye Pemasaran</button>' +
-              '<button class="btn-danger" data-prod-action="discontinue" data-prod-id="' + p.id + '" style="width:100%;">Hentikan Produk</button>'
-            : '<div class="empty-hint" style="margin-top:10px;">Produk sudah dihentikan.</div>';
+            ? '<div class="card-title" style="margin-top:14px;">' + t('prod.detail.actions_title') + '</div>' +
+              '<button class="btn-secondary" data-prod-action="order-prod" data-prod-id="' + p.id + '" style="width:100%;margin-bottom:6px;">' + t('prod.detail.order_btn') + '</button>' +
+              '<button class="btn-secondary" data-prod-action="campaign" data-prod-id="' + p.id + '" style="width:100%;margin-bottom:6px;">' + t('prod.detail.campaign_btn') + '</button>' +
+              '<button class="btn-danger" data-prod-action="discontinue" data-prod-id="' + p.id + '" style="width:100%;">' + t('prod.detail.discontinue_btn') + '</button>'
+            : '<div class="empty-hint" style="margin-top:10px;">' + t('prod.detail.discontinued') + '</div>';
 
         var html = '<div class="modal-title">' + escapeHtml(p.name) + '</div>' +
-            '<div class="modal-sub">Rilis ' + p.releaseDate.day + '/' + p.releaseDate.month + '/' + p.releaseDate.year + '</div>' +
-            '<div class="card-title">Penjualan</div>' +
-            '<div class="sum-row"><span>Total terjual</span><b>' + p.totalSold.toLocaleString('en-US') + ' unit</b></div>' +
-            '<div class="sum-row"><span>Pendapatan</span><b>$' + p.totalRevenue.toLocaleString('en-US') + '</b></div>' +
-            '<div class="sum-row"><span>Stok saat ini</span><b>' + p.stock.toLocaleString('en-US') + '</b></div>' +
-            '<div class="sum-row"><span>Ulasan rata-rata</span><b>' + avg + '/10 (' + p.reviews.length + ')</b></div>' +
-            '<div class="card-title" style="margin-top:12px;">Spesifikasi</div>' +
+            '<div class="modal-sub">' + t('prod.detail.release', { day: p.releaseDate.day, month: p.releaseDate.month, year: p.releaseDate.year }) + '</div>' +
+            '<div class="card-title">' + t('prod.detail.section_sales') + '</div>' +
+            '<div class="sum-row"><span>' + t('prod.detail.total_sold') + '</span><b>' + p.totalSold.toLocaleString('en-US') + ' ' + t('prod.detail.unit') + '</b></div>' +
+            '<div class="sum-row"><span>' + t('prod.detail.revenue') + '</span><b>$' + p.totalRevenue.toLocaleString('en-US') + '</b></div>' +
+            '<div class="sum-row"><span>' + t('prod.detail.stock') + '</span><b>' + p.stock.toLocaleString('en-US') + '</b></div>' +
+            '<div class="sum-row"><span>' + t('prod.detail.review_avg') + '</span><b>' + avg + '/10 (' + p.reviews.length + ')</b></div>' +
+            '<div class="card-title" style="margin-top:12px;">' + t('prod.detail.section_spec') + '</div>' +
             specRows +
             autoSection +
             actionsHtml +
-            '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">Tutup</button>';
+            '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">' + t('prod.detail.close') + '</button>';
 
         window.__game.Modal.open('product-detail', html);
     } catch (err) {
@@ -392,14 +379,14 @@ export function openCampaignModal(params) {
             var c = campaigns[i];
             buttonsHtml += '<button class="wiz-option" data-campaign-pick="' + c.id + '" data-prod-id="' + productId + '" style="width:100%;margin-bottom:6px;text-align:left;">' +
                 '<div class="wiz-opt-name">' + escapeHtml(c.name) + '</div>' +
-                '<div class="wiz-opt-meta">$' + c.cost.toLocaleString('en-US') + ' - ' + c.durationDays + ' hari - reach +' + Math.round(c.reachBase * 100) + '%</div>' +
+                '<div class="wiz-opt-meta">$' + c.cost.toLocaleString('en-US') + ' - ' + c.durationDays + ' - reach +' + Math.round(c.reachBase * 100) + '%</div>' +
                 '</button>';
         }
 
-        var html = '<div class="modal-title">Pilih Kampanye</div>' +
-            '<div class="modal-sub">Efek diperkuat oleh jumlah Marketer.</div>' +
+        var html = '<div class="modal-title">' + t('prod.campaign.title') + '</div>' +
+            '<div class="modal-sub">' + t('prod.campaign.sub') + '</div>' +
             buttonsHtml +
-            '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:8px;">Batal</button>';
+            '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:8px;">' + t('prod.campaign.cancel') + '</button>';
 
         window.__game.Modal.open('campaign-pick', html);
     } catch (err) {
@@ -417,15 +404,15 @@ export function openOrderProductionModal(params) {
         var p = (data.products && data.products.catalog) ? data.products.catalog.find(function (x) { return x.id === productId; }) : null;
         if (!p) return;
 
-        var html = '<div class="modal-title">Produksi Tambahan</div>' +
+        var html = '<div class="modal-title">' + t('prod.order.title') + '</div>' +
             '<div class="modal-sub">' + escapeHtml(p.name) + '</div>' +
-            '<label class="field-label">Jumlah unit</label>' +
+            '<label class="field-label">' + t('prod.order.qty_label') + '</label>' +
             '<input class="field-input" data-order-qty type="number" min="100" step="100" value="1000" />' +
-            '<div class="sum-row" style="margin-top:8px;"><span>Biaya per unit</span><b>$' + p.unitCost + '</b></div>' +
-            '<div class="sum-row"><span>Setup cost</span><b>$2.000</b></div>' +
-            '<div class="sum-row"><span>Total estimasi</span><b data-order-total>$0</b></div>' +
-            '<button class="btn-primary" data-order-confirm data-prod-id="' + productId + '" style="width:100%;margin-top:12px;">Pesan</button>' +
-            '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:6px;">Batal</button>';
+            '<div class="sum-row" style="margin-top:8px;"><span>' + t('prod.order.cost_unit') + '</span><b>$' + p.unitCost + '</b></div>' +
+            '<div class="sum-row"><span>' + t('prod.order.setup') + '</span><b>$2,000</b></div>' +
+            '<div class="sum-row"><span>' + t('prod.order.total') + '</span><b data-order-total>$0</b></div>' +
+            '<button class="btn-primary" data-order-confirm data-prod-id="' + productId + '" style="width:100%;margin-top:12px;">' + t('prod.order.submit') + '</button>' +
+            '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:6px;">' + t('prod.order.cancel') + '</button>';
 
         window.__game.Modal.open('order-prod', html);
 
