@@ -1,7 +1,5 @@
 // FILE: src/ui/panels/SettingsPanel.js
-// v2027.5 — Executive Console redesign.
-// Hero card + 5 sub-tab (Umum/Tampilan/Audio/Keuangan/Data).
-// In-family dengan Research/OS/Dashboard panel.
+// v2027.6a — Executive Console + i18n + tab Bahasa.
 import { state } from '../../core/GameState.js';
 import { SaveService } from '../../core/SaveService.js';
 import { ToastService } from '../../core/ToastService.js';
@@ -9,23 +7,23 @@ import { bus } from '../../core/EventBus.js';
 import { Modal } from '../modal.js';
 import { BALANCE } from '../../data/balance.data.js';
 import { ThemeService } from '../../core/ThemeService.js';
+import { LanguageService, t } from '../../core/LanguageService.js';
 import { THEMES, ACCENTS } from '../../data/theme.data.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { APP_CONFIG } from '../../config/app.config.js';
+import { SUPPORTED_LANGS } from '../../data/i18n/index.js';
 
-// ============================================================
-// STATE (module-level — persist antar render)
-// ============================================================
 let _activeTab = 'umum';
 
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 
 const TABS = [
-    { id: 'umum',     label: 'Umum',     icon: 'settings' },
-    { id: 'tampilan', label: 'Tampilan', icon: 'palette' },
-    { id: 'audio',    label: 'Audio',    icon: 'bell' },
-    { id: 'keuangan', label: 'Keuangan', icon: 'coin' },
-    { id: 'data',     label: 'Data',     icon: 'database' }
+    { id: 'umum',     key: 'settings.tab.general',    icon: 'settings' },
+    { id: 'tampilan', key: 'settings.tab.appearance', icon: 'palette' },
+    { id: 'audio',    key: 'settings.tab.audio',      icon: 'bell' },
+    { id: 'keuangan', key: 'settings.tab.finance',    icon: 'coin' },
+    { id: 'bahasa',   key: 'settings.tab.language',   icon: 'globe' },
+    { id: 'data',     key: 'settings.tab.data',       icon: 'database' }
 ];
 
 function escapeHtml(s) {
@@ -43,13 +41,14 @@ export function renderSettingsPanel() {
 }
 
 // ============================================================
-// HERO COMPANY CARD
+// HERO
 // ============================================================
 function _heroCard(s) {
-    const t = s.time || {};
-    const monthShort = MONTH_SHORT[(t.currentMonth || 1) - 1] || '';
-    const founded = t.currentDay + ' ' + monthShort + ' ' + t.currentYear;
-    const diffLabel = { santai: 'Santai', normal: 'Normal', sulit: 'Sulit' }[s.difficulty] || s.difficulty || 'Normal';
+    const time = s.time || {};
+    const monthShort = MONTH_SHORT[(time.currentMonth || 1) - 1] || '';
+    const founded = time.currentDay + ' ' + monthShort + ' ' + time.currentYear;
+    const diffKey = 'settings.difficulty.' + (s.difficulty || 'normal');
+    const diffLabel = t(diffKey);
     const rep = (s.market && typeof s.market.reputation === 'number') ? s.market.reputation : 0;
     const team = s.team ? ((s.team.engineers || 0) + (s.team.designers || 0) + (s.team.marketers || 0)) : 0;
     const initial = (s.companyName || 'M').charAt(0).toUpperCase();
@@ -59,7 +58,7 @@ function _heroCard(s) {
             '<div class="settings-hero-logo">' + escapeHtml(initial) + '</div>' +
             '<div class="settings-hero-info">' +
                 '<div class="settings-hero-name">' + escapeHtml(s.companyName || 'My Tech Co') + '</div>' +
-                '<div class="settings-hero-meta">Didirikan ' + escapeHtml(founded) + ' · ' + escapeHtml(diffLabel) + '</div>' +
+                '<div class="settings-hero-meta">' + escapeHtml(t('settings.row.founded')) + ' ' + escapeHtml(founded) + ' · ' + escapeHtml(diffLabel) + '</div>' +
             '</div>' +
         '</div>' +
         '<div class="settings-hero-kpi">' +
@@ -78,28 +77,26 @@ function _kpi(label, value) {
 }
 
 // ============================================================
-// TAB BAR
+// TABS
 // ============================================================
 function _tabBar() {
     return '<div class="settings-tabs">' +
-        TABS.map(function (t) {
-            var cls = 'settings-tab' + (_activeTab === t.id ? ' active' : '');
-            return '<button class="' + cls + '" data-set-tab="' + t.id + '" type="button">' +
-                renderIcon(t.icon, 13) +
-                '<span>' + escapeHtml(t.label) + '</span>' +
+        TABS.map(function (tab) {
+            var cls = 'settings-tab' + (_activeTab === tab.id ? ' active' : '');
+            return '<button class="' + cls + '" data-set-tab="' + tab.id + '" type="button">' +
+                renderIcon(tab.icon, 13) +
+                '<span>' + escapeHtml(t(tab.key)) + '</span>' +
                 '</button>';
         }).join('') +
         '</div>';
 }
 
-// ============================================================
-// TAB CONTENT
-// ============================================================
 function _tabContent(s) {
     switch (_activeTab) {
         case 'tampilan': return _tabTampilan(s);
         case 'audio':    return _tabAudio(s);
         case 'keuangan': return _tabKeuangan(s);
+        case 'bahasa':   return _tabBahasa(s);
         case 'data':     return _tabData(s);
         default:         return _tabUmum(s);
     }
@@ -109,42 +106,36 @@ function _tabContent(s) {
 // TAB — UMUM
 // ============================================================
 function _tabUmum(s) {
-    const foundedLabel = _formatFounded(s);
-
-    return _section('settings', 'Perusahaan',
-        _row({ label: 'Nama', value: escapeHtml(s.companyName || '—'), action: true, attrs: 'data-set="edit-name"', chevron: true }) +
-        _row({ label: 'Kesulitan', value: escapeHtml(_diffLabel(s.difficulty)) }) +
-        _row({ label: 'Didirikan', value: escapeHtml(foundedLabel) })
+    return _section('settings', t('settings.section.company'),
+        _row({ label: t('settings.row.name'), value: escapeHtml(s.companyName || '—'), action: true, attrs: 'data-set="edit-name"', chevron: true }) +
+        _row({ label: t('settings.row.difficulty'), value: escapeHtml(t('settings.difficulty.' + (s.difficulty || 'normal'))) }) +
+        _row({ label: t('settings.row.founded'), value: escapeHtml(_formatFounded(s)) })
     ) +
-    _section('question', 'Bantuan',
-        _row({ label: 'Panduan', hint: 'Cara bermain & tips', action: true, attrs: 'data-set="guide"', chevron: true }) +
-        _row({ label: 'Ulangi Tutorial', hint: 'Mulai dari langkah pertama', action: true, attrs: 'data-set="tutorial"', chevron: true })
+    _section('question', t('settings.section.help'),
+        _row({ label: t('settings.row.guide'), hint: t('settings.row.guide_hint'), action: true, attrs: 'data-set="guide"', chevron: true }) +
+        _row({ label: t('settings.row.tutorial'), hint: t('settings.row.tutorial_hint'), action: true, attrs: 'data-set="tutorial"', chevron: true })
     );
 }
 
 function _formatFounded(s) {
-    const t = s.time || {};
-    const monthShort = MONTH_SHORT[(t.currentMonth || 1) - 1] || '';
-    return t.currentDay + ' ' + monthShort + ' ' + t.currentYear;
-}
-
-function _diffLabel(diff) {
-    return { santai: 'Santai', normal: 'Normal', sulit: 'Sulit' }[diff] || diff || 'Normal';
+    const time = s.time || {};
+    const monthShort = MONTH_SHORT[(time.currentMonth || 1) - 1] || '';
+    return time.currentDay + ' ' + monthShort + ' ' + time.currentYear;
 }
 
 // ============================================================
 // TAB — TAMPILAN
 // ============================================================
-function _tabTampilan(s) {
+function _tabTampilan() {
     const currentTheme  = ThemeService.getTheme();
     const currentAccent = ThemeService.getAccent();
 
     const themeSegment = '<div class="settings-segment">' +
         '<button class="settings-seg-btn' + (currentTheme === 'dark' ? ' active' : '') + '" data-theme-pick="dark" type="button">' +
-            renderIcon('moon', 14) + '<span>Gelap</span>' +
+            renderIcon('moon', 14) + '<span>' + escapeHtml(t('settings.row.theme_dark') || 'Dark') + '</span>' +
         '</button>' +
         '<button class="settings-seg-btn' + (currentTheme === 'light' ? ' active' : '') + '" data-theme-pick="light" type="button">' +
-            renderIcon('sun', 14) + '<span>Terang</span>' +
+            renderIcon('sun', 14) + '<span>' + escapeHtml(t('settings.row.theme_light') || 'Light') + '</span>' +
         '</button>' +
         '</div>';
 
@@ -159,12 +150,12 @@ function _tabTampilan(s) {
         '</div>';
 
     return '<div class="settings-section">' +
-        '<div class="settings-section-head">' + renderIcon('palette', 12) + 'Tema</div>' +
+        '<div class="settings-section-head">' + renderIcon('palette', 12) + escapeHtml(t('settings.section.theme')) + '</div>' +
         '<div class="settings-picker-block">' + themeSegment + '</div>' +
         '<div class="settings-picker-block">' +
-            '<div class="settings-picker-label">Warna Aksen</div>' +
+            '<div class="settings-picker-label">' + escapeHtml(t('settings.section.accent')) + '</div>' +
             accentPicker +
-            '<div class="settings-picker-hint">Warna utama untuk tombol & highlight.</div>' +
+            '<div class="settings-picker-hint">' + escapeHtml(t('settings.hint.accent')) + '</div>' +
         '</div>' +
         '</div>';
 }
@@ -176,9 +167,9 @@ function _tabAudio(s) {
     const vib = !!(s.settings && s.settings.vibrate);
     const snd = !!(s.settings && s.settings.sound);
 
-    return _section('bell', 'Suara & Getar',
-        _row({ label: 'Suara', hint: snd ? 'Efek suara aktif' : 'Efek suara mati', switchOn: snd, attrs: 'data-toggle="sound"' }) +
-        _row({ label: 'Getar', hint: vib ? 'Umpan balik haptic aktif' : 'Umpan balik haptic mati', switchOn: vib, attrs: 'data-toggle="vibrate"' })
+    return _section('bell', t('settings.section.audio_haptic'),
+        _row({ label: t('settings.row.sound'),   hint: snd ? t('settings.sound_on') : t('settings.sound_off'),   switchOn: snd, attrs: 'data-toggle="sound"' }) +
+        _row({ label: t('settings.row.vibrate'), hint: vib ? t('settings.vibrate_on') : t('settings.vibrate_off'), switchOn: vib, attrs: 'data-toggle="vibrate"' })
     );
 }
 
@@ -193,41 +184,67 @@ function _tabKeuangan(s) {
         activeHtml = activeLoans.map(function (l) {
             return _row({
                 label: escapeHtml(l.label || l.id),
-                hint: 'Sisa $' + (l.remaining || 0).toLocaleString('en-US') + ' · ' + Math.round((l.monthlyInterestRate || 0) * 100) + '%/bln'
+                hint: 'Sisa $' + (l.remaining || 0).toLocaleString('en-US') + ' · ' + Math.round((l.monthlyInterestRate || 0) * 100) + '%/mo'
             });
         }).join('');
     } else {
-        activeHtml = '<div class="settings-empty">Tidak ada pinjaman aktif.</div>';
+        activeHtml = '<div class="settings-empty">' + escapeHtml(t('settings.empty.loans')) + '</div>';
     }
 
     const offersHtml = BALANCE.loans.map(function (l) {
         return _row({
             label: escapeHtml(l.label),
-            hint: '$' + l.principal.toLocaleString('en-US') + ' · ' + Math.round(l.monthlyInterestRate * 100) + '%/bln · ' + l.termMonths + ' bulan',
+            hint: '$' + l.principal.toLocaleString('en-US') + ' · ' + Math.round(l.monthlyInterestRate * 100) + '%/mo · ' + l.termMonths + ' mo',
             action: true,
             attrs: 'data-loan="' + l.id + '"',
             chevron: true
         });
     }).join('');
 
-    return _section('coin', 'Pinjaman Aktif', activeHtml) +
-           _section('coin', 'Ambil Pinjaman', offersHtml);
+    return _section('coin', t('settings.section.loans_active'), activeHtml) +
+           _section('coin', t('settings.section.loans_take'), offersHtml);
+}
+
+// ============================================================
+// TAB — BAHASA
+// ============================================================
+function _tabBahasa() {
+    const current = LanguageService.getLang();
+    const langs = LanguageService.getSupported();
+
+    const rows = langs.map(function (lang) {
+        var isActive = lang.id === current;
+        var activeTag = isActive ? '<span class="settings-lang-check">✓</span>' : '';
+        return '<button class="settings-lang-row' + (isActive ? ' active' : '') + '" data-lang-pick="' + lang.id + '" type="button">' +
+            '<div class="settings-lang-main">' +
+                '<div class="settings-lang-label">' + escapeHtml(lang.label) + '</div>' +
+                (isActive ? '<div class="settings-lang-meta">' + escapeHtml(t('settings.lang.active')) + '</div>' : '') +
+            '</div>' +
+            activeTag +
+            '</button>';
+    }).join('');
+
+    return '<div class="settings-section">' +
+        '<div class="settings-section-head">' + renderIcon('globe', 12) + escapeHtml(t('settings.section.language')) + '</div>' +
+        '<div class="settings-list settings-list-langs">' + rows + '</div>' +
+        '<div class="settings-lang-hint">' + escapeHtml(t('settings.lang.hint')) + '</div>' +
+        '</div>';
 }
 
 // ============================================================
 // TAB — DATA
 // ============================================================
-function _tabData(s) {
+function _tabData() {
     const version = (APP_CONFIG && APP_CONFIG.version) ? APP_CONFIG.version : 'dev';
 
-    return _section('folder', 'Penyimpanan',
-        _row({ label: 'Simpan Manual', hint: 'Simpan progres sekarang', action: true, attrs: 'data-set="save"', chevron: true }) +
-        _row({ label: 'Muat Save', hint: 'Kembali ke save terakhir', action: true, attrs: 'data-set="load"', chevron: true }) +
-        _row({ label: 'Export JSON', hint: 'Salin data sebagai teks', action: true, attrs: 'data-set="export"', chevron: true }) +
-        _row({ label: 'Import JSON', hint: 'Tempel backup untuk memuat', action: true, attrs: 'data-set="import"', chevron: true })
+    return _section('folder', t('settings.section.storage'),
+        _row({ label: t('settings.row.save'), hint: t('settings.row.save_hint'), action: true, attrs: 'data-set="save"', chevron: true }) +
+        _row({ label: t('settings.row.load'), hint: t('settings.row.load_hint'), action: true, attrs: 'data-set="load"', chevron: true }) +
+        _row({ label: t('settings.row.export'), hint: t('settings.row.export_hint'), action: true, attrs: 'data-set="export"', chevron: true }) +
+        _row({ label: t('settings.row.import'), hint: t('settings.row.import_hint'), action: true, attrs: 'data-set="import"', chevron: true })
     ) +
-    _sectionDanger('warn', 'Zona Bahaya',
-        _row({ label: 'Reset Perusahaan', hint: 'Hapus semua progres, mulai dari nol', action: true, danger: true, attrs: 'data-set="reset"', chevron: true })
+    _sectionDanger('warn', t('settings.section.danger'),
+        _row({ label: t('settings.row.reset'), hint: t('settings.row.reset_hint'), action: true, danger: true, attrs: 'data-set="reset"', chevron: true })
     ) +
     '<div class="settings-footer">' + escapeHtml(APP_CONFIG.name || 'Smartphone Empire') + ' · v' + escapeHtml(version) + '</div>';
 }
@@ -296,13 +313,24 @@ export function bindSettingsActions(root) {
             return;
         }
 
+        var langBtn = e.target.closest('[data-lang-pick]');
+        if (langBtn) {
+            e.preventDefault();
+            var newLang = langBtn.dataset.langPick;
+            var ok = LanguageService.setLang(newLang);
+            if (ok) {
+                var label = newLang === 'id' ? t('settings.lang.indonesian') : t('settings.lang.english');
+                ToastService.info(t('toast.lang_changed', { value: label }));
+                // renderAll akan dipicu dari main.js via bus 'lang:changed'
+            }
+            return;
+        }
+
         var themeBtn = e.target.closest('[data-theme-pick]');
         if (themeBtn) {
             e.preventDefault();
-            var tid = themeBtn.dataset.themePick;
-            ThemeService.setTheme(tid);
-            var label = (tid === 'dark') ? 'Gelap' : 'Terang';
-            ToastService.info('Tema: ' + label);
+            ThemeService.setTheme(themeBtn.dataset.themePick);
+            ToastService.info(t('toast.theme_changed', { value: themeBtn.dataset.themePick }));
             window.__game.render();
             return;
         }
@@ -311,31 +339,19 @@ export function bindSettingsActions(root) {
         if (accentBtn) {
             e.preventDefault();
             ThemeService.setAccent(accentBtn.dataset.accentPick);
-            ToastService.info('Warna aksen diperbarui.');
+            ToastService.info(t('toast.accent_changed'));
             window.__game.render();
             return;
         }
 
         var setBtn = e.target.closest('[data-set]');
-        if (setBtn) {
-            e.preventDefault();
-            _handleSet(setBtn.dataset.set);
-            return;
-        }
+        if (setBtn) { e.preventDefault(); _handleSet(setBtn.dataset.set); return; }
 
         var togBtn = e.target.closest('[data-toggle]');
-        if (togBtn) {
-            e.preventDefault();
-            _handleToggle(togBtn.dataset.toggle);
-            return;
-        }
+        if (togBtn) { e.preventDefault(); _handleToggle(togBtn.dataset.toggle); return; }
 
         var loanBtn = e.target.closest('[data-loan]');
-        if (loanBtn) {
-            e.preventDefault();
-            bus.emit('settings:take-loan', { loanId: loanBtn.dataset.loan });
-            return;
-        }
+        if (loanBtn) { e.preventDefault(); bus.emit('settings:take-loan', { loanId: loanBtn.dataset.loan }); return; }
     });
 }
 
@@ -345,8 +361,8 @@ export function bindSettingsActions(root) {
 function _handleSet(action) {
     switch (action) {
         case 'save':
-            if (SaveService.save(state)) ToastService.success('Save tersimpan.');
-            else ToastService.error('Gagal save.');
+            if (SaveService.save(state)) ToastService.success(t('toast.save_ok'));
+            else ToastService.error(t('toast.save_fail'));
             break;
         case 'load':   _confirmLoad(); break;
         case 'export': _openExport(); break;
@@ -368,17 +384,17 @@ function _handleToggle(key) {
 }
 
 // ============================================================
-// MODAL — EDIT NAMA PERUSAHAAN
+// MODAL — EDIT NAMA
 // ============================================================
 function _openEditName() {
     const s = state.get();
-    const html = '<div class="modal-title">Ubah Nama Perusahaan</div>' +
-        '<div class="modal-sub">Nama ini tampil di header dan laporan bulanan.</div>' +
-        '<label class="field-label">Nama Perusahaan</label>' +
-        '<input class="field-input" data-edit-company-name maxlength="32" value="' + escapeHtml(s.companyName || '') + '" autocomplete="off" />' +
+    const html = '<div class="modal-title">' + escapeHtml(t('settings.edit_name.title')) + '</div>' +
+        '<div class="modal-sub">' + escapeHtml(t('settings.edit_name.sub')) + '</div>' +
+        '<label class="field-label">' + escapeHtml(t('settings.edit_name.label')) + '</label>' +
+        '<input class="field-input" data-edit-company-name maxlength="32" value="' + escapeHtml(s.companyName || '') + '" placeholder="' + escapeHtml(t('settings.edit_name.placeholder')) + '" autocomplete="off" />' +
         '<div style="display:flex;gap:8px;margin-top:16px;">' +
-        '<button class="btn-secondary" data-modal-close style="flex:1;">Batal</button>' +
-        '<button class="btn-primary" data-edit-company-confirm style="flex:1;">Simpan</button>' +
+        '<button class="btn-secondary" data-modal-close style="flex:1;">' + escapeHtml(t('common.cancel')) + '</button>' +
+        '<button class="btn-primary" data-edit-company-confirm style="flex:1;">' + escapeHtml(t('common.save')) + '</button>' +
         '</div>';
 
     Modal.open('edit-company-name', html);
@@ -390,35 +406,35 @@ function _openEditName() {
 
     root.querySelector('[data-edit-company-confirm]').addEventListener('click', function () {
         const val = (input.value || '').trim();
-        if (!val) { ToastService.error('Nama tidak boleh kosong.'); return; }
-        if (val.length > 32) { ToastService.error('Maksimal 32 karakter.'); return; }
+        if (!val) { ToastService.error(t('settings.edit_name.error_empty')); return; }
+        if (val.length > 32) { ToastService.error(t('settings.edit_name.error_long')); return; }
         state.patch({ companyName: val });
         Modal.close('edit-company-name', true);
-        ToastService.success('Nama diperbarui.');
+        ToastService.success(t('settings.edit_name.success'));
         window.__game.render();
     });
 }
 
 // ============================================================
-// MODAL — EXPORT / IMPORT / LOAD / RESET (tidak berubah)
+// MODAL — EXPORT / IMPORT / LOAD / RESET
 // ============================================================
 function _openExport() {
     const json = SaveService.export(state);
-    if (!json) { ToastService.error('Export gagal.'); return; }
+    if (!json) { ToastService.error('Export failed.'); return; }
     const html = '<div class="modal-title">Export Save</div>' +
-        '<div class="modal-sub">Salin teks ini ke catatan HP-mu untuk backup.</div>' +
+        '<div class="modal-sub">Copy this text for backup.</div>' +
         '<textarea class="field-textarea" readonly rows="10">' + escapeHtml(json) + '</textarea>' +
-        '<button class="btn-secondary" data-modal-close style="margin-top:12px;width:100%;">Tutup</button>';
+        '<button class="btn-secondary" data-modal-close style="margin-top:12px;width:100%;">' + escapeHtml(t('common.tutup')) + '</button>';
     Modal.open('export', html);
 }
 
 function _openImport() {
     const html = '<div class="modal-title">Import Save</div>' +
-        '<div class="modal-sub">Tempel JSON backup di bawah. Ini akan menimpa save saat ini.</div>' +
+        '<div class="modal-sub">Paste JSON backup below. This overwrites current save.</div>' +
         '<textarea class="field-textarea" data-import-text rows="10" placeholder=\'{"version":3,"data":{...}}\'></textarea>' +
         '<div style="display:flex;gap:8px;margin-top:12px;">' +
-        '<button class="btn-secondary" data-modal-close style="flex:1;">Batal</button>' +
-        '<button class="btn-primary" data-import-confirm style="flex:1;">Impor</button>' +
+        '<button class="btn-secondary" data-modal-close style="flex:1;">' + escapeHtml(t('common.cancel')) + '</button>' +
+        '<button class="btn-primary" data-import-confirm style="flex:1;">' + escapeHtml(t('common.import')) + '</button>' +
         '</div>';
     Modal.open('import', html);
     const root = document.querySelector('[data-modal-id="import"]');
@@ -426,38 +442,38 @@ function _openImport() {
     root.querySelector('[data-import-confirm]').addEventListener('click', function () {
         const text = root.querySelector('[data-import-text]').value;
         const data = SaveService.parseImport(text);
-        if (!data) { ToastService.error('JSON tidak valid.'); return; }
+        if (!data) { ToastService.error('Invalid JSON.'); return; }
         state.hydrate(data);
         SaveService.save(state);
-        ToastService.success('Save diimpor. Memuat ulang...');
+        ToastService.success('Save imported. Reloading...');
         setTimeout(function () { window.location.reload(); }, 800);
     });
 }
 
 function _confirmLoad() {
-    if (!SaveService.hasSave()) { ToastService.warning('Tidak ada save.'); return; }
-    const html = '<div class="modal-title">Muat Save?</div>' +
-        '<div class="modal-sub">Progres saat ini akan diganti.</div>' +
+    if (!SaveService.hasSave()) { ToastService.warning(t('toast.no_save')); return; }
+    const html = '<div class="modal-title">Load Save?</div>' +
+        '<div class="modal-sub">Current progress will be replaced.</div>' +
         '<div style="display:flex;gap:8px;">' +
-        '<button class="btn-secondary" data-modal-close style="flex:1;">Batal</button>' +
-        '<button class="btn-primary" data-load-confirm style="flex:1;">Muat</button>' +
+        '<button class="btn-secondary" data-modal-close style="flex:1;">' + escapeHtml(t('common.cancel')) + '</button>' +
+        '<button class="btn-primary" data-load-confirm style="flex:1;">' + escapeHtml(t('common.load')) + '</button>' +
         '</div>';
     Modal.open('confirm-load', html);
     document.querySelector('[data-load-confirm]').addEventListener('click', function () {
         const data = SaveService.load();
-        if (!data) { ToastService.error('Gagal memuat.'); return; }
+        if (!data) { ToastService.error('Load failed.'); return; }
         state.hydrate(data);
-        ToastService.success('Save dimuat.');
+        ToastService.success('Save loaded.');
         Modal.close('confirm-load', true);
     });
 }
 
 function _confirmReset() {
     const html = '<div class="modal-title">Reset Game?</div>' +
-        '<div class="modal-sub">Semua progres akan hilang dan tidak bisa dikembalikan.</div>' +
+        '<div class="modal-sub">' + escapeHtml(t('toast.reset_confirm')) + '</div>' +
         '<div style="display:flex;gap:8px;">' +
-        '<button class="btn-secondary" data-modal-close style="flex:1;">Batal</button>' +
-        '<button class="btn-danger" data-reset-confirm style="flex:1;">Reset</button>' +
+        '<button class="btn-secondary" data-modal-close style="flex:1;">' + escapeHtml(t('common.cancel')) + '</button>' +
+        '<button class="btn-danger" data-reset-confirm style="flex:1;">' + escapeHtml(t('common.reset')) + '</button>' +
         '</div>';
     Modal.open('confirm-reset', html);
     document.querySelector('[data-reset-confirm]').addEventListener('click', function () {
@@ -465,4 +481,4 @@ function _confirmReset() {
         SaveService.stopAutoSave();
         window.location.reload();
     });
-}
+    }
