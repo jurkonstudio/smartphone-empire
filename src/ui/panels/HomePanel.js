@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/HomePanel.js
-// v2027.17a — 3D map + tab carousel (Focus / News / Activity).
+// v2027.18a — 3D map + carousel + dots indicator. Tanpa pill text.
 import { t } from '../../core/LanguageService.js';
 import { renderCampusLoading } from '../campus/CampusFallback.js';
 import { renderProgressPanel } from './ProgressPanel.js';
@@ -33,18 +33,24 @@ function _renderSlide(tabId, state, research) {
 }
 
 // ============================================================
+// DOTS
+// ============================================================
+function _renderDots() {
+    return '<div class="home-dots" role="tablist">' +
+        TABS.map(function (id) {
+            return '<button class="home-dot ' + (id === _activeTab ? 'active' : '') + '" ' +
+                'data-home-dot="' + id + '" type="button" ' +
+                'aria-label="' + id + '"></button>';
+        }).join('') +
+        '</div>';
+}
+
+// ============================================================
 // MAIN RENDER
 // ============================================================
 export function renderHomePanel() {
     const state = (window.__game && window.__game.state) ? window.__game.state.get() : null;
     const research = (window.__game && window.__game.research) ? window.__game.research : null;
-
-    const tabsHtml = TABS.map(function (id) {
-        return '<button class="home-tab ' + (id === _activeTab ? 'active' : '') + '" ' +
-            'data-home-tab="' + id + '" type="button">' +
-            t('home.tab.' + id) +
-            '</button>';
-    }).join('');
 
     const slidesHtml = TABS.map(function (id) {
         return _renderSlide(id, state, research);
@@ -54,40 +60,36 @@ export function renderHomePanel() {
         '<div id="campus-map" class="card home-map" role="img" aria-label="' + t('home.campus.aria') + '">' +
             renderCampusLoading() +
         '</div>' +
-        '<div class="home-tabs" role="tablist">' + tabsHtml + '</div>' +
         '<div class="home-carousel" data-home-carousel>' + slidesHtml + '</div>' +
+        _renderDots() +
         '</div>';
 }
 
 // ============================================================
-// MOUNT — dipanggil main.js setelah render + mountCampusMap
+// MOUNT
 // ============================================================
 export function initHomeTabs(rootEl) {
     if (!rootEl) return;
     const carousel = rootEl.querySelector('[data-home-carousel]');
     if (!carousel) return;
 
-    // Bind tab pills
-    rootEl.querySelectorAll('[data-home-tab]').forEach(function (btn) {
+    // Dots: tap untuk pindah tab
+    rootEl.querySelectorAll('[data-home-dot]').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            _goToTab(carousel, btn.dataset.homeTab, true);
+            _goToTab(carousel, btn.dataset.homeDot, true);
         });
     });
 
-    // Stop propagation supaya SwipeService (yang listen di document)
-    // tidak ikut trigger page-change saat user swipe di carousel.
+    // Stop propagation — supaya SwipeService tidak ikut trigger
     ['touchstart', 'touchmove', 'touchend', 'pointerdown', 'pointerup'].forEach(function (ev) {
         carousel.addEventListener(ev, function (e) { e.stopPropagation(); }, { passive: true });
     });
 
-    // Set scroll position ke tab aktif
     requestAnimationFrame(function () {
         const idx = TABS.indexOf(_activeTab);
-        if (idx > 0) {
-            carousel.scrollLeft = idx * carousel.clientWidth;
-        }
+        if (idx > 0) carousel.scrollLeft = idx * carousel.clientWidth;
         _observeScroll(carousel);
-        _updateActivePill(carousel);
+        _updateDots(carousel);
     });
 }
 
@@ -106,14 +108,14 @@ function _goToTab(carousel, tabId, smooth) {
     } catch (e) {
         carousel.scrollLeft = idx * carousel.clientWidth;
     }
-    _updateActivePill(carousel);
+    _updateDots(carousel);
 }
 
-function _updateActivePill(carousel) {
+function _updateDots(carousel) {
     const root = carousel.closest('.home-wrapper');
     if (!root) return;
-    root.querySelectorAll('[data-home-tab]').forEach(function (btn) {
-        btn.classList.toggle('active', btn.dataset.homeTab === _activeTab);
+    root.querySelectorAll('[data-home-dot]').forEach(function (dot) {
+        dot.classList.toggle('active', dot.dataset.homeDot === _activeTab);
     });
 }
 
@@ -130,7 +132,7 @@ function _observeScroll(carousel) {
                 const id = entry.target.dataset.homeSlide;
                 if (id && id !== _activeTab) {
                     _activeTab = id;
-                    _updateActivePill(carousel);
+                    _updateDots(carousel);
                 }
             }
         });
