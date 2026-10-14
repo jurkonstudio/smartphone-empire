@@ -236,9 +236,11 @@ function _bindCarouselPerf(wrapperEl) {
         if (!map.classList.contains('scrolling')) {
             map.classList.add('scrolling');
         }
+        bus.emit('home:carousel-scroll');   // v2027.31b — paksa render
         if (_carouselPerfTimer) clearTimeout(_carouselPerfTimer);
         _carouselPerfTimer = setTimeout(function () {
             map.classList.remove('scrolling');
+            bus.emit('home:carousel-scroll-end');   // v2027.31b
         }, 180);
     }, { passive: true });
 }
