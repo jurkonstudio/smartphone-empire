@@ -1,6 +1,6 @@
 // FILE: src/ui/panels/TeamPanel.js
 // v2027.8a — Render 3 section scroll (Tim Aktif, Rekrut, Info).
-// Sub-tab bar dihapus — sekarang dipanggil dari HqPanel.
+// Sub-tab bar dihapus — dipanggil dari HqPanel.
 import { ROLES, getRoleById, getSkillTier, getTraitById } from '../../data/staff.data.js';
 import { BALANCE } from '../../data/balance.data.js';
 import { generateAvatar } from '../avatars/AvatarGenerator.js';
@@ -43,6 +43,7 @@ export function renderTeamPanel({ teamSystem }) {
     );
 
     return _sectionDivider('Tim Aktif', 'users') + activeHtml +
+           '<div data-hq-anchor="team-recruit"></div>' +
            _sectionDivider('Rekrut', 'plus') + recruitHtml +
            _sectionDivider('Info', 'info') + infoHtml;
 }
