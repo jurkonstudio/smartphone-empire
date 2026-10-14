@@ -1,5 +1,6 @@
 // FILE: src/data/i18n/id.js
 // Kamus Bahasa Indonesia. Key flat dengan prefix kategori.
+// v2027.13a — Tambah: date.month.*, kpi.*, dashboard.*, log.*, news.*, timeline.*
 
 export const id = {
     // ============================================================
@@ -20,6 +21,35 @@ export const id = {
     'header.play_aria':    'Mulai',
     'header.speed_aria':   'Kecepatan',
     'header.paused':       'Paused',
+
+    // ============================================================
+    // KALENDER
+    // ============================================================
+    'date.month.1':  'Jan',
+    'date.month.2':  'Feb',
+    'date.month.3':  'Mar',
+    'date.month.4':  'Apr',
+    'date.month.5':  'Mei',
+    'date.month.6':  'Jun',
+    'date.month.7':  'Jul',
+    'date.month.8':  'Agu',
+    'date.month.9':  'Sep',
+    'date.month.10': 'Okt',
+    'date.month.11': 'Nov',
+    'date.month.12': 'Des',
+
+    'date.month_full.1':  'Januari',
+    'date.month_full.2':  'Februari',
+    'date.month_full.3':  'Maret',
+    'date.month_full.4':  'April',
+    'date.month_full.5':  'Mei',
+    'date.month_full.6':  'Juni',
+    'date.month_full.7':  'Juli',
+    'date.month_full.8':  'Agustus',
+    'date.month_full.9':  'September',
+    'date.month_full.10': 'Oktober',
+    'date.month_full.11': 'November',
+    'date.month_full.12': 'Desember',
 
     // ============================================================
     // SETELAN
@@ -49,6 +79,8 @@ export const id = {
     'settings.row.guide_hint':  'Cara bermain & tips',
     'settings.row.tutorial':    'Ulangi Tutorial',
     'settings.row.tutorial_hint': 'Mulai dari langkah pertama',
+    'settings.row.theme_dark':  'Gelap',
+    'settings.row.theme_light': 'Terang',
 
     'settings.row.sound':       'Suara',
     'settings.row.vibrate':     'Getar',
@@ -97,6 +129,12 @@ export const id = {
     'common.load':    'Muat',
     'common.import':  'Impor',
     'common.export':  'Ekspor',
+    'common.close':   'Tutup',
+    'common.back':    'Kembali',
+    'common.next':    'Lanjut',
+    'common.confirm': 'Konfirmasi',
+    'common.yes':     'Ya',
+    'common.no':      'Tidak',
 
     'toast.theme_changed':   'Tema: {value}',
     'toast.accent_changed':  'Warna aksen diperbarui.',
@@ -118,6 +156,74 @@ export const id = {
     'campus.placeholder.body':  'Peta 3D kantor pusat dan sistem upgrade gedung akan tersedia di update berikutnya.',
 
     // ============================================================
+    // KPI CARDS (Dashboard)
+    // ============================================================
+    'kpi.cash':          'Uang Tunai',
+    'kpi.reputation':    'Reputasi',
+    'kpi.rep_high':      'Baik',
+    'kpi.rep_mid':       'Cukup',
+    'kpi.rep_low':       'Rendah',
+    'kpi.team':          'Tim',
+    'kpi.team_empty':    'Belum ada tim',
+    'kpi.team_morale':   'Morale {n}/100',
+    'kpi.date':          'Tanggal',
+
+    // ============================================================
+    // DASHBOARD
+    // ============================================================
+    'dashboard.public_highlight': 'Sorotan Publik',
+    'dashboard.sentiment':        'Sentimen',
+    'dashboard.view_feedback':    'Lihat Feedback Publik',
+    'dashboard.timeline_title':   'Timeline Sejarah 2000–2026',
+    'dashboard.focus_title':      'Fokus Hari Ini',
+    'dashboard.focus_empty_title':'Semua berjalan lancar',
+    'dashboard.focus_empty_desc': 'Riset teknologi baru, rekrut tim, atau rilis produk untuk mempercepat pertumbuhan.',
+    'dashboard.focus_open_research': 'Buka Tab Riset',
+    'dashboard.focus_active_research': 'Riset Aktif',
+    'dashboard.focus_slots':      '{n}/{max} slot terpakai',
+    'dashboard.focus_quest':      'Quest',
+
+    // ============================================================
+    // LOG / AKTIVITAS
+    // ============================================================
+    'log.title':       'Aktivitas Terbaru',
+    'log.empty':       'Belum ada aktivitas.',
+    'log.type.info':   'Info',
+    'log.type.success':'Sukses',
+    'log.type.warning':'Peringatan',
+    'log.type.danger': 'Bahaya',
+
+    // ============================================================
+    // NEWS / BERITA
+    // ============================================================
+    'news.panel_title':     'Berita Internasional',
+    'news.panel_empty':     'Belum ada berita. Rilis produk untuk melihat ulasan media.',
+    'news.new_badge':       '{n} baru',
+    'news.read_latest':     'Baca Berita Terbaru',
+    'news.score':           'Skor {n}/10',
+    'news.sentiment.positive': 'Positif',
+    'news.sentiment.negative': 'Negatif',
+    'news.sentiment.mixed':    'Campuran',
+    'news.article.by':         'Oleh',
+    'news.article.editor_score': 'Penilaian Editor',
+    'news.article.from':       'Artikel dari {source} ({type})',
+    'news.article.close':      'Tutup Artikel',
+
+    // ============================================================
+    // TIMELINE
+    // ============================================================
+    'timeline.header.era':      'Era',
+    'timeline.filter.all':      'Semua',
+    'timeline.filter.phone':    'Ponsel',
+    'timeline.filter.os':       'OS',
+    'timeline.kind.phone':      'Ponsel',
+    'timeline.kind.os':         'OS',
+    'timeline.speculative':     'Spekulatif',
+    'timeline.now':             'Sekarang · {year}',
+    'timeline.empty_title':     'Belum ada data timeline',
+    'timeline.empty_desc':      'Data sejarah akan muncul seiring waktu berjalan.',
+
+    // ============================================================
     // TEAM — dropdown, roster, recruit, info
     // ============================================================
     'team.mode.roster':  'Tim Aktif',
@@ -125,6 +231,9 @@ export const id = {
     'team.mode.info':    'Info',
 
     'team.kpi.salary':   'Gaji/Bln',
+    'team.kpi.engineer': 'Engineer',
+    'team.kpi.designer': 'Designer',
+    'team.kpi.marketer': 'Marketer',
 
     'team.roster.empty_title': 'Belum ada tim',
     'team.roster.empty_desc':  'Pilih menu Rekrut di dropdown atas untuk mencari kandidat.',
@@ -189,4 +298,20 @@ export const id = {
     'team.tips.l2':    'Trait Fast Learner mempercepat naik tier.',
     'team.tips.l3':    'Trait Specialist memberi bonus +25% di bidangnya.',
     'team.tips.l4':    'Moral rendah menurunkan produktivitas.',
+
+    // ============================================================
+    // STAFF DETAIL MODAL
+    // ============================================================
+    'staff.detail.role_joined': '{role} • Bergabung {day}/{month}/{year}',
+    'staff.detail.months_worked': '{n} bulan bekerja',
+    'staff.detail.tier_label':    'Tier {n}',
+    'staff.detail.progress_to':   'Progres ke Tier {n}',
+    'staff.detail.max_tier':      'Sudah di tier tertinggi',
+    'staff.detail.salary':        'Gaji per bulan',
+    'staff.detail.morale':        'Moral',
+    'staff.detail.traits_title':  'Trait',
+    'staff.detail.no_traits':     'Tanpa trait khusus.',
+    'staff.detail.train_btn':     '📚 Training Intensif (+30 progress) — ${cost}',
+    'staff.detail.fire_btn':      '⛔ PHK Staff (pesangon ${severance})',
+    'staff.detail.close':         'Tutup',
 };
