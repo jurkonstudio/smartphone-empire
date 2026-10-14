@@ -7,7 +7,7 @@ export const id = {
     // NAVIGASI
     // ============================================================
     'nav.home':     'Home',
-    'nav.team':     'Tim',
+    'nav.team':     'HQ',
     'nav.research': 'Riset',
     'nav.products': 'Produk',
     'nav.market':   'Pasar',
@@ -127,4 +127,15 @@ export const id = {
     'toast.save_fail':       'Gagal save.',
     'toast.no_save':         'Tidak ada save.',
     'toast.reset_confirm':   'Semua progres akan hilang.',
+
+    // ============================================================
+    // HQ — Sub-tab & Home placeholder
+    // ============================================================
+    'hq.tab.overview': 'Overview',
+    'hq.tab.campus':   'Campus',
+    'hq.tab.team':     'Team',
+    'home.placeholder.title': 'Campus Map',
+    'home.placeholder.body':  'Peta 3D kantor pusat akan muncul di sini. Untuk sekarang, buka tab HQ untuk mengelola perusahaan.',
+    'campus.placeholder.title': 'Campus 3D Map',
+    'campus.placeholder.body':  'Peta 3D kantor pusat dan sistem upgrade gedung akan tersedia di update berikutnya.',
 };
