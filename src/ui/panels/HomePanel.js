@@ -1,18 +1,11 @@
 // FILE: src/ui/panels/HomePanel.js
-// v2027.13c — dipisah dari main.js + i18n.
-import { renderIcon } from '../icons/FeatureIcons.js';
+// v2027.14 — placeholder diganti peta kampus 3D (mount lewat main.js).
 import { t } from '../../core/LanguageService.js';
+import { renderCampusLoading } from '../campus/CampusFallback.js';
 
 export function renderHomePanel() {
-    return '<div class="card" style="text-align:center;padding:60px 20px;">' +
-        '<div style="display:inline-flex;align-items:center;justify-content:center;width:88px;height:88px;border-radius:24px;background:var(--accent-soft);color:var(--accent);margin-bottom:18px;">' +
-            renderIcon('layers', 44) +
-        '</div>' +
-        '<div style="font-size:17px;font-weight:700;margin-bottom:8px;letter-spacing:-0.01em;">' +
-            t('home.placeholder.title') +
-        '</div>' +
-        '<div style="font-size:13px;color:var(--text-tertiary);line-height:1.6;max-width:300px;margin:0 auto;">' +
-            t('home.placeholder.body') +
-        '</div>' +
+    return '<div id="campus-map" class="card" role="img" aria-label="' + t('home.campus.aria') + '" ' +
+        'style="padding:0;height:min(62vh,480px);min-height:320px;position:relative;overflow:hidden;">' +
+        renderCampusLoading() +
         '</div>';
 }
