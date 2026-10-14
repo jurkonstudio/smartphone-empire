@@ -155,7 +155,7 @@ export const MONTHLY_HEADLINES_EN = {
         headline: 'Global phone sales 2002 reach 400 million units, growing steadily',
         text: 'The phone industry closes the year with moderate growth. Nokia, Samsung, and Motorola lead, while the camera phone market begins to bloom.'
     }
-};
+
     // ==================== 2003 ====================
     '2003-1': {
         headline: 'Phone industry prepares for "camera in every phone" year',
