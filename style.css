@@ -3593,3 +3593,41 @@ body {
 .home-slide {
     contain: layout style;
 }
+/* ============================================================================
+   69. HOME MAP — ANTI-FLICKER + GPU ISOLATION (v2027.37a)
+   Fix: kedip 3D map saat swipe carousel.
+   Override section 68 (kalau ada) — pakai contain: layout style (bukan paint).
+   ============================================================================ */
+
+.home-map {
+    /* Force GPU layer sendiri — biar Chrome gak discard texture
+       saat layer tetangga (carousel) re-composite */
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    isolation: isolate;
+    /* Layout containment aja, TANPA paint — paint contain bikin
+       canvas sering ke-invalidate saat tetangga repaint */
+    contain: layout style;
+    position: relative;
+    overflow: hidden;
+}
+
+.home-map canvas {
+    display: block;
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    max-width: 100%;
+    max-height: 100%;
+    /* Canvas WebGL promoted ke layer sendiri */
+}
+
+/* Pastikan carousel bikin stacking context sendiri — biar
+   gak numpuk dengan map saat scroll */
+.home-carousel {
+    isolation: isolate;
+    contain: layout style;
+}
