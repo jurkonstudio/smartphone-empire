@@ -1,5 +1,5 @@
 // FILE: src/ui/layout/Header.js
-// v2027.16a — prefix "Hari"/"Day" bisa diterjemahkan.
+// v2027.28a — cash delta indicator real-time.
 import { generateLogo } from '../avatars/AvatarGenerator.js';
 import { t } from '../../core/LanguageService.js';
 
@@ -10,8 +10,6 @@ export function renderHeader({ state, timeSnapshot, warning }) {
     const status = time.isPaused ? t('header.paused') : (time.gameSpeed + 'x');
     const statusCls = time.isPaused ? '' : 'running';
 
-    // Format: "{prefix} {day} {monthShort} {year}"
-    // ID: "Hari 1 Jan 2000" / EN: "Day 1 Jan 2000"
     const mKey = 'date.month.' + (time.currentMonth || 1);
     const mShort = t(mKey);
     const monthLabel = (mShort === mKey) ? String(time.currentMonth || 1) : mShort;
@@ -29,7 +27,10 @@ export function renderHeader({ state, timeSnapshot, warning }) {
                     <span class="header-chevron">›</span>
                 </button>
                 ${warnBadge}
-                <div class="header-cash" data-cash>$${state.cash.toLocaleString('en-US')}</div>
+                <div class="header-cash-wrap">
+                    <div class="header-cash" data-cash>$${state.cash.toLocaleString('en-US')}</div>
+                    <div class="header-cash-delta" data-cash-delta aria-hidden="true"></div>
+                </div>
             </div>
             <div class="header-row">
                 <div class="header-meta">
