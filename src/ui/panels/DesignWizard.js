@@ -1,10 +1,8 @@
 // FILE: src/ui/panels/DesignWizard.js
-// ============================================================
-// DesignWizard — wizard desain ponsel ERA-AWARE dengan live mockup.
-// Mockup muncul di atas wizard, live update di setiap step.
-// Tombol "Lihat Detail" → modal mockup besar + spec info.
-// Kamera bersifat OPSIONAL (ponsel budget bisa tanpa kamera).
-// ============================================================
+// v2027.4a — fix 3 kritis:
+//   1. Default harga adaptif (unitCost × 2, bulat 50)
+//   2. Kategori pakai renderIcon (bukan emoji string)
+//   3. Tombol Rilis disabled saat margin negatif
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
 import { state } from '../../core/GameState.js';
@@ -16,10 +14,10 @@ import {
 import { renderPhoneMockup } from '../phone/PhoneMockup.js';
 import { getDesignEraForYear } from '../../data/era-design.data.js';
 import { resolveSpec } from '../../data/phone-specs.data.js';
+import { renderIcon } from '../icons/FeatureIcons.js';
 
 let _wizardState = null;
 
-// Kategori yang boleh kosong
 const OPTIONAL_CATEGORIES = ['camera'];
 
 function escapeHtml(s) {
@@ -42,6 +40,7 @@ function defaultState() {
         bodyId: null,
         bodyColorId: null,
         price: 200,
+        priceManuallyEdited: false,
         productionQty: 5000
     };
 }
@@ -197,7 +196,10 @@ function _bindStep() {
         priceInput.value = _wizardState.price;
         priceInput.addEventListener('input', (e) => {
             _wizardState.price = parseInt(e.target.value, 10) || 0;
+            _wizardState.priceManuallyEdited = true;
             _refreshPreview();
+            // Update tombol disabled state via re-render step 4
+            _updateConfirmButtonState();
         });
     }
     const qtyInput = root.querySelector('[data-wiz-qty]');
@@ -220,6 +222,41 @@ function _bindStep() {
 
     const detailBtn = root.querySelector('[data-wiz-detail]');
     if (detailBtn) detailBtn.addEventListener('click', () => _openDetailModal());
+
+    // Update tombol confirm state saat pertama render step 4
+    if (_wizardState.step === 4) _updateConfirmButtonState();
+}
+
+// ============================================================
+// UPDATE CONFIRM BUTTON STATE (v2027.4a)
+// ============================================================
+function _updateConfirmButtonState() {
+    const root = document.querySelector('[data-modal-id="design-wizard"]');
+    if (!root) return;
+    const btn = root.querySelector('[data-wiz-confirm]');
+    if (!btn) return;
+    const s = _wizardState;
+    if (!s) return;
+
+    const ps = window.__game && window.__game.products;
+    if (!ps) return;
+
+    let unitCost = 0;
+    try { unitCost = ps.computeUnitCost ? ps.computeUnitCost(s) : 0; } catch (e) {}
+    const margin = (s.price || 0) - unitCost;
+    const canRelease = margin >= 0;
+
+    if (canRelease) {
+        btn.disabled = false;
+        btn.style.opacity = '';
+        btn.style.cursor = '';
+        btn.textContent = 'Rilis Produk ✓';
+    } else {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        btn.textContent = 'Harga < Biaya';
+    }
 }
 
 // ============================================================
@@ -241,6 +278,18 @@ function _next() {
         if (!s.osOptionId || !s.bodyId || !s.bodyColorId) {
             ToastService.warning('Pilih OS, bodi, dan warna.');
             return;
+        }
+        // [v2027.4a] Auto-set harga default kalau user belum pernah ubah.
+        if (!s.priceManuallyEdited) {
+            const ps = window.__game && window.__game.products;
+            let unitCost = 0;
+            try { unitCost = ps && ps.computeUnitCost ? ps.computeUnitCost(s) : 0; } catch (e) {}
+            if (unitCost > 0) {
+                // Harga = unitCost × 2, bulatkan ke atas kelipatan 50, minimum 200.
+                const raw = unitCost * 2;
+                const rounded = Math.ceil(raw / 50) * 50;
+                s.price = Math.max(200, rounded);
+            }
         }
     }
     if (s.step >= 4) return;
@@ -363,9 +412,12 @@ function _step2(s) {
             options = `<div class="wiz-empty">Belum ada komponen — riset dulu atau tunggu tahun berikutnya.</div>`;
         }
 
+        // [v2027.4a] Icon via renderIcon, bukan string emoji
+        const iconHtml = cat ? renderIcon(cat.icon, 14, 'style="vertical-align:middle;margin-right:5px;"') : '';
+
         return `
             <div class="wiz-cat">
-                <div class="wiz-cat-title">${cat.icon} ${cat.name} <span style="color:var(--text-mute);font-weight:500;">(${list.length}${isOptional ? ' + opsional' : ''})</span></div>
+                <div class="wiz-cat-title" style="text-transform:none;">${iconHtml}${escapeHtml(cat.name)} <span style="color:var(--text-mute);font-weight:500;">(${list.length}${isOptional ? ' + opsional' : ''})</span></div>
                 <div class="wiz-options-row">${options}</div>
             </div>
         `;
@@ -397,7 +449,7 @@ function _step3(s) {
     return `
         <div style="max-height:45vh;overflow-y:auto;padding-right:4px;">
             <div class="wiz-cat">
-                <div class="wiz-cat-title">💿 Sistem Operasi</div>
+                <div class="wiz-cat-title" style="text-transform:none;">${renderIcon('disc', 14, 'style="vertical-align:middle;margin-right:5px;"')}Sistem Operasi</div>
                 <div class="wiz-options-row">
                     ${osOptions.length ? osOptions.map(o => `
                         <button class="wiz-option ${s.osOptionId === o.id ? 'selected' : ''}" data-wiz-pick="osOptionId:${o.id}">
@@ -409,7 +461,7 @@ function _step3(s) {
             </div>
 
             <div class="wiz-cat">
-                <div class="wiz-cat-title">🧱 Bodi</div>
+                <div class="wiz-cat-title" style="text-transform:none;">${renderIcon('layers', 14, 'style="vertical-align:middle;margin-right:5px;"')}Bodi</div>
                 <div class="wiz-options-row">
                     ${bodies.length ? bodies.map(b => `
                         <button class="wiz-option ${s.bodyId === b.id ? 'selected' : ''}" data-wiz-pick="bodyId:${b.id}">
@@ -421,7 +473,7 @@ function _step3(s) {
             </div>
 
             <div class="wiz-cat">
-                <div class="wiz-cat-title">🎨 Warna</div>
+                <div class="wiz-cat-title" style="text-transform:none;">${renderIcon('palette', 14, 'style="vertical-align:middle;margin-right:5px;"')}Warna</div>
                 ${colors.length ? `
                     <div class="wiz-colors">
                         ${colors.map(c => `
@@ -443,9 +495,15 @@ function _step3(s) {
 }
 
 // ============================================================
-// STEP 4 — HARGA + RINGKASAN (mockup sudah di atas)
+// STEP 4 — HARGA + RINGKASAN
 // ============================================================
 function _step4(s) {
+    const ps = window.__game && window.__game.products;
+    let unitCost = 0;
+    try { unitCost = ps && ps.computeUnitCost ? ps.computeUnitCost(s) : 0; } catch (e) {}
+    const margin = (s.price || 0) - unitCost;
+    const canRelease = margin >= 0;
+
     return `
         <div class="wiz-price-layout">
             <div>
@@ -465,7 +523,9 @@ function _step4(s) {
 
         <div class="wiz-nav">
             <button class="btn-secondary" data-wiz-back style="flex:1;">← Kembali</button>
-            <button class="btn-primary" data-wiz-confirm style="flex:2;">Rilis Produk ✓</button>
+            <button class="btn-primary" data-wiz-confirm style="flex:2;" ${canRelease ? '' : 'disabled style="flex:2;opacity:0.5;cursor:not-allowed;"'}>
+                ${canRelease ? 'Rilis Produk ✓' : 'Harga < Biaya'}
+            </button>
         </div>
     `;
 }
@@ -606,4 +666,4 @@ function _openDetailModal() {
     `;
 
     Modal.open('design-wizard-detail', html);
-        }
+}
