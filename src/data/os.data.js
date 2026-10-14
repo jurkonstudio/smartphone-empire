@@ -2,6 +2,7 @@
 // ============================================================
 // DATA OS — 45 fitur (24 ID lama dipertahankan + 21 baru).
 // Icon diubah dari emoji ke icon ID (FeatureIcons.js).
+// v2026.4 — starter:true pada fw_sms, fw_contacts, fw_calendar.
 // ============================================================
 
 export const OS_ERAS = [
@@ -14,19 +15,19 @@ export const OS_ERAS = [
 
 export const OS_FEATURES = [
     // ============ ERA 1 — FIRMWARE ============
-    { id: 'fw_sms', era: 'firmware', minYear: 2000, requiresResearch: ['net_gsm'],
+    { id: 'fw_sms', era: 'firmware', minYear: 2000, starter: true, requiresResearch: ['net_gsm'],
       name: 'Pesan SMS', icon: 'message',
       description: 'Pesan singkat antar operator.',
       devCost: 3000, devDays: 8, complexity: 1, requiresFeatures: [],
       statEffects: { stability: 5, speed: 2, features: 8, security: 3, design: 2 } },
 
-    { id: 'fw_contacts', era: 'firmware', minYear: 2000, requiresResearch: ['net_gsm'],
+    { id: 'fw_contacts', era: 'firmware', minYear: 2000, starter: true, requiresResearch: ['net_gsm'],
       name: 'Buku Kontak', icon: 'contacts',
       description: 'Manajemen kontak dasar dengan grup.',
       devCost: 2500, devDays: 6, complexity: 1, requiresFeatures: [],
       statEffects: { stability: 4, speed: 2, features: 6, security: 3, design: 3 } },
 
-    { id: 'fw_calendar', era: 'firmware', minYear: 2000, requiresResearch: [],
+    { id: 'fw_calendar', era: 'firmware', minYear: 2000, starter: true, requiresResearch: [],
       name: 'Kalender & Alarm', icon: 'calendar',
       description: 'Jadwal, pengingat, dan alarm.',
       devCost: 4000, devDays: 8, complexity: 1, requiresFeatures: [],
@@ -503,4 +504,4 @@ export function getEraForYear(year) {
         if (year >= OS_ERAS[i].fromYear && year <= OS_ERAS[i].toYear) return OS_ERAS[i];
     }
     return OS_ERAS[OS_ERAS.length - 1];
-     }
+                    }
