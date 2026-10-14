@@ -1,28 +1,30 @@
 // FILE: src/ui/panels/MonthlySummaryModal.js
+// v2027.13c — i18n.
 import { Modal } from '../modal.js';
 import { bus } from '../../core/EventBus.js';
+import { t } from '../../core/LanguageService.js';
 
 export function initMonthlySummary() {
-    bus.on('economy:month-processed', (entry) => _show(entry));
+    bus.on('economy:month-processed', function (entry) { _show(entry); });
 }
 
 function _show(e) {
     const netColor = e.net >= 0 ? 'var(--accent)' : 'var(--danger)';
-    const fmt = (n) => '$' + Math.round(n).toLocaleString('en-US');
+    const fmt = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
     const html = `
-        <div class="modal-title">Laporan Bulan ${e.month}/${e.year}</div>
-        <div class="modal-sub">Ringkasan keuangan otomatis.</div>
-        <div class="sum-row"><span>Pemasukan</span><b>${fmt(e.income)}</b></div>
-        <div class="sum-row"><span>Gaji tim</span><b>-${fmt(e.breakdown.salary)}</b></div>
-        <div class="sum-row"><span>Sewa & utilitas</span><b>-${fmt(e.breakdown.fixed)}</b></div>
-        <div class="sum-row"><span>Bunga pinjaman</span><b>-${fmt(e.breakdown.loanInterest)}</b></div>
-        <div class="sum-row"><span>Pajak</span><b>-${fmt(e.tax)}</b></div>
+        <div class="modal-title">${t('monthly.title', { month: e.month, year: e.year })}</div>
+        <div class="modal-sub">${t('monthly.sub')}</div>
+        <div class="sum-row"><span>${t('monthly.income')}</span><b>${fmt(e.income)}</b></div>
+        <div class="sum-row"><span>${t('monthly.salary')}</span><b>-${fmt(e.breakdown.salary)}</b></div>
+        <div class="sum-row"><span>${t('monthly.fixed')}</span><b>-${fmt(e.breakdown.fixed)}</b></div>
+        <div class="sum-row"><span>${t('monthly.loan_interest')}</span><b>-${fmt(e.breakdown.loanInterest)}</b></div>
+        <div class="sum-row"><span>${t('monthly.tax')}</span><b>-${fmt(e.tax)}</b></div>
         <div class="sum-row total">
-            <span>Laba Bersih</span>
+            <span>${t('monthly.net')}</span>
             <b style="color:${netColor}">${e.net >= 0 ? '+' : ''}${fmt(e.net)}</b>
         </div>
-        <div class="sum-row"><span>Saldo akhir</span><b>${fmt(e.cash)}</b></div>
-        <button class="btn-primary" data-modal-close style="margin-top:16px;">Tutup</button>
+        <div class="sum-row"><span>${t('monthly.cash_end')}</span><b>${fmt(e.cash)}</b></div>
+        <button class="btn-primary" data-modal-close style="margin-top:16px;">${t('monthly.close')}</button>
     `;
     Modal.open('monthly-summary', html);
 }
