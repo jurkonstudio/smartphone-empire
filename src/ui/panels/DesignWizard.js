@@ -223,13 +223,13 @@ function _render() {
     else                   stepBody = _step4(s);
 
     const html = `
-        <div class="wiz-era-banner" style="background:${era.aesthetic.bg};border-color:${era.aesthetic.accent}40;">
-            <div class="wiz-era-year">${DesignEraService.getCurrentYear()}</div>
-            <div class="wiz-era-info">
-                <div class="wiz-era-label" style="color:${era.aesthetic.accent};">${escapeHtml(era.label)}</div>
-                <div class="wiz-era-desc">${escapeHtml(era.description)}</div>
-            </div>
-        </div>
+        <div class="wiz-era-banner" data-era="${era.id}">
+    <div class="wiz-era-year">${DesignEraService.getCurrentYear()}</div>
+    <div class="wiz-era-info">
+        <div class="wiz-era-label">${escapeHtml(era.label)}</div>
+        <div class="wiz-era-desc">${escapeHtml(era.description)}</div>
+    </div>
+</div>
 
         <div class="wiz-mockup-live" data-wiz-mockup-container></div>
         <div class="wiz-spec-strip" data-wiz-spec-strip></div>
