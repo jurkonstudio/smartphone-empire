@@ -1,5 +1,6 @@
 // FILE: src/ui/panels/TeamPanel.js
-// v2027.7b — Modal conditional rendering (hide empty detail fields).
+// v2027.8a — Render 3 section scroll (Tim Aktif, Rekrut, Info).
+// Sub-tab bar dihapus — sekarang dipanggil dari HqPanel.
 import { ROLES, getRoleById, getSkillTier, getTraitById } from '../../data/staff.data.js';
 import { BALANCE } from '../../data/balance.data.js';
 import { generateAvatar } from '../avatars/AvatarGenerator.js';
@@ -22,26 +23,36 @@ function safe(fn, fallback) {
     }
 }
 
-export function renderTeamPanel({ subtab, teamSystem }) {
+// ============================================================
+// MAIN RENDER — 3 section scroll
+// ============================================================
+export function renderTeamPanel({ teamSystem }) {
     const data = window.__game.state.get();
 
-    const subtabBar = `
-        <div class="subtab-bar">
-            <button class="subtab-btn ${subtab === 'active'   ? 'active' : ''}" data-team-subtab="active">Tim Aktif</button>
-            <button class="subtab-btn ${subtab === 'recruit'  ? 'active' : ''}" data-team-subtab="recruit">Rekrut</button>
-            <button class="subtab-btn ${subtab === 'info'     ? 'active' : ''}" data-team-subtab="info">Info</button>
-        </div>
-    `;
+    const activeHtml = safe(
+        function () { return _renderActive(data, teamSystem); },
+        '<div class="empty"><div class="empty-title">Gagal render Tim Aktif</div></div>'
+    );
+    const recruitHtml = safe(
+        function () { return _renderRecruit(data, teamSystem); },
+        '<div class="empty"><div class="empty-title">Gagal render Rekrut</div></div>'
+    );
+    const infoHtml = safe(
+        function () { return _renderInfo(data, teamSystem); },
+        '<div class="empty"><div class="empty-title">Gagal render Info</div></div>'
+    );
 
-    let body = '';
-    if (subtab === 'recruit') {
-        body = safe(function() { return _renderRecruit(data, teamSystem); }, '<div class="empty"><div class="empty-title">Gagal render Rekrut</div></div>');
-    } else if (subtab === 'info') {
-        body = safe(function() { return _renderInfo(data, teamSystem); }, '<div class="empty"><div class="empty-title">Gagal render Info</div></div>');
-    } else {
-        body = safe(function() { return _renderActive(data, teamSystem); }, '<div class="empty"><div class="empty-title">Gagal render Tim Aktif</div></div>');
-    }
-    return subtabBar + body;
+    return _sectionDivider('Tim Aktif', 'users') + activeHtml +
+           _sectionDivider('Rekrut', 'plus') + recruitHtml +
+           _sectionDivider('Info', 'info') + infoHtml;
+}
+
+function _sectionDivider(label, iconId) {
+    return '<div class="hq-section-divider">' +
+        '<span class="hq-section-icon">' + renderIcon(iconId, 11) + '</span>' +
+        '<span class="hq-section-label">' + label + '</span>' +
+        '<span class="hq-section-line"></span>' +
+        '</div>';
 }
 
 // ============================================================
@@ -265,7 +276,7 @@ function _renderCandidateRow(c) {
 }
 
 // ============================================================
-// MODAL DETAIL KANDIDAT — v2027.7b conditional rendering
+// MODAL DETAIL KANDIDAT
 // ============================================================
 export function openCandidateDetailModal({ candidateId }) {
     const data = window.__game.state.get();
@@ -281,7 +292,6 @@ export function openCandidateDetailModal({ candidateId }) {
     let avatar = '';
     try { avatar = generateAvatar(c.name || 'Unknown', { size: 72 }); } catch (e) {}
 
-    // ---------- Traits ----------
     const traitList = Array.isArray(c.traits) ? c.traits : [];
     const traitHtml = traitList.length
         ? traitList.map(function(tid) {
@@ -297,8 +307,6 @@ export function openCandidateDetailModal({ candidateId }) {
         }).join('')
         : '<div class="cand-modal-empty">Tidak ada trait khusus.</div>';
 
-    // ---------- Detail rows (conditional) ----------
-    // Hanya tampilkan field yang ada isinya.
     const detailCandidates = [
         { label: 'Spesialisasi',   value: c.specialty },
         { label: 'Pengalaman',     value: (typeof c.yearsExperience === 'number' && c.yearsExperience > 0) ? (c.yearsExperience + ' tahun') : null },
@@ -319,7 +327,6 @@ export function openCandidateDetailModal({ candidateId }) {
             '<div class="cand-modal-section-title">' + renderIcon('info', 11) + 'Detail</div>' +
             '<div class="cand-modal-details">' + rows + '</div>';
     } else {
-        // Semua kosong — tampilkan notifikasi ringkas
         detailSectionHtml =
             '<div class="cand-modal-section-title">' + renderIcon('info', 11) + 'Detail</div>' +
             '<div class="cand-modal-note">' +
@@ -328,7 +335,6 @@ export function openCandidateDetailModal({ candidateId }) {
             '</div>';
     }
 
-    // ---------- Country row (kalau ada) ----------
     const countryHtml = c.countryFlag || c.countryLabel
         ? '<div class="cand-modal-country">' +
             (c.countryFlag ? '<span>' + c.countryFlag + '</span>' : '') +
