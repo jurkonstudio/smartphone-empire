@@ -1,33 +1,38 @@
 // FILE: src/systems/MarketSystem.js
-// ============================================================
-// MarketSystem — hitung pangsa pasar riil bulanan.
-// Pangsa = playerRevenue / (playerRevenue + sum(competitorRevenue) + othersRevenue)
-//
-// Kompetitor revenue datang dari CompetitorSystem.computeCompetitorPower().
-// Tren di-drift tiap bulan. Pangsa disimpan 24 bulan.
-// ============================================================
+// v2027.1c — fix pangsa pasar: revenue pemain dari accumulator event.
+// Pangsa = playerRevenue / (playerRevenue + competitorRevenue + othersRevenue)
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
-import { TIME_CONFIG } from '../config/time.config.js';
 import { LOG_TYPES } from '../config/constants.js';
 import { getCompetitorById, getFictionalName } from '../data/competitors.data.js';
 
-const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
+// Pangsa "others" (brand kecil tak terlacak) — realistis 30% pasar.
+const OTHERS_SHARE = 0.30;
 
 export class MarketSystem {
     constructor(gameState) {
         this.state = gameState;
         this._unsubs = [];
-        this._competitorSystem = null;  // di-inject oleh main.js
+        this._competitorSystem = null;
+        // [v2027.1c] Accumulator revenue bulan berjalan.
+        this._monthRevenueAccum = 0;
     }
 
-    // main.js memanggil ini setelah instansiasi CompetitorSystem
     setCompetitorSystem(cs) { this._competitorSystem = cs; }
 
     start() {
         this._unsubs.push(bus.on('time:month-changed', (s) => this._onMonthChanged(s)));
         this._unsubs.push(bus.on('state:hydrated',     () => this._ensureTrends()));
+
+        // [v2027.1c] Kumpulkan revenue harian dari ProductSystem.
+        // Event sama yang dipakai EconomySystem — kita paralel mendengar.
+        this._unsubs.push(bus.on('economy:add-revenue', (payload) => {
+            if (payload && typeof payload.amount === 'number') {
+                this._monthRevenueAccum += payload.amount;
+            }
+        }));
+
         this._ensureTrends();
         console.info('[MarketSystem] siap.');
     }
@@ -50,10 +55,11 @@ export class MarketSystem {
     _onMonthChanged(snap) {
         const data = this.state.data;
 
-        // ---- 1. Hitung revenue pemain bulan ini ----
-        const playerRevenue = this._computePlayerRevenue();
+        // ---- 1. Revenue pemain dari accumulator ----
+        // [v2027.1c] Sebelumnya scan dailySales dengan mismatch skala → selalu 0.
+        const playerRevenue = Math.round(this._monthRevenueAccum);
 
-        // ---- 2. Hitung revenue kompetitor aktif ----
+        // ---- 2. Revenue kompetitor ----
         const cs = this._competitorSystem;
         const competitorRevenues = [];
         let totalCompetitorRevenue = 0;
@@ -63,26 +69,22 @@ export class MarketSystem {
             ids.forEach(id => {
                 const comp = getCompetitorById(id);
                 if (!comp) return;
-                const power = cs.computeCompetitorPower(id, snap.currentYear);
-                // Tambah noise halus
-                const noise = 1 + (Math.random() * 2 - 1) * 0.12;
-                const rev = Math.max(0, Math.round(power * noise));
+                const rev = Math.max(0, Math.round(cs.computeCompetitorPower(id, snap.currentYear)));
                 competitorRevenues.push({ id, name: comp.name, revenue: rev });
                 totalCompetitorRevenue += rev;
             });
         }
 
-        // ---- 3. Others (pemain lain / pasar gelap) ----
-        const others = Math.round((playerRevenue + totalCompetitorRevenue) * 0.4);
+        // ---- 3. Others — pangsa brand kecil (30% dari tracked market) ----
+        const tracked = playerRevenue + totalCompetitorRevenue;
+        const others = Math.round(tracked * OTHERS_SHARE);
+        const total = tracked + others;
 
-        // ---- 4. Total & pangsa ----
-        const total = playerRevenue + totalCompetitorRevenue + others;
+        // ---- 4. Pangsa pemain ----
         const playerShare = total > 0 ? playerRevenue / total : 0;
 
-        // ---- 5. Simpan ke state ----
+        // ---- 5. Simpan ----
         data.market.share = playerShare;
-
-        // Update share per kompetitor di state.market.competitors (untuk UI cepat)
         data.market.competitors = competitorRevenues.map(cr => {
             const comp = getCompetitorById(cr.id);
             return {
@@ -98,6 +100,8 @@ export class MarketSystem {
             year: snap.currentYear,
             month: snap.currentMonth,
             playerShare,
+            playerRevenue,
+            totalRevenue: total,
             competitors: data.market.competitors.map(c => ({ id: c.id, share: c.share }))
         });
         if (data.market.shareHistory.length > 24) data.market.shareHistory.length = 24;
@@ -113,7 +117,7 @@ export class MarketSystem {
         // ---- 6. Drift tren ----
         this._driftTrends();
 
-        // ---- 7. Milestone pangsa ----
+        // ---- 7. Milestone ----
         const pct = Math.round(playerShare * 100);
         if (pct >= 10 && !data.milestones.some(m => m.id === 'share_10')) {
             this.state.addMilestone('share_10', 'Pangsa pasar 10%.');
@@ -127,40 +131,22 @@ export class MarketSystem {
 
         // ---- 8. Log ----
         if (playerRevenue > 0) {
-            this.state.addLog('Pangsa pasar bulan ini: ' + (playerShare * 100).toFixed(1) + '%.', LOG_TYPES.info);
+            this.state.addLog(
+                'Pangsa pasar: ' + (playerShare * 100).toFixed(1) +
+                '% (pendapatan bulan ini $' + playerRevenue.toLocaleString('en-US') + ').',
+                LOG_TYPES.info
+            );
         }
 
-        // ---- 9. Emit ----
+        // ---- 9. Reset accumulator untuk bulan depan ----
+        this._monthRevenueAccum = 0;
+
+        // ---- 10. Emit ----
         bus.emit('market:share-updated', {
             playerShare,
             competitors: data.market.competitors.map(c => ({ id: c.id, name: c.name, share: c.share }))
         });
         bus.emit('state:changed', data);
-    }
-
-    // ============================================================
-    // REVENUE PEMAIN BULAN INI
-    // ============================================================
-    _computePlayerRevenue() {
-        const data = this.state.data;
-        let total = 0;
-
-        // Ambil dari dailySales yang jatuh di bulan ini
-        const currentAbsMonth = data.time.currentYear * 12 + (data.time.currentMonth - 1);
-
-        data.products.catalog.forEach(p => {
-            if (!p.dailySales) return;
-            p.dailySales.forEach(d => {
-                // Konversi game minute ke bulan (kasar via 30.4 hari)
-                const dayAbs = Math.floor(d.day / MINUTES_PER_DAY);
-                const monthAbs = Math.floor(dayAbs / 30.4);
-                if (monthAbs === currentAbsMonth) {
-                    total += d.revenue;
-                }
-            });
-        });
-
-        return Math.round(total);
     }
 
     _driftTrends() {
@@ -183,14 +169,12 @@ export class MarketSystem {
     getReputation()       { return this.state.data.market.reputation || 0; }
     getShareHistory()     { return this.state.data.market.shareHistory || []; }
 
-    // Perubahan pangsa vs bulan sebelumnya
     getShareDelta() {
         const h = this.state.data.market.shareHistory || [];
         if (h.length < 2) return 0;
         return h[0].playerShare - h[1].playerShare;
     }
 
-    // Mode nama
     getDisplayName(id, mode) {
         const comp = getCompetitorById(id);
         if (!comp) return id;
