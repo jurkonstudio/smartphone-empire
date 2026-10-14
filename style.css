@@ -3547,3 +3547,16 @@ body {
 .home-slide {
     touch-action: manipulation;
 }
+/* ============================================================================
+   67. HOME SLIDE — EXPLICIT RESET (v2027.32c)
+   Section 65 gak bisa nge-override max-height + overflow-y dari duplikat
+   section 64 lama karena gak explicit nyebut property-nya.
+   Section ini explicit reset, biar slide BUKAN vertical scroll container
+   sendiri — itu yang bikin Chrome block horizontal swipe.
+   ============================================================================ */
+
+.home-slide {
+    max-height: none !important;
+    overflow-y: visible !important;
+    overflow-x: visible !important;
+}
