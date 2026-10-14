@@ -3225,3 +3225,314 @@ body {
     .os-mini-btn { font-size: 10.5px; padding: 4px 8px; }
     .os-status-badge { font-size: 9px; padding: 2px 6px; }
 }
+/* ============================================================
+   SETTINGS v2027.5 — Executive Console
+   In-family dengan panel lain. Append only.
+   ============================================================ */
+
+/* ---------- HERO COMPANY CARD ---------- */
+.settings-hero {
+    background: linear-gradient(135deg, var(--bg-2) 0%, var(--bg-3) 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-sm);
+    animation: fadeIn 0.25s ease-out;
+}
+.settings-hero-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.settings-hero-logo {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+    color: #ffffff;
+    font-size: 22px;
+    font-weight: var(--fw-black);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: -0.03em;
+    box-shadow: 0 4px 14px var(--accent-glow);
+}
+.settings-hero-info {
+    flex: 1;
+    min-width: 0;
+}
+.settings-hero-name {
+    font-size: 17px;
+    font-weight: var(--fw-bold);
+    color: var(--text-primary);
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.settings-hero-meta {
+    font-size: 11.5px;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.1px;
+}
+.settings-hero-kpi {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+.settings-kpi { min-width: 0; }
+.settings-kpi-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-tertiary);
+    font-weight: var(--fw-semibold);
+    margin-bottom: 3px;
+}
+.settings-kpi-value {
+    font-size: 14px;
+    font-weight: var(--fw-bold);
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---------- TAB BAR ---------- */
+.settings-tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 12px;
+    background: var(--bg-2);
+    padding: 4px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.settings-tabs::-webkit-scrollbar { display: none; }
+
+.settings-tab {
+    flex: 1 0 auto;
+    min-width: 68px;
+    padding: 8px 10px;
+    background: transparent;
+    border: none;
+    border-radius: var(--r-sm);
+    color: var(--text-secondary);
+    font-size: 11.5px;
+    font-weight: var(--fw-semibold);
+    font-family: inherit;
+    letter-spacing: -0.005em;
+    cursor: pointer;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 44px;
+    transition: background 0.15s, color 0.15s, transform 0.12s;
+}
+.settings-tab svg { flex-shrink: 0; }
+.settings-tab:active { transform: scale(0.96); }
+.settings-tab.active {
+    background: var(--bg-4);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ---------- SECTION ---------- */
+.settings-section {
+    margin-bottom: 14px;
+    animation: fadeIn 0.22s ease-out;
+}
+.settings-section-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    font-weight: var(--fw-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-tertiary);
+    margin: 0 4px 6px;
+    padding-top: 4px;
+}
+.settings-section-head svg { opacity: 0.7; flex-shrink: 0; }
+
+.settings-section-danger .settings-section-head { color: var(--danger); opacity: 0.8; }
+
+.settings-list {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    overflow: hidden;
+}
+
+/* ---------- ROW ---------- */
+.settings-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.12s;
+    position: relative;
+}
+.settings-row:last-child { border-bottom: none; }
+
+.settings-row-action { cursor: pointer; }
+.settings-row-action:hover { background: var(--bg-3); }
+.settings-row-action:active { background: var(--bg-4); }
+
+.settings-row-danger .settings-row-label { color: var(--danger); }
+.settings-row-danger.settings-row-action:hover { background: var(--danger-soft); }
+
+.settings-row-main {
+    flex: 1;
+    min-width: 0;
+}
+.settings-row-label {
+    font-size: 13.5px;
+    font-weight: var(--fw-semibold);
+    color: var(--text-primary);
+    letter-spacing: -0.005em;
+    line-height: 1.3;
+}
+.settings-row-hint {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 3px;
+    line-height: 1.4;
+}
+.settings-row-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.settings-row-value {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    font-weight: var(--fw-medium);
+    font-variant-numeric: tabular-nums;
+    max-width: 180px;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.settings-row-chevron {
+    color: var(--text-tertiary);
+    font-size: 18px;
+    font-weight: var(--fw-light);
+    line-height: 1;
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+.settings-empty {
+    padding: 14px;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    text-align: center;
+}
+
+/* ---------- PICKER BLOCKS (Tampilan) ---------- */
+.settings-picker-block {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+}
+.settings-picker-block:last-child { border-bottom: none; }
+.settings-picker-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.1px;
+    margin-bottom: 8px;
+}
+.settings-picker-hint {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
+/* Segmented control for tema */
+.settings-segment {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    background: var(--bg-3);
+    border-radius: var(--r-sm);
+    padding: 3px;
+}
+.settings-seg-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 12px;
+    background: transparent;
+    border: none;
+    border-radius: var(--r-sm);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+    min-height: 40px;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
+}
+.settings-seg-btn:active { transform: scale(0.97); }
+.settings-seg-btn.active {
+    background: var(--bg-2);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.settings-accent-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 2px 0;
+}
+.settings-accent-picker .accent-dot {
+    width: 34px;
+    height: 34px;
+}
+
+/* ---------- FOOTER ---------- */
+.settings-footer {
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.2px;
+    margin-top: 18px;
+    padding: 12px 0 6px;
+    opacity: 0.7;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 380px) {
+    .settings-hero-name { font-size: 15px; }
+    .settings-hero-logo { width: 42px; height: 42px; font-size: 19px; }
+    .settings-kpi-value { font-size: 13px; }
+    .settings-tab { font-size: 10.5px; padding: 7px 8px; }
+    .settings-row { padding: 11px 12px; }
+    .settings-row-label { font-size: 13px; }
+}
