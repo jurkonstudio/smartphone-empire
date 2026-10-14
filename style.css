@@ -3560,3 +3560,36 @@ body {
     overflow-y: visible !important;
     overflow-x: visible !important;
 }
+/* ============================================================================
+   68. HOME MAP — GPU LAYER ISOLATION (v2027.33a)
+   Fix Chrome HP flicker: canvas 3D ikut re-composite tiap scroll-snap carousel.
+   Isolasi layer biar GPU handle sendiri, gak ikut repaint tetangga.
+   ============================================================================ */
+
+.home-map {
+    /* Paksa browser bikin layer terpisah untuk map */
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    contain: layout paint;
+}
+
+.home-map canvas {
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    display: block;
+}
+
+/* Isolasi carousel juga biar gak gangu map */
+.home-carousel {
+    contain: layout paint style;
+    isolation: isolate;
+}
+
+/* Slide jangan punya layer sendiri-sendiri (bikin berat di HP) */
+.home-slide {
+    contain: layout style;
+}
