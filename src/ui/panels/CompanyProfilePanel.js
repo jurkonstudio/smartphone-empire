@@ -1,6 +1,7 @@
 // FILE: src/ui/panels/CompanyProfilePanel.js
-// Halaman Profil Perusahaan.
+// v2027.13c — i18n.
 import { CloudService } from '../../services/CloudService.js';
+import { t } from '../../core/LanguageService.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -9,25 +10,29 @@ function escapeHtml(s) {
 }
 
 const DIFF_LABEL = {
-    santai: { label: 'Santai', color: 'var(--success)' },
-    normal: { label: 'Normal', color: 'var(--info)' },
-    sulit:  { label: 'Sulit',  color: 'var(--danger)' }
+    santai: { key: 'settings.difficulty.santai', color: 'var(--success)' },
+    normal: { key: 'settings.difficulty.normal', color: 'var(--info)' },
+    sulit:  { key: 'settings.difficulty.sulit',  color: 'var(--danger)' }
 };
 
 const ERA_LABEL = {
-    feature_phone:     'Feature Phone',
-    touch_revolution:  'Touch Revolution',
-    modern_smartphone: 'Smartphone Modern',
-    ai_ecosystem:      'AI & Ecosystem'
+    feature_phone:     'profile.era.feature_phone',
+    touch_revolution:  'profile.era.touch_revolution',
+    modern_smartphone: 'profile.era.modern_smartphone',
+    ai_ecosystem:      'profile.era.ai_ecosystem'
 };
 
-export function renderCompanyProfilePanel({ teamSystem, marketSystem, competitors, opinionSystem }) {
-    const data = window.__game.state.get();
-    const t = data.time;
+export function renderCompanyProfilePanel(params) {
+    var teamSystem = params.teamSystem;
+    var marketSystem = params.marketSystem;
+    var opinionSystem = params.opinionSystem;
 
-    const totalRevenue = (data.products.catalog || []).reduce((s, p) => s + (p.totalRevenue || 0), 0);
-    const totalSold    = (data.products.catalog || []).reduce((s, p) => s + (p.totalSold || 0), 0);
-    const activeProducts = (data.products.catalog || []).filter(p => p.status === 'selling').length;
+    const data = window.__game.state.get();
+    const tSnap = data.time;
+
+    const totalRevenue = (data.products.catalog || []).reduce(function (s, p) { return s + (p.totalRevenue || 0); }, 0);
+    const totalSold    = (data.products.catalog || []).reduce(function (s, p) { return s + (p.totalSold || 0); }, 0);
+    const activeProducts = (data.products.catalog || []).filter(function (p) { return p.status === 'selling'; }).length;
     const totalProducts  = (data.products.catalog || []).length;
 
     const staffCount = (data.staff || []).length;
@@ -41,8 +46,8 @@ export function renderCompanyProfilePanel({ teamSystem, marketSystem, competitor
     const milestones = (data.milestones || []).slice().reverse();
     const diffInfo = DIFF_LABEL[data.difficulty] || DIFF_LABEL.normal;
 
-    const competitorsList = (data.market.competitors || []).slice().sort((a, b) => b.share - a.share);
-    const playerRank = 1 + competitorsList.filter(c => c.share > marketShare).length;
+    const competitorsList = (data.market.competitors || []).slice().sort(function (a, b) { return b.share - a.share; });
+    const playerRank = 1 + competitorsList.filter(function (c) { return c.share > marketShare; }).length;
     const totalCompanies = 1 + competitorsList.length;
 
     const headerCard = `
@@ -50,12 +55,12 @@ export function renderCompanyProfilePanel({ teamSystem, marketSystem, competitor
             <div class="profile-logo">${escapeHtml(data.companyName.charAt(0).toUpperCase())}</div>
             <div class="profile-name">${escapeHtml(data.companyName)}</div>
             <div class="profile-meta">
-                <span class="profile-difficulty" style="color:${diffInfo.color};">● ${diffInfo.label}</span>
+                <span class="profile-difficulty" style="color:${diffInfo.color};">● ${t(diffInfo.key)}</span>
                 <span>•</span>
-                <span>Berdiri 2000</span>
+                <span>${t('profile.founded')}</span>
             </div>
             <div class="profile-era">
-                ${ERA_LABEL[data.era] || data.era} • Tahun ${t.currentYear}
+                ${t(ERA_LABEL[data.era] || 'profile.era.modern_smartphone')} • ${t('profile.era_year', { era: '', year: tSnap.currentYear }).replace(' • ', ' • ').replace('{era}', '').trim().replace(/^•\s*/, '')}
             </div>
         </div>
     `;
@@ -63,76 +68,79 @@ export function renderCompanyProfilePanel({ teamSystem, marketSystem, competitor
     const kpis = `
         <div class="kpi-grid">
             <div class="kpi green">
-                <div class="kpi-label">Pendapatan Total</div>
+                <div class="kpi-label">${t('profile.kpi_revenue')}</div>
                 <div class="kpi-value" style="font-size:15px;">$${totalRevenue.toLocaleString('en-US')}</div>
             </div>
             <div class="kpi blue">
-                <div class="kpi-label">Unit Terjual</div>
+                <div class="kpi-label">${t('profile.kpi_sold')}</div>
                 <div class="kpi-value" style="font-size:15px;">${totalSold.toLocaleString('en-US')}</div>
             </div>
             <div class="kpi warn">
-                <div class="kpi-label">Peringkat Pasar</div>
+                <div class="kpi-label">${t('profile.kpi_rank')}</div>
                 <div class="kpi-value">#${playerRank}<span style="font-size:12px;color:var(--text-dim);">/${totalCompanies}</span></div>
             </div>
             <div class="kpi">
-                <div class="kpi-label">Pangsa Pasar</div>
+                <div class="kpi-label">${t('profile.kpi_share')}</div>
                 <div class="kpi-value" style="font-size:15px;">${(marketShare * 100).toFixed(1)}%</div>
             </div>
         </div>
     `;
 
+    const moraleColor = avgMorale >= 70 ? 'var(--success)' : avgMorale >= 40 ? 'var(--warn)' : 'var(--danger)';
+
     const opsCard = `
         <div class="card">
-            <div class="card-title">Ringkasan Operasional</div>
-            <div class="sum-row"><span>Uang tunai</span><b>$${data.cash.toLocaleString('en-US')}</b></div>
-            <div class="sum-row"><span>Produk aktif</span><b>${activeProducts} / ${totalProducts}</b></div>
-            <div class="sum-row"><span>Total staff</span><b>${staffCount} orang</b></div>
-            <div class="sum-row"><span>Gaji bulanan</span><b>$${monthlySalary.toLocaleString('en-US')}</b></div>
-            <div class="sum-row"><span>Moral rata-rata</span><b style="color:${avgMorale >= 70 ? 'var(--success)' : avgMorale >= 40 ? 'var(--warn)' : 'var(--danger)'};">${avgMorale}/100</b></div>
-            <div class="sum-row"><span>Reputasi</span><b>${reputation}/100</b></div>
-            <div class="sum-row"><span>Sentimen publik</span><b>${sentiment}/100</b></div>
+            <div class="card-title">${t('profile.ops_title')}</div>
+            <div class="sum-row"><span>${t('profile.ops_cash')}</span><b>$${data.cash.toLocaleString('en-US')}</b></div>
+            <div class="sum-row"><span>${t('profile.ops_active')}</span><b>${activeProducts} / ${totalProducts}</b></div>
+            <div class="sum-row"><span>${t('profile.ops_staff')}</span><b>${t('profile.ops_staff_unit', { n: staffCount })}</b></div>
+            <div class="sum-row"><span>${t('profile.ops_salary')}</span><b>$${monthlySalary.toLocaleString('en-US')}</b></div>
+            <div class="sum-row"><span>${t('profile.ops_morale')}</span><b style="color:${moraleColor};">${avgMorale}/100</b></div>
+            <div class="sum-row"><span>${t('profile.ops_rep')}</span><b>${reputation}/100</b></div>
+            <div class="sum-row"><span>${t('profile.ops_sentiment')}</span><b>${sentiment}/100</b></div>
         </div>
     `;
 
     const milestonesHtml = milestones.length
-        ? milestones.map(m => `
-            <div class="ms-row">
-                <span class="ms-year">${m.year}</span>
-                <span class="ms-text">${escapeHtml(m.text)}</span>
-            </div>
-        `).join('')
-        : '<div class="log-empty">Belum ada pencapaian. Terus kembangkan perusahaan!</div>';
+        ? milestones.map(function (m) {
+            return '<div class="ms-row">' +
+                '<span class="ms-year">' + m.year + '</span>' +
+                '<span class="ms-text">' + escapeHtml(m.text) + '</span>' +
+                '</div>';
+        }).join('')
+        : '<div class="log-empty">' + t('profile.milestones_empty') + '</div>';
 
     const milestonesCard = `
         <div class="card">
-            <div class="card-title">Pencapaian (${milestones.length})</div>
+            <div class="card-title">${t('profile.milestones', { n: milestones.length })}</div>
             ${milestonesHtml}
         </div>
     `;
 
     const cloudStatus = CloudService.getStatus();
-    const cloudLabel = {
-        disconnected: 'Belum terhubung',
-        connecting:   'Menghubungkan...',
-        connected:    'Tersinkron',
-        error:        'Gagal terhubung'
-    }[cloudStatus] || cloudStatus;
+    const cloudKeyMap = {
+        disconnected: 'profile.cloud_disconnected',
+        connecting:   'profile.cloud_connecting',
+        connected:    'profile.cloud_connected',
+        error:        'profile.cloud_error'
+    };
+    const cloudLabel = t(cloudKeyMap[cloudStatus] || 'profile.cloud_disconnected');
     const cloudColor = cloudStatus === 'connected' ? 'var(--success)' :
                        cloudStatus === 'connecting' ? 'var(--warn)' :
                        cloudStatus === 'error' ? 'var(--danger)' : 'var(--text-mute)';
 
     const cloudCard = `
         <div class="card">
-            <div class="card-title">☁️ Cloud Sync</div>
+            <div class="card-title">${t('profile.cloud_title')}</div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <div style="font-size:13px;color:var(--text-dim);">Status</div>
+                <div style="font-size:13px;color:var(--text-dim);">${t('profile.cloud_status')}</div>
                 <div style="font-size:13px;font-weight:700;color:${cloudColor};">${cloudLabel}</div>
             </div>
             <div style="font-size:11.5px;color:var(--text-mute);line-height:1.5;margin-bottom:10px;">
-                Sinkronisasi cloud akan hadir di update berikutnya. Save Anda saat ini tersimpan lokal di perangkat.
+                ${t('profile.cloud_desc')}
             </div>
             <button class="btn-secondary" disabled style="width:100%;font-size:12px;padding:8px;opacity:0.55;cursor:not-allowed;">
-                Atur Cloud (Coming Soon)
+                ${t('profile.cloud_btn')}
             </button>
         </div>
     `;
@@ -142,4 +150,4 @@ export function renderCompanyProfilePanel({ teamSystem, marketSystem, competitor
 
 export function bindCompanyProfileActions(root) {
     // Placeholder untuk future
-                  }
+}
