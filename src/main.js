@@ -47,6 +47,7 @@ import { openViralResponseModal } from './ui/panels/PublicOpinionPanel.js';
 import { drawSalesChart } from './ui/panels/SalesChart.js';
 import { openCandidateDetailModal, setRecruitFilter, setTeamMode } from './ui/panels/TeamPanel.js';
 import { renderHqPanel } from './ui/panels/HqPanel.js';
+import { renderHomePanel } from './ui/panels/HomePanel.js';
 import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
 import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
@@ -54,7 +55,6 @@ import { openNewsArticleModal } from './ui/panels/NewsArticleModal.js';
 import { handleNewsListClick } from './ui/panels/NewsListPanel.js';
 import { renderChipMockup } from './ui/phone/ChipMockup.js';
 import { renderChipRadarChart } from './ui/charts/ChipRadarChart.js';
-import { renderIcon } from './ui/icons/FeatureIcons.js';
 import * as marketingModule from './data/marketing.data.js';
 import * as feedbackModule from './data/feedback.data.js';
 import { getActiveRendererIdPublic } from './ui/notifications/NotificationRenderer.js';
@@ -165,19 +165,6 @@ function updateNavSlider(animated) {
     }
 }
 
-// ============ HOME PLACEHOLDER ============
-function _renderHomePlaceholder() {
-    return '<div class="card" style="text-align:center;padding:60px 20px;">' +
-        '<div style="display:inline-flex;align-items:center;justify-content:center;width:88px;height:88px;border-radius:24px;background:var(--accent-soft);color:var(--accent);margin-bottom:18px;">' +
-            renderIcon('layers', 44) +
-        '</div>' +
-        '<div style="font-size:17px;font-weight:700;margin-bottom:8px;letter-spacing:-0.01em;">Campus Map</div>' +
-        '<div style="font-size:13px;color:var(--text-tertiary);line-height:1.6;max-width:300px;margin:0 auto;">' +
-            'Peta 3D kantor pusat akan muncul di sini. Untuk sekarang, buka tab <b>HQ</b> untuk mengelola perusahaan.' +
-        '</div>' +
-        '</div>';
-}
-
 // ============ RENDER VIEW ============
 function renderView(opts) {
     if (!els.view) return;
@@ -187,7 +174,7 @@ function renderView(opts) {
 
     var html = '';
     try {
-        if (activeView === 'dashboard') html = _renderHomePlaceholder();
+        if (activeView === 'dashboard') html = renderHomePanel();
         else if (activeView === 'profile') html = renderCompanyProfilePanel({ teamSystem: teamSystem, marketSystem: market, competitors: competitors, opinionSystem: opinion });
         else if (activeView === 'team') html = renderHqPanel({ subtab: activeHqSubtab, state: state.get(), timeSnapshot: getTime(), researchSystem: research, teamSystem: teamSystem });
         else if (activeView === 'research') html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os, chipResearchSystem: chipResearch });
