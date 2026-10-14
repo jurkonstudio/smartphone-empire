@@ -1,21 +1,24 @@
 // FILE: src/ui/layout/Header.js
+// v2027.6a — pakai t() untuk string UI.
 import { getMonthName } from '../../core/TimeSystem.js';
 import { generateLogo } from '../avatars/AvatarGenerator.js';
+import { t } from '../../core/LanguageService.js';
 
 export function renderHeader({ state, timeSnapshot, warning }) {
-    const t = timeSnapshot;
-    const hh = String(Math.floor(t.currentHour)).padStart(2, '0');
-    const mm = String(Math.floor(t.currentMinute)).padStart(2, '0');
-    const status = t.isPaused ? 'Paused' : (t.gameSpeed + 'x');
-    const statusCls = t.isPaused ? '' : 'running';
-    const dateStr = t.currentDay + ' ' + getMonthName(t.currentMonth, true) + ' ' + t.currentYear;
+    const time = timeSnapshot;
+    const hh = String(Math.floor(time.currentHour)).padStart(2, '0');
+    const mm = String(Math.floor(time.currentMinute)).padStart(2, '0');
+    const status = time.isPaused ? t('header.paused') : (time.gameSpeed + 'x');
+    const statusCls = time.isPaused ? '' : 'running';
+    const dateStr = time.currentDay + ' ' + getMonthName(time.currentMonth, true) + ' ' + time.currentYear;
 
     const warnBadge = warning ? `<span class="header-warn">⚠ ${warning}</span>` : '';
+    const pauseAria = time.isPaused ? t('header.play_aria') : t('header.pause_aria');
 
     return `
         <div class="header-inner">
             <div class="header-row">
-                <button class="header-company-btn" data-nav="profile" aria-label="Profil perusahaan">
+                <button class="header-company-btn" data-nav="profile" aria-label="${t('header.company_aria')}">
                     ${generateLogo(state.companyName, { size: 26 })}
                     <span class="header-company">${state.companyName}</span>
                     <span class="header-chevron">›</span>
@@ -32,10 +35,10 @@ export function renderHeader({ state, timeSnapshot, warning }) {
                     <span class="header-status ${statusCls}" data-time-status>${status}</span>
                 </div>
                 <div class="header-controls">
-                    <button class="btn-icon" data-time-action="toggle-pause" aria-label="${t.isPaused ? 'Mulai' : 'Jeda'}">
-                        ${t.isPaused ? '▶' : '❚❚'}
+                    <button class="btn-icon" data-time-action="toggle-pause" aria-label="${pauseAria}">
+                        ${time.isPaused ? '▶' : '❚❚'}
                     </button>
-                    <button class="btn-icon" data-time-action="cycle-speed" aria-label="Kecepatan">⏩</button>
+                    <button class="btn-icon" data-time-action="cycle-speed" aria-label="${t('header.speed_aria')}">⏩</button>
                 </div>
             </div>
         </div>
