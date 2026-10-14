@@ -914,4 +914,4 @@ export const en = {
 'campus.manager.category.marketing':  'Marketing',
 'campus.manager.category.industry':   'Industry',
 'campus.manager.category.support':    'Facilities',
-};
+}
