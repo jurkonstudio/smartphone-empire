@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SettingsPanel.js
-// v2027.6b — fix toggle data-toggle attribute.
+// v2027.6c — fix guard listener (bug toggle flip 2x dalam 1 klik).
 import { state } from '../../core/GameState.js';
 import { SaveService } from '../../core/SaveService.js';
 import { ToastService } from '../../core/ToastService.js';
@@ -14,6 +14,7 @@ import { APP_CONFIG } from '../../config/app.config.js';
 import { SUPPORTED_LANGS } from '../../data/i18n/index.js';
 
 let _activeTab = 'umum';
+let _boundRoot = null;   // [v2027.6c] guard listener
 
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 
@@ -253,7 +254,6 @@ function _row(opts) {
     var rightHtml = '<div class="settings-row-right">';
 
     if (opts.switchOn != null) {
-        // FIX: jangan clear attrs di sini
         rightHtml += '<button class="toggle-switch' + (opts.switchOn ? ' on' : '') + '" ' + attrs + ' type="button" aria-label="Toggle"><span class="toggle-thumb"></span></button>';
     } else if (opts.value != null && opts.value !== '') {
         rightHtml += '<span class="settings-row-value">' + opts.value + '</span>';
@@ -270,6 +270,9 @@ function _row(opts) {
 
 export function bindSettingsActions(root) {
     if (!root) return;
+    // [v2027.6c] Hanya bind sekali per element.
+    if (_boundRoot === root) return;
+    _boundRoot = root;
 
     root.addEventListener('click', function (e) {
         var tabBtn = e.target.closest('[data-set-tab]');
@@ -438,4 +441,4 @@ function _confirmReset() {
         SaveService.stopAutoSave();
         window.location.reload();
     });
-}
+        }
