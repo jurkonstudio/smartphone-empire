@@ -1,13 +1,5 @@
 // FILE: src/systems/CompetitorSystem.js
-// ============================================================
-// CompetitorSystem — AI kompetitor dunia nyata.
-// Tanggung jawab:
-//   - Seed entitas kompetitor saat tahun berganti (aktif/nonaktif).
-//   - Menaikkan tier riset mereka perlahan (mengikuti tahun).
-//   - Merilis produk AI setiap aiReleaseIntervalMonths bulan.
-//   - Memicu lifeEvents pada tahun yang ditentukan (mis. iPhone 2007).
-//   - Menyediakan data pangsa awal untuk MarketSystem.
-// ============================================================
+// v2027.1c — computeCompetitorPower scale dengan era (tidak lagi flat 500K).
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
@@ -40,7 +32,6 @@ export class CompetitorSystem {
         this._unsubs.push(bus.on('time:month-changed', (s) => this._onMonthChanged(s)));
         this._unsubs.push(bus.on('state:hydrated',     () => this._onHydrated()));
 
-        // Seed pertama
         this._seedForYear(this.state.data.time.currentYear);
         console.info('[CompetitorSystem] siap.');
     }
@@ -76,14 +67,13 @@ export class CompetitorSystem {
                     lastReleaseMonth: absMonth(year, 1),
                     releases: [],
                     activeViralId: null,
-                    power: 1.0,        // di-update MarketSystem
+                    power: 1.0,
                     introduced: true
                 };
                 bus.emit('competitor:activated', { id: c.id, name: c.name });
             }
         });
 
-        // Hapus yang sudah tidak aktif
         Object.keys(cs.entities).forEach(id => {
             const c = getCompetitorById(id);
             if (!c) return;
@@ -102,17 +92,14 @@ export class CompetitorSystem {
         const cs = data.competitorState;
         const year = snap.currentYear;
 
-        // Seed kompetitor baru
         this._seedForYear(year);
 
-        // Naikkan tier riset AI perlahan
         const tierInc = BALANCE.competitors.aiResearchTierPerYear || 0.3;
         Object.keys(cs.entities).forEach(id => {
             const e = cs.entities[id];
             e.currentTier = Math.min(5, e.currentTier + tierInc);
         });
 
-        // Fire life events tahun ini
         const lifeEvents = getLifeEventsForYear(year);
         lifeEvents.forEach(le => {
             const comp = getCompetitorById(le.competitorId);
@@ -120,10 +107,8 @@ export class CompetitorSystem {
             const e = cs.entities[comp.id];
             if (!e) return;
 
-            // Update share
             e.currentShare = Math.max(0, Math.min(1, (e.currentShare || 0) + (le.shareDelta || 0)));
 
-            // Notifikasi ke pemain
             const isBig = Math.abs(le.shareDelta || 0) >= 0.05;
             const msg = comp.name + ': ' + le.text;
             this.state.addLog(msg, LOG_TYPES.info);
@@ -172,10 +157,8 @@ export class CompetitorSystem {
         const e = cs.entities[competitorId];
         if (!e) return;
 
-        // Pilih tier: kadang tier terbaru, kadang tier sebelumnya (variasi)
         const tier = Math.max(1, Math.min(5, Math.round(e.currentTier + (Math.random() * 0.6 - 0.3))));
 
-        // Cari produk ikonik dari data atau generate generik
         let productName = null;
         const candidate = (comp.signatureProducts || []).find(sp =>
             sp.year <= year && sp.year >= year - 3 && sp.tier === tier
@@ -186,7 +169,6 @@ export class CompetitorSystem {
             productName = comp.name + ' ' + ['X', 'Pro', 'Plus', 'Lite', 'Neo'][Math.floor(Math.random() * 5)] + (year % 100);
         }
 
-        // Share boost berdasarkan tier & personality
         const baseBoost = 0.005 + (tier - 1) * 0.008;
         const personMult = {
             aggressive: 1.2,
@@ -202,7 +184,6 @@ export class CompetitorSystem {
         e.releases.push({ name: productName, year, month, tier });
         if (e.releases.length > 10) e.releases.shift();
 
-        // Log & emit
         this.state.addLog(comp.name + ' merilis ' + productName + ' (Tier ' + tier + ').', LOG_TYPES.info);
         bus.emit('competitor:released-product', {
             competitorId,
@@ -218,47 +199,61 @@ export class CompetitorSystem {
     // ============================================================
     // API PUBLIK
     // ============================================================
-    // Hitung "power" (proxy revenue) kompetitor untuk MarketSystem.
-    // Semakin tinggi tier, semakin besar power.
+    // [v2027.1c] Hitung revenue bulanan kompetitor — scale dengan era.
     computeCompetitorPower(competitorId, year) {
         const comp = getCompetitorById(competitorId);
         if (!comp) return 0;
         const e = this.state.data.competitorState.entities[competitorId];
         if (!e) return 0;
 
-        // Base revenue berdasarkan share awal & tier
-        const startShare = comp.startShare || 0;
-        const tier = e.currentTier || 1;
-        const tierMult = 1 + (tier - 1) * 0.6;
-        const shareMult = 1 + (startShare * 5);
+        // Base revenue tumbuh seiring era.
+        const base = this._baseRevenueForYear(year);
 
-        // Base revenue kasar = 500k (kompetitor skala besar)
-        let base = 500000;
+        // Tier 1-5 → 1.0x - 2.6x.
+        const tierMult = 1 + ((e.currentTier || 1) - 1) * 0.4;
 
-        // Penyesuaian era: kompetitor lebih kuat di era awal, lebih lemah di era akhir untuk brand lama
-        if (comp.personality === 'declining') base *= 0.6;
-        if (comp.personality === 'dominant')  base *= 1.4;
-        if (comp.personality === 'aggressive')base *= 1.15;
-        if (comp.personality === 'premium')   base *= 1.10;
-        if (comp.personality === 'innovator') base *= 1.05;
-        if (comp.personality === 'follower')  base *= 0.85;
+        // Share 0-0.5 → 1.0x - 2.0x.
+        const shareMult = 1 + (e.currentShare || 0) * 2;
 
-        return Math.round(base * tierMult * shareMult);
+        // Personality.
+        const personMult = {
+            aggressive: 1.20,
+            premium:    1.10,
+            innovator:  1.05,
+            follower:   0.90,
+            dominant:   1.50,
+            declining:  0.70
+        }[comp.personality] || 1.0;
+
+        // Noise ±10%.
+        const noise = 1 + (Math.random() * 2 - 1) * 0.10;
+
+        return Math.round(base * tierMult * shareMult * personMult * noise);
     }
 
-    // Ambil nama tampil sesuai mode Asli/Fiktif
+    // [v2027.1c] Base revenue bulanan per era (skala bertumbuh).
+    _baseRevenueForYear(year) {
+        if (year <= 2002) return 500000;      // early feature phone
+        if (year <= 2005) return 1000000;
+        if (year <= 2008) return 2000000;
+        if (year <= 2011) return 3500000;     // touch revolution
+        if (year <= 2014) return 6000000;
+        if (year <= 2017) return 10000000;    // modern smartphone
+        if (year <= 2020) return 16000000;
+        if (year <= 2023) return 25000000;    // AI era
+        return 40000000;
+    }
+
     getDisplayName(competitorId, mode) {
         const comp = getCompetitorById(competitorId);
         if (!comp) return competitorId;
         return mode === 'fictional' ? getFictionalName(competitorId) : comp.name;
     }
 
-    // Daftar kompetitor aktif tahun ini
     getActiveIds() {
         return Object.keys(this.state.data.competitorState.entities);
     }
 
-    // Ambil data lengkap untuk UI
     getCompetitorData(id, mode) {
         const comp = getCompetitorById(id);
         if (!comp) return null;
