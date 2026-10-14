@@ -1,4 +1,7 @@
 // FILE: src/ui/panels/QuestsPanel.js
+// v2027.13c — i18n.
+import { t } from '../../core/LanguageService.js';
+
 export function renderQuestsPanel(state) {
     const active = (state.quests && state.quests.active) ? state.quests.active : [];
     const completed = (state.quests && state.quests.completed) ? state.quests.completed : [];
@@ -14,11 +17,11 @@ export function renderQuestsPanel(state) {
                     </div>
                 </div>`;
         }).join('')
-        : '<div class="log-empty">Semua quest awal selesai 🎉</div>';
+        : '<div class="log-empty">' + t('quests.empty') + '</div>';
 
     return `
         <div class="card">
-            <div class="card-title">Quest (${completed.length} selesai)</div>
+            <div class="card-title">${t('quests.title', { n: completed.length })}</div>
             ${list}
         </div>
     `;
