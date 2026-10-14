@@ -1,20 +1,7 @@
 // FILE: src/ui/layout/Header.js
-// v2027.29a — company level badge.
+// v2027.16a — prefix "Hari"/"Day" bisa diterjemahkan.
 import { generateLogo } from '../avatars/AvatarGenerator.js';
 import { t } from '../../core/LanguageService.js';
-
-function _getCompanyLevel(state) {
-    var milestones = (state.milestones || []).length;
-    var products = (state.products && state.products.catalog) ? state.products.catalog.length : 0;
-    var research = (state.research && state.research.completed) ? state.research.completed.length : 0;
-    var staff = (state.staff || []).length;
-    var score = milestones + products * 3 + Math.floor(research / 3) + Math.floor(staff / 2);
-    if (score >= 60) return 5;
-    if (score >= 35) return 4;
-    if (score >= 18) return 3;
-    if (score >= 6)  return 2;
-    return 1;
-}
 
 export function renderHeader({ state, timeSnapshot, warning }) {
     const time = timeSnapshot;
@@ -23,6 +10,8 @@ export function renderHeader({ state, timeSnapshot, warning }) {
     const status = time.isPaused ? t('header.paused') : (time.gameSpeed + 'x');
     const statusCls = time.isPaused ? '' : 'running';
 
+    // Format: "{prefix} {day} {monthShort} {year}"
+    // ID: "Hari 1 Jan 2000" / EN: "Day 1 Jan 2000"
     const mKey = 'date.month.' + (time.currentMonth || 1);
     const mShort = t(mKey);
     const monthLabel = (mShort === mKey) ? String(time.currentMonth || 1) : mShort;
@@ -30,8 +19,6 @@ export function renderHeader({ state, timeSnapshot, warning }) {
 
     const warnBadge = warning ? `<span class="header-warn">⚠ ${warning}</span>` : '';
     const pauseAria = time.isPaused ? t('header.play_aria') : t('header.pause_aria');
-
-    const level = _getCompanyLevel(state);
 
     return `
         <div class="header-inner">
@@ -41,12 +28,8 @@ export function renderHeader({ state, timeSnapshot, warning }) {
                     <span class="header-company">${state.companyName}</span>
                     <span class="header-chevron">›</span>
                 </button>
-                <span class="header-level" data-level="${level}">Lv.${level}</span>
                 ${warnBadge}
-                <div class="header-cash-wrap">
-                    <div class="header-cash" data-cash>$${state.cash.toLocaleString('en-US')}</div>
-                    <div class="header-cash-delta" data-cash-delta aria-hidden="true"></div>
-                </div>
+                <div class="header-cash" data-cash>$${state.cash.toLocaleString('en-US')}</div>
             </div>
             <div class="header-row">
                 <div class="header-meta">
