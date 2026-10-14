@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/TeamPanel.js
-// v2027.8c — Fix accordion: summary tanpa flex + chevron CSS.
+// v2027.9 — Dropdown selector Tim Aktif / Rekrut / Info.
 import { ROLES, getRoleById, getSkillTier, getTraitById } from '../../data/staff.data.js';
 import { BALANCE } from '../../data/balance.data.js';
 import { generateAvatar } from '../avatars/AvatarGenerator.js';
@@ -7,6 +7,13 @@ import { renderIcon } from '../icons/FeatureIcons.js';
 import { Modal } from '../modal.js';
 
 let _recruitFilter = 'all';
+let _teamMode = 'roster'; // 'roster' | 'recruit' | 'info'
+
+const TEAM_MODES = [
+    { id: 'roster',  label: 'Tim Aktif', icon: 'users' },
+    { id: 'recruit', label: 'Rekrut',    icon: 'plus' },
+    { id: 'info',    label: 'Info',      icon: 'settings' }
+];
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -23,49 +30,57 @@ function safe(fn, fallback) {
 }
 
 // ============================================================
-// MAIN RENDER — Tim Aktif + folder Rekrut + folder Info
+// MAIN RENDER — dropdown + konten sesuai mode
 // ============================================================
 export function renderTeamPanel({ teamSystem }) {
     const data = window.__game.state.get();
 
-    const activeHtml = safe(
-        function () { return _renderActive(data, teamSystem); },
-        '<div class="empty"><div class="empty-title">Gagal render Tim Aktif</div></div>'
-    );
-    const recruitHtml = safe(
-        function () { return _renderRecruit(data, teamSystem); },
-        '<div class="empty"><div class="empty-title">Gagal render Rekrut</div></div>'
-    );
-    const infoHtml = safe(
-        function () { return _renderInfo(data, teamSystem); },
-        '<div class="empty"><div class="empty-title">Gagal render Info</div></div>'
-    );
+    const dropdownHtml = _renderDropdown();
 
-    const candidateCount = (data.candidates || []).length;
+    let body = '';
+    if (_teamMode === 'recruit') {
+        body = safe(function () { return _renderRecruit(data, teamSystem); }, '');
+    } else if (_teamMode === 'info') {
+        body = safe(function () { return _renderInfo(data, teamSystem); }, '');
+    } else {
+        body = safe(function () { return _renderActive(data, teamSystem); }, '');
+    }
 
-    return activeHtml +
-        _foldOpen('rekrut', 'Rekrut', 'plus', candidateCount + ' kandidat') +
-            recruitHtml +
-        '</details>' +
-        _foldOpen('info', 'Info', 'settings', null) +
-            infoHtml +
+    return dropdownHtml + body;
+}
+
+function _renderDropdown() {
+    const current = TEAM_MODES.find(m => m.id === _teamMode) || TEAM_MODES[0];
+
+    const items = TEAM_MODES.map(function (m) {
+        var isActive = m.id === _teamMode;
+        return '<button class="team-dropdown-item' + (isActive ? ' active' : '') + '" ' +
+            'data-team-mode="' + m.id + '" type="button">' +
+            renderIcon(m.icon, 13) +
+            '<span class="team-dropdown-item-label">' + escapeHtml(m.label) + '</span>' +
+            (isActive ? '<span class="team-dropdown-check">✓</span>' : '') +
+            '</button>';
+    }).join('');
+
+    return '<details class="team-dropdown">' +
+        '<summary class="team-dropdown-trigger">' +
+            renderIcon(current.icon, 13) +
+            '<span class="team-dropdown-current">' + escapeHtml(current.label) + '</span>' +
+            '<span class="team-dropdown-chevron"></span>' +
+        '</summary>' +
+        '<div class="team-dropdown-menu">' + items + '</div>' +
         '</details>';
 }
 
-// Chevron pakai karakter CSS (tidak butuh ikon).
-// Konten summary dibungkus <div> — flex di dalam div, bukan di summary.
-function _foldOpen(id, label, iconId, meta) {
-    return '<details class="team-fold" data-team-fold="' + id + '">' +
-        '<summary class="team-fold-summary">' +
-            '<div class="team-fold-summary-inner">' +
-                '<span class="team-fold-icon">' + renderIcon(iconId, 13) + '</span>' +
-                '<span class="team-fold-label">' + escapeHtml(label) + '</span>' +
-                (meta ? '<span class="team-fold-meta">' + escapeHtml(meta) + '</span>' : '') +
-                '<span class="team-fold-chevron"></span>' +
-            '</div>' +
-        '</summary>' +
-        '<div class="team-fold-body">';
+// ============================================================
+// EXPORT — get/set
+// ============================================================
+export function getTeamMode() { return _teamMode; }
+export function setTeamMode(mode) {
+    if (mode === 'roster' || mode === 'recruit' || mode === 'info') _teamMode = mode;
 }
+export function getRecruitFilter() { return _recruitFilter; }
+export function setRecruitFilter(f) { _recruitFilter = f; }
 
 // ============================================================
 // TIM AKTIF
@@ -106,7 +121,7 @@ function _renderActive(data, teamSystem) {
             <div class="empty">
                 <div class="empty-ico">${renderIcon('users', 48)}</div>
                 <div class="empty-title">Belum ada tim</div>
-                <div class="empty-desc">Buka folder <b>Rekrut</b> di bawah untuk mencari kandidat.</div>
+                <div class="empty-desc">Pilih menu <b>Rekrut</b> di dropdown atas untuk mencari kandidat.</div>
             </div>
         `;
     }
@@ -232,7 +247,6 @@ function _renderRecruit(data, teamSystem) {
     }
 
     const rows = candidates.map(_renderCandidateRow).join('');
-
     return header + filterChips + '<div class="cand-list">' + rows + '</div>';
 }
 
@@ -319,9 +333,9 @@ export function openCandidateDetailModal({ candidateId }) {
         : '<div class="cand-modal-empty">Tidak ada trait khusus.</div>';
 
     const detailCandidates = [
-        { label: 'Spesialisasi',   value: c.specialty },
-        { label: 'Pengalaman',     value: (typeof c.yearsExperience === 'number' && c.yearsExperience > 0) ? (c.yearsExperience + ' tahun') : null },
-        { label: 'Usia',           value: c.age ? (c.age + ' tahun') : null },
+        { label: 'Spesialisasi', value: c.specialty },
+        { label: 'Pengalaman',   value: (typeof c.yearsExperience === 'number' && c.yearsExperience > 0) ? (c.yearsExperience + ' tahun') : null },
+        { label: 'Usia',         value: c.age ? (c.age + ' tahun') : null },
         { label: 'Latar Belakang', value: c.background }
     ];
     const filledDetails = detailCandidates.filter(d => d.value != null && d.value !== '');
@@ -368,12 +382,9 @@ export function openCandidateDetailModal({ candidateId }) {
                     '</div>' +
                 '</div>' +
             '</div>' +
-
             '<div class="cand-modal-section-title">' + renderIcon('sparkles', 11) + 'Traits</div>' +
             '<div class="cand-modal-traits">' + traitHtml + '</div>' +
-
             detailSectionHtml +
-
             '<div class="cand-modal-section-title">' + renderIcon('coin', 11) + 'Biaya</div>' +
             '<div class="cand-modal-costs">' +
                 '<div class="cand-modal-cost-row">' +
@@ -389,7 +400,6 @@ export function openCandidateDetailModal({ candidateId }) {
                     '<b>$' + total.toLocaleString('en-US') + '</b>' +
                 '</div>' +
             '</div>' +
-
             '<div class="cand-modal-actions">' +
                 '<button class="btn-secondary" data-modal-close style="flex:1;">Batal</button>' +
                 '<button class="btn-primary" data-team-action="hire" data-candidate-id="' + c.id + '" style="flex:2;">Rekrut</button>' +
@@ -479,9 +489,3 @@ function _renderInfo(data, teamSystem) {
 
     return engSec + desSec + mktSec + extraSec + tips;
 }
-
-// ============================================================
-// EXPORT
-// ============================================================
-export function getRecruitFilter() { return _recruitFilter; }
-export function setRecruitFilter(f) { _recruitFilter = f; }
