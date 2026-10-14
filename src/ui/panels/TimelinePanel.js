@@ -1,8 +1,7 @@
 // FILE: src/ui/panels/TimelinePanel.js
 // ============================================================
 // TimelinePanel — timeline vertikal ponsel & OS ikonik 2000-2026.
-// Menampilkan milestone dari historical-timeline.data.js.
-// Highlight posisi pemain saat ini + era aktif.
+// v2026.2 — header compact, marker garis, no emoji.
 // ============================================================
 import {
     TIMELINE_ERAS,
@@ -31,37 +30,28 @@ export function renderTimelinePanel() {
     const currentYear = safeGetYear();
     const currentEra = getEraForYear(currentYear);
 
-    const headerHtml = `
-        <div class="card" style="padding:12px 14px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-                <div>
-                    <div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Tahun Saat Ini</div>
-                    <div style="font-size:22px;font-weight:800;color:var(--accent);letter-spacing:-0.02em;line-height:1.1;margin-top:2px;">${currentYear}</div>
-                </div>
-                <div style="text-align:right;">
-                    <div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Era</div>
-                    <div style="font-size:13px;font-weight:700;margin-top:2px;">${escapeHtml(currentEra ? currentEra.name : '—')}</div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    const filterHtml = `
-        <div class="chip-bar" style="margin-top:8px;">
-            <button class="chip ${_filter === 'all'   ? 'active' : ''}" data-timeline-filter="all">Semua</button>
-            <button class="chip ${_filter === 'phone' ? 'active' : ''}" data-timeline-filter="phone">
-                ${renderIcon('phone', 12, 'style="vertical-align:middle;margin-right:4px;"')} Ponsel
-            </button>
-            <button class="chip ${_filter === 'os'    ? 'active' : ''}" data-timeline-filter="os">
-                ${renderIcon('disc', 12, 'style="vertical-align:middle;margin-right:4px;"')} OS
-            </button>
-        </div>
-    `;
+    const headerHtml =
+        '<div class="tl-header">' +
+        '<div class="tl-header-row">' +
+            '<span class="tl-header-year">' + currentYear + '</span>' +
+            '<span class="tl-header-sep">·</span>' +
+            '<span class="tl-header-era">' + escapeHtml(currentEra ? currentEra.name : '—') + '</span>' +
+        '</div>' +
+        '<div class="chip-bar tl-header-chips">' +
+            '<button class="chip ' + (_filter === 'all'   ? 'active' : '') + '" data-timeline-filter="all">Semua</button>' +
+            '<button class="chip ' + (_filter === 'phone' ? 'active' : '') + '" data-timeline-filter="phone">' +
+                renderIcon('phone', 12) + ' Ponsel' +
+            '</button>' +
+            '<button class="chip ' + (_filter === 'os'    ? 'active' : '') + '" data-timeline-filter="os">' +
+                renderIcon('disc', 12) + ' OS' +
+            '</button>' +
+        '</div>' +
+        '</div>';
 
     const items = buildItems();
     const listHtml = renderTimelineList(items, currentYear);
 
-    return headerHtml + filterHtml + listHtml;
+    return headerHtml + listHtml;
 }
 
 // ============================================================
@@ -100,7 +90,6 @@ function buildItems() {
 
     items.sort(function (a, b) {
         if (a.year !== b.year) return a.year - b.year;
-        // phone dulu, lalu os
         if (a.kind !== b.kind) return a.kind === 'phone' ? -1 : 1;
         return 0;
     });
@@ -113,7 +102,10 @@ function buildItems() {
 // ============================================================
 function renderTimelineList(items, currentYear) {
     if (!items.length) {
-        return '<div class="empty"><div class="empty-ico">📅</div><div class="empty-title">Belum ada data</div></div>';
+        return '<div class="empty">' +
+            '<div class="empty-title">Belum ada data timeline</div>' +
+            '<div class="empty-desc">Data sejarah akan muncul seiring waktu berjalan.</div>' +
+            '</div>';
     }
 
     let html = '<div class="tl-list">';
@@ -122,7 +114,6 @@ function renderTimelineList(items, currentYear) {
     for (let i = 0; i < items.length; i++) {
         const it = items[i];
 
-        // Sisipkan marker "sekarang" tepat sebelum item pertama yang tahunnya > currentYear
         if (!markerInserted && it.year > currentYear) {
             html += renderNowMarker(currentYear);
             markerInserted = true;
@@ -131,7 +122,6 @@ function renderTimelineList(items, currentYear) {
         html += renderTimelineItem(it, currentYear);
     }
 
-    // Kalau semua item sudah lewat, marker di akhir
     if (!markerInserted) {
         html += renderNowMarker(currentYear);
     }
@@ -179,15 +169,10 @@ function renderTimelineItem(it, currentYear) {
 }
 
 function renderNowMarker(currentYear) {
-    return `
-        <div class="tl-now-marker">
-            <div class="tl-now-dot"></div>
-            <div class="tl-now-label">
-                <span class="tl-now-text">Posisi Anda Saat Ini</span>
-                <span class="tl-now-year">${currentYear}</span>
-            </div>
-        </div>
-    `;
+    return '<div class="tl-now-line">' +
+        '<span class="tl-now-line-text">Sekarang · ' + currentYear + '</span>' +
+        '<span class="tl-now-line-fill"></span>' +
+        '</div>';
 }
 
 // ============================================================
