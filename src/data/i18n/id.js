@@ -1,11 +1,9 @@
 // FILE: src/data/i18n/id.js
 // Kamus Bahasa Indonesia. Key flat dengan prefix kategori.
-// v2027.13a — Tambah: date.month.*, kpi.*, dashboard.*, log.*, news.*, timeline.*
+// v2027.13b — fix: hapus kurung kurawal premature.
 
 export const id = {
-    // ============================================================
     // NAVIGASI
-    // ============================================================
     'nav.home':     'Home',
     'nav.team':     'HQ',
     'nav.research': 'Riset',
@@ -13,18 +11,14 @@ export const id = {
     'nav.market':   'Pasar',
     'nav.settings': 'Setelan',
 
-    // ============================================================
     // HEADER
-    // ============================================================
     'header.company_aria': 'Profil perusahaan',
     'header.pause_aria':   'Jeda',
     'header.play_aria':    'Mulai',
     'header.speed_aria':   'Kecepatan',
     'header.paused':       'Paused',
 
-    // ============================================================
     // KALENDER
-    // ============================================================
     'date.month.1':  'Jan',
     'date.month.2':  'Feb',
     'date.month.3':  'Mar',
@@ -51,9 +45,7 @@ export const id = {
     'date.month_full.11': 'November',
     'date.month_full.12': 'Desember',
 
-    // ============================================================
     // SETELAN
-    // ============================================================
     'settings.tab.general':    'Umum',
     'settings.tab.appearance': 'Tampilan',
     'settings.tab.audio':      'Audio',
@@ -144,9 +136,7 @@ export const id = {
     'toast.no_save':         'Tidak ada save.',
     'toast.reset_confirm':   'Semua progres akan hilang.',
 
-    // ============================================================
-    // HQ — Sub-tab & Home placeholder
-    // ============================================================
+    // HQ
     'hq.tab.overview': 'Overview',
     'hq.tab.campus':   'Campus',
     'hq.tab.team':     'Team',
@@ -155,9 +145,7 @@ export const id = {
     'campus.placeholder.title': 'Campus 3D Map',
     'campus.placeholder.body':  'Peta 3D kantor pusat dan sistem upgrade gedung akan tersedia di update berikutnya.',
 
-    // ============================================================
-    // KPI CARDS (Dashboard)
-    // ============================================================
+    // KPI
     'kpi.cash':          'Uang Tunai',
     'kpi.reputation':    'Reputasi',
     'kpi.rep_high':      'Baik',
@@ -168,9 +156,7 @@ export const id = {
     'kpi.team_morale':   'Morale {n}/100',
     'kpi.date':          'Tanggal',
 
-    // ============================================================
     // DASHBOARD
-    // ============================================================
     'dashboard.public_highlight': 'Sorotan Publik',
     'dashboard.sentiment':        'Sentimen',
     'dashboard.view_feedback':    'Lihat Feedback Publik',
@@ -183,9 +169,7 @@ export const id = {
     'dashboard.focus_slots':      '{n}/{max} slot terpakai',
     'dashboard.focus_quest':      'Quest',
 
-    // ============================================================
-    // LOG / AKTIVITAS
-    // ============================================================
+    // LOG
     'log.title':       'Aktivitas Terbaru',
     'log.empty':       'Belum ada aktivitas.',
     'log.type.info':   'Info',
@@ -193,9 +177,7 @@ export const id = {
     'log.type.warning':'Peringatan',
     'log.type.danger': 'Bahaya',
 
-    // ============================================================
-    // NEWS / BERITA
-    // ============================================================
+    // NEWS
     'news.panel_title':     'Berita Internasional',
     'news.panel_empty':     'Belum ada berita. Rilis produk untuk melihat ulasan media.',
     'news.new_badge':       '{n} baru',
@@ -209,9 +191,7 @@ export const id = {
     'news.article.from':       'Artikel dari {source} ({type})',
     'news.article.close':      'Tutup Artikel',
 
-    // ============================================================
     // TIMELINE
-    // ============================================================
     'timeline.header.era':      'Era',
     'timeline.filter.all':      'Semua',
     'timeline.filter.phone':    'Ponsel',
@@ -223,25 +203,20 @@ export const id = {
     'timeline.empty_title':     'Belum ada data timeline',
     'timeline.empty_desc':      'Data sejarah akan muncul seiring waktu berjalan.',
 
-    // ============================================================
-    // TEAM — dropdown, roster, recruit, info
-    // ============================================================
+    // TEAM
     'team.mode.roster':  'Tim Aktif',
     'team.mode.recruit': 'Rekrut',
     'team.mode.info':    'Info',
-
     'team.kpi.salary':   'Gaji/Bln',
     'team.kpi.engineer': 'Engineer',
     'team.kpi.designer': 'Designer',
     'team.kpi.marketer': 'Marketer',
-
     'team.roster.empty_title': 'Belum ada tim',
     'team.roster.empty_desc':  'Pilih menu Rekrut di dropdown atas untuk mencari kandidat.',
     'team.roster.unnamed':     'Tanpa Nama',
     'team.roster.morale':      'Morale',
     'team.roster.corrupt':     'Data staff korup',
     'team.roster.error':       'Error',
-
     'team.recruit.candidates_avail': 'kandidat tersedia',
     'team.recruit.refresh_in':       'refresh dalam {n} hari',
     'team.recruit.filter_all':       'Semua',
@@ -252,7 +227,6 @@ export const id = {
     'team.recruit.per_month':        '/bln',
     'team.recruit.total':            'Total',
     'team.recruit.pool_refreshed':   'Pool diperbarui.',
-
     'team.modal.traits':        'Traits',
     'team.modal.traits_empty':  'Tidak ada trait khusus.',
     'team.modal.detail':        'Detail',
@@ -269,7 +243,6 @@ export const id = {
     'team.modal.btn_cancel':    'Batal',
     'team.modal.btn_hire':      'Rekrut',
     'team.modal.aria_hire':     'Rekrut',
-
     'team.info.system_not_ready': 'TeamSystem belum siap',
     'team.info.eng_section':      'Engineer Bonus',
     'team.info.eng_count':        'Jumlah Engineer',
@@ -277,31 +250,23 @@ export const id = {
     'team.info.extra_res_slots':  'Slot Riset Ekstra',
     'team.info.os_speed':         'Kecepatan Dev OS',
     'team.info.extra_os_slots':   'Slot Fitur OS Ekstra',
-
     'team.info.des_section':      'Designer Bonus',
     'team.info.des_count':        'Jumlah Designer',
     'team.info.product_speed':    'Kecepatan Desain Produk',
     'team.info.quality_bonus':    'Bonus Kualitas Produk',
-
     'team.info.mkt_section':      'Marketer Bonus',
     'team.info.mkt_count':        'Jumlah Marketer',
     'team.info.campaign_bonus':   'Efektivitas Kampanye',
-
     'team.info.summary_section':  'Ringkasan Tim',
     'team.info.total_staff':      'Total Staff',
     'team.info.total_salary':     'Total Gaji / Bulan',
     'team.info.avg_morale':       'Rata-rata Moral',
     'team.info.points_unit':      'poin',
-
     'team.tips.title': 'TIPS',
     'team.tips.l1':    'Staff tier tinggi memberi bonus lebih besar tapi gaji lebih mahal.',
     'team.tips.l2':    'Trait Fast Learner mempercepat naik tier.',
     'team.tips.l3':    'Trait Specialist memberi bonus +25% di bidangnya.',
     'team.tips.l4':    'Moral rendah menurunkan produktivitas.',
-
-    // ============================================================
-    // STAFF DETAIL MODAL
-    // ============================================================
     'staff.detail.role_joined': '{role} • Bergabung {day}/{month}/{year}',
     'staff.detail.months_worked': '{n} bulan bekerja',
     'staff.detail.tier_label':    'Tier {n}',
@@ -314,25 +279,19 @@ export const id = {
     'staff.detail.train_btn':     '📚 Training Intensif (+30 progress) — ${cost}',
     'staff.detail.fire_btn':      '⛔ PHK Staff (pesangon ${severance})',
     'staff.detail.close':         'Tutup',
-
-    // ============================================================
-    // RESEARCH PANEL
-    // ============================================================
+        // RESEARCH
     'research.subtab.tech':    'Teknologi',
     'research.subtab.os':      'OS',
     'research.subtab.history': 'Sejarah',
     'research.subtab.chip':    'Chip',
-
     'research.section.running':   'Berjalan',
     'research.section.available': 'Tersedia',
     'research.section.done':      'Selesai',
     'research.section.locked':    'Terkunci',
     'research.section.empty':     'Tidak ada node di kategori ini',
-
     'research.slot.title':       'Riset Aktif',
     'research.slot.hint':        'Belum ada riset berjalan. Pilih node di bawah.',
     'research.slot.eta':         'Sisa ~{n} hari',
-
     'research.node.category':    'Kategori',
     'research.node.tier':        'Tier',
     'research.node.available_year': 'Tersedia tahun',
@@ -349,40 +308,32 @@ export const id = {
     'research.node.cancel':      'Batalkan Riset',
     'research.node.not_available': 'Tidak tersedia',
 
-    // ============================================================
-    // OS PANEL
-    // ============================================================
+    // OS
     'os.empty.title':       'Belum ada OS',
     'os.empty.desc':        'Bangun sistem operasi sendiri atau lisensi OS pihak ketiga.',
     'os.empty.create':      'Buat OS',
-
     'os.hero.version':      'Versi {v}',
     'os.hero.no_version':   'Belum ada versi rilis',
     'os.hero.dev_new':      'Kembangkan Versi Baru',
     'os.hero.dev_empty':    'Kembangkan versi pertama (v1.0) untuk melihat stat.',
-
     'os.dev.title':         'Sedang Dikembangkan',
     'os.dev.features_count': '{n} fitur baru',
     'os.dev.cancel':        'Batalkan Pengembangan',
     'os.dev.progress':      'Progress',
     'os.dev.eta_calc':      'Menghitung estimasi...',
-
     'os.bug.title':         'Bug Aktif · {n}',
     'os.bug.severity':      'Sev {n}',
     'os.bug.patch':         'Patch',
     'os.bug.ignore':        'Abaikan',
     'os.bug.patching':      'DIPATCH',
-
     'os.features.section_available': 'Tersedia',
     'os.features.section_deving':    'Dikembangkan',
     'os.features.section_owned':     'Dimiliki',
     'os.features.section_locked':    'Terkunci',
-
     'os.feature.badge_owned':      'DIMILIKI',
     'os.feature.badge_deving':     'DIKEMBANGKAN',
     'os.feature.badge_available':  'TERSEDIA',
     'os.feature.badge_locked':     'TERKUNCI',
-
     'os.apps.section':      'Ekosistem Aplikasi · {owned}/{total}',
     'os.apps.third_party':  'Aplikasi pihak ketiga: {n}',
     'os.apps.owned_badge':  'DIMILIKI',
@@ -390,12 +341,10 @@ export const id = {
     'os.apps.build':        'Buat',
     'os.apps.invite':       'Undang Developer (+apps)',
     'os.apps.appeal_bonus': '+{n} appeal',
-
     'os.licenses.section':  'Lisensi OS Pihak Ketiga',
     'os.licenses.per_unit': '${cost}/unit',
     'os.licenses.available':'Tersedia',
     'os.licenses.available_from': 'Tersedia {year}',
-
     'os.stat.stability':    'Stabilitas',
     'os.stat.speed':        'Kecepatan',
     'os.stat.features':     'Fitur',
@@ -406,7 +355,6 @@ export const id = {
     'os.stat.fitur_short':  'Fitur',
     'os.stat.aman_short':   'Aman',
     'os.stat.desain_short': 'Desain',
-
     'os.wizard.title':      'Kembangkan Versi Baru',
     'os.wizard.sub':        'Pilih maks {n} fitur. Stat akan dihitung ulang.',
     'os.wizard.preview':    'Preview Stat',
@@ -417,14 +365,12 @@ export const id = {
     'os.wizard.no_features':'Tidak ada fitur baru yang tersedia.',
     'os.wizard.select_min': 'Pilih minimal 1 fitur.',
     'os.wizard.max_features':'Maks {n} fitur per versi.',
-
     'os.create.title':      'Buat OS Baru',
     'os.create.sub':        'Beri nama sistem operasi perusahaanmu.',
     'os.create.label':      'Nama OS',
     'os.create.placeholder':'Contoh: MyOS, Aurora, ...',
     'os.create.btn':        'Buat',
     'os.create.cancel':     'Batal',
-
     'os.feature_detail.era':       'Era',
     'os.feature_detail.min_year':  'Tahun min',
     'os.feature_detail.cost':      'Biaya',
@@ -436,15 +382,12 @@ export const id = {
     'os.feature_detail.status_available': 'Tersedia untuk versi berikutnya',
     'os.feature_detail.close':     'Tutup',
 
-    // ============================================================
-    // CHIP / CHIP DESIGNER
-    // ============================================================
+    // CHIP
     'chip.lab.title':       'Chip Lab',
     'chip.lab.arch_avail':  'Arsitektur tersedia',
     'chip.lab.node_avail':  'Node tersedia',
     'chip.lab.feat_avail':  'Fitur tersedia',
     'chip.lab.catalog':     'Chip di katalog',
-
     'chip.design.title':    'Desain Chip Baru',
     'chip.design.desc':     'Rancang silicon: pilih arsitektur, node, core, clock, dan fitur.',
     'chip.design.start':    'Mulai Desain Chip',
@@ -452,13 +395,11 @@ export const id = {
     'chip.design.progress': 'Progress',
     'chip.design.days_left':'{n} hari tersisa',
     'chip.design.cancel':   'Batalkan',
-
     'chip.catalog.title':   'Katalog Chip ({n})',
     'chip.catalog.empty':   'Belum ada chip',
     'chip.catalog.empty_desc': 'Desain chip pertama Anda di Chip Designer.',
     'chip.catalog.perf':    'Perf',
     'chip.catalog.eff':     'Eff',
-
     'chip.fab.title':       'Fabrikasi',
     'chip.fab.level':       'Level',
     'chip.fab.capacity':    'Kapasitas',
@@ -471,7 +412,6 @@ export const id = {
     'chip.fab.system_not_ready': 'Chip System belum siap',
     'chip.fab.per_month':   '/bln',
     'chip.fab.unit':        'unit',
-
     'chip.wiz.title':       'Chip Designer',
     'chip.wiz.sub':         'Rancang silicon-mu sendiri',
     'chip.wiz.step1':       'Nama & Arsitektur',
@@ -501,7 +441,6 @@ export const id = {
     'chip.wiz.err_node':    'Pilih process node.',
     'chip.wiz.goto_research': 'Buka Riset Chip →',
     'chip.wiz.no_arch':     'Belum ada arsitektur tersedia. Riset chip architecture dulu.',
-
     'chip.research.slot_title':  'Riset Chip',
     'chip.research.done_summary': 'Selesai: <b>{n}</b> / {total} node',
     'chip.research.empty_active': 'Belum ada riset berjalan.',
@@ -510,14 +449,11 @@ export const id = {
     'chip.research.section_done':      'Selesai',
     'chip.research.section_locked':    'Terkunci',
 
-    // ============================================================
-    // PRODUCT PANEL & DESIGN WIZARD
-    // ============================================================
+    // PRODUCT
     'prod.subtab.design':  'Desain',
     'prod.subtab.catalog': 'Katalog',
     'prod.subtab.sales':   'Penjualan',
     'prod.subtab.chip':    'Chip',
-
     'prod.design.title':    'Desain Produk Baru',
     'prod.design.desc':     'Rancang ponsel: pilih komponen, tentukan OS, harga, dan jumlah produksi.',
     'prod.design.start':    'Mulai Desain Ponsel',
@@ -525,12 +461,10 @@ export const id = {
     'prod.design.dev_phase':'Tahap: <b>{phase}</b> - Total {days} hari game',
     'prod.design.dev_eta':  'Menunggu waktu berjalan...',
     'prod.design.cancel':   'Batalkan Proyek',
-
     'prod.phase.design':    'Desain',
     'prod.phase.prototype': 'Prototipe',
     'prod.phase.production':'Produksi',
     'prod.phase.released':  'Rilis',
-
     'prod.catalog.empty':   'Belum ada produk',
     'prod.catalog.empty_desc': 'Rilis ponsel pertamamu di sub-tab Desain.',
     'prod.catalog.status_selling': 'Dijual',
@@ -542,14 +476,12 @@ export const id = {
     'prod.catalog.sold':    'Terjual: {n}',
     'prod.catalog.price':   'Harga: ${n}',
     'prod.catalog.quality': 'Kualitas: {n}',
-
     'prod.sales.total_revenue': 'Total Pendapatan',
     'prod.sales.total_sold':    'Total Terjual',
     'prod.sales.active_products':'Produk Aktif',
     'prod.sales.best_seller':   'Terlaris',
     'prod.sales.list_title':    'Daftar Produk',
     'prod.sales.list_empty':    'Belum ada produk.',
-
     'prod.detail.title':         'Detail Ponsel',
     'prod.detail.release':       'Rilis {day}/{month}/{year}',
     'prod.detail.section_sales': 'Penjualan',
@@ -576,11 +508,9 @@ export const id = {
     'prod.detail.discontinue_btn':'Hentikan Produk',
     'prod.detail.discontinued':  'Produk sudah dihentikan.',
     'prod.detail.close':         'Tutup',
-
     'prod.campaign.title':   'Pilih Kampanye',
     'prod.campaign.sub':     'Efek diperkuat oleh jumlah Marketer.',
     'prod.campaign.cancel':  'Batal',
-
     'prod.order.title':      'Produksi Tambahan',
     'prod.order.qty_label':  'Jumlah unit',
     'prod.order.cost_unit':  'Biaya per unit',
@@ -589,13 +519,13 @@ export const id = {
     'prod.order.submit':     'Pesan',
     'prod.order.cancel':     'Batal',
 
+    // WIZARD
     'wiz.era_banner_year':   '{year}',
     'wiz.step_of':           'Langkah {n} dari 4 — {title}',
     'wiz.step1.title':       'Nama & Bentuk',
     'wiz.step2.title':       'Komponen',
     'wiz.step3.title':       'OS & Bodi',
     'wiz.step4.title':       'Harga & Produksi',
-
     'wiz.step1.name_label':  'Nama Ponsel',
     'wiz.step1.name_ph':     'Contoh: X1, Nova, ...',
     'wiz.step1.autofill_btn':'Isi Rekomendasi Otomatis',
@@ -605,7 +535,6 @@ export const id = {
     'wiz.step1.cancel':      'Batal',
     'wiz.step1.next':        'Lanjut →',
     'wiz.step1.no_ff':       'Tidak ada form factor tersedia di tahun ini. Riset dulu.',
-
     'wiz.step2.cat_count':   '({n})',
     'wiz.step2.cat_count_opt':'({n} + opsional)',
     'wiz.step2.no_camera':   'Tanpa Kamera',
@@ -615,7 +544,6 @@ export const id = {
     'wiz.step2.empty':       'Belum ada komponen — riset dulu atau tunggu tahun berikutnya.',
     'wiz.step2.back':        '← Kembali',
     'wiz.step2.next':        'Lanjut →',
-
     'wiz.step3.os_label':    'Sistem Operasi',
     'wiz.step3.body_label':  'Bodi',
     'wiz.step3.color_label': 'Warna',
@@ -625,14 +553,12 @@ export const id = {
     'wiz.step3.os_free':     'Gratis',
     'wiz.step3.back':        '← Kembali',
     'wiz.step3.next':        'Lanjut →',
-
     'wiz.step4.price_label': 'Harga Jual (USD)',
     'wiz.step4.qty_label':   'Jumlah Produksi Awal',
     'wiz.step4.summary':     'Ringkasan',
     'wiz.step4.back':        '← Kembali',
     'wiz.step4.release':     'Rilis Produk ✓',
     'wiz.step4.price_low':   'Harga < Biaya',
-
     'wiz.preview.quality':    'Skor Kualitas',
     'wiz.preview.unit_cost':  'Biaya per unit',
     'wiz.preview.total_cost': 'Total biaya',
@@ -643,7 +569,6 @@ export const id = {
     'wiz.preview.warn_chip_bat': 'Chip kuat tapi baterai kecil.',
     'wiz.preview.warn_cam_disp': 'Kamera bagus tapi layar kurang.',
     'wiz.preview.warn_margin':   'Harga di bawah biaya produksi!',
-
     'wiz.detail.title':       'Detail Ponsel',
     'wiz.detail.sub':         '{name} — {year}',
     'wiz.detail.era':         'Era Desain',
@@ -659,7 +584,6 @@ export const id = {
     'wiz.detail.spec_color':  'Warna',
     'wiz.detail.close':       'Tutup',
     'wiz.detail.btn_show':    'Lihat Detail',
-
     'wiz.err.need_name':      'Isi nama produk.',
     'wiz.err.need_ff':        'Pilih bentuk.',
     'wiz.err.need_comp':      'Lengkapi komponen wajib (layar, baterai, chip, jaringan).',
@@ -670,21 +594,17 @@ export const id = {
     'wiz.success.autofill':   'Rekomendasi terbaik diterapkan!',
     'wiz.warn.autofill_missing': 'Belum tersedia tahun ini: {list}',
     'wiz.err.dev_active':     'Ada produk yang sedang dikembangkan.',
-
     'wiz.spec.quality':       'Skor',
     'wiz.spec.margin':        'Margin',
     'wiz.spec.screen':        'Layar',
     'wiz.spec.chip':          'Chip',
     'wiz.spec.no_name':       'Tanpa Nama',
 
-    // ============================================================
-    // MARKET PANEL
-    // ============================================================
+    // MARKET
     'market.subtab.share':       'Pangsa',
     'market.subtab.competitors': 'Kompetitor',
     'market.subtab.trends':      'Tren',
     'market.subtab.public':      'Publik',
-
     'market.share.title':        'Pangsa Pasar Anda',
     'market.share.updated':      'Data diperbarui bulanan',
     'market.share.chart_title':  'Grafik Pangsa (24 Bulan)',
@@ -692,32 +612,27 @@ export const id = {
     'market.share.rank_title':   'Peringkat',
     'market.share.you':          'Anda',
     'market.share.others':       'Pemain lain',
-
     'market.competitors.empty':  'Belum ada kompetitor',
     'market.competitors.not_ready': 'Sistem kompetitor belum siap',
     'market.comp.share_label':   'pangsa',
     'market.comp.latest':        '📱 Terbaru: {name} ({year})',
     'market.comp.os_tier':       'OS: {os} • Tier {tier}',
-
     'market.trends.title':       'Sorotan Pasar',
     'market.trends.likes':       'Pasar sedang menyukai <b>{name}</b>.',
     'market.trends.taste':       'Selera Pasar',
     'market.trends.note_title':  'Catatan',
     'market.trends.note_desc':   'Selera pasar berubah perlahan setiap bulan. Produk yang cocok dengan tren akan lebih laris.',
-
     'market.trend.camera':      'Kamera',
     'market.trend.battery':     'Baterai',
     'market.trend.screen':      'Layar',
     'market.trend.performance': 'Performa',
     'market.trend.design':      'Desain',
-
     'market.personality.aggressive': '⚔️ Agresif Harga',
     'market.personality.premium':    '💎 Premium',
     'market.personality.innovator':  '💡 Inovator',
     'market.personality.follower':   '🔄 Pengikut',
     'market.personality.dominant':   '👑 Dominan',
     'market.personality.declining':  '📉 Menurun',
-
     'market.comp_detail.title':      'Detail Kompetitor',
     'market.comp_detail.os':         'OS',
     'market.comp_detail.share':      'Pangsa saat ini',
@@ -729,16 +644,13 @@ export const id = {
     'market.comp_detail.no_sig':     'Belum ada produk ikonik.',
     'market.comp_detail.close':      'Tutup',
 
-    // ============================================================
-    // PUBLIC OPINION
-    // ============================================================
+    // OPINION
     'opinion.sentiment.title':       'Sentimen Publik',
     'opinion.sentiment.very_good':   'Sangat Baik',
     'opinion.sentiment.good':        'Baik',
     'opinion.sentiment.neutral':     'Netral',
     'opinion.sentiment.bad':         'Buruk',
     'opinion.sentiment.very_bad':    'Sangat Buruk',
-
     'opinion.aspects.title':         'Per Aspek',
     'opinion.aspect.design':         'Desain',
     'opinion.aspect.camera':         'Kamera',
@@ -748,32 +660,24 @@ export const id = {
     'opinion.aspect.reliability':    'Keandalan',
     'opinion.aspect.os':             'OS/Software',
     'opinion.aspect.support':        'Purna Jual',
-
     'opinion.comparison.title':      'Perbandingan Kepuasan',
     'opinion.comparison.you':        'Anda',
-
     'opinion.viral.positive':        '✨ Viral Positif',
     'opinion.viral.negative':        '⚠ Viral Negatif',
     'opinion.viral.expires':         'Berakhir dalam ~{n} hari',
     'opinion.viral.respond':        'Pilih Respons',
-
     'opinion.suggestions.title':     'Saran dari Pelanggan',
     'opinion.suggestions.score':     'Skor aspek: {n}/100',
-
     'opinion.per_product.title':     'Kepuasan per Produk',
-
     'opinion.feed.title':            'Feed Ulasan ({n})',
     'opinion.feed.empty':            'Belum ada ulasan',
     'opinion.feed.empty_desc':       'Rilis ponsel dulu agar publik mulai berkomentar.',
-
     'opinion.viral_modal.title':     'Respons Viral Negatif',
     'opinion.viral_modal.sub':       'Pilih cara menanggapi. Respons kuat butuh biaya.',
     'opinion.viral_modal.free':      'Gratis',
     'opinion.viral_modal.cancel':    'Batal',
 
-    // ============================================================
-    // NEWS ARTICLE MODAL
-    // ============================================================
+    // NEWS ARTICLE
     'news_article.by':        'Oleh',
     'news_article.score':     'Penilaian Editor',
     'news_article.from':      'Artikel dari {source} ({type})',
@@ -781,9 +685,7 @@ export const id = {
     'news_article.redaksi':   'Redaksi',
     'news_article.global':    'Global',
 
-    // ============================================================
-    // MONTHLY SUMMARY
-    // ============================================================
+    // MONTHLY
     'monthly.title':          'Laporan Bulan {month}/{year}',
     'monthly.sub':            'Ringkasan keuangan otomatis.',
     'monthly.income':         'Pemasukan',
@@ -795,9 +697,7 @@ export const id = {
     'monthly.cash_end':       'Saldo akhir',
     'monthly.close':          'Tutup',
 
-    // ============================================================
     // ONBOARDING
-    // ============================================================
     'onb.title':              'Selamat Datang',
     'onb.sub':                'Mari mendirikan perusahaan ponsel pertamamu.',
     'onb.name_label':         'Nama perusahaan',
@@ -810,9 +710,7 @@ export const id = {
     'onb.diff_sulit_desc':    'Modal kecil, biaya tinggi, kompetitor agresif.',
     'onb.submit':             'Mulai Bermain',
 
-    // ============================================================
     // GAME OVER
-    // ============================================================
     'gameover.title':         'Perusahaan Bangkrut',
     'gameover.sub':           '{company} tidak bisa bertahan.',
     'gameover.reason':        'Uang negatif selama {n} bulan berturut-turut.',
@@ -821,9 +719,7 @@ export const id = {
     'gameover.milestones':    'Milestone tercapai: {n}',
     'gameover.restart':       'Mulai Ulang',
 
-    // ============================================================
-    // COMPANY PROFILE
-    // ============================================================
+    // PROFILE
     'profile.founded':        'Berdiri 2000',
     'profile.era_year':       '{era} • Tahun {year}',
     'profile.kpi_revenue':    'Pendapatan Total',
@@ -849,41 +745,31 @@ export const id = {
     'profile.cloud_error':        'Gagal terhubung',
     'profile.cloud_desc':     'Sinkronisasi cloud akan hadir di update berikutnya. Save Anda saat ini tersimpan lokal di perangkat.',
     'profile.cloud_btn':      'Atur Cloud (Coming Soon)',
-
     'profile.era.feature_phone':     'Feature Phone',
     'profile.era.touch_revolution':  'Touch Revolution',
     'profile.era.modern_smartphone': 'Smartphone Modern',
     'profile.era.ai_ecosystem':      'AI & Ecosystem',
 
-    // ============================================================
-    // CLOUD STATUS CARD
-    // ============================================================
+    // CLOUD
     'cloud.card_title':       'Penyimpanan',
     'cloud.autosave':         '💾 Auto-save lokal aktif (setiap 30 detik).',
     'cloud.sync_unavailable': '☁️ Cloud sync: Belum tersedia',
 
-    // ============================================================
-    // QUESTS PANEL
-    // ============================================================
+    // QUESTS
     'quests.title':           'Quest ({n} selesai)',
     'quests.empty':           'Semua quest awal selesai 🎉',
 
-    // ============================================================
-    // TIME PANEL
-    // ============================================================
+    // TIME
     'time.title':             'Waktu Simulasi',
     'time.clock':             'Pukul <b>{hh}:{mm}</b>',
     'time.elapsed':           'Total {n} menit game berjalan',
     'time.paused':            'Paused',
 
-    // ============================================================
-    // GUIDE PANEL
-    // ============================================================
+    // GUIDE
     'guide.glossary_title':   'Glosarium',
     'guide.tips_title':       'Tips Umum',
     'guide.shortcuts_title':  'Pintasan',
     'guide.back':             '← Kembali',
-
     'guide.term.reputation':  'Reputasi',
     'guide.def.reputation':   'Kepercayaan pasar terhadap perusahaanmu. Mempengaruhi permintaan.',
     'guide.term.share':       'Pangsa Pasar',
@@ -902,16 +788,13 @@ export const id = {
     'guide.def.prototype':    'Tahap uji coba sebelum produksi massal.',
     'guide.term.lifecycle':   'Lifecycle',
     'guide.def.lifecycle':    'Siklus hidup produk: naik, puncak, turun.',
-
     'guide.tip.1':            'Jaga uang tetap > 3 bulan biaya operasional.',
     'guide.tip.2':            'Riset lebih awal membuka komponen murah berkualitas.',
     'guide.tip.3':            'Rekrut Engineer mempercepat riset; Designer menaikkan kualitas produk.',
     'guide.tip.4':            'Jangan lupakan pemasaran saat merilis ponsel.',
     'guide.tip.5':            'Ikuti tren era agar produkmu tidak ketinggalan zaman.',
 
-    // ============================================================
-    // FAB PANEL
-    // ============================================================
+    // FAB
     'fab.title':              '🏭 Fab Panel',
     'fab.sub':                'Kelola pabrik chip Anda',
     'fab.build_title':        '🏭 Bangun Fabrikasi Chip',
@@ -951,7 +834,6 @@ export const id = {
     'fab.build_btn':          'Bangun {name}',
     'fab.need_research_btn':  'Butuh riset Fab',
     'fab.no_money':           'Uang tidak cukup',
-
     'fab.prod_qty_title':     '🏭 Produksi: {name}',
     'fab.prod_qty_sub':       'Target output unit chip',
     'fab.prod_qty_label':     'Jumlah Unit',
@@ -962,31 +844,23 @@ export const id = {
     'fab.prod_qty_cancel':    'Batal',
     'fab.prod_qty_confirm':   'Produksi',
 
-    // ============================================================
     // CHIP MISC
-    // ============================================================
     'chip.arch.tier_desc':    'Tier {tier} • Max {max} core • {year}',
     'chip.node.perf':         'Perf ×{n} • Yield {y}%',
 
-    // ============================================================
-    // ACTIVITY PANEL (legacy)
-    // ============================================================
+    // ACTIVITY
     'activity.title':         'Aktivitas Terbaru',
     'activity.founded':       'Hari 1: Perusahaan <b>{name}</b> didirikan.',
     'activity.waiting':       'Menunggu milestone berikutnya.',
 
-    // ============================================================
     // CHART
-    // ============================================================
     'chart.sales_title':      'Grafik Penjualan',
     'chart.sales_empty':      'Belum ada penjualan. Rilis produk dulu.',
     'chart.sales_x':          '30 hari terakhir',
     'chart.cash_title':       'Keuangan — 24 Bulan',
     'chart.cash_empty':       'Data muncul setelah 2 bulan simulasi.',
 
-    // ============================================================
-    // TUTORIAL OVERLAY
-    // ============================================================
+    // TUTORIAL
     'tut.skip':               'Lewati',
     'tut.next':               'Lanjut',
 };
