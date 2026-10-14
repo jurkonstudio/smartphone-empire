@@ -1,4 +1,7 @@
 // FILE: src/ui/panels/LogPanel.js
+// v2027.13a — i18n.
+import { t } from '../../core/LanguageService.js';
+
 const TYPE_COLOR = {
     info:    'var(--text-dim)',
     success: 'var(--accent)',
@@ -17,11 +20,11 @@ export function renderLogPanel(state, options) {
                     <span class="log-text" style="color:${TYPE_COLOR[e.type] || 'var(--text)'}">${e.text}</span>
                 </div>`;
         }).join('')
-        : '<div class="log-empty">Belum ada aktivitas.</div>';
+        : '<div class="log-empty">' + t('log.empty') + '</div>';
 
     return `
         <div class="card">
-            <div class="card-title">Aktivitas Terbaru</div>
+            <div class="card-title">${t('log.title')}</div>
             ${body}
         </div>
     `;
