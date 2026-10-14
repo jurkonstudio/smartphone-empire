@@ -79,11 +79,10 @@ export function initHomeTabs(rootEl) {
             _goToTab(carousel, btn.dataset.homeDot, true);
         });
     });
-
-    // Stop propagation — supaya SwipeService tidak ikut trigger
-    ['touchstart', 'touchmove', 'touchend', 'pointerdown', 'pointerup'].forEach(function (ev) {
-        carousel.addEventListener(ev, function (e) { e.stopPropagation(); }, { passive: true });
-    });
+ 
+    // Biarkan browser menangani scroll horizontal secara native.
+// Cukup pastikan event tidak di-preventDefault oleh kode lain.
+carousel.style.touchAction = 'pan-x';
 
     requestAnimationFrame(function () {
         const idx = TABS.indexOf(_activeTab);
