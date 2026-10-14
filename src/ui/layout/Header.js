@@ -10,8 +10,10 @@ export function renderHeader({ state, timeSnapshot, warning }) {
     const mm = String(Math.floor(time.currentMinute)).padStart(2, '0');
     const status = time.isPaused ? t('header.paused') : (time.gameSpeed + 'x');
     const statusCls = time.isPaused ? '' : 'running';
-    const dateStr = time.currentDay + ' ' + getMonthName(time.currentMonth, true) + ' ' + time.currentYear;
-
+    const mKey = 'date.month.' + (time.currentMonth || 1);
+const mShort = t(mKey);
+const monthLabel = (mShort === mKey) ? String(time.currentMonth) : mShort;
+const dateStr = time.currentDay + ' ' + monthLabel + ' ' + time.currentYear;
     const warnBadge = warning ? `<span class="header-warn">⚠ ${warning}</span>` : '';
     const pauseAria = time.isPaused ? t('header.play_aria') : t('header.pause_aria');
 
