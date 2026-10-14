@@ -1,9 +1,7 @@
 // FILE: src/ui/panels/NewsListPanel.js
-// ============================================================
-// Kartu "Berita Internasional Terbaru" untuk Dashboard.
-// Menampilkan 3 artikel terbaru dengan tombol "Baca Semua".
-// ============================================================
+// v2027.13a — i18n.
 import { openNewsArticleModal } from './NewsArticleModal.js';
+import { t } from '../../core/LanguageService.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -24,7 +22,6 @@ function _sentimentDot(sentiment) {
 }
 
 function _flag(country) {
-    // Simple 2-letter code display
     if (!country) return '';
     return '<span class="news-flag">' + escapeHtml(country.slice(0, 2).toUpperCase()) + '</span>';
 }
@@ -35,8 +32,8 @@ export function renderNewsListPanel(state) {
 
     if (!top.length) {
         return '<div class="card">' +
-            '<div class="card-title">Berita Internasional</div>' +
-            '<div class="log-empty">Belum ada berita. Rilis produk untuk melihat ulasan media.</div>' +
+            '<div class="card-title">' + t('news.panel_title') + '</div>' +
+            '<div class="log-empty">' + t('news.panel_empty') + '</div>' +
             '</div>';
     }
 
@@ -59,20 +56,20 @@ export function renderNewsListPanel(state) {
             '<div class="news-row-headline">' + escapeHtml(_shortHeadline(a.headline)) + '</div>' +
             '<div class="news-row-meta">' +
             escapeHtml(a.createdAt ? (a.createdAt.day + '/' + a.createdAt.month + '/' + a.createdAt.year) : '-') +
-            ' - Skor ' + a.score + '/10' +
+            ' - ' + t('news.score', { n: a.score }) +
             '</div>' +
             '</div>';
     }
 
     var badgeHtml = unread > 0
-        ? ' <span class="news-badge">' + unread + ' baru</span>'
+        ? ' <span class="news-badge">' + t('news.new_badge', { n: unread }) + '</span>'
         : '';
 
     return '<div class="card">' +
-        '<div class="card-title">Berita Internasional' + badgeHtml + '</div>' +
+        '<div class="card-title">' + t('news.panel_title') + badgeHtml + '</div>' +
         '<div class="news-list">' + rows + '</div>' +
         '<button class="btn-secondary" data-news-action="open-latest" style="width:100%;margin-top:10px;font-size:12px;padding:8px;">' +
-        'Baca Berita Terbaru' +
+        t('news.read_latest') +
         '</button>' +
         '</div>';
 }
