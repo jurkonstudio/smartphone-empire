@@ -3035,6 +3035,7 @@ body {
     .wiz-spec-trunc { max-width: 90px; }
     .wiz-spec-meta { grid-template-columns: 1fr; }
 }
+
 /* ============================================================================
    61. WIZ AUTOFILL BUTTON (v2027.12a)
    ============================================================================ */
@@ -3070,6 +3071,7 @@ body {
     margin-top: 6px;
     line-height: 1.4;
 }
+
 /* ============================================================================
    63. CAMPUS MANAGER PANEL (v2027.16a)
    ============================================================================ */
@@ -3249,6 +3251,7 @@ body {
     scroll-snap-stop: always;
     padding: 0 2px;
     box-sizing: border-box;
+   
     /* Batasi tinggi supaya halaman tidak scroll panjang */
     max-height: 42vh;
     overflow-y: auto;
@@ -3378,6 +3381,7 @@ body {
     scroll-snap-stop: always;
     box-sizing: border-box;
 }
+
 /* ============================================================================
    FIX SWIPE CAROUSEL — override touch-action (v2027.21a)
    Parent .app-view terlalu ketat (pan-y). Ganti jadi manipulation
