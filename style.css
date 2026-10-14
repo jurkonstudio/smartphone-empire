@@ -2592,3 +2592,343 @@ body {
 @media (min-width: 768px) {
     .kpi-sub { font-size: 11px; }
 }
+/* ============================================================
+   RESEARCH v2026.2 — row-based nodes (Sim Companies style)
+   ============================================================ */
+
+/* --- Slot strip (pengganti slot card + counter card) --- */
+.slot-strip {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 10px 12px;
+    margin-bottom: 10px;
+}
+.slot-strip-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.slot-strip-label {
+    font-size: var(--fs-2xs);
+    font-weight: var(--fw-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-secondary);
+}
+.slot-strip-count {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-bold);
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+}
+.slot-strip-hint {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    line-height: 1.4;
+    margin-top: 2px;
+}
+.slot-strip-empty { padding-bottom: 12px; }
+
+.slot-strip-item {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+}
+.slot-strip-item:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+.slot-strip-item-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+    gap: 8px;
+}
+.slot-strip-item-name {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    color: var(--text-primary);
+    letter-spacing: -0.005em;
+}
+.slot-strip-item-pct {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-bold);
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+.slot-strip-item-progress { height: 4px; margin-bottom: 3px; }
+.slot-strip-item-eta {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- Section label (TERSEDIA · 3 ─────) --- */
+.section-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 2px 6px;
+}
+.section-label-text {
+    font-size: 10px;
+    font-weight: var(--fw-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+}
+.section-label-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+/* --- Collapsible section (Selesai / Terkunci) --- */
+.section-collapsible { margin-top: 14px; }
+.section-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    list-style: none;
+    padding: 6px 2px;
+    user-select: none;
+}
+.section-summary::-webkit-details-marker { display: none; }
+.section-summary::before {
+    content: "▸";
+    font-size: 10px;
+    color: var(--text-tertiary);
+    transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-block;
+    flex-shrink: 0;
+}
+.section-collapsible[open] .section-summary::before {
+    transform: rotate(90deg);
+}
+.section-summary-text {
+    font-size: 10px;
+    font-weight: var(--fw-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+}
+.section-summary-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+.section-summary:hover .section-summary-text { color: var(--text-secondary); }
+.section-collapsible > .node-list { margin-top: 6px; }
+
+/* --- Node list & row --- */
+.node-list {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    overflow: hidden;
+}
+.node-row-wrap {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    transition: background 0.12s;
+}
+.node-row-wrap:last-child { border-bottom: none; }
+.node-row-wrap::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    border-radius: 0 2px 2px 0;
+    background: transparent;
+    transition: background 0.15s;
+}
+.node-row-wrap.node-running::before { background: var(--warn); }
+.node-row-wrap.node-available::before { background: var(--info); }
+.node-row-wrap:hover { background: var(--bg-3); }
+.node-row-wrap:hover::before { width: 3px; }
+
+.node-row-content {
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+}
+
+.node-row-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 3px;
+}
+.node-row-title {
+    font-size: var(--fs-base);
+    font-weight: var(--fw-bold);
+    color: var(--text-primary);
+    letter-spacing: -0.005em;
+    line-height: 1.25;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.node-row-year {
+    font-size: 10.5px;
+    font-weight: var(--fw-bold);
+    color: var(--text-secondary);
+    background: var(--bg-3);
+    padding: 2px 6px;
+    border-radius: var(--r-sm);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+}
+
+.node-row-sub {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    margin-bottom: 4px;
+}
+.node-row-cat {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.2px;
+    flex-shrink: 0;
+}
+.node-row-cat svg {
+    vertical-align: middle;
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+.node-row-effects {
+    color: var(--text-secondary);
+    letter-spacing: -0.005em;
+    line-height: 1.4;
+}
+.node-eff-num {
+    color: var(--success);
+    font-weight: var(--fw-bold);
+    font-variant-numeric: tabular-nums;
+}
+.node-eff-sep { color: var(--text-tertiary); margin: 0 2px; }
+.node-eff-tag {
+    display: inline-block;
+    font-size: 9.5px;
+    font-weight: var(--fw-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-tertiary);
+    background: var(--bg-3);
+    padding: 1px 5px;
+    border-radius: var(--r-sm);
+    margin-right: 3px;
+}
+
+.node-row-progress {
+    height: 3px;
+    background: var(--bg-4);
+    border-radius: var(--r-pill);
+    overflow: hidden;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+.node-row-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-hover), var(--accent));
+    border-radius: var(--r-pill);
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.node-row-foot {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.005em;
+}
+.node-row-cost {
+    font-weight: var(--fw-bold);
+    color: var(--text-primary);
+}
+.node-row-dot { color: var(--text-tertiary); }
+.node-row-dur { color: var(--text-tertiary); }
+.node-row-eta {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+}
+
+.node-row-actions {
+    flex-shrink: 0;
+    padding-bottom: 1px;
+}
+.node-row-cta {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-3);
+    color: var(--accent);
+    font-size: 17px;
+    font-weight: var(--fw-bold);
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    transition: background 0.12s, transform 0.08s, border-color 0.12s;
+    padding: 0;
+}
+.node-row-cta:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+}
+.node-row-cta:active { transform: scale(0.92); }
+.node-row-cta-danger { color: var(--danger); }
+.node-row-cta-danger:hover {
+    background: var(--danger-soft);
+    border-color: var(--danger);
+}
+.node-row-cta-locked {
+    color: var(--text-tertiary);
+    background: transparent;
+    border-color: transparent;
+    cursor: default;
+    font-size: 12px;
+    opacity: 0.6;
+}
+.node-row-cta-locked:hover {
+    background: transparent;
+    border-color: transparent;
+}
+
+/* Node status halus */
+.node-row-wrap.node-done .node-row-title { color: var(--text-secondary); }
+.node-row-wrap.node-locked { opacity: 0.55; }
+.node-row-wrap.node-locked .node-row-title { color: var(--text-secondary); }
+
+@media (max-width: 380px) {
+    .node-row-title { font-size: 12.5px; }
+    .node-row-wrap { padding: 9px 10px; }
+}
