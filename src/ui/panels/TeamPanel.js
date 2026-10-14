@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/TeamPanel.js
-// v2027.7a — Kartu compact + modal detail kandidat + filter role.
+// v2027.7b — Modal conditional rendering (hide empty detail fields).
 import { ROLES, getRoleById, getSkillTier, getTraitById } from '../../data/staff.data.js';
 import { BALANCE } from '../../data/balance.data.js';
 import { generateAvatar } from '../avatars/AvatarGenerator.js';
@@ -172,7 +172,6 @@ function _renderRecruit(data, teamSystem) {
     const cfg = BALANCE.team || {};
     const refreshIn = Math.max(0, (cfg.poolRefreshDays || 30) - daysSinceRefresh);
 
-    // Filter by role
     const candidates = _recruitFilter === 'all'
         ? allCandidates
         : allCandidates.filter(c => c.role === _recruitFilter);
@@ -224,7 +223,6 @@ function _renderCandidateRow(c) {
     const flag = c.countryFlag || '';
     const specialty = c.specialty || '';
 
-    // Traits dot
     const traitList = Array.isArray(c.traits) ? c.traits : [];
     const traitDots = traitList.map(function(tid) {
         const t = getTraitById(tid);
@@ -267,7 +265,7 @@ function _renderCandidateRow(c) {
 }
 
 // ============================================================
-// MODAL DETAIL KANDIDAT
+// MODAL DETAIL KANDIDAT — v2027.7b conditional rendering
 // ============================================================
 export function openCandidateDetailModal({ candidateId }) {
     const data = window.__game.state.get();
@@ -283,6 +281,7 @@ export function openCandidateDetailModal({ candidateId }) {
     let avatar = '';
     try { avatar = generateAvatar(c.name || 'Unknown', { size: 72 }); } catch (e) {}
 
+    // ---------- Traits ----------
     const traitList = Array.isArray(c.traits) ? c.traits : [];
     const traitHtml = traitList.length
         ? traitList.map(function(tid) {
@@ -298,19 +297,44 @@ export function openCandidateDetailModal({ candidateId }) {
         }).join('')
         : '<div class="cand-modal-empty">Tidak ada trait khusus.</div>';
 
-    const details = [
-        { label: 'Spesialisasi', value: c.specialty || '—' },
-        { label: 'Pengalaman', value: (c.yearsExperience || 0) + ' tahun' },
-        { label: 'Usia', value: c.age ? (c.age + ' tahun') : '—' },
-        { label: 'Latar Belakang', value: c.background || '—' }
+    // ---------- Detail rows (conditional) ----------
+    // Hanya tampilkan field yang ada isinya.
+    const detailCandidates = [
+        { label: 'Spesialisasi',   value: c.specialty },
+        { label: 'Pengalaman',     value: (typeof c.yearsExperience === 'number' && c.yearsExperience > 0) ? (c.yearsExperience + ' tahun') : null },
+        { label: 'Usia',           value: c.age ? (c.age + ' tahun') : null },
+        { label: 'Latar Belakang', value: c.background }
     ];
+    const filledDetails = detailCandidates.filter(d => d.value != null && d.value !== '');
 
-    const detailRows = details.map(function(d) {
-        return '<div class="cand-modal-detail-row">' +
-            '<div class="cand-modal-detail-label">' + escapeHtml(d.label) + '</div>' +
-            '<div class="cand-modal-detail-value">' + escapeHtml(d.value) + '</div>' +
+    let detailSectionHtml = '';
+    if (filledDetails.length) {
+        const rows = filledDetails.map(function(d) {
+            return '<div class="cand-modal-detail-row">' +
+                '<div class="cand-modal-detail-label">' + escapeHtml(d.label) + '</div>' +
+                '<div class="cand-modal-detail-value">' + escapeHtml(String(d.value)) + '</div>' +
+                '</div>';
+        }).join('');
+        detailSectionHtml =
+            '<div class="cand-modal-section-title">' + renderIcon('info', 11) + 'Detail</div>' +
+            '<div class="cand-modal-details">' + rows + '</div>';
+    } else {
+        // Semua kosong — tampilkan notifikasi ringkas
+        detailSectionHtml =
+            '<div class="cand-modal-section-title">' + renderIcon('info', 11) + 'Detail</div>' +
+            '<div class="cand-modal-note">' +
+                renderIcon('warn', 14) +
+                '<span>Profil terbatas — kandidat ini belum memiliki data lengkap. Kandidat dengan profil penuh akan muncul setelah pool refresh.</span>' +
             '</div>';
-    }).join('');
+    }
+
+    // ---------- Country row (kalau ada) ----------
+    const countryHtml = c.countryFlag || c.countryLabel
+        ? '<div class="cand-modal-country">' +
+            (c.countryFlag ? '<span>' + c.countryFlag + '</span>' : '') +
+            (c.countryLabel ? '<span>' + escapeHtml(c.countryLabel) + '</span>' : '') +
+            '</div>'
+        : '';
 
     const html =
         '<div class="cand-modal">' +
@@ -318,10 +342,7 @@ export function openCandidateDetailModal({ candidateId }) {
                 '<div class="cand-modal-avatar">' + avatar + '</div>' +
                 '<div class="cand-modal-identity">' +
                     '<div class="cand-modal-name">' + escapeHtml(c.name || 'Tanpa Nama') + '</div>' +
-                    '<div class="cand-modal-country">' +
-                        (c.countryFlag ? '<span>' + c.countryFlag + '</span>' : '') +
-                        '<span>' + escapeHtml(c.countryLabel || '') + '</span>' +
-                    '</div>' +
+                    countryHtml +
                     '<div class="cand-modal-role" style="color:' + role.color + ';">' +
                         renderIcon(role.icon || 'cpu', 12) +
                         '<span>' + escapeHtml(role.label) + '</span>' +
@@ -334,8 +355,7 @@ export function openCandidateDetailModal({ candidateId }) {
             '<div class="cand-modal-section-title">' + renderIcon('sparkles', 11) + 'Traits</div>' +
             '<div class="cand-modal-traits">' + traitHtml + '</div>' +
 
-            '<div class="cand-modal-section-title">' + renderIcon('info', 11) + 'Detail</div>' +
-            '<div class="cand-modal-details">' + detailRows + '</div>' +
+            detailSectionHtml +
 
             '<div class="cand-modal-section-title">' + renderIcon('coin', 11) + 'Biaya</div>' +
             '<div class="cand-modal-costs">' +
@@ -444,7 +464,7 @@ function _renderInfo(data, teamSystem) {
 }
 
 // ============================================================
-// EXPORT: get/set filter
+// EXPORT
 // ============================================================
 export function getRecruitFilter() { return _recruitFilter; }
 export function setRecruitFilter(f) { _recruitFilter = f; }
