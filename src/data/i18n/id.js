@@ -703,6 +703,7 @@ export const id = {
     'onb.title':              'Selamat Datang',
     'onb.sub':                'Mari mendirikan perusahaan ponsel pertamamu.',
     'onb.name_label':         'Nama perusahaan',
+    'onb.name_placeholder':   'Nama perusahaanmu...',
     'onb.diff_label':         'Tingkat kesulitan',
     'onb.diff_santai':        'Santai',
     'onb.diff_santai_desc':   'Modal besar, biaya ringan, kompetitor ramah.',
