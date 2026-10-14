@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2027.6a — tambah LanguageService (i18n). Perubahan minimal.
+// v2027.7a — Team redesign: candidate modal + recruit filter.
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -8,7 +8,7 @@ import { TimeSystem } from './core/TimeSystem.js';
 import { SaveService } from './core/SaveService.js';
 import { ToastService } from './core/ToastService.js';
 import { ThemeService } from './core/ThemeService.js';
-import { LanguageService } from './core/LanguageService.js';   // [v2027.6a]
+import { LanguageService } from './core/LanguageService.js';
 import { ChipResearchSystem } from './core/ChipResearchSystem.js';
 import { EconomySystem } from './systems/EconomySystem.js';
 import { QuestSystem } from './systems/QuestSystem.js';
@@ -45,7 +45,7 @@ import { renderMarketPanel, drawShareChart } from './ui/panels/MarketPanel.js';
 import { openCompetitorDetailModal } from './ui/panels/CompetitorDetailModal.js';
 import { openViralResponseModal } from './ui/panels/PublicOpinionPanel.js';
 import { drawSalesChart } from './ui/panels/SalesChart.js';
-import { renderTeamPanel } from './ui/panels/TeamPanel.js';
+import { renderTeamPanel, openCandidateDetailModal, setRecruitFilter } from './ui/panels/TeamPanel.js';   // [v2027.7a]
 import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
 import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
@@ -117,8 +117,6 @@ function renderNavOnly() {
             requestAnimationFrame(function () { updateNavSlider(false); });
         });
     } else {
-        // [v2027.6a] Re-render nav saat bahasa berubah untuk update label.
-        // Cek apakah jumlah tombol masih sama (kalau ya, hanya update active state).
         var buttons = els.nav.querySelectorAll('.nav-btn');
         for (var i = 0; i < buttons.length; i++) {
             var isActive = buttons[i].dataset.nav === activeView;
@@ -330,16 +328,33 @@ function bindGlobalClicks() {
             return;
         }
 
+        // ============ TEAM ============
         var teamSub = e.target.closest('[data-team-subtab]');
         if (teamSub) { e.preventDefault(); activeTeamSubtab = teamSub.dataset.teamSubtab; renderView(); return; }
+
+        var recruitFilterBtn = e.target.closest('[data-recruit-filter]');
+        if (recruitFilterBtn) {
+            e.preventDefault();
+            setRecruitFilter(recruitFilterBtn.dataset.recruitFilter);
+            renderView();
+            return;
+        }
+
         var teamAction = e.target.closest('[data-team-action]');
         if (teamAction) {
             e.preventDefault(); vibrate(8);
             var a = teamAction.dataset.teamAction;
-            if (a === 'hire') { var res = teamSystem.hireCandidate(teamAction.dataset.candidateId); if (!res.ok) ToastService.error(res.reason); else renderAll(); return; }
+            if (a === 'hire') {
+                var res = teamSystem.hireCandidate(teamAction.dataset.candidateId);
+                if (!res.ok) ToastService.error(res.reason);
+                else { Modal.close('candidate-detail', true); renderAll(); }
+                return;
+            }
             if (a === 'refresh-pool') { teamSystem.refreshCandidates(); ToastService.success('Pool diperbarui.'); renderAll(); return; }
             if (a === 'goto-recruit') { activeTeamSubtab = 'recruit'; renderView(); return; }
+            if (a === 'open-candidate') { openCandidateDetailModal({ candidateId: teamAction.dataset.candidateId }); return; }
         }
+
         var staffCard = e.target.closest('[data-staff-detail]');
         if (staffCard && !e.target.closest('[data-staff-action]')) { e.preventDefault(); openStaffDetailModal({ staffId: staffCard.dataset.staffDetail }); return; }
         var staffAction = e.target.closest('[data-staff-action]');
@@ -588,7 +603,6 @@ function bindStateEvents() {
     bus.on('team:recruited', function () { if (activeView === 'team') renderView({ soft: true }); });
     bus.on('team:fired', function () { if (activeView === 'team') renderView({ soft: true }); });
 
-    // [v2027.6a] Re-render saat bahasa berubah.
     bus.on('lang:changed', function () {
         renderAll();
     });
@@ -618,7 +632,7 @@ async function boot() {
     try {
         if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML utama tidak ditemukan.');
         ThemeService.init();
-        LanguageService.init();   // [v2027.6a]
+        LanguageService.init();
         mountToastContainer(els.toast);
         initTutorialOverlay();
         initMonthlySummary();
