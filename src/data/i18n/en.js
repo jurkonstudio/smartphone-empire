@@ -22,7 +22,7 @@ export const en = {
     'header.paused':       'Paused',
 
     // ============================================================
-    // SETTINGS — Title & Tabs
+    // SETTINGS
     // ============================================================
     'settings.tab.general':    'General',
     'settings.tab.appearance': 'Appearance',
@@ -31,9 +31,6 @@ export const en = {
     'settings.tab.language':   'Language',
     'settings.tab.data':       'Data',
 
-    // ============================================================
-    // SETTINGS — Sections
-    // ============================================================
     'settings.section.company':       'Company',
     'settings.section.help':          'Help',
     'settings.section.theme':         'Theme',
@@ -45,9 +42,6 @@ export const en = {
     'settings.section.danger':        'Danger Zone',
     'settings.section.language':      'Language',
 
-    // ============================================================
-    // SETTINGS — Row labels
-    // ============================================================
     'settings.row.name':        'Name',
     'settings.row.difficulty':  'Difficulty',
     'settings.row.founded':     'Founded',
@@ -77,18 +71,12 @@ export const en = {
     'settings.empty.loans':     'No active loans.',
     'settings.hint.accent':     'Primary color for buttons & highlights.',
 
-    // ============================================================
-    // SETTINGS — Language
-    // ============================================================
     'settings.lang.title':      'App Language',
     'settings.lang.hint':       'Change the interface language. Technical component names (mAh, GHz, MP) stay universal.',
     'settings.lang.indonesian': 'Bahasa Indonesia',
     'settings.lang.english':    'English',
     'settings.lang.active':     'Active',
 
-    // ============================================================
-    // SETTINGS — Edit Name Modal
-    // ============================================================
     'settings.edit_name.title':    'Change Company Name',
     'settings.edit_name.sub':      'This name appears in the header and monthly reports.',
     'settings.edit_name.label':    'Company Name',
@@ -98,16 +86,10 @@ export const en = {
     'settings.edit_name.error_long':  'Maximum 32 characters.',
     'settings.edit_name.success':  'Name updated.',
 
-    // ============================================================
-    // SETTINGS — Difficulty
-    // ============================================================
     'settings.difficulty.santai': 'Relaxed',
     'settings.difficulty.normal': 'Normal',
     'settings.difficulty.sulit':  'Hard',
 
-    // ============================================================
-    // COMMON
-    // ============================================================
     'common.cancel':  'Cancel',
     'common.save':    'Save',
     'common.tutup':   'Close',
@@ -116,9 +98,6 @@ export const en = {
     'common.import':  'Import',
     'common.export':  'Export',
 
-    // ============================================================
-    // TOAST — Settings
-    // ============================================================
     'toast.theme_changed':   'Theme: {value}',
     'toast.accent_changed':  'Accent color updated.',
     'toast.lang_changed':    'Language: {value}',
@@ -137,4 +116,77 @@ export const en = {
     'home.placeholder.body':  'The 3D headquarters map will appear here. For now, open the HQ tab to manage your company.',
     'campus.placeholder.title': 'Campus 3D Map',
     'campus.placeholder.body':  'The 3D headquarters map and building upgrade system will be available in a future update.',
+
+    // ============================================================
+    // TEAM — dropdown, roster, recruit, info
+    // ============================================================
+    'team.mode.roster':  'Roster',
+    'team.mode.recruit': 'Recruit',
+    'team.mode.info':    'Info',
+
+    'team.kpi.salary':   'Salary/Mo',
+
+    'team.roster.empty_title': 'No staff yet',
+    'team.roster.empty_desc':  'Open the Recruit menu above to find candidates.',
+    'team.roster.unnamed':     'Unnamed',
+    'team.roster.morale':      'Morale',
+    'team.roster.corrupt':     'Corrupt staff data',
+    'team.roster.error':       'Error',
+
+    'team.recruit.candidates_avail': 'candidates available',
+    'team.recruit.refresh_in':       'refresh in {n} days',
+    'team.recruit.filter_all':       'All',
+    'team.recruit.empty_title':      'No candidates',
+    'team.recruit.empty_hint_filter':'Try another role filter.',
+    'team.recruit.empty_hint_wait':  'Wait a few days or refresh the pool.',
+    'team.recruit.refresh_btn':      'Refresh Pool Now',
+    'team.recruit.per_month':        '/mo',
+    'team.recruit.total':            'Total',
+    'team.recruit.pool_refreshed':   'Pool refreshed.',
+
+    'team.modal.traits':        'Traits',
+    'team.modal.traits_empty':  'No special traits.',
+    'team.modal.detail':        'Details',
+    'team.modal.detail_specialty': 'Specialty',
+    'team.modal.detail_exp':    'Experience',
+    'team.modal.detail_age':    'Age',
+    'team.modal.detail_bg':     'Background',
+    'team.modal.detail_limit':  'Limited profile — this candidate lacks complete data. Full profiles appear after the pool refreshes.',
+    'team.modal.years':         'years',
+    'team.modal.cost':          'Cost',
+    'team.modal.cost_salary':   'Monthly salary',
+    'team.modal.cost_signing':  'Signing bonus',
+    'team.modal.cost_total':    'First month total',
+    'team.modal.btn_cancel':    'Cancel',
+    'team.modal.btn_hire':      'Recruit',
+    'team.modal.aria_hire':     'Recruit',
+
+    'team.info.system_not_ready': 'TeamSystem not ready',
+    'team.info.eng_section':      'Engineer Bonus',
+    'team.info.eng_count':        'Engineer count',
+    'team.info.research_speed':   'Research Speed',
+    'team.info.extra_res_slots':  'Extra Research Slots',
+    'team.info.os_speed':         'OS Dev Speed',
+    'team.info.extra_os_slots':   'Extra OS Feature Slots',
+
+    'team.info.des_section':      'Designer Bonus',
+    'team.info.des_count':        'Designer count',
+    'team.info.product_speed':    'Product Design Speed',
+    'team.info.quality_bonus':    'Product Quality Bonus',
+
+    'team.info.mkt_section':      'Marketer Bonus',
+    'team.info.mkt_count':        'Marketer count',
+    'team.info.campaign_bonus':   'Campaign Effectiveness',
+
+    'team.info.summary_section':  'Team Summary',
+    'team.info.total_staff':      'Total Staff',
+    'team.info.total_salary':     'Total Salary / Month',
+    'team.info.avg_morale':       'Average Morale',
+    'team.info.points_unit':      'pts',
+
+    'team.tips.title': 'TIPS',
+    'team.tips.l1':    'Higher tier staff give bigger bonuses but cost more.',
+    'team.tips.l2':    'Fast Learner trait speeds up tier progression.',
+    'team.tips.l3':    'Specialist trait gives +25% bonus in its field.',
+    'team.tips.l4':    'Low morale reduces productivity.',
 };
