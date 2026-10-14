@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/HomePanel.js
-// v2027.22a — JS manual swipe untuk carousel (bypass touch-action Chrome).
+// v2027.23a — drag-follow swipe: carousel ikut geser mengikuti jari.
 import { t } from '../../core/LanguageService.js';
 import { renderCampusLoading } from '../campus/CampusFallback.js';
 import { renderProgressPanel } from './ProgressPanel.js';
@@ -7,11 +7,13 @@ import { renderNewsListPanel } from './NewsListPanel.js';
 import { renderLogPanel } from './LogPanel.js';
 
 const TABS = ['focus', 'news', 'activity'];
+const SWIPE_THRESHOLD_PX = 25;
+const VELOCITY_THRESHOLD = 0.3;   // px/ms — swipe cepat
 
 let _activeTab = 'focus';
 let _observedCarousel = null;
 let _intersectionObserver = null;
-let _swipeBound = null;   // carousel yang sudah di-bind
+let _swipeBound = null;
 
 // ============================================================
 // SLIDE RENDER
@@ -71,14 +73,12 @@ export function initHomeTabs(rootEl) {
     const carousel = rootEl.querySelector('[data-home-carousel]');
     if (!carousel) return;
 
-    // Dots
     rootEl.querySelectorAll('[data-home-dot]').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            _goToTab(carousel, btn.dataset.homeDot, false);
+            _goToTab(carousel, btn.dataset.homeDot, true);
         });
     });
 
-    // Reset swipe binding (carousel baru setelah re-render)
     _swipeBound = null;
     _bindSwipe(carousel);
     _bindScrollObserver(carousel);
@@ -91,66 +91,117 @@ export function initHomeTabs(rootEl) {
 }
 
 // ============================================================
-// SWIPE HANDLER — JS manual
+// DRAG-FOLLOW SWIPE
 // ============================================================
 function _bindSwipe(carousel) {
     if (_swipeBound === carousel) return;
     _swipeBound = carousel;
 
     let startX = 0, startY = 0, startTime = 0;
-    let tracking = false, locked = null;
+    let startScrollLeft = 0;
+    let tracking = false;
+    let locked = null;        // null | 'h' | 'v'
+    let lastX = 0, lastT = 0;
+    let velocity = 0;
 
     function onStart(e) {
         if (!e.touches || !e.touches[0]) return;
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
         startTime = Date.now();
+        startScrollLeft = carousel.scrollLeft;
+        lastX = startX;
+        lastT = startTime;
+        velocity = 0;
         tracking = true;
         locked = null;
+        // Matikan smooth agar drag terasa instant
+        carousel.style.scrollBehavior = 'auto';
     }
 
     function onMove(e) {
         if (!tracking || !e.touches || !e.touches[0]) return;
-        const dx = e.touches[0].clientX - startX;
-        const dy = e.touches[0].clientY - startY;
+        const x = e.touches[0].clientX;
+        const y = e.touches[0].clientY;
+        const dx = x - startX;
+        const dy = y - startY;
+
         if (locked === null) {
-            if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+            if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
                 locked = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
             }
+        }
+
+        if (locked === 'h') {
+            // Block SwipeService global
+            if (e.cancelable) e.preventDefault();
+            e.stopPropagation();
+
+            const now = Date.now();
+            const dt = now - lastT;
+            if (dt > 0) velocity = (x - lastX) / dt;
+            lastX = x;
+            lastT = now;
+
+            // Drag-follow: geser scroll sesuai pergerakan jari
+            carousel.scrollLeft = startScrollLeft - dx;
         }
     }
 
     function onEnd(e) {
         if (!tracking) return;
+        const wasHorizontal = locked === 'h';
         tracking = false;
-        if (locked !== 'h') return;
+
+        // Kembalikan smooth untuk snap
+        carousel.style.scrollBehavior = 'smooth';
+
+        if (!wasHorizontal) return;
         if (!e.changedTouches || !e.changedTouches[0]) return;
 
-        const dx = e.changedTouches[0].clientX - startX;
+        const x = e.changedTouches[0].clientX;
+        const dx = x - startX;
         const dt = Date.now() - startTime;
-        if (dt > 800) return;
-        if (Math.abs(dx) < 40) return;
+        if (dt > 1000) return;
 
         const idx = TABS.indexOf(_activeTab);
-        let next = idx;
-        if (dx < 0) next = Math.min(TABS.length - 1, idx + 1);   // swipe kiri → maju
-        else        next = Math.max(0, idx - 1);                  // swipe kanan → mundur
-        if (next === idx) return;
+        const w = carousel.clientWidth || 1;
 
-        _goToTab(carousel, TABS[next], false);
+        // Velocity dalam px/ms. Geser < threshold tapi cepat → tetap pindah.
+        const fastLeft = velocity < -VELOCITY_THRESHOLD;
+        const fastRight = velocity > VELOCITY_THRESHOLD;
+        const farLeft = dx < -SWIPE_THRESHOLD_PX;
+        const farRight = dx > SWIPE_THRESHOLD_PX;
+
+        let next = idx;
+        if (fastLeft || farLeft) next = Math.min(TABS.length - 1, idx + 1);
+        else if (fastRight || farRight) next = Math.max(0, idx - 1);
+        if (next === idx) {
+            // Snap kembali ke posisi semula
+            carousel.scrollTo({ left: idx * w, behavior: 'smooth' });
+            return;
+        }
+
+        _goToTab(carousel, TABS[next], true);
     }
 
-    // Simpan binding untuk cleanup
-    carousel._seSwipe = { onStart: onStart, onMove: onMove, onEnd: onEnd };
+    function onCancel() {
+        tracking = false;
+        locked = null;
+        carousel.style.scrollBehavior = 'smooth';
+    }
 
+    carousel._seSwipe = { onStart: onStart, onMove: onMove, onEnd: onEnd, onCancel: onCancel };
+
+    // touchmove harus non-passive agar preventDefault bisa bekerja
     carousel.addEventListener('touchstart', onStart, { passive: true });
-    carousel.addEventListener('touchmove', onMove, { passive: true });
+    carousel.addEventListener('touchmove', onMove, { passive: false });
     carousel.addEventListener('touchend', onEnd, { passive: true });
-    carousel.addEventListener('touchcancel', function () { tracking = false; locked = null; }, { passive: true });
+    carousel.addEventListener('touchcancel', onCancel, { passive: true });
 }
 
 // ============================================================
-// SCROLL OBSERVER — sinkron dot saat user scroll manual
+// SCROLL OBSERVER
 // ============================================================
 function _bindScrollObserver(carousel) {
     if (_intersectionObserver) _intersectionObserver.disconnect();
