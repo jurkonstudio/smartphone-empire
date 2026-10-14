@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SettingsPanel.js
-// v2027.6c — fix guard listener (bug toggle flip 2x dalam 1 klik).
+// v2027.33b — validasi nama via name-blocklist.data.js
 import { state } from '../../core/GameState.js';
 import { SaveService } from '../../core/SaveService.js';
 import { ToastService } from '../../core/ToastService.js';
@@ -12,9 +12,10 @@ import { THEMES, ACCENTS } from '../../data/theme.data.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { APP_CONFIG } from '../../config/app.config.js';
 import { SUPPORTED_LANGS } from '../../data/i18n/index.js';
+import { validateCompanyName } from '../../data/name-blocklist.data.js';
 
 let _activeTab = 'umum';
-let _boundRoot = null;   // [v2027.6c] guard listener
+let _boundRoot = null;
 
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 
@@ -31,6 +32,18 @@ function escapeHtml(s) {
     if (typeof s !== 'string') return '';
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function _reasonToKey(reason) {
+    switch (reason) {
+        case 'empty':      return 'settings.edit_name.error_empty';
+        case 'too_short':  return 'settings.edit_name.error_too_short';
+        case 'too_long':   return 'settings.edit_name.error_long';
+        case 'competitor': return 'settings.edit_name.error_competitor';
+        case 'brand':      return 'settings.edit_name.error_brand';
+        case 'profanity':  return 'settings.edit_name.error_profanity';
+        default:           return 'settings.edit_name.error_profanity';
+    }
 }
 
 export function renderSettingsPanel() {
@@ -270,7 +283,6 @@ function _row(opts) {
 
 export function bindSettingsActions(root) {
     if (!root) return;
-    // [v2027.6c] Hanya bind sekali per element.
     if (_boundRoot === root) return;
     _boundRoot = root;
 
@@ -354,7 +366,8 @@ function _openEditName() {
     const html = '<div class="modal-title">' + escapeHtml(t('settings.edit_name.title')) + '</div>' +
         '<div class="modal-sub">' + escapeHtml(t('settings.edit_name.sub')) + '</div>' +
         '<label class="field-label">' + escapeHtml(t('settings.edit_name.label')) + '</label>' +
-        '<input class="field-input" data-edit-company-name maxlength="32" value="' + escapeHtml(s.companyName || '') + '" placeholder="' + escapeHtml(t('settings.edit_name.placeholder')) + '" autocomplete="off" />' +
+        '<input class="field-input" data-edit-company-name maxlength="24" value="' + escapeHtml(s.companyName || '') + '" placeholder="' + escapeHtml(t('settings.edit_name.placeholder')) + '" autocomplete="off" />' +
+        '<div data-edit-name-error style="display:none;color:var(--danger);font-size:12px;margin-top:6px;line-height:1.4;"></div>' +
         '<div style="display:flex;gap:8px;margin-top:16px;">' +
         '<button class="btn-secondary" data-modal-close style="flex:1;">' + escapeHtml(t('common.cancel')) + '</button>' +
         '<button class="btn-primary" data-edit-company-confirm style="flex:1;">' + escapeHtml(t('common.save')) + '</button>' +
@@ -365,13 +378,32 @@ function _openEditName() {
     const root = document.querySelector('[data-modal-id="edit-company-name"]');
     if (!root) return;
     const input = root.querySelector('[data-edit-company-name]');
+    const errorEl = root.querySelector('[data-edit-name-error]');
     if (input) input.focus();
 
+    function _clearError() {
+        errorEl.style.display = 'none';
+        errorEl.textContent = '';
+        input.style.borderColor = '';
+    }
+
+    function _showError(key) {
+        errorEl.textContent = t(key);
+        errorEl.style.display = 'block';
+        input.style.borderColor = 'var(--danger)';
+    }
+
+    if (input) input.addEventListener('input', _clearError);
+
     root.querySelector('[data-edit-company-confirm]').addEventListener('click', function () {
-        const val = (input.value || '').trim();
-        if (!val) { ToastService.error(t('settings.edit_name.error_empty')); return; }
-        if (val.length > 32) { ToastService.error(t('settings.edit_name.error_long')); return; }
-        state.patch({ companyName: val });
+        const result = validateCompanyName(input.value);
+        if (!result.ok) {
+            _showError(_reasonToKey(result.reason));
+            input.focus();
+            return;
+        }
+        const finalName = input.value.trim();
+        state.patch({ companyName: finalName });
         Modal.close('edit-company-name', true);
         ToastService.success(t('settings.edit_name.success'));
         window.__game.render();
@@ -441,4 +473,4 @@ function _confirmReset() {
         SaveService.stopAutoSave();
         window.location.reload();
     });
-        }
+}
