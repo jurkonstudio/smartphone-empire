@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2027.8a — Restrukturisasi HQ + sub-tab (Overview, Campus, Team).
+// v2027.9 — Team dropdown selector (Tim Aktif / Rekrut / Info).
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -45,7 +45,7 @@ import { renderMarketPanel, drawShareChart } from './ui/panels/MarketPanel.js';
 import { openCompetitorDetailModal } from './ui/panels/CompetitorDetailModal.js';
 import { openViralResponseModal } from './ui/panels/PublicOpinionPanel.js';
 import { drawSalesChart } from './ui/panels/SalesChart.js';
-import { openCandidateDetailModal, setRecruitFilter } from './ui/panels/TeamPanel.js';
+import { openCandidateDetailModal, setRecruitFilter, setTeamMode } from './ui/panels/TeamPanel.js';
 import { renderHqPanel } from './ui/panels/HqPanel.js';
 import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
 import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
@@ -106,7 +106,7 @@ function renderHeaderOnly() {
 }
 
 // ============================================================
-// NAV RENDER — Liquid Glass Slider
+// NAV RENDER
 // ============================================================
 function renderNavOnly() {
     if (!els.nav) return;
@@ -349,6 +349,16 @@ function bindGlobalClicks() {
         var hqSubBtn = e.target.closest('[data-hq-subtab]');
         if (hqSubBtn) { e.preventDefault(); activeHqSubtab = hqSubBtn.dataset.hqSubtab; renderView(); return; }
 
+        // ============ TEAM DROPDOWN MODE ============
+        var teamModeBtn = e.target.closest('[data-team-mode]');
+        if (teamModeBtn) {
+            e.preventDefault();
+            vibrate(6);
+            setTeamMode(teamModeBtn.dataset.teamMode);
+            renderView();
+            return;
+        }
+
         var recruitFilterBtn = e.target.closest('[data-recruit-filter]');
         if (recruitFilterBtn) {
             e.preventDefault();
@@ -368,11 +378,7 @@ function bindGlobalClicks() {
                 return;
             }
             if (a === 'refresh-pool') { teamSystem.refreshCandidates(); ToastService.success('Pool diperbarui.'); renderAll(); return; }
-            if (a === 'goto-recruit') {
-                var recruitAnchor = document.querySelector('[data-hq-anchor="team-recruit"]');
-                if (recruitAnchor && recruitAnchor.scrollIntoView) recruitAnchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                return;
-            }
+            if (a === 'goto-recruit') { setTeamMode('recruit'); renderView(); return; }
             if (a === 'open-candidate') { openCandidateDetailModal({ candidateId: teamAction.dataset.candidateId }); return; }
         }
 
@@ -393,7 +399,6 @@ function bindGlobalClicks() {
         var timelineFilter = e.target.closest('[data-timeline-filter]');
         if (timelineFilter) { e.preventDefault(); setTimelineFilter(timelineFilter.dataset.timelineFilter); renderView(); return; }
 
-        // Chip research
         var chipFilterCat = e.target.closest('[data-chip-filter-cat]');
         if (chipFilterCat) { e.preventDefault(); setChipResearchFilter(chipFilterCat.dataset.chipFilterCat); renderView(); return; }
         var chipNodeCard = e.target.closest('[data-chip-node-detail]');
@@ -624,9 +629,7 @@ function bindStateEvents() {
     bus.on('team:recruited', function () { if (activeView === 'team') renderView({ soft: true }); });
     bus.on('team:fired', function () { if (activeView === 'team') renderView({ soft: true }); });
 
-    bus.on('lang:changed', function () {
-        renderAll();
-    });
+    bus.on('lang:changed', function () { renderAll(); });
 
     bus.on('news:published', function (data) {
         try {
@@ -721,6 +724,7 @@ async function boot() {
                 setAccent: function (id) { ThemeService.setAccent(id); renderAll(); return { accent: id }; },
                 setLang: function (id) { LanguageService.setLang(id); renderAll(); return { lang: id }; },
                 setHqSubtab: function (id) { activeHqSubtab = id; renderAll(); return { subtab: id }; },
+                setTeamMode: function (id) { setTeamMode(id); renderAll(); return { mode: id }; },
                 unlockChipDesign: function () { ['chip_design_tool','chip_arch_arm_a','node_180','node_130','node_90','chip_isp_basic','chip_dvfs','fab_construction'].forEach(function (id) { research.completeResearch(id); chipResearch.completeResearch(id); }); return { ok: true }; },
                 quickDesignChip: function (cfg) { return chipSystem.quickDesignChip(cfg); },
                 buildFab: function (lvl) { return fabSystem.quickBuildFab(lvl || 1); },
@@ -743,12 +747,8 @@ async function boot() {
         timeSystem.start();
         SaveService.startAutoSave(function () { return state; });
 
-        window.addEventListener('resize', function () {
-            updateNavSlider(false);
-        });
-        window.addEventListener('orientationchange', function () {
-            setTimeout(function () { updateNavSlider(false); }, 200);
-        });
+        window.addEventListener('resize', function () { updateNavSlider(false); });
+        window.addEventListener('orientationchange', function () { setTimeout(function () { updateNavSlider(false); }, 200); });
 
         var cash = state.get().cash;
         if (cash > 0) {
