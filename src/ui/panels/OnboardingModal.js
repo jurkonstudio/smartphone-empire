@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/OnboardingModal.js
-// v2027.13c — i18n.
+// v2027.14b — i18n + placeholder name (bukan prefilled value).
 import { Modal } from '../modal.js';
 import { bus } from '../../core/EventBus.js';
 import { DIFFICULTY } from '../../config/constants.js';
@@ -20,7 +20,9 @@ export function showOnboarding() {
             <div class="modal-sub">${t('onb.sub')}</div>
 
             <label class="field-label">${t('onb.name_label')}</label>
-            <input class="field-input" data-onb-name maxlength="24" value="My Tech Co" />
+            <input class="field-input" data-onb-name maxlength="24"
+                   placeholder="${t('onb.name_placeholder')}"
+                   autocomplete="off" autocapitalize="words" />
 
             <label class="field-label" style="margin-top:12px;">${t('onb.diff_label')}</label>
             <div class="diff-grid">
