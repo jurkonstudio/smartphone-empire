@@ -3930,3 +3930,21 @@ body {
     .cand-cta { width: 30px; height: 30px; }
     .cand-modal-name { font-size: 16px; }
 }
+/* v2027.7b — Note untuk modal kandidat ketika profil terbatas */
+.cand-modal-note {
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--warn-soft);
+    border: 1px solid rgba(245,158,11,0.28);
+    border-radius: var(--r);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    align-items: flex-start;
+}
+.cand-modal-note svg {
+    flex-shrink: 0;
+    color: var(--warn);
+    margin-top: 1px;
+}
