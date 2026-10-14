@@ -1,10 +1,11 @@
 // FILE: src/ui/campus/CampusScene.js
-// Scene Three.js: kamera ortografik isometrik, lampu, tanah, HQ.
-// Render "sesuai kebutuhan" (hanya saat ada perubahan) supaya hemat baterai.
+// v2027.25a — optimize: debounced resize + size tracking + pixel ratio 1.5
 import { createAssets, buildGround, buildTree, buildHQ, getHqLevel, PALETTES, TREE_SPOTS } from './CampusBuildings.js';
 import { createCampusControls } from './CampusControls.js';
 
-var BASE_VIEW = 16; // tinggi pandang (unit dunia) pada zoom 1
+var BASE_VIEW = 16;
+var MAX_DPR = 1.5;              // turun dari 2 — hemat GPU 2x di HP DPR 3+
+var MIN_RESIZE_DELTA = 2;       // piksel — skip resize kalau perubahan < 2px
 
 function readAccent() {
     try {
@@ -15,9 +16,13 @@ function readAccent() {
 }
 
 export function createCampusScene(THREE, container, gameState) {
-    var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); // maks 2
-    renderer.setClearColor(0x000000, 0); // transparan: latar kartu terlihat
+    var renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        powerPreference: 'low-power'
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
+    renderer.setClearColor(0x000000, 0);
     var canvas = renderer.domElement;
     canvas.style.cssText = 'width:100%;height:100%;display:block;';
     container.innerHTML = '';
@@ -36,6 +41,8 @@ export function createCampusScene(THREE, container, gameState) {
 
     var hq = null, hqLevel = 0;
     var aspect = 1, raf = 0, disposed = false;
+    var lastW = 0, lastH = 0;   // ukuran terakhir — untuk skip resize yang tidak perlu
+    var resizeScheduled = false;
 
     function applyCamera() {
         var v = controls.view;
@@ -50,7 +57,7 @@ export function createCampusScene(THREE, container, gameState) {
         if (raf || disposed) return;
         raf = requestAnimationFrame(function () {
             raf = 0;
-            if (disposed || document.hidden) return; // jangan render saat tab browser tersembunyi
+            if (disposed || document.hidden) return;
             renderer.render(scene, camera);
         });
     }
@@ -60,13 +67,24 @@ export function createCampusScene(THREE, container, gameState) {
         onChange: function () { applyCamera(); requestRender(); }
     });
 
+    // Debounced resize — batch via rAF, skip kalau ukuran tidak berubah signifikan
     function resize() {
-        var w = container.clientWidth, h = container.clientHeight;
-        if (!w || !h) return;
-        renderer.setSize(w, h, false);
-        aspect = w / h;
-        applyCamera();
-        requestRender();
+        if (disposed || resizeScheduled) return;
+        resizeScheduled = true;
+        requestAnimationFrame(function () {
+            resizeScheduled = false;
+            if (disposed || document.hidden) return;
+            var w = container.clientWidth;
+            var h = container.clientHeight;
+            if (!w || !h) return;
+            if (Math.abs(w - lastW) < MIN_RESIZE_DELTA && Math.abs(h - lastH) < MIN_RESIZE_DELTA) return;
+            lastW = w;
+            lastH = h;
+            renderer.setSize(w, h, false);
+            aspect = w / h;
+            applyCamera();
+            requestRender();
+        });
     }
 
     function applyTheme() {
@@ -79,7 +97,6 @@ export function createCampusScene(THREE, container, gameState) {
         sun.intensity = p.dirI;
     }
 
-    // Dipanggil tiap state berubah; HQ hanya dibangun ulang kalau levelnya berubah.
     function update(data) {
         var lvl = getHqLevel(data);
         if (lvl === hqLevel) return;
