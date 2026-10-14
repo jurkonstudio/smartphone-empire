@@ -1,9 +1,6 @@
 // FILE: src/ui/panels/DesignWizard.js
-// v2027.12a — Auto-fill "Isi Rekomendasi":
-//   1. Tombol di Langkah 1 → auto-isi semua field (kriteria: costPerUnit tertinggi)
-//   2. Loncat langsung ke Langkah 4 (Ringkasan + Rilis)
-//   3. Validasi ringan: kalau ada yang belum tersedia tahun ini, batal loncat
-//   4. Logika step manual TIDAK diubah — pemain bisa tetap kustom
+// v2027.12a — Auto-fill "Isi Rekomendasi"
+// v2027.13c — i18n.
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
 import { state } from '../../core/GameState.js';
@@ -16,6 +13,7 @@ import { renderPhoneMockup } from '../phone/PhoneMockup.js';
 import { getDesignEraForYear } from '../../data/era-design.data.js';
 import { resolveSpec } from '../../data/phone-specs.data.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
+import { t } from '../../core/LanguageService.js';
 
 let _wizardState = null;
 
@@ -47,15 +45,15 @@ function defaultState() {
 }
 
 // ============================================================
-// FILTER KOMPONEN PER ERA
+// FILTER
 // ============================================================
 function filterComponentsByEra(catId) {
     const year = DesignEraService.getCurrentYear();
     const completed = state.get().research.completed || [];
     const all = getComponentsByCategory(catId);
-    return all.filter(c => {
+    return all.filter(function (c) {
         if (typeof c.minYear === 'number' && year < c.minYear) return false;
-        if (c.requiresResearch && !completed.includes(c.requiresResearch)) return false;
+        if (c.requiresResearch && completed.indexOf(c.requiresResearch) === -1) return false;
         return true;
     });
 }
@@ -63,11 +61,11 @@ function filterComponentsByEra(catId) {
 function filterFormFactorsByEra() {
     const year = DesignEraService.getCurrentYear();
     const era = getDesignEraForYear(year);
-    const all = COMPONENTS.filter(c => c.category === 'form_factor');
-    return all.filter(f => {
+    const all = COMPONENTS.filter(function (c) { return c.category === 'form_factor'; });
+    return all.filter(function (f) {
         if (typeof f.minYear === 'number' && year < f.minYear) return false;
         if (Array.isArray(era.formFactors) && era.formFactors.length) {
-            return era.formFactors.includes(f.id);
+            return era.formFactors.indexOf(f.id) !== -1;
         }
         return true;
     });
@@ -77,16 +75,16 @@ function filterBodyColorsByEra() {
     const year = DesignEraService.getCurrentYear();
     const era = getDesignEraForYear(year);
     if (!Array.isArray(era.bodyColors) || !era.bodyColors.length) return BODY_COLORS;
-    return BODY_COLORS.filter(c => era.bodyColors.includes(c.id));
+    return BODY_COLORS.filter(function (c) { return era.bodyColors.indexOf(c.id) !== -1; });
 }
 
 function filterBodiesByEra() {
     const year = DesignEraService.getCurrentYear();
     const completed = state.get().research.completed || [];
     const all = getComponentsByCategory('body');
-    return all.filter(b => {
+    return all.filter(function (b) {
         if (typeof b.minYear === 'number' && year < b.minYear) return false;
-        if (b.requiresResearch && !completed.includes(b.requiresResearch)) return false;
+        if (b.requiresResearch && completed.indexOf(b.requiresResearch) === -1) return false;
         return true;
     });
 }
@@ -97,7 +95,7 @@ function currentEraInfo() {
 }
 
 // ============================================================
-// AUTO-FILL HELPERS (v2027.12a)
+// AUTO-FILL
 // ============================================================
 function _pickMostExpensive(list) {
     if (!list || !list.length) return null;
@@ -115,19 +113,12 @@ function _autoFillBest(s) {
     const bestFf = _pickMostExpensive(ffs);
     if (bestFf) s.formFactorId = bestFf.id;
 
-    const catMap = {
-        display: 'displayId',
-        camera: 'cameraId',
-        battery: 'batteryId',
-        chip: 'chipId',
-        network: 'networkId'
-    };
+    const catMap = { display: 'displayId', camera: 'cameraId', battery: 'batteryId', chip: 'chipId', network: 'networkId' };
     for (const catId in catMap) {
         const list = filterComponentsByEra(catId);
         const best = _pickMostExpensive(list);
         if (best) s[catMap[catId]] = best.id;
     }
-    // Kalau camera kosong, biarkan null agar tetap "Tanpa Kamera"
     if (!s.cameraId) s.cameraId = 'none';
 
     const osOptions = (window.__game && window.__game.os && window.__game.os.getOsOptionsForPhone)
@@ -165,14 +156,14 @@ function _autoFillBest(s) {
 
 function _validateComplete(s) {
     const missing = [];
-    if (!s.formFactorId) missing.push('bentuk');
-    if (!s.displayId) missing.push('layar');
-    if (!s.batteryId) missing.push('baterai');
+    if (!s.formFactorId) missing.push('form');
+    if (!s.displayId) missing.push('display');
+    if (!s.batteryId) missing.push('battery');
     if (!s.chipId) missing.push('chip');
-    if (!s.networkId) missing.push('jaringan');
+    if (!s.networkId) missing.push('network');
     if (!s.osOptionId) missing.push('OS');
-    if (!s.bodyId) missing.push('bodi');
-    if (!s.bodyColorId) missing.push('warna');
+    if (!s.bodyId) missing.push('body');
+    if (!s.bodyColorId) missing.push('color');
     return missing;
 }
 
@@ -188,22 +179,22 @@ function _handleAutoFill() {
 
     const missing = _validateComplete(s);
     if (missing.length) {
-        ToastService.warning('Belum tersedia tahun ini: ' + missing.join(', '));
+        ToastService.warning(t('wiz.warn.autofill_missing', { list: missing.join(', ') }));
         _render();
         return;
     }
 
     s.step = 4;
     _render();
-    ToastService.success('Rekomendasi terbaik diterapkan!');
+    ToastService.success(t('wiz.success.autofill'));
 }
 
 // ============================================================
-// OPEN WIZARD
+// OPEN
 // ============================================================
-export function openDesignWizard({ researchSystem, osSystem, productSystem }) {
+export function openDesignWizard(params) {
     if (state.get().products.development) {
-        ToastService.warning('Ada produk yang sedang dikembangkan.');
+        ToastService.warning(t('wiz.err.dev_active'));
         return;
     }
 
@@ -243,13 +234,13 @@ function _render() {
         <div class="wiz-mockup-live" data-wiz-mockup-container></div>
         <div class="wiz-spec-strip" data-wiz-spec-strip></div>
         <div class="wiz-mockup-actions">
-            <button class="btn-secondary" data-wiz-detail style="font-size:12px;min-height:34px;padding:6px 12px;">Lihat Detail</button>
+            <button class="btn-secondary" data-wiz-detail style="font-size:12px;min-height:34px;padding:6px 12px;">${t('wiz.detail.btn_show')}</button>
         </div>
 
         <div class="wiz-step-indicator">
-            ${[1,2,3,4].map(i => `<span class="wiz-dot ${i === s.step ? 'active' : ''} ${i < s.step ? 'done' : ''}"></span>`).join('')}
+            ${[1,2,3,4].map(function (i) { return '<span class="wiz-dot ' + (i === s.step ? 'active' : '') + ' ' + (i < s.step ? 'done' : '') + '"></span>'; }).join('')}
         </div>
-        <div class="modal-sub" style="margin-bottom:12px;">Langkah ${s.step} dari 4 — ${_stepTitle(s.step)}</div>
+        <div class="modal-sub" style="margin-bottom:12px;">${t('wiz.step_of', { n: s.step, title: _stepTitle(s.step) })}</div>
 
         ${stepBody}
     `;
@@ -269,7 +260,8 @@ function _render() {
 }
 
 function _stepTitle(step) {
-    return { 1: 'Nama & Bentuk', 2: 'Komponen', 3: 'OS & Bodi', 4: 'Harga & Produksi' }[step] || '';
+    const map = { 1: 'wiz.step1.title', 2: 'wiz.step2.title', 3: 'wiz.step3.title', 4: 'wiz.step4.title' };
+    return t(map[step] || '');
 }
 
 // ============================================================
@@ -282,14 +274,14 @@ function _bindStep() {
     const nameInput = root.querySelector('[data-wiz-name]');
     if (nameInput) {
         nameInput.value = _wizardState.name;
-        nameInput.addEventListener('input', (e) => { _wizardState.name = e.target.value; });
+        nameInput.addEventListener('input', function (e) { _wizardState.name = e.target.value; });
     }
 
     const autofillBtn = root.querySelector('[data-wiz-autofill]');
-    if (autofillBtn) autofillBtn.addEventListener('click', () => _handleAutoFill());
+    if (autofillBtn) autofillBtn.addEventListener('click', function () { _handleAutoFill(); });
 
-    root.querySelectorAll('[data-wiz-pick]').forEach(btn => {
-        btn.addEventListener('click', () => {
+    root.querySelectorAll('[data-wiz-pick]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
             const parts = btn.dataset.wizPick.split(':');
             const key = parts[0];
             const value = parts.slice(1).join(':');
@@ -301,7 +293,7 @@ function _bindStep() {
     const priceInput = root.querySelector('[data-wiz-price]');
     if (priceInput) {
         priceInput.value = _wizardState.price;
-        priceInput.addEventListener('input', (e) => {
+        priceInput.addEventListener('input', function (e) {
             _wizardState.price = parseInt(e.target.value, 10) || 0;
             _wizardState.priceManuallyEdited = true;
             _refreshPreview();
@@ -311,30 +303,27 @@ function _bindStep() {
     const qtyInput = root.querySelector('[data-wiz-qty]');
     if (qtyInput) {
         qtyInput.value = _wizardState.productionQty;
-        qtyInput.addEventListener('input', (e) => {
+        qtyInput.addEventListener('input', function (e) {
             _wizardState.productionQty = parseInt(e.target.value, 10) || 0;
             _refreshPreview();
         });
     }
 
     const nextBtn = root.querySelector('[data-wiz-next]');
-    if (nextBtn) nextBtn.addEventListener('click', () => _next());
+    if (nextBtn) nextBtn.addEventListener('click', function () { _next(); });
     const backBtn = root.querySelector('[data-wiz-back]');
-    if (backBtn) backBtn.addEventListener('click', () => _back());
+    if (backBtn) backBtn.addEventListener('click', function () { _back(); });
     const cancelBtn = root.querySelector('[data-wiz-cancel]');
-    if (cancelBtn) cancelBtn.addEventListener('click', () => { _wizardState = null; Modal.close('design-wizard', true); });
+    if (cancelBtn) cancelBtn.addEventListener('click', function () { _wizardState = null; Modal.close('design-wizard', true); });
     const confirmBtn = root.querySelector('[data-wiz-confirm]');
-    if (confirmBtn) confirmBtn.addEventListener('click', () => _confirm());
+    if (confirmBtn) confirmBtn.addEventListener('click', function () { _confirm(); });
 
     const detailBtn = root.querySelector('[data-wiz-detail]');
-    if (detailBtn) detailBtn.addEventListener('click', () => _openDetailModal());
+    if (detailBtn) detailBtn.addEventListener('click', function () { _openDetailModal(); });
 
     if (_wizardState.step === 4) _updateConfirmButtonState();
 }
 
-// ============================================================
-// UPDATE CONFIRM BUTTON STATE
-// ============================================================
 function _updateConfirmButtonState() {
     const root = document.querySelector('[data-modal-id="design-wizard"]');
     if (!root) return;
@@ -355,33 +344,33 @@ function _updateConfirmButtonState() {
         btn.disabled = false;
         btn.style.opacity = '';
         btn.style.cursor = '';
-        btn.textContent = 'Rilis Produk ✓';
+        btn.textContent = t('wiz.step4.release');
     } else {
         btn.disabled = true;
         btn.style.opacity = '0.5';
         btn.style.cursor = 'not-allowed';
-        btn.textContent = 'Harga < Biaya';
+        btn.textContent = t('wiz.step4.price_low');
     }
 }
 
 // ============================================================
-// NAVIGATION
+// NAV
 // ============================================================
 function _next() {
     const s = _wizardState;
     if (s.step === 1) {
-        if (!s.name.trim()) { ToastService.warning('Isi nama produk.'); return; }
-        if (!s.formFactorId) { ToastService.warning('Pilih bentuk.'); return; }
+        if (!s.name.trim()) { ToastService.warning(t('wiz.err.need_name')); return; }
+        if (!s.formFactorId) { ToastService.warning(t('wiz.err.need_ff')); return; }
     }
     if (s.step === 2) {
         if (!s.displayId || !s.batteryId || !s.chipId || !s.networkId) {
-            ToastService.warning('Lengkapi komponen wajib (layar, baterai, chip, jaringan).');
+            ToastService.warning(t('wiz.err.need_comp'));
             return;
         }
     }
     if (s.step === 3) {
         if (!s.osOptionId || !s.bodyId || !s.bodyColorId) {
-            ToastService.warning('Pilih OS, bodi, dan warna.');
+            ToastService.warning(t('wiz.err.need_os_body'));
             return;
         }
         if (!s.priceManuallyEdited) {
@@ -410,7 +399,7 @@ function _back() {
 function _confirm() {
     const s = _wizardState;
     const game = window.__game;
-    if (!game || !game.products) { ToastService.error('Sistem belum siap.'); return; }
+    if (!game || !game.products) { ToastService.error(t('wiz.err.not_ready')); return; }
 
     const res = game.products.confirmDesign({
         name: s.name.trim(),
@@ -427,10 +416,10 @@ function _confirm() {
         productionQty: s.productionQty
     });
     if (!res.ok) {
-        ToastService.error(res.reason || 'Gagal.');
+        ToastService.error(res.reason || t('wiz.err.confirm_fail'));
         return;
     }
-    ToastService.success('Pengembangan dimulai!');
+    ToastService.success(t('wiz.success.dev_start'));
     _wizardState = null;
     Modal.close('design-wizard', true);
     if (game.render) game.render();
@@ -443,105 +432,98 @@ function _step1(s) {
     const ffs = filterFormFactorsByEra();
     if (!ffs.length) {
         return `
-            <div class="empty-hint" style="margin:20px 0;">Tidak ada form factor tersedia di tahun ini. Riset dulu.</div>
+            <div class="empty-hint" style="margin:20px 0;">${t('wiz.step1.no_ff')}</div>
             <div class="wiz-nav">
-                <button class="btn-secondary" data-wiz-cancel style="flex:1;">Batal</button>
+                <button class="btn-secondary" data-wiz-cancel style="flex:1;">${t('wiz.step1.cancel')}</button>
             </div>
         `;
     }
 
     return `
-        <label class="field-label">Nama Ponsel</label>
-        <input class="field-input" data-wiz-name maxlength="24" placeholder="Contoh: X1, Nova, ..." autocomplete="off" />
+        <label class="field-label">${t('wiz.step1.name_label')}</label>
+        <input class="field-input" data-wiz-name maxlength="24" placeholder="${t('wiz.step1.name_ph')}" autocomplete="off" />
 
         <button class="wiz-autofill-btn" data-wiz-autofill>
             <span class="wiz-autofill-ico">✨</span>
-            <span>Isi Rekomendasi Otomatis</span>
+            <span>${t('wiz.step1.autofill_btn')}</span>
         </button>
-        <div class="wiz-autofill-hint">Pilih komponen terbaik tahun ini &amp; langsung ke Ringkasan.</div>
+        <div class="wiz-autofill-hint">${t('wiz.step1.autofill_hint')}</div>
 
-        <label class="field-label" style="margin-top:16px;">Bentuk (Form Factor)</label>
+        <label class="field-label" style="margin-top:16px;">${t('wiz.step1.ff_label')}</label>
         <div class="wiz-options">
-            ${ffs.map(f => `
-                <button class="wiz-option ${s.formFactorId === f.id ? 'selected' : ''}" data-wiz-pick="formFactorId:${f.id}">
-                    <div class="wiz-opt-name">${escapeHtml(f.name)}</div>
-                    <div class="wiz-opt-meta">Tier ${f.tier} • ${f.minYear}</div>
-                </button>
-            `).join('')}
+            ${ffs.map(function (f) {
+                return '<button class="wiz-option ' + (s.formFactorId === f.id ? 'selected' : '') + '" data-wiz-pick="formFactorId:' + f.id + '">' +
+                    '<div class="wiz-opt-name">' + escapeHtml(f.name) + '</div>' +
+                    '<div class="wiz-opt-meta">' + t('wiz.step1.ff_tier', { tier: f.tier, year: f.minYear }) + '</div>' +
+                    '</button>';
+            }).join('')}
         </div>
 
         <div class="wiz-nav">
-            <button class="btn-secondary" data-wiz-cancel style="flex:1;">Batal</button>
-            <button class="btn-primary" data-wiz-next style="flex:2;">Lanjut →</button>
+            <button class="btn-secondary" data-wiz-cancel style="flex:1;">${t('wiz.step1.cancel')}</button>
+            <button class="btn-primary" data-wiz-next style="flex:2;">${t('wiz.step1.next')}</button>
         </div>
     `;
 }
 
 // ============================================================
-// STEP 2 — KOMPONEN
+// STEP 2
 // ============================================================
 function _step2(s) {
     const cats = ['display', 'camera', 'battery', 'chip', 'network'];
-    const stateKeys = {
-        display: 'displayId',
-        camera: 'cameraId',
-        battery: 'batteryId',
-        chip: 'chipId',
-        network: 'networkId'
-    };
+    const stateKeys = { display: 'displayId', camera: 'cameraId', battery: 'batteryId', chip: 'chipId', network: 'networkId' };
 
-    const groups = cats.map(catId => {
-        const cat = COMPONENT_CATEGORIES.find(c => c.id === catId);
+    const groups = cats.map(function (catId) {
+        const cat = COMPONENT_CATEGORIES.find(function (c) { return c.id === catId; });
         const list = filterComponentsByEra(catId);
         const stateKey = stateKeys[catId];
         const selected = s[stateKey];
-        const isOptional = OPTIONAL_CATEGORIES.includes(catId);
+        const isOptional = OPTIONAL_CATEGORIES.indexOf(catId) !== -1;
 
-        let options = list.map(c => `
-            <button class="wiz-option ${selected === c.id ? 'selected' : ''}" data-wiz-pick="${stateKey}:${c.id}">
-                <div class="wiz-opt-name">${escapeHtml(c.name)}</div>
-                <div class="wiz-opt-meta">$${c.costPerUnit}/unit</div>
-            </button>
-        `).join('');
+        let options = list.map(function (c) {
+            return '<button class="wiz-option ' + (selected === c.id ? 'selected' : '') + '" data-wiz-pick="' + stateKey + ':' + c.id + '">' +
+                '<div class="wiz-opt-name">' + escapeHtml(c.name) + '</div>' +
+                '<div class="wiz-opt-meta">$' + c.costPerUnit + '/unit</div>' +
+                '</button>';
+        }).join('');
 
         if (isOptional) {
-            const noneLabel = catId === 'camera' ? 'Tanpa Kamera' : 'Tanpa ' + cat.name;
-            const noneMeta = catId === 'camera' ? 'Hemat biaya produksi' : 'Opsional';
+            const noneLabel = catId === 'camera' ? t('wiz.step2.no_camera') : t('wiz.step2.no_item', { name: cat.name });
+            const noneMeta = catId === 'camera' ? t('wiz.step2.no_camera_hint') : t('wiz.step2.optional');
             const isNoneSelected = (!selected || selected === 'none');
-            options = `
-                <button class="wiz-option ${isNoneSelected ? 'selected' : ''}" data-wiz-pick="${stateKey}:none">
-                    <div class="wiz-opt-name">${noneLabel}</div>
-                    <div class="wiz-opt-meta">${noneMeta}</div>
-                </button>
-            ` + options;
+            options = '<button class="wiz-option ' + (isNoneSelected ? 'selected' : '') + '" data-wiz-pick="' + stateKey + ':none">' +
+                '<div class="wiz-opt-name">' + noneLabel + '</div>' +
+                '<div class="wiz-opt-meta">' + noneMeta + '</div>' +
+                '</button>' + options;
         }
 
         const totalCount = list.length + (isOptional ? 1 : 0);
         if (totalCount === 0) {
-            options = `<div class="wiz-empty">Belum ada komponen — riset dulu atau tunggu tahun berikutnya.</div>`;
+            options = '<div class="wiz-empty">' + t('wiz.step2.empty') + '</div>';
         }
 
         const iconHtml = cat ? renderIcon(cat.icon, 14, 'style="vertical-align:middle;margin-right:5px;"') : '';
+        const countLabel = isOptional
+            ? t('wiz.step2.cat_count_opt', { n: list.length })
+            : t('wiz.step2.cat_count', { n: list.length });
 
-        return `
-            <div class="wiz-cat">
-                <div class="wiz-cat-title" style="text-transform:none;">${iconHtml}${escapeHtml(cat.name)} <span style="color:var(--text-mute);font-weight:500;">(${list.length}${isOptional ? ' + opsional' : ''})</span></div>
-                <div class="wiz-options-row">${options}</div>
-            </div>
-        `;
+        return '<div class="wiz-cat">' +
+            '<div class="wiz-cat-title" style="text-transform:none;">' + iconHtml + escapeHtml(cat.name) + ' <span style="color:var(--text-mute);font-weight:500;">' + countLabel + '</span></div>' +
+            '<div class="wiz-options-row">' + options + '</div>' +
+            '</div>';
     }).join('');
 
     return `
         <div style="max-height:45vh;overflow-y:auto;padding-right:4px;">${groups}</div>
         <div class="wiz-nav">
-            <button class="btn-secondary" data-wiz-back style="flex:1;">← Kembali</button>
-            <button class="btn-primary" data-wiz-next style="flex:2;">Lanjut →</button>
+            <button class="btn-secondary" data-wiz-back style="flex:1;">${t('wiz.step2.back')}</button>
+            <button class="btn-primary" data-wiz-next style="flex:2;">${t('wiz.step2.next')}</button>
         </div>
     `;
 }
 
 // ============================================================
-// STEP 3 — OS & BODI
+// STEP 3
 // ============================================================
 function _step3(s) {
     const osOptions = (window.__game && window.__game.os && window.__game.os.getOsOptionsForPhone)
@@ -550,60 +532,57 @@ function _step3(s) {
     const bodies = filterBodiesByEra();
     const colors = filterBodyColorsByEra();
 
-    if (colors.length && !colors.some(c => c.id === s.bodyColorId)) {
+    if (colors.length && !colors.some(function (c) { return c.id === s.bodyColorId; })) {
         s.bodyColorId = colors[0].id;
     }
 
     return `
         <div style="max-height:45vh;overflow-y:auto;padding-right:4px;">
             <div class="wiz-cat">
-                <div class="wiz-cat-title" style="text-transform:none;">${renderIcon('disc', 14, 'style="vertical-align:middle;margin-right:5px;"')}Sistem Operasi</div>
+                <div class="wiz-cat-title" style="text-transform:none;">${renderIcon('disc', 14, 'style="vertical-align:middle;margin-right:5px;"')}${t('wiz.step3.os_label')}</div>
                 <div class="wiz-options-row">
-                    ${osOptions.length ? osOptions.map(o => `
-                        <button class="wiz-option ${s.osOptionId === o.id ? 'selected' : ''}" data-wiz-pick="osOptionId:${o.id}">
-                            <div class="wiz-opt-name">${escapeHtml(o.label)}</div>
-                            <div class="wiz-opt-meta">${o.source === 'license' ? '$' + o.costPerUnit + '/unit' : 'Gratis'}</div>
-                        </button>
-                    `).join('') : '<div class="wiz-empty">Belum ada OS. Buat OS dulu di tab Riset.</div>'}
+                    ${osOptions.length ? osOptions.map(function (o) {
+                        var meta = o.source === 'license' ? '$' + o.costPerUnit + '/unit' : t('wiz.step3.os_free');
+                        return '<button class="wiz-option ' + (s.osOptionId === o.id ? 'selected' : '') + '" data-wiz-pick="osOptionId:' + o.id + '">' +
+                            '<div class="wiz-opt-name">' + escapeHtml(o.label) + '</div>' +
+                            '<div class="wiz-opt-meta">' + meta + '</div>' +
+                            '</button>';
+                    }).join('') : '<div class="wiz-empty">' + t('wiz.step3.os_empty') + '</div>'}
                 </div>
             </div>
 
             <div class="wiz-cat">
-                <div class="wiz-cat-title" style="text-transform:none;">${renderIcon('layers', 14, 'style="vertical-align:middle;margin-right:5px;"')}Bodi</div>
+                <div class="wiz-cat-title" style="text-transform:none;">${renderIcon('layers', 14, 'style="vertical-align:middle;margin-right:5px;"')}${t('wiz.step3.body_label')}</div>
                 <div class="wiz-options-row">
-                    ${bodies.length ? bodies.map(b => `
-                        <button class="wiz-option ${s.bodyId === b.id ? 'selected' : ''}" data-wiz-pick="bodyId:${b.id}">
-                            <div class="wiz-opt-name">${escapeHtml(b.name)}</div>
-                            <div class="wiz-opt-meta">$${b.costPerUnit}/unit</div>
-                        </button>
-                    `).join('') : '<div class="wiz-empty">Belum ada bodi tersedia.</div>'}
+                    ${bodies.length ? bodies.map(function (b) {
+                        return '<button class="wiz-option ' + (s.bodyId === b.id ? 'selected' : '') + '" data-wiz-pick="bodyId:' + b.id + '">' +
+                            '<div class="wiz-opt-name">' + escapeHtml(b.name) + '</div>' +
+                            '<div class="wiz-opt-meta">$' + b.costPerUnit + '/unit</div>' +
+                            '</button>';
+                    }).join('') : '<div class="wiz-empty">' + t('wiz.step3.body_empty') + '</div>'}
                 </div>
             </div>
 
             <div class="wiz-cat">
-                <div class="wiz-cat-title" style="text-transform:none;">${renderIcon('palette', 14, 'style="vertical-align:middle;margin-right:5px;"')}Warna</div>
-                ${colors.length ? `
-                    <div class="wiz-colors">
-                        ${colors.map(c => `
-                            <button class="wiz-color ${s.bodyColorId === c.id ? 'selected' : ''}"
-                                    data-wiz-pick="bodyColorId:${c.id}"
-                                    style="background:${c.hex};"
-                                    title="${escapeHtml(c.name)}"
-                                    aria-label="${escapeHtml(c.name)}"></button>
-                        `).join('')}
-                    </div>
-                ` : '<div class="wiz-empty">Belum ada warna tersedia.</div>'}
+                <div class="wiz-cat-title" style="text-transform:none;">${renderIcon('palette', 14, 'style="vertical-align:middle;margin-right:5px;"')}${t('wiz.step3.color_label')}</div>
+                ${colors.length ? '<div class="wiz-colors">' + colors.map(function (c) {
+                    return '<button class="wiz-color ' + (s.bodyColorId === c.id ? 'selected' : '') + '"' +
+                        ' data-wiz-pick="bodyColorId:' + c.id + '"' +
+                        ' style="background:' + c.hex + ';"' +
+                        ' title="' + escapeHtml(c.name) + '"' +
+                        ' aria-label="' + escapeHtml(c.name) + '"></button>';
+                }).join('') + '</div>' : '<div class="wiz-empty">' + t('wiz.step3.color_empty') + '</div>'}
             </div>
         </div>
         <div class="wiz-nav">
-            <button class="btn-secondary" data-wiz-back style="flex:1;">← Kembali</button>
-            <button class="btn-primary" data-wiz-next style="flex:2;">Lanjut →</button>
+            <button class="btn-secondary" data-wiz-back style="flex:1;">${t('wiz.step3.back')}</button>
+            <button class="btn-primary" data-wiz-next style="flex:2;">${t('wiz.step3.next')}</button>
         </div>
     `;
 }
 
 // ============================================================
-// STEP 4 — HARGA + RINGKASAN
+// STEP 4
 // ============================================================
 function _step4(s) {
     const ps = window.__game && window.__game.products;
@@ -615,24 +594,24 @@ function _step4(s) {
     return `
         <div class="wiz-price-layout">
             <div>
-                <label class="field-label">Harga Jual (USD)</label>
+                <label class="field-label">${t('wiz.step4.price_label')}</label>
                 <input class="field-input" data-wiz-price type="number" min="1" value="${s.price}" />
             </div>
             <div>
-                <label class="field-label">Jumlah Produksi Awal</label>
+                <label class="field-label">${t('wiz.step4.qty_label')}</label>
                 <input class="field-input" data-wiz-qty type="number" min="100" step="100" value="${s.productionQty}" />
             </div>
         </div>
 
         <div style="margin-top:14px;">
-            <div class="card-title">Ringkasan</div>
+            <div class="card-title">${t('wiz.step4.summary')}</div>
             <div data-wiz-preview>${_previewHtml(s)}</div>
         </div>
 
         <div class="wiz-nav">
-            <button class="btn-secondary" data-wiz-back style="flex:1;">← Kembali</button>
-            <button class="btn-primary" data-wiz-confirm style="flex:2;" ${canRelease ? '' : 'disabled style="flex:2;opacity:0.5;cursor:not-allowed;"'}>
-                ${canRelease ? 'Rilis Produk ✓' : 'Harga < Biaya'}
+            <button class="btn-secondary" data-wiz-back style="flex:1;">${t('wiz.step4.back')}</button>
+            <button class="btn-primary" data-wiz-confirm style="flex:2;" ${canRelease ? '' : 'disabled'}>
+                ${canRelease ? t('wiz.step4.release') : t('wiz.step4.price_low')}
             </button>
         </div>
     `;
@@ -657,18 +636,14 @@ function _refreshPreview() {
             mockupContainer.innerHTML = renderPhoneMockup(_wizardState, { size: size });
         } catch (e) {
             console.error('[DesignWizard] Mockup error:', e);
-            mockupContainer.innerHTML = '<div style="color:var(--text-mute);font-size:11px;">Mockup error</div>';
+            mockupContainer.innerHTML = '';
         }
     }
 
     const specStrip = root.querySelector('[data-wiz-spec-strip]');
     if (specStrip) {
-        try {
-            specStrip.innerHTML = _specStripHtml(_wizardState);
-        } catch (e) {
-            console.error('[DesignWizard] Spec strip error:', e);
-            specStrip.innerHTML = '';
-        }
+        try { specStrip.innerHTML = _specStripHtml(_wizardState); }
+        catch (e) { console.error('[DesignWizard] Spec strip error:', e); specStrip.innerHTML = ''; }
     }
 
     const previewEl = root.querySelector('[data-wiz-preview]');
@@ -678,8 +653,7 @@ function _refreshPreview() {
 function _computeStats(s) {
     const ps = window.__game && window.__game.products;
     if (ps && ps.computeStats) {
-        try { return ps.computeStats(s); }
-        catch (e) { /* fallback */ }
+        try { return ps.computeStats(s); } catch (e) {}
     }
     const stat = { display: 0, camera: 0, battery: 0, performance: 0, connectivity: 0, quality: 0, design: 0, usability: 0 };
     const map = {
@@ -695,7 +669,7 @@ function _computeStats(s) {
             }
         }
     }
-    ['display','camera','battery','performance','connectivity','quality','design','usability'].forEach(k => {
+    ['display','camera','battery','performance','connectivity','quality','design','usability'].forEach(function (k) {
         stat[k] = Math.max(0, Math.min(100, Math.round(stat[k])));
     });
     return stat;
@@ -709,7 +683,7 @@ function _specStripHtml(s) {
     if (!ps) return '';
 
     const name = (s.name || '').trim();
-    const displayName = name ? escapeHtml(name) : '<span style="opacity:0.5;">Tanpa Nama</span>';
+    const displayName = name ? escapeHtml(name) : '<span style="opacity:0.5;">' + t('wiz.spec.no_name') + '</span>';
     const price = s.price || 0;
 
     let unitCost = 0;
@@ -736,19 +710,19 @@ function _specStripHtml(s) {
         </div>
         <div class="wiz-spec-meta">
             <div class="wiz-spec-item">
-                <span class="wiz-spec-label">Skor</span>
+                <span class="wiz-spec-label">${t('wiz.spec.quality')}</span>
                 <span class="wiz-spec-value">${qualityScore}/100</span>
             </div>
             <div class="wiz-spec-item">
-                <span class="wiz-spec-label">Margin</span>
+                <span class="wiz-spec-label">${t('wiz.spec.margin')}</span>
                 <span class="wiz-spec-value" style="color:${marginColor};">$${margin} (${marginPct}%)</span>
             </div>
             <div class="wiz-spec-item">
-                <span class="wiz-spec-label">Layar</span>
+                <span class="wiz-spec-label">${t('wiz.spec.screen')}</span>
                 <span class="wiz-spec-value wiz-spec-trunc" title="${escapeHtml(displayLabel)}">${escapeHtml(displayLabel)}</span>
             </div>
             <div class="wiz-spec-item">
-                <span class="wiz-spec-label">Chip</span>
+                <span class="wiz-spec-label">${t('wiz.spec.chip')}</span>
                 <span class="wiz-spec-value wiz-spec-trunc" title="${escapeHtml(chipLabel)}">${escapeHtml(chipLabel)}</span>
             </div>
         </div>
@@ -757,7 +731,7 @@ function _specStripHtml(s) {
 
 function _previewHtml(s) {
     const ps = window.__game && window.__game.products;
-    if (!ps) return '<div style="font-size:12px;color:var(--text-mute);">Sistem belum siap.</div>';
+    if (!ps) return '<div style="font-size:12px;color:var(--text-mute);">' + t('wiz.err.not_ready') + '</div>';
     try {
         const stats = _computeStats(s);
         const unitCost = ps.computeUnitCost ? ps.computeUnitCost(s) : 0;
@@ -768,18 +742,18 @@ function _previewHtml(s) {
         const noCamera = !s.cameraId || s.cameraId === 'none';
 
         const warnings = [];
-        if (stats.performance > 60 && stats.battery < 40) warnings.push('Chip kuat tapi baterai kecil.');
-        if (stats.camera > 60 && stats.display < 40) warnings.push('Kamera bagus tapi layar kurang.');
-        if (margin < 0) warnings.push('Harga di bawah biaya produksi!');
+        if (stats.performance > 60 && stats.battery < 40) warnings.push(t('wiz.preview.warn_chip_bat'));
+        if (stats.camera > 60 && stats.display < 40) warnings.push(t('wiz.preview.warn_cam_disp'));
+        if (margin < 0) warnings.push(t('wiz.preview.warn_margin'));
 
         return `
-            <div class="preview-row"><span>Skor Kualitas</span><b>${stats.qualityScore || 0}/100</b></div>
-            <div class="preview-row"><span>Biaya per unit</span><b>$${unitCost}</b></div>
-            <div class="preview-row"><span>Total biaya</span><b>$${totalCost.toLocaleString('en-US')}</b></div>
-            <div class="preview-row"><span>Margin</span><b style="color:${margin >= 0 ? 'var(--success)' : 'var(--danger)'};">$${margin} (${marginPct}%)</b></div>
-            <div class="preview-row"><span>Estimasi permintaan/hari</span><b>~${demand.toLocaleString('en-US')} unit</b></div>
-            ${noCamera ? '<div style="margin-top:8px;font-size:11px;color:var(--text-mute);">ℹ Ponsel ini tanpa kamera — pasar mungkin kurang tertarik.</div>' : ''}
-            ${warnings.length ? `<div style="margin-top:8px;font-size:11px;color:var(--warn);line-height:1.5;">⚠ ${warnings.join('<br>⚠ ')}</div>` : ''}
+            <div class="preview-row"><span>${t('wiz.preview.quality')}</span><b>${stats.qualityScore || 0}/100</b></div>
+            <div class="preview-row"><span>${t('wiz.preview.unit_cost')}</span><b>$${unitCost}</b></div>
+            <div class="preview-row"><span>${t('wiz.preview.total_cost')}</span><b>$${totalCost.toLocaleString('en-US')}</b></div>
+            <div class="preview-row"><span>${t('wiz.preview.margin')}</span><b style="color:${margin >= 0 ? 'var(--success)' : 'var(--danger)'};">$${margin} (${marginPct}%)</b></div>
+            <div class="preview-row"><span>${t('wiz.preview.demand')}</span><b>${t('wiz.preview.demand_unit', { n: demand.toLocaleString('en-US') })}</b></div>
+            ${noCamera ? '<div style="margin-top:8px;font-size:11px;color:var(--text-mute);">' + t('wiz.preview.no_camera') + '</div>' : ''}
+            ${warnings.length ? '<div style="margin-top:8px;font-size:11px;color:var(--warn);line-height:1.5;">⚠ ' + warnings.join('<br>⚠ ') + '</div>' : ''}
         `;
     } catch (e) {
         return '<div style="font-size:12px;color:var(--danger);">Preview error: ' + escapeHtml(e.message) + '</div>';
@@ -799,49 +773,46 @@ function _openDetailModal() {
     const spec = resolveSpec(year, completed);
 
     let mockupHtml = '';
-    try {
-        mockupHtml = renderPhoneMockup(s, { size: 240 });
-    } catch (e) {
-        mockupHtml = '<div style="color:var(--danger);font-size:12px;">Mockup error: ' + escapeHtml(e.message) + '</div>';
-    }
+    try { mockupHtml = renderPhoneMockup(s, { size: 240 }); }
+    catch (e) { mockupHtml = '<div style="color:var(--danger);font-size:12px;">Mockup error</div>'; }
 
     const compInfo = [
-        { label: 'Bentuk', id: s.formFactorId },
-        { label: 'Layar', id: s.displayId },
-        { label: 'Kamera', id: (s.cameraId && s.cameraId !== 'none') ? s.cameraId : null },
-        { label: 'Baterai', id: s.batteryId },
-        { label: 'Chip', id: s.chipId },
-        { label: 'Jaringan', id: s.networkId },
-        { label: 'Bodi', id: s.bodyId }
+        { labelKey: 'wiz.detail.spec_ff', id: s.formFactorId },
+        { labelKey: 'wiz.detail.spec_screen', id: s.displayId },
+        { labelKey: 'wiz.detail.spec_camera', id: (s.cameraId && s.cameraId !== 'none') ? s.cameraId : null },
+        { labelKey: 'wiz.detail.spec_battery', id: s.batteryId },
+        { labelKey: 'wiz.detail.spec_chip', id: s.chipId },
+        { labelKey: 'wiz.detail.spec_network', id: s.networkId },
+        { labelKey: 'wiz.detail.spec_body', id: s.bodyId }
     ];
 
     const compRows = compInfo.map(function (row) {
         var comp = row.id ? getComponentById(row.id) : null;
         var label = comp ? comp.name : (row.id ? row.id : '—');
-        return '<div class="sum-row"><span>' + row.label + '</span><b>' + escapeHtml(label) + '</b></div>';
+        return '<div class="sum-row"><span>' + t(row.labelKey) + '</span><b>' + escapeHtml(label) + '</b></div>';
     }).join('');
 
     var colorComp = s.bodyColorId ? getBodyColorById(s.bodyColorId) : null;
     var colorRow = colorComp
-        ? '<div class="sum-row"><span>Warna</span><b><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + colorComp.hex + ';vertical-align:middle;margin-right:6px;border:1px solid var(--border);"></span>' + escapeHtml(colorComp.name) + '</b></div>'
+        ? '<div class="sum-row"><span>' + t('wiz.detail.spec_color') + '</span><b><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + colorComp.hex + ';vertical-align:middle;margin-right:6px;border:1px solid var(--border);"></span>' + escapeHtml(colorComp.name) + '</b></div>'
         : '';
 
     const html = `
-        <div class="modal-title">Detail Ponsel</div>
-        <div class="modal-sub">${escapeHtml(s.name || 'Tanpa Nama')} — ${year}</div>
+        <div class="modal-title">${t('wiz.detail.title')}</div>
+        <div class="modal-sub">${t('wiz.detail.sub', { name: escapeHtml(s.name || t('wiz.spec.no_name')), year: year })}</div>
 
         <div class="wiz-detail-mockup">
             ${mockupHtml}
         </div>
 
-        <div class="sum-row"><span>Era Desain</span><b>${escapeHtml(era.label)}</b></div>
-        <div class="sum-row"><span>Milestone</span><b>${escapeHtml(spec.label || spec.id)}</b></div>
-        <div class="card-title" style="margin-top:14px;">Komponen</div>
+        <div class="sum-row"><span>${t('wiz.detail.era')}</span><b>${escapeHtml(era.label)}</b></div>
+        <div class="sum-row"><span>${t('wiz.detail.milestone')}</span><b>${escapeHtml(spec.label || spec.id)}</b></div>
+        <div class="card-title" style="margin-top:14px;">${t('wiz.detail.section_comp')}</div>
         ${compRows}
         ${colorRow}
 
-        <button class="btn-secondary" data-modal-close style="width:100%;margin-top:14px;">Tutup</button>
+        <button class="btn-secondary" data-modal-close style="width:100%;margin-top:14px;">${t('wiz.detail.close')}</button>
     `;
 
     Modal.open('design-wizard-detail', html);
-                                                                                     }
+                }
