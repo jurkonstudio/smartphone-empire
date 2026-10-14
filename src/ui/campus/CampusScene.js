@@ -1,7 +1,8 @@
 // FILE: src/ui/campus/CampusScene.js
-// v2027.38a — preserveDrawingBuffer untuk cegah texture discard saat scroll
+// v2027.38b — force render saat carousel scroll (anti hitam mid-swipe)
 import { createAssets, buildGround, buildTree, buildHQ, getHqLevel, PALETTES, TREE_SPOTS } from './CampusBuildings.js';
 import { createCampusControls } from './CampusControls.js';
+import { bus } from '../../core/EventBus.js';
 
 var BASE_VIEW = 16;
 var MAX_DPR = 1.5;
@@ -20,7 +21,7 @@ export function createCampusScene(THREE, container, gameState) {
         antialias: true,
         alpha: true,
         powerPreference: 'low-power',
-        preserveDrawingBuffer: true   // v2027.38a — cegah texture discard saat scroll
+        preserveDrawingBuffer: true
     });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
     renderer.setClearColor(0x000000, 0);
@@ -61,6 +62,12 @@ export function createCampusScene(THREE, container, gameState) {
             if (disposed || document.hidden) return;
             renderer.render(scene, camera);
         });
+    }
+
+    // v2027.38b — render langsung tanpa debounce (untuk scroll force render)
+    function forceRender() {
+        if (disposed || document.hidden) return;
+        renderer.render(scene, camera);
     }
 
     var controls = createCampusControls(canvas, {
@@ -110,6 +117,10 @@ export function createCampusScene(THREE, container, gameState) {
     function onVis() { if (!document.hidden) requestRender(); }
     document.addEventListener('visibilitychange', onVis);
 
+    // v2027.38b — listen event dari main.js, force render selama swipe
+    var unsubScroll = bus.on('home:carousel-scroll', forceRender);
+    var unsubScrollEnd = bus.on('home:carousel-scroll-end', requestRender);
+
     var ro = null;
     if (typeof ResizeObserver !== 'undefined') {
         ro = new ResizeObserver(resize);
@@ -124,12 +135,15 @@ export function createCampusScene(THREE, container, gameState) {
 
     return {
         update: update,
+        forceRender: forceRender,
         refreshTheme: function () { applyTheme(); requestRender(); },
         dispose: function () {
             disposed = true;
             if (raf) cancelAnimationFrame(raf);
             if (ro) ro.disconnect(); else window.removeEventListener('resize', resize);
             document.removeEventListener('visibilitychange', onVis);
+            if (typeof unsubScroll === 'function') unsubScroll();
+            if (typeof unsubScrollEnd === 'function') unsubScrollEnd();
             controls.dispose();
             A.dispose();
             renderer.dispose();
