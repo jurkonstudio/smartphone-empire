@@ -17,6 +17,7 @@ export const en = {
     'header.play_aria':    'Play',
     'header.speed_aria':   'Speed',
     'header.paused':       'Paused',
+    'header.day_prefix': 'Day',
 
     // CALENDAR
     'date.month.1':  'Jan',
