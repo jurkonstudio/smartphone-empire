@@ -1,5 +1,6 @@
 // FILE: src/systems/ProductSystem.js
 // Versi lengkap — dengan _checkSalesMilestones untuk trigger berita milestone.
+// v2027.1a — fix reputasi ganda di _releaseProduct & _maybeAddRandomReviews.
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
@@ -157,7 +158,6 @@ export class ProductSystem {
         var data = this.state.data;
         var osOptionId = null;
 
-        // Terima config langsung atau product (yang punya config.osOptionId).
         if (configOrProduct) {
             if (configOrProduct.osOptionId) osOptionId = configOrProduct.osOptionId;
             else if (configOrProduct.config && configOrProduct.config.osOptionId) {
@@ -178,7 +178,6 @@ export class ProductSystem {
             }
         }
 
-        // Fallback: OS pemain saat ini (perilaku lama).
         if (!stats) {
             var os = window.__game && window.__game.os ? window.__game.os : null;
             if (!os) return 0.7;
@@ -384,8 +383,9 @@ export class ProductSystem {
         product.reviews.push(rv);
         this._pushReviewToFeed(product, rv);
 
+        // [v2027.1a] fix reputasi ganda: kirim delta, bukan current+delta.
         var repDelta = (rv.score - 5) * BALANCE.products.reputationPerReviewPoint;
-        if (repDelta !== 0) this.state.addReputation((data.market.reputation || 0) + repDelta);
+        if (repDelta !== 0) this.state.addReputation(repDelta);
 
         data.products.catalog.push(product);
         data.products.development = null;
@@ -430,7 +430,6 @@ export class ProductSystem {
             p.dailySales.push({ day: data.time.elapsedGameMinutes, sold: sold, revenue: revenue });
             if (p.dailySales.length > 400) p.dailySales.shift();
 
-            // CEK MILESTONE PENJUALAN
             this._checkSalesMilestones(p);
 
             if (p.stock === 0) {
@@ -788,8 +787,9 @@ export class ProductSystem {
                 p.reviews.push(rv);
                 if (p.reviews.length > 10) p.reviews.shift();
                 this._pushReviewToFeed(p, rv);
+                // [v2027.1a] fix reputasi ganda: kirim delta, bukan current+delta.
                 var repDelta = (rv.score - 5) * BALANCE.products.reputationPerReviewPoint * 0.5;
-                if (repDelta !== 0) this.state.addReputation((data.market.reputation || 0) + repDelta);
+                if (repDelta !== 0) this.state.addReputation(repDelta);
             }
         }.bind(this));
     }
