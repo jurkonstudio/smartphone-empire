@@ -4,7 +4,52 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0f0f0f">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Smartphone Empire</title>
+
+<!-- ============================================================
+     VERSION CHECK — paksa reload kalau versi deploy berubah.
+     Fetch version.json dengan cache: 'no-store'.
+     Kalau versi beda → reload sekali dengan query _v.
+     Setelah reload, versi disimpan → tidak ada loop.
+     ============================================================ -->
+<script>
+(function () {
+    try {
+        var KEY = 'se_deploy_v';
+        var url = new URL(window.location.href);
+        var incoming = url.searchParams.get('_v');
+        var stored = localStorage.getItem(KEY);
+
+        // Kalau baru reload dari version-check, simpan & bersihkan URL
+        if (incoming) {
+            try { localStorage.setItem(KEY, incoming); } catch (e) {}
+            url.searchParams.delete('_v');
+            try { history.replaceState(null, '', url.toString()); } catch (e) {}
+            return;
+        }
+
+        // Cek versi terbaru dari server
+        fetch('./version.json?t=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var v = data && data.v;
+                if (!v) return;
+                if (stored && stored !== v) {
+                    // Versi berubah — paksa reload
+                    url.searchParams.set('_v', v);
+                    window.location.replace(url.toString());
+                } else if (!stored) {
+                    // Pertama kali — simpan saja
+                    try { localStorage.setItem(KEY, v); } catch (e) {}
+                }
+            })
+            .catch(function () { /* silent — kalau version.json tidak ada, lanjut normal */ });
+    } catch (e) { /* silent */ }
+})();
+</script>
 
 <!-- ============================================================
      GLOBAL ERROR OVERLAY
@@ -37,8 +82,6 @@ window.addEventListener('unhandledrejection', function (e) {
 
 <!-- ============================================================
      MODULEPRELOAD — mempercepat load module penting.
-     Modulepreload hanya hint; kalau file tidak ada, browser tetap
-     lanjut tanpa gagal total.
      ============================================================ -->
 <link rel="modulepreload" href="./src/core/GameState.js">
 <link rel="modulepreload" href="./src/core/EventBus.js">
@@ -84,11 +127,10 @@ window.addEventListener('unhandledrejection', function (e) {
     <div id="loading-screen" class="loading-screen">Memuat Smartphone Empire…</div>
     <div id="error-message" class="error-message" role="alert"></div>
 
-    <script type="module" src="./src/main.js?v=2"></script>
+    <script type="module" src="./src/main.js"></script>
 
     <!-- ============================================================
-         FALLBACK — tampilkan pesan jika modul gagal dimuat (404 / parse error).
-         Menangkap error pada <script> element sebelum module sempat jalan.
+         FALLBACK — tampilkan pesan jika modul gagal dimuat.
          ============================================================ -->
     <script>
     window.addEventListener('error', function (e) {
