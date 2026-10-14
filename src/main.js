@@ -603,15 +603,19 @@ function bindProgressEvents() {
 // ============ TIME ============
 function bindTimeEvents() {
     bus.on('time:tick', function () {
-        var meta = els.header && els.header.querySelector('.header-meta');
-        if (!meta) return;
-        var t = getTime();
-        var hh = String(Math.floor(t.currentHour)).padStart(2, '0');
-        var mm = String(Math.floor(t.currentMinute)).padStart(2, '0');
-        var d = meta.querySelector('[data-time-date]'); if (d) d.textContent = 'Hari ' + t.currentDay + '/' + t.currentMonth + '/' + t.currentYear;
-        var c = meta.querySelector('[data-time-clock]'); if (c) c.textContent = hh + ':' + mm;
-        var s = meta.querySelector('[data-time-status]'); if (s) { s.textContent = t.isPaused ? 'Paused' : (t.gameSpeed + 'x'); s.classList.toggle('running', !t.isPaused); }
-    });
+    var meta = els.header && els.header.querySelector('.header-meta');
+    if (!meta) return;
+    var t = getTime();
+    var hh = String(Math.floor(t.currentHour)).padStart(2, '0');
+    var mm = String(Math.floor(t.currentMinute)).padStart(2, '0');
+    var mKey = 'date.month.' + (t.currentMonth || 1);
+    var mShort = t(mKey);
+    if (mShort === mKey) mShort = String(t.currentMonth || 1);
+    var d = meta.querySelector('[data-time-date]');
+    if (d) d.textContent = t.currentDay + ' ' + mShort + ' ' + t.currentYear;
+    var c = meta.querySelector('[data-time-clock]'); if (c) c.textContent = hh + ':' + mm;
+    var s = meta.querySelector('[data-time-status]'); if (s) { s.textContent = t.isPaused ? 'Paused' : (t.gameSpeed + 'x'); s.classList.toggle('running', !t.isPaused); }
+});
     bus.on('time:day-changed', function () { if (activeView === 'team' && activeHqSubtab === 'overview') updateDashboardLive(); });
     bus.on('time:speed-changed', function () { renderHeaderOnly(); });
 }
