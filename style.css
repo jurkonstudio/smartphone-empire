@@ -3035,3 +3035,38 @@ body {
     .wiz-spec-trunc { max-width: 90px; }
     .wiz-spec-meta { grid-template-columns: 1fr; }
 }
+/* ============================================================================
+   61. WIZ AUTOFILL BUTTON (v2027.12a)
+   ============================================================================ */
+.wiz-autofill-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 12px;
+    padding: 12px 16px;
+    min-height: 46px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+    color: #ffffff;
+    border: none;
+    border-radius: var(--r);
+    font-family: inherit;
+    font-size: var(--fs-md);
+    font-weight: var(--fw-bold);
+    letter-spacing: -0.005em;
+    cursor: pointer;
+    box-shadow: 0 4px 14px var(--accent-glow);
+    transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.18s, opacity 0.15s;
+}
+.wiz-autofill-btn:hover { box-shadow: 0 6px 20px var(--accent-glow); }
+.wiz-autofill-btn:active { transform: scale(0.97); }
+.wiz-autofill-ico { font-size: 16px; line-height: 1; }
+.wiz-autofill-hint {
+    font-size: var(--fs-xs);
+    color: var(--text-tertiary);
+    text-align: center;
+    margin-top: 6px;
+    line-height: 1.4;
+}
