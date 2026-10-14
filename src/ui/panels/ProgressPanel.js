@@ -1,5 +1,6 @@
 // FILE: src/ui/panels/ProgressPanel.js
-// Rework: merge riset aktif + quest aktif menjadi satu kartu "Fokus Hari Ini".
+// v2027.13a — i18n.
+import { t } from '../../core/LanguageService.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -22,11 +23,11 @@ export function renderProgressPanel(state, researchSystem) {
 
     if (!hasAny) {
         return '<div class="card">' +
-            '<div class="card-title">Fokus Hari Ini</div>' +
+            '<div class="card-title">' + t('dashboard.focus_title') + '</div>' +
             '<div class="focus-empty">' +
-                '<div class="focus-empty-title">Semua berjalan lancar</div>' +
-                '<div class="focus-empty-desc">Riset teknologi baru, rekrut tim, atau rilis produk untuk mempercepat pertumbuhan.</div>' +
-                '<button class="btn-primary" data-nav="research" style="width:100%;margin-top:10px;">Buka Tab Riset</button>' +
+                '<div class="focus-empty-title">' + t('dashboard.focus_empty_title') + '</div>' +
+                '<div class="focus-empty-desc">' + t('dashboard.focus_empty_desc') + '</div>' +
+                '<button class="btn-primary" data-nav="research" style="width:100%;margin-top:10px;">' + t('dashboard.focus_open_research') + '</button>' +
             '</div>' +
             '</div>';
     }
@@ -38,8 +39,8 @@ export function renderProgressPanel(state, researchSystem) {
         var activeCount = (state.research && state.research.active)
             ? state.research.active.length : activeResearch.length;
 
-        body += '<div class="focus-section-label">Riset Aktif</div>';
-        body += '<div class="focus-section-meta">' + activeCount + '/' + slots + ' slot terpakai</div>';
+        body += '<div class="focus-section-label">' + t('dashboard.focus_active_research') + '</div>';
+        body += '<div class="focus-section-meta">' + t('dashboard.focus_slots', { n: activeCount, max: slots }) + '</div>';
         body += activeResearch.map(function (r) {
             var pct = Math.round(r.percent * 100);
             return '<div class="focus-item">' +
@@ -53,7 +54,7 @@ export function renderProgressPanel(state, researchSystem) {
     }
 
     if (activeQuests.length) {
-        body += '<div class="focus-section-label">Quest</div>';
+        body += '<div class="focus-section-label">' + t('dashboard.focus_quest') + '</div>';
         body += activeQuests.slice(0, 3).map(function (q) {
             return '<div class="focus-quest">' +
                 '<div class="quest-dot"></div>' +
@@ -66,7 +67,7 @@ export function renderProgressPanel(state, researchSystem) {
     }
 
     return '<div class="card">' +
-        '<div class="card-title">Fokus Hari Ini</div>' +
+        '<div class="card-title">' + t('dashboard.focus_title') + '</div>' +
         body +
         '</div>';
 }
