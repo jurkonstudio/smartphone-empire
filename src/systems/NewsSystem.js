@@ -1,7 +1,8 @@
 // FILE: src/systems/NewsSystem.js
 // ============================================================
 // NewsSystem — generator artikel media internasional.
-// Trigger: product:released, milestone penjualan, event viral.
+// Trigger: product:released, milestone penjualan, event viral,
+//          headline bulanan historis (time:month-changed).
 // ============================================================
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
@@ -12,6 +13,8 @@ import {
     BODY_TEMPLATES, PULL_QUOTE_TEMPLATES,
     getOutletsForYear, getJournalistForCountry, getDatelineForRegion, getRandomFrom
 } from '../data/news.data.js';
+// [V7a-2] import helper headline bulanan
+import { getHeadlineForMonth } from '../data/news-headlines.data.js';
 
 var MAX_ARTICLES = 30;
 var _articleSeq = 1;
@@ -121,6 +124,83 @@ function _generateArticle(options) {
     };
 }
 
+// ============================================================
+// [V7a-2] _toneToScore — mapping tone headline → skor numerik
+// ============================================================
+function _toneToScore(tone) {
+    if (tone === 'positive') return 7.5;
+    if (tone === 'negative') return 3.5;
+    return 5.5;
+}
+
+// ============================================================
+// [V7a-2] _makeHeadlineArticle — bangun artikel dari headline
+// historis. Struktur kompatibel NewsListPanel + NewsArticleModal.
+// ============================================================
+function _makeHeadlineArticle(h) {
+    if (!h) return null;
+    var data = state.get();
+
+    var outlet = null;
+    try {
+        var outlets = getOutletsForYear(h.year) || [];
+        for (var i = 0; i < outlets.length; i++) {
+            if (outlets[i].id === h.sourceId) { outlet = outlets[i]; break; }
+        }
+    } catch (e) { /* diamkan */ }
+
+    var byline = 'Redaksi ' + (h.source || 'Media');
+    var dateline = 'Global';
+    var sourceCountry = null;
+    var sourceRegion = null;
+    var sourceType = 'media';
+
+    if (outlet) {
+        try {
+            var j = getJournalistForCountry(outlet.country);
+            if (j) byline = j;
+        } catch (e) { /* diamkan */ }
+        try {
+            var city = getDatelineForRegion(outlet.region);
+            if (city) dateline = city;
+        } catch (e) { /* diamkan */ }
+        sourceCountry = outlet.country || null;
+        sourceRegion = outlet.region || null;
+        sourceType = outlet.type || sourceType;
+    }
+
+    return {
+        id: 'headline_' + h.year + '_' + h.month,
+        headline: h.headline || '',
+        subheadline: '',
+        byline: byline,
+        dateline: dateline,
+        paragraphs: h.text ? [h.text] : [],
+        pullQuote: '',
+        source: h.source || 'Media',
+        sourceId: h.sourceId || null,
+        sourceCountry: sourceCountry,
+        sourceRegion: sourceRegion,
+        sourceType: sourceType,
+        score: _toneToScore(h.tone),
+        sentiment: h.tone || 'mixed',
+        articleType: 'monthly_headline',
+        productId: null,
+        productName: null,
+        createdAt: {
+            year: h.year,
+            month: h.month,
+            day: 1,
+            gameMinute: data.time.elapsedGameMinutes
+        },
+        era: h.era || data.era,
+        read: false,
+        headlineYear: h.year,
+        headlineMonth: h.month,
+        tags: Array.isArray(h.tags) ? h.tags.slice() : []
+    };
+}
+
 export var NewsSystem = {
     start: function () {
         bus.on('product:released', function (payload) {
@@ -129,6 +209,10 @@ export var NewsSystem = {
         bus.on('product:milestone-sales', function (payload) {
             NewsSystem._onMilestoneSales(payload);
         });
+        // [V7a-2] listener headline bulanan
+        bus.on('time:month-changed', function (snapshot) {
+            NewsSystem._onMonthlyHeadline(snapshot);
+        });
         console.info('[NewsSystem] siap.');
     },
 
@@ -136,7 +220,7 @@ export var NewsSystem = {
         if (!payload) return;
         try {
             var data = state.get();
-            if (!data.news) data.news = { articles: [], lastMilestone: {} };
+            if (!data.news) data.news = { articles: [], lastMilestone: {}, headlineHistory: [] };
 
             var product = null;
             for (var i = 0; i < data.products.catalog.length; i++) {
@@ -207,7 +291,7 @@ export var NewsSystem = {
         if (!payload) return;
         try {
             var data = state.get();
-            if (!data.news) data.news = { articles: [], lastMilestone: {} };
+            if (!data.news) data.news = { articles: [], lastMilestone: {}, headlineHistory: [] };
             if (!data.news.lastMilestone) data.news.lastMilestone = {};
 
             var productId = payload.productId;
@@ -236,6 +320,50 @@ export var NewsSystem = {
             }
         } catch (err) {
             console.error('[NewsSystem] _onMilestoneSales error:', err);
+        }
+    },
+
+    // [V7a-2] Handler headline bulanan historis.
+    _onMonthlyHeadline: function (snapshot) {
+        try {
+            var data = state.get();
+            if (!data.news) data.news = { articles: [], lastMilestone: {}, headlineHistory: [] };
+            if (!Array.isArray(data.news.headlineHistory)) data.news.headlineHistory = [];
+
+            var year = (snapshot && snapshot.currentYear) || data.time.currentYear;
+            var month = (snapshot && snapshot.currentMonth) || data.time.currentMonth;
+
+            var h = getHeadlineForMonth(year, month);
+            if (!h) return;
+
+            var key = year + '-' + month;
+            if (data.news.headlineHistory.indexOf(key) !== -1) return;
+
+            // Guard defensif: save lama mungkin sudah punya artikel headline
+            // bulan ini tanpa tercatat di history.
+            for (var i = 0; i < data.news.articles.length; i++) {
+                var a = data.news.articles[i];
+                if (a.articleType === 'monthly_headline' &&
+                    a.headlineYear === year && a.headlineMonth === month) {
+                    data.news.headlineHistory.push(key);
+                    return;
+                }
+            }
+
+            var art = _makeHeadlineArticle(h);
+            if (!art) return;
+
+            data.news.headlineHistory.push(key);
+            data.news.articles.unshift(art);
+            if (data.news.articles.length > MAX_ARTICLES) {
+                data.news.articles.length = MAX_ARTICLES;
+            }
+
+            bus.emit('news:published', { article: art });
+            state.addLog('Headline: ' + art.headline, LOG_TYPES.info);
+            bus.emit('state:changed', data);
+        } catch (err) {
+            console.error('[NewsSystem] _onMonthlyHeadline error:', err);
         }
     },
 
