@@ -704,6 +704,7 @@ export const en = {
     'onb.title':              'Welcome',
     'onb.sub':                'Let us found your first phone company.',
     'onb.name_label':         'Company name',
+    'onb.name_placeholder':   'Your company name...',
     'onb.diff_label':         'Difficulty level',
     'onb.diff_santai':        'Relaxed',
     'onb.diff_santai_desc':   'Big capital, low costs, friendly competitors.',
