@@ -13,12 +13,56 @@ import {
     BODY_TEMPLATES, PULL_QUOTE_TEMPLATES,
     getOutletsForYear, getJournalistForCountry, getDatelineForRegion, getRandomFrom
 } from '../data/news.data.js';
-import { getHeadlineForMonth } from '../data/news-headlines.data.js';
-import { getPrehistoryHeadlines } from '../data/news-prehistory.data.js';
+import { getHeadlineForMonth, MONTHLY_HEADLINES } from '../data/news-headlines.data.js';
+import { getPrehistoryHeadlines, PREHISTORY_HEADLINES } from '../data/news-prehistory.data.js';
+import { MONTHLY_HEADLINES_EN } from '../data/news-headlines.en.js';
+import { PREHISTORY_HEADLINES_EN } from '../data/news-prehistory.en.js';
+import { LanguageService } from '../core/LanguageService.js';
 
 var MAX_ARTICLES = 30;
 var _articleSeq = 1;
 
+// ============================================================
+// LANGUAGE-AWARE HEADLINE LOOKUP
+// ============================================================
+function _currentLang() {
+    try {
+        if (LanguageService && LanguageService.getLang) {
+            return LanguageService.getLang() === 'en' ? 'en' : 'id';
+        }
+    } catch (e) {}
+    return 'id';
+}
+
+function _getLocalizedHeadline(year, month) {
+    var base = getHeadlineForMonth(year, month);
+    if (!base) return null;
+    if (_currentLang() !== 'en') return base;
+
+    var key = year + '-' + month;
+    var en = MONTHLY_HEADLINES_EN[key];
+    if (!en) return base;
+
+    return Object.assign({}, base, {
+        headline: en.headline || base.headline,
+        text: en.text || base.text
+    });
+}
+
+function _getLocalizedPrehistory() {
+    var base = getPrehistoryHeadlines();
+    if (_currentLang() !== 'en') return base;
+
+    return base.map(function (h) {
+        var key = h.year + '-' + (h.month < 10 ? '0' : '') + h.month + '-' + (h.day < 10 ? '0' : '') + h.day;
+        var en = PREHISTORY_HEADLINES_EN[key];
+        if (!en) return h;
+        return Object.assign({}, h, {
+            headline: en.headline || h.headline,
+            text: en.text || h.text
+        });
+    });
+}
 function _toneFromScore(score, reputation) {
     var repBonus = (reputation - 50) / 100;
     var adjusted = score + repBonus * 1.5;
@@ -272,9 +316,21 @@ export var NewsSystem = {
         // [V7a-4] Headline bulanan dicek setiap pergantian hari.
         // Muncul mulai hari ke-2 bulan berjalan.
         bus.on('time:day-changed', function (snapshot) {
-            NewsSystem._onMonthlyHeadline(snapshot);
-        });
-        console.info('[NewsSystem] siap.');
+    NewsSystem._onMonthlyHeadline(snapshot);
+});
+// Re-seed arsip pra-2000 saat bahasa berubah
+bus.on('lang:changed', function () {
+    try {
+        var data = state.get();
+        if (data.news) {
+            data.news.recapSeeded = false;
+            // Hapus recap lama agar di-rebuild dengan bahasa baru
+            data.news.articles = (data.news.articles || []).filter(function (a) { return !a.isRecap; });
+        }
+        NewsSystem.seedPreHistory();
+    } catch (err) { console.warn('[NewsSystem] lang reload error:', err); }
+});
+console.info('[NewsSystem] siap.');
     },
 
     _onProductReleased: function (payload) {
@@ -395,8 +451,8 @@ export var NewsSystem = {
             // Headline muncul mulai hari ke-2 bulan berjalan.
             if (day < 2) return;
 
-            var h = getHeadlineForMonth(year, month);
-            if (!h) return;
+            var h = _getLocalizedHeadline(year, month);
+if (!h) return;
 
             var key = year + '-' + month;
             if (data.news.headlineHistory.indexOf(key) !== -1) return;
@@ -435,7 +491,7 @@ export var NewsSystem = {
             if (!data.news) data.news = { articles: [], lastMilestone: {}, headlineHistory: [], recapSeeded: false };
             if (data.news.recapSeeded) return;
 
-            var list = getPrehistoryHeadlines();
+            var list = _getLocalizedPrehistory();
             var added = 0;
             for (var i = 0; i < list.length; i++) {
                 var art = _makeRecapArticle(list[i]);
