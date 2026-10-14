@@ -3378,3 +3378,89 @@ body {
     scroll-snap-stop: always;
     box-sizing: border-box;
 }
+/* ============================================================================
+   FIX SWIPE CAROUSEL — override touch-action (v2027.21a)
+   Parent .app-view terlalu ketat (pan-y). Ganti jadi manipulation
+   supaya carousel bisa scroll horizontal di Chrome.
+   ============================================================================ */
+
+.app-view {
+    touch-action: manipulation;
+}
+
+/* Konsolidasi section 64 — pastikan versi final yang dipakai */
+.home-map {
+    padding: 0;
+    height: min(42vh, 380px);
+    min-height: 220px;
+    max-height: 340px;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    overflow: hidden;
+    margin: 0 0 8px 0;
+    flex-shrink: 0;
+}
+
+.home-carousel {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    touch-action: pan-x;
+    gap: 0;
+}
+.home-carousel::-webkit-scrollbar { display: none; }
+
+.home-slide {
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    box-sizing: border-box;
+    padding: 0;
+    max-height: 52vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+.home-slide > .card:first-child { margin-top: 0; }
+.home-slide > .card:last-child { margin-bottom: 0; }
+
+.home-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 0 4px;
+    flex-shrink: 0;
+}
+
+.home-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--bg-4);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: background 0.25s, transform 0.25s, width 0.25s;
+    -webkit-tap-highlight-color: transparent;
+}
+.home-dot.active {
+    background: var(--accent);
+    width: 22px;
+    border-radius: 4px;
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+@media (max-width: 380px) {
+    .home-map { height: min(38vh, 320px); min-height: 200px; max-height: 280px; }
+    .home-slide { max-height: 48vh; }
+    .home-dots { padding: 8px 0 2px; }
+}
