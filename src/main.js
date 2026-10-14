@@ -232,6 +232,23 @@ function updateDashboardLive() {
 
 // ============ CASH ANIMATION ============
 var _cashRaf = null;
+function _showCashDelta(diff) {
+    var el = document.querySelector('[data-cash-delta]');
+    if (!el) return;
+    if (!diff || Math.abs(diff) < 1) return;
+    var isUp = diff > 0;
+    var sign = isUp ? '+' : '−';
+    var text = sign + '$' + Math.abs(Math.round(diff)).toLocaleString('en-US');
+    el.textContent = text;
+    el.classList.remove('up', 'down');
+    el.classList.add(isUp ? 'up' : 'down');
+    el.classList.add('show');
+    if (window.__deltaTimer) clearTimeout(window.__deltaTimer);
+    window.__deltaTimer = setTimeout(function () {
+        el.classList.remove('show');
+    }, 2500);
+}
+
 function animateCash(from, to) {
     if (_cashRaf) { cancelAnimationFrame(_cashRaf); _cashRaf = null; }
     var targets = document.querySelectorAll('[data-cash]');
@@ -246,7 +263,8 @@ function animateCash(from, to) {
         if (p < 1) _cashRaf = requestAnimationFrame(step); else _cashRaf = null;
     }
     _cashRaf = requestAnimationFrame(step);
-}
+    _showCashDelta(to - from);
+}}
 
 // ============ NAV ============
 function navigate(id) {
