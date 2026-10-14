@@ -171,7 +171,7 @@ body {
     padding: 12px 12px 0;
     -webkit-overflow-scrolling: touch;
     padding-bottom: calc(20px + var(--nav-h) + env(safe-area-inset-bottom));
-    background: transparent; touch-action: pan-y;
+    background: transparent; touch-action: pan-x pan-y;
 }
 #sidebar { display: none; }
 
