@@ -1,16 +1,20 @@
 // FILE: src/ui/panels/KpiCards.js
-// Rework: 4 KPI (Uang, Reputasi, Tim, Tanggal).
-// Hindari redundansi dengan header.
+// v2027.13a — i18n.
+import { t } from '../../core/LanguageService.js';
 
-var MONTH_SHORT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+function _monthShort(m) {
+    var key = 'date.month.' + (m || 1);
+    var v = t(key);
+    return v === key ? '' : v;
+}
 
 export function renderKpiCards(state, timeSnapshot, teamSystem) {
-    var t = timeSnapshot;
-    var monthShort = MONTH_SHORT[(t.currentMonth || 1) - 1] || '';
+    var tSnap = timeSnapshot;
+    var monthShort = _monthShort(tSnap.currentMonth);
 
     var rep = (state.market && typeof state.market.reputation === 'number')
         ? state.market.reputation : 0;
-    var repLabel = rep >= 70 ? 'Baik' : rep >= 40 ? 'Cukup' : 'Rendah';
+    var repLabel = rep >= 70 ? t('kpi.rep_high') : rep >= 40 ? t('kpi.rep_mid') : t('kpi.rep_low');
     var repColor = rep >= 70 ? 'var(--success)' : rep >= 40 ? 'var(--warn)' : 'var(--danger)';
 
     var teamTotal = 0;
@@ -26,31 +30,31 @@ export function renderKpiCards(state, timeSnapshot, teamSystem) {
     } catch (e) { /* diamkan */ }
 
     var moraleLabel = teamTotal === 0
-        ? 'Belum ada tim'
-        : 'Morale ' + morale + '/100';
+        ? t('kpi.team_empty')
+        : t('kpi.team_morale', { n: morale });
     var moraleColor = teamTotal === 0
         ? 'var(--text-tertiary)'
         : (morale >= 70 ? 'var(--success)' : morale >= 40 ? 'var(--warn)' : 'var(--danger)');
 
     return '<div class="kpi-grid">' +
         '<div class="kpi">' +
-            '<div class="kpi-label">Uang Tunai</div>' +
+            '<div class="kpi-label">' + t('kpi.cash') + '</div>' +
             '<div class="kpi-value" data-cash style="color:var(--accent);">$' + state.cash.toLocaleString('en-US') + '</div>' +
         '</div>' +
         '<div class="kpi green">' +
-            '<div class="kpi-label">Reputasi</div>' +
+            '<div class="kpi-label">' + t('kpi.reputation') + '</div>' +
             '<div class="kpi-value">' + rep + '</div>' +
             '<div class="kpi-sub" style="color:' + repColor + ';">' + repLabel + '</div>' +
         '</div>' +
         '<div class="kpi blue">' +
-            '<div class="kpi-label">Tim</div>' +
+            '<div class="kpi-label">' + t('kpi.team') + '</div>' +
             '<div class="kpi-value">' + teamTotal + '</div>' +
             '<div class="kpi-sub" style="color:' + moraleColor + ';">' + moraleLabel + '</div>' +
         '</div>' +
         '<div class="kpi warn">' +
-            '<div class="kpi-label">Tanggal</div>' +
-            '<div class="kpi-value"><span data-kpi-day>' + t.currentDay + '</span> ' + monthShort + '</div>' +
-            '<div class="kpi-sub" data-kpi-year>' + t.currentYear + '</div>' +
+            '<div class="kpi-label">' + t('kpi.date') + '</div>' +
+            '<div class="kpi-value"><span data-kpi-day>' + tSnap.currentDay + '</span> ' + monthShort + '</div>' +
+            '<div class="kpi-sub" data-kpi-year>' + tSnap.currentYear + '</div>' +
         '</div>' +
         '</div>';
 }
