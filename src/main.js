@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2027.35b — Silicon diaktifkan kembali (patch 5 titik).
+// v2027.35c — Silicon + daily login aktif.
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -26,7 +26,7 @@ import { FabSystem } from './systems/FabSystem.js';
 import { NewsSystem } from './systems/NewsSystem.js';
 import { AdvisorSystem } from './systems/AdvisorSystem.js';
 import { StockSystem } from './systems/StockSystem.js';
-import { SiliconService } from './systems/SiliconService.js'; // [PATCH 1]
+import { SiliconService } from './systems/SiliconService.js';
 import { renderHeader } from './ui/layout/Header.js';
 import { renderMobileNav } from './ui/layout/MobileNav.js';
 import { renderEmptyState } from './ui/panels/EmptyState.js';
@@ -56,7 +56,7 @@ import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
 import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
 import { openNewsArticleModal } from './ui/panels/NewsArticleModal.js';
-import { openSiliconModal } from './ui/panels/SiliconPanel.js'; // [PATCH 2]
+import { openSiliconModal } from './ui/panels/SiliconPanel.js';
 import { handleNewsListClick } from './ui/panels/NewsListPanel.js';
 import { renderChipMockup } from './ui/phone/ChipMockup.js';
 import { renderChipRadarChart } from './ui/charts/ChipRadarChart.js';
@@ -434,7 +434,6 @@ function bindGlobalClicks() {
         var guideReport = e.target.closest('[data-guide-report]');
         if (guideReport) { e.preventDefault(); vibrate(8); openDiagnosticModal(); return; }
 
-        // [PATCH 3] — tombol Silicon di Header
         var siliconBtn = e.target.closest('[data-silicon-open]');
         if (siliconBtn) { e.preventDefault(); vibrate(8); openSiliconModal(); return; }
 
@@ -807,8 +806,6 @@ function bindStateEvents() {
     bus.on('team:fired', function () { if (activeView === 'team') renderView({ soft: true }); });
 
     bus.on('lang:changed', function () { renderAll(); });
-
-    // [PATCH 4] — refresh angka SIL di Header setiap kali berubah
     bus.on('silicon:changed', function () { renderHeaderOnly(); });
 
     bus.on('advisor:go', function (p) {
@@ -893,6 +890,19 @@ async function boot() {
 
         if (!state.get().settings.competitorMode) state.get().settings.competitorMode = 'real';
 
+        // [PATCH 6] Daily login bonus Silicon
+        try {
+            var dl = SiliconService.claimDailyLogin();
+            if (dl && dl.ok) {
+                ToastService.success('Daily login: +' + dl.amount + ' SIL (streak ' + dl.streak + ' hari)');
+                console.info('[Silicon] Daily login +' + dl.amount + ' SIL, streak ' + dl.streak);
+            } else if (dl && dl.reason === 'already_claimed') {
+                console.info('[Silicon] Daily login sudah diklaim hari ini.');
+            }
+        } catch (e) {
+            console.warn('[Silicon] Daily login gagal:', e);
+        }
+
         eraSystem.start();
         economy.start();
         quests.start();
@@ -943,7 +953,7 @@ async function boot() {
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
-            silicon: SiliconService, // [PATCH 5]
+            silicon: SiliconService,
             LanguageService: LanguageService,
             SaveService: SaveService, ToastService: ToastService, Modal: Modal, navigate: navigate, render: renderAll,
             modules: { marketing: marketingModule, feedbackData: feedbackModule },
