@@ -1,25 +1,27 @@
 // FILE: src/data/stocks.data.js
 // ============================================================
-// DATA SAHAM HISTORIS — dipakai halaman Exchange di HQ.
+// DATA SAHAM HISTORIS — untuk halaman Exchange di HQ.
 // v2027.1a — Sesi 1: display only.
 //
 // Prinsip:
-// - Angka adalah PIVOT TAHUNAN dari sumber publik.
+// - Angka adalah PIVOT TAHUNAN dari sumber publik (close tahunan).
 // - Bulan di antara pivot diinterpolasi halus oleh StockSystem.
-// - Kalau emiten punya data terbatas, pakai `growthByYear` (persen).
+// - Kalau emiten punya data terbatas, tetap dipakai apa adanya.
+//
+// Catatan emiten yang di-skip karena tidak listed publik:
+// Huawei, Oppo, Vivo, OnePlus, Honor, Nothing, Microsoft Lumia.
 // ============================================================
 
 export const STOCKS = [
-    // ====== SAHAM YANG ADA SEJAK 1999 ======
     {
         id: 'nokia',
         ticker: 'NOK',
         name: 'Nokia Corporation',
         competitorId: 'nokia',
+        country: 'Finlandia',
         listedFrom: 1999,
-        listedTo: 2014,  // diakuisisi Microsoft
+        listedTo: 2014,
         currency: 'USD',
-        // Pivot harga per tahun (dari data publik).
         priceByYear: {
             1999: 22.81, 2000: 20.85, 2001: 14.11, 2002: 8.50,
             2003: 12.50, 2004: 15.20, 2005: 17.50, 2006: 18.90,
@@ -32,6 +34,7 @@ export const STOCKS = [
         ticker: 'MOT',
         name: 'Motorola, Inc.',
         competitorId: 'motorola',
+        country: 'Amerika Serikat',
         listedFrom: 1999,
         listedTo: 2011,
         currency: 'USD',
@@ -46,6 +49,7 @@ export const STOCKS = [
         ticker: 'BB',
         name: 'Research In Motion',
         competitorId: 'blackberry',
+        country: 'Kanada',
         listedFrom: 1999,
         listedTo: 2016,
         currency: 'USD',
@@ -62,10 +66,10 @@ export const STOCKS = [
         ticker: '005930.KS',
         name: 'Samsung Electronics',
         competitorId: 'samsung',
+        country: 'Korea Selatan',
         listedFrom: 1999,
         listedTo: null,
         currency: 'KRW',
-        // Samsung dalam KRW — perlu konversi tampilan.
         priceByYear: {
             1999: 6110, 2000: 6110, 2001: 9000, 2002: 13185,
             2003: 16850, 2004: 18270, 2005: 27375, 2006: 29100,
@@ -81,6 +85,7 @@ export const STOCKS = [
         ticker: '2498.TW',
         name: 'HTC Corporation',
         competitorId: 'htc',
+        country: 'Taiwan',
         listedFrom: 2006,
         listedTo: 2019,
         currency: 'TWD',
@@ -91,13 +96,13 @@ export const STOCKS = [
             2018: 40, 2019: 35
         }
     },
-    // ====== SAHAM YANG MUNCUL KEMUDIAN ======
     {
         id: 'apple',
         ticker: 'AAPL',
         name: 'Apple Inc.',
         competitorId: 'apple',
-        listedFrom: 2007,  // di game, Apple muncul 2007
+        country: 'Amerika Serikat',
+        listedFrom: 2007,
         listedTo: null,
         currency: 'USD',
         priceByYear: {
@@ -113,7 +118,8 @@ export const STOCKS = [
         ticker: '1810.HK',
         name: 'Xiaomi Corporation',
         competitorId: 'xiaomi',
-        listedFrom: 2018,  // IPO di game 2018 (nyata: Juli 2018)
+        country: 'Tiongkok',
+        listedFrom: 2018,
         listedTo: null,
         currency: 'HKD',
         priceByYear: {
@@ -121,21 +127,20 @@ export const STOCKS = [
             2022: 11.00, 2023: 14.00, 2024: 35.90, 2026: 42.00
         }
     },
-    // ====== EMITEN FIKTIF UNTUK PEMAIN ======
     {
         id: 'jsi',
         ticker: 'JSI',
         name: 'Player Company',
-        competitorId: null,  // bukan kompetitor
+        competitorId: null,
+        country: null,
         isPlayer: true,
-        listedFrom: null,    // dinamis — saat milestone produk ke-4
+        listedFrom: null,
         listedTo: null,
         currency: 'USD',
-        priceByYear: null    // dihitung dinamis oleh StockSystem
+        priceByYear: null
     }
 ];
 
-// ====== INDEKS MAKRO ======
 export const MARKET_INDICES = [
     {
         id: 'nasdaq',
@@ -184,14 +189,19 @@ export const MARKET_INDICES = [
     }
 ];
 
-export function getStockById(id) { return STOCKS.find(s => s.id === id) || null; }
-export function getIndexById(id) { return MARKET_INDICES.find(i => i.id === id) || null; }
+export function getStockById(id) {
+    return STOCKS.find(s => s.id === id) || null;
+}
+
+export function getIndexById(id) {
+    return MARKET_INDICES.find(i => i.id === id) || null;
+}
 
 export function getStocksForYear(year) {
     return STOCKS.filter(s => {
-        if (s.isPlayer) return false;  // player stock dikelola StockSystem
+        if (s.isPlayer) return false;
         if (year < s.listedFrom) return false;
         if (s.listedTo !== null && year > s.listedTo) return false;
         return true;
     });
-          }
+}
