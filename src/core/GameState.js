@@ -148,6 +148,11 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
 
         settings: { vibrate: true, sound: false },
 
+// [v2027.3a] Premium currency.
+silicon: 10,
+siliconHistory: [],
+dailyLogin: { lastClaimGameMinute: -1, streak: 0 },
+
         era: 'feature_phone',
         eraStartYear: TIME_CONFIG.startYear,
 
@@ -450,8 +455,15 @@ class GameState {
             events:   { ...base.events,   ...(incoming.events || {}) },
             quests:   { ...base.quests,   ...(incoming.quests || {}) },
             tutorial: { ...base.tutorial, ...(incoming.tutorial || {}) },
-            settings: { ...base.settings, ...(incoming.settings || {}) }
-        };
+                settings: { ...base.settings, ...(incoming.settings || {}) }
+};
+
+// [v2027.3a] Migrasi save lama — kasih modal awal 10 SIL kalau belum ada.
+if (typeof this.data.silicon !== 'number') this.data.silicon = 10;
+if (!Array.isArray(this.data.siliconHistory)) this.data.siliconHistory = [];
+if (!this.data.dailyLogin || typeof this.data.dailyLogin !== 'object') {
+    this.data.dailyLogin = { lastClaimGameMinute: -1, streak: 0 };
+}
 
         _ensureStarterResearch(this.data);
 
