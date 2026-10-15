@@ -63,6 +63,8 @@ import { getActiveRendererIdPublic } from './ui/notifications/NotificationRender
 import { initSwipe, showSwipeAnimation } from './core/SwipeService.js';
 import { initNavSliderDrag } from './core/NavSliderDrag.js';
 import { AudioService } from './core/AudioService.js';
+import { StockSystem } from './systems/StockSystem.js';
+import { renderExchangePanel, drawExchangeChart, setExchangeCategory, setExchangeStock } from './ui/panels/ExchangePanel.js';
 
 // ============ INSTANCE ============
 var timeSystem        = new TimeSystem(state);
@@ -81,6 +83,7 @@ var teamSystem        = new TeamSystem(state);
 var chipSystem        = new ChipSystem(state);
 var fabSystem         = new FabSystem(state);
 var advisor           = new AdvisorSystem(state, { research: research });
+var stockSystem       = new StockSystem(state);
 
 market.setCompetitorSystem(competitors);
 
@@ -180,11 +183,11 @@ function renderView(opts) {
     try {
         if (activeView === 'dashboard') html = renderHomePanel();
         else if (activeView === 'profile') html = renderCompanyProfilePanel({ teamSystem: teamSystem, marketSystem: market, competitors: competitors, opinionSystem: opinion });
-        else if (activeView === 'team') html = renderHqPanel({ subtab: activeHqSubtab, state: state.get(), timeSnapshot: getTime(), researchSystem: research, teamSystem: teamSystem });
+        else if (activeView === 'team') html = renderHqPanel({ subtab: activeHqSubtab, state: state.get(), timeSnapshot: getTime(), researchSystem: research, teamSystem: teamSystem, stockSystem: stockSystem });
         else if (activeView === 'research') html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os, chipResearchSystem: chipResearch });
         else if (activeView === 'products') html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os });
         else if (activeView === 'market') html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion });
-        else if (activeView === 'settings') html = renderSettingsPanel();
+        if (activeView === 'settings') bindSettingsActions(els.view);
         else if (activeView === 'guide') html = renderGuidePanel();
         else html = renderEmptyState({ icon: '?', title: 'Tidak ditemukan' });
     } catch (err) {
@@ -395,8 +398,13 @@ function bindGlobalClicks() {
         }
 
         var hqSubBtn = e.target.closest('[data-hq-subtab]');
-        if (hqSubBtn) { e.preventDefault(); activeHqSubtab = hqSubBtn.dataset.hqSubtab; renderView(); return; }
+if (hqSubBtn) { e.preventDefault(); activeHqSubtab = hqSubBtn.dataset.hqSubtab; renderView(); return; }
 
+var exCat = e.target.closest('[data-ex-cat]');
+if (exCat) { e.preventDefault(); setExchangeCategory(exCat.dataset.exCat); renderView(); return; }
+
+var exSel = e.target.closest('[data-ex-select]');
+if (exSel) { e.preventDefault(); setExchangeStock(exSel.dataset.exSelect); renderView(); return; }
         var teamModeBtn = e.target.closest('[data-team-mode]');
         if (teamModeBtn) {
             e.preventDefault();
@@ -785,14 +793,14 @@ async function boot() {
         opinion.start();
         chipSystem.start();
         fabSystem.start();
-        NewsSystem.start();
-        advisor.start();
-        mountAdvisorButton(advisor);
+NewsSystem.start();
+advisor.start();
+stockSystem.start();
 
         window.__game = {
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
-            chips: chipSystem, fab: fabSystem, news: NewsSystem, advisor: advisor, ThemeService: ThemeService,
+            chips: chipSystem, fab: fabSystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
             LanguageService: LanguageService,
             SaveService: SaveService, ToastService: ToastService, Modal: Modal, navigate: navigate, render: renderAll,
             modules: { marketing: marketingModule, feedbackData: feedbackModule },
