@@ -62,7 +62,9 @@ import { setExchangeCategory, setExchangeStock, drawExchangeChart, openBuyModal,
 import { buildReport, formatReportText } from './diagnostics/DiagnosticReport.js';
 import { openDiagnosticModal } from './diagnostics/DiagnosticUI.js';
 import { CloudService } from './services/CloudService.js';
-// import { SupabaseAdapter } from './services/cloud/SupabaseAdapter.js'; // sementara disabled
+import { SupabaseAdapter } from './services/cloud/SupabaseAdapter.js';
+import { CloudSync } from './services/cloud/CloudSync.js';
+import { bindCloudUI } from './services/cloud/CloudUI.js';
 import * as marketingModule from './data/marketing.data.js';
 import * as feedbackModule from './data/feedback.data.js';
 import { getActiveRendererIdPublic } from './ui/notifications/NotificationRenderer.js';
@@ -911,8 +913,23 @@ async function boot() {
 
         // Cloud sync: hanya daftarkan adapter. Tidak ada sesi dibuat di sini.
         // Pemain membuat sesi anonymous secara eksplisit dari Profile → Cloud.
-        // Cloud sementara disabled — SupabaseAdapter belum siap.
-console.info('[Cloud] Adapter dinonaktifkan.');
+ 
+        try {
+    CloudService.registerAdapter(SupabaseAdapter);
+    CloudSync.init(state);
+    bindCloudUI();        
+    // Restore sesi hanya kalau memang ada sesi tersimpan — TIDAK buat sesi baru.
+    if (typeof SupabaseAdapter.hasStoredSession === 'function' && SupabaseAdapter.hasStoredSession()) {
+        CloudService.restoreSession().then(function (r) {
+            if (r && r.ok) console.info('[Cloud] Sesi dipulihkan:', r.email || r.userId);
+            else console.info('[Cloud] Tidak ada sesi tersimpan.');
+        });
+    } else {
+        console.info('[Cloud] Adapter terdaftar (belum login).');
+    }
+} catch (e) {
+    console.warn('[Cloud] Init gagal:', e);
+}
 
         window.__game = {
             // ===== DIAGNOSTIC =====
