@@ -108,24 +108,6 @@ export const CloudService = {
         }
     },
 
-    // ---------- Google OAuth ----------
-async signInWithGoogle() {
-    if (!_adapter) return NOT_CONFIGURED;
-    if (typeof _adapter.signInWithGoogle !== 'function') {
-        return { ok: false, reason: 'Google login tidak didukung.', code: 'unknown' };
-    }
-    _setStatus('connecting');
-    try {
-        await _adapter.signInWithGoogle(location.origin);
-        // Supabase akan redirect browser ke Google.
-        // Setelah balik, onAuthStateChange akan menangkap sesi.
-        return { ok: true, redirecting: true };
-    } catch (err) {
-        _setStatus('disconnected');
-        return _fail(err);
-    }
-},
-
     async signIn(email, password) {
         if (!_adapter) return NOT_CONFIGURED;
         _setStatus('connecting');
