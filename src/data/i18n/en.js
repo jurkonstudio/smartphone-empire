@@ -652,6 +652,26 @@ export const en = {
     'market.comp_detail.no_sig':     'No signature products yet.',
     'market.comp_detail.close':      'Close',
 
+// [v2027.14b] Transparent biography
+'market.comp_detail.fact_historical':  'Based on historical facts',
+'market.comp_detail.fact_mixed':       'Mixed facts & game simplification',
+'market.comp_detail.fact_fictional':   'Fictional for gameplay',
+'market.comp_detail.profile_title':    'Company Profile',
+'market.comp_detail.founded':          'Founded',
+'market.comp_detail.founder':          'Founder',
+'market.comp_detail.hq':               'Headquarters',
+'market.comp_detail.parent':           'Parent Company',
+'market.comp_detail.origin_title':     'Origin Story',
+'market.comp_detail.milestones_title': 'Historical Milestones',
+'market.comp_detail.verified_label':   'Verified',
+'market.comp_detail.approx_label':     'Approximate',
+'market.comp_detail.trivia_title':     'Fun Facts',
+'market.comp_detail.fact_note_label':  'Verification Note',
+'market.comp_detail.sources_label':    'Sources',
+'market.comp_detail.exit_title':       'Exited the Market',
+'market.comp_detail.market_title':     'Market Data',
+'market.comp_detail.active_now':       'active',
+
     // OPINION
     'opinion.sentiment.title':       'Public Sentiment',
     'opinion.sentiment.very_good':   'Very Good',
