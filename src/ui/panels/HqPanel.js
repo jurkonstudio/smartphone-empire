@@ -1,16 +1,18 @@
 // FILE: src/ui/panels/HqPanel.js
-// v2027.27a — Hapus sub-tab Campus (dipindah ke Home 3D map).
+// v2027.28a — tambah tab Exchange.
 import { renderDashboard } from './DashboardPanel.js';
 import { renderTeamPanel } from './TeamPanel.js';
+import { renderExchangePanel } from './ExchangePanel.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
 
 const HQ_TABS = [
     { id: 'overview', key: 'hq.tab.overview', icon: 'activity' },
-    { id: 'team',     key: 'hq.tab.team',     icon: 'users' }
+    { id: 'team',     key: 'hq.tab.team',     icon: 'users' },
+    { id: 'exchange', key: 'hq.tab.exchange', icon: 'trending-up' }
 ];
 
-export function renderHqPanel({ subtab, state, timeSnapshot, researchSystem, teamSystem }) {
+export function renderHqPanel({ subtab, state, timeSnapshot, researchSystem, teamSystem, stockSystem }) {
     var tabBar = '<div class="subtab-bar">' +
         HQ_TABS.map(function (tab) {
             var cls = 'subtab-btn' + (subtab === tab.id ? ' active' : '');
@@ -24,6 +26,8 @@ export function renderHqPanel({ subtab, state, timeSnapshot, researchSystem, tea
     var body = '';
     if (subtab === 'team') {
         body = renderTeamPanel({ teamSystem: teamSystem });
+    } else if (subtab === 'exchange') {
+        body = renderExchangePanel({ stockSystem: stockSystem });
     } else {
         body = renderDashboard(state, timeSnapshot, researchSystem, teamSystem);
     }
