@@ -3663,3 +3663,59 @@ body {
     min-height: 60vh !important;
     max-height: 60vh !important;
 }
+
+/* ============================================================================
+   102. GUIDE — step, system, collapsible overrides (v2027.14a)
+   ============================================================================ */
+.guide-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+.guide-step:last-child { border-bottom: none; }
+.guide-step-num {
+    flex-shrink: 0;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 11px; font-weight: 800;
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-top: 1px;
+}
+.guide-step-text {
+    font-size: 12.5px;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+.guide-sys-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+.guide-sys-row:last-child { border-bottom: none; }
+.guide-sys-icon {
+    flex-shrink: 0;
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: var(--bg-3);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 15px;
+}
+.guide-sys-body { flex: 1; min-width: 0; }
+.guide-sys-title {
+    font-size: 13px; font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.005em;
+    margin-bottom: 2px;
+}
+.guide-sys-desc {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
