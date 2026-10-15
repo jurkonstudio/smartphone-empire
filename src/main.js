@@ -24,6 +24,7 @@ import { TeamSystem } from './systems/TeamSystem.js';
 import { ChipSystem } from './systems/ChipSystem.js';
 import { FabSystem } from './systems/FabSystem.js';
 import { NewsSystem } from './systems/NewsSystem.js';
+import { AdvisorSystem } from './systems/AdvisorSystem.js';
 import { renderHeader } from './ui/layout/Header.js';
 import { renderMobileNav } from './ui/layout/MobileNav.js';
 import { renderEmptyState } from './ui/panels/EmptyState.js';
@@ -37,6 +38,7 @@ import { showOnboarding } from './ui/panels/OnboardingModal.js';
 import { initMonthlySummary } from './ui/panels/MonthlySummaryModal.js';
 import { initGameOverScreen } from './ui/panels/GameOverScreen.js';
 import { Modal } from './ui/modal.js';
+import { mountAdvisorButton } from './ui/panels/AdvisorPanel.js';
 import { renderResearchPanel, setFilterCategory, setTimelineFilter, getChipResearchFilter, setChipResearchFilter, openNodeDetailModal, openOsWizardModal, openCreateOsModal, openFeatureDetailModal, openChipNodeModal } from './ui/panels/ResearchPanel.js';
 import { renderProductPanel, openProductDetailModal, openCampaignModal, openOrderProductionModal } from './ui/panels/ProductPanel.js';
 import { openDesignWizard } from './ui/panels/DesignWizard.js';
@@ -78,6 +80,7 @@ var eraSystem         = new EraSystem(state);
 var teamSystem        = new TeamSystem(state);
 var chipSystem        = new ChipSystem(state);
 var fabSystem         = new FabSystem(state);
+var advisor           = new AdvisorSystem(state, { research: research });
 
 market.setCompetitorSystem(competitors);
 
@@ -682,6 +685,18 @@ function bindStateEvents() {
     bus.on('team:fired', function () { if (activeView === 'team') renderView({ soft: true }); });
 
     bus.on('lang:changed', function () { renderAll(); });
+    // Asisten bisnis: lompat ke panel/subtab yang disarankan.
+    bus.on('advisor:go', function (p) {
+        if (!p || !p.nav) return;
+        Modal.closeAll();
+        if (p.subtab) {
+            if (p.nav === 'research') activeSubtab = p.subtab;
+            else if (p.nav === 'products') activeProdSubtab = p.subtab;
+            else if (p.nav === 'market') activeMarketSubtab = p.subtab;
+            else if (p.nav === 'team') activeHqSubtab = p.subtab;
+        }
+        if (p.nav === activeView) renderView(); else navigate(p.nav);
+    });
 
     bus.on('news:published', function (data) {
         try {
@@ -771,11 +786,13 @@ async function boot() {
         chipSystem.start();
         fabSystem.start();
         NewsSystem.start();
+        advisor.start();
+        mountAdvisorButton(advisor);
 
         window.__game = {
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
-            chips: chipSystem, fab: fabSystem, news: NewsSystem, ThemeService: ThemeService,
+            chips: chipSystem, fab: fabSystem, news: NewsSystem, advisor: advisor, ThemeService: ThemeService,
             LanguageService: LanguageService,
             SaveService: SaveService, ToastService: ToastService, Modal: Modal, navigate: navigate, render: renderAll,
             modules: { marketing: marketingModule, feedbackData: feedbackModule },
