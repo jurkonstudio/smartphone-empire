@@ -1,6 +1,7 @@
 // FILE: src/ui/panels/KpiCards.js
-// v2027.13a — i18n.
+// v2027.14a — pakai formatCurrency.
 import { t } from '../../core/LanguageService.js';
+import { formatCurrency } from '../../utils/format.js';
 
 function _monthShort(m) {
     var key = 'date.month.' + (m || 1);
@@ -39,7 +40,7 @@ export function renderKpiCards(state, timeSnapshot, teamSystem) {
     return '<div class="kpi-grid">' +
         '<div class="kpi">' +
             '<div class="kpi-label">' + t('kpi.cash') + '</div>' +
-            '<div class="kpi-value" data-cash style="color:var(--accent);">$' + state.cash.toLocaleString('en-US') + '</div>' +
+            '<div class="kpi-value" data-cash style="color:var(--accent);">' + formatCurrency(state.cash) + '</div>' +
         '</div>' +
         '<div class="kpi green">' +
             '<div class="kpi-label">' + t('kpi.reputation') + '</div>' +
