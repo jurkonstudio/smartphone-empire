@@ -426,6 +426,9 @@ function bindGlobalClicks() {
 
         var navBtn = e.target.closest('[data-nav]');
         if (navBtn) { e.preventDefault(); vibrate(8); navigate(navBtn.dataset.nav); return; }
+        
+var guideReport = e.target.closest('[data-guide-report]');
+if (guideReport) { e.preventDefault(); vibrate(8); openDiagnosticModal(); return; }
 
         var timeBtn = e.target.closest('[data-time-action]');
         if (timeBtn) {
