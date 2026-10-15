@@ -1,7 +1,7 @@
 // FILE: src/systems/SiliconService.js
 // ============================================================
 // SiliconService — premium currency "Silicon" (SIL).
-// v2027.3a — tambah chip research + OS bugs.
+// v2027.4a — tambah fab build + fab production.
 // ============================================================
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
@@ -17,6 +17,8 @@ export var SILICON_ACTIONS = [
     { id: 'research',     cost: 20, icon: '🔬', ready: true },
     { id: 'chipResearch', cost: 20, icon: '💠', ready: true },
     { id: 'dev',          cost: 30, icon: '📱', ready: true },
+    { id: 'fabBuild',     cost: 30, icon: '🏗️', ready: true },
+    { id: 'fabProd',      cost: 20, icon: '🏭', ready: true },
     { id: 'osBugs',       cost: 10, icon: '🐞', ready: true },
     { id: 'morale',       cost: 15, icon: '😊', ready: true },
     { id: 'rep',          cost: 25, icon: '⭐', ready: true }
@@ -109,6 +111,12 @@ export var SiliconService = {
         if (actionId === 'dev') {
             if (!state.data.products.development) return { ok: false, reason: 'Tidak ada produk sedang dikembangkan.' };
         }
+        if (actionId === 'fabBuild') {
+            if (!state.data.fab || !state.data.fab.upgrade) return { ok: false, reason: 'Tidak ada build/upgrade fab.' };
+        }
+        if (actionId === 'fabProd') {
+            if (!state.data.fab || !state.data.fab.producing) return { ok: false, reason: 'Tidak ada produksi fab.' };
+        }
         if (actionId === 'osBugs') {
             var bugs = (state.data.os && state.data.os.bugs) || [];
             if (!bugs.length) return { ok: false, reason: 'Tidak ada bug OS.' };
@@ -155,6 +163,27 @@ export var SiliconService = {
                     game.timeSystem.fastForwardDays(Math.max(1, Math.ceil(totalMinutes / (24 * 60))));
                 }
                 ToastService.success(t('silicon.msg.dev') || 'Product development accelerated.');
+            } else if (actionId === 'fabBuild') {
+                var u = state.data.fab.upgrade;
+                if (u) {
+                    // Paksa progress = selesai, lalu trigger tick.
+                    u.progressDays = u.durationDays;
+                    u.lastProcessedMinute = state.data.time.elapsedGameMinutes - 60;
+                    if (game.fab && typeof game.fab._tickBuildUpgrade === 'function') {
+                        game.fab._tickBuildUpgrade();
+                    }
+                }
+                ToastService.success(t('silicon.msg.fabBuild') || 'Fab build/upgrade completed instantly.');
+            } else if (actionId === 'fabProd') {
+                var p = state.data.fab.producing;
+                if (p) {
+                    p.progressUnits = p.totalUnits;
+                    p.lastProcessedMinute = state.data.time.elapsedGameMinutes - 60;
+                    if (game.fab && typeof game.fab._tickProduction === 'function') {
+                        game.fab._tickProduction();
+                    }
+                }
+                ToastService.success(t('silicon.msg.fabProd') || 'Fab production completed instantly.');
             } else if (actionId === 'osBugs') {
                 var before = (state.data.os.bugs || []).length;
                 state.data.os.bugs = [];
