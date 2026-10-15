@@ -1,4 +1,5 @@
 // FILE: src/core/SaveService.js
+// v2027.38a — emit save:success satu kali dengan payload lengkap (untuk CloudSync).
 import { bus } from './EventBus.js';
 import { APP_CONFIG } from '../config/app.config.js';
 import { SCHEMA_VERSION } from './GameState.js';
@@ -17,8 +18,8 @@ export const SaveService = {
                 data: state.serialize()
             };
             localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
-            bus.emit('save:success', { at: Date.now() });
-            bus.emit('save:success', { savedAt: payload.savedAt });
+            // Satu event saja — CloudSync mendengarkan ini untuk autosync.
+            bus.emit('save:success', { savedAt: payload.savedAt, at: payload.savedAt });
             return true;
         } catch (err) {
             console.error('[SaveService] Gagal menyimpan:', err);
@@ -38,6 +39,22 @@ export const SaveService = {
             console.error('[SaveService] Gagal memuat:', err);
             return null;
         }
+    },
+
+    // Ambil payload penuh (dengan metadata) — dipakai untuk cek timestamp.
+    loadFull: function () {
+        try {
+            const raw = localStorage.getItem(SAVE_KEY);
+            if (!raw) return null;
+            return JSON.parse(raw);
+        } catch (err) {
+            return null;
+        }
+    },
+
+    getSavedAt: function () {
+        const p = this.loadFull();
+        return p && p.savedAt ? p.savedAt : 0;
     },
 
     clear: function () {
@@ -87,8 +104,9 @@ export const SaveService = {
         if (this._timerId !== null) return;
         this._timerId = setInterval(function () {
             if (document.visibilityState !== 'visible') return;
-            if (getState().data.gameOver) return;
-            self.save(getState());
+            var s = getState();
+            if (!s || !s.data || s.data.gameOver) return;
+            self.save(s);
         }, AUTOSAVE_INTERVAL_MS);
     },
 
