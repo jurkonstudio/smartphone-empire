@@ -1,7 +1,5 @@
 // FILE: src/services/CloudService.js
-// v2027.37a — Fasad cloud. API lama (registerAdapter, signIn, signOut, uploadSave,
-// downloadSave, listSaves, getStatus, getUserId, isAvailable) tetap sama;
-// ditambah: signUp, restoreSession, slot aktif, reset password, realtime, profil, storage.
+// v2027.38a — Fasad cloud. + 3 method Silicon (get/add/spend server-side).
 import { bus } from '../core/EventBus.js';
 
 const SLOT_KEY = 'smartphone-empire:cloud-slot';
@@ -87,7 +85,6 @@ export const CloudService = {
         _setStatus('disconnected');
     },
 
-    // Pulihkan sesi tersimpan (dipanggil saat boot).
     async restoreSession() {
         if (!_adapter) return NOT_CONFIGURED;
         _setStatus('connecting');
@@ -103,7 +100,7 @@ export const CloudService = {
             _setStatus('disconnected');
             return { ok: false, reason: 'Tidak ada sesi.', code: 'no_session' };
         } catch (err) {
-            _setStatus('disconnected');     // gagal pulihkan sesi bukan error fatal: game tetap lokal
+            _setStatus('disconnected');
             return _fail(err);
         }
     },
@@ -198,14 +195,12 @@ export const CloudService = {
         }
     },
 
-    // Versi lama: error ditelan -> []. JANGAN dipakai untuk keputusan sinkronisasi.
     async listSaves() {
         if (!_adapter || !_userId) return [];
         try { return await _adapter.listSaves(_userId); }
         catch (err) { return []; }
     },
 
-    // Versi tegas: membedakan "kosong" dari "gagal membaca".
     async listSavesStrict() {
         if (!_adapter) return NOT_CONFIGURED;
         if (!_userId) return NOT_SIGNED_IN;
@@ -213,7 +208,6 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
-    // cb(row) dipanggil saat ada save baru dari perangkat lain. Mengembalikan fungsi unsubscribe.
     async subscribeSaves(cb) {
         if (!_adapter || !_userId || typeof _adapter.subscribeSaves !== 'function') return function () {};
         try { return await _adapter.subscribeSaves(_userId, cb); }
@@ -246,6 +240,33 @@ export const CloudService = {
     async getGameAssetUrl(path) {
         if (!_adapter || typeof _adapter.getGameAssetUrl !== 'function') return NOT_CONFIGURED;
         try { return { ok: true, url: await _adapter.getGameAssetUrl(path) }; }
+        catch (err) { return _fail(err); }
+    },
+
+    // ============================================================
+    // SILICON (server-side, via RPC)
+    // ============================================================
+    async getSiliconBalance() {
+        if (!_adapter) return NOT_CONFIGURED;
+        if (!_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.rpcGetSilicon !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, balance: await _adapter.rpcGetSilicon() }; }
+        catch (err) { return _fail(err); }
+    },
+
+    async addSiliconServer(delta) {
+        if (!_adapter) return NOT_CONFIGURED;
+        if (!_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.rpcAddSilicon !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, balance: await _adapter.rpcAddSilicon(delta) }; }
+        catch (err) { return _fail(err); }
+    },
+
+    async spendSiliconServer(amount) {
+        if (!_adapter) return NOT_CONFIGURED;
+        if (!_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.rpcSpendSilicon !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, balance: await _adapter.rpcSpendSilicon(amount) }; }
         catch (err) { return _fail(err); }
     }
 };
