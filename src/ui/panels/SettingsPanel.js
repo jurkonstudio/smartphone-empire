@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SettingsPanel.js
-// v2027.33b — validasi nama via name-blocklist.data.js
+// v2027.34a — pakai formatCurrency + live update cash.
 import { state } from '../../core/GameState.js';
 import { SaveService } from '../../core/SaveService.js';
 import { ToastService } from '../../core/ToastService.js';
@@ -13,9 +13,11 @@ import { renderIcon } from '../icons/FeatureIcons.js';
 import { APP_CONFIG } from '../../config/app.config.js';
 import { SUPPORTED_LANGS } from '../../data/i18n/index.js';
 import { validateCompanyName } from '../../data/name-blocklist.data.js';
+import { formatCurrency } from '../../utils/format.js';
 
 let _activeTab = 'umum';
 let _boundRoot = null;
+let _cashListenerBound = false;
 
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 
@@ -70,17 +72,17 @@ function _heroCard(s) {
             '</div>' +
         '</div>' +
         '<div class="settings-hero-kpi">' +
-            _kpi('Cash', '$' + (s.cash || 0).toLocaleString('en-US')) +
+            _kpi('Cash', formatCurrency(s.cash), 'data-settings-cash') +
             _kpi('Reputasi', String(rep)) +
             _kpi('Tim', String(team)) +
         '</div>' +
         '</div>';
 }
 
-function _kpi(label, value) {
+function _kpi(label, value, valueAttrs) {
     return '<div class="settings-kpi">' +
         '<div class="settings-kpi-label">' + escapeHtml(label) + '</div>' +
-        '<div class="settings-kpi-value">' + escapeHtml(value) + '</div>' +
+        '<div class="settings-kpi-value"' + (valueAttrs ? ' ' + valueAttrs : '') + '>' + escapeHtml(value) + '</div>' +
         '</div>';
 }
 
@@ -177,7 +179,7 @@ function _tabKeuangan(s) {
         activeHtml = activeLoans.map(function (l) {
             return _row({
                 label: escapeHtml(l.label || l.id),
-                hint: 'Sisa $' + (l.remaining || 0).toLocaleString('en-US') + ' · ' + Math.round((l.monthlyInterestRate || 0) * 100) + '%/mo'
+                hint: 'Sisa ' + formatCurrency(l.remaining) + ' · ' + Math.round((l.monthlyInterestRate || 0) * 100) + '%/mo'
             });
         }).join('');
     } else {
@@ -187,7 +189,7 @@ function _tabKeuangan(s) {
     const offersHtml = BALANCE.loans.map(function (l) {
         return _row({
             label: escapeHtml(l.label),
-            hint: '$' + l.principal.toLocaleString('en-US') + ' · ' + Math.round(l.monthlyInterestRate * 100) + '%/mo · ' + l.termMonths + ' mo',
+            hint: formatCurrency(l.principal) + ' · ' + Math.round(l.monthlyInterestRate * 100) + '%/mo · ' + l.termMonths + ' mo',
             action: true,
             attrs: 'data-loan="' + l.id + '"',
             chevron: true
@@ -285,6 +287,16 @@ export function bindSettingsActions(root) {
     if (!root) return;
     if (_boundRoot === root) return;
     _boundRoot = root;
+
+    // [v2027.34a] Live update hero cash saat cash berubah.
+    if (!_cashListenerBound) {
+        _cashListenerBound = true;
+        bus.on('state:cash-changed', function (data) {
+            var el = document.querySelector('[data-settings-cash]');
+            if (!el) return;
+            el.textContent = formatCurrency(data.next);
+        });
+    }
 
     root.addEventListener('click', function (e) {
         var tabBtn = e.target.closest('[data-set-tab]');
