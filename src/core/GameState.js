@@ -1,5 +1,5 @@
 // FILE: src/core/GameState.js
-// v2027.2a — fix reputasi floating point drift.
+// v2027.3a — state silicon + dailyLogin.
 import { TIME_CONFIG } from '../config/time.config.js';
 import { BALANCE } from '../data/balance.data.js';
 import { DIFFICULTY, LOG_TYPES } from '../config/constants.js';
@@ -148,10 +148,10 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
 
         settings: { vibrate: true, sound: false },
 
-// [v2027.3a] Premium currency.
-silicon: 10,
-siliconHistory: [],
-dailyLogin: { lastClaimGameMinute: -1, streak: 0 },
+        // [v2027.3a] Premium currency.
+        silicon: 10,
+        siliconHistory: [],
+        dailyLogin: { lastClaimDate: null, streak: 0 },
 
         era: 'feature_phone',
         eraStartYear: TIME_CONFIG.startYear,
@@ -245,7 +245,6 @@ function _ensureStarterResearch(data) {
     }
 }
 
-// [v2027.2a] Bulatkan 1 desimal untuk reputasi.
 function _roundRep(n) {
     if (typeof n !== 'number' || !isFinite(n)) return 0;
     return Math.round(n * 10) / 10;
@@ -348,7 +347,6 @@ class GameState {
         return true;
     }
 
-    // [v2027.2a] Reputasi selalu 1 desimal, dibulatkan.
     setReputation(value) {
         const clamped = Math.max(BALANCE.market.minReputation, Math.min(BALANCE.market.maxReputation, value));
         const rounded = _roundRep(clamped);
@@ -455,15 +453,15 @@ class GameState {
             events:   { ...base.events,   ...(incoming.events || {}) },
             quests:   { ...base.quests,   ...(incoming.quests || {}) },
             tutorial: { ...base.tutorial, ...(incoming.tutorial || {}) },
-                settings: { ...base.settings, ...(incoming.settings || {}) }
-};
+            settings: { ...base.settings, ...(incoming.settings || {}) }
+        };
 
-// [v2027.3a] Migrasi save lama — kasih modal awal 10 SIL kalau belum ada.
-if (typeof this.data.silicon !== 'number') this.data.silicon = 10;
-if (!Array.isArray(this.data.siliconHistory)) this.data.siliconHistory = [];
-if (!this.data.dailyLogin || typeof this.data.dailyLogin !== 'object') {
-    this.data.dailyLogin = { lastClaimGameMinute: -1, streak: 0 };
-}
+        // [v2027.3a] Migrasi save lama — silicon + dailyLogin.
+        if (typeof this.data.silicon !== 'number') this.data.silicon = 10;
+        if (!Array.isArray(this.data.siliconHistory)) this.data.siliconHistory = [];
+        if (!this.data.dailyLogin || typeof this.data.dailyLogin !== 'object') {
+            this.data.dailyLogin = { lastClaimDate: null, streak: 0 };
+        }
 
         _ensureStarterResearch(this.data);
 
@@ -471,7 +469,6 @@ if (!this.data.dailyLogin || typeof this.data.dailyLogin !== 'object') {
         if (!this.data.market.trends) this.data.market.trends = { ...BALANCE.market.trendsByEra.feature_phone };
         if (typeof this.data.feedback.sentiment !== 'number') this.data.feedback.sentiment = (BALANCE.feedback && BALANCE.feedback.initialSentiment) || 50;
 
-        // [v2027.2a] Bersihkan drift reputasi dari save lama.
         if (typeof this.data.market.reputation === 'number') {
             this.data.market.reputation = _roundRep(this.data.market.reputation);
         }
