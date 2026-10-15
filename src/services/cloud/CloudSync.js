@@ -1,20 +1,9 @@
 // FILE: src/services/cloud/CloudSync.js
-// v2027.38a — Orkestrasi sinkronisasi save lokal <-> cloud.
-// + Sinkronisasi Silicon (pull-once-then-server).
-//
-// Prinsip keselamatan (agar progres tidak hilang):
-//  1. Tidak ada unggahan otomatis sebelum pengecekan saat-terhubung selesai (_ready).
-//  2. Kalau cloud lebih maju / beda perusahaan / perangkat masih kosong -> pemain DIMINTA memilih.
-//  3. Kalau daftar save di cloud gagal dibaca (offline, dll) -> TIDAK mengunggah apa pun.
-//  4. Autosync dibatasi jeda minimal dan hanya jika progres game berubah.
-//
-// Prinsip Silicon:
-//  - Login pertama kali (setelah fitur ini rilis): rekonsiliasi (lokal vs server).
-//  - Setelah ditandai synced: server authoritative (pull saat login).
-//  - Setiap perubahan lokal (add/spend): push delta ke server (fire-and-forget).
+// v2027.38b — Fix logika rekonsiliasi SIL + toast feedback.
 import { bus } from '../../core/EventBus.js';
 import { SaveService } from '../../core/SaveService.js';
 import { SCHEMA_VERSION } from '../../core/GameState.js';
+import { ToastService } from '../../core/ToastService.js';
 import { CloudService } from '../CloudService.js';
 import { SiliconService } from '../../systems/SiliconService.js';
 import { CLOUD } from './supabase.config.js';
@@ -25,16 +14,15 @@ const SILICON_SYNC_KEY = 'smartphone-empire:silicon-synced';
 
 let _state = null;
 let _inited = false;
-let _ready = false;            // boleh autosync?
-let _busy = false;             // sedang mengunggah
+let _ready = false;
+let _busy = false;
 let _checking = false;
 let _conflictOpen = false;
 let _lastUploadAt = 0;
 let _lastUploadMinutes = -1;
 let _unsubRealtime = null;
-let _siliconSyncing = false;   // sedang pull dari server (skip push)
+let _siliconSyncing = false;
 
-// ---------- util murni (diekspor agar mudah dites) ----------
 export function getDeviceId() {
     try {
         let id = localStorage.getItem(DEVICE_KEY);
@@ -92,7 +80,7 @@ function _isConnected() {
 }
 
 // ============================================================
-// SILICON — sinkronisasi dengan server
+// SILICON
 // ============================================================
 function _hasSyncedSilicon() {
     try { return localStorage.getItem(SILICON_SYNC_KEY) === '1'; } catch (e) { return false; }
@@ -116,35 +104,48 @@ async function syncSiliconOnLogin() {
         var localBal = SiliconService.getBalance();
         var hasSynced = _hasSyncedSilicon();
 
+        console.info('[CloudSync] SIL sync — lokal:', localBal, 'server:', serverBal, 'hasSynced:', hasSynced);
+
         if (!hasSynced) {
-            // Pertama kali: rekonsiliasi (yang lebih besar menang)
+            // First sync: LOCAL WINS (pemain sudah main lokal, server masih default).
             if (localBal > serverBal) {
-                var delta = localBal - serverBal;
-                console.info('[CloudSync] SIL rekonsiliasi: push +' + delta + ' ke server.');
-                var pushRes = await CloudService.addSiliconServer(delta);
-                if (!pushRes.ok) {
-                    console.warn('[CloudSync] SIL push gagal:', pushRes.code);
-                    return;   // jangan tandai synced kalau gagal
+                var addDelta = localBal - serverBal;
+                console.info('[CloudSync] First sync — push +' + addDelta + ' ke server.');
+                var r1 = await CloudService.addSiliconServer(addDelta);
+                if (!r1.ok) {
+                    ToastService.warning('Sync SIL gagal (push). Coba lagi nanti.');
+                    console.warn('[CloudSync] push gagal:', r1.code);
+                    return;
                 }
                 _markSiliconSynced();
+                ToastService.success('SIL disinkronkan ke cloud (' + localBal + ' SIL).');
             } else if (serverBal > localBal) {
-                console.info('[CloudSync] SIL rekonsiliasi: pull ' + serverBal + ' dari server (lokal ' + localBal + ').');
-                SiliconService.applyServerBalance(serverBal);
+                var spendDelta = serverBal - localBal;
+                console.info('[CloudSync] First sync — spend ' + spendDelta + ' dari server.');
+                var r2 = await CloudService.spendSiliconServer(spendDelta);
+                if (!r2.ok) {
+                    ToastService.warning('Sync SIL gagal (spend). Coba lagi nanti.');
+                    console.warn('[CloudSync] spend gagal:', r2.code);
+                    return;
+                }
                 _markSiliconSynced();
+                ToastService.success('SIL disinkronkan ke cloud (' + localBal + ' SIL).');
             } else {
-                // Sama — cukup tandai
                 _markSiliconSynced();
+                ToastService.info('SIL sudah sinkron dengan cloud (' + localBal + ' SIL).');
             }
             return;
         }
 
-        // Sudah sync: server authoritative
+        // Sudah pernah sync: server authoritative
         if (serverBal !== localBal) {
-            console.info('[CloudSync] SIL pull: server ' + serverBal + ', lokal ' + localBal + '. Terapkan server.');
+            console.info('[CloudSync] Pull dari server:', serverBal, '(lokal:', localBal + ')');
             SiliconService.applyServerBalance(serverBal);
+            ToastService.info('SIL disinkronkan dari cloud (' + serverBal + ' SIL).');
         }
     } catch (e) {
         console.warn('[CloudSync] syncSiliconOnLogin error:', e);
+        ToastService.warning('Sync SIL error. Coba lagi nanti.');
     } finally {
         _siliconSyncing = false;
     }
@@ -153,10 +154,8 @@ async function syncSiliconOnLogin() {
 function _pushSiliconDelta(delta) {
     if (!_state || !_isConnected()) return;
     if (!delta || delta === 0) return;
-    if (_siliconSyncing) return;   // sedang pull, jangan push balik
+    if (_siliconSyncing) return;
 
-    // Fire-and-forget: tidak block UI. Kalau gagal, akan direkonsiliasi
-    // saat login berikutnya (server authoritative).
     try {
         if (delta > 0) {
             CloudService.addSiliconServer(delta).then(function (res) {
@@ -172,7 +171,6 @@ function _pushSiliconDelta(delta) {
     }
 }
 
-// ---------- unggah ----------
 async function uploadNow(opts) {
     opts = opts || {};
     if (!_state) return { ok: false, reason: 'not_inited', code: 'unknown' };
@@ -211,7 +209,6 @@ function _onLocalSaved() {
     uploadNow({ auto: true });
 }
 
-// ---------- cek saat terhubung / ganti slot ----------
 async function checkOnConnect() {
     if (_checking || !_state) return;
     _checking = true;
@@ -239,7 +236,6 @@ async function checkOnConnect() {
     }
 }
 
-// ---------- terapkan save cloud ke game ----------
 async function applyCloud(slot) {
     slot = slot || CloudService.getSlot();
     const res = await CloudService.downloadSave(slot);
@@ -258,7 +254,6 @@ async function applyCloud(slot) {
     return { ok: true, slot: slot };
 }
 
-// ---------- realtime ----------
 async function _startRealtime() {
     _stopRealtime();
     _unsubRealtime = await CloudService.subscribeSaves(function (row) {
@@ -285,7 +280,7 @@ export const CloudSync = {
             if (e && e.status === 'connected') {
                 _startRealtime();
                 checkOnConnect();
-                syncSiliconOnLogin();          // ← tambah: sinkron SIL saat login
+                syncSiliconOnLogin();
             } else if (e && e.status === 'disconnected') {
                 _stopRealtime();
                 _ready = false;
@@ -293,9 +288,8 @@ export const CloudSync = {
             }
         });
 
-        // Push delta SIL ke server setiap perubahan lokal
         bus.on('silicon:changed', function (payload) {
-            if (!payload || payload.fromServer) return;   // skip kalau dari server
+            if (!payload || payload.fromServer) return;
             _pushSiliconDelta(payload.delta || 0);
         });
     },
@@ -303,9 +297,7 @@ export const CloudSync = {
     uploadNow: uploadNow,
     applyCloud: applyCloud,
     recheck: checkOnConnect,
-
     beginConflict: function () { _conflictOpen = true; },
-
     resolve: async function (choice) {
         if (choice === 'cloud') return applyCloud(CloudService.getSlot());
         if (choice === 'local') {
@@ -322,8 +314,13 @@ export const CloudSync = {
     },
     isPaused: function () { return _isConnected() && !_ready; },
 
-    // Manual trigger (opsional dipakai dari UI)
     syncSilicon: syncSiliconOnLogin,
+
+    // Untuk memaksa test ulang rekonsiliasi (debug)
+    resetSiliconSync: function () {
+        try { localStorage.removeItem(SILICON_SYNC_KEY); } catch (e) {}
+        console.info('[CloudSync] silicon-synced flag di-reset.');
+    },
 
     _reset: function () { _inited = false; _ready = false; _busy = false; _checking = false; _conflictOpen = false; _lastUploadAt = 0; _lastUploadMinutes = -1; _stopRealtime(); }
 };
