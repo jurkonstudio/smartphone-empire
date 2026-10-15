@@ -1,18 +1,22 @@
 // FILE: src/systems/StockSystem.js
 // ============================================================
-// StockSystem — mesin harga saham untuk halaman Exchange.
-// v2027.1b — full: interpolasi + proyeksi + getSeries untuk chart.
+// StockSystem — mesin harga saham + trading.
+// v2027.2a — Sesi 2: beli/jual, portofolio, riwayat transaksi.
 //
-// Siap untuk integrasi AI setelah 2026:
-//   - _projectFuturePrice(year, month, stock) jadi hook AI.
-//   - Hasil disimpan di state.data.stocks.projected.
-//   - Kalau provider tidak ada, pakai rumus fallback lokal.
+// Semua nilai disimpan dalam USD. Harga lokal dikonversi
+// memakai getCurrencyRateToUSD(currency, year).
+//
+// AI hook siap: _projectFuturePrice() bisa diganti panggilan AI.
 // ============================================================
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
-import { STOCKS, MARKET_INDICES, getStocksForYear } from '../data/stocks.data.js';
+import {
+    STOCKS, MARKET_INDICES, getStocksForYear,
+    getStockById, getCurrencyRateToUSD
+} from '../data/stocks.data.js';
 
-var MAX_HISTORY = 60;  // 5 tahun × 12 bulan
+var MAX_HISTORY = 60;
+var MAX_TRANSACTIONS = 20;
 
 export class StockSystem {
     constructor(gameState) {
@@ -38,16 +42,18 @@ export class StockSystem {
     _ensureState() {
         var d = this.state.data;
         if (!d.stocks || typeof d.stocks !== 'object') {
-            d.stocks = { prices: {}, indices: {}, history: [], projected: {} };
+            d.stocks = { prices: {}, indices: {}, history: [], projected: {}, portfolio: [], transactions: [] };
         }
         if (!d.stocks.prices) d.stocks.prices = {};
         if (!d.stocks.indices) d.stocks.indices = {};
         if (!Array.isArray(d.stocks.history)) d.stocks.history = [];
         if (!d.stocks.projected) d.stocks.projected = {};
+        if (!Array.isArray(d.stocks.portfolio)) d.stocks.portfolio = [];
+        if (!Array.isArray(d.stocks.transactions)) d.stocks.transactions = [];
     }
 
     // ============================================================
-    // INTERPOLASI — dari pivot tahunan ke nilai bulanan.
+    // INTERPOLASI
     // ============================================================
     _interpolate(map, year, month) {
         if (!map) return null;
@@ -70,8 +76,7 @@ export class StockSystem {
     }
 
     // ============================================================
-    // PROYEKSI — hook untuk AI di masa depan.
-    // Sesi 1: pakai tren historis + noise kecil.
+    // PROYEKSI setelah 2026 (hook AI)
     // ============================================================
     _projectFuturePrice(stock, year, month) {
         var key = stock.id + ':' + year + ':' + month;
@@ -181,7 +186,7 @@ export class StockSystem {
     }
 
     // ============================================================
-    // API PUBLIK
+    // API PUBLIK — HARGA
     // ============================================================
     getPrice(stockId) {
         return this.state.data.stocks.prices[stockId] || 0;
@@ -207,7 +212,6 @@ export class StockSystem {
         return out;
     }
 
-    // Bangun deret bulanan untuk grafik (dari listing s/d bulan sekarang).
     getSeries(stockId) {
         var stock = null;
         for (var i = 0; i < STOCKS.length; i++) {
@@ -231,7 +235,6 @@ export class StockSystem {
         return out;
     }
 
-    // Hitung perubahan % vs bulan lalu (untuk UI ▲/▼).
     getChangePercent(stockId) {
         var h = this.state.data.stocks.history || [];
         if (h.length < 2) return 0;
@@ -240,4 +243,205 @@ export class StockSystem {
         if (curr == null || prev == null || prev === 0) return 0;
         return (curr - prev) / prev;
     }
-}
+
+    // ============================================================
+    // TRADING — beli/jual
+    // ============================================================
+
+    // Konversi harga saham dalam mata uang lokal ke USD.
+    getPriceUSD(stockId) {
+        var stock = getStockById(stockId);
+        if (!stock) return 0;
+        var local = this.getPrice(stockId);
+        if (!local) return 0;
+        var year = this.state.data.time.currentYear;
+        var rate = getCurrencyRateToUSD(stock.currency, year);
+        return local * rate;
+    }
+
+    // Hitung berapa lembar maksimum yang bisa dibeli dengan cash sekarang.
+    getMaxAffordableShares(stockId) {
+        var priceUSD = this.getPriceUSD(stockId);
+        if (priceUSD <= 0) return 0;
+        var cash = this.state.data.cash || 0;
+        return Math.floor(cash / priceUSD);
+    }
+
+    buyStock(stockId, shares) {
+        var stock = getStockById(stockId);
+        if (!stock) return { ok: false, reason: 'Emiten tidak ditemukan.' };
+        shares = Math.floor(shares);
+        if (!shares || shares <= 0) return { ok: false, reason: 'Jumlah lembar tidak valid.' };
+
+        var d = this.state.data;
+        var year = d.time.currentYear;
+        var localPrice = this.getPrice(stockId);
+        if (!localPrice) return { ok: false, reason: 'Harga tidak tersedia.' };
+
+        var rate = getCurrencyRateToUSD(stock.currency, year);
+        var priceUSD = localPrice * rate;
+        var totalUSD = priceUSD * shares;
+
+        if (totalUSD > d.cash) {
+            return { ok: false, reason: 'Uang tidak cukup. Butuh $' + Math.round(totalUSD).toLocaleString('en-US') + '.' };
+        }
+
+        // Kurangi cash.
+        this.state.addCash(-totalUSD);
+
+        // Cari entri portofolio yang ada.
+        var existing = null;
+        for (var i = 0; i < d.stocks.portfolio.length; i++) {
+            if (d.stocks.portfolio[i].stockId === stockId) {
+                existing = d.stocks.portfolio[i];
+                break;
+            }
+        }
+
+        if (existing) {
+            // Update avg buy price.
+            var totalShares = existing.shares + shares;
+            var totalCost = existing.totalCostUSD + totalUSD;
+            existing.shares = totalShares;
+            existing.totalCostUSD = totalCost;
+            existing.avgBuyPriceUSD = totalCost / totalShares;
+        } else {
+            d.stocks.portfolio.push({
+                stockId: stockId,
+                shares: shares,
+                avgBuyPriceUSD: priceUSD,
+                totalCostUSD: totalUSD,
+                firstBuyDate: { y: year, m: d.time.currentMonth, d: d.time.currentDay }
+            });
+        }
+
+        // Catat transaksi.
+        this._pushTransaction({
+            type: 'buy',
+            stockId: stockId,
+            ticker: stock.ticker,
+            shares: shares,
+            priceLocal: localPrice,
+            priceUSD: priceUSD,
+            totalUSD: totalUSD,
+            currency: stock.currency,
+            year: year, month: d.time.currentMonth, day: d.time.currentDay
+        });
+
+        bus.emit('stocks:updated', { prices: d.stocks.prices });
+        bus.emit('state:changed', d);
+        return { ok: true, shares: shares, totalUSD: totalUSD };
+    }
+
+    sellStock(stockId, shares) {
+        var stock = getStockById(stockId);
+        if (!stock) return { ok: false, reason: 'Emiten tidak ditemukan.' };
+        shares = Math.floor(shares);
+        if (!shares || shares <= 0) return { ok: false, reason: 'Jumlah lembar tidak valid.' };
+
+        var d = this.state.data;
+
+        // Cari portofolio.
+        var idx = -1;
+        for (var i = 0; i < d.stocks.portfolio.length; i++) {
+            if (d.stocks.portfolio[i].stockId === stockId) { idx = i; break; }
+        }
+        if (idx < 0) return { ok: false, reason: 'Anda tidak memiliki saham ini.' };
+
+        var entry = d.stocks.portfolio[idx];
+        if (shares > entry.shares) {
+            return { ok: false, reason: 'Lembar tidak cukup. Anda punya ' + entry.shares + '.' };
+        }
+
+        var year = d.time.currentYear;
+        var localPrice = this.getPrice(stockId);
+        if (!localPrice) return { ok: false, reason: 'Harga tidak tersedia.' };
+
+        var rate = getCurrencyRateToUSD(stock.currency, year);
+        var priceUSD = localPrice * rate;
+        var proceedsUSD = priceUSD * shares;
+
+        // Tambah cash.
+        this.state.addCash(proceedsUSD);
+
+        // Update portofolio.
+        entry.shares -= shares;
+        if (entry.shares <= 0) {
+            d.stocks.portfolio.splice(idx, 1);
+        } else {
+            // Sisa: totalCostUSD proporsional (biar avg tetap).
+            var costPerShare = entry.totalCostUSD / (entry.shares + shares);
+            entry.totalCostUSD = costPerShare * entry.shares;
+            entry.avgBuyPriceUSD = costPerShare;
+        }
+
+        // Catat transaksi.
+        this._pushTransaction({
+            type: 'sell',
+            stockId: stockId,
+            ticker: stock.ticker,
+            shares: shares,
+            priceLocal: localPrice,
+            priceUSD: priceUSD,
+            totalUSD: proceedsUSD,
+            currency: stock.currency,
+            year: year, month: d.time.currentMonth, day: d.time.currentDay
+        });
+
+        bus.emit('stocks:updated', { prices: d.stocks.prices });
+        bus.emit('state:changed', d);
+        return { ok: true, shares: shares, totalUSD: proceedsUSD };
+    }
+
+    _pushTransaction(tx) {
+        var d = this.state.data;
+        tx.id = 'tx_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+        d.stocks.transactions.unshift(tx);
+        if (d.stocks.transactions.length > MAX_TRANSACTIONS) {
+            d.stocks.transactions.length = MAX_TRANSACTIONS;
+        }
+    }
+
+    getPortfolio() {
+        var d = this.state.data;
+        return (d.stocks.portfolio || []).map(function (e) {
+            var stock = getStockById(e.stockId);
+            var currentPrice = this.getPrice(e.stockId);
+            var rate = getCurrencyRateToUSD(stock ? stock.currency : 'USD', d.time.currentYear);
+            var currentPriceUSD = currentPrice * rate;
+            var currentValueUSD = currentPriceUSD * e.shares;
+            var plUSD = currentValueUSD - e.totalCostUSD;
+            var plPct = e.totalCostUSD > 0 ? (plUSD / e.totalCostUSD) : 0;
+            return {
+                stockId: e.stockId,
+                ticker: stock ? stock.ticker : e.stockId,
+                name: stock ? stock.name : e.stockId,
+                currency: stock ? stock.currency : 'USD',
+                shares: e.shares,
+                avgBuyPriceUSD: e.avgBuyPriceUSD,
+                totalCostUSD: e.totalCostUSD,
+                currentPriceLocal: currentPrice,
+                currentPriceUSD: currentPriceUSD,
+                currentValueUSD: currentValueUSD,
+                plUSD: plUSD,
+                plPct: plPct
+            };
+        }.bind(this));
+    }
+
+    getPortfolioValue() {
+        var p = this.getPortfolio();
+        var sum = 0;
+        for (var i = 0; i < p.length; i++) sum += p[i].currentValueUSD;
+        return sum;
+    }
+
+    getNetWorth() {
+        var d = this.state.data;
+        return (d.cash || 0) + this.getPortfolioValue();
+    }
+
+    getTransactions() {
+        return (this.state.data.stocks.transactions || []).slice();
+    }
+                }
