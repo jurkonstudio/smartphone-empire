@@ -1,7 +1,7 @@
 // FILE: src/data/stocks.data.js
 // ============================================================
 // DATA SAHAM HISTORIS — untuk halaman Exchange di HQ.
-// v2027.2a — 36 emiten, 8 kategori, multi-currency.
+// v2027.3a — tambah IDR, Polytron (fiktif), ERAA, kurs historis.
 //
 // Ticker = gaya IDX (4 huruf). realTicker = kode bursa asli.
 // Harga split-adjusted untuk grafik yang konsisten.
@@ -9,10 +9,11 @@
 // Tingkat kepercayaan data:
 //   [verified]  — angka publik yang saya yakini.
 //   [trend]     — kurva tren realistis, angka perkiraan.
+//   [fictional] — emiten fiktif untuk gameplay.
 // ============================================================
 
 export const STOCKS = [
-    // ==================== PHONE (7) ====================
+    // ==================== PHONE (9) ====================
     { id: 'nokia', ticker: 'NOKI', realTicker: 'NOK', name: 'Nokia Corporation',
       competitorId: 'nokia', category: 'phone', country: 'Finlandia',
       listedFrom: 1999, listedTo: 2014, currency: 'USD', confidence: 'verified',
@@ -77,6 +78,25 @@ export const STOCKS = [
       priceByYear: {
           2018: 17.00, 2019: 8.28, 2020: 20.00, 2021: 25.00,
           2022: 11.00, 2023: 14.00, 2024: 35.90, 2026: 42.00
+      } },
+    // Polytron — FIKSI untuk gameplay (di dunia nyata tidak listed).
+    { id: 'polytron', ticker: 'PLTR', realTicker: null, name: 'Polytron (fiktif)',
+      competitorId: null, category: 'phone', country: 'Indonesia',
+      listedFrom: 1999, listedTo: null, currency: 'IDR', confidence: 'fictional',
+      priceByYear: {
+          1999: 850, 2000: 1200, 2002: 1500, 2005: 2200,
+          2008: 1800, 2010: 3200, 2013: 4500, 2015: 5200,
+          2018: 6800, 2020: 8500, 2022: 7200, 2024: 9500, 2026: 11000
+      } },
+    // Erajaya — emiten nyata IDX.
+    { id: 'erajaya', ticker: 'ERAA', realTicker: 'ERAA', name: 'Erajaya Swasembada',
+      competitorId: null, category: 'phone', country: 'Indonesia',
+      listedFrom: 2011, listedTo: null, currency: 'IDR', confidence: 'trend',
+      priceByYear: {
+          2011: 800, 2012: 1000, 2013: 1500, 2014: 2000,
+          2015: 1400, 2016: 1500, 2017: 1200, 2018: 1000,
+          2019: 900, 2020: 1000, 2021: 1200, 2022: 1000,
+          2023: 900, 2024: 800, 2026: 850
       } },
 
     // ==================== CHIP / SEMICONDUCTOR (8) ====================
@@ -363,12 +383,55 @@ export const STOCK_CATEGORIES = [
     { id: 'player',    label: 'Perusahaan Anda' }
 ];
 
+// ============================================================
+// MATA UANG — symbol, desimal, dan kurs historis IDR/USD.
+// rateToUSDByYear: berapa USD untuk 1 unit mata uang lokal.
+// ============================================================
 export const CURRENCIES = {
-    USD: { symbol: '$', decimals: 2, rateToUSD: 1.00 },
-    KRW: { symbol: '₩', decimals: 0, rateToUSD: 1 / 1300 },
-    TWD: { symbol: 'NT$', decimals: 0, rateToUSD: 1 / 32 },
-    HKD: { symbol: 'HK$', decimals: 2, rateToUSD: 1 / 7.8 }
+    USD: { symbol: '$', decimals: 2 },
+    KRW: { symbol: '₩', decimals: 0 },
+    TWD: { symbol: 'NT$', decimals: 0 },
+    HKD: { symbol: 'HK$', decimals: 2 },
+    IDR: { symbol: 'Rp', decimals: 0 }
 };
+
+// Kurs rata-rata tahunan: IDR per 1 USD.
+// Sumber: FRED (OECD), Bank Indonesia, World Bank.
+export const IDR_PER_USD_BY_YEAR = {
+    1999: 8500, 2000: 8400, 2001: 10200, 2002: 9300, 2003: 8600,
+    2004: 9000, 2005: 9700, 2006: 9200, 2007: 9100, 2008: 9700,
+    2009: 10400, 2010: 9100, 2011: 8800, 2012: 9400, 2013: 10500,
+    2014: 11800, 2015: 13400, 2016: 13300, 2017: 13400, 2018: 14200,
+    2019: 14100, 2020: 14100, 2021: 14300, 2022: 14800, 2023: 15200,
+    2024: 15800, 2025: 16200, 2026: 16800
+};
+
+// Ambil kurs USD untuk 1 unit mata uang tertentu pada tahun tertentu.
+export function getCurrencyRateToUSD(currency, year) {
+    if (currency === 'USD') return 1;
+    if (currency === 'IDR') {
+        // Interpolasi linear dari tabel IDR historis.
+        var years = Object.keys(IDR_PER_USD_BY_YEAR).map(Number).sort(function (a, b) { return a - b; });
+        if (!years.length) return 1 / 15000;
+        if (year <= years[0]) return 1 / IDR_PER_USD_BY_YEAR[years[0]];
+        if (year >= years[years.length - 1]) return 1 / IDR_PER_USD_BY_YEAR[years[years.length - 1]];
+        for (var i = 0; i < years.length - 1; i++) {
+            var y1 = years[i], y2 = years[i + 1];
+            if (year >= y1 && year <= y2) {
+                var v1 = IDR_PER_USD_BY_YEAR[y1];
+                var v2 = IDR_PER_USD_BY_YEAR[y2];
+                var rate = v1 + (v2 - v1) * ((year - y1) / (y2 - y1));
+                return 1 / rate;
+            }
+        }
+        return 1 / IDR_PER_USD_BY_YEAR[years[years.length - 1]];
+    }
+    // Mata uang lain: pakai kurs tetap (untuk saat ini).
+    if (currency === 'KRW') return 1 / 1300;
+    if (currency === 'TWD') return 1 / 32;
+    if (currency === 'HKD') return 1 / 7.8;
+    return 1;
+}
 
 export function getStockById(id) { return STOCKS.find(s => s.id === id) || null; }
 export function getIndexById(id) { return MARKET_INDICES.find(i => i.id === id) || null; }
@@ -379,4 +442,4 @@ export function getStocksForYear(year) {
         if (s.listedTo !== null && year > s.listedTo) return false;
         return true;
     });
-}
+     }
