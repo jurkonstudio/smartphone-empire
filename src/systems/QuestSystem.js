@@ -1,16 +1,16 @@
 // FILE: src/systems/QuestSystem.js
+// v2027.2a — reward silicon.
 import { bus } from '../core/EventBus.js';
 import { BALANCE } from '../data/balance.data.js';
 import { LOG_TYPES } from '../config/constants.js';
 
-// Definisi quest awal (Fase 1). Ditambah di tahap berikutnya.
 const QUEST_DEFS = [
     {
         id: 'first_start_research',
         title: 'Riset pertama',
         description: 'Mulai satu proyek riset.',
         check: (state) => state.data.research.active.length > 0 || state.data.research.completed.length > 0,
-        rewards: BALANCE.questRewards.first_start_research
+        rewards: Object.assign({ silicon: 3 }, BALANCE.questRewards.first_start_research)
     },
     {
         id: 'first_recruit',
@@ -20,14 +20,14 @@ const QUEST_DEFS = [
             const t = state.data.team;
             return (t.engineers + t.designers + t.marketers) >= 1;
         },
-        rewards: BALANCE.questRewards.first_recruit
+        rewards: Object.assign({ silicon: 3 }, BALANCE.questRewards.first_recruit)
     },
     {
         id: 'first_product',
         title: 'Rilis ponsel pertama',
         description: 'Selesaikan desain dan rilis satu produk.',
         check: (state) => state.data.products.catalog.length > 0,
-        rewards: BALANCE.questRewards.first_product
+        rewards: Object.assign({ silicon: 5 }, BALANCE.questRewards.first_product)
     }
 ];
 
@@ -38,12 +38,8 @@ export class QuestSystem {
     }
 
     start() {
-        // Aktifkan semua quest yang belum selesai
         this._ensureActive();
-
-        // Evaluasi setiap hari + saat state berubah (hemat: pakai day-changed)
         this._unsubs.push(bus.on('time:day-changed', () => this.evaluateAll()));
-        // Beberapa aksi tidak lewat hari (mis. rekrut), jadi cek juga saat state:changed
         this._unsubs.push(bus.on('state:changed', () => this.evaluateAll()));
     }
 
@@ -89,12 +85,16 @@ export class QuestSystem {
         if (q.completed.includes(def.id)) return;
         q.completed.push(def.id);
 
-        // Terapkan reward
         const r = def.rewards || {};
         if (r.cash) this.state.addCash(r.cash);
         if (r.reputation) {
-            // Reputasi belum ada di state; siapkan slot (0 default) di state.market
             this.state.data.market.reputation = (this.state.data.market.reputation || 0) + r.reputation;
+        }
+        // [v2027.2a] Reward Silicon.
+        if (r.silicon) {
+            const d = this.state.data;
+            d.silicon = (d.silicon || 0) + r.silicon;
+            bus.emit('silicon:changed', { balance: d.silicon, delta: r.silicon });
         }
         this.state.addLog(`Quest selesai: "${def.title}".`, LOG_TYPES.success);
         bus.emit('quest:completed', { id: def.id, title: def.title, rewards: r });
