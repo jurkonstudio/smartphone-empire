@@ -907,7 +907,12 @@ export const en = {
 'silicon.action.morale.d':   'Set all staff morale to 100.',
 'silicon.action.rep.t':      'Reputation +20',
 'silicon.action.rep.d':      'Instantly gain 20 reputation.',
-
+'silicon.action.chipResearch.t': 'Finish Chip Research',
+'silicon.action.chipResearch.d': 'Complete active chip research instantly.',
+'silicon.action.osBugs.t':       'Fix All OS Bugs',
+'silicon.action.osBugs.d':       'Instantly patch every OS bug.',
+'silicon.msg.chipResearch':      'Chip research completed instantly.',
+'silicon.msg.osBugs':            'Fixed {n} OS bugs.',
 'silicon.msg.skip7':    'Time skip +7 days.',
 'silicon.msg.skip30':   'Time skip +30 days.',
 'silicon.msg.research': 'Research completed instantly.',
