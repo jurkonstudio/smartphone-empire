@@ -1,6 +1,7 @@
 // FILE: src/ui/panels/DesignWizard.js
 // v2027.12a — Auto-fill "Isi Rekomendasi"
 // v2027.13c — i18n.
+// v2027.14a — [PATCH] validasi nama produk duplikat di step 1.
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
 import { state } from '../../core/GameState.js';
@@ -165,6 +166,18 @@ function _validateComplete(s) {
     if (!s.bodyId) missing.push('body');
     if (!s.bodyColorId) missing.push('color');
     return missing;
+}
+
+// ============================================================
+// [PATCH v2027.14a] VALIDASI NAMA UNIK PRODUK
+// ============================================================
+function _isNameDuplicate(name) {
+    var norm = (name || '').trim().toLowerCase();
+    if (!norm) return false;
+    var catalog = state.get().products.catalog || [];
+    return catalog.some(function (p) {
+        return (p.name || '').trim().toLowerCase() === norm;
+    });
 }
 
 function _handleAutoFill() {
@@ -361,6 +374,10 @@ function _next() {
     if (s.step === 1) {
         if (!s.name.trim()) { ToastService.warning(t('wiz.err.need_name')); return; }
         if (!s.formFactorId) { ToastService.warning(t('wiz.err.need_ff')); return; }
+        if (_isNameDuplicate(s.name)) {
+            ToastService.error(t('wiz.err.duplicate_name') || 'Product name is already used.');
+            return;
+        }
     }
     if (s.step === 2) {
         if (!s.displayId || !s.batteryId || !s.chipId || !s.networkId) {
@@ -815,4 +832,4 @@ function _openDetailModal() {
     `;
 
     Modal.open('design-wizard-detail', html);
-                }
+}
