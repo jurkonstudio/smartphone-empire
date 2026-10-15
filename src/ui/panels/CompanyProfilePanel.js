@@ -1,7 +1,9 @@
 // FILE: src/ui/panels/CompanyProfilePanel.js
-// v2027.14a — fix format cash (bulat).
-import { CloudService } from '../../services/CloudService.js';
+// v2027.15a — cloud summary + tombol buka CloudUI.
 import { t } from '../../core/LanguageService.js';
+import { CloudService } from '../../services/CloudService.js';
+import { getCloudSummary, openCloudPanel } from '../../services/cloud/CloudUI.js';
+import { isCloudConfigured } from '../../services/cloud/supabase.config.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -9,7 +11,6 @@ function escapeHtml(s) {
             .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
-// Format uang: bulatkan ke integer, tampilkan tanpa desimal.
 function _fmtMoney(n) {
     if (typeof n !== 'number' || !isFinite(n)) return '$0';
     return '$' + Math.round(n).toLocaleString('en-US');
@@ -30,7 +31,6 @@ const ERA_LABEL = {
 
 export function renderCompanyProfilePanel(params) {
     var teamSystem = params.teamSystem;
-    var marketSystem = params.marketSystem;
     var opinionSystem = params.opinionSystem;
 
     const data = window.__game.state.get();
@@ -45,7 +45,7 @@ export function renderCompanyProfilePanel(params) {
     const monthlySalary = teamSystem ? teamSystem.getTotalSalary() : 0;
     const avgMorale = teamSystem ? teamSystem.getAverageMorale() : 0;
 
-    const reputation = Math.round(data.market.reputation || 0);
+    const reputation = (data.market && typeof data.market.reputation === 'number') ? data.market.reputation : 0;
     const sentiment = opinionSystem ? opinionSystem.getSentiment() : 50;
     const marketShare = data.market.share || 0;
 
@@ -102,7 +102,7 @@ export function renderCompanyProfilePanel(params) {
             <div class="sum-row"><span>${t('profile.ops_staff')}</span><b>${t('profile.ops_staff_unit', { n: staffCount })}</b></div>
             <div class="sum-row"><span>${t('profile.ops_salary')}</span><b>${_fmtMoney(monthlySalary)}</b></div>
             <div class="sum-row"><span>${t('profile.ops_morale')}</span><b style="color:${moraleColor};">${avgMorale}/100</b></div>
-            <div class="sum-row"><span>${t('profile.ops_rep')}</span><b>${reputation}/100</b></div>
+            <div class="sum-row"><span>${t('profile.ops_rep')}</span><b>${Number(reputation).toFixed(1)}/100</b></div>
             <div class="sum-row"><span>${t('profile.ops_sentiment')}</span><b>${sentiment}/100</b></div>
         </div>
     `;
@@ -123,6 +123,7 @@ export function renderCompanyProfilePanel(params) {
         </div>
     `;
 
+    // ---- Cloud card (pakai API Claude) ----
     const cloudStatus = CloudService.getStatus();
     const cloudKeyMap = {
         disconnected: 'profile.cloud_disconnected',
@@ -134,6 +135,7 @@ export function renderCompanyProfilePanel(params) {
     const cloudColor = cloudStatus === 'connected' ? 'var(--success)' :
                        cloudStatus === 'connecting' ? 'var(--warn)' :
                        cloudStatus === 'error' ? 'var(--danger)' : 'var(--text-mute)';
+    const cloudSummary = isCloudConfigured() ? getCloudSummary() : t('profile.cloud_disconnected');
 
     const cloudCard = `
         <div class="card">
@@ -143,10 +145,10 @@ export function renderCompanyProfilePanel(params) {
                 <div style="font-size:13px;font-weight:700;color:${cloudColor};">${cloudLabel}</div>
             </div>
             <div style="font-size:11.5px;color:var(--text-mute);line-height:1.5;margin-bottom:10px;">
-                ${t('profile.cloud_desc')}
+                ${escapeHtml(cloudSummary)}
             </div>
-            <button class="btn-secondary" disabled style="width:100%;font-size:12px;padding:8px;opacity:0.55;cursor:not-allowed;">
-                ${t('profile.cloud_btn')}
+            <button class="btn-primary" data-cloud-open style="width:100%;font-size:12px;padding:10px;font-weight:700;">
+                ${cloudStatus === 'connected' ? '☁️ ' + t('profile.cloud_btn') : t('profile.cloud_btn')}
             </button>
         </div>
     `;
@@ -155,5 +157,11 @@ export function renderCompanyProfilePanel(params) {
 }
 
 export function bindCompanyProfileActions(root) {
-    // Placeholder untuk future
+    if (!root) return;
+    root.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-cloud-open]');
+        if (!btn) return;
+        e.preventDefault();
+        openCloudPanel();
+    });
 }
