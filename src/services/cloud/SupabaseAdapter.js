@@ -1,7 +1,6 @@
 // FILE: src/services/cloud/SupabaseAdapter.js
-// v2027.37a — Adapter Supabase untuk CloudService.
-// Semua method melempar Error dengan properti .code yang sudah dinormalisasi
-// (invalid_credentials, email_exists, network, db_setup, ...), siap dipetakan ke teks UI.
+// v2027.38a — Adapter Supabase untuk CloudService.
+// + 3 method RPC Silicon (get_silicon, add_silicon, spend_silicon).
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_LIB_URLS, CLOUD } from './supabase.config.js';
 
 var _client = null;
@@ -58,7 +57,7 @@ async function getClient() {
                 auth: {
                     persistSession: true,
                     autoRefreshToken: true,
-                    detectSessionInUrl: true,           // tautan reset password
+                    detectSessionInUrl: true,
                     storageKey: CLOUD.authStorageKey
                 },
                 realtime: { params: { eventsPerSecond: 2 } }
@@ -78,7 +77,6 @@ function userOf(u) { return u ? { userId: u.id, email: u.email || '' } : null; }
 export const SupabaseAdapter = {
     _inject: function (createClientFn) { _injected = createClientFn; _client = null; },
 
-    // Apakah ada sesi/tautan yang perlu diproses saat boot? (hindari memuat library tanpa perlu)
     hasStoredSession: function () {
         try {
             if (localStorage.getItem(CLOUD.authStorageKey)) return true;
@@ -117,7 +115,6 @@ export const SupabaseAdapter = {
         var res = await c.auth.signUp({ email: email, password: password, options: { emailRedirectTo: location.origin } });
         if (res.error) throw mk(res.error);
         var u = res.data.user;
-        // Email sudah terdaftar & konfirmasi aktif: Supabase mengembalikan user tanpa identities.
         if (u && Array.isArray(u.identities) && u.identities.length === 0) throw mk(null, 'email_exists');
         var out = userOf(u) || {};
         out.needsConfirm = !(res.data.session);
@@ -164,37 +161,35 @@ export const SupabaseAdapter = {
     },
 
     // ---------- i18n strings ----------
-fetchI18nStrings: async function (lang) {
-    var c = await getClient();
-    var res = await c.from('i18n_strings')
-        .select('key,value')
-        .eq('lang', lang);
-    if (res.error) throw mk(res.error);
-    return res.data || [];
-},
+    fetchI18nStrings: async function (lang) {
+        var c = await getClient();
+        var res = await c.from('i18n_strings').select('key,value').eq('lang', lang);
+        if (res.error) throw mk(res.error);
+        return res.data || [];
+    },
 
-saveI18nString: async function (lang, key, value) {
-    var c = await getClient();
-    var session = await c.auth.getSession();
-    var userId = session && session.data && session.data.session && session.data.session.user
-        ? session.data.session.user.id : null;
-    var res = await c.from('i18n_strings').upsert({
-        key: key,
-        lang: lang,
-        value: value,
-        updated_by: userId,
-        updated_at: new Date().toISOString()
-    }, { onConflict: 'key,lang' });
-    if (res.error) throw mk(res.error);
-    return true;
-},
+    saveI18nString: async function (lang, key, value) {
+        var c = await getClient();
+        var session = await c.auth.getSession();
+        var userId = session && session.data && session.data.session && session.data.session.user
+            ? session.data.session.user.id : null;
+        var res = await c.from('i18n_strings').upsert({
+            key: key,
+            lang: lang,
+            value: value,
+            updated_by: userId,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'key,lang' });
+        if (res.error) throw mk(res.error);
+        return true;
+    },
 
-deleteI18nString: async function (lang, key) {
-    var c = await getClient();
-    var res = await c.from('i18n_strings').delete().eq('key', key).eq('lang', lang);
-    if (res.error) throw mk(res.error);
-    return true;
-},
+    deleteI18nString: async function (lang, key) {
+        var c = await getClient();
+        var res = await c.from('i18n_strings').delete().eq('key', key).eq('lang', lang);
+        if (res.error) throw mk(res.error);
+        return true;
+    },
 
     downloadSave: async function (userId, slot) {
         var c = await getClient();
@@ -206,7 +201,6 @@ deleteI18nString: async function (lang, key) {
         return { data: res.data.data, version: res.data.schema_version, savedAt: res.data.client_saved_at, updatedAt: res.data.updated_at };
     },
 
-    // Ringan: membaca tabel save_heads (tanpa kolom data besar).
     listSaves: async function (userId) {
         var c = await getClient();
         var res = await c.from(CLOUD.tables.heads).select('*').eq('user_id', userId).order('slot', { ascending: true });
@@ -214,7 +208,6 @@ deleteI18nString: async function (lang, key) {
         return res.data || [];
     },
 
-    // Realtime: kabar bila ada save baru dari perangkat lain.
     subscribeSaves: async function (userId, cb) {
         var c = await getClient();
         var ch = c.channel('heads:' + userId).on('postgres_changes',
@@ -240,7 +233,6 @@ deleteI18nString: async function (lang, key) {
     },
 
     // ---------- Storage ----------
-    // Aset pribadi pemain (mis. logo perusahaan). Path otomatis diawali userId (dipaksa oleh RLS storage).
     uploadPlayerAsset: async function (userId, name, fileOrBlob, contentType) {
         var c = await getClient();
         var path = userId + '/' + String(name).replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -258,9 +250,32 @@ deleteI18nString: async function (lang, key) {
         return res.data.signedUrl;
     },
 
-    // Aset game publik (bucket publik, tanpa login).
     getGameAssetUrl: async function (path) {
         var c = await getClient();
         return c.storage.from(CLOUD.buckets.game).getPublicUrl(path).data.publicUrl;
+    },
+
+    // ============================================================
+    // SILICON (RPC ke Postgres functions)
+    // ============================================================
+    rpcGetSilicon: async function () {
+        var c = await getClient();
+        var res = await c.rpc('get_silicon');
+        if (res.error) throw mk(res.error);
+        return res.data == null ? 0 : res.data;
+    },
+
+    rpcAddSilicon: async function (delta) {
+        var c = await getClient();
+        var res = await c.rpc('add_silicon', { p_delta: Math.floor(delta) });
+        if (res.error) throw mk(res.error);
+        return res.data == null ? 0 : res.data;
+    },
+
+    rpcSpendSilicon: async function (amount) {
+        var c = await getClient();
+        var res = await c.rpc('spend_silicon', { p_amount: Math.floor(amount) });
+        if (res.error) throw mk(res.error);
+        return res.data == null ? 0 : res.data;
     }
 };
