@@ -143,6 +143,9 @@ export const id = {
 
     // HQ
     'hq.tab.overview': 'Overview',
+'hq.tab.office':   'Kantor',
+'hq.office.title': 'Ruang Kantor',
+'hq.office.desc':  'Peta 3D ruang kantor sedang disiapkan. Di update berikutnya, kamu bisa menjelajahi kantor pusat, melihat aktivitas staf, dan mengembangkan fasilitas perusahaan.',
     'hq.tab.campus':   'Campus',
     'hq.tab.team':     'Team',
     'hq.tab.exchange': 'Bursa',
