@@ -1,5 +1,5 @@
 // FILE: src/services/CloudService.js
-// v2027.38a — Fasad cloud. + 3 method Silicon (get/add/spend server-side).
+// v2027.39a — Fasad cloud. + listProfiles, getProfileById.
 import { bus } from '../core/EventBus.js';
 
 const SLOT_KEY = 'smartphone-empire:cloud-slot';
@@ -244,7 +244,26 @@ export const CloudService = {
     },
 
     // ============================================================
-    // SILICON (server-side, via RPC)
+    // PUBLIC PROFILES
+    // ============================================================
+    async listProfiles() {
+        if (!_adapter) return NOT_CONFIGURED;
+        if (!_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.listProfiles !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, rows: await _adapter.listProfiles() }; }
+        catch (err) { return _fail(err); }
+    },
+
+    async getProfileById(id) {
+        if (!_adapter) return NOT_CONFIGURED;
+        if (!_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.getProfileById !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, profile: await _adapter.getProfileById(id) }; }
+        catch (err) { return _fail(err); }
+    },
+
+    // ============================================================
+    // SILICON
     // ============================================================
     async getSiliconBalance() {
         if (!_adapter) return NOT_CONFIGURED;
