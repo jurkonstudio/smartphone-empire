@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2027.35a — versi stabil (tanpa Silicon, tanpa i18n admin).
+// v2027.35b — Silicon diaktifkan kembali (patch 5 titik).
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -26,6 +26,7 @@ import { FabSystem } from './systems/FabSystem.js';
 import { NewsSystem } from './systems/NewsSystem.js';
 import { AdvisorSystem } from './systems/AdvisorSystem.js';
 import { StockSystem } from './systems/StockSystem.js';
+import { SiliconService } from './systems/SiliconService.js'; // [PATCH 1]
 import { renderHeader } from './ui/layout/Header.js';
 import { renderMobileNav } from './ui/layout/MobileNav.js';
 import { renderEmptyState } from './ui/panels/EmptyState.js';
@@ -55,6 +56,7 @@ import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
 import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
 import { openNewsArticleModal } from './ui/panels/NewsArticleModal.js';
+import { openSiliconModal } from './ui/panels/SiliconPanel.js'; // [PATCH 2]
 import { handleNewsListClick } from './ui/panels/NewsListPanel.js';
 import { renderChipMockup } from './ui/phone/ChipMockup.js';
 import { renderChipRadarChart } from './ui/charts/ChipRadarChart.js';
@@ -432,6 +434,10 @@ function bindGlobalClicks() {
         var guideReport = e.target.closest('[data-guide-report]');
         if (guideReport) { e.preventDefault(); vibrate(8); openDiagnosticModal(); return; }
 
+        // [PATCH 3] — tombol Silicon di Header
+        var siliconBtn = e.target.closest('[data-silicon-open]');
+        if (siliconBtn) { e.preventDefault(); vibrate(8); openSiliconModal(); return; }
+
         var timeBtn = e.target.closest('[data-time-action]');
         if (timeBtn) {
             e.preventDefault(); vibrate(12);
@@ -801,6 +807,10 @@ function bindStateEvents() {
     bus.on('team:fired', function () { if (activeView === 'team') renderView({ soft: true }); });
 
     bus.on('lang:changed', function () { renderAll(); });
+
+    // [PATCH 4] — refresh angka SIL di Header setiap kali berubah
+    bus.on('silicon:changed', function () { renderHeaderOnly(); });
+
     bus.on('advisor:go', function (p) {
         if (!p || !p.nav) return;
         Modal.closeAll();
@@ -933,6 +943,7 @@ async function boot() {
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
+            silicon: SiliconService, // [PATCH 5]
             LanguageService: LanguageService,
             SaveService: SaveService, ToastService: ToastService, Modal: Modal, navigate: navigate, render: renderAll,
             modules: { marketing: marketingModule, feedbackData: feedbackModule },
@@ -962,7 +973,9 @@ async function boot() {
                 quickDesignChip: function (cfg) { return chipSystem.quickDesignChip(cfg); },
                 buildFab: function (lvl) { return fabSystem.quickBuildFab(lvl || 1); },
                 produceChips: function (chipId, qty) { var id = chipId || (state.get().chips.catalog[0] && state.get().chips.catalog[0].id); return fabSystem.orderProduction(id, qty || 1000); },
-                testNews: function () { var a = NewsSystem.generateTestArticle(); if (a) bus.emit('news:published', { article: a }); return a; }
+                testNews: function () { var a = NewsSystem.generateTestArticle(); if (a) bus.emit('news:published', { article: a }); return a; },
+                addSilicon: function (n) { return SiliconService.add(n, 'cheat'); },
+                claimDaily: function () { return SiliconService.claimDailyLogin(); }
             }
         };
 
@@ -1014,7 +1027,7 @@ async function boot() {
             }
         });
 
-        console.info('[' + APP_CONFIG.name + '] siap. Era: ' + state.get().era + ', Lang: ' + LanguageService.getLang());
+        console.info('[' + APP_CONFIG.name + '] siap. Era: ' + state.get().era + ', Lang: ' + LanguageService.getLang() + ', SIL: ' + SiliconService.getBalance());
     } catch (err) {
         console.error('[boot] gagal:', err);
         hideLoading();
