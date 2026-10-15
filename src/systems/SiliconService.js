@@ -1,7 +1,7 @@
 // FILE: src/systems/SiliconService.js
 // ============================================================
 // SiliconService — premium currency "Silicon" (SIL).
-// v2027.4a — tambah fab build + fab production.
+// v2027.5a — tambah applyServerBalance() untuk sinkronisasi cloud.
 // ============================================================
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
@@ -68,6 +68,19 @@ export var SiliconService = {
         bus.emit('silicon:changed', { balance: state.data.silicon, delta: -amount });
         bus.emit('state:changed', state.data);
         return { ok: true, balance: state.data.silicon };
+    },
+
+    // [v2027.5a] Set saldo dari server (dipakai CloudSync pull).
+    applyServerBalance(newBalance) {
+        newBalance = Math.max(0, Math.floor(newBalance || 0));
+        var old = state.data.silicon || 0;
+        if (old === newBalance) return { ok: true, balance: newBalance, changed: false };
+        var delta = newBalance - old;
+        state.data.silicon = newBalance;
+        _pushHistory('sync', delta, 'server-sync');
+        bus.emit('silicon:changed', { balance: newBalance, delta: delta, fromServer: true });
+        bus.emit('state:changed', state.data);
+        return { ok: true, balance: newBalance, changed: true };
     },
 
     getHistory() {
@@ -166,7 +179,6 @@ export var SiliconService = {
             } else if (actionId === 'fabBuild') {
                 var u = state.data.fab.upgrade;
                 if (u) {
-                    // Paksa progress = selesai, lalu trigger tick.
                     u.progressDays = u.durationDays;
                     u.lastProcessedMinute = state.data.time.elapsedGameMinutes - 60;
                     if (game.fab && typeof game.fab._tickBuildUpgrade === 'function') {
