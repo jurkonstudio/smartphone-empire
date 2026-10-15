@@ -13,6 +13,7 @@ import { renderIcon } from '../icons/FeatureIcons.js';
 import { APP_CONFIG } from '../../config/app.config.js';
 import { SUPPORTED_LANGS } from '../../data/i18n/index.js';
 import { validateCompanyName } from '../../data/name-blocklist.data.js';
+import { getCloudSummary, openCloudPanel, syncNow } from '../../services/cloud/CloudUI.js';
 
 let _activeTab = 'umum';
 let _boundRoot = null;
@@ -230,6 +231,10 @@ function _tabData() {
         _row({ label: t('settings.row.export'), hint: t('settings.row.export_hint'), action: true, attrs: 'data-set="export"', chevron: true }) +
         _row({ label: t('settings.row.import'), hint: t('settings.row.import_hint'), action: true, attrs: 'data-set="import"', chevron: true })
     ) +
+    _section('database', t('cloud.section'),
+        _row({ label: t('cloud.row.account'), hint: getCloudSummary(), action: true, attrs: 'data-set="cloud"', chevron: true }) +
+        _row({ label: t('cloud.row.sync'), hint: t('cloud.row.sync_hint'), action: true, attrs: 'data-set="cloud-sync"', chevron: true })
+    ) +
     _sectionDanger('warn', t('settings.section.danger'),
         _row({ label: t('settings.row.reset'), hint: t('settings.row.reset_hint'), action: true, danger: true, attrs: 'data-set="reset"', chevron: true })
     ) +
@@ -346,6 +351,8 @@ function _handleSet(action) {
         case 'export': _openExport(); break;
         case 'import': _openImport(); break;
         case 'reset':  _confirmReset(); break;
+        case 'cloud':  openCloudPanel(); break;
+        case 'cloud-sync': syncNow(); break;
         case 'guide':  bus.emit('view:changed', { id: 'guide' }); window.__game.navigate('guide'); break;
         case 'tutorial': bus.emit('tutorial:restart'); break;
         case 'edit-name': _openEditName(); break;
