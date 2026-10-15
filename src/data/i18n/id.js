@@ -145,6 +145,7 @@ export const id = {
     'hq.tab.overview': 'Overview',
     'hq.tab.campus':   'Campus',
     'hq.tab.team':     'Team',
+    'hq.tab.exchange': 'Bursa',
     'home.placeholder.title': 'Campus Map',
     'home.placeholder.body':  'Peta 3D kantor pusat akan muncul di sini. Untuk sekarang, buka tab HQ untuk mengelola perusahaan.',
     'home.campus.aria':    'Peta kampus 3D interaktif. Geser untuk berpindah, cubit untuk zoom.',
