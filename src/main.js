@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2027.38a — Silicon + i18n admin + cloud.
+// v2027.35a — versi stabil (tanpa Silicon, tanpa i18n admin).
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -26,7 +26,6 @@ import { FabSystem } from './systems/FabSystem.js';
 import { NewsSystem } from './systems/NewsSystem.js';
 import { AdvisorSystem } from './systems/AdvisorSystem.js';
 import { StockSystem } from './systems/StockSystem.js';
-import { SiliconService } from './systems/SiliconService.js';
 import { renderHeader } from './ui/layout/Header.js';
 import { renderMobileNav } from './ui/layout/MobileNav.js';
 import { renderEmptyState } from './ui/panels/EmptyState.js';
@@ -60,15 +59,12 @@ import { handleNewsListClick } from './ui/panels/NewsListPanel.js';
 import { renderChipMockup } from './ui/phone/ChipMockup.js';
 import { renderChipRadarChart } from './ui/charts/ChipRadarChart.js';
 import { setExchangeCategory, setExchangeStock, drawExchangeChart, openBuyModal, openSellModal } from './ui/panels/ExchangePanel.js';
-import { openSiliconModal } from './ui/panels/SiliconPanel.js';
 import { buildReport, formatReportText } from './diagnostics/DiagnosticReport.js';
 import { openDiagnosticModal } from './diagnostics/DiagnosticUI.js';
-import { openI18nAdmin } from './ui/panels/I18nAdminPanel.js';
 import { CloudService } from './services/CloudService.js';
 import { SupabaseAdapter } from './services/cloud/SupabaseAdapter.js';
 import { CloudSync } from './services/cloud/CloudSync.js';
 import { bindCloudUI } from './services/cloud/CloudUI.js';
-import { I18nCloudService } from './services/i18n/I18nCloudService.js';
 import * as marketingModule from './data/marketing.data.js';
 import * as feedbackModule from './data/feedback.data.js';
 import { getActiveRendererIdPublic } from './ui/notifications/NotificationRenderer.js';
@@ -245,9 +241,6 @@ function renderView(opts) {
     } catch (err) { console.error('[renderView] Post:', err); }
 }
 
-// ============================================================
-// HOMEPANEL PERF — (v2027.34a) NO-OP
-// ============================================================
 function _bindCarouselPerf(wrapperEl) {
     var map = wrapperEl && wrapperEl.querySelector('#campus-map');
     if (map) map.classList.remove('scrolling');
@@ -438,9 +431,6 @@ function bindGlobalClicks() {
 
         var guideReport = e.target.closest('[data-guide-report]');
         if (guideReport) { e.preventDefault(); vibrate(8); openDiagnosticModal(); return; }
-
-        var siliconBtn = e.target.closest('[data-silicon-open]');
-        if (siliconBtn) { e.preventDefault(); vibrate(8); openSiliconModal(); return; }
 
         var timeBtn = e.target.closest('[data-time-action]');
         if (timeBtn) {
@@ -678,7 +668,6 @@ function bindGlobalClicks() {
     });
 }
 
-// ============ CHIP DETAIL ============
 function _openChipDetail(chip) {
     if (!chip) return;
     var lifecycle = chipSystem.getChipLifecycle ? chipSystem.getChipLifecycle(chip) : null;
@@ -711,7 +700,6 @@ function _openChipDetail(chip) {
     Modal.open('chip-detail', html);
 }
 
-// ============ PROGRESS ============
 function bindProgressEvents() {
     bus.on('research:progress', function (data) {
         if (activeView !== 'research' || activeSubtab !== 'tech') return;
@@ -765,7 +753,6 @@ function bindProgressEvents() {
     bus.on('product:development-cancelled', function () { if (activeView === 'products') renderView({ soft: true }); });
 }
 
-// ============ TIME ============
 function bindTimeEvents() {
     bus.on('time:tick', function () {
         var meta = els.header && els.header.querySelector('.header-meta');
@@ -785,13 +772,8 @@ function bindTimeEvents() {
     bus.on('time:speed-changed', function () { renderHeaderOnly(); });
 }
 
-// ============ STATE ============
 function bindStateEvents() {
     bus.on('state:cash-changed', function (data) { animateCash(data.prev, data.next); });
-    bus.on('silicon:changed', function () {
-        var el = document.querySelector('[data-silicon-value]');
-        if (el) el.textContent = SiliconService.getBalance();
-    });
     bus.on('state:log-changed', function () { if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true }); });
     bus.on('state:milestone-added', function () { if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true }); });
     bus.on('quest:completed', function (data) { ToastService.success('Quest selesai: ' + data.title); vibrate(20); });
@@ -872,7 +854,6 @@ function bindStateEvents() {
     bus.on('product:development-cancelled', function () { _refreshHomeIfActive(); });
 }
 
-// ============ BOOT ============
 async function boot() {
     try {
         if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML utama tidak ditemukan.');
@@ -922,7 +903,6 @@ async function boot() {
         stockSystem.start();
         mountAdvisorButton(advisor);
 
-        // Cloud sync: daftarkan adapter, restore sesi kalau ada.
         try {
             CloudService.registerAdapter(SupabaseAdapter);
             CloudSync.init(state);
@@ -939,36 +919,7 @@ async function boot() {
             console.warn('[Cloud] Init gagal:', e);
         }
 
-        // Muat custom translations dari Supabase.
-        function _syncI18n(lang) {
-            I18nCloudService.fetchLang(lang).then(function (map) {
-                if (map) {
-                    console.info('[I18n] Cloud strings loaded:', Object.keys(map).length, 'keys for', lang);
-                    LanguageService.applyCloudStrings(lang, map);
-                }
-            }).catch(function () { /* offline: pakai cache/lokal */ });
-        }
-        _syncI18n(LanguageService.getLang());
-        bus.on('lang:changed', function (e) {
-            if (e && e.fromCloud) return;
-            _syncI18n(LanguageService.getLang());
-        });
-
-        // Daily login Silicon — cek sekali per hari (real calendar).
-        try {
-            var dl = SiliconService.claimDailyLogin();
-            if (dl.ok) {
-                var dmsg = LanguageService.t('silicon.daily.msg');
-                if (dmsg === 'silicon.daily.msg') dmsg = 'Daily login: +' + dl.amount + ' SIL (streak ' + dl.streak + ').';
-                else dmsg = dmsg.replace('{n}', dl.amount).replace('{s}', dl.streak);
-                setTimeout(function () { ToastService.success(dmsg); }, 1500);
-            }
-        } catch (e) {
-            console.warn('[Silicon] Daily login gagal:', e);
-        }
-
         window.__game = {
-            // ===== DIAGNOSTIC =====
             report: function (opts) {
                 return buildReport(state.get(), window.__game, opts || {});
             },
@@ -978,30 +929,7 @@ async function boot() {
             reportShow: function () {
                 openDiagnosticModal();
             },
-            // ===== i18n ADMIN =====
-            i18nAdmin: function () {
-                openI18nAdmin();
-            },
-            // ===== i18n diagnostics =====
-            i18nReport: function () {
-                var txt = LanguageService.getMissingKeysAsJs();
-                console.log(txt);
-                console.log('Total:', LanguageService.getMissingKeys().length, 'key.');
-                return txt;
-            },
-            i18nList: function () {
-                return LanguageService.getMissingKeys();
-            },
-            i18nClear: function () {
-                LanguageService.clearMissingKeys();
-                console.log('[i18n] Missing key list dibersihkan.');
-                return true;
-            },
-            // ===== CLOUD =====
             cloud: CloudService,
-            // ===== SILICON =====
-            silicon: SiliconService,
-            // ===== CORE =====
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
