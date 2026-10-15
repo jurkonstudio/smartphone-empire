@@ -850,6 +850,8 @@ export const en = {
 'cloud.auth.sub':             'Sync your progress to the cloud.',
 'cloud.auth.tab_login':       'Sign In',
 'cloud.auth.tab_register':    'Register',
+'cloud.auth.google': 'Continue with Google',
+'cloud.auth.or_email': 'or continue with email',
 'cloud.auth.email':           'Email',
 'cloud.auth.password':        'Password',
 'cloud.auth.forgot':          'Forgot password?',
