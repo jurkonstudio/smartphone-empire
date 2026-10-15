@@ -1,5 +1,5 @@
 // FILE: src/ui/layout/Header.js
-// v2027.17a — pakai formatCurrency (konsisten, bulat).
+// v2027.18a — wallet: cash + silicon button.
 import { generateLogo } from '../avatars/AvatarGenerator.js';
 import { t } from '../../core/LanguageService.js';
 import { formatCurrency } from '../../utils/format.js';
@@ -19,6 +19,8 @@ export function renderHeader({ state, timeSnapshot, warning }) {
     const warnBadge = warning ? `<span class="header-warn">⚠ ${warning}</span>` : '';
     const pauseAria = time.isPaused ? t('header.play_aria') : t('header.pause_aria');
 
+    const silicon = state.silicon != null ? state.silicon : 0;
+
     return `
         <div class="header-inner">
             <div class="header-row">
@@ -28,7 +30,13 @@ export function renderHeader({ state, timeSnapshot, warning }) {
                     <span class="header-chevron">›</span>
                 </button>
                 ${warnBadge}
-                <div class="header-cash" data-cash>${formatCurrency(state.cash)}</div>
+                <div class="header-wallet">
+                    <div class="header-cash" data-cash>${formatCurrency(state.cash)}</div>
+                    <button class="header-silicon" data-silicon-open type="button" aria-label="Silicon">
+                        <span class="header-silicon-ico">💎</span>
+                        <span class="header-silicon-value" data-silicon-value>${silicon}</span>
+                    </button>
+                </div>
             </div>
             <div class="header-row">
                 <div class="header-meta">
