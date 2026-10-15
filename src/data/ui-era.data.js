@@ -11,7 +11,7 @@ export const UI_ERAS = [
     {
         id: 'feature_phone',
         label: 'Feature Phone (LCD Monokrom)',
-        fromYear: 1999,
+        fromYear: 2000,
         toYear: 2006,
         renderer: 'classic',
         description: 'Kotak LCD abu-abu, huruf monospace, tanpa animasi.',
