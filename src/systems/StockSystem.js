@@ -1,7 +1,7 @@
 // FILE: src/systems/StockSystem.js
 // ============================================================
 // StockSystem — mesin harga saham untuk halaman Exchange.
-// v2027.1a — Sesi 1: display only, interpolasi tahunan→bulanan.
+// v2027.1b — full: interpolasi + proyeksi + getSeries untuk chart.
 //
 // Siap untuk integrasi AI setelah 2026:
 //   - _projectFuturePrice(year, month, stock) jadi hook AI.
@@ -54,11 +54,9 @@ export class StockSystem {
         var years = Object.keys(map).map(Number).sort(function (a, b) { return a - b; });
         if (!years.length) return null;
 
-        // Di luar rentang pivot → pakai ujungnya (fallback proyeksi).
         if (year <= years[0]) return map[years[0]];
         if (year >= years[years.length - 1]) return map[years[years.length - 1]];
 
-        // Cari pasangan pivot y1 <= year < y2.
         for (var i = 0; i < years.length - 1; i++) {
             var y1 = years[i], y2 = years[i + 1];
             if (year >= y1 && year < y2) {
@@ -76,13 +74,11 @@ export class StockSystem {
     // Sesi 1: pakai tren historis + noise kecil.
     // ============================================================
     _projectFuturePrice(stock, year, month) {
-        // Cache: kalau sudah pernah dihitung, pakai itu.
         var key = stock.id + ':' + year + ':' + month;
         if (this.state.data.stocks.projected[key] !== undefined) {
             return this.state.data.stocks.projected[key];
         }
 
-        // Ambil pivot terakhir sebagai anchor.
         var map = stock.priceByYear;
         var years = map ? Object.keys(map).map(Number).sort(function (a, b) { return a - b; }) : [];
         if (!years.length) return 0;
@@ -90,13 +86,11 @@ export class StockSystem {
         var lastYear = years[years.length - 1];
         var lastVal = map[lastYear];
 
-        // Tren rata-rata 5 tahun terakhir (kalau ada).
         var anchorIdx = Math.max(0, years.length - 5);
         var anchorYear = years[anchorIdx];
         var anchorVal = map[anchorYear];
         var span = lastYear - anchorYear;
         var cagr = span > 0 ? Math.pow(lastVal / anchorVal, 1 / span) - 1 : 0.05;
-        // Clamp CAGR biar tidak eksplosif.
         cagr = Math.max(-0.15, Math.min(0.25, cagr));
 
         var yearsAhead = (year - lastYear) + (month - 1) / 12;
@@ -105,8 +99,6 @@ export class StockSystem {
 
         this.state.data.stocks.projected[key] = projected;
 
-        // [AI HOOK] Kalau provider tersedia, panggil async dan
-        // simpan hasilnya untuk re-render berikutnya. Belum diaktifkan.
         if (this._aiProvider) {
             this._callAI(stock, year, month, projected);
         }
@@ -114,7 +106,6 @@ export class StockSystem {
         return projected;
     }
 
-    // Placeholder untuk integrasi AI di masa depan.
     _callAI(stock, year, month, fallbackPrice) {
         var self = this;
         try {
@@ -150,11 +141,11 @@ export class StockSystem {
 
         var newPrices = {};
         STOCKS.forEach(function (s) {
-            if (s.isPlayer) return;  // player stock dikelola terpisah
+            if (s.isPlayer) return;
             if (year < s.listedFrom) return;
             if (s.listedTo !== null && year > s.listedTo) return;
-
             if (!s.priceByYear) return;
+
             var years = Object.keys(s.priceByYear).map(Number);
             var lastYear = Math.max.apply(null, years);
 
@@ -176,7 +167,6 @@ export class StockSystem {
         d.stocks.prices = newPrices;
         d.stocks.indices = newIndices;
 
-        // Simpan snapshot untuk grafik.
         d.stocks.history.unshift({
             year: year,
             month: month,
@@ -213,6 +203,30 @@ export class StockSystem {
             var v = h[i].prices[stockId];
             if (v != null) out.push({ year: h[i].year, month: h[i].month, value: v });
             if (limit && out.length >= limit) break;
+        }
+        return out;
+    }
+
+    // Bangun deret bulanan untuk grafik (dari listing s/d bulan sekarang).
+    getSeries(stockId) {
+        var stock = null;
+        for (var i = 0; i < STOCKS.length; i++) {
+            if (STOCKS[i].id === stockId) { stock = STOCKS[i]; break; }
+        }
+        if (!stock || !stock.priceByYear) return [];
+
+        var d = this.state.data;
+        var endY = d.time.currentYear;
+        var endM = d.time.currentMonth;
+        var startY = Math.max(1999, stock.listedFrom || 1999);
+
+        var out = [];
+        for (var y = startY; y <= endY; y++) {
+            var mLimit = (y === endY) ? endM : 12;
+            for (var m = 1; m <= mLimit; m++) {
+                var v = this._interpolate(stock.priceByYear, y, m);
+                if (v != null) out.push({ year: y, month: m, value: v });
+            }
         }
         return out;
     }
