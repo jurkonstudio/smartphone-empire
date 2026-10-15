@@ -40,7 +40,6 @@ import { initMonthlySummary } from './ui/panels/MonthlySummaryModal.js';
 import { initGameOverScreen } from './ui/panels/GameOverScreen.js';
 import { Modal } from './ui/modal.js';
 import { mountAdvisorButton } from './ui/panels/AdvisorPanel.js';
-import { initCloud } from './services/cloud/index.js';
 import { renderResearchPanel, setFilterCategory, setTimelineFilter, getChipResearchFilter, setChipResearchFilter, openNodeDetailModal, openOsWizardModal, openCreateOsModal, openFeatureDetailModal, openChipNodeModal } from './ui/panels/ResearchPanel.js';
 import { renderProductPanel, openProductDetailModal, openCampaignModal, openOrderProductionModal } from './ui/panels/ProductPanel.js';
 import { openDesignWizard } from './ui/panels/DesignWizard.js';
@@ -796,7 +795,6 @@ async function boot() {
         advisor.start();
         stockSystem.start();
         mountAdvisorButton(advisor);
-        initCloud(state);
 
         window.__game = {
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
