@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2027.34a — Diagnostic report hook.
+// v2027.35a — Cloud adapter (opt-in, no auto signin).
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -31,7 +31,7 @@ import { renderMobileNav } from './ui/layout/MobileNav.js';
 import { renderEmptyState } from './ui/panels/EmptyState.js';
 import { renderSettingsPanel, bindSettingsActions } from './ui/panels/SettingsPanel.js';
 import { renderGuidePanel } from './ui/panels/GuidePanel.js';
-import { renderCompanyProfilePanel } from './ui/panels/CompanyProfilePanel.js';
+import { renderCompanyProfilePanel, bindCompanyProfileActions } from './ui/panels/CompanyProfilePanel.js';
 import { mountToastContainer } from './ui/panels/ToastContainer.js';
 import { drawCashChart } from './ui/panels/CashChart.js';
 import { initTutorialOverlay } from './ui/panels/TutorialOverlay.js';
@@ -61,6 +61,8 @@ import { renderChipRadarChart } from './ui/charts/ChipRadarChart.js';
 import { setExchangeCategory, setExchangeStock, drawExchangeChart, openBuyModal, openSellModal } from './ui/panels/ExchangePanel.js';
 import { buildReport, formatReportText } from './diagnostics/DiagnosticReport.js';
 import { openDiagnosticModal } from './diagnostics/DiagnosticUI.js';
+import { CloudService } from './services/CloudService.js';
+import { SupabaseAdapter } from './services/cloud/SupabaseAdapter.js';
 import * as marketingModule from './data/marketing.data.js';
 import * as feedbackModule from './data/feedback.data.js';
 import { getActiveRendererIdPublic } from './ui/notifications/NotificationRenderer.js';
@@ -220,6 +222,7 @@ function renderView(opts) {
         if (activeView === 'products' && activeProdSubtab === 'sales') { var sc = els.view.querySelector('.chart-wrap'); if (sc) drawSalesChart(sc); }
         if (activeView === 'market' && activeMarketSubtab === 'share') { var sc2 = els.view.querySelector('.chart-wrap'); if (sc2) drawShareChart(sc2); }
         if (activeView === 'settings') bindSettingsActions(els.view);
+        if (activeView === 'profile') bindCompanyProfileActions(els.view);
         if (activeView === 'team' && activeHqSubtab === 'exchange') {
             var exChart = els.view.querySelector('[data-ex-chart]');
             if (exChart) drawExchangeChart(exChart);
@@ -426,9 +429,9 @@ function bindGlobalClicks() {
 
         var navBtn = e.target.closest('[data-nav]');
         if (navBtn) { e.preventDefault(); vibrate(8); navigate(navBtn.dataset.nav); return; }
-        
-var guideReport = e.target.closest('[data-guide-report]');
-if (guideReport) { e.preventDefault(); vibrate(8); openDiagnosticModal(); return; }
+
+        var guideReport = e.target.closest('[data-guide-report]');
+        if (guideReport) { e.preventDefault(); vibrate(8); openDiagnosticModal(); return; }
 
         var timeBtn = e.target.closest('[data-time-action]');
         if (timeBtn) {
@@ -906,6 +909,15 @@ async function boot() {
         stockSystem.start();
         mountAdvisorButton(advisor);
 
+        // Cloud sync: hanya daftarkan adapter. Tidak ada sesi dibuat di sini.
+        // Pemain membuat sesi anonymous secara eksplisit dari Profile → Cloud.
+        try {
+            CloudService.registerAdapter(SupabaseAdapter);
+            console.info('[Cloud] Adapter terdaftar (belum login).');
+        } catch (e) {
+            console.warn('[Cloud] Adapter gagal didaftarkan:', e);
+        }
+
         window.__game = {
             // ===== DIAGNOSTIC =====
             report: function (opts) {
@@ -917,6 +929,8 @@ async function boot() {
             reportShow: function () {
                 openDiagnosticModal();
             },
+            // ===== CLOUD =====
+            cloud: CloudService,
             // ===== CORE =====
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
