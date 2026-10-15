@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/MarketPanel.js
-// v2027.13c — i18n.
+// v2027.14a — chart auto-scale + overlay kompetitor.
 import { renderPublicOpinionPanel } from './PublicOpinionPanel.js';
 import { t } from '../../core/LanguageService.js';
 
@@ -81,17 +81,43 @@ function _renderShare(marketSystem) {
     return html;
 }
 
+const _COMP_COLORS = ['#6b8e23', '#c97f3c', '#8a5ec9'];
+
 function _renderShareChart(history) {
     if (!history.length) {
         return '<div class="card"><div class="card-title">' + t('market.share.chart_title') + '</div><div class="log-empty">' + t('market.share.chart_empty') + '</div></div>';
     }
     const id = 'share-chart-' + Math.random().toString(36).slice(2, 8);
+
+    // Legend: player + top 3 kompetitor dari snapshot terbaru.
+    const state = window.__game && window.__game.state ? window.__game.state.get() : null;
+    const compMeta = {};
+    if (state && state.market && Array.isArray(state.market.competitors)) {
+        state.market.competitors.forEach(function (c) { compMeta[c.id] = c; });
+    }
+    const latest = history[0]; // unshift → index 0 = terbaru
+    const topComp = (latest && latest.competitors ? latest.competitors : [])
+        .slice()
+        .sort(function (a, b) { return b.share - a.share; })
+        .slice(0, 3);
+
+    const itemStyle = 'display:inline-flex;align-items:center;gap:4px;';
+    const dotStyle = 'width:10px;height:3px;border-radius:2px;';
+    const legendPlayer = '<span style="' + itemStyle + '"><span style="' + dotStyle + 'background:#4CAF50;"></span>' + t('market.share.you') + '</span>';
+    const legendComp = topComp.map(function (c, i) {
+        const meta = compMeta[c.id] || { name: c.id };
+        const color = _COMP_COLORS[i % _COMP_COLORS.length];
+        return '<span style="' + itemStyle + 'opacity:0.85;"><span style="' + dotStyle + 'background:' + color + ';"></span>' + escapeHtml(meta.name || c.id) + '</span>';
+    }).join('');
+    const legendHtml = '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:10.5px;color:var(--text-mute);">' + legendPlayer + legendComp + '</div>';
+
     return `
         <div class="card">
             <div class="card-title">${t('market.share.chart_title')}</div>
             <div class="chart-wrap" id="${id}" style="height:140px;">
                 <canvas class="chart-canvas" data-share-chart="${id}" style="height:140px;"></canvas>
             </div>
+            ${legendHtml}
         </div>
     `;
 }
@@ -102,8 +128,10 @@ export function drawShareChart(container) {
     if (!canvas) return;
     const game = window.__game;
     if (!game) return;
-    const history = [].concat(game.state.get().market.shareHistory || []).reverse();
-    if (history.length < 2) return;
+    const rawHistory = game.state.get().market.shareHistory || [];
+    if (rawHistory.length < 2) return;
+    // Balik supaya index 0 = paling lama.
+    const history = [].concat(rawHistory).reverse();
 
     const cssW = container.clientWidth || 320;
     const cssH = 140;
@@ -116,15 +144,30 @@ export function drawShareChart(container) {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, cssW, cssH);
 
-    const padL = 32, padR = 8, padT = 10, padB = 16;
+    const padL = 42, padR = 8, padT = 10, padB = 18;
     const plotW = cssW - padL - padR;
     const plotH = cssH - padT - padB;
-    const maxV = Math.max(0.1, Math.max.apply(null, history.map(function (h) { return h.playerShare; })));
-    const range = maxV || 0.1;
+
+    // Kumpulkan data. compSeries[id] = array sepanjang history, null kalau belum ada.
+    let maxV = 0;
+    const compSeries = {};
+    history.forEach(function (h, i) {
+        if (h.playerShare > maxV) maxV = h.playerShare;
+        (h.competitors || []).forEach(function (c) {
+            if (!compSeries[c.id]) compSeries[c.id] = new Array(history.length).fill(null);
+            compSeries[c.id][i] = c.share;
+            if (c.share > maxV) maxV = c.share;
+        });
+    });
+    // Padding 15% di atas + clamp minimum.
+    maxV = maxV * 1.15;
+    if (maxV < 0.005) maxV = 0.005;
+    const range = maxV;
 
     const xOf = function (i) { return padL + (plotW * i) / (history.length - 1); };
     const yOf = function (v) { return padT + plotH - (v / range) * plotH; };
 
+    // Grid.
     ctx.strokeStyle = 'rgba(255,255,255,0.06)';
     ctx.lineWidth = 1;
     for (let i = 1; i <= 3; i++) {
@@ -132,8 +175,54 @@ export function drawShareChart(container) {
         ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(cssW - padR, y); ctx.stroke();
     }
 
-    ctx.strokeStyle = '#4CAF50';
-    ctx.lineWidth = 2;
+    // Format label Y (adaptif desimal).
+    const fmtPct = function (v) {
+        const pct = v * 100;
+        if (pct >= 10) return pct.toFixed(0) + '%';
+        if (pct >= 1)  return pct.toFixed(1) + '%';
+        return pct.toFixed(2) + '%';
+    };
+    ctx.fillStyle = '#6a6a6a';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(fmtPct(maxV), padL - 4, padT + 10);
+    ctx.fillText(fmtPct(maxV / 2), padL - 4, padT + plotH / 2 + 3);
+    ctx.fillText('0%', padL - 4, padT + plotH - 2);
+
+    // Top 3 kompetitor dari snapshot terbaru.
+    const latest = history[history.length - 1];
+    const topComp = (latest.competitors || []).slice()
+        .sort(function (a, b) { return b.share - a.share; })
+        .slice(0, 3);
+
+    // Gambar garis kompetitor dulu (supaya garis player tampil di atas).
+    topComp.forEach(function (c, idx) {
+        const series = compSeries[c.id];
+        if (!series) return;
+        const nonNull = series.filter(function (v) { return v != null; });
+        if (nonNull.length < 2) return;
+
+        ctx.strokeStyle = _COMP_COLORS[idx % _COMP_COLORS.length];
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        let started = false;
+        series.forEach(function (v, i) {
+            if (v == null) { started = false; return; }
+            const x = xOf(i), y = yOf(v);
+            if (!started) { ctx.moveTo(x, y); started = true; }
+            else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+
+    // Garis player (tebal, warna adaptif tren).
+    const firstVal = history[0].playerShare;
+    const lastVal  = history[history.length - 1].playerShare;
+    const playerColor = lastVal < firstVal ? '#ef5350' : '#4CAF50';
+    ctx.strokeStyle = playerColor;
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
     history.forEach(function (h, i) {
         const x = xOf(i), y = yOf(h.playerShare);
@@ -141,11 +230,13 @@ export function drawShareChart(container) {
     });
     ctx.stroke();
 
-    ctx.fillStyle = '#6a6a6a';
-    ctx.font = '10px sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText((maxV * 100).toFixed(0) + '%', padL - 4, padT + 10);
-    ctx.fillText('0%', padL - 4, padT + plotH - 2);
+    // Titik di ujung garis player.
+    const lastX = xOf(history.length - 1);
+    const lastY = yOf(lastVal);
+    ctx.fillStyle = playerColor;
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+    ctx.fill();
 }
 
 // ============================================================
