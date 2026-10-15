@@ -330,6 +330,11 @@ bus.on('lang:changed', function () {
         NewsSystem.seedPreHistory();
     } catch (err) { console.warn('[NewsSystem] lang reload error:', err); }
 });
+
+// [V7a-5] Seed arsip pra-2000 saat boot. Idempotent — kalau
+// recapSeeded sudah true (save lama), fungsi ini langsung return.
+NewsSystem.seedPreHistory();
+
 console.info('[NewsSystem] siap.');
     },
 
