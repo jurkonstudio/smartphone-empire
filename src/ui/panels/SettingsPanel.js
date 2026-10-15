@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SettingsPanel.js
-// v2027.36a — Tambah tab Debug (untuk development, tanpa console).
+// v2027.37a — + row "Pemain Online" di tab Umum.
 import { state } from '../../core/GameState.js';
 import { SaveService } from '../../core/SaveService.js';
 import { ToastService } from '../../core/ToastService.js';
@@ -15,6 +15,7 @@ import { SUPPORTED_LANGS } from '../../data/i18n/index.js';
 import { validateCompanyName } from '../../data/name-blocklist.data.js';
 import { formatCurrency } from '../../utils/format.js';
 import { renderDebugSection, bindDebugActions } from './DebugPanel.js';
+import { openPlayerListModal } from '../social/PlayerListPanel.js';
 
 let _activeTab = 'umum';
 let _boundRoot = null;
@@ -118,6 +119,9 @@ function _tabUmum(s) {
         _row({ label: t('settings.row.name'), value: escapeHtml(s.companyName || '—'), action: true, attrs: 'data-set="edit-name"', chevron: true }) +
         _row({ label: t('settings.row.difficulty'), value: escapeHtml(t('settings.difficulty.' + (s.difficulty || 'normal'))) }) +
         _row({ label: t('settings.row.founded'), value: escapeHtml(_formatFounded(s)) })
+    ) +
+    _section('globe', 'Pemain',
+        _row({ label: 'Lihat Pemain Online', hint: 'Daftar perusahaan pemain lain', action: true, attrs: 'data-set="player-list"', chevron: true })
     ) +
     _section('question', t('settings.section.help'),
         _row({ label: t('settings.row.guide'), hint: t('settings.row.guide_hint'), action: true, attrs: 'data-set="guide"', chevron: true }) +
@@ -290,7 +294,6 @@ function _row(opts) {
 export function bindSettingsActions(root) {
     if (!root) return;
 
-    // Bind debug actions (idempotent, punya guard sendiri).
     bindDebugActions(root);
 
     if (_boundRoot === root) return;
@@ -361,13 +364,14 @@ function _handleSet(action) {
             if (SaveService.save(state)) ToastService.success(t('toast.save_ok'));
             else ToastService.error(t('toast.save_fail'));
             break;
-        case 'load':   _confirmLoad(); break;
-        case 'export': _openExport(); break;
-        case 'import': _openImport(); break;
-        case 'reset':  _confirmReset(); break;
-        case 'guide':  bus.emit('view:changed', { id: 'guide' }); window.__game.navigate('guide'); break;
-        case 'tutorial': bus.emit('tutorial:restart'); break;
-        case 'edit-name': _openEditName(); break;
+        case 'load':        _confirmLoad(); break;
+        case 'export':      _openExport(); break;
+        case 'import':      _openImport(); break;
+        case 'reset':       _confirmReset(); break;
+        case 'guide':       bus.emit('view:changed', { id: 'guide' }); window.__game.navigate('guide'); break;
+        case 'tutorial':    bus.emit('tutorial:restart'); break;
+        case 'edit-name':   _openEditName(); break;
+        case 'player-list': openPlayerListModal(); break;
     }
 }
 
@@ -492,4 +496,4 @@ function _confirmReset() {
         SaveService.stopAutoSave();
         window.location.reload();
     });
-    }
+}
