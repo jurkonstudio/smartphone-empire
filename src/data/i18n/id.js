@@ -652,6 +652,26 @@ export const id = {
     'market.comp_detail.no_sig':     'Belum ada produk ikonik.',
     'market.comp_detail.close':      'Tutup',
 
+// [v2027.14b] Biografi transparan
+'market.comp_detail.fact_historical':  'Berbasis fakta sejarah',
+'market.comp_detail.fact_mixed':       'Campuran fakta & penyederhanaan game',
+'market.comp_detail.fact_fictional':   'Fiksi untuk gameplay',
+'market.comp_detail.profile_title':    'Profil Perusahaan',
+'market.comp_detail.founded':          'Didirikan',
+'market.comp_detail.founder':          'Pendiri',
+'market.comp_detail.hq':               'Kantor Pusat',
+'market.comp_detail.parent':           'Induk Perusahaan',
+'market.comp_detail.origin_title':     'Asal Usul',
+'market.comp_detail.milestones_title': 'Jejak Sejarah',
+'market.comp_detail.verified_label':   'Terverifikasi',
+'market.comp_detail.approx_label':     'Perkiraan',
+'market.comp_detail.trivia_title':     'Fakta Menarik',
+'market.comp_detail.fact_note_label':  'Catatan Verifikasi',
+'market.comp_detail.sources_label':    'Sumber',
+'market.comp_detail.exit_title':       'Keluar dari Pasar',
+'market.comp_detail.market_title':     'Data Pasar',
+'market.comp_detail.active_now':       'aktif',
+
     // OPINION
     'opinion.sentiment.title':       'Sentimen Publik',
     'opinion.sentiment.very_good':   'Sangat Baik',
