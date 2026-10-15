@@ -1,3 +1,4 @@
+
 // FILE: src/data/i18n/id.js
 // Kamus Bahasa Indonesia. Key flat dengan prefix kategori.
 // v2027.33b — tambah keys validasi nama.
@@ -907,7 +908,12 @@ export const id = {
 'silicon.action.morale.d':   'Set semua morale staff ke 100.',
 'silicon.action.rep.t':      'Reputasi +20',
 'silicon.action.rep.d':      'Dapat 20 reputasi instan.',
-
+'silicon.action.chipResearch.t': 'Selesaikan Riset Chip',
+'silicon.action.chipResearch.d': 'Riset chip aktif selesai seketika.',
+'silicon.action.osBugs.t':       'Fix Semua Bug OS',
+'silicon.action.osBugs.d':       'Perbaiki semua bug OS seketika.',
+'silicon.msg.chipResearch':      'Riset chip selesai seketika.',
+'silicon.msg.osBugs':            'Memperbaiki {n} bug OS.',
 'silicon.msg.skip7':    'Time skip +7 hari.',
 'silicon.msg.skip30':   'Time skip +30 hari.',
 'silicon.msg.research': 'Riset selesai seketika.',
