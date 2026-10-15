@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2027.35a — Cloud adapter (opt-in, no auto signin).
+// v2027.36a — Silicon premium currency.
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -26,6 +26,7 @@ import { FabSystem } from './systems/FabSystem.js';
 import { NewsSystem } from './systems/NewsSystem.js';
 import { AdvisorSystem } from './systems/AdvisorSystem.js';
 import { StockSystem } from './systems/StockSystem.js';
+import { SiliconService } from './systems/SiliconService.js';
 import { renderHeader } from './ui/layout/Header.js';
 import { renderMobileNav } from './ui/layout/MobileNav.js';
 import { renderEmptyState } from './ui/panels/EmptyState.js';
@@ -61,6 +62,7 @@ import { renderChipRadarChart } from './ui/charts/ChipRadarChart.js';
 import { setExchangeCategory, setExchangeStock, drawExchangeChart, openBuyModal, openSellModal } from './ui/panels/ExchangePanel.js';
 import { buildReport, formatReportText } from './diagnostics/DiagnosticReport.js';
 import { openDiagnosticModal } from './diagnostics/DiagnosticUI.js';
+import { openSiliconModal } from './ui/panels/SiliconPanel.js';
 import { CloudService } from './services/CloudService.js';
 import { SupabaseAdapter } from './services/cloud/SupabaseAdapter.js';
 import { CloudSync } from './services/cloud/CloudSync.js';
@@ -435,6 +437,9 @@ function bindGlobalClicks() {
         var guideReport = e.target.closest('[data-guide-report]');
         if (guideReport) { e.preventDefault(); vibrate(8); openDiagnosticModal(); return; }
 
+        var siliconBtn = e.target.closest('[data-silicon-open]');
+        if (siliconBtn) { e.preventDefault(); vibrate(8); openSiliconModal(); return; }
+
         var timeBtn = e.target.closest('[data-time-action]');
         if (timeBtn) {
             e.preventDefault(); vibrate(12);
@@ -781,6 +786,10 @@ function bindTimeEvents() {
 // ============ STATE ============
 function bindStateEvents() {
     bus.on('state:cash-changed', function (data) { animateCash(data.prev, data.next); });
+    bus.on('silicon:changed', function () {
+        var el = document.querySelector('[data-silicon-value]');
+        if (el) el.textContent = SiliconService.getBalance();
+    });
     bus.on('state:log-changed', function () { if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true }); });
     bus.on('state:milestone-added', function () { if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true }); });
     bus.on('quest:completed', function (data) { ToastService.success('Quest selesai: ' + data.title); vibrate(20); });
@@ -911,25 +920,22 @@ async function boot() {
         stockSystem.start();
         mountAdvisorButton(advisor);
 
-        // Cloud sync: hanya daftarkan adapter. Tidak ada sesi dibuat di sini.
-        // Pemain membuat sesi anonymous secara eksplisit dari Profile → Cloud.
- 
+        // Cloud sync: daftarkan adapter, restore sesi kalau ada.
         try {
-    CloudService.registerAdapter(SupabaseAdapter);
-    CloudSync.init(state);
-    bindCloudUI();        
-    // Restore sesi hanya kalau memang ada sesi tersimpan — TIDAK buat sesi baru.
-    if (typeof SupabaseAdapter.hasStoredSession === 'function' && SupabaseAdapter.hasStoredSession()) {
-        CloudService.restoreSession().then(function (r) {
-            if (r && r.ok) console.info('[Cloud] Sesi dipulihkan:', r.email || r.userId);
-            else console.info('[Cloud] Tidak ada sesi tersimpan.');
-        });
-    } else {
-        console.info('[Cloud] Adapter terdaftar (belum login).');
-    }
-} catch (e) {
-    console.warn('[Cloud] Init gagal:', e);
-}
+            CloudService.registerAdapter(SupabaseAdapter);
+            CloudSync.init(state);
+            bindCloudUI();
+            if (typeof SupabaseAdapter.hasStoredSession === 'function' && SupabaseAdapter.hasStoredSession()) {
+                CloudService.restoreSession().then(function (r) {
+                    if (r && r.ok) console.info('[Cloud] Sesi dipulihkan:', r.email || r.userId);
+                    else console.info('[Cloud] Tidak ada sesi tersimpan.');
+                });
+            } else {
+                console.info('[Cloud] Adapter terdaftar (belum login).');
+            }
+        } catch (e) {
+            console.warn('[Cloud] Init gagal:', e);
+        }
 
         window.__game = {
             // ===== DIAGNOSTIC =====
@@ -944,6 +950,8 @@ async function boot() {
             },
             // ===== CLOUD =====
             cloud: CloudService,
+            // ===== SILICON =====
+            silicon: SiliconService,
             // ===== CORE =====
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
