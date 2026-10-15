@@ -1,7 +1,7 @@
 // FILE: src/systems/StockSystem.js
 // ============================================================
 // StockSystem — mesin harga saham + trading.
-// v2027.2a — Sesi 2: beli/jual, portofolio, riwayat transaksi.
+// v2027.2b — fix: totalUSD & proceedsUSD dibulatkan (no pecahan sen).
 //
 // Semua nilai disimpan dalam USD. Harga lokal dikonversi
 // memakai getCurrencyRateToUSD(currency, year).
@@ -248,7 +248,6 @@ export class StockSystem {
     // TRADING — beli/jual
     // ============================================================
 
-    // Konversi harga saham dalam mata uang lokal ke USD.
     getPriceUSD(stockId) {
         var stock = getStockById(stockId);
         if (!stock) return 0;
@@ -259,7 +258,6 @@ export class StockSystem {
         return local * rate;
     }
 
-    // Hitung berapa lembar maksimum yang bisa dibeli dengan cash sekarang.
     getMaxAffordableShares(stockId) {
         var priceUSD = this.getPriceUSD(stockId);
         if (priceUSD <= 0) return 0;
@@ -280,16 +278,15 @@ export class StockSystem {
 
         var rate = getCurrencyRateToUSD(stock.currency, year);
         var priceUSD = localPrice * rate;
-        var totalUSD = priceUSD * shares;
+        // [v2027.2b] Bulatkan supaya cash tetap integer.
+        var totalUSD = Math.round(priceUSD * shares);
 
         if (totalUSD > d.cash) {
-            return { ok: false, reason: 'Uang tidak cukup. Butuh $' + Math.round(totalUSD).toLocaleString('en-US') + '.' };
+            return { ok: false, reason: 'Uang tidak cukup. Butuh $' + totalUSD.toLocaleString('en-US') + '.' };
         }
 
-        // Kurangi cash.
         this.state.addCash(-totalUSD);
 
-        // Cari entri portofolio yang ada.
         var existing = null;
         for (var i = 0; i < d.stocks.portfolio.length; i++) {
             if (d.stocks.portfolio[i].stockId === stockId) {
@@ -299,7 +296,6 @@ export class StockSystem {
         }
 
         if (existing) {
-            // Update avg buy price.
             var totalShares = existing.shares + shares;
             var totalCost = existing.totalCostUSD + totalUSD;
             existing.shares = totalShares;
@@ -315,7 +311,6 @@ export class StockSystem {
             });
         }
 
-        // Catat transaksi.
         this._pushTransaction({
             type: 'buy',
             stockId: stockId,
@@ -341,7 +336,6 @@ export class StockSystem {
 
         var d = this.state.data;
 
-        // Cari portofolio.
         var idx = -1;
         for (var i = 0; i < d.stocks.portfolio.length; i++) {
             if (d.stocks.portfolio[i].stockId === stockId) { idx = i; break; }
@@ -359,23 +353,20 @@ export class StockSystem {
 
         var rate = getCurrencyRateToUSD(stock.currency, year);
         var priceUSD = localPrice * rate;
-        var proceedsUSD = priceUSD * shares;
+        // [v2027.2b] Bulatkan supaya cash tetap integer.
+        var proceedsUSD = Math.round(priceUSD * shares);
 
-        // Tambah cash.
         this.state.addCash(proceedsUSD);
 
-        // Update portofolio.
         entry.shares -= shares;
         if (entry.shares <= 0) {
             d.stocks.portfolio.splice(idx, 1);
         } else {
-            // Sisa: totalCostUSD proporsional (biar avg tetap).
             var costPerShare = entry.totalCostUSD / (entry.shares + shares);
             entry.totalCostUSD = costPerShare * entry.shares;
             entry.avgBuyPriceUSD = costPerShare;
         }
 
-        // Catat transaksi.
         this._pushTransaction({
             type: 'sell',
             stockId: stockId,
@@ -444,4 +435,4 @@ export class StockSystem {
     getTransactions() {
         return (this.state.data.stocks.transactions || []).slice();
     }
-                }
+}
