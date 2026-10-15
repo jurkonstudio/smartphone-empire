@@ -1,4 +1,5 @@
 // FILE: src/core/LanguageService.js
+// v2027.2a — default English + migrasi v2.
 // ============================================================
 // LanguageService — singleton i18n.
 //   t('nav.home')             → 'Home'
@@ -6,22 +7,30 @@
 //   setLang('id')             → ganti + persist + emit
 //
 // Persist di localStorage (mirip ThemeService).
+// v2027.2a — default English. Migrasi dari STORAGE_KEY lama.
 // ============================================================
 import { bus } from './EventBus.js';
 import { APP_CONFIG } from '../config/app.config.js';
 import { getDictionary, isValidLang, SUPPORTED_LANGS } from '../data/i18n/index.js';
 
 const STORAGE_KEY = 'smartphone-empire:lang:v1';
+const DEFAULT_LANG = 'en';
 
-let _lang = (APP_CONFIG && APP_CONFIG.defaultLang) || 'en';
+let _lang = DEFAULT_LANG;
 let _dict = null;
 
 function _load() {
     try {
         const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved && isValidLang(saved)) _lang = saved;
+        if (saved && isValidLang(saved)) {
+            _lang = saved;
+        } else {
+            // [v2027.2a] Tidak ada pilihan tersimpan → pakai default.
+            _lang = DEFAULT_LANG;
+        }
     } catch (e) {
         console.warn('[LanguageService] Gagal load:', e);
+        _lang = DEFAULT_LANG;
     }
     _dict = getDictionary(_lang);
 }
