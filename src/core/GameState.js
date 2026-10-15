@@ -1,5 +1,5 @@
 // FILE: src/core/GameState.js
-// v2027.1f — jamin starter research selalu ada di save lama.
+// v2027.2a — fix reputasi floating point drift.
 import { TIME_CONFIG } from '../config/time.config.js';
 import { BALANCE } from '../data/balance.data.js';
 import { DIFFICULTY, LOG_TYPES } from '../config/constants.js';
@@ -220,9 +220,6 @@ function _skillTierDef(tier) {
     return tiers.find(t => t.tier === tier) || tiers[0];
 }
 
-// [v2027.1f] Union starter research dari BALANCE ke completed.
-// Idempotent — aman dipanggil berkali-kali. Digunakan saat hydrate
-// untuk save lama yang tidak punya starter.
 function _ensureStarterResearch(data) {
     if (!data || !data.research) return;
     if (!Array.isArray(data.research.completed)) data.research.completed = [];
@@ -237,11 +234,16 @@ function _ensureStarterResearch(data) {
         console.info('[GameState] Starter research ditambahkan:', missing.join(', '));
     }
 
-    // Pastikan totalCompleted sinkron.
     const total = data.research.completed.length;
     if (typeof data.research.totalCompleted !== 'number' || data.research.totalCompleted < total) {
         data.research.totalCompleted = total;
     }
+}
+
+// [v2027.2a] Bulatkan 1 desimal untuk reputasi.
+function _roundRep(n) {
+    if (typeof n !== 'number' || !isFinite(n)) return 0;
+    return Math.round(n * 10) / 10;
 }
 
 class GameState {
@@ -341,9 +343,12 @@ class GameState {
         return true;
     }
 
+    // [v2027.2a] Reputasi selalu 1 desimal, dibulatkan.
     setReputation(value) {
         const clamped = Math.max(BALANCE.market.minReputation, Math.min(BALANCE.market.maxReputation, value));
-        this.data.market.reputation = clamped;
+        const rounded = _roundRep(clamped);
+        if (this.data.market.reputation === rounded) return;
+        this.data.market.reputation = rounded;
         bus.emit('state:changed', this.data);
     }
     addReputation(delta) { this.setReputation((this.data.market.reputation || 0) + delta); }
@@ -448,12 +453,16 @@ class GameState {
             settings: { ...base.settings, ...(incoming.settings || {}) }
         };
 
-        // [v2027.1f] Jamin starter research selalu ada setelah hydrate.
         _ensureStarterResearch(this.data);
 
         if (typeof this.data.research.totalCompleted !== 'number') this.data.research.totalCompleted = this.data.research.completed.length;
         if (!this.data.market.trends) this.data.market.trends = { ...BALANCE.market.trendsByEra.feature_phone };
         if (typeof this.data.feedback.sentiment !== 'number') this.data.feedback.sentiment = (BALANCE.feedback && BALANCE.feedback.initialSentiment) || 50;
+
+        // [v2027.2a] Bersihkan drift reputasi dari save lama.
+        if (typeof this.data.market.reputation === 'number') {
+            this.data.market.reputation = _roundRep(this.data.market.reputation);
+        }
 
         if (typeof this.data.chipResearch.totalCompleted !== 'number') {
             this.data.chipResearch.totalCompleted = this.data.chipResearch.completed.length;
