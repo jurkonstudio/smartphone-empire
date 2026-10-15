@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2027.36a — Silicon premium currency.
+// v2027.38a — Silicon + i18n admin + cloud.
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -60,13 +60,15 @@ import { handleNewsListClick } from './ui/panels/NewsListPanel.js';
 import { renderChipMockup } from './ui/phone/ChipMockup.js';
 import { renderChipRadarChart } from './ui/charts/ChipRadarChart.js';
 import { setExchangeCategory, setExchangeStock, drawExchangeChart, openBuyModal, openSellModal } from './ui/panels/ExchangePanel.js';
+import { openSiliconModal } from './ui/panels/SiliconPanel.js';
 import { buildReport, formatReportText } from './diagnostics/DiagnosticReport.js';
 import { openDiagnosticModal } from './diagnostics/DiagnosticUI.js';
-import { openSiliconModal } from './ui/panels/SiliconPanel.js';
+import { openI18nAdmin } from './ui/panels/I18nAdminPanel.js';
 import { CloudService } from './services/CloudService.js';
 import { SupabaseAdapter } from './services/cloud/SupabaseAdapter.js';
 import { CloudSync } from './services/cloud/CloudSync.js';
 import { bindCloudUI } from './services/cloud/CloudUI.js';
+import { I18nCloudService } from './services/i18n/I18nCloudService.js';
 import * as marketingModule from './data/marketing.data.js';
 import * as feedbackModule from './data/feedback.data.js';
 import { getActiveRendererIdPublic } from './ui/notifications/NotificationRenderer.js';
@@ -937,6 +939,34 @@ async function boot() {
             console.warn('[Cloud] Init gagal:', e);
         }
 
+        // Muat custom translations dari Supabase.
+        function _syncI18n(lang) {
+            I18nCloudService.fetchLang(lang).then(function (map) {
+                if (map) {
+                    console.info('[I18n] Cloud strings loaded:', Object.keys(map).length, 'keys for', lang);
+                    LanguageService.applyCloudStrings(lang, map);
+                }
+            }).catch(function () { /* offline: pakai cache/lokal */ });
+        }
+        _syncI18n(LanguageService.getLang());
+        bus.on('lang:changed', function (e) {
+            if (e && e.fromCloud) return;
+            _syncI18n(LanguageService.getLang());
+        });
+
+        // Daily login Silicon — cek sekali per hari (real calendar).
+        try {
+            var dl = SiliconService.claimDailyLogin();
+            if (dl.ok) {
+                var dmsg = LanguageService.t('silicon.daily.msg');
+                if (dmsg === 'silicon.daily.msg') dmsg = 'Daily login: +' + dl.amount + ' SIL (streak ' + dl.streak + ').';
+                else dmsg = dmsg.replace('{n}', dl.amount).replace('{s}', dl.streak);
+                setTimeout(function () { ToastService.success(dmsg); }, 1500);
+            }
+        } catch (e) {
+            console.warn('[Silicon] Daily login gagal:', e);
+        }
+
         window.__game = {
             // ===== DIAGNOSTIC =====
             report: function (opts) {
@@ -948,21 +978,25 @@ async function boot() {
             reportShow: function () {
                 openDiagnosticModal();
             },
+            // ===== i18n ADMIN =====
+            i18nAdmin: function () {
+                openI18nAdmin();
+            },
             // ===== i18n diagnostics =====
-i18nReport: function () {
-    var txt = LanguageService.getMissingKeysAsJs();
-    console.log(txt);
-    console.log('Total:', LanguageService.getMissingKeys().length, 'key.');
-    return txt;
-},
-i18nList: function () {
-    return LanguageService.getMissingKeys();
-},
-i18nClear: function () {
-    LanguageService.clearMissingKeys();
-    console.log('[i18n] Missing key list dibersihkan.');
-    return true;
-},
+            i18nReport: function () {
+                var txt = LanguageService.getMissingKeysAsJs();
+                console.log(txt);
+                console.log('Total:', LanguageService.getMissingKeys().length, 'key.');
+                return txt;
+            },
+            i18nList: function () {
+                return LanguageService.getMissingKeys();
+            },
+            i18nClear: function () {
+                LanguageService.clearMissingKeys();
+                console.log('[i18n] Missing key list dibersihkan.');
+                return true;
+            },
             // ===== CLOUD =====
             cloud: CloudService,
             // ===== SILICON =====
