@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/KpiCards.js
-// v2027.14a — pakai formatCurrency.
+// v2027.15a — reputasi 1 desimal + formatCurrency.
 import { t } from '../../core/LanguageService.js';
 import { formatCurrency } from '../../utils/format.js';
 
@@ -44,7 +44,7 @@ export function renderKpiCards(state, timeSnapshot, teamSystem) {
         '</div>' +
         '<div class="kpi green">' +
             '<div class="kpi-label">' + t('kpi.reputation') + '</div>' +
-            '<div class="kpi-value">' + rep + '</div>' +
+            '<div class="kpi-value">' + Number(rep).toFixed(1) + '</div>' +
             '<div class="kpi-sub" style="color:' + repColor + ';">' + repLabel + '</div>' +
         '</div>' +
         '<div class="kpi blue">' +
