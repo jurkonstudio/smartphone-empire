@@ -1,6 +1,5 @@
 // FILE: src/ui/panels/DebugPanel.js
-// v1.0 — Panel debug untuk development. Muncul di Settings → tab Debug.
-// Menampilkan status Cloud & Silicon, plus tombol aksi testing tanpa console.
+// v1.1 — + tombol Test List Profiles (Sesi 1 Player List).
 import { CloudService } from '../../services/CloudService.js';
 import { CloudSync } from '../../services/cloud/CloudSync.js';
 import { SiliconService } from '../../systems/SiliconService.js';
@@ -63,6 +62,12 @@ export function renderDebugSection() {
         '</div>' +
     '</div>' +
     '<div class="settings-section">' +
+        '<div class="settings-section-head">👥 Players</div>' +
+        '<div class="settings-list">' +
+            _row('Total profil publik', '? (klik test)', 'dbg-players-count') +
+        '</div>' +
+    '</div>' +
+    '<div class="settings-section">' +
         '<div class="settings-section-head">🔧 Actions</div>' +
         '<div class="settings-list" style="padding:6px 0;">' +
             _btn('Refresh info', 'dbg-refresh') +
@@ -71,6 +76,8 @@ export function renderDebugSection() {
             _btn('Push lokal → server', 'dbg-push-sil') +
             _btn('Pull server → lokal', 'dbg-pull-sil') +
             _btn('Reset synced flag', 'dbg-reset-flag') +
+            _btn('Test List Profiles', 'dbg-list-profiles', 'primary') +
+            _btn('Test Get My Profile', 'dbg-get-my-profile') +
         '</div>' +
     '</div>' +
     '<div class="settings-section">' +
@@ -122,22 +129,15 @@ async function _handleAction(action, btn) {
         } else if (action === 'dbg-check-server') {
             _log('Cek SIL server...');
             var r = await CloudService.getSiliconBalance();
-            if (r.ok) {
-                _updateEl('dbg-sil-server', r.balance + ' SIL');
-                _log('Server SIL: ' + r.balance);
-            } else {
-                _updateEl('dbg-sil-server', 'error');
-                _log('Gagal: ' + (r.code || r.reason));
-            }
+            if (r.ok) { _updateEl('dbg-sil-server', r.balance + ' SIL'); _log('Server SIL: ' + r.balance); }
+            else { _updateEl('dbg-sil-server', 'error'); _log('Gagal: ' + (r.code || r.reason)); }
 
         } else if (action === 'dbg-sync-sil') {
             _log('Trigger manual sync...');
             if (typeof CloudSync.syncSilicon === 'function') {
                 await CloudSync.syncSilicon();
                 _log('Sync selesai. Cek server sekarang.');
-            } else {
-                _log('CloudSync.syncSilicon tidak tersedia.');
-            }
+            } else { _log('CloudSync.syncSilicon tidak tersedia.'); }
 
         } else if (action === 'dbg-push-sil') {
             _log('Push lokal → server...');
@@ -162,15 +162,38 @@ async function _handleAction(action, btn) {
             if (rp.ok) {
                 SiliconService.applyServerBalance(rp.balance);
                 _log('Pull server ' + rp.balance + ' → lokal');
-            } else {
-                _log('Gagal pull: ' + (rp.code || rp.reason));
-            }
+            } else { _log('Gagal pull: ' + (rp.code || rp.reason)); }
 
         } else if (action === 'dbg-reset-flag') {
-            try {
-                localStorage.removeItem('smartphone-empire:silicon-synced');
-                _log('Flag silicon-synced di-reset.');
-            } catch (err) { _log('Reset gagal: ' + err.message); }
+            try { localStorage.removeItem('smartphone-empire:silicon-synced'); _log('Flag silicon-synced di-reset.'); }
+            catch (err) { _log('Reset gagal: ' + err.message); }
+
+        } else if (action === 'dbg-list-profiles') {
+            _log('List profiles...');
+            var rl = await CloudService.listProfiles();
+            if (rl.ok) {
+                var rows = rl.rows || [];
+                _updateEl('dbg-players-count', rows.length + ' profil');
+                _log('Ditemukan ' + rows.length + ' profil.');
+                rows.slice(0, 5).forEach(function (p) {
+                    _log('  · ' + (p.company_name || p.display_name || '?') + ' (' + (p.founded_year || '?') + ')');
+                });
+                if (rows.length > 5) _log('  ... dan ' + (rows.length - 5) + ' lagi');
+            } else {
+                _updateEl('dbg-players-count', 'error');
+                _log('Gagal list: ' + (rl.code || rl.reason));
+            }
+
+        } else if (action === 'dbg-get-my-profile') {
+            _log('Get my profile...');
+            var uid = CloudService.getUserId();
+            if (!uid) { _log('Belum login.'); return; }
+            var rg = await CloudService.getProfileById(uid);
+            if (rg.ok && rg.profile) {
+                _log('My profile OK:');
+                _log('  Company: ' + (rg.profile.company_name || '—'));
+                _log('  Founded: ' + (rg.profile.founded_year || '?') + '/' + (rg.profile.founded_month || '?'));
+            } else { _log('Gagal: ' + (rg.code || rg.reason)); }
         }
     } catch (err) {
         _log('ERROR: ' + (err && err.message || err));
