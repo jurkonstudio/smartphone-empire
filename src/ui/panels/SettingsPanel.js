@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SettingsPanel.js
-// v2027.34a — pakai formatCurrency + live update cash.
+// v2027.35a — reputasi 1 desimal + formatCurrency.
 import { state } from '../../core/GameState.js';
 import { SaveService } from '../../core/SaveService.js';
 import { ToastService } from '../../core/ToastService.js';
@@ -73,7 +73,7 @@ function _heroCard(s) {
         '</div>' +
         '<div class="settings-hero-kpi">' +
             _kpi('Cash', formatCurrency(s.cash), 'data-settings-cash') +
-            _kpi('Reputasi', String(rep)) +
+            _kpi('Reputasi', Number(rep).toFixed(1)) +
             _kpi('Tim', String(team)) +
         '</div>' +
         '</div>';
@@ -288,7 +288,6 @@ export function bindSettingsActions(root) {
     if (_boundRoot === root) return;
     _boundRoot = root;
 
-    // [v2027.34a] Live update hero cash saat cash berubah.
     if (!_cashListenerBound) {
         _cashListenerBound = true;
         bus.on('state:cash-changed', function (data) {
