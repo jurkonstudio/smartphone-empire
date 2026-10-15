@@ -9,7 +9,7 @@
 export const DESIGN_ERAS = [
     {
         id: 'era_lcd_mono',
-        fromYear: 2000, toYear: 2002,
+        fromYear: 1999, toYear: 2002,
         label: 'Era LCD Monokrom',
         shortLabel: 'Monokrom',
         description: 'Layar hijau/abu monokrom, ponsel kokoh, dominasi plastik.',
@@ -202,14 +202,12 @@ export function getAestheticForYear(year) {
     return era.aesthetic || {};
 }
 
-// Cek apakah warna bodi tersedia di tahun tertentu
 export function isBodyColorAvailable(colorId, year) {
     const available = getBodyColorsForYear(year);
     return available.includes(colorId);
 }
 
-// Cek apakah form factor tersedia di tahun tertentu
 export function isFormFactorAvailable(ffId, year) {
     const available = getFormFactorsForYear(year);
     return available.includes(ffId);
-      }
+}
