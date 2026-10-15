@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2027.31a — Home carousel perf + real-time refresh.
+// v2027.32a — Exchange tab (Sesi 1).
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -25,6 +25,7 @@ import { ChipSystem } from './systems/ChipSystem.js';
 import { FabSystem } from './systems/FabSystem.js';
 import { NewsSystem } from './systems/NewsSystem.js';
 import { AdvisorSystem } from './systems/AdvisorSystem.js';
+import { StockSystem } from './systems/StockSystem.js';
 import { renderHeader } from './ui/layout/Header.js';
 import { renderMobileNav } from './ui/layout/MobileNav.js';
 import { renderEmptyState } from './ui/panels/EmptyState.js';
@@ -57,14 +58,13 @@ import { openNewsArticleModal } from './ui/panels/NewsArticleModal.js';
 import { handleNewsListClick } from './ui/panels/NewsListPanel.js';
 import { renderChipMockup } from './ui/phone/ChipMockup.js';
 import { renderChipRadarChart } from './ui/charts/ChipRadarChart.js';
+import { setExchangeCategory, setExchangeStock, drawExchangeChart } from './ui/panels/ExchangePanel.js';
 import * as marketingModule from './data/marketing.data.js';
 import * as feedbackModule from './data/feedback.data.js';
 import { getActiveRendererIdPublic } from './ui/notifications/NotificationRenderer.js';
 import { initSwipe, showSwipeAnimation } from './core/SwipeService.js';
 import { initNavSliderDrag } from './core/NavSliderDrag.js';
 import { AudioService } from './core/AudioService.js';
-import { StockSystem } from './systems/StockSystem.js';
-import { renderExchangePanel, drawExchangeChart, setExchangeCategory, setExchangeStock } from './ui/panels/ExchangePanel.js';
 
 // ============ INSTANCE ============
 var timeSystem        = new TimeSystem(state);
@@ -187,7 +187,7 @@ function renderView(opts) {
         else if (activeView === 'research') html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os, chipResearchSystem: chipResearch });
         else if (activeView === 'products') html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os });
         else if (activeView === 'market') html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion });
-        if (activeView === 'settings') bindSettingsActions(els.view);
+        else if (activeView === 'settings') html = renderSettingsPanel();
         else if (activeView === 'guide') html = renderGuidePanel();
         else html = renderEmptyState({ icon: '?', title: 'Tidak ditemukan' });
     } catch (err) {
@@ -218,6 +218,10 @@ function renderView(opts) {
         if (activeView === 'products' && activeProdSubtab === 'sales') { var sc = els.view.querySelector('.chart-wrap'); if (sc) drawSalesChart(sc); }
         if (activeView === 'market' && activeMarketSubtab === 'share') { var sc2 = els.view.querySelector('.chart-wrap'); if (sc2) drawShareChart(sc2); }
         if (activeView === 'settings') bindSettingsActions(els.view);
+        if (activeView === 'team' && activeHqSubtab === 'exchange') {
+            var exChart = els.view.querySelector('[data-ex-chart]');
+            if (exChart) drawExchangeChart(exChart);
+        }
         if (activeView === 'dashboard') {
             var campusEl = els.view.querySelector('#campus-map');
             if (campusEl) mountCampusMap(campusEl, state.get());
@@ -232,11 +236,6 @@ function renderView(opts) {
 
 // ============================================================
 // HOMEPANEL PERF — (v2027.34a) NO-OP
-// Dulu: menambah class .scrolling ke #campus-map tiap carousel di-scroll,
-// yang di CSS memakai content-visibility:hidden -> peta 3D ikut hilang/
-// berkedip dan canvas WebGL bisa kosong setelahnya.
-// Peta 3D sudah render-on-demand (tidak ada loop rAF), jadi tidak perlu
-// di-freeze. Fungsi dipertahankan agar pemanggilnya di renderView tetap aman.
 // ============================================================
 function _bindCarouselPerf(wrapperEl) {
     var map = wrapperEl && wrapperEl.querySelector('#campus-map');
@@ -398,13 +397,14 @@ function bindGlobalClicks() {
         }
 
         var hqSubBtn = e.target.closest('[data-hq-subtab]');
-if (hqSubBtn) { e.preventDefault(); activeHqSubtab = hqSubBtn.dataset.hqSubtab; renderView(); return; }
+        if (hqSubBtn) { e.preventDefault(); activeHqSubtab = hqSubBtn.dataset.hqSubtab; renderView(); return; }
 
-var exCat = e.target.closest('[data-ex-cat]');
-if (exCat) { e.preventDefault(); setExchangeCategory(exCat.dataset.exCat); renderView(); return; }
+        var exCat = e.target.closest('[data-ex-cat]');
+        if (exCat) { e.preventDefault(); vibrate(6); setExchangeCategory(exCat.dataset.exCat); renderView(); return; }
 
-var exSel = e.target.closest('[data-ex-select]');
-if (exSel) { e.preventDefault(); setExchangeStock(exSel.dataset.exSelect); renderView(); return; }
+        var exSel = e.target.closest('[data-ex-select]');
+        if (exSel) { e.preventDefault(); vibrate(6); setExchangeStock(exSel.dataset.exSelect); renderView(); return; }
+
         var teamModeBtn = e.target.closest('[data-team-mode]');
         if (teamModeBtn) {
             e.preventDefault();
@@ -693,7 +693,6 @@ function bindStateEvents() {
     bus.on('team:fired', function () { if (activeView === 'team') renderView({ soft: true }); });
 
     bus.on('lang:changed', function () { renderAll(); });
-    // Asisten bisnis: lompat ke panel/subtab yang disarankan.
     bus.on('advisor:go', function (p) {
         if (!p || !p.nav) return;
         Modal.closeAll();
@@ -726,7 +725,6 @@ function bindStateEvents() {
         }
     });
 
-    // ---- Real-time refresh Home slides saat event berubah ----
     function _refreshHomeIfActive() {
         if (activeView === 'dashboard') {
             try { refreshHomeSlides(); } catch (e) { console.error('[home] refresh error:', e); }
@@ -793,9 +791,10 @@ async function boot() {
         opinion.start();
         chipSystem.start();
         fabSystem.start();
-NewsSystem.start();
-advisor.start();
-stockSystem.start();
+        NewsSystem.start();
+        advisor.start();
+        stockSystem.start();
+        mountAdvisorButton(advisor);
 
         window.__game = {
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
