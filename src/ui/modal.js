@@ -1,6 +1,8 @@
 // FILE: src/ui/modal.js
-// Helper sederhana untuk membuka/menutup modal overlay.
-// Setiap modal punya id unik; hanya satu yang tampil pada satu waktu.
+// v2027.38a — fix: hapus node lama se-id sebelum buat baru.
+// Bug sebelumnya: node lama masih di DOM 220ms (fade-out), jadi
+// querySelector('[data-modal-id=...]') mengembalikan node lama saat
+// modal di-render ulang dengan id yang sama (mis. ganti tab auth).
 import { bus } from '../core/EventBus.js';
 
 let _root = null;
@@ -16,10 +18,15 @@ function ensureRoot() {
 }
 
 export const Modal = {
+    // Mengembalikan node modal (backdrop) — pakai ini untuk attach handler.
     open(id, html, { dismissible = true, onClose = null } = {}) {
         const root = ensureRoot();
         // Tutup modal yang sedang terbuka (single-modal policy)
         if (_openStack.length) this.close(_openStack[_openStack.length - 1].id, true);
+
+        // [v2027.38a] Hapus sisa node lama dengan id sama (yang sedang fade-out).
+        var leftovers = root.querySelectorAll('[data-modal-id="' + id + '"]');
+        for (var i = 0; i < leftovers.length; i++) leftovers[i].remove();
 
         const node = document.createElement('div');
         node.className = 'modal-backdrop';
@@ -27,7 +34,6 @@ export const Modal = {
         node.innerHTML = `<div class="modal-card" role="dialog" aria-modal="true">${html}</div>`;
         root.appendChild(node);
 
-        // Event delegation untuk tombol close
         const closeBtn = node.querySelector('[data-modal-close]');
         if (closeBtn) closeBtn.addEventListener('click', () => this.close(id));
 
@@ -40,6 +46,7 @@ export const Modal = {
         _openStack.push({ id, node, onClose });
         requestAnimationFrame(() => node.classList.add('visible'));
         bus.emit('ui:modal-open', { id });
+        return node;
     },
 
     close(id, silent = false) {
