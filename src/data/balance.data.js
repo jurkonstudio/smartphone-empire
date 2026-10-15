@@ -1,6 +1,6 @@
 // FILE: src/data/balance.data.js
 // Semua angka balancing di sini — ubah tanpa menyentuh logika.
-// v2027.1e — tambah feedback.reputationDrift untuk drift reputasi bulanan.
+// v2027.2a — tambah market.marketUnitsByYear + avgPriceByYear + othersShareByYear.
 
 export const BALANCE = {
     startingCash: {
@@ -183,7 +183,26 @@ export const BALANCE = {
             modern_smartphone:{ camera: 0.7, battery: 0.6, screen: 0.5, performance: 0.8, design: 0.5 },
             ai_ecosystem:     { camera: 0.6, battery: 0.7, screen: 0.5, performance: 0.9, design: 0.5 }
         },
-        trendVariationPerMonth: 0.05
+        trendVariationPerMonth: 0.05,
+
+        // [v2027.2a] Pangsa pasar brand kecil di luar competitor tracked.
+        // Dipakai untuk hitung "Others" di MarketSystem.
+        othersShareByYear: {
+            2000: 0.25, 2005: 0.22, 2010: 0.25, 2015: 0.28,
+            2020: 0.26, 2024: 0.30, 2026: 0.30
+        },
+
+        // [v2027.2a] Ukuran pasar ponsel global per bulan (unit).
+        // Dipakai sebagai anchor revenue kompetitor.
+        marketUnitsByYear: {
+            2000: 30000000, 2005: 60000000, 2010: 120000000,
+            2015: 130000000, 2020: 110000000, 2024: 120000000, 2026: 125000000
+        },
+
+        // [v2027.2a] Harga rata-rata ponsel global (USD).
+        avgPriceByYear: {
+            2000: 200, 2005: 150, 2010: 220, 2015: 280, 2020: 320, 2026: 350
+        }
     },
 
     marketing: { perMarketerBonus: 0.1, maxMarketingFactor: 2.5 },
@@ -226,10 +245,6 @@ export const BALANCE = {
         suggestionBonus: 5,
         viralEventImpact: 0.3,
 
-        // [v2027.1e] Reputasi drift menuju sentimen publik tiap bulan.
-        // pullPerMonth: pecahan gap yang ditutup (0.2 = 20% gap per bulan).
-        // maxPerMonth:  batas absolut perubahan (biar tidak loncat).
-        // minThreshold: gap minimal agar drift aktif (biar tidak jitter).
         reputationDrift: {
             pullPerMonth: 0.2,
             maxPerMonth: 2,
