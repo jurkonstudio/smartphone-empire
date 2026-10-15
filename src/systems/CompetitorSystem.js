@@ -1,5 +1,5 @@
 // FILE: src/systems/CompetitorSystem.js
-// v2027.1c — computeCompetitorPower scale dengan era (tidak lagi flat 500K).
+// v2027.2a — revenue kompetitor anchored historis (share × market size).
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
@@ -11,7 +11,8 @@ import {
     getActiveCompetitors,
     getCompetitorById,
     getFictionalName,
-    getLifeEventsForYear
+    getLifeEventsForYear,
+    getHistoricalShare
 } from '../data/competitors.data.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
@@ -50,9 +51,6 @@ export class CompetitorSystem {
         }
     }
 
-    // ============================================================
-    // SEED & EVENT TAHUNAN
-    // ============================================================
     _seedForYear(year) {
         const data = this.state.data;
         const cs = data.competitorState;
@@ -107,8 +105,8 @@ export class CompetitorSystem {
             const e = cs.entities[comp.id];
             if (!e) return;
 
-            e.currentShare = Math.max(0, Math.min(1, (e.currentShare || 0) + (le.shareDelta || 0)));
-
+            // [v2027.2a] Skip life event share delta karena share
+            // sekarang bersumber dari historical curve. Hanya emit log.
             const isBig = Math.abs(le.shareDelta || 0) >= 0.05;
             const msg = comp.name + ': ' + le.text;
             this.state.addLog(msg, LOG_TYPES.info);
@@ -147,9 +145,6 @@ export class CompetitorSystem {
         });
     }
 
-    // ============================================================
-    // AI RILIS PRODUK
-    // ============================================================
     _releaseAiProduct(competitorId, year, month) {
         const comp = getCompetitorById(competitorId);
         if (!comp) return;
@@ -169,18 +164,7 @@ export class CompetitorSystem {
             productName = comp.name + ' ' + ['X', 'Pro', 'Plus', 'Lite', 'Neo'][Math.floor(Math.random() * 5)] + (year % 100);
         }
 
-        const baseBoost = 0.005 + (tier - 1) * 0.008;
-        const personMult = {
-            aggressive: 1.2,
-            premium:    1.1,
-            innovator:  1.15,
-            follower:   0.9,
-            dominant:   1.0,
-            declining:  0.6
-        }[comp.personality] || 1.0;
-        const shareBoost = baseBoost * personMult;
-
-        e.currentShare = Math.min(0.5, (e.currentShare || 0) + shareBoost);
+        // [v2027.2a] Tidak lagi tambah currentShare; share berasal dari kurva.
         e.releases.push({ name: productName, year, month, tier });
         if (e.releases.length > 10) e.releases.shift();
 
@@ -197,51 +181,49 @@ export class CompetitorSystem {
     }
 
     // ============================================================
-    // API PUBLIK
+    // [v2027.2a] Revenue kompetitor anchored ke historical share
+    // × ukuran pasar × harga rata-rata. Tidak lagi pakai noise
+    // akumulatif currentShare.
     // ============================================================
-    // [v2027.1c] Hitung revenue bulanan kompetitor — scale dengan era.
     computeCompetitorPower(competitorId, year) {
         const comp = getCompetitorById(competitorId);
         if (!comp) return 0;
         const e = this.state.data.competitorState.entities[competitorId];
         if (!e) return 0;
 
-        // Base revenue tumbuh seiring era.
-        const base = this._baseRevenueForYear(year);
+        // Historical share (0-1) untuk tahun ini.
+        let baseShare = getHistoricalShare(competitorId, year);
+        if (baseShare === null) baseShare = e.currentShare || 0;
 
-        // Tier 1-5 → 1.0x - 2.6x.
-        const tierMult = 1 + ((e.currentTier || 1) - 1) * 0.4;
+        // Ukuran pasar dan harga rata-rata (interpolasi linear).
+        const units   = this._interpYearly(BALANCE.market.marketUnitsByYear, year, 30000000);
+        const avgP    = this._interpYearly(BALANCE.market.avgPriceByYear, year, 200);
+        const marketRevenue = units * avgP;
 
-        // Share 0-0.5 → 1.0x - 2.0x.
-        const shareMult = 1 + (e.currentShare || 0) * 2;
+        // Base revenue = share × market revenue.
+        const baseRevenue = marketRevenue * baseShare;
 
-        // Personality.
-        const personMult = {
-            aggressive: 1.20,
-            premium:    1.10,
-            innovator:  1.05,
-            follower:   0.90,
-            dominant:   1.50,
-            declining:  0.70
-        }[comp.personality] || 1.0;
+        // Noise kecil ±5% biar tidak kaku.
+        const noise = 1 + (Math.random() * 2 - 1) * 0.05;
 
-        // Noise ±10%.
-        const noise = 1 + (Math.random() * 2 - 1) * 0.10;
-
-        return Math.round(base * tierMult * shareMult * personMult * noise);
+        return Math.round(baseRevenue * noise);
     }
 
-    // [v2027.1c] Base revenue bulanan per era (skala bertumbuh).
-    _baseRevenueForYear(year) {
-        if (year <= 2002) return 500000;      // early feature phone
-        if (year <= 2005) return 1000000;
-        if (year <= 2008) return 2000000;
-        if (year <= 2011) return 3500000;     // touch revolution
-        if (year <= 2014) return 6000000;
-        if (year <= 2017) return 10000000;    // modern smartphone
-        if (year <= 2020) return 16000000;
-        if (year <= 2023) return 25000000;    // AI era
-        return 40000000;
+    _interpYearly(map, year, fallback) {
+        if (!map) return fallback || 0;
+        if (map[year] !== undefined) return map[year];
+        const years = Object.keys(map).map(Number).sort((a, b) => a - b);
+        if (!years.length) return fallback || 0;
+        if (year < years[0]) return map[years[0]];
+        if (year > years[years.length - 1]) return map[years[years.length - 1]];
+        for (let i = 0; i < years.length - 1; i++) {
+            const y1 = years[i], y2 = years[i + 1];
+            if (year >= y1 && year <= y2) {
+                const v1 = map[y1], v2 = map[y2];
+                return v1 + (v2 - v1) * ((year - y1) / (y2 - y1));
+            }
+        }
+        return map[years[years.length - 1]];
     }
 
     getDisplayName(competitorId, mode) {
@@ -273,13 +255,18 @@ export class CompetitorSystem {
             lastRelease: e && e.releases.length ? e.releases[e.releases.length - 1] : null,
             signatureProducts: comp.signatureProducts || [],
             activeFromYear: comp.activeFromYear,
-            activeToYear: comp.activeToYear
+            activeToYear: comp.activeToYear,
+            // [v2027.2a] Biografi — dipakai di modal detail.
+            foundedYear: comp.foundedYear,
+            founder: comp.founder,
+            hq: comp.hq,
+            parentCompany: comp.parentCompany,
+            origin: comp.origin,
+            exitReason: comp.exitReason,
+            isEcosystem: !!comp.isEcosystem
         };
     }
 
-    // ============================================================
-    // CHEAT
-    // ============================================================
     forceRelease(competitorId) {
         const y = this.state.data.time.currentYear;
         const m = this.state.data.time.currentMonth;
@@ -293,8 +280,6 @@ export class CompetitorSystem {
         const events = (comp.lifeEvents || []).filter(le => le.year === this.state.data.time.currentYear);
         if (!events.length) return { ok: false, reason: 'Tidak ada life event tahun ini.' };
         const le = events[0];
-        const e = this.state.data.competitorState.entities[competitorId];
-        if (e) e.currentShare = Math.max(0, (e.currentShare || 0) + (le.shareDelta || 0));
         this.state.addLog('(cheat) ' + comp.name + ': ' + le.text, LOG_TYPES.info);
         bus.emit('competitor:life-event', { competitorId, competitorName: comp.name, year: this.state.data.time.currentYear, text: le.text, shareDelta: le.shareDelta || 0 });
         return { ok: true };
