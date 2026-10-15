@@ -3654,12 +3654,12 @@ body {
 .advisor-answer[hidden] { display: none; }
 
 /* ============================================================================
-   101. HOME MAP — 70VH OVERRIDE (v2027.35a)
+   101. HOME MAP — 60VH OVERRIDE (v2027.35a)
    Perbesar peta 3D jadi 70% tinggi layar. Override semua setting lama
    (section 64, 65, 68) yang sebelumnya pakai min(45vh, 400px).
    ============================================================================ */
 .home-map {
-    height: 70vh !important;
-    min-height: 70vh !important;
-    max-height: 70vh !important;
+    height: 60vh !important;
+    min-height: 60vh !important;
+    max-height: 60vh !important;
 }
