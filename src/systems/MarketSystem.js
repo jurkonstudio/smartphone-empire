@@ -1,21 +1,16 @@
 // FILE: src/systems/MarketSystem.js
-// v2027.1c — fix pangsa pasar: revenue pemain dari accumulator event.
-// Pangsa = playerRevenue / (playerRevenue + competitorRevenue + othersRevenue)
+// v2027.2a — pangsa pasar ber-anchor historis + ekosistem di-skip.
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
 import { LOG_TYPES } from '../config/constants.js';
 import { getCompetitorById, getFictionalName } from '../data/competitors.data.js';
 
-// Pangsa "others" (brand kecil tak terlacak) — realistis 30% pasar.
-const OTHERS_SHARE = 0.30;
-
 export class MarketSystem {
     constructor(gameState) {
         this.state = gameState;
         this._unsubs = [];
         this._competitorSystem = null;
-        // [v2027.1c] Accumulator revenue bulan berjalan.
         this._monthRevenueAccum = 0;
     }
 
@@ -24,15 +19,11 @@ export class MarketSystem {
     start() {
         this._unsubs.push(bus.on('time:month-changed', (s) => this._onMonthChanged(s)));
         this._unsubs.push(bus.on('state:hydrated',     () => this._ensureTrends()));
-
-        // [v2027.1c] Kumpulkan revenue harian dari ProductSystem.
-        // Event sama yang dipakai EconomySystem — kita paralel mendengar.
         this._unsubs.push(bus.on('economy:add-revenue', (payload) => {
             if (payload && typeof payload.amount === 'number') {
                 this._monthRevenueAccum += payload.amount;
             }
         }));
-
         this._ensureTrends();
         console.info('[MarketSystem] siap.');
     }
@@ -49,17 +40,16 @@ export class MarketSystem {
         data.market.trends = { ...(BALANCE.market.trendsByEra[era] || BALANCE.market.trendsByEra.feature_phone) };
     }
 
-    // ============================================================
-    // BULANAN: HITUNG PANGSA
-    // ============================================================
     _onMonthChanged(snap) {
         const data = this.state.data;
+        const year = snap.currentYear;
 
-        // ---- 1. Revenue pemain dari accumulator ----
-        // [v2027.1c] Sebelumnya scan dailySales dengan mismatch skala → selalu 0.
+        // ---- 1. Revenue pemain ----
         const playerRevenue = Math.round(this._monthRevenueAccum);
 
-        // ---- 2. Revenue kompetitor ----
+        // ---- 2. Revenue kompetitor (anchored historis) ----
+        // [v2027.2a] Skip entitas isEcosystem (Android) supaya tidak
+        // double-count dengan brand hardware.
         const cs = this._competitorSystem;
         const competitorRevenues = [];
         let totalCompetitorRevenue = 0;
@@ -69,15 +59,18 @@ export class MarketSystem {
             ids.forEach(id => {
                 const comp = getCompetitorById(id);
                 if (!comp) return;
-                const rev = Math.max(0, Math.round(cs.computeCompetitorPower(id, snap.currentYear)));
+                if (comp.isEcosystem) return; // skip Android ecosystem
+                const rev = Math.max(0, Math.round(cs.computeCompetitorPower(id, year)));
                 competitorRevenues.push({ id, name: comp.name, revenue: rev });
                 totalCompetitorRevenue += rev;
             });
         }
 
-        // ---- 3. Others — pangsa brand kecil (30% dari tracked market) ----
+        // ---- 3. Others — proporsi dari tracked (player + kompetitor) ----
+        const othersShare = this._interpYearly(BALANCE.market.othersShareByYear, year, 0.25);
         const tracked = playerRevenue + totalCompetitorRevenue;
-        const others = Math.round(tracked * OTHERS_SHARE);
+        const others = Math.round(tracked * (othersShare / Math.max(0.01, 1 - othersShare)));
+
         const total = tracked + others;
 
         // ---- 4. Pangsa pemain ----
@@ -138,7 +131,7 @@ export class MarketSystem {
             );
         }
 
-        // ---- 9. Reset accumulator untuk bulan depan ----
+        // ---- 9. Reset accumulator ----
         this._monthRevenueAccum = 0;
 
         // ---- 10. Emit ----
@@ -158,6 +151,23 @@ export class MarketSystem {
         }
         data.market.trends = t;
         data.market.lastTrendUpdateMonth = { year: data.time.currentYear, month: data.time.currentMonth };
+    }
+
+    _interpYearly(map, year, fallback) {
+        if (!map) return fallback;
+        if (map[year] !== undefined) return map[year];
+        const years = Object.keys(map).map(Number).sort((a, b) => a - b);
+        if (!years.length) return fallback;
+        if (year < years[0]) return map[years[0]];
+        if (year > years[years.length - 1]) return map[years[years.length - 1]];
+        for (let i = 0; i < years.length - 1; i++) {
+            const y1 = years[i], y2 = years[i + 1];
+            if (year >= y1 && year <= y2) {
+                const v1 = map[y1], v2 = map[y2];
+                return v1 + (v2 - v1) * ((year - y1) / (y2 - y1));
+            }
+        }
+        return map[years[years.length - 1]];
     }
 
     // ============================================================
