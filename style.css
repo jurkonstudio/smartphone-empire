@@ -3719,3 +3719,56 @@ body {
     color: var(--text-secondary);
     line-height: 1.5;
 }
+
+/* ============================================================================
+   103. HEADER WALLET — cash + silicon (v2027.4a)
+   Cash jadi minimalis, silicon button di bawahnya.
+   ============================================================================ */
+.header-wallet {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.header-wallet .header-cash {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+}
+
+.header-silicon {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: linear-gradient(135deg, rgba(79,140,255,0.16), rgba(139,92,246,0.16));
+    border: 1px solid rgba(139,92,246,0.3);
+    border-radius: 999px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 10.5px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.12s, background 0.15s, border-color 0.15s;
+    line-height: 1;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+.header-silicon:active { transform: scale(0.94); }
+.header-silicon:hover { border-color: rgba(139,92,246,0.5); }
+
+.header-silicon-ico {
+    font-size: 11px;
+    line-height: 1;
+}
+
+.header-silicon-value {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+}
