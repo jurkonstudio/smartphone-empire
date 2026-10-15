@@ -1,5 +1,6 @@
 // FILE: src/ui/panels/SettingsPanel.js
 // v2027.33b — validasi nama via name-blocklist.data.js
+import { renderCloudPanel, bindCloudUI } from '../../cloud/CloudUI.js';
 import { state } from '../../core/GameState.js';
 import { SaveService } from '../../core/SaveService.js';
 import { ToastService } from '../../core/ToastService.js';
