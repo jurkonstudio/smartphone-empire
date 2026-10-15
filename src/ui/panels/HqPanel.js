@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/HqPanel.js
-// v2027.29a — tambah tab Office (placeholder).
+// v2027.30a — tab Office placeholder full-height.
 import { renderDashboard } from './DashboardPanel.js';
 import { renderTeamPanel } from './TeamPanel.js';
 import { renderExchangePanel } from './ExchangePanel.js';
@@ -39,13 +39,29 @@ export function renderHqPanel({ subtab, state, timeSnapshot, researchSystem, tea
 
 // ============================================================
 // PLACEHOLDER OFFICE — 3D scene akan ditambahkan di sesi berikutnya.
+// Kontainer full-height supaya 3D map bisa lega sampai bawah layar.
 // ============================================================
 function _renderOfficePlaceholder() {
-    return '<div class="card" style="text-align:center;padding:40px 20px;">' +
-        '<div style="font-size:52px;line-height:1;margin-bottom:14px;">🏢</div>' +
-        '<div style="font-size:16px;font-weight:800;margin-bottom:6px;">' +
+    return '<div class="office-placeholder" style="' +
+                'min-height:calc(100vh - 220px);' +
+                'display:flex;' +
+                'flex-direction:column;' +
+                'align-items:center;' +
+                'justify-content:center;' +
+                'text-align:center;' +
+                'padding:40px 20px;' +
+                'background:linear-gradient(180deg, rgba(79,140,255,0.06) 0%, rgba(79,140,255,0.02) 100%);' +
+                'border:1px dashed rgba(79,140,255,0.25);' +
+                'border-radius:14px;' +
+                'margin-top:4px;' +
+            '">' +
+        '<div style="font-size:64px;line-height:1;margin-bottom:16px;">🏢</div>' +
+        '<div style="font-size:17px;font-weight:800;margin-bottom:8px;">' +
             t('hq.office.title') + '</div>' +
-        '<div style="font-size:12.5px;color:var(--text-mute);line-height:1.6;max-width:320px;margin:0 auto;">' +
+        '<div style="font-size:12.5px;color:var(--text-mute);line-height:1.65;max-width:340px;">' +
             t('hq.office.desc') + '</div>' +
+        '<div style="margin-top:24px;font-size:11px;color:var(--text-mute);opacity:0.7;letter-spacing:0.5px;">' +
+            '🚧 3D MAP · COMING SOON' +
+        '</div>' +
     '</div>';
 }
