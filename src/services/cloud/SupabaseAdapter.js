@@ -163,6 +163,39 @@ export const SupabaseAdapter = {
         return { uploadedAt: res.data.updated_at };
     },
 
+    // ---------- i18n strings ----------
+fetchI18nStrings: async function (lang) {
+    var c = await getClient();
+    var res = await c.from('i18n_strings')
+        .select('key,value')
+        .eq('lang', lang);
+    if (res.error) throw mk(res.error);
+    return res.data || [];
+},
+
+saveI18nString: async function (lang, key, value) {
+    var c = await getClient();
+    var session = await c.auth.getSession();
+    var userId = session && session.data && session.data.session && session.data.session.user
+        ? session.data.session.user.id : null;
+    var res = await c.from('i18n_strings').upsert({
+        key: key,
+        lang: lang,
+        value: value,
+        updated_by: userId,
+        updated_at: new Date().toISOString()
+    }, { onConflict: 'key,lang' });
+    if (res.error) throw mk(res.error);
+    return true;
+},
+
+deleteI18nString: async function (lang, key) {
+    var c = await getClient();
+    var res = await c.from('i18n_strings').delete().eq('key', key).eq('lang', lang);
+    if (res.error) throw mk(res.error);
+    return true;
+},
+
     downloadSave: async function (userId, slot) {
         var c = await getClient();
         var res = await c.from(CLOUD.tables.saves)
