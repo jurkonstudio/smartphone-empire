@@ -17,6 +17,7 @@ export const SaveService = {
                 data: state.serialize()
             };
             localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+            bus.emit('save:success', { at: Date.now() });
             bus.emit('save:success', { savedAt: payload.savedAt });
             return true;
         } catch (err) {
