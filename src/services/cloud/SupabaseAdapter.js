@@ -1,11 +1,10 @@
 // FILE: src/services/cloud/SupabaseAdapter.js
-// v2027.38a — Adapter Supabase untuk CloudService.
-// + 3 method RPC Silicon (get_silicon, add_silicon, spend_silicon).
+// v2027.39a — Adapter Supabase. + 2 method: listProfiles, getProfileById.
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_LIB_URLS, CLOUD } from './supabase.config.js';
 
 var _client = null;
 var _loading = null;
-var _injected = null;          // untuk pengujian: fungsi createClient palsu
+var _injected = null;
 
 function classify(err) {
     if (!err) return 'unknown';
@@ -40,7 +39,7 @@ async function loadLib() {
         try {
             var m = await import(/* webpackIgnore: true */ SUPABASE_LIB_URLS[i]);
             if (m && typeof m.createClient === 'function') return m.createClient;
-        } catch (e) { /* coba CDN berikutnya */ }
+        } catch (e) { }
     }
     var err = new Error('Gagal memuat library Supabase.');
     err.code = 'LIB_LOAD_FAILED';
@@ -85,7 +84,6 @@ export const SupabaseAdapter = {
         } catch (e) { return false; }
     },
 
-    // ---------- Auth ----------
     init: async function () {
         var c = await getClient();
         var res = await c.auth.getSession();
@@ -139,7 +137,6 @@ export const SupabaseAdapter = {
         if (res.error) throw mk(res.error);
     },
 
-    // ---------- Save game ----------
     uploadSave: async function (userId, payload) {
         var c = await getClient();
         var meta = payload.meta || {};
@@ -160,7 +157,6 @@ export const SupabaseAdapter = {
         return { uploadedAt: res.data.updated_at };
     },
 
-    // ---------- i18n strings ----------
     fetchI18nStrings: async function (lang) {
         var c = await getClient();
         var res = await c.from('i18n_strings').select('key,value').eq('lang', lang);
@@ -174,11 +170,7 @@ export const SupabaseAdapter = {
         var userId = session && session.data && session.data.session && session.data.session.user
             ? session.data.session.user.id : null;
         var res = await c.from('i18n_strings').upsert({
-            key: key,
-            lang: lang,
-            value: value,
-            updated_by: userId,
-            updated_at: new Date().toISOString()
+            key: key, lang: lang, value: value, updated_by: userId, updated_at: new Date().toISOString()
         }, { onConflict: 'key,lang' });
         if (res.error) throw mk(res.error);
         return true;
@@ -217,7 +209,6 @@ export const SupabaseAdapter = {
         return function () { try { c.removeChannel(ch); } catch (e) {} };
     },
 
-    // ---------- Profil ----------
     getProfile: async function (userId) {
         var c = await getClient();
         var res = await c.from(CLOUD.tables.profiles).select('*').eq('id', userId).maybeSingle();
@@ -232,7 +223,32 @@ export const SupabaseAdapter = {
         return res.data;
     },
 
-    // ---------- Storage ----------
+    // ============================================================
+    // PUBLIC PROFILES (via view public_profiles)
+    // ============================================================
+    listProfiles: async function () {
+        var c = await getClient();
+        var res = await c.from('public_profiles')
+            .select('id, display_name, avatar_path, company_name, founded_year, founded_month, game_minutes, updated_at')
+            .order('updated_at', { ascending: false })
+            .limit(100);
+        if (res.error) throw mk(res.error);
+        return res.data || [];
+    },
+
+    getProfileById: async function (id) {
+        var c = await getClient();
+        var res = await c.from('public_profiles')
+            .select('id, display_name, avatar_path, company_name, founded_year, founded_month, game_minutes, updated_at, created_at')
+            .eq('id', id)
+            .maybeSingle();
+        if (res.error) throw mk(res.error);
+        return res.data;
+    },
+
+    // ============================================================
+    // STORAGE
+    // ============================================================
     uploadPlayerAsset: async function (userId, name, fileOrBlob, contentType) {
         var c = await getClient();
         var path = userId + '/' + String(name).replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -256,7 +272,7 @@ export const SupabaseAdapter = {
     },
 
     // ============================================================
-    // SILICON (RPC ke Postgres functions)
+    // SILICON (RPC)
     // ============================================================
     rpcGetSilicon: async function () {
         var c = await getClient();
