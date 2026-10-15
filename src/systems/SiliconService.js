@@ -1,7 +1,7 @@
 // FILE: src/systems/SiliconService.js
 // ============================================================
 // SiliconService — premium currency "Silicon" (SIL).
-// v2027.2a — daily login + aksi percepat.
+// v2027.3a — tambah chip research + OS bugs.
 // ============================================================
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
@@ -12,12 +12,14 @@ import { t } from '../core/LanguageService.js';
 var MAX_HISTORY = 20;
 
 export var SILICON_ACTIONS = [
-    { id: 'skip7',    cost: 10, icon: '📅', ready: true },
-    { id: 'skip30',   cost: 40, icon: '🗓️', ready: true },
-    { id: 'research', cost: 20, icon: '🔬', ready: true },
-    { id: 'dev',      cost: 30, icon: '📱', ready: true },
-    { id: 'morale',   cost: 15, icon: '😊', ready: true },
-    { id: 'rep',      cost: 25, icon: '⭐', ready: true }
+    { id: 'skip7',        cost: 10, icon: '📅', ready: true },
+    { id: 'skip30',       cost: 40, icon: '🗓️', ready: true },
+    { id: 'research',     cost: 20, icon: '🔬', ready: true },
+    { id: 'chipResearch', cost: 20, icon: '💠', ready: true },
+    { id: 'dev',          cost: 30, icon: '📱', ready: true },
+    { id: 'osBugs',       cost: 10, icon: '🐞', ready: true },
+    { id: 'morale',       cost: 15, icon: '😊', ready: true },
+    { id: 'rep',          cost: 25, icon: '⭐', ready: true }
 ];
 
 function _pushHistory(type, delta, reason) {
@@ -70,7 +72,6 @@ export var SiliconService = {
         return (state.data.siliconHistory || []).slice();
     },
 
-    // [v2027.2a] Daily login — bonus SIL sekali per hari (real calendar day).
     claimDailyLogin() {
         var d = state.data;
         if (!d.dailyLogin || typeof d.dailyLogin !== 'object') {
@@ -98,12 +99,19 @@ export var SiliconService = {
         var game = window.__game;
         if (!game) return { ok: false, reason: 'Game belum siap.' };
 
+        // ---------- Validasi spesifik ----------
         if (actionId === 'research') {
-            var activeR = (state.data.research.active || []);
-            if (!activeR.length) return { ok: false, reason: 'Tidak ada riset berjalan.' };
+            if (!(state.data.research.active || []).length) return { ok: false, reason: 'Tidak ada riset berjalan.' };
+        }
+        if (actionId === 'chipResearch') {
+            if (!(state.data.chipResearch.active || []).length) return { ok: false, reason: 'Tidak ada riset chip berjalan.' };
         }
         if (actionId === 'dev') {
             if (!state.data.products.development) return { ok: false, reason: 'Tidak ada produk sedang dikembangkan.' };
+        }
+        if (actionId === 'osBugs') {
+            var bugs = (state.data.os && state.data.os.bugs) || [];
+            if (!bugs.length) return { ok: false, reason: 'Tidak ada bug OS.' };
         }
         if (actionId === 'morale') {
             var staff = state.data.staff || [];
@@ -116,9 +124,11 @@ export var SiliconService = {
             if (rep >= 100) return { ok: false, reason: 'Reputasi sudah maksimal.' };
         }
 
+        // ---------- Charge SIL ----------
         var spendRes = this.spend(def.cost, actionId);
         if (!spendRes.ok) return spendRes;
 
+        // ---------- Eksekusi ----------
         try {
             if (actionId === 'skip7') {
                 game.timeSystem.fastForwardDays(7);
@@ -132,14 +142,24 @@ export var SiliconService = {
                     if (game.research && game.research.completeResearch) game.research.completeResearch(nodeId);
                 });
                 ToastService.success(t('silicon.msg.research') || 'Research completed instantly.');
+            } else if (actionId === 'chipResearch') {
+                var chipNodes = (state.data.chipResearch.active || []).map(function (r) { return r.nodeId; });
+                chipNodes.forEach(function (nodeId) {
+                    if (game.chipResearch && game.chipResearch.completeResearch) game.chipResearch.completeResearch(nodeId);
+                });
+                ToastService.success(t('silicon.msg.chipResearch') || 'Chip research completed instantly.');
             } else if (actionId === 'dev') {
                 var d = state.data.products.development;
                 if (d) {
                     var totalMinutes = (d.totalDurationDays || 0) * 24 * 60;
-                    var remaining = Math.max(0, totalMinutes);
-                    game.timeSystem.fastForwardDays(Math.max(1, Math.ceil(remaining / (24 * 60))));
+                    game.timeSystem.fastForwardDays(Math.max(1, Math.ceil(totalMinutes / (24 * 60))));
                 }
                 ToastService.success(t('silicon.msg.dev') || 'Product development accelerated.');
+            } else if (actionId === 'osBugs') {
+                var before = (state.data.os.bugs || []).length;
+                state.data.os.bugs = [];
+                bus.emit('state:changed', state.data);
+                ToastService.success(t('silicon.msg.osBugs', { n: before }) || ('Fixed ' + before + ' bugs.'));
             } else if (actionId === 'morale') {
                 (state.data.staff || []).forEach(function (s) { s.morale = 100; });
                 bus.emit('state:changed', state.data);
