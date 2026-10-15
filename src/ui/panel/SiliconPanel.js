@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SiliconPanel.js
-// v2027.1a — Modal Silicon: saldo, 6 aksi, riwayat singkat.
+// v2027.1a — Modal Silicon.
 import { Modal } from '../modal.js';
 import { t } from '../../core/LanguageService.js';
 import { SiliconService, SILICON_ACTIONS } from '../../systems/SiliconService.js';
@@ -40,7 +40,7 @@ function _renderActions(balance) {
 function _renderHistory(history) {
     if (!history.length) {
         return '<div style="font-size:11px;color:var(--text-mute);padding:6px 0;">' +
-            _tf('silicon.empty', 'Belum ada transaksi.') + '</div>';
+            _tf('silicon.empty', 'No transactions yet.') + '</div>';
     }
     return history.slice(0, 6).map(function (h) {
         var positive = h.delta > 0;
@@ -59,12 +59,12 @@ export function openSiliconModal() {
 
     var html =
         '<div class="modal-title">💎 ' + _tf('silicon.title', 'Silicon') + '</div>' +
-        '<div class="modal-sub">' + _tf('silicon.sub', 'Alat percepat & boost.') + '</div>' +
+        '<div class="modal-sub">' + _tf('silicon.sub', 'Boost & speed up actions.') + '</div>' +
 
         '<div style="background:linear-gradient(135deg, rgba(79,140,255,0.14), rgba(139,92,246,0.14));' +
             'border-radius:12px;padding:14px;margin-bottom:14px;text-align:center;">' +
             '<div style="font-size:11px;color:var(--text-mute);letter-spacing:0.5px;">' +
-                _tf('silicon.balance', 'SALDO') + '</div>' +
+                _tf('silicon.balance', 'BALANCE') + '</div>' +
             '<div style="font-size:30px;font-weight:900;color:var(--accent);letter-spacing:-0.02em;line-height:1.1;">' +
                 balance + ' <span style="font-size:14px;color:var(--text-dim);">SIL</span></div>' +
         '</div>' +
@@ -72,11 +72,11 @@ export function openSiliconModal() {
         _renderActions(balance) +
 
         '<div class="card-title" style="margin-top:16px;">' +
-            _tf('silicon.history', 'Riwayat') + '</div>' +
+            _tf('silicon.history', 'History') + '</div>' +
         _renderHistory(history) +
 
         '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:14px;padding:10px;">' +
-            _tf('common.close', 'Tutup') + '</button>';
+            _tf('common.close', 'Close') + '</button>';
 
     Modal.open('silicon-panel', html);
 
@@ -95,13 +95,11 @@ export function openSiliconModal() {
             ToastService.error(res.reason || 'Gagal.');
             return;
         }
-        // Refresh modal — saldo berubah.
         Modal.close('silicon-panel', true);
         openSiliconModal();
     });
 }
 
-// Auto-refresh modal saat saldo berubah dari luar.
 bus.on('silicon:changed', function () {
     if (Modal.isOpen('silicon-panel')) {
         Modal.close('silicon-panel', true);
