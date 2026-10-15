@@ -4,6 +4,7 @@
 // + Filled versions (batch 1: 10 icons).
 // Style: outline stroke 1.75px | filled = solid currentColor.
 // Compatible dengan Lucide/Feather design language.
+// v2027.2a — tambah building, briefcase, factory.
 // ============================================================
 
 export var FEATURE_ICONS = {
@@ -82,10 +83,11 @@ export var FEATURE_ICONS = {
     wifi:           '<path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>',
 
     // ==================== BUSINESS ====================
-building:       '<rect x="4" y="2" width="16" height="20" rx="1"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/>',
-briefcase:      '<rect x="2" y="6" width="20" height="14" rx="2"/><path d="M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M2 13a18.15 18.15 0 0 0 20 0"/>',
-factory:        '<path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><path d="M17 18h1M12 18h1M7 18h1"/>',
-store:          '<path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/>...    "credit-card":  '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>',
+    building:       '<rect x="4" y="2" width="16" height="20" rx="1"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/>',
+    briefcase:      '<rect x="2" y="6" width="20" height="14" rx="2"/><path d="M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M2 13a18.15 18.15 0 0 0 20 0"/>',
+    factory:        '<path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><path d="M17 18h1M12 18h1M7 18h1"/>',
+    store:          '<path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/>',
+    "credit-card":  '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>',
     gift:           '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/>',
 
     // ==================== DESIGN ====================
@@ -129,37 +131,17 @@ store:          '<path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59
 
 // ============================================================
 // FILLED ICONS — batch 1 (10 ikon).
-// Fill currentColor. Jangan pakai stroke kecuali perlu.
 // ============================================================
 export var FEATURE_ICONS_FILLED = {
-    // CPU / chip silikon dengan pin
     cpu:      '<path fill-rule="evenodd" d="M5 5h14v14H5V5zm4 4v6h6V9H9z"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>',
-
-    // Speech bubble solid
     message:  '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
-
-    // Amplop solid dengan lipatan V cut-out
     mail:     '<path fill-rule="evenodd" d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 3v11h16V7l-8 5-8-5z"/>',
-
-    // Kamera solid + lensa cut-out
     camera:   '<path fill-rule="evenodd" d="M4 7h3l2.5-3h5L17 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zm8 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/>',
-
-    // Baterai solid + kontak
     battery:  '<rect x="2" y="7" width="18" height="10" rx="2"/><rect x="21" y="11" width="2" height="2" rx="0.5"/>',
-
-    // Database silinder solid (top ellipse sebagai cut-out)
     database: '<path fill-rule="evenodd" d="M12 2C6.48 2 3 3.34 3 5v14c0 1.66 3.48 3 9 3s9-1.34 9-3V5c0-1.66-3.48-3-9-3zm0 2c3.87 0 7 .9 7 1s-3.13 1-7 1-7-.9-7-1 3.13-1 7-1z"/>',
-
-    // Shield solid
     shield:   '<path d="M12 2 4 5v7c0 5.55 8 10 8 10s8-4.45 8-10V5l-8-3z"/>',
-
-    // Gembok solid + shackle stroke
     lock:     '<path fill-rule="evenodd" d="M7 10V7a5 5 0 0 1 10 0v3h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h1zm2-3v3h6V7a3 3 0 0 0-6 0z"/>',
-
-    // Cloud solid
     cloud:    '<path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97 6 6 0 0 0-11.6 1.6A4 4 0 0 0 7 19h10.5z"/>',
-
-    // Heart solid
     heart:    '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7z"/>'
 };
 
@@ -188,8 +170,6 @@ export function hasFilledIcon(id) {
 
 // ============================================================
 // renderIcon — bungkus konten ikon dalam SVG.
-// options.filled = true → pakai versi filled kalau tersedia.
-// Kalau tidak tersedia, fallback ke outline (tidak error).
 // ============================================================
 export function renderIcon(id, size, extraAttrs, options) {
     if (!id) return '';
