@@ -2,9 +2,9 @@
 // Konfigurasi tunggal sistem waktu. Kalender mengikuti kalender Gregorian.
 
 export const TIME_CONFIG = {
-    startYear: 1999,
-    startMonth: 11,
-    startDay: 17,
+    startYear: 2000,
+    startMonth: 1,
+    startDay: 1,
     startHour: 8,
     startMinute: 0,
 
