@@ -63,6 +63,16 @@ import { getActiveRendererIdPublic } from './ui/notifications/NotificationRender
 import { initSwipe, showSwipeAnimation } from './core/SwipeService.js';
 import { initNavSliderDrag } from './core/NavSliderDrag.js';
 import { AudioService } from './core/AudioService.js';
+import { CloudService } from './services/CloudService.js';
+import { SupabaseAdapter } from './services/SupabaseAdapter.js';
+
+CloudService.registerAdapter(SupabaseAdapter);
+
+const session = await CloudService.initialize();
+
+console.log('Cloud status:', CloudService.getStatus());
+console.log('Cloud user:', session.userId);
+
 
 // ============ INSTANCE ============
 var timeSystem        = new TimeSystem(state);
