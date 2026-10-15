@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2027.33a — Exchange Sesi 2 (trading).
+// v2027.34a — Diagnostic report hook.
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -59,14 +59,14 @@ import { handleNewsListClick } from './ui/panels/NewsListPanel.js';
 import { renderChipMockup } from './ui/phone/ChipMockup.js';
 import { renderChipRadarChart } from './ui/charts/ChipRadarChart.js';
 import { setExchangeCategory, setExchangeStock, drawExchangeChart, openBuyModal, openSellModal } from './ui/panels/ExchangePanel.js';
+import { buildReport, formatReportText } from './diagnostics/DiagnosticReport.js';
+import { openDiagnosticModal } from './diagnostics/DiagnosticUI.js';
 import * as marketingModule from './data/marketing.data.js';
 import * as feedbackModule from './data/feedback.data.js';
 import { getActiveRendererIdPublic } from './ui/notifications/NotificationRenderer.js';
 import { initSwipe, showSwipeAnimation } from './core/SwipeService.js';
 import { initNavSliderDrag } from './core/NavSliderDrag.js';
 import { AudioService } from './core/AudioService.js';
-import { buildReport, formatReportText } from './diagnostics/DiagnosticReport.js';
-import { openDiagnosticModal } from './diagnostics/DiagnosticUI.js';
 
 // ============ INSTANCE ============
 var timeSystem        = new TimeSystem(state);
@@ -349,7 +349,6 @@ function _updateSellTotal() {
 
 // ============ CLICKS ============
 function bindGlobalClicks() {
-    // Live update total di modal buy/sell.
     document.body.addEventListener('input', function (e) {
         if (e.target.matches('[data-qty-input]')) {
             var root = e.target.closest('[data-modal-id]');
@@ -905,6 +904,17 @@ async function boot() {
         mountAdvisorButton(advisor);
 
         window.__game = {
+            // ===== DIAGNOSTIC =====
+            report: function (opts) {
+                return buildReport(state.get(), window.__game, opts || {});
+            },
+            reportText: function (opts) {
+                return formatReportText(buildReport(state.get(), window.__game, opts || {}));
+            },
+            reportShow: function () {
+                openDiagnosticModal();
+            },
+            // ===== CORE =====
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
