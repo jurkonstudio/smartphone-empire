@@ -1,6 +1,5 @@
 // FILE: src/ui/panels/SettingsPanel.js
 // v2027.33b — validasi nama via name-blocklist.data.js
-import { renderCloudPanel, bindCloudUI } from '../../cloud/CloudUI.js';
 import { state } from '../../core/GameState.js';
 import { SaveService } from '../../core/SaveService.js';
 import { ToastService } from '../../core/ToastService.js';
@@ -231,13 +230,11 @@ function _tabData() {
         _row({ label: t('settings.row.export'), hint: t('settings.row.export_hint'), action: true, attrs: 'data-set="export"', chevron: true }) +
         _row({ label: t('settings.row.import'), hint: t('settings.row.import_hint'), action: true, attrs: 'data-set="import"', chevron: true })
     ) +
-    renderCloudPanel() +
     _sectionDanger('warn', t('settings.section.danger'),
         _row({ label: t('settings.row.reset'), hint: t('settings.row.reset_hint'), action: true, danger: true, attrs: 'data-set="reset"', chevron: true })
     ) +
     '<div class="settings-footer">' + escapeHtml(APP_CONFIG.name || 'Smartphone Empire') + ' · v' + escapeHtml(version) + '</div>';
 }
-
 
 function _section(iconId, title, contentHtml) {
     var icon = iconId ? renderIcon(iconId, 12) : '';
@@ -284,14 +281,10 @@ function _row(opts) {
     return '<div class="' + cls + '" ' + attrs + '>' + labelHtml + rightHtml + '</div>';
 }
 
-
 export function bindSettingsActions(root) {
     if (!root) return;
     if (_boundRoot === root) return;
     _boundRoot = root;
-
-    bindCloudUI(root);
-
 
     root.addEventListener('click', function (e) {
         var tabBtn = e.target.closest('[data-set-tab]');
