@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/CompanyProfilePanel.js
-// v2027.13c — i18n.
+// v2027.14a — fix format cash (bulat).
 import { CloudService } from '../../services/CloudService.js';
 import { t } from '../../core/LanguageService.js';
 
@@ -7,6 +7,12 @@ function escapeHtml(s) {
     if (typeof s !== 'string') return '';
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+// Format uang: bulatkan ke integer, tampilkan tanpa desimal.
+function _fmtMoney(n) {
+    if (typeof n !== 'number' || !isFinite(n)) return '$0';
+    return '$' + Math.round(n).toLocaleString('en-US');
 }
 
 const DIFF_LABEL = {
@@ -60,7 +66,7 @@ export function renderCompanyProfilePanel(params) {
                 <span>${t('profile.founded')}</span>
             </div>
             <div class="profile-era">
-                ${t(ERA_LABEL[data.era] || 'profile.era.modern_smartphone')} • ${t('profile.era_year', { era: '', year: tSnap.currentYear }).replace(' • ', ' • ').replace('{era}', '').trim().replace(/^•\s*/, '')}
+                ${t(ERA_LABEL[data.era] || 'profile.era.modern_smartphone')} • ${tSnap.currentYear}
             </div>
         </div>
     `;
@@ -69,7 +75,7 @@ export function renderCompanyProfilePanel(params) {
         <div class="kpi-grid">
             <div class="kpi green">
                 <div class="kpi-label">${t('profile.kpi_revenue')}</div>
-                <div class="kpi-value" style="font-size:15px;">$${totalRevenue.toLocaleString('en-US')}</div>
+                <div class="kpi-value" style="font-size:15px;">${_fmtMoney(totalRevenue)}</div>
             </div>
             <div class="kpi blue">
                 <div class="kpi-label">${t('profile.kpi_sold')}</div>
@@ -91,10 +97,10 @@ export function renderCompanyProfilePanel(params) {
     const opsCard = `
         <div class="card">
             <div class="card-title">${t('profile.ops_title')}</div>
-            <div class="sum-row"><span>${t('profile.ops_cash')}</span><b>$${data.cash.toLocaleString('en-US')}</b></div>
+            <div class="sum-row"><span>${t('profile.ops_cash')}</span><b>${_fmtMoney(data.cash)}</b></div>
             <div class="sum-row"><span>${t('profile.ops_active')}</span><b>${activeProducts} / ${totalProducts}</b></div>
             <div class="sum-row"><span>${t('profile.ops_staff')}</span><b>${t('profile.ops_staff_unit', { n: staffCount })}</b></div>
-            <div class="sum-row"><span>${t('profile.ops_salary')}</span><b>$${monthlySalary.toLocaleString('en-US')}</b></div>
+            <div class="sum-row"><span>${t('profile.ops_salary')}</span><b>${_fmtMoney(monthlySalary)}</b></div>
             <div class="sum-row"><span>${t('profile.ops_morale')}</span><b style="color:${moraleColor};">${avgMorale}/100</b></div>
             <div class="sum-row"><span>${t('profile.ops_rep')}</span><b>${reputation}/100</b></div>
             <div class="sum-row"><span>${t('profile.ops_sentiment')}</span><b>${sentiment}/100</b></div>
