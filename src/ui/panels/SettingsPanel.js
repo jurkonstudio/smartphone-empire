@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SettingsPanel.js
-// v2027.35a — reputasi 1 desimal + formatCurrency.
+// v2027.36a — Tambah tab Debug (untuk development, tanpa console).
 import { state } from '../../core/GameState.js';
 import { SaveService } from '../../core/SaveService.js';
 import { ToastService } from '../../core/ToastService.js';
@@ -14,6 +14,7 @@ import { APP_CONFIG } from '../../config/app.config.js';
 import { SUPPORTED_LANGS } from '../../data/i18n/index.js';
 import { validateCompanyName } from '../../data/name-blocklist.data.js';
 import { formatCurrency } from '../../utils/format.js';
+import { renderDebugSection, bindDebugActions } from './DebugPanel.js';
 
 let _activeTab = 'umum';
 let _boundRoot = null;
@@ -27,7 +28,8 @@ const TABS = [
     { id: 'audio',    key: 'settings.tab.audio',      icon: 'bell' },
     { id: 'keuangan', key: 'settings.tab.finance',    icon: 'coin' },
     { id: 'bahasa',   key: 'settings.tab.language',   icon: 'globe' },
-    { id: 'data',     key: 'settings.tab.data',       icon: 'database' }
+    { id: 'data',     key: 'settings.tab.data',       icon: 'database' },
+    { id: 'debug',    label: 'Debug',                 icon: 'settings' }
 ];
 
 function escapeHtml(s) {
@@ -90,9 +92,10 @@ function _tabBar() {
     return '<div class="settings-tabs">' +
         TABS.map(function (tab) {
             var cls = 'settings-tab' + (_activeTab === tab.id ? ' active' : '');
+            var label = tab.label || t(tab.key);
             return '<button class="' + cls + '" data-set-tab="' + tab.id + '" type="button">' +
                 renderIcon(tab.icon, 13) +
-                '<span>' + escapeHtml(t(tab.key)) + '</span>' +
+                '<span>' + escapeHtml(label) + '</span>' +
                 '</button>';
         }).join('') +
         '</div>';
@@ -105,6 +108,7 @@ function _tabContent(s) {
         case 'keuangan': return _tabKeuangan(s);
         case 'bahasa':   return _tabBahasa(s);
         case 'data':     return _tabData(s);
+        case 'debug':    return renderDebugSection();
         default:         return _tabUmum(s);
     }
 }
@@ -285,6 +289,10 @@ function _row(opts) {
 
 export function bindSettingsActions(root) {
     if (!root) return;
+
+    // Bind debug actions (idempotent, punya guard sendiri).
+    bindDebugActions(root);
+
     if (_boundRoot === root) return;
     _boundRoot = root;
 
@@ -484,4 +492,4 @@ function _confirmReset() {
         SaveService.stopAutoSave();
         window.location.reload();
     });
-}
+    }
