@@ -1,15 +1,7 @@
 // FILE: src/systems/SiliconService.js
 // ============================================================
 // SiliconService — premium currency "Silicon" (SIL).
-// v2027.1a
-//
-// Fungsi:
-//   - Kelola saldo SIL (tambah, kurangi).
-//   - Aksi pembelian: time skip, instant research, dsb.
-//   - Riwayat transaksi (maks 20).
-//
-// Aksi dibatasi lewat whitelist ACTIONS — tidak bisa dipanggil
-// dari console sembarangan tanpa argumen valid.
+// v2027.2a — daily login + aksi percepat.
 // ============================================================
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
@@ -19,22 +11,20 @@ import { t } from '../core/LanguageService.js';
 
 var MAX_HISTORY = 20;
 
-// ---------- Katalog aksi ----------
-// id, cost SIL, handler.
 export var SILICON_ACTIONS = [
-    { id: 'skip7',   cost: 10, icon: '📅', ready: true },
-    { id: 'skip30',  cost: 40, icon: '🗓️', ready: true },
+    { id: 'skip7',    cost: 10, icon: '📅', ready: true },
+    { id: 'skip30',   cost: 40, icon: '🗓️', ready: true },
     { id: 'research', cost: 20, icon: '🔬', ready: true },
-    { id: 'dev',     cost: 30, icon: '📱', ready: true },
-    { id: 'morale',  cost: 15, icon: '😊', ready: true },
-    { id: 'rep',     cost: 25, icon: '⭐', ready: true }
+    { id: 'dev',      cost: 30, icon: '📱', ready: true },
+    { id: 'morale',   cost: 15, icon: '😊', ready: true },
+    { id: 'rep',      cost: 25, icon: '⭐', ready: true }
 ];
 
 function _pushHistory(type, delta, reason) {
     var d = state.data;
     if (!Array.isArray(d.siliconHistory)) d.siliconHistory = [];
     d.siliconHistory.unshift({
-        type: type,             // 'earn' | 'spend'
+        type: type,
         delta: delta,
         reason: reason,
         balanceAfter: d.silicon,
@@ -80,8 +70,25 @@ export var SiliconService = {
         return (state.data.siliconHistory || []).slice();
     },
 
-    // ---------- Aksi ----------
-    // Dipanggil dari UI. Mengembalikan { ok, reason?, spent? }.
+    // [v2027.2a] Daily login — bonus SIL sekali per hari (real calendar day).
+    claimDailyLogin() {
+        var d = state.data;
+        if (!d.dailyLogin || typeof d.dailyLogin !== 'object') {
+            d.dailyLogin = { lastClaimDate: null, streak: 0 };
+        }
+        var today = new Date().toISOString().slice(0, 10);
+        if (d.dailyLogin.lastClaimDate === today) {
+            return { ok: false, reason: 'already_claimed' };
+        }
+        var yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+        var streak = (d.dailyLogin.lastClaimDate === yesterday) ? (d.dailyLogin.streak + 1) : 1;
+        var reward = Math.min(streak, 7);
+        d.dailyLogin.lastClaimDate = today;
+        d.dailyLogin.streak = streak;
+        this.add(reward, 'daily-login');
+        return { ok: true, amount: reward, streak: streak };
+    },
+
     runAction(actionId) {
         var def = SILICON_ACTIONS.find(function (a) { return a.id === actionId; });
         if (!def) return { ok: false, reason: 'Aksi tidak dikenal.' };
@@ -91,7 +98,6 @@ export var SiliconService = {
         var game = window.__game;
         if (!game) return { ok: false, reason: 'Game belum siap.' };
 
-        // ---- Validasi aksi spesifik SEBELUM charge ----
         if (actionId === 'research') {
             var activeR = (state.data.research.active || []);
             if (!activeR.length) return { ok: false, reason: 'Tidak ada riset berjalan.' };
@@ -110,24 +116,22 @@ export var SiliconService = {
             if (rep >= 100) return { ok: false, reason: 'Reputasi sudah maksimal.' };
         }
 
-        // ---- Charge SIL ----
         var spendRes = this.spend(def.cost, actionId);
         if (!spendRes.ok) return spendRes;
 
-        // ---- Jalankan aksi ----
         try {
             if (actionId === 'skip7') {
                 game.timeSystem.fastForwardDays(7);
-                ToastService.success(t('silicon.msg.skip7', { n: 7 }) || ('Time skip +7 hari.'));
+                ToastService.success(t('silicon.msg.skip7') || 'Time skip +7 days.');
             } else if (actionId === 'skip30') {
                 game.timeSystem.fastForwardDays(30);
-                ToastService.success(t('silicon.msg.skip30', { n: 30 }) || ('Time skip +30 hari.'));
+                ToastService.success(t('silicon.msg.skip30') || 'Time skip +30 days.');
             } else if (actionId === 'research') {
                 var nodes = (state.data.research.active || []).map(function (r) { return r.nodeId; });
                 nodes.forEach(function (nodeId) {
                     if (game.research && game.research.completeResearch) game.research.completeResearch(nodeId);
                 });
-                ToastService.success(t('silicon.msg.research') || 'Riset diselesaikan seketika.');
+                ToastService.success(t('silicon.msg.research') || 'Research completed instantly.');
             } else if (actionId === 'dev') {
                 var d = state.data.products.development;
                 if (d) {
@@ -135,18 +139,17 @@ export var SiliconService = {
                     var remaining = Math.max(0, totalMinutes);
                     game.timeSystem.fastForwardDays(Math.max(1, Math.ceil(remaining / (24 * 60))));
                 }
-                ToastService.success(t('silicon.msg.dev') || 'Pengembangan produk dipercepat.');
+                ToastService.success(t('silicon.msg.dev') || 'Product development accelerated.');
             } else if (actionId === 'morale') {
                 (state.data.staff || []).forEach(function (s) { s.morale = 100; });
                 bus.emit('state:changed', state.data);
-                ToastService.success(t('silicon.msg.morale') || 'Morale semua staff dipulihkan.');
+                ToastService.success(t('silicon.msg.morale') || 'Staff morale restored.');
             } else if (actionId === 'rep') {
                 state.addReputation(20);
-                ToastService.success(t('silicon.msg.rep') || 'Reputasi +20.');
+                ToastService.success(t('silicon.msg.rep') || 'Reputation +20.');
             }
         } catch (err) {
             console.error('[SiliconService] Aksi gagal:', actionId, err);
-            // Refund SIL kalau aksi gagal.
             state.data.silicon = (state.data.silicon || 0) + def.cost;
             _pushHistory('earn', def.cost, 'refund:' + actionId);
             bus.emit('silicon:changed', { balance: state.data.silicon, delta: def.cost });
