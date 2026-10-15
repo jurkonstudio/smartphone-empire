@@ -143,6 +143,9 @@ export const en = {
 
     // HQ
     'hq.tab.overview': 'Overview',
+'hq.tab.office':   'Office',
+'hq.office.title': 'Office Room',
+'hq.office.desc':  'The 3D office map is being prepared. In the next update, you will be able to explore headquarters, watch staff activity, and expand company facilities.',
     'hq.tab.campus':   'Campus',
     'hq.tab.team':     'Team',
     'hq.tab.exchange': 'Exchange',
