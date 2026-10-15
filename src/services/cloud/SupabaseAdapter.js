@@ -1,5 +1,5 @@
 // FILE: src/services/cloud/SupabaseAdapter.js
-// v2027.39a — Adapter Supabase. + 2 method: listProfiles, getProfileById.
+// v2027.40a — Adapter Supabase. + subscribePresence() untuk online indicator.
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_LIB_URLS, CLOUD } from './supabase.config.js';
 
 var _client = null;
@@ -209,6 +209,40 @@ export const SupabaseAdapter = {
         return function () { try { c.removeChannel(ch); } catch (e) {} };
     },
 
+    // ============================================================
+    // PRESENCE (online indicator)
+    // ============================================================
+    subscribePresence: async function (userId, meta, onSync) {
+        var c = await getClient();
+        var ch = c.channel('online-users', {
+            config: {
+                presence: { key: userId }
+            }
+        });
+
+        ch.on('presence', { event: 'sync' }, function () {
+            try {
+                var state = ch.presenceState() || {};
+                var ids = Object.keys(state);
+                onSync(ids);
+            } catch (e) {
+                onSync([]);
+            }
+        });
+
+        ch.subscribe(function (status) {
+            if (status === 'SUBSCRIBED') {
+                try { ch.track(meta || { online_at: new Date().toISOString() }); }
+                catch (e) {}
+            }
+        });
+
+        return function () {
+            try { ch.untrack(); } catch (e) {}
+            try { c.removeChannel(ch); } catch (e) {}
+        };
+    },
+
     getProfile: async function (userId) {
         var c = await getClient();
         var res = await c.from(CLOUD.tables.profiles).select('*').eq('id', userId).maybeSingle();
@@ -223,9 +257,6 @@ export const SupabaseAdapter = {
         return res.data;
     },
 
-    // ============================================================
-    // PUBLIC PROFILES (via view public_profiles)
-    // ============================================================
     listProfiles: async function () {
         var c = await getClient();
         var res = await c.from('public_profiles')
@@ -246,9 +277,6 @@ export const SupabaseAdapter = {
         return res.data;
     },
 
-    // ============================================================
-    // STORAGE
-    // ============================================================
     uploadPlayerAsset: async function (userId, name, fileOrBlob, contentType) {
         var c = await getClient();
         var path = userId + '/' + String(name).replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -271,9 +299,6 @@ export const SupabaseAdapter = {
         return c.storage.from(CLOUD.buckets.game).getPublicUrl(path).data.publicUrl;
     },
 
-    // ============================================================
-    // SILICON (RPC)
-    // ============================================================
     rpcGetSilicon: async function () {
         var c = await getClient();
         var res = await c.rpc('get_silicon');
