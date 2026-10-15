@@ -104,6 +104,19 @@ export const SupabaseAdapter = {
             self._authSub = sub && sub.data && sub.data.subscription;
         }).catch(function () {});
     },
+    
+// ---------- Google OAuth ----------
+signInWithGoogle: async function (redirectTo) {
+    var c = await getClient();
+    var res = await c.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: redirectTo || location.origin
+        }
+    });
+    if (res.error) throw mk(res.error);
+    return res.data;
+},
 
     signIn: async function (email, password) {
         var c = await getClient();
