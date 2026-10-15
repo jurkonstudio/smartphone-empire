@@ -62,7 +62,7 @@ import { setExchangeCategory, setExchangeStock, drawExchangeChart, openBuyModal,
 import { buildReport, formatReportText } from './diagnostics/DiagnosticReport.js';
 import { openDiagnosticModal } from './diagnostics/DiagnosticUI.js';
 import { CloudService } from './services/CloudService.js';
-import { SupabaseAdapter } from './services/cloud/SupabaseAdapter.js';
+// import { SupabaseAdapter } from './services/cloud/SupabaseAdapter.js'; // sementara disabled
 import * as marketingModule from './data/marketing.data.js';
 import * as feedbackModule from './data/feedback.data.js';
 import { getActiveRendererIdPublic } from './ui/notifications/NotificationRenderer.js';
@@ -911,12 +911,8 @@ async function boot() {
 
         // Cloud sync: hanya daftarkan adapter. Tidak ada sesi dibuat di sini.
         // Pemain membuat sesi anonymous secara eksplisit dari Profile → Cloud.
-        try {
-            CloudService.registerAdapter(SupabaseAdapter);
-            console.info('[Cloud] Adapter terdaftar (belum login).');
-        } catch (e) {
-            console.warn('[Cloud] Adapter gagal didaftarkan:', e);
-        }
+        // Cloud sementara disabled — SupabaseAdapter belum siap.
+console.info('[Cloud] Adapter dinonaktifkan.');
 
         window.__game = {
             // ===== DIAGNOSTIC =====
