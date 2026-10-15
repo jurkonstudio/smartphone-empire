@@ -948,6 +948,21 @@ async function boot() {
             reportShow: function () {
                 openDiagnosticModal();
             },
+            // ===== i18n diagnostics =====
+i18nReport: function () {
+    var txt = LanguageService.getMissingKeysAsJs();
+    console.log(txt);
+    console.log('Total:', LanguageService.getMissingKeys().length, 'key.');
+    return txt;
+},
+i18nList: function () {
+    return LanguageService.getMissingKeys();
+},
+i18nClear: function () {
+    LanguageService.clearMissingKeys();
+    console.log('[i18n] Missing key list dibersihkan.');
+    return true;
+},
             // ===== CLOUD =====
             cloud: CloudService,
             // ===== SILICON =====
