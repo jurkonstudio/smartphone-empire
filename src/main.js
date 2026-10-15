@@ -65,6 +65,8 @@ import { getActiveRendererIdPublic } from './ui/notifications/NotificationRender
 import { initSwipe, showSwipeAnimation } from './core/SwipeService.js';
 import { initNavSliderDrag } from './core/NavSliderDrag.js';
 import { AudioService } from './core/AudioService.js';
+import { buildReport, formatReportText } from './diagnostics/DiagnosticReport.js';
+import { openDiagnosticModal } from './diagnostics/DiagnosticUI.js';
 
 // ============ INSTANCE ============
 var timeSystem        = new TimeSystem(state);
