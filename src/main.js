@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2027.32a — Exchange tab (Sesi 1).
+// v2027.33a — Exchange Sesi 2 (trading).
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -58,7 +58,7 @@ import { openNewsArticleModal } from './ui/panels/NewsArticleModal.js';
 import { handleNewsListClick } from './ui/panels/NewsListPanel.js';
 import { renderChipMockup } from './ui/phone/ChipMockup.js';
 import { renderChipRadarChart } from './ui/charts/ChipRadarChart.js';
-import { setExchangeCategory, setExchangeStock, drawExchangeChart } from './ui/panels/ExchangePanel.js';
+import { setExchangeCategory, setExchangeStock, drawExchangeChart, openBuyModal, openSellModal } from './ui/panels/ExchangePanel.js';
 import * as marketingModule from './data/marketing.data.js';
 import * as feedbackModule from './data/feedback.data.js';
 import { getActiveRendererIdPublic } from './ui/notifications/NotificationRenderer.js';
@@ -316,8 +316,47 @@ function vibrate(ms) {
     if (navigator && typeof navigator.vibrate === 'function') { try { navigator.vibrate(ms); } catch (e) {} }
 }
 
+// ============ MODAL HELPERS (Exchange) ============
+function _updateBuyTotal() {
+    var root = document.querySelector('[data-modal-id="buy-modal"]');
+    if (!root) return;
+    var btn = root.querySelector('[data-buy-confirm]');
+    if (!btn) return;
+    var stockId = btn.dataset.buyConfirm;
+    var qty = parseInt(root.querySelector('[data-qty-input]').value, 10) || 0;
+    var el = root.querySelector('[data-buy-total]');
+    if (!el) return;
+    if (!window.__game || !window.__game.stocks) return;
+    var priceUSD = window.__game.stocks.getPriceUSD(stockId);
+    el.textContent = '$' + (priceUSD * qty).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function _updateSellTotal() {
+    var root = document.querySelector('[data-modal-id="sell-modal"]');
+    if (!root) return;
+    var btn = root.querySelector('[data-sell-confirm]');
+    if (!btn) return;
+    var stockId = btn.dataset.sellConfirm;
+    var qty = parseInt(root.querySelector('[data-qty-input]').value, 10) || 0;
+    var el = root.querySelector('[data-sell-total]');
+    if (!el) return;
+    if (!window.__game || !window.__game.stocks) return;
+    var priceUSD = window.__game.stocks.getPriceUSD(stockId);
+    el.textContent = '$' + (priceUSD * qty).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 // ============ CLICKS ============
 function bindGlobalClicks() {
+    // Live update total di modal buy/sell.
+    document.body.addEventListener('input', function (e) {
+        if (e.target.matches('[data-qty-input]')) {
+            var root = e.target.closest('[data-modal-id]');
+            if (!root) return;
+            if (root.dataset.modalId === 'buy-modal') _updateBuyTotal();
+            else if (root.dataset.modalId === 'sell-modal') _updateSellTotal();
+        }
+    });
+
     document.body.addEventListener('click', function (e) {
         try {
             var clickable = e.target.closest('button, [role="button"], .nav-btn, .chip, .chip-small, .subtab-btn, .wiz-option, .wiz-color, .staff-row, .cand-row');
@@ -405,6 +444,73 @@ function bindGlobalClicks() {
         var exSel = e.target.closest('[data-ex-select]');
         if (exSel) { e.preventDefault(); vibrate(6); setExchangeStock(exSel.dataset.exSelect); renderView(); return; }
 
+        var exBuy = e.target.closest('[data-ex-buy]');
+        if (exBuy) { e.preventDefault(); vibrate(8); openBuyModal(exBuy.dataset.exBuy); return; }
+
+        var exSell = e.target.closest('[data-ex-sell]');
+        if (exSell) { e.preventDefault(); vibrate(8); openSellModal(exSell.dataset.exSell); return; }
+
+        var buyPreset = e.target.closest('[data-buy-preset]');
+        if (buyPreset) {
+            e.preventDefault();
+            var bRoot = document.querySelector('[data-modal-id="buy-modal"]');
+            if (!bRoot) return;
+            var bInp = bRoot.querySelector('[data-qty-input]');
+            var bv = buyPreset.dataset.buyPreset;
+            if (bv === 'max') {
+                var sid = buyPreset.dataset.buyStock;
+                if (window.__game && window.__game.stocks) {
+                    bInp.value = window.__game.stocks.getMaxAffordableShares(sid);
+                }
+            } else {
+                bInp.value = bv;
+            }
+            _updateBuyTotal();
+            return;
+        }
+
+        var sellPreset = e.target.closest('[data-sell-preset]');
+        if (sellPreset) {
+            e.preventDefault();
+            var sRoot = document.querySelector('[data-modal-id="sell-modal"]');
+            if (!sRoot) return;
+            var sInp = sRoot.querySelector('[data-qty-input]');
+            var sv = sellPreset.dataset.sellPreset;
+            sInp.value = (sv === 'all') ? sInp.max : sv;
+            _updateSellTotal();
+            return;
+        }
+
+        var buyConfirm = e.target.closest('[data-buy-confirm]');
+        if (buyConfirm) {
+            e.preventDefault();
+            var cRoot = document.querySelector('[data-modal-id="buy-modal"]');
+            var cQty = parseInt(cRoot.querySelector('[data-qty-input]').value, 10) || 0;
+            if (!window.__game || !window.__game.stocks) return;
+            var cRes = window.__game.stocks.buyStock(buyConfirm.dataset.buyConfirm, cQty);
+            if (!cRes.ok) { ToastService.error(cRes.reason); return; }
+            ToastService.success('Beli ' + cRes.shares.toLocaleString('en-US') + ' lembar.');
+            vibrate(15);
+            Modal.close('buy-modal', true);
+            renderView();
+            return;
+        }
+
+        var sellConfirm = e.target.closest('[data-sell-confirm]');
+        if (sellConfirm) {
+            e.preventDefault();
+            var csRoot = document.querySelector('[data-modal-id="sell-modal"]');
+            var csQty = parseInt(csRoot.querySelector('[data-qty-input]').value, 10) || 0;
+            if (!window.__game || !window.__game.stocks) return;
+            var csRes = window.__game.stocks.sellStock(sellConfirm.dataset.sellConfirm, csQty);
+            if (!csRes.ok) { ToastService.error(csRes.reason); return; }
+            ToastService.success('Jual ' + csRes.shares.toLocaleString('en-US') + ' lembar.');
+            vibrate(15);
+            Modal.close('sell-modal', true);
+            renderView();
+            return;
+        }
+
         var teamModeBtn = e.target.closest('[data-team-mode]');
         if (teamModeBtn) {
             e.preventDefault();
@@ -425,16 +531,16 @@ function bindGlobalClicks() {
         var teamAction = e.target.closest('[data-team-action]');
         if (teamAction) {
             e.preventDefault(); vibrate(8);
-            var a = teamAction.dataset.teamAction;
-            if (a === 'hire') {
+            var ta = teamAction.dataset.teamAction;
+            if (ta === 'hire') {
                 var res = teamSystem.hireCandidate(teamAction.dataset.candidateId);
                 if (!res.ok) ToastService.error(res.reason);
                 else { Modal.close('candidate-detail', true); renderAll(); }
                 return;
             }
-            if (a === 'refresh-pool') { teamSystem.refreshCandidates(); ToastService.success('Pool diperbarui.'); renderAll(); return; }
-            if (a === 'goto-recruit') { setTeamMode('recruit'); renderView(); return; }
-            if (a === 'open-candidate') { openCandidateDetailModal({ candidateId: teamAction.dataset.candidateId }); return; }
+            if (ta === 'refresh-pool') { teamSystem.refreshCandidates(); ToastService.success('Pool diperbarui.'); renderAll(); return; }
+            if (ta === 'goto-recruit') { setTeamMode('recruit'); renderView(); return; }
+            if (ta === 'open-candidate') { openCandidateDetailModal({ candidateId: teamAction.dataset.candidateId }); return; }
         }
 
         var staffCard = e.target.closest('[data-staff-detail]');
@@ -442,9 +548,9 @@ function bindGlobalClicks() {
         var staffAction = e.target.closest('[data-staff-action]');
         if (staffAction) {
             e.preventDefault();
-            var a = staffAction.dataset.staffAction; var sid = staffAction.dataset.staffId;
-            if (a === 'fire') { var res = teamSystem.fireStaff(sid); if (!res.ok) ToastService.error(res.reason); else { Modal.close('staff-detail', true); renderAll(); } return; }
-            if (a === 'train') { var res = teamSystem.trainStaff(sid); if (!res.ok) ToastService.error(res.reason); else { Modal.close('staff-detail', true); openStaffDetailModal({ staffId: sid }); renderAll(); } return; }
+            var sa = staffAction.dataset.staffAction; var sid2 = staffAction.dataset.staffId;
+            if (sa === 'fire') { var res = teamSystem.fireStaff(sid2); if (!res.ok) ToastService.error(res.reason); else { Modal.close('staff-detail', true); renderAll(); } return; }
+            if (sa === 'train') { var res = teamSystem.trainStaff(sid2); if (!res.ok) ToastService.error(res.reason); else { Modal.close('staff-detail', true); openStaffDetailModal({ staffId: sid2 }); renderAll(); } return; }
         }
 
         var subBtn = e.target.closest('[data-subtab]');
@@ -461,9 +567,9 @@ function bindGlobalClicks() {
         var chipRAction = e.target.closest('[data-chip-research-action]');
         if (chipRAction) {
             e.preventDefault();
-            var a = chipRAction.dataset.chipResearchAction; var nodeId = chipRAction.dataset.nodeId;
-            if (a === 'start') { var res = chipResearch.startResearch(nodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.success('Riset chip dimulai!'); Modal.close('chip-node-detail', true); renderAll(); } }
-            else if (a === 'cancel') { var res = chipResearch.cancelResearch(nodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.info('Dibatalkan.'); Modal.close('chip-node-detail', true); renderAll(); } }
+            var cra = chipRAction.dataset.chipResearchAction; var cnodeId = chipRAction.dataset.nodeId;
+            if (cra === 'start') { var res = chipResearch.startResearch(cnodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.success('Riset chip dimulai!'); Modal.close('chip-node-detail', true); renderAll(); } }
+            else if (cra === 'cancel') { var res = chipResearch.cancelResearch(cnodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.info('Dibatalkan.'); Modal.close('chip-node-detail', true); renderAll(); } }
             return;
         }
 
@@ -472,24 +578,24 @@ function bindGlobalClicks() {
         var rAction = e.target.closest('[data-research-action]');
         if (rAction) {
             e.preventDefault();
-            var a = rAction.dataset.researchAction; var nodeId = rAction.dataset.nodeId;
-            if (a === 'start') { var res = research.startResearch(nodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.success('Riset dimulai!'); Modal.close('node-detail', true); renderAll(); } }
-            else if (a === 'cancel') { var res = research.cancelResearch(nodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.info('Dibatalkan.'); Modal.close('node-detail', true); renderAll(); } }
+            var ra = rAction.dataset.researchAction; var rnodeId = rAction.dataset.nodeId;
+            if (ra === 'start') { var res = research.startResearch(rnodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.success('Riset dimulai!'); Modal.close('node-detail', true); renderAll(); } }
+            else if (ra === 'cancel') { var res = research.cancelResearch(rnodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.info('Dibatalkan.'); Modal.close('node-detail', true); renderAll(); } }
             return;
         }
 
         var osAction = e.target.closest('[data-os-action]');
         if (osAction) {
             e.preventDefault();
-            var a = osAction.dataset.osAction;
-            if (a === 'create') { openCreateOsModal({ osSystem: os }); return; }
-            if (a === 'wizard') { openOsWizardModal({ osSystem: os }); return; }
-            if (a === 'cancel-deving') { var res = os.cancelVersion(); if (res.ok) { ToastService.info('Dibatalkan.'); renderAll(); } else ToastService.error(res.reason); return; }
-            if (a === 'patch-bug') { var r = os.patchBug(osAction.dataset.bugId); if (r.ok) { ToastService.success('Patch dimulai.'); renderAll(); } else ToastService.error(r.reason); return; }
-            if (a === 'ignore-bug') { var r = os.ignoreBug(osAction.dataset.bugId); if (r.ok) { ToastService.warning('Diabaikan.'); renderAll(); } else ToastService.error(r.reason); return; }
-            if (a === 'start-app') { var r = os.startApp(osAction.dataset.appId); if (r.ok) { ToastService.success('App dirilis.'); renderAll(); } else ToastService.error(r.reason); return; }
-            if (a === 'invite-devs') { var r = os.inviteDevelopers(); if (r.ok) { ToastService.success('+' + r.bonus + ' dev.'); renderAll(); } else ToastService.error(r.reason); return; }
-            if (a === 'feature-detail') { openFeatureDetailModal({ osSystem: os, featureId: osAction.dataset.featureId }); return; }
+            var oa = osAction.dataset.osAction;
+            if (oa === 'create') { openCreateOsModal({ osSystem: os }); return; }
+            if (oa === 'wizard') { openOsWizardModal({ osSystem: os }); return; }
+            if (oa === 'cancel-deving') { var res = os.cancelVersion(); if (res.ok) { ToastService.info('Dibatalkan.'); renderAll(); } else ToastService.error(res.reason); return; }
+            if (oa === 'patch-bug') { var r = os.patchBug(osAction.dataset.bugId); if (r.ok) { ToastService.success('Patch dimulai.'); renderAll(); } else ToastService.error(r.reason); return; }
+            if (oa === 'ignore-bug') { var r = os.ignoreBug(osAction.dataset.bugId); if (r.ok) { ToastService.warning('Diabaikan.'); renderAll(); } else ToastService.error(r.reason); return; }
+            if (oa === 'start-app') { var r = os.startApp(osAction.dataset.appId); if (r.ok) { ToastService.success('App dirilis.'); renderAll(); } else ToastService.error(r.reason); return; }
+            if (oa === 'invite-devs') { var r = os.inviteDevelopers(); if (r.ok) { ToastService.success('+' + r.bonus + ' dev.'); renderAll(); } else ToastService.error(r.reason); return; }
+            if (oa === 'feature-detail') { openFeatureDetailModal({ osSystem: os, featureId: osAction.dataset.featureId }); return; }
         }
 
         var prodSub = e.target.closest('[data-prod-subtab]');
@@ -497,12 +603,12 @@ function bindGlobalClicks() {
         var prodAction = e.target.closest('[data-prod-action]');
         if (prodAction) {
             e.preventDefault();
-            var a = prodAction.dataset.prodAction; var pid = prodAction.dataset.prodId;
-            if (a === 'open-wizard') { openDesignWizard({ researchSystem: research, osSystem: os, productSystem: products }); return; }
-            if (a === 'cancel-dev') { var r = products.cancelDevelopment(); if (r.ok) { ToastService.info('Dibatalkan.'); renderAll(); } else ToastService.error(r.reason); return; }
-            if (a === 'order-prod') { openOrderProductionModal({ productId: pid }); return; }
-            if (a === 'campaign') { openCampaignModal({ productId: pid }); return; }
-            if (a === 'discontinue') { var r = products.discontinueProduct(pid); if (r.ok) { ToastService.info('Produk dihentikan.'); Modal.close('product-detail', true); renderAll(); } else ToastService.error(r.reason); return; }
+            var pa = prodAction.dataset.prodAction; var pid = prodAction.dataset.prodId;
+            if (pa === 'open-wizard') { openDesignWizard({ researchSystem: research, osSystem: os, productSystem: products }); return; }
+            if (pa === 'cancel-dev') { var r = products.cancelDevelopment(); if (r.ok) { ToastService.info('Dibatalkan.'); renderAll(); } else ToastService.error(r.reason); return; }
+            if (pa === 'order-prod') { openOrderProductionModal({ productId: pid }); return; }
+            if (pa === 'campaign') { openCampaignModal({ productId: pid }); return; }
+            if (pa === 'discontinue') { var r = products.discontinueProduct(pid); if (r.ok) { ToastService.info('Produk dihentikan.'); Modal.close('product-detail', true); renderAll(); } else ToastService.error(r.reason); return; }
         }
         var prodCard = e.target.closest('[data-prod-detail]');
         if (prodCard && !e.target.closest('[data-prod-action]') && !e.target.closest('[data-auto-toggle]') && !e.target.closest('[data-auto-threshold]')) {
@@ -519,9 +625,9 @@ function bindGlobalClicks() {
         var orderConfirm = e.target.closest('[data-order-confirm]');
         if (orderConfirm) {
             e.preventDefault();
-            var root = document.querySelector('[data-modal-id="order-prod"]');
-            var qty = parseInt(root.querySelector('[data-order-qty]').value, 10) || 0;
-            var res = products.orderProduction(orderConfirm.dataset.prodId, qty);
+            var oRoot = document.querySelector('[data-modal-id="order-prod"]');
+            var oQty = parseInt(oRoot.querySelector('[data-order-qty]').value, 10) || 0;
+            var res = products.orderProduction(orderConfirm.dataset.prodId, oQty);
             if (!res.ok) ToastService.error(res.reason);
             else { ToastService.success('Order dibuat.'); Modal.close('order-prod', true); renderAll(); }
             return;
