@@ -1,5 +1,5 @@
 // FILE: src/services/CloudService.js
-// v2027.39a — Fasad cloud. + listProfiles, getProfileById.
+// v2027.40a — Fasad cloud. + subscribePresence().
 import { bus } from '../core/EventBus.js';
 
 const SLOT_KEY = 'smartphone-empire:cloud-slot';
@@ -214,6 +214,13 @@ export const CloudService = {
         catch (err) { return function () {}; }
     },
 
+    async subscribePresence(meta, onSync) {
+        if (!_adapter || !_userId) return function () {};
+        if (typeof _adapter.subscribePresence !== 'function') return function () {};
+        try { return await _adapter.subscribePresence(_userId, meta, onSync); }
+        catch (err) { return function () {}; }
+    },
+
     async getProfile() {
         if (!_adapter || !_userId || typeof _adapter.getProfile !== 'function') return null;
         try { return await _adapter.getProfile(_userId); } catch (err) { return null; }
@@ -243,9 +250,6 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
-    // ============================================================
-    // PUBLIC PROFILES
-    // ============================================================
     async listProfiles() {
         if (!_adapter) return NOT_CONFIGURED;
         if (!_userId) return NOT_SIGNED_IN;
@@ -262,9 +266,6 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
-    // ============================================================
-    // SILICON
-    // ============================================================
     async getSiliconBalance() {
         if (!_adapter) return NOT_CONFIGURED;
         if (!_userId) return NOT_SIGNED_IN;
