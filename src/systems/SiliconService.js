@@ -3,6 +3,7 @@
 // SiliconService — premium currency "Silicon" (SIL).
 // v2027.5a — tambah applyServerBalance() untuk sinkronisasi cloud.
 // v2027.40 — unlock riset & boost riset pakai SIL (tech + chip), fix boost dev.
+// v2027.41 — percepatan waktu 2x/5x/10x berbayar SIL (batas waktu per 10 SIL); hapus skip7/skip30.
 // ============================================================
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
@@ -10,14 +11,16 @@ import { ToastService } from '../core/ToastService.js';
 import { LOG_TYPES } from '../config/constants.js';
 import { t } from '../core/LanguageService.js';
 import { SILICON_COSTS } from '../data/silicon.data.js';
+import { DEV_BUILD } from '../config/dev.config.js';
+
+// [HARDENING] Kredit SIL hanya sah dari sumber ini (produksi). 'cheat' & lainnya ditolak.
+var ALLOWED_CREDIT = /^(topup:|daily-login$|quest:|refund:|server-sync$)/;
 import { getNodeById } from '../data/research.data.js';
 import { getChipResearchById } from '../data/chip-research.data.js';
 
 var MAX_HISTORY = 20;
 
 export var SILICON_ACTIONS = [
-    { id: 'skip7', group: 'time',        cost: 10, icon: '📅', ready: true },
-    { id: 'skip30', group: 'time',       cost: 40, icon: '🗓️', ready: true },
     { id: 'research', group: 'research',     cost: 20, icon: '🔬', ready: true },
     { id: 'chipResearch', group: 'research', cost: 20, icon: '💠', ready: true },
     { id: 'dev', group: 'production',          cost: 30, icon: '📱', ready: true },
@@ -68,6 +71,7 @@ export var SiliconService = {
     add(amount, reason) {
         amount = Math.floor(amount);
         if (!amount || amount <= 0) return { ok: false, reason: 'Jumlah tidak valid.' };
+        if (!DEV_BUILD && !ALLOWED_CREDIT.test(String(reason || ''))) return { ok: false, reason: 'Sumber kredit tidak sah.' };
         state.data.silicon = (state.data.silicon || 0) + amount;
         _pushHistory('earn', amount, reason || 'reward');
         bus.emit('silicon:changed', { balance: state.data.silicon, delta: amount });
@@ -201,6 +205,45 @@ export var SiliconService = {
         bus.emit('state:changed', state.data);
     },
 
+    // ============================================================
+    // PERCEPATAN WAKTU (2x / 5x / 10x) — bayar SIL, ada batas waktu
+    // ============================================================
+    speedPack(speed) {
+        var cfg = SILICON_COSTS.speed;
+        var p = cfg.packs[speed];
+        return p ? { speed: speed, cost: cfg.cost, seconds: p.seconds } : null;
+    },
+
+    getSpeedBoost() {
+        var g = window.__game;
+        return (g && g.timeSystem) ? g.timeSystem.getBoost() : null;
+    },
+
+    // Beli / perpanjang boost. Kecepatan beda → sisa waktu dikonversi (nilai hari-game tetap).
+    buySpeed(speed) {
+        var cfg = SILICON_COSTS.speed;
+        var pack = this.speedPack(speed);
+        if (!pack) return { ok: false, reason: 'Kecepatan tidak valid.' };
+        var g = window.__game;
+        if (!g || !g.timeSystem) return { ok: false, reason: 'Game belum siap.' };
+
+        var cur = g.timeSystem.getBoost();
+        var carry = cur ? (cur.remainingSec * cur.speed / speed) : 0;
+        var total = carry + pack.seconds;
+        if (total > cfg.maxSeconds) {
+            return { ok: false, reason: 'limit', maxSeconds: cfg.maxSeconds };
+        }
+        if (!this.canAfford(pack.cost)) {
+            return { ok: false, reason: 'Silicon tidak cukup (' + pack.cost + ' SIL).', need: pack.cost };
+        }
+        var sp = this.spend(pack.cost, 'speed:' + speed + 'x');
+        if (!sp.ok) return sp;
+
+        g.timeSystem.activateBoost(speed, total);
+        bus.emit('silicon:action-done', { id: 'speed', cost: pack.cost });
+        return { ok: true, spent: pack.cost, speed: speed, remainingSec: total };
+    },
+
     getHistory() {
         return (state.data.siliconHistory || []).slice();
     },
@@ -220,6 +263,15 @@ export var SiliconService = {
         d.dailyLogin.lastClaimDate = today;
         d.dailyLogin.streak = streak;
         this.add(reward, 'daily-login');
+        // [HARDENING] Saat login cloud, server yang menentukan hadiah harian.
+        try {
+            var cs = window.__game && window.__game.cloud;
+            if (cs && cs.claimDailySilicon) {
+                cs.claimDailySilicon().then(function (r) {
+                    if (r && r.ok) SiliconService.applyServerBalance(r.balance);
+                }).catch(function () {});
+            }
+        } catch (e) {}
         return { ok: true, amount: reward, streak: streak };
     },
 
@@ -269,13 +321,7 @@ export var SiliconService = {
 
         // ---------- Eksekusi ----------
         try {
-            if (actionId === 'skip7') {
-                game.timeSystem.fastForwardDays(7);
-                ToastService.success(t('silicon.msg.skip7') || 'Time skip +7 days.');
-            } else if (actionId === 'skip30') {
-                game.timeSystem.fastForwardDays(30);
-                ToastService.success(t('silicon.msg.skip30') || 'Time skip +30 days.');
-            } else if (actionId === 'research') {
+            if (actionId === 'research') {
                 var nodes = (state.data.research.active || []).map(function (r) { return r.nodeId; });
                 nodes.forEach(function (nodeId) {
                     if (game.research) game.research.boostResearch(nodeId, Infinity);
