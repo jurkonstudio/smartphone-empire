@@ -43,7 +43,7 @@ import { initGameOverScreen } from './ui/panels/GameOverScreen.js';
 import { Modal } from './ui/modal.js';
 import { mountAdvisorButton } from './ui/panels/AdvisorPanel.js';
 import { renderResearchPanel, setFilterCategory, setTimelineFilter, getChipResearchFilter, setChipResearchFilter, openNodeDetailModal, openOsWizardModal, openCreateOsModal, openFeatureDetailModal, openChipNodeModal } from './ui/panels/ResearchPanel.js';
-import { renderProductPanel, openProductDetailModal, openCampaignModal, openOrderProductionModal } from './ui/panels/ProductPanel.js';
+import { renderProductPanel, setCatalogView, openProductDetailModal, openCampaignModal, openOrderProductionModal } from './ui/panels/ProductPanel.js';
 import { openDesignWizard } from './ui/panels/DesignWizard.js';
 import { renderMarketPanel, drawShareChart } from './ui/panels/MarketPanel.js';
 import { openCompetitorDetailModal } from './ui/panels/CompetitorDetailModal.js';
@@ -358,6 +358,20 @@ function _updateSellTotal() {
     el.textContent = '$' + (priceUSD * qty).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// Render ulang halaman + modal detail produk bila sedang terbuka
+// (perbaikan: toggle auto-restock di modal tidak terlihat berubah).
+function _refreshProductUi(productId) {
+    var modalOpen = Modal.isOpen('product-detail');
+    renderAll();
+    if (modalOpen) {
+        var body = document.querySelector('[data-modal-id="product-detail"] .modal-card');
+        var scroll = body ? body.scrollTop : 0;
+        openProductDetailModal({ productId: productId, productSystem: products });
+        var nb = document.querySelector('[data-modal-id="product-detail"] .modal-card');
+        if (nb) nb.scrollTop = scroll;
+    }
+}
+
 // ============ CLICKS ============
 function bindGlobalClicks() {
     document.body.addEventListener('input', function (e) {
@@ -391,11 +405,18 @@ function bindGlobalClicks() {
         if (autoToggle) {
             e.preventDefault(); vibrate(8);
             var p = state.get().products.catalog.find(function (x) { return x.id === autoToggle.dataset.prodId; });
-            if (p) { products.toggleAutoRestock(p.id, !(p.autoRestock && p.autoRestock.enabled)); renderAll(); }
+            if (p) {
+                products.toggleAutoRestock(p.id, !(p.autoRestock && p.autoRestock.enabled));
+                _refreshProductUi(p.id);
+            }
             return;
         }
         var autoThresh = e.target.closest('[data-auto-threshold]');
-        if (autoThresh) { e.preventDefault(); vibrate(6); products.setAutoRestockThreshold(autoThresh.dataset.prodId, parseInt(autoThresh.dataset.autoThreshold, 10) || 20); renderAll(); return; }
+        if (autoThresh) { e.preventDefault(); vibrate(6); products.setAutoRestockThreshold(autoThresh.dataset.prodId, parseInt(autoThresh.dataset.autoThreshold, 10) || 20); _refreshProductUi(autoThresh.dataset.prodId); return; }
+        var catFilter = e.target.closest('[data-catalog-filter]');
+        if (catFilter) { e.preventDefault(); setCatalogView('filter', catFilter.dataset.catalogFilter); renderAll(); return; }
+        var catSort = e.target.closest('[data-catalog-sort]');
+        if (catSort) { e.preventDefault(); setCatalogView('sort', catSort.dataset.catalogSort); renderAll(); return; }
 
         var chipAction = e.target.closest('[data-chip-action]');
         if (chipAction) {
