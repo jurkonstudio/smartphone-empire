@@ -12,7 +12,7 @@
 
 // Ubah ke true SAAT DEVELOPMENT SAJA.
 // Sebelum build APK, pastikan false.
-export const DEV_BUILD = true;
+export const DEV_BUILD = false;
 
 const STORAGE_KEY = 'se_devmode';
 
