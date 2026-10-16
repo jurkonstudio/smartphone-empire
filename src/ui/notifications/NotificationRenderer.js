@@ -69,7 +69,12 @@ function calcDuration(payload, msg) {
 function ensureStyle() {
     if (typeof document === 'undefined' || document.getElementById('ni-style')) return;
     var css = [
-        '.toast-container{animation:none!important;gap:8px}',
+        '.toast-container{animation:none!important;gap:8px;',
+        'top:calc(var(--ni-top,0px) + 8px)!important;max-height:calc(100vh - var(--ni-top,0px) - 16px);overflow:visible}',
+        '.ni{flex:0 0 auto}',
+        '.ni.ni-collapse{max-height:0!important;margin-top:0!important;margin-bottom:-8px!important;padding-top:0!important;',
+        'padding-bottom:0!important;border-width:0!important;box-shadow:none!important;',
+        'transition:max-height .26s ease,margin .26s ease,padding .26s ease,border-width .26s ease,opacity .24s ease,transform .24s ease}',
         '.ni{position:relative;box-sizing:border-box;width:100%;max-width:calc(100vw - 24px);margin:0 auto;',
         '--ni-rgb:10,132,255;background:rgba(12,12,14,.94);-webkit-backdrop-filter:blur(18px) saturate(1.4);',
         'backdrop-filter:blur(18px) saturate(1.4);color:#fff;border-radius:22px;padding:9px 10px 12px 10px;',
@@ -126,6 +131,20 @@ function ensureStyle() {
     document.head.appendChild(el);
 }
 
+// ------------------------------------------------------------ posisi
+
+function updateTop(container) {
+    var h = document.getElementById('app-header');
+    var top = 0;
+    if (h) {
+        var r = h.getBoundingClientRect();
+        if (r.height > 0) top = Math.max(0, Math.round(r.bottom));
+    }
+    container.style.setProperty('--ni-top', top + 'px');
+}
+
+var _resizeBound = false;
+
 // ------------------------------------------------------------ timer
 
 function startTimer(entry, ms) {
@@ -176,6 +195,9 @@ function removeEntry(entry, dir) {
     n.style.transform = dir === 'left' ? 'translateX(-110%)'
         : dir === 'right' ? 'translateX(110%)'
         : 'translateY(-24px) scale(.94)';
+    n.style.maxHeight = n.offsetHeight + 'px';
+    void n.offsetHeight;
+    n.classList.add('ni-collapse');
     setTimeout(function () {
         if (n.parentNode) n.parentNode.removeChild(n);
     }, OUT_MS + 40);
@@ -268,6 +290,11 @@ function bumpEntry(entry, payload, msg) {
 export function renderNotification(container, payload) {
     if (!container || !payload) return;
     ensureStyle();
+    updateTop(container);
+    if (!_resizeBound) {
+        _resizeBound = true;
+        window.addEventListener('resize', function () { updateTop(container); });
+    }
 
     var type = normalizeType(payload.type);
     var msg = String(payload.message || '');
