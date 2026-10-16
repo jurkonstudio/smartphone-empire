@@ -1,18 +1,14 @@
 // FILE: src/ui/panels/HomePanel.js
+// v2027.43 — Focus tab: live sales chart (30 hari), gaya selaras CashChart.
 // v2027.42 — Focus tab: live sales chart (30 hari) real-time.
 // v2027.41a — Layout Home: peta 3D mengisi layar + dock (tab berlabel & carousel).
-//   • Tab diberi label + badge (sebelumnya hanya titik kecil di paling bawah).
-//   • Dock bisa diciutkan supaya peta 3D lega penuh.
-//   • Carousel tetap native scroll-snap (tanpa JS swipe handler).
 import { t } from '../../core/LanguageService.js';
 import { bus } from '../../core/EventBus.js';
 import { TIME_CONFIG } from '../../config/time.config.js';
 import { renderCampusLoading } from '../campus/CampusFallback.js';
 import { renderNewsListPanel } from './NewsListPanel.js';
 import { renderLogPanel } from './LogPanel.js';
-// [v2027.42] renderProgressPanel tidak lagi dipakai — focus tab sekarang
-// menampilkan chart penjualan live. File ProgressPanel.js tetap ada di repo.
-// import { renderProgressPanel } from './ProgressPanel.js';
+// [v2027.42] renderProgressPanel tidak dipakai di focus tab.
 
 const TABS = ['focus', 'news', 'activity'];
 
@@ -49,16 +45,8 @@ function _syncBodyClass() {
     document.body.classList.toggle('home-dock-collapsed', _dockCollapsed);
 }
 
-function _fmtMoneyShort(v) {
-    if (v >= 1e9) return (v / 1e9).toFixed(1) + 'B';
-    if (v >= 1e6) return (v / 1e6).toFixed(1) + 'M';
-    if (v >= 1e3) return (v / 1e3).toFixed(0) + 'K';
-    return String(Math.round(v));
-}
-
 // ============================================================
 // SALES DATA AGGREGATION
-// Agregasi dailySales dari semua produk ke bucket per game-day.
 // dailySales entry: { day: elapsedGameMinutes, sold, revenue }
 // ============================================================
 function _aggregateDailySales(state, daysBack) {
@@ -100,50 +88,41 @@ function _renderFocusSlide(state) {
 
     const delta = today.revenue - yest.revenue;
     let deltaLabel = '—';
-    let deltaClass = 'flat';
     let deltaColor = 'var(--text-mute)';
     if (yest.revenue > 0) {
         const pct = (delta / yest.revenue) * 100;
         deltaLabel = (delta >= 0 ? '+' : '') + pct.toFixed(1) + '%';
-        deltaClass = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat';
         deltaColor = delta > 0 ? 'var(--accent)' : delta < 0 ? 'var(--danger)' : 'var(--text-mute)';
     } else if (today.revenue > 0) {
         deltaLabel = 'NEW';
-        deltaClass = 'up';
         deltaColor = 'var(--accent)';
     }
 
-    const headBg = 'background:linear-gradient(135deg, rgba(76,175,80,0.10), rgba(76,175,80,0.02));';
-    const amtColor = 'var(--accent)';
-
     return '' +
-        '<div class="card" style="' + headBg + '">' +
-            '<div class="card-title" style="color:var(--text-secondary);">' + t('home.focus.sales_title') + '</div>' +
-            '<div style="display:flex;align-items:baseline;gap:10px;margin-top:2px;">' +
-                '<div style="font-size:30px;font-weight:800;color:' + amtColor + ';letter-spacing:-0.02em;line-height:1.1;">' +
+        '<div class="card">' +
+            '<div class="card-title">' + t('home.focus.sales_title') + '</div>' +
+            '<div style="display:flex;align-items:baseline;gap:8px;margin-top:2px;">' +
+                '<div style="font-size:22px;font-weight:600;color:var(--accent);letter-spacing:-0.01em;line-height:1.15;">' +
                     '$' + Math.round(today.revenue).toLocaleString('en-US') +
                 '</div>' +
-                '<div style="font-size:13px;font-weight:600;color:' + deltaColor + ';">' + deltaLabel + '</div>' +
+                '<div style="font-size:12px;font-weight:500;color:' + deltaColor + ';">' + deltaLabel + '</div>' +
             '</div>' +
-            '<div style="font-size:11.5px;color:var(--text-mute);margin-top:4px;">' +
+            '<div style="font-size:11px;color:var(--text-mute);margin-top:2px;">' +
                 t('home.focus.today') + ' · ' + today.sold.toLocaleString('en-US') + ' ' + t('home.focus.units') +
             '</div>' +
-            '<div class="chart-wrap" style="height:160px;position:relative;margin-top:10px;">' +
-                '<canvas data-sales-live-canvas style="width:100%;height:160px;display:block;"></canvas>' +
+            '<div class="chart-wrap" style="position:relative;margin-top:8px;">' +
+                '<canvas data-sales-live-canvas></canvas>' +
             '</div>' +
-            '<div style="display:flex;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);">' +
+            '<div style="display:flex;justify-content:space-between;gap:10px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);">' +
                 '<div style="flex:1;">' +
-                    '<div style="font-size:10.5px;color:var(--text-mute);letter-spacing:.04em;">' + t('home.focus.total30') + '</div>' +
-                    '<div style="font-size:14px;font-weight:700;color:var(--text);margin-top:2px;">$' + Math.round(total30).toLocaleString('en-US') + '</div>' +
+                    '<div style="font-size:10px;color:var(--text-mute);letter-spacing:.04em;">' + t('home.focus.total30') + '</div>' +
+                    '<div style="font-size:13px;font-weight:600;color:var(--text);margin-top:2px;">$' + Math.round(total30).toLocaleString('en-US') + '</div>' +
                 '</div>' +
                 '<div style="flex:1;text-align:right;">' +
-                    '<div style="font-size:10.5px;color:var(--text-mute);letter-spacing:.04em;">' + t('home.focus.units30') + '</div>' +
-                    '<div style="font-size:14px;font-weight:700;color:var(--text);margin-top:2px;">' + units30.toLocaleString('en-US') + '</div>' +
+                    '<div style="font-size:10px;color:var(--text-mute);letter-spacing:.04em;">' + t('home.focus.units30') + '</div>' +
+                    '<div style="font-size:13px;font-weight:600;color:var(--text);margin-top:2px;">' + units30.toLocaleString('en-US') + '</div>' +
                 '</div>' +
             '</div>' +
-            '<button class="btn-secondary" data-nav="research" style="width:100%;margin-top:12px;">' +
-                t('home.focus.open_research') +
-            '</button>' +
         '</div>';
 }
 
@@ -157,7 +136,7 @@ function _drawSalesLiveChart(canvas) {
 
     const container = canvas.parentElement;
     const cssW = (container && container.clientWidth) || 320;
-    const cssH = 160;
+    const cssH = 120;
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.max(1, Math.floor(cssW * dpr));
     canvas.height = Math.max(1, Math.floor(cssH * dpr));
@@ -168,19 +147,20 @@ function _drawSalesLiveChart(canvas) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cssW, cssH);
 
-    const padL = 42, padR = 8, padT = 12, padB = 16;
-    const plotW = Math.max(1, cssW - padL - padR);
-    const plotH = Math.max(1, cssH - padT - padB);
+    const values = series.map(function (s) { return s.revenue; });
+    const minV = Math.min.apply(null, values.concat([0]));
+    const maxV = Math.max.apply(null, values.concat([1]));
+    const range = Math.max(1, maxV - minV);
 
-    let maxV = 0;
-    series.forEach(function (s) { if (s.revenue > maxV) maxV = s.revenue; });
-    if (maxV <= 0) maxV = 1;
-    maxV *= 1.18;
+    // Padding identik CashChart: minim kiri (tanpa label Y panjang).
+    const padL = 6, padR = 6, padT = 10, padB = 18;
+    const plotW = cssW - padL - padR;
+    const plotH = cssH - padT - padB;
 
     const xOf = function (i) { return padL + (plotW * i) / Math.max(1, series.length - 1); };
-    const yOf = function (v) { return padT + plotH - (v / maxV) * plotH; };
+    const yOf = function (v) { return padT + plotH - ((v - minV) / range) * plotH; };
 
-    // Horizontal grid lines
+    // Grid horizontal (subtle).
     ctx.strokeStyle = 'rgba(255,255,255,0.06)';
     ctx.lineWidth = 1;
     for (let i = 1; i <= 3; i++) {
@@ -191,55 +171,40 @@ function _drawSalesLiveChart(canvas) {
         ctx.stroke();
     }
 
-    // Y-axis labels
-    ctx.fillStyle = '#6a6a6a';
-    ctx.font = '10px sans-serif';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('$' + _fmtMoneyShort(maxV), padL - 4, padT + 6);
-    ctx.fillText('$' + _fmtMoneyShort(maxV / 2), padL - 4, padT + plotH / 2);
-    ctx.fillText('$0', padL - 4, padT + plotH);
-
-    // Area gradient under line
-    const grad = ctx.createLinearGradient(0, padT, 0, padT + plotH);
-    grad.addColorStop(0, 'rgba(76,175,80,0.42)');
-    grad.addColorStop(1, 'rgba(76,175,80,0.02)');
-    ctx.beginPath();
-    ctx.moveTo(xOf(0), padT + plotH);
-    series.forEach(function (s, i) { ctx.lineTo(xOf(i), yOf(s.revenue)); });
-    ctx.lineTo(xOf(series.length - 1), padT + plotH);
-    ctx.closePath();
-    ctx.fillStyle = grad;
-    ctx.fill();
-
-    // Line
+    // Garis data.
+    ctx.strokeStyle = '#4CAF50';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
     ctx.beginPath();
     series.forEach(function (s, i) {
         const x = xOf(i), y = yOf(s.revenue);
         if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     });
-    ctx.strokeStyle = '#4CAF50';
-    ctx.lineWidth = 2.2;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
     ctx.stroke();
 
-    // Today dot
-    const last = series[series.length - 1];
-    const lx = xOf(series.length - 1);
-    const ly = yOf(last.revenue);
-    if (lx > padL && lx < cssW - padR) {
-        ctx.beginPath();
-        ctx.arc(lx, ly, 5, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(76,175,80,0.25)';
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(lx, ly, 3, 0, Math.PI * 2);
-        ctx.fillStyle = '#4CAF50';
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1.4;
-        ctx.stroke();
+    // Area gradient (halus, identik CashChart).
+    const grad = ctx.createLinearGradient(0, padT, 0, padT + plotH);
+    grad.addColorStop(0, 'rgba(76,175,80,0.18)');
+    grad.addColorStop(1, 'rgba(76,175,80,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    series.forEach(function (s, i) {
+        const x = xOf(i), y = yOf(s.revenue);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.lineTo(xOf(series.length - 1), padT + plotH);
+    ctx.lineTo(xOf(0), padT + plotH);
+    ctx.closePath();
+    ctx.fill();
+
+    // Label Y: hanya max (atas) & min (bawah), font regular (bukan bold).
+    ctx.fillStyle = '#6a6a6a';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('$' + Math.round(maxV).toLocaleString('en-US'), padL + 2, padT + 10);
+    if (minV > 0) {
+        ctx.fillText('$' + Math.round(minV).toLocaleString('en-US'), padL + 2, padT + plotH - 2);
     }
 }
 
@@ -339,7 +304,6 @@ export function initHomeTabs(rootEl) {
     _syncBodyClass();
     _bindHomeEvents();
 
-    // Tap tab → pindah slide (kalau dock sedang diciutkan, bentangkan dulu)
     rootEl.querySelectorAll('[data-home-tab]').forEach(function (btn) {
         btn.addEventListener('click', function () {
             if (_dockCollapsed) _setCollapsed(rootEl, false);
@@ -347,7 +311,6 @@ export function initHomeTabs(rootEl) {
         });
     });
 
-    // Tombol ciutkan / bentangkan
     const toggle = rootEl.querySelector('[data-home-dock-toggle]');
     if (toggle) {
         toggle.addEventListener('click', function () {
@@ -355,10 +318,8 @@ export function initHomeTabs(rootEl) {
         });
     }
 
-    // Sinkronkan tab aktif saat user swipe manual
     _bindScrollObserver(carousel);
 
-    // Posisi awal tanpa animasi (mis. setelah render ulang)
     requestAnimationFrame(function () {
         _snapToActive(carousel);
         _drawSalesChartIfFocus();
@@ -442,7 +403,7 @@ function _updateTabs(carousel) {
 }
 
 // ============================================================
-// REFRESH — isi slide diperbarui, posisi scroll vertikal dipertahankan
+// REFRESH
 // ============================================================
 export function refreshHomeSlides() {
     const root = document.querySelector('.home-wrapper');
@@ -467,7 +428,6 @@ export function refreshHomeSlides() {
         badge.hidden = n === 0;
     }
 
-    // [v2027.42] Redraw canvas setelah innerHTML di-replace.
     if (_activeTab === 'focus') requestAnimationFrame(_drawSalesChartIfFocus);
 }
 
