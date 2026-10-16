@@ -17,7 +17,7 @@ import { getHeadlineForMonth, MONTHLY_HEADLINES } from '../data/news-headlines.d
 import { getPrehistoryHeadlines, PREHISTORY_HEADLINES } from '../data/news-prehistory.data.js';
 import { MONTHLY_HEADLINES_EN } from '../data/news-headlines.en.js';
 import { PREHISTORY_HEADLINES_EN } from '../data/news-prehistory.en.js';
-import { LanguageService } from '../core/LanguageService.js';
+import { LanguageService, t } from '../core/LanguageService.js';
 import { getCompetitorReleasesForMonth, getReleaseDay } from '../data/news-competitor-releases.data.js';
 import { getActiveCompetitors, getCompetitorById } from '../data/competitors.data.js';
 
@@ -313,7 +313,7 @@ function _makeCompetitorReleaseArticle(e, day) {
         try { var c = getDatelineForRegion(outlet.region); if (c) dateline = c; } catch (err2) { /* diamkan */ }
     }
     var text = en ? e.t_en : e.t;
-    if (e.speculative) text += en ? ' (Unconfirmed report.)' : ' (Laporan belum terkonfirmasi.)';
+    if (e.speculative) text += ' ' + t('news.unconfirmed');
 
     return {
         id: e.id,
@@ -593,7 +593,7 @@ if (!h) return;
             _trimArticles(data.news.articles, MAX_ARTICLES);
             for (var p = 0; p < published.length; p++) {
                 bus.emit('news:published', { article: published[p] });
-                state.addLog('Berita industri: ' + published[p].headline, LOG_TYPES.info);
+                state.addLog(t('news.industry_log', { headline: published[p].headline }), LOG_TYPES.info);
             }
             bus.emit('state:changed', data);
         } catch (err) {
