@@ -47,6 +47,12 @@ export function renderMarketPanel(params) {
 // ============================================================
 // SUB-TAB PANGSA
 // ============================================================
+// [v2027.4] Pangsa kecil (<1%) ditampilkan 2 desimal supaya tidak terlihat "0.0%".
+function _pct(v) {
+    const p = (v || 0) * 100;
+    return (Math.abs(p) > 0 && Math.abs(p) < 1 ? p.toFixed(2) : p.toFixed(1)) + '%';
+}
+
 function _renderShare(marketSystem) {
     const data = window.__game.state.get();
     const share = data.market.share || 0;
@@ -60,8 +66,8 @@ function _renderShare(marketSystem) {
         <div class="card">
             <div class="card-title">${t('market.share.title')}</div>
             <div style="display:flex;align-items:baseline;gap:10px;">
-                <div style="font-size:28px;font-weight:800;color:var(--accent);">${(share * 100).toFixed(1)}%</div>
-                <div style="font-size:13px;color:${arrowColor};">${arrow} ${Math.abs(delta * 100).toFixed(1)}%</div>
+                <div style="font-size:28px;font-weight:800;color:var(--accent);">${_pct(share)}</div>
+                <div style="font-size:13px;color:${arrowColor};">${arrow} ${_pct(Math.abs(delta))}</div>
             </div>
             <div style="font-size:11.5px;color:var(--text-mute);margin-top:4px;">${t('market.share.updated')}</div>
         </div>
@@ -70,7 +76,7 @@ function _renderShare(marketSystem) {
             <div class="card-title">${t('market.share.rank_title')}</div>
             <div class="sum-row">
                 <span><b style="color:var(--accent);">${t('market.share.you')}</b></span>
-                <b>${(share * 100).toFixed(1)}%</b>
+                <b>${_pct(share)}</b>
             </div>
             ${competitors.slice().sort(function (a, b) { return b.share - a.share; }).map(function (c) {
                 return '<div class="sum-row"><span>' + escapeHtml(c.name) + '</span><b>' + (c.share * 100).toFixed(1) + '%</b></div>';
