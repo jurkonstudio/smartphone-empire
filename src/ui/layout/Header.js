@@ -35,6 +35,7 @@ export function renderHeader({ state, timeSnapshot, warning }) {
                     <button class="header-silicon" data-silicon-open type="button" aria-label="Silicon">
                         <span class="header-silicon-ico">💎</span>
                         <span class="header-silicon-value" data-silicon-value>${silicon}</span>
+                        <span class="header-silicon-plus" aria-hidden="true">+</span>
                     </button>
                 </div>
             </div>
