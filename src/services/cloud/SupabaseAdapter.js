@@ -1,5 +1,5 @@
 // FILE: src/services/cloud/SupabaseAdapter.js
-// v2027.40a — Adapter Supabase. + subscribePresence() untuk online indicator.
+// v2027.42 — Adapter Supabase. + profil pemain (leaderboard, foto, rpcSyncProfile).
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_LIB_URLS, CLOUD } from './supabase.config.js';
 
 var _client = null;
@@ -257,11 +257,14 @@ export const SupabaseAdapter = {
         return res.data;
     },
 
-    listProfiles: async function () {
+    // orderBy: 'revenue' | 'sold' | 'reputation' | 'share' | 'recent'
+    listProfiles: async function (orderBy) {
+        var cols = { revenue: 'stat_revenue', sold: 'stat_sold', reputation: 'stat_reputation', share: 'stat_share', recent: 'updated_at' };
+        var col = cols[orderBy] || cols.revenue;
         var c = await getClient();
         var res = await c.from('public_profiles')
-            .select('id, display_name, avatar_path, company_name, founded_year, founded_month, game_minutes, updated_at')
-            .order('updated_at', { ascending: false })
+            .select('id, display_name, avatar_path, company_name, founded_year, founded_month, game_minutes, updated_at, stat_revenue, stat_sold, stat_reputation, stat_share')
+            .order(col, { ascending: false, nullsFirst: false })
             .limit(100);
         if (res.error) throw mk(res.error);
         return res.data || [];
@@ -270,7 +273,7 @@ export const SupabaseAdapter = {
     getProfileById: async function (id) {
         var c = await getClient();
         var res = await c.from('public_profiles')
-            .select('id, display_name, avatar_path, company_name, founded_year, founded_month, game_minutes, updated_at, created_at')
+            .select('id, display_name, avatar_path, company_name, founded_year, founded_month, game_minutes, updated_at, created_at, stat_revenue, stat_sold, stat_reputation, stat_share')
             .eq('id', id)
             .maybeSingle();
         if (res.error) throw mk(res.error);
@@ -292,6 +295,20 @@ export const SupabaseAdapter = {
         var res = await c.storage.from(CLOUD.buckets.player).createSignedUrl(path, expiresSec || 3600);
         if (res.error) throw mk(res.error);
         return res.data.signedUrl;
+    },
+
+    getPlayerAssetUrls: async function (paths, expiresSec) {
+        var c = await getClient();
+        var res = await c.storage.from(CLOUD.buckets.player).createSignedUrls(paths, expiresSec || 3600);
+        if (res.error) throw mk(res.error);
+        return res.data || [];
+    },
+
+    rpcSyncProfile: async function (fields) {
+        var c = await getClient();
+        var res = await c.rpc('sync_player_profile', fields);
+        if (res.error) throw mk(res.error);
+        return true;
     },
 
     getGameAssetUrl: async function (path) {
