@@ -1,11 +1,13 @@
 // FILE: src/ui/layout/Header.js
 // v2027.18a — wallet: cash + silicon button.
 // v2027.41 — chip countdown boost percepatan (data-time-boost).
+// v2027.44 — ketuk nama perusahaan = buka Pusat Notifikasi (profil & nama ada di Pengaturan).
 import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 ensureIconStyles();
 import { generateLogo } from '../avatars/AvatarGenerator.js';
 import { t } from '../../core/LanguageService.js';
 import { formatCurrency } from '../../utils/format.js';
+import { getUnreadCount, isNotificationPanelOpen } from '../notifications/NotificationRenderer.js';
 
 export function renderHeader({ state, timeSnapshot, warning }) {
     const time = timeSnapshot;
@@ -22,6 +24,10 @@ export function renderHeader({ state, timeSnapshot, warning }) {
     const warnBadge = warning ? `<span class="header-warn">⚠ ${warning}</span>` : '';
     const pauseAria = time.isPaused ? t('header.play_aria') : t('header.pause_aria');
 
+    const unread = getUnreadCount();
+    const unreadTxt = unread > 99 ? '99+' : String(unread);
+    const notifOpen = isNotificationPanelOpen();
+
     const silicon = state.silicon != null ? state.silicon : 0;
 
     const sb = state.speedBoost;
@@ -34,10 +40,11 @@ export function renderHeader({ state, timeSnapshot, warning }) {
     return `
         <div class="header-inner">
             <div class="header-row">
-                <button class="header-company-btn" data-nav="profile" aria-label="${t('header.company_aria')}">
+                <button class="header-company-btn" data-notif-toggle type="button" aria-haspopup="dialog" aria-expanded="${notifOpen}" aria-label="${t('header.notif_aria')}">
                     ${generateLogo(state.companyName, { size: 26 })}
                     <span class="header-company">${state.companyName}</span>
-                    <span class="header-chevron">›</span>
+                    <span class="header-notif-badge" data-notif-badge ${unread > 0 ? '' : 'hidden'}>${unread > 0 ? unreadTxt : ''}</span>
+                    <span class="header-chevron" aria-hidden="true">›</span>
                 </button>
                 ${warnBadge}
                 <div class="header-wallet">
