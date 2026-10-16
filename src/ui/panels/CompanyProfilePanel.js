@@ -3,6 +3,7 @@
 //   Perusahaan: ringkasan, KPI, kondisi (meter), milestone, cloud.
 //   Pemain    : foto + nama pemain, ganti nama perusahaan (gratis 2x lalu 150 SIL),
 //               statistik leaderboard, tombol leaderboard.
+import { gIcon } from '../icons/GameIcons.js';
 import { t } from '../../core/LanguageService.js';
 import { CloudService } from '../../services/CloudService.js';
 import { getCloudSummary, openCloudPanel } from '../../services/cloud/CloudUI.js';
@@ -168,7 +169,7 @@ function _playerTab(params) {
     var playerName = player.displayName || t('pp.player.default_name');
 
     var badge = info.cost > 0
-        ? '<span class="pf-badge pf-badge-sil">💎 ' + esc(t('pp.company.paid_badge', { cost: info.cost })) + '</span>'
+        ? '<span class="pf-badge pf-badge-sil">' + gIcon('sil', 13) + ' ' + esc(t('pp.company.paid_badge', { cost: info.cost })) + '</span>'
         : '<span class="pf-badge pf-badge-free">' + esc(t('pp.company.free_left', { n: info.freeLeft })) + '</span>';
 
     var hero =
@@ -179,7 +180,7 @@ function _playerTab(params) {
             '<div class="pf-player-name">' + esc(playerName) + '</div>' +
             '<div class="pf-player-company">' + renderIcon('building', 12) + '<span>' + esc(data.companyName) + '</span></div>' +
             '<div class="pf-tags pf-tags-center">' +
-                '<span class="pf-tag">💎 ' + esc(info.balance) + ' SIL</span>' +
+                '<span class="pf-tag">' + gIcon('sil', 13) + ' ' + esc(info.balance) + ' SIL</span>' +
                 '<span class="pf-tag"><i style="background:' + (connected ? 'var(--success)' : 'var(--text-tertiary)') + ';"></i>' +
                     esc(t(connected ? 'profile.cloud_connected' : 'profile.cloud_disconnected')) + '</span>' +
             '</div>' +

@@ -1,5 +1,6 @@
 // FILE: src/ui/panels/SiliconStorePanel.js
 // Modal Top Up Silicon: paket + slot metode pembayaran + riwayat order.
+import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 import { Modal } from '../modal.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
 import { SiliconService } from '../../systems/SiliconService.js';
@@ -36,7 +37,7 @@ function _renderPackages() {
         var tag = p.tag ? '<span class="sil-pkg-tag sil-pkg-tag-' + p.tag + '">' + _tf('silicon.store.tag.' + p.tag, p.tag) + '</span>' : '';
         return '<button type="button" class="sil-pkg' + (_sel.pkg === p.id ? ' active' : '') + '" data-sil-pkg="' + p.id + '">' +
             tag +
-            '<span class="sil-pkg-ico">' + p.icon + '</span>' +
+            '<span class="sil-pkg-ico">' + gIcon(p.icon, 20) + '</span>' +
             '<span class="sil-pkg-amt">' + p.sil + '</span>' +
             '<span class="sil-pkg-bonus">' + (p.bonus ? '+' + p.bonus + ' ' + _tf('silicon.store.bonus', 'bonus') : '&nbsp;') + '</span>' +
             '<span class="sil-pkg-price">' + _price(p) + '</span>' +
@@ -57,7 +58,7 @@ function _renderMethods(methods) {
                 : '<span class="sil-badge">' + _tf('silicon.store.soon', 'Segera') + '</span>';
             return '<button type="button" class="sil-method' + (_sel.method === m.id ? ' active' : '') + (avail ? '' : ' is-soon') + '" ' +
                 'data-sil-method="' + m.id + '"' + (avail ? '' : ' disabled') + '>' +
-                '<span class="sil-method-ico">' + (m.icon || '•') + '</span>' +
+                '<span class="sil-method-ico">' + gIcon(m.icon || 'wallet', 18) + '</span>' +
                 '<span class="sil-method-name">' + _esc(m.name) + '</span>' +
                 badge +
                 '<span class="sil-radio"></span>' +
@@ -98,7 +99,7 @@ function _build() {
     var canPay = !!_sel.method && !_sel.busy;
 
     var html =
-        '<div class="modal-title">💎 ' + _tf('silicon.store.title', 'Top Up Silicon') + '</div>' +
+        '<div class="modal-title g-ico-title">' + gIcon('sil', 20) + '<span>' + _tf('silicon.store.title', 'Top Up Silicon') + '</span></div>' +
         '<div class="modal-sub">' + _tf('silicon.store.sub', 'Pilih paket dan metode pembayaran.') + '</div>' +
 
         '<div class="sil-balance sil-balance-compact">' +
@@ -179,6 +180,7 @@ function _render() {
 }
 
 export function openSiliconStoreModal() {
+    ensureIconStyles();
     Modal.open(MODAL_ID, _build());
     var root = document.querySelector('[data-modal-id="' + MODAL_ID + '"]');
     if (root) root.addEventListener('click', _onClick);
