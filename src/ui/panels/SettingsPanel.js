@@ -1,5 +1,6 @@
 // FILE: src/ui/panels/SettingsPanel.js
-// v2027.37a — + row "Pemain Online" di tab Umum.
+// v2027.42 — hero baru (foto pemain), tab Umum tersusun (Akun & Profil / Permainan / Komunitas / Bantuan),
+//            ganti nama perusahaan lewat ProfileEditModals (gratis 2x, lalu 150 SIL).
 import { state } from '../../core/GameState.js';
 import { SaveService } from '../../core/SaveService.js';
 import { ToastService } from '../../core/ToastService.js';
@@ -12,10 +13,15 @@ import { THEMES, ACCENTS } from '../../data/theme.data.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { APP_CONFIG } from '../../config/app.config.js';
 import { SUPPORTED_LANGS } from '../../data/i18n/index.js';
-import { validateCompanyName } from '../../data/name-blocklist.data.js';
 import { formatCurrency } from '../../utils/format.js';
 import { renderDebugSection, bindDebugActions } from './DebugPanel.js';
 import { openPlayerListModal } from '../social/PlayerListPanel.js';
+import { avatarHtml } from '../social/AvatarView.js';
+import { openEditCompanyNameModal } from '../social/ProfileEditModals.js';
+import { setProfileTab } from './CompanyProfilePanel.js';
+import { openCloudPanel } from '../../services/cloud/CloudUI.js';
+import { CloudService } from '../../services/CloudService.js';
+import { PlayerProfileService } from '../../systems/PlayerProfileService.js';
 
 let _activeTab = 'umum';
 let _boundRoot = null;
@@ -39,45 +45,34 @@ function escapeHtml(s) {
             .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
-function _reasonToKey(reason) {
-    switch (reason) {
-        case 'empty':      return 'settings.edit_name.error_empty';
-        case 'too_short':  return 'settings.edit_name.error_too_short';
-        case 'too_long':   return 'settings.edit_name.error_long';
-        case 'competitor': return 'settings.edit_name.error_competitor';
-        case 'brand':      return 'settings.edit_name.error_brand';
-        case 'profanity':  return 'settings.edit_name.error_profanity';
-        default:           return 'settings.edit_name.error_profanity';
-    }
-}
-
 export function renderSettingsPanel() {
     const s = state.get();
     return _heroCard(s) + _tabBar() + _tabContent(s);
 }
 
 function _heroCard(s) {
-    const time = s.time || {};
-    const monthShort = MONTH_SHORT[(time.currentMonth || 1) - 1] || '';
-    const founded = time.currentDay + ' ' + monthShort + ' ' + time.currentYear;
-    const diffKey = 'settings.difficulty.' + (s.difficulty || 'normal');
-    const diffLabel = t(diffKey);
+    const diffLabel = t('settings.difficulty.' + (s.difficulty || 'normal'));
     const rep = (s.market && typeof s.market.reputation === 'number') ? s.market.reputation : 0;
     const team = s.team ? ((s.team.engineers || 0) + (s.team.designers || 0) + (s.team.marketers || 0)) : 0;
-    const initial = (s.companyName || 'M').charAt(0).toUpperCase();
+    const player = PlayerProfileService.getPlayer();
+    const playerName = player.displayName || t('pp.player.default_name');
+    const companyName = s.companyName || 'My Tech Co';
 
     return '<div class="settings-hero">' +
-        '<div class="settings-hero-top">' +
-            '<div class="settings-hero-logo">' + escapeHtml(initial) + '</div>' +
+        '<button class="settings-hero-top settings-hero-link" data-set="player-profile" type="button">' +
+            avatarHtml({ src: player.avatar, name: player.displayName || companyName, size: 52 }) +
             '<div class="settings-hero-info">' +
-                '<div class="settings-hero-name">' + escapeHtml(s.companyName || 'My Tech Co') + '</div>' +
-                '<div class="settings-hero-meta">' + escapeHtml(t('settings.row.founded')) + ' ' + escapeHtml(founded) + ' · ' + escapeHtml(diffLabel) + '</div>' +
+                '<div class="settings-hero-name">' + escapeHtml(playerName) + '</div>' +
+                '<div class="settings-hero-company">' + renderIcon('building', 11) + '<span>' + escapeHtml(companyName) + '</span></div>' +
+                '<div class="settings-hero-meta">' + escapeHtml(t('settings.row.founded')) + ' ' + escapeHtml(_formatFounded(s)) + ' · ' + escapeHtml(diffLabel) + '</div>' +
             '</div>' +
-        '</div>' +
-        '<div class="settings-hero-kpi">' +
-            _kpi('Cash', formatCurrency(s.cash), 'data-settings-cash') +
-            _kpi('Reputasi', Number(rep).toFixed(1)) +
-            _kpi('Tim', String(team)) +
+            '<span class="settings-row-chevron">›</span>' +
+        '</button>' +
+        '<div class="settings-hero-kpi is-4">' +
+            _kpi(t('pp.kpi.cash'), formatCurrency(s.cash), 'data-settings-cash') +
+            _kpi('SIL', '💎 ' + (s.silicon || 0), 'data-settings-sil') +
+            _kpi(t('pp.kpi.rep'), Number(rep).toFixed(1)) +
+            _kpi(t('pp.kpi.team'), String(team)) +
         '</div>' +
         '</div>';
 }
@@ -115,13 +110,25 @@ function _tabContent(s) {
 }
 
 function _tabUmum(s) {
-    return _section('settings', t('settings.section.company'),
-        _row({ label: t('settings.row.name'), value: escapeHtml(s.companyName || '—'), action: true, attrs: 'data-set="edit-name"', chevron: true }) +
+    const info = PlayerProfileService.getNameChangeInfo();
+    const nameHint = info.cost > 0
+        ? t('pp.company.rule_paid', { cost: info.cost })
+        : t('pp.company.free_left', { n: info.freeLeft });
+    const connected = CloudService.getStatus() === 'connected';
+    const cloudKey = connected ? 'profile.cloud_connected' : 'profile.cloud_disconnected';
+
+    return _section('portrait', t('pp.settings.section_account'),
+        _row({ icon: 'portrait', label: t('pp.settings.row_profile'), hint: t('pp.settings.row_profile_hint'), action: true, attrs: 'data-set="player-profile"', chevron: true }) +
+        _row({ icon: 'building', label: t('pp.settings.row_company'), hint: nameHint, value: escapeHtml(s.companyName || '—'), action: true, attrs: 'data-set="edit-name"', chevron: true }) +
+        _row({ icon: 'cloud', label: t('pp.settings.row_cloud'), value: '<span style="color:' + (connected ? 'var(--success)' : 'var(--text-tertiary)') + ';">' + escapeHtml(t(cloudKey)) + '</span>', action: true, attrs: 'data-set="cloud"', chevron: true })
+    ) +
+    _section('gamepad', t('pp.settings.section_game'),
         _row({ label: t('settings.row.difficulty'), value: escapeHtml(t('settings.difficulty.' + (s.difficulty || 'normal'))) }) +
         _row({ label: t('settings.row.founded'), value: escapeHtml(_formatFounded(s)) })
     ) +
-    _section('globe', 'Pemain',
-        _row({ label: 'Lihat Pemain Online', hint: 'Daftar perusahaan pemain lain', action: true, attrs: 'data-set="player-list"', chevron: true })
+    _section('globe', t('pp.settings.section_community'),
+        _row({ icon: 'target', label: t('pp.settings.row_leaderboard'), hint: t('pp.settings.row_leaderboard_hint'), action: true, attrs: 'data-set="leaderboard"', chevron: true }) +
+        _row({ icon: 'globe', label: t('pp.settings.row_players'), hint: t('pp.settings.row_players_hint'), action: true, attrs: 'data-set="player-list"', chevron: true })
     ) +
     _section('question', t('settings.section.help'),
         _row({ label: t('settings.row.guide'), hint: t('settings.row.guide_hint'), action: true, attrs: 'data-set="guide"', chevron: true }) +
@@ -288,7 +295,8 @@ function _row(opts) {
 
     rightHtml += '</div>';
 
-    return '<div class="' + cls + '" ' + attrs + '>' + labelHtml + rightHtml + '</div>';
+    var iconHtml = opts.icon ? '<span class="settings-row-ico">' + renderIcon(opts.icon, 15) + '</span>' : '';
+    return '<div class="' + cls + '" ' + attrs + '>' + iconHtml + labelHtml + rightHtml + '</div>';
 }
 
 export function bindSettingsActions(root) {
@@ -305,6 +313,11 @@ export function bindSettingsActions(root) {
             var el = document.querySelector('[data-settings-cash]');
             if (!el) return;
             el.textContent = formatCurrency(data.next);
+        });
+        bus.on('silicon:changed', function (data) {
+            var el = document.querySelector('[data-settings-sil]');
+            if (!el) return;
+            el.textContent = '💎 ' + (data && data.balance != null ? data.balance : state.get().silicon || 0);
         });
     }
 
@@ -370,8 +383,11 @@ function _handleSet(action) {
         case 'reset':       _confirmReset(); break;
         case 'guide':       bus.emit('view:changed', { id: 'guide' }); window.__game.navigate('guide'); break;
         case 'tutorial':    bus.emit('tutorial:restart'); break;
-        case 'edit-name':   _openEditName(); break;
+        case 'edit-name':   openEditCompanyNameModal(); break;
         case 'player-list': openPlayerListModal(); break;
+        case 'leaderboard': openPlayerListModal('revenue'); break;
+        case 'cloud':       openCloudPanel(); break;
+        case 'player-profile': setProfileTab('player'); window.__game.navigate('profile'); break;
     }
 }
 
@@ -382,55 +398,6 @@ function _handleToggle(key) {
     ToastService.info(key + ': ' + (s.settings[key] ? 'ON' : 'OFF'));
     bus.emit('settings:changed', s.settings);
     window.__game.render();
-}
-
-function _openEditName() {
-    const s = state.get();
-    const html = '<div class="modal-title">' + escapeHtml(t('settings.edit_name.title')) + '</div>' +
-        '<div class="modal-sub">' + escapeHtml(t('settings.edit_name.sub')) + '</div>' +
-        '<label class="field-label">' + escapeHtml(t('settings.edit_name.label')) + '</label>' +
-        '<input class="field-input" data-edit-company-name maxlength="24" value="' + escapeHtml(s.companyName || '') + '" placeholder="' + escapeHtml(t('settings.edit_name.placeholder')) + '" autocomplete="off" />' +
-        '<div data-edit-name-error style="display:none;color:var(--danger);font-size:12px;margin-top:6px;line-height:1.4;"></div>' +
-        '<div style="display:flex;gap:8px;margin-top:16px;">' +
-        '<button class="btn-secondary" data-modal-close style="flex:1;">' + escapeHtml(t('common.cancel')) + '</button>' +
-        '<button class="btn-primary" data-edit-company-confirm style="flex:1;">' + escapeHtml(t('common.save')) + '</button>' +
-        '</div>';
-
-    Modal.open('edit-company-name', html);
-
-    const root = document.querySelector('[data-modal-id="edit-company-name"]');
-    if (!root) return;
-    const input = root.querySelector('[data-edit-company-name]');
-    const errorEl = root.querySelector('[data-edit-name-error]');
-    if (input) input.focus();
-
-    function _clearError() {
-        errorEl.style.display = 'none';
-        errorEl.textContent = '';
-        input.style.borderColor = '';
-    }
-
-    function _showError(key) {
-        errorEl.textContent = t(key);
-        errorEl.style.display = 'block';
-        input.style.borderColor = 'var(--danger)';
-    }
-
-    if (input) input.addEventListener('input', _clearError);
-
-    root.querySelector('[data-edit-company-confirm]').addEventListener('click', function () {
-        const result = validateCompanyName(input.value);
-        if (!result.ok) {
-            _showError(_reasonToKey(result.reason));
-            input.focus();
-            return;
-        }
-        const finalName = input.value.trim();
-        state.patch({ companyName: finalName });
-        Modal.close('edit-company-name', true);
-        ToastService.success(t('settings.edit_name.success'));
-        window.__game.render();
-    });
 }
 
 function _openExport() {
