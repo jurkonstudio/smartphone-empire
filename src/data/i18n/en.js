@@ -1215,4 +1215,12 @@ export const en = {
     'silicon.action.fabProd.d': 'Fab chip production completes instantly.',
     'silicon.msg.fabBuild': 'Fab build finished instantly.',
     'silicon.msg.fabProd': 'Fab production finished instantly.',
+    
+// [v2027.42] Home focus tab — live sales chart
+'home.focus.sales_title': 'Sales · Today',
+'home.focus.today': 'Today',
+'home.focus.units': 'units',
+'home.focus.total30': '30 DAYS',
+'home.focus.units30': '30-DAY UNITS',
+'home.focus.open_research': 'Open Research Tab',
 };
