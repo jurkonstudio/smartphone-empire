@@ -1,4 +1,5 @@
 // FILE: src/systems/PublicOpinionSystem.js
+// v2027.2 — fix normalisasi bobot sentiment (sebelumnya max hanya 60, bukan 100).
 // v2027.1a — fix reputasi ganda di _startViralEvent & respondToViral.
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
@@ -167,12 +168,18 @@ export class PublicOpinionSystem {
             priceScore = Math.max(0, Math.min(100, 50 + (ratio - 1) * 60));
         }
 
+        // [v2027.2] FIX: bobot quality(0.25) + price(0.15) + reputation(0.20) = 0.60.
+        // Tanpa normalisasi, sentiment maksimum hanya ~60 sehingga label
+        // "very good" (>=70) tidak mungkin tercapai. Normalisasi weighted
+        // average agar skala penuh 0-100 tetap konsisten.
         const w = BALANCE.feedback.sentimentWeights;
-        let sentiment =
+        const totalW = (w.quality + w.price + w.reputation) || 1;
+        let sentiment = (
             avgQuality * w.quality +
             priceScore * w.price +
-            reputation * w.reputation -
-            bugPenalty * w.bugPenalty;
+            reputation * w.reputation
+        ) / totalW;
+        sentiment -= bugPenalty * w.bugPenalty;
 
         let viralBoost = 0;
         fb.activeViral.forEach(v => {
@@ -442,4 +449,4 @@ export class PublicOpinionSystem {
         bus.emit('state:changed', this.state.data);
         return { ok: true, review: rv };
     }
-                }
+}
