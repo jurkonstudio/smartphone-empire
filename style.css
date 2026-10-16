@@ -3812,3 +3812,169 @@ body {
 .header-silicon:hover { border-color: rgba(139,92,246,0.5); }
 .header-silicon-ico { font-size: 11px; line-height: 1; }
 .header-silicon-value { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+
+/* ============================================================================
+   104. SILICON — wallet, aksi, top-up, riset (v2027.40)
+   Memakai token & pola yang sama dengan node-list / slot-strip / diff-btn.
+   ============================================================================ */
+.header-silicon-plus {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 13px; height: 13px; margin-left: 2px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-size: 11px; font-weight: var(--fw-black); line-height: 1;
+}
+
+/* Kartu saldo */
+.sil-balance {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    background: linear-gradient(135deg, rgba(79,140,255,0.14), rgba(139,92,246,0.14));
+    border: 1px solid rgba(139,92,246,0.25);
+    border-radius: var(--r-lg); padding: 12px 14px; margin-bottom: 4px;
+}
+.sil-balance-compact { justify-content: space-between; padding: 10px 14px; }
+.sil-balance-label {
+    font-size: var(--fs-2xs); font-weight: var(--fw-bold);
+    letter-spacing: 0.7px; text-transform: uppercase; color: var(--text-secondary);
+}
+.sil-balance-value {
+    font-size: var(--fs-2xl); font-weight: var(--fw-black); color: var(--accent);
+    letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums;
+}
+.sil-balance-value span { font-size: var(--fs-md); color: var(--text-secondary); font-weight: var(--fw-bold); }
+.sil-balance-compact .sil-balance-value { font-size: var(--fs-xl); }
+.sil-topup-btn { padding: 9px 14px; font-size: var(--fs-sm); white-space: nowrap; }
+
+/* Pill harga SIL */
+.sil-cost {
+    flex-shrink: 0; padding: 3px 9px; border-radius: var(--r-pill);
+    background: rgba(139,92,246,0.14); border: 1px solid rgba(139,92,246,0.3);
+    color: var(--text-primary); font-size: var(--fs-xs); font-weight: var(--fw-black);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
+/* Baris aksi di modal Silicon */
+.sil-row {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 10px 12px; background: transparent; border: none;
+    border-bottom: 1px solid var(--border); color: var(--text-primary);
+    font-family: inherit; text-align: left; cursor: pointer;
+    transition: background 0.12s, transform 0.08s;
+}
+.sil-row:last-child { border-bottom: none; }
+.sil-row:hover { background: var(--bg-3); }
+.sil-row:active { transform: scale(0.99); }
+.sil-row-ico { font-size: 18px; width: 26px; text-align: center; flex-shrink: 0; }
+.sil-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.sil-row-title { font-size: var(--fs-base); font-weight: var(--fw-bold); letter-spacing: -0.005em; }
+.sil-row-desc { font-size: var(--fs-xs); color: var(--text-tertiary); line-height: 1.35; }
+.sil-row.is-short .sil-cost,
+.sil-btn.is-short .sil-cost { background: var(--danger-soft); border-color: rgba(239,68,68,0.35); color: var(--danger); }
+.sil-row.is-short { opacity: 0.8; }
+
+.sil-empty { font-size: var(--fs-xs); color: var(--text-tertiary); padding: 6px 2px; }
+.sil-hist-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 8px 12px; font-size: var(--fs-xs); border-bottom: 1px solid var(--border);
+}
+.sil-hist-row:last-child { border-bottom: none; }
+.sil-hist-reason { color: var(--text-secondary); min-width: 0; }
+.sil-hist-delta { font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.sil-hist-delta.pos { color: var(--success); }
+.sil-hist-delta.neg { color: var(--danger); }
+.sil-hist-delta.warn { color: var(--warn); }
+
+/* Blok SIL di modal detail riset */
+.sil-block {
+    margin-top: 12px; padding: 10px 12px;
+    background: linear-gradient(135deg, rgba(79,140,255,0.08), rgba(139,92,246,0.08));
+    border: 1px solid rgba(139,92,246,0.25); border-radius: var(--r);
+}
+.sil-block-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.sil-block-title {
+    font-size: var(--fs-2xs); font-weight: var(--fw-bold);
+    letter-spacing: 0.7px; text-transform: uppercase; color: var(--text-secondary);
+}
+.sil-block-bal { font-size: var(--fs-xs); color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+.sil-btn {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
+    padding: 9px 12px; margin-top: 6px; background: var(--bg-3);
+    border: 1px solid var(--border); border-radius: var(--r);
+    color: var(--text-primary); font-family: inherit; text-align: left; cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, transform 0.08s;
+}
+.sil-btn:first-of-type { margin-top: 0; }
+.sil-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+.sil-btn:active { transform: scale(0.98); }
+.sil-btn-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.sil-btn-title { font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.sil-btn-sub { font-size: var(--fs-2xs); color: var(--text-tertiary); line-height: 1.35; }
+.sil-hint { font-size: var(--fs-xs); color: var(--text-tertiary); line-height: 1.4; }
+
+/* Tombol boost kecil di slot-strip */
+.slot-strip-item-boost { display: flex; justify-content: flex-end; margin-top: 6px; }
+.slot-boost {
+    padding: 3px 9px; border-radius: var(--r-pill);
+    background: rgba(139,92,246,0.14); border: 1px solid rgba(139,92,246,0.3);
+    color: var(--text-primary); font-family: inherit; font-size: var(--fs-2xs);
+    font-weight: var(--fw-bold); cursor: pointer; font-variant-numeric: tabular-nums;
+    transition: transform 0.08s, border-color 0.12s;
+}
+.slot-boost:hover { border-color: rgba(139,92,246,0.6); }
+.slot-boost:active { transform: scale(0.94); }
+.slot-boost[data-sil-short] { color: var(--danger); border-color: rgba(239,68,68,0.35); background: var(--danger-soft); }
+
+/* Top Up — paket */
+.sil-pkg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.sil-pkg {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px;
+    padding: 14px 6px 10px; background: var(--bg-3); border: 1px solid var(--border);
+    border-radius: var(--r); color: var(--text-primary); font-family: inherit; cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.06s;
+}
+.sil-pkg:active { transform: scale(0.97); }
+.sil-pkg.active { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 3px var(--accent-soft); }
+.sil-pkg-ico { font-size: 20px; line-height: 1; }
+.sil-pkg-amt { font-size: var(--fs-lg); font-weight: var(--fw-black); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.sil-pkg-bonus { font-size: var(--fs-2xs); font-weight: var(--fw-bold); color: var(--success); min-height: 13px; }
+.sil-pkg-price { font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--text-secondary); margin-top: 2px; }
+.sil-pkg-tag {
+    position: absolute; top: -7px; left: 50%; transform: translateX(-50%);
+    padding: 1px 7px; border-radius: var(--r-pill); white-space: nowrap;
+    font-size: 9px; font-weight: var(--fw-black); letter-spacing: 0.4px; text-transform: uppercase;
+    background: var(--accent); color: #fff;
+}
+.sil-pkg-tag-best { background: var(--warn); color: #1a1a1a; }
+
+/* Top Up — slot metode bayar */
+.sil-methods { display: flex; flex-direction: column; }
+.sil-method-group {
+    margin: 10px 2px 4px; font-size: var(--fs-2xs); font-weight: var(--fw-bold);
+    letter-spacing: 0.7px; text-transform: uppercase; color: var(--text-tertiary);
+}
+.sil-method-group:first-child { margin-top: 0; }
+.sil-method {
+    display: flex; align-items: center; gap: 10px; width: 100%; margin-bottom: 6px;
+    padding: 10px 12px; background: var(--bg-3); border: 1px solid var(--border);
+    border-radius: var(--r); color: var(--text-primary); font-family: inherit; text-align: left; cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.06s;
+}
+.sil-method:active { transform: scale(0.99); }
+.sil-method.active { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 3px var(--accent-soft); }
+.sil-method.is-soon { opacity: 0.55; cursor: not-allowed; border-style: dashed; }
+.sil-method-ico { font-size: 16px; width: 22px; text-align: center; flex-shrink: 0; }
+.sil-method-name { flex: 1; min-width: 0; font-size: var(--fs-base); font-weight: var(--fw-semibold); }
+.sil-badge {
+    padding: 1px 7px; border-radius: var(--r-pill); background: var(--bg-4); color: var(--text-tertiary);
+    font-size: var(--fs-2xs); font-weight: var(--fw-bold);
+}
+.sil-badge-on { background: var(--success-soft); color: var(--success); }
+.sil-radio {
+    width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+    border: 2px solid var(--border-strong); position: relative;
+}
+.sil-method.active .sil-radio { border-color: var(--accent); }
+.sil-method.active .sil-radio::after {
+    content: ""; position: absolute; inset: 2px; border-radius: 50%; background: var(--accent);
+}
+.sil-method.is-soon .sil-radio { display: none; }
+.sil-summary { margin-top: 12px; }
