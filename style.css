@@ -3178,26 +3178,72 @@ body {
 }
 
 /* ============================================================================
-   64. HOME — MAP + TAB CAROUSEL (v2027.17a)
+   64. HOME — PETA PENUH + DOCK (v2027.41a)
+   Satu-satunya sumber aturan tata letak halaman Home. Menggantikan section
+   64 / 65 / 66 / 67 / 68 / 101 lama yang saling menimpa (!important).
+
+   Susunan satu layar (tanpa scroll halaman):
+       header
+       peta 3D        ← mengisi semua sisa tinggi layar (flex: 1)
+       dock           ← baris tab (Fokus · Berita · Aktivitas) + carousel
+       nav bawah
+
+   Warna, kartu, tab pill, dan tipografi memakai token yang sudah ada —
+   yang berubah hanya posisi & ukuran.
    ============================================================================ */
+:root {
+    --home-tabs-h: 40px;
+    --home-slide-h: clamp(160px, 28vh, 280px);
+    --home-gap: 8px;
+}
+@supports (height: 1dvh) {
+    :root { --home-slide-h: clamp(160px, 28dvh, 280px); }
+}
+
+/* View Home = satu layar penuh. Halaman lain tetap scroll seperti biasa. */
+.app-view.view-home {
+    overflow: hidden;
+    padding: 8px 10px 10px;
+}
 
 .home-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--home-gap);
+    height: 100%;
+    min-height: 0;
 }
 
+/* ---------- PETA ---------- */
 .home-map {
+    flex: 1 1 auto;
+    min-height: 160px;
     padding: 0;
-    height: min(42vh, 380px);
-    min-height: 260px;
+    margin: 0;
     position: relative;
     overflow: hidden;
-    margin-bottom: 0;
+    contain: layout paint;        /* isolasi layer: canvas 3D tidak ikut repaint carousel */
+    touch-action: none;           /* drag & pinch milik peta */
+}
+.home-map canvas { display: block; touch-action: none; }
+
+/* ---------- DOCK ---------- */
+.home-dock {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--home-gap);
+}
+.home-dockbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
-/* ---------- TAB PILLS ---------- */
+/* Tab pill (gaya lama v2027.17a) */
 .home-tabs {
+    flex: 1;
+    min-width: 0;
     display: flex;
     gap: 4px;
     padding: 3px;
@@ -3206,10 +3252,15 @@ body {
     border-radius: var(--r-md);
     box-shadow: var(--shadow-sm);
 }
-
 .home-tab {
     flex: 1;
-    padding: 9px 6px;
+    min-width: 0;
+    min-height: calc(var(--home-tabs-h) - 8px);
+    padding: 6px 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     background: transparent;
     color: var(--text-secondary);
     border: none;
@@ -3219,381 +3270,126 @@ body {
     font-weight: var(--fw-semibold);
     letter-spacing: -0.005em;
     cursor: pointer;
-    min-height: 36px;
+    white-space: nowrap;
     transition: background 0.15s, color 0.15s, transform 0.12s;
+    -webkit-tap-highlight-color: transparent;
 }
 .home-tab:active { transform: scale(0.97); }
 .home-tab.active {
     background: var(--bg-4);
     color: var(--text-primary);
-    box-shadow: var(--shadow-sm),
-                inset 0 0 0 1px var(--border-strong);
+    box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--border-strong);
 }
-
-/* ---------- CAROUSEL ---------- */
-.home-carousel {
-    display: flex;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    touch-action: pan-x;
-    gap: 0;
-}
-.home-carousel::-webkit-scrollbar { display: none; }
-
-.home-slide {
-    flex: 0 0 100%;
-    width: 100%;
-    min-width: 100%;
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
-    padding: 0 2px;
-    box-sizing: border-box;
-    /* Batasi tinggi supaya halaman tidak scroll panjang */
-    max-height: 42vh;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-}
-
-/* Card di dalam slide tidak perlu margin luar besar */
-.home-slide > .card:first-child { margin-top: 0; }
-.home-slide > .card:last-child { margin-bottom: 0; }
-
-/* Khusus slide Focus: quest & research ringkas */
-.home-slide[data-home-slide="focus"] .card { padding: 12px 14px; }
-.home-slide[data-home-slide="news"] .card { padding: 12px 14px; }
-.home-slide[data-home-slide="activity"] .card { padding: 12px 14px; }
-
-@media (max-width: 380px) {
-    .home-map { height: min(38vh, 320px); min-height: 220px; }
-    .home-slide { max-height: 38vh; }
-    .home-tab { font-size: var(--fs-xs); padding: 8px 4px; }
-}
-
-/* ============================================================================
-   64. HOME — MAP + CAROUSEL + DOTS (v2027.18a)
-   ============================================================================ */
-
-.home-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
-
-.home-map {
-    padding: 0;
-    height: min(45vh, 400px);
-    min-height: 260px;
-    position: relative;
-    overflow: hidden;
-    margin-bottom: 10px;
-}
-
-/* ---------- CAROUSEL ---------- */
-.home-carousel {
-    display: flex;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    touch-action: pan-x;
-    gap: 0;
-    flex: 1;
-}
-.home-carousel::-webkit-scrollbar { display: none; }
-
-.home-slide {
-    flex: 0 0 100%;
-    width: 100%;
-    min-width: 100%;
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
-    padding: 0;
-    box-sizing: border-box;
-    max-height: 45vh;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-}
-
-.home-slide > .card:first-child { margin-top: 0; }
-.home-slide > .card:last-child { margin-bottom: 0; }
-
-/* ---------- DOTS ---------- */
-.home-dots {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 6px;
-    padding: 12px 0 6px;
-    flex-shrink: 0;
-}
-
-.home-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--bg-4);
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: background 0.25s, transform 0.25s, width 0.25s;
-    -webkit-tap-highlight-color: transparent;
-}
-.home-dot.active {
+.home-tab-badge {
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: var(--r-pill);
     background: var(--accent);
-    width: 22px;
-    border-radius: 4px;
-    transform: none;
-    box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-@media (max-width: 380px) {
-    .home-map { height: min(42vh, 340px); min-height: 220px; }
-    .home-slide { max-height: 42vh; }
-    .home-dots { padding: 10px 0 4px; }
-}
-
-/* ============================================================================
-   HOME — CAROUSEL (FIX SLIDE)
-   ============================================================================ */
-.home-carousel {
-    display: flex;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;      /* wajib: mengunci slide per halaman */
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;  /* momentum scroll di iOS */
-    scrollbar-width: none;
-    touch-action: pan-x;                /* izinkan geser horizontal, blokir vertikal */
-    gap: 0;
-}
-.home-carousel::-webkit-scrollbar { display: none; }
-
-.home-slide {
-    flex: 0 0 100%;
-    width: 100%;
-    scroll-snap-align: start;           /* setiap slide “menempel” di kiri */
-    scroll-snap-stop: always;
+    color: #fff;
+    font-size: 10px;
+    font-weight: var(--fw-bold);
+    line-height: 16px;
+    text-align: center;
     box-sizing: border-box;
 }
+.home-tab-badge[hidden] { display: none; }
 
-/* ============================================================================
-   HOMEPANEL FIX v2027.31a — Chrome swipe + Samsung smooth
-   ============================================================================ */
-
-/* Paksa parent izinkan horizontal — override .app-view { touch-action: pan-y } */
-.app-view {
-    touch-action: manipulation !important;
+/* Tombol ciutkan / bentangkan dock */
+.home-dock-toggle {
+    flex: 0 0 auto;
+    width: var(--home-tabs-h);
+    height: var(--home-tabs-h);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-2);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.12s, color 0.15s;
 }
+.home-dock-toggle:active { transform: scale(0.94); }
+.home-dock-toggle svg { width: 18px; height: 18px; transition: transform 0.2s; }
+.home-dock.collapsed .home-dock-toggle svg { transform: rotate(180deg); }
 
-.home-carousel {
-    touch-action: pan-x !important;
-    /* Paksa carousel ke GPU layer terpisah */
-    transform: translateZ(0);
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x mandatory;
-    will-change: scroll-position;
-}
-
-.home-slide {
-    /* Isolasi render slide — jangan reflow elemen lain */
-    transform: translateZ(0);
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    contain: layout paint style;
-}
-
-/* Saat scroll, freeze 3D map — GPU full untuk carousel */
-.home-map.scrolling {
-    /* v2027.34a: dinonaktifkan — content-visibility:hidden bikin peta 3D
-       hilang/berkedip saat carousel di-swipe. */
-    content-visibility: visible;
-    pointer-events: auto;
-}
-
-/* ============================================================================
-   65. HOME CAROUSEL — OVERRIDE FINAL (v2027.32a)
-   Menimpa semua duplikat section 64 lama (v2027.17a, v2027.18a, FIX SLIDE).
-   Fix utama: hapus max-height + overflow-y dari .home-slide supaya tidak jadi
-   vertical scroll container — itu yang bikin Chrome gagal swipe horizontal.
-   ============================================================================ */
-
-.home-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
-
-.home-map {
-    padding: 0;
-    height: min(45vh, 400px);
-    min-height: 260px;
-    position: relative;
-    overflow: hidden;
-    margin-bottom: 10px;
-}
-
-/* ---------- CAROUSEL ---------- */
+/* ---------- CAROUSEL (scroll-snap native) ---------- */
 .home-carousel {
     display: flex;
     flex-wrap: nowrap;
+    height: var(--home-slide-h);
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
     scrollbar-width: none;
-    touch-action: pan-x;
-    gap: 0;
-    width: 100%;
-   
-    /* max-height DIHAPUS — biar tidak jadi container scroll sendiri */
 }
 .home-carousel::-webkit-scrollbar { display: none; }
 
-/* ---------- SLIDE ---------- */
+/* Dock diciutkan: carousel 0 tinggi (tetap di DOM supaya posisi scroll aman) */
+.home-dock.collapsed .home-carousel {
+    height: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+.home-dock.collapsed { gap: 0; }
+
+/* Setiap slide scroll vertikal sendiri; geser horizontal diteruskan ke carousel */
 .home-slide {
     flex: 0 0 100%;
     width: 100%;
     min-width: 100%;
-    max-width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 1px;
     scroll-snap-align: start;
     scroll-snap-stop: always;
-    padding: 0;
-    box-sizing: border-box;
-   
-    /* max-height + overflow-y DIHAPUS — slide tidak lagi scroll sendiri.
-       Vertikal scroll tetap bisa lewat parent .app-view. */
+    overflow-x: hidden;
+    overflow-y: auto;
+    /* y saja! `contain` di sumbu x memutus penerusan swipe horizontal ke carousel */
+    overscroll-behavior-y: contain;
+    overscroll-behavior-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
 }
-
+.home-slide::-webkit-scrollbar { display: none; }
 .home-slide > .card:first-child { margin-top: 0; }
 .home-slide > .card:last-child { margin-bottom: 0; }
+.home-slide > .card:only-child { min-height: calc(100% - 2px); box-sizing: border-box; }  /* dock selalu terlihat seragam */
+.home-slide[data-home-slide="focus"] .card,
+.home-slide[data-home-slide="news"] .card,
+.home-slide[data-home-slide="activity"] .card { padding: 12px 14px; }
 
-/* ---------- DOTS ---------- */
-.home-dots {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 6px;
-    padding: 12px 0 6px;
-    flex-shrink: 0;
+/* ---------- Tombol Asisten Bisnis: naik di atas dock supaya tidak menutupi kartu ---------- */
+body.is-home .advisor-fab {
+    bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 10px
+                 + var(--home-tabs-h) + var(--home-slide-h) + (var(--home-gap) * 2) + 10px);
+}
+body.is-home.home-dock-collapsed .advisor-fab {
+    bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 10px
+                 + var(--home-tabs-h) + var(--home-gap) + 10px);
 }
 
-.home-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--bg-4);
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: background 0.25s, transform 0.25s, width 0.25s;
-    -webkit-tap-highlight-color: transparent;
+/* ---------- Layar lebar & layar pendek ---------- */
+@media (min-width: 768px) {
+    .app-view.view-home { padding: 18px; }
+    body.is-home .advisor-fab {
+        bottom: calc(18px + var(--home-tabs-h) + var(--home-slide-h) + (var(--home-gap) * 2) + 10px);
+    }
+    body.is-home.home-dock-collapsed .advisor-fab {
+        bottom: calc(18px + var(--home-tabs-h) + var(--home-gap) + 10px);
+    }
 }
-.home-dot.active {
-    background: var(--accent);
-    width: 22px;
-    border-radius: 4px;
-    transform: none;
-    box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-/* ---------- MOBILE SMALL ---------- */
-@media (max-width: 380px) {
-    .home-map { height: min(42vh, 340px); min-height: 220px; }
-    .home-dots { padding: 10px 0 4px; }
-}
-
-/* ============================================================================
-   66. TOUCH-ACTION CHAIN FIX (v2027.32b)
-   Chrome Android strict soal touch-action parent. `.app-view { touch-action: pan-y }`
-   bikin gesture horizontal "ketelan" sebelum sampai ke .home-carousel.
-   Fix: ganti .app-view jadi `manipulation` (auto minus double-tap-zoom),
-   plus explicit override di tiap level chain supaya Chrome mau lepas gesture
-   horizontal ke carousel.
-   ============================================================================ */
-
-.app-view {
-    /* Override `pan-y` lama. `manipulation` = auto minus double-tap-zoom,
-       jadi horizontal & vertical gesture sama-sama diizinkan lewat. */
-    touch-action: manipulation;
-}
-
-/* Chain: pastikan wrapper home juga izinkan horizontal */
-.home-wrapper {
-    touch-action: manipulation;
-}
-
-/* Map tetap block semua gesture (biar drag/pinch 3D gak bocor) */
-.home-map,
-.home-map canvas {
-    touch-action: none;
-}
-
-/* Carousel: horizontal doang (native scroll-snap) */
-.home-carousel {
-    touch-action: pan-x;
-}
-
-/* Slide: biarkan gesture apa aja lewat — jangan jadi scroll container
-   sendiri (max-height + overflow-y udah gue buang di section 65) */
-.home-slide {
-    touch-action: manipulation;
-}
-/* ============================================================================
-   67. HOME SLIDE — EXPLICIT RESET (v2027.32c)
-   Section 65 gak bisa nge-override max-height + overflow-y dari duplikat
-   section 64 lama karena gak explicit nyebut property-nya.
-   Section ini explicit reset, biar slide BUKAN vertical scroll container
-   sendiri — itu yang bikin Chrome block horizontal swipe.
-   ============================================================================ */
-
-.home-slide {
-    max-height: none !important;
-    overflow-y: visible !important;
-    overflow-x: visible !important;
-}
-/* ============================================================================
-   68. HOME MAP — GPU LAYER ISOLATION (v2027.33a)
-   Fix Chrome HP flicker: canvas 3D ikut re-composite tiap scroll-snap carousel.
-   Isolasi layer biar GPU handle sendiri, gak ikut repaint tetangga.
-   ============================================================================ */
-
-.home-map {
-    /* Paksa browser bikin layer terpisah untuk map */
-    transform: translateZ(0);
-    will-change: transform;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    contain: layout paint;
-}
-
-.home-map canvas {
-    transform: translateZ(0);
-    will-change: transform;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    display: block;
-}
-
-/* Isolasi carousel juga biar gak gangu map */
-.home-carousel {
-    contain: layout paint style;
-    isolation: isolate;
-}
-
-/* Slide jangan punya layer sendiri-sendiri (bikin berat di HP) */
-.home-slide {
-    contain: layout style;
+@media (max-height: 600px) {
+    :root { --home-slide-h: 132px; }
+    .app-view.view-home { overflow-y: auto; }
+    .home-wrapper { height: auto; min-height: 100%; }
+    .home-map { min-height: 220px; }
 }
 
 /* ============================================================================
@@ -3652,17 +3448,6 @@ body {
     color: var(--text-primary); white-space: pre-wrap;
 }
 .advisor-answer[hidden] { display: none; }
-
-/* ============================================================================
-   101. HOME MAP — 60VH OVERRIDE (v2027.35a)
-   Perbesar peta 3D jadi 70% tinggi layar. Override semua setting lama
-   (section 64, 65, 68) yang sebelumnya pakai min(45vh, 400px).
-   ============================================================================ */
-.home-map {
-    height: 60vh !important;
-    min-height: 60vh !important;
-    max-height: 60vh !important;
-}
 
 /* ============================================================================
    102. GUIDE — step, system, collapsible overrides (v2027.14a)
