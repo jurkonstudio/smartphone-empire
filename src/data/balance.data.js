@@ -202,6 +202,20 @@ export const BALANCE = {
         // [v2027.2a] Harga rata-rata ponsel global (USD).
         avgPriceByYear: {
             2000: 200, 2005: 150, 2010: 220, 2015: 280, 2020: 320, 2026: 350
+        },
+
+        // [v2027.4] FIX pangsa pasar 0%: skala penjualan pemain (permintaan
+        // dasar ~4.200 unit/hari/produk di 2000) jauh lebih kecil daripada
+        // ukuran pasar global (~30 juta unit/bulan), sehingga pangsa pemain
+        // selalu ~0,00x%. Pendapatan pemain kini dikonversi ke skala pasar
+        // saat menghitung pangsa. referenceShare = pangsa yang dicapai bila
+        // pemain menjual tepat sebesar permintaan dasar pasar sebulan penuh.
+        // Naikkan nilainya agar lebih mudah bersaing, turunkan agar lebih sulit.
+        playerShareScale: {
+            enabled: true,
+            referenceShare: 0.10,
+            smoothMonths: 3,      // rata-rata bergerak agar grafik tidak liar
+            maxShare: 0.70
         }
     },
 
@@ -237,7 +251,20 @@ export const BALANCE = {
         aiResearchTierPerYear: 0.3,
         aiResearchCostScale: 0.9,
         aiReleaseIntervalMonths: 8,
-        aiReactionSensitivity: 0.3
+        aiReactionSensitivity: 0.3,
+
+        // [v2027.4] Tekanan kompetitor ke penjualan produk pemain.
+        // Sebelumnya competitorPressure di-set 0.2 saat rilis dan tidak pernah
+        // berubah, jadi kompetitor tidak pernah benar-benar bersaing.
+        pressure: {
+            base: 0.10,        // tekanan minimum dari 'pasar ramai'
+            gainPerShare: 2.0, // pangsa kompetitor x kesenjangan kualitas x ini
+            tierToQuality: 20, // tier 1-5 -> skor kualitas 20-100
+            tierOffset: 10,
+            gapDivisor: 40,
+            maxGap: 1.5,
+            maxPressure: 1.5   // competitorF minimum = 1/(1+1.5) = 0.4
+        }
     },
 
     feedback: {
