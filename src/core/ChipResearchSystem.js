@@ -197,7 +197,8 @@ export class ChipResearchSystem {
     // ============================================================
     // { status, reason }
     // status: 'done' | 'running' | 'available' | 'locked'
-    getNodeStatus(nodeId) {
+    getNodeStatus(nodeId, opts) {
+        const ignoreCash = !!(opts && opts.ignoreCash);
         const data = this.state.data;
         if (!data.chipResearch) return { status: 'locked', reason: 'Sistem belum siap.' };
 
@@ -221,23 +222,24 @@ export class ChipResearchSystem {
         if (data.chipResearch.active.length >= data.chipResearch.maxSlots) {
             return { status: 'locked', reason: 'Slot chip penuh (' + data.chipResearch.active.length + '/' + data.chipResearch.maxSlots + ')' };
         }
-        if (data.cash < node.cost) {
+        if (!ignoreCash && data.cash < node.cost) {
             return { status: 'locked', reason: 'Uang tidak cukup ($' + node.cost.toLocaleString('en-US') + ')' };
         }
         return { status: 'available', reason: null };
     }
 
-    startResearch(nodeId) {
+    startResearch(nodeId, opts) {
+        const paidWithSilicon = !!(opts && opts.paidWithSilicon);
         const data = this.state.data;
         const node = getChipResearchById(nodeId);
         if (!node) return { ok: false, reason: 'Node tidak ditemukan.' };
 
-        const st = this.getNodeStatus(nodeId);
+        const st = this.getNodeStatus(nodeId, { ignoreCash: paidWithSilicon });
         if (st.status !== 'available') {
             return { ok: false, reason: st.reason || 'Belum bisa dimulai.' };
         }
 
-        this.state.setCash(data.cash - node.cost);
+        if (!paidWithSilicon) this.state.setCash(data.cash - node.cost);
 
         const entry = {
             nodeId: node.id,
@@ -286,6 +288,24 @@ export class ChipResearchSystem {
         return { ok: true, refund };
     }
 
+    // [SIL] Majukan progress riset aktif sebanyak `days` hari-progress
+    // (Infinity = selesaikan sekarang). Selesai lewat jalur normal sehingga
+    // toast, log, milestone & event tetap jalan.
+    boostResearch(nodeId, days) {
+        const data = this.state.data;
+        const entry = data.chipResearch.active.find(e => e.nodeId === nodeId);
+        if (!entry) return { ok: false, reason: 'Riset tidak aktif.' };
+        const add = (days === Infinity) ? (entry.durationDays - entry.progressDays) : Math.max(0, days || 0);
+        entry.progressDays = Math.min(entry.durationDays, entry.progressDays + add);
+        if (entry.progressDays >= entry.durationDays) {
+            this._completeResearch(entry);
+            return { ok: true, completed: true };
+        }
+        bus.emit('state:changed', data);
+        return { ok: true, completed: false };
+    }
+
+    // Ringkasan untuk UI ProgressPanel (Dashboard).
     getProgress() {
         const data = this.state.data;
         if (!data.chipResearch) return [];

@@ -151,6 +151,7 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
         // [v2027.3a] Premium currency.
         silicon: 10,
         siliconHistory: [],
+        paymentOrders: [],
         dailyLogin: { lastClaimDate: null, streak: 0 },
 
         era: 'feature_phone',
@@ -459,6 +460,7 @@ class GameState {
         // [v2027.3a] Migrasi save lama — silicon + dailyLogin.
         if (typeof this.data.silicon !== 'number') this.data.silicon = 10;
         if (!Array.isArray(this.data.siliconHistory)) this.data.siliconHistory = [];
+        if (!Array.isArray(this.data.paymentOrders)) this.data.paymentOrders = [];
         if (!this.data.dailyLogin || typeof this.data.dailyLogin !== 'object') {
             this.data.dailyLogin = { lastClaimDate: null, streak: 0 };
         }
