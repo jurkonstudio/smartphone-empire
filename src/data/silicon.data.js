@@ -6,6 +6,21 @@
 
 // ---------- HARGA FITUR ----------
 export const SILICON_COSTS = {
+    // Percepatan waktu (2x / 5x / 10x) — WAJIB bayar SIL.
+    // Tiap pembelian = `cost` SIL untuk satu paket waktu (`seconds` detik NYATA,
+    // hanya berkurang saat game berjalan / tidak pause). Setelah habis, kembali ke 1x.
+    // Beli lagi saat boost aktif = waktu ditambah (nilai sisa dikonversi bila ganti kecepatan).
+    // maxSeconds = batas total waktu boost yang boleh ditimbun.
+    speed: {
+        cost: 10,
+        maxSeconds: 1800,
+        packs: {
+            2:  { seconds: 300 },   // 10 SIL = 5 menit nyata  (~10 hari game)
+            5:  { seconds: 180 },   // 10 SIL = 3 menit nyata  (~15 hari game)
+            10: { seconds: 120 }    // 10 SIL = 2 menit nyata  (~20 hari game)
+        }
+    },
+
     // Unlock riset = bayar SIL sebagai pengganti uang tunai ($).
     // Syarat tahun & prasyarat riset TETAP berlaku (tidak bisa loncat era).
     // cost = clamp(durasi × unlockPerDay, unlockMin, unlockMax)
