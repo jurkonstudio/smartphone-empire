@@ -274,11 +274,14 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
-    async addSiliconServer(delta) {
+    // [HARDENING] addSiliconServer dihapus: kredit SIL hanya boleh dari server.
+    async addSiliconServer() { return { ok: false, code: 'FORBIDDEN' }; },
+
+    async claimDailySilicon() {
         if (!_adapter) return NOT_CONFIGURED;
         if (!_userId) return NOT_SIGNED_IN;
-        if (typeof _adapter.rpcAddSilicon !== 'function') return NOT_CONFIGURED;
-        try { return { ok: true, balance: await _adapter.rpcAddSilicon(delta) }; }
+        if (typeof _adapter.rpcClaimDaily !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, balance: await _adapter.rpcClaimDaily() }; }
         catch (err) { return _fail(err); }
     },
 
