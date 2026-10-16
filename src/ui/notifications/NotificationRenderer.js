@@ -82,7 +82,7 @@ function ensureStyle() {
     if (typeof document === 'undefined' || document.getElementById('ni-style')) return;
     var css = [
         '.toast-container{animation:none!important;gap:8px;',
-        'top:calc(max(var(--ni-top,0px),env(safe-area-inset-top,0px)) + 8px)!important;max-height:calc(100vh - var(--ni-top,0px) - 16px);overflow:visible}',
+        'top:calc(env(safe-area-inset-top,0px) + 8px)!important;max-height:calc(100dvh - 16px);overflow:visible}',
         '.ni{flex:0 0 auto}',
         '.ni.ni-collapse{max-height:0!important;margin-top:0!important;margin-bottom:-8px!important;padding-top:0!important;',
         'padding-bottom:0!important;border-width:0!important;box-shadow:none!important;',
