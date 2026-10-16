@@ -3787,3 +3787,20 @@ body.is-home.home-dock-collapsed .advisor-fab {
     cursor: pointer; transition: background 0.15s, color 0.15s;
 }
 .wiz-view-toggle button.active { background: var(--accent); color: #fff; }
+
+/* ===== Katalog produk (v2027.4) ===== */
+.cat-summary { margin-bottom: 10px; grid-template-columns: repeat(3, 1fr); }
+.cat-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.prod-card.is-disc { opacity: 0.72; }
+.cat-rate.good { color: var(--success); font-weight: 700; }
+.cat-rate.mid  { color: var(--warning, #f5b942); font-weight: 700; }
+.cat-rate.bad  { color: var(--danger); font-weight: 700; }
+.cat-stock { margin-top: 8px; }
+.cat-stock-head { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-mute); margin-bottom: 4px; }
+.cat-warn { color: var(--danger); font-weight: 700; }
+.cat-bar { height: 6px; border-radius: 6px; background: var(--bg-4); overflow: hidden; }
+.cat-bar-fill { height: 100%; border-radius: 6px; background: var(--success); transition: width 0.3s ease; }
+.cat-bar-fill.low { background: var(--warning, #f5b942); }
+.cat-bar-fill.out { background: var(--danger); }
+.cat-auto { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border, rgba(255,255,255,0.08)); font-size: 12px; color: var(--text-secondary); }
+.cat-auto .toggle-switch { touch-action: manipulation; }
