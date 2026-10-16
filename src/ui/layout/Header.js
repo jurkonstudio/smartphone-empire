@@ -1,5 +1,6 @@
 // FILE: src/ui/layout/Header.js
 // v2027.18a — wallet: cash + silicon button.
+// v2027.41 — chip countdown boost percepatan (data-time-boost).
 import { generateLogo } from '../avatars/AvatarGenerator.js';
 import { t } from '../../core/LanguageService.js';
 import { formatCurrency } from '../../utils/format.js';
@@ -20,6 +21,13 @@ export function renderHeader({ state, timeSnapshot, warning }) {
     const pauseAria = time.isPaused ? t('header.play_aria') : t('header.pause_aria');
 
     const silicon = state.silicon != null ? state.silicon : 0;
+
+    const sb = state.speedBoost;
+    const boostOn = sb && sb.remainingSec > 0 && sb.speed > 1;
+    const boostSec = boostOn ? Math.ceil(sb.remainingSec) : 0;
+    const boostTxt = boostOn
+        ? '⚡ ' + sb.speed + 'x · ' + String(Math.floor(boostSec / 60)).padStart(2, '0') + ':' + String(boostSec % 60).padStart(2, '0')
+        : '';
 
     return `
         <div class="header-inner">
@@ -46,6 +54,7 @@ export function renderHeader({ state, timeSnapshot, warning }) {
                     <span data-time-clock>${hh}:${mm}</span>
                     <span>•</span>
                     <span class="header-status ${statusCls}" data-time-status>${status}</span>
+                    <span class="header-boost" data-time-boost style="${boostOn ? '' : 'display:none;'}">${boostTxt}</span>
                 </div>
                 <div class="header-controls">
                     <button class="btn-icon" data-time-action="toggle-pause" aria-label="${pauseAria}">
