@@ -2,9 +2,12 @@
 // Dynamic Island v2 — stack 3 notifikasi, antrean halus, swipe untuk menutup,
 // jeda saat disentuh/diperluas, progress bar sisa waktu, ikon SVG, i18n,
 // penghitung duplikat (x2, x3), dan durasi otomatis menurut panjang pesan.
+// v3 — Pusat Notifikasi: ketuk nama perusahaan di header untuk membuka panel riwayat
+// (dropdown di bawah header, badge belum dibaca, hapus semua, tombol aksi tetap berfungsi).
 // CSS di-inject dari file ini sendiri, jadi style.css & index.html TIDAK perlu diubah.
 
 import { t } from '../../core/LanguageService.js';
+import { bus } from '../../core/EventBus.js';
 
 var MAX_ACTIVE = 3;
 var MIN_MS = 2800;
@@ -16,6 +19,15 @@ var OUT_MS = 260;
 var SWIPE_PX = 56;
 
 var _active = [];
+
+// ---- riwayat (pusat notifikasi)
+var HISTORY_MAX = 50;
+var _history = [];
+var _unread = 0;
+var _histId = 1;
+var _panel = null;
+var _panelOpen = false;
+var _tickTimer = null;
 
 var TYPES = {
     info: {
@@ -118,6 +130,50 @@ function ensureStyle() {
         '.ni-bar i{display:block;height:100%;background:rgb(var(--ni-rgb));transform-origin:left;transform:scaleX(1)}',
         '.ni-bar i.ni-run{animation:niBar var(--ni-dur,4000ms) linear forwards}',
         '.ni.ni-paused .ni-bar i{animation-play-state:paused}',
+        '.np-backdrop{position:fixed;left:0;right:0;bottom:0;top:var(--np-top,0px);z-index:9998;background:rgba(0,0,0,.35);',
+        'opacity:0;transition:opacity .2s ease;-webkit-tap-highlight-color:transparent}',
+        '.np-backdrop.np-show{opacity:1}',
+        '.np-panel{position:fixed;z-index:9999;left:50%;top:calc(var(--np-top,0px) + 6px);width:min(94vw,420px);',
+        'max-height:min(70vh,calc(100dvh - var(--np-top,0px) - 90px));display:flex;flex-direction:column;box-sizing:border-box;',
+        'background:var(--bg-2,#161618);color:var(--text-primary,#fff);border:1px solid var(--border,rgba(255,255,255,.1));',
+        'border-radius:18px;box-shadow:0 18px 44px rgba(0,0,0,.5);overflow:hidden;',
+        'font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif;',
+        'opacity:0;transform:translate(-50%,-10px) scale(.97);transform-origin:top left;',
+        'transition:opacity .2s ease,transform .22s cubic-bezier(.34,1.3,.64,1)}',
+        '.np-panel.np-show{opacity:1;transform:translate(-50%,0) scale(1)}',
+        '.np-head{display:flex;align-items:center;gap:8px;padding:12px 14px 10px;border-bottom:1px solid var(--border,rgba(255,255,255,.08))}',
+        '.np-title{flex:1;font-size:15px;font-weight:700;letter-spacing:-.01em}',
+        '.np-sub{font-size:11px;font-weight:600;color:var(--text-tertiary,#8e8e93)}',
+        '.np-btn{border:0;background:transparent;color:var(--accent,#0a84ff);font:600 12px -apple-system,sans-serif;',
+        'padding:6px 8px;border-radius:10px;cursor:pointer}',
+        '.np-btn:active{background:var(--accent-soft,rgba(10,132,255,.15))}',
+        '.np-btn[disabled]{opacity:.35;pointer-events:none}',
+        '.np-list{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:6px}',
+        '.np-item{--ni-rgb:10,132,255;display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:12px;position:relative}',
+        '.np-item+.np-item{margin-top:2px}',
+        '.np-item.np-unread{background:rgba(var(--ni-rgb),.09)}',
+        '.np-item .ni-ico{width:28px;height:28px}',
+        '.np-body{flex:1;min-width:0}',
+        '.np-msg{font-size:13px;line-height:1.4;font-weight:500;word-break:break-word}',
+        '.np-meta{margin-top:3px;font-size:11px;color:var(--text-tertiary,#8e8e93);display:flex;gap:6px;align-items:center}',
+        '.np-meta b{font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:rgb(var(--ni-rgb));font-size:10px}',
+        '.np-act{flex:0 0 auto;align-self:center;min-height:30px;padding:0 12px;border:0;border-radius:15px;',
+        'background:rgb(var(--ni-rgb));color:#fff;font:700 12px -apple-system,sans-serif;cursor:pointer}',
+        '.np-act:active{transform:scale(.94)}',
+        '.np-x{flex:0 0 auto;align-self:center;width:26px;height:26px;border:0;border-radius:50%;background:transparent;',
+        'color:var(--text-tertiary,#8e8e93);font-size:16px;line-height:1;cursor:pointer}',
+        '.np-x:active{background:rgba(255,255,255,.1)}',
+        '.np-empty{white-space:pre-line;padding:34px 20px;text-align:center;color:var(--text-tertiary,#8e8e93);font-size:13px;line-height:1.5}',
+        '.np-empty svg{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;',
+        'stroke-linejoin:round;opacity:.7;margin-bottom:8px}',
+        '.header-company-btn{position:relative}',
+        '.header-company-btn .header-chevron{display:inline-block;transition:transform .2s ease}',
+        '.header-company-btn[aria-expanded=\"true\"] .header-chevron{transform:rotate(90deg)}',
+        '.header-notif-badge{flex:0 0 auto;min-width:16px;height:16px;padding:0 4px;border-radius:8px;box-sizing:border-box;',
+        'background:#ff453a;color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;',
+        'font-variant-numeric:tabular-nums}',
+        '.header-notif-badge[hidden]{display:none}',
+        '@media (prefers-reduced-motion:reduce){.np-panel,.np-backdrop{transition:none}}',
         '@keyframes niIn{from{opacity:0;transform:translateY(-14px) scale(.92)}to{opacity:1;transform:none}}',
         '@keyframes niBump{0%{transform:scale(1)}40%{transform:scale(1.04)}100%{transform:scale(1)}}',
         '@keyframes niBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}',
@@ -141,6 +197,13 @@ function updateTop(container) {
         if (r.height > 0) top = Math.max(0, Math.round(r.bottom));
     }
     container.style.setProperty('--ni-top', top + 'px');
+}
+
+function headerBottom() {
+    var h = document.getElementById('app-header');
+    if (!h) return 0;
+    var r = h.getBoundingClientRect();
+    return r.height > 0 ? Math.max(0, Math.round(r.bottom)) : 0;
 }
 
 var _resizeBound = false;
@@ -285,6 +348,190 @@ function bumpEntry(entry, payload, msg) {
     if (!entry.expanded) startTimer(entry, calcDuration(payload, msg));
 }
 
+
+// ------------------------------------------------------------ riwayat & panel
+
+function relTime(ts) {
+    var sec = Math.max(0, Math.round((Date.now() - ts) / 1000));
+    if (sec < 45) return t('notif.time.now');
+    var min = Math.round(sec / 60);
+    if (min < 60) return t('notif.time.min', { n: min });
+    var hr = Math.round(min / 60);
+    if (hr < 24) return t('notif.time.hour', { n: hr });
+    return t('notif.time.day', { n: Math.round(hr / 24) });
+}
+
+function emitChanged() {
+    try { bus.emit('notif:changed', { unread: _unread, total: _history.length }); } catch (e) {}
+    syncBadge();
+}
+
+function recordHistory(type, msg, payload) {
+    var last = _history[0];
+    // pesan identik berurutan digabung agar riwayat tidak penuh spam
+    if (last && last.type === type && last.msg === msg && (Date.now() - last.ts) < 60000) {
+        last.count++;
+        last.ts = Date.now();
+        if (!last.read) { /* tetap belum dibaca */ } else { last.read = false; _unread++; }
+        if (payload && payload.action && typeof payload.action.onClick === 'function') last.action = payload.action;
+    } else {
+        _history.unshift({
+            id: _histId++, type: type, msg: msg, ts: Date.now(), count: 1,
+            read: _panelOpen,
+            action: (payload && payload.action && typeof payload.action.onClick === 'function') ? payload.action : null
+        });
+        if (!_panelOpen) _unread++;
+        while (_history.length > HISTORY_MAX) {
+            var old = _history.pop();
+            if (old && !old.read) _unread = Math.max(0, _unread - 1);
+        }
+    }
+    if (_panelOpen) renderPanelList();
+    emitChanged();
+}
+
+function syncBadge() {
+    if (typeof document === 'undefined') return;
+    var badges = document.querySelectorAll('[data-notif-badge]');
+    for (var i = 0; i < badges.length; i++) {
+        var b = badges[i];
+        if (_unread > 0) { b.textContent = _unread > 99 ? '99+' : String(_unread); b.hidden = false; }
+        else { b.hidden = true; b.textContent = ''; }
+    }
+    var btn = document.querySelector('[data-notif-toggle]');
+    if (btn) btn.setAttribute('aria-expanded', _panelOpen ? 'true' : 'false');
+}
+
+function markAllRead() {
+    for (var i = 0; i < _history.length; i++) _history[i].read = true;
+    _unread = 0;
+}
+
+var BELL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>';
+
+function renderPanelList() {
+    if (!_panel) return;
+    var list = _panel.querySelector('.np-list');
+    var sub = _panel.querySelector('.np-sub');
+    var clr = _panel.querySelector('[data-np-clear]');
+    if (!list) return;
+    clr.disabled = _history.length === 0;
+    sub.textContent = _history.length ? t('notif.panel.count', { n: _history.length }) : '';
+    if (!_history.length) {
+        list.innerHTML = '<div class="np-empty">' + BELL_ICON + '<div>' + escapeHtml(t('notif.panel.empty')) + '</div></div>';
+        return;
+    }
+    var html = '';
+    for (var i = 0; i < _history.length; i++) {
+        var h = _history[i];
+        var meta = TYPES[h.type] || TYPES.info;
+        html += '<div class="np-item' + (h.read ? '' : ' np-unread') + '" style="--ni-rgb:' + meta.rgb + '" data-np-id="' + h.id + '">' +
+            '<span class="ni-ico"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round">' + meta.icon + '</svg></span>' +
+            '<div class="np-body"><div class="np-msg">' + escapeHtml(h.msg) + '</div>' +
+            '<div class="np-meta"><b>' + escapeHtml(typeLabel(h.type)) + '</b><span>\u00b7</span><span>' + escapeHtml(relTime(h.ts)) + '</span>' +
+            (h.count > 1 ? '<span>\u00b7</span><span>\u00d7' + h.count + '</span>' : '') + '</div></div>' +
+            (h.action ? '<button type="button" class="np-act" data-np-act="' + h.id + '">' + escapeHtml(h.action.label || t('notif.action.open')) + '</button>' : '') +
+            '<button type="button" class="np-x" data-np-del="' + h.id + '" aria-label="' + escapeHtml(t('notif.close')) + '">\u00d7</button>' +
+            '</div>';
+    }
+    list.innerHTML = html;
+}
+
+function onKey(e) { if (e.key === 'Escape') closeNotificationPanel(); }
+
+export function openNotificationPanel() {
+    if (typeof document === 'undefined' || _panelOpen) return;
+    ensureStyle();
+    var top = headerBottom();
+
+    var back = document.createElement('div');
+    back.className = 'np-backdrop';
+    back.style.setProperty('--np-top', top + 'px');
+    back.addEventListener('click', function () { closeNotificationPanel(); });
+
+    var panel = document.createElement('div');
+    panel.className = 'np-panel';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-label', t('notif.panel.title'));
+    panel.style.setProperty('--np-top', top + 'px');
+    panel.innerHTML =
+        '<div class="np-head"><div class="np-title">' + escapeHtml(t('notif.panel.title')) + '</div>' +
+        '<span class="np-sub"></span>' +
+        '<button type="button" class="np-btn" data-np-clear>' + escapeHtml(t('notif.panel.clear')) + '</button>' +
+        '<button type="button" class="np-btn" data-np-close aria-label="' + escapeHtml(t('notif.panel.close')) + '">\u00d7</button></div>' +
+        '<div class="np-list"></div>';
+
+    panel.addEventListener('click', function (e) {
+        var tg = e.target;
+        if (!tg || !tg.closest) return;
+        if (tg.closest('[data-np-close]')) { closeNotificationPanel(); return; }
+        if (tg.closest('[data-np-clear]')) { clearHistory(); return; }
+        var del = tg.closest('[data-np-del]');
+        if (del) {
+            var did = Number(del.getAttribute('data-np-del'));
+            _history = _history.filter(function (x) { return x.id !== did; });
+            renderPanelList(); emitChanged();
+            return;
+        }
+        var act = tg.closest('[data-np-act]');
+        if (act) {
+            var aid = Number(act.getAttribute('data-np-act'));
+            var item = _history.filter(function (x) { return x.id === aid; })[0];
+            closeNotificationPanel();
+            if (item && item.action) {
+                try { item.action.onClick(); } catch (err) { console.error('[Notif] action error:', err); }
+            }
+        }
+    });
+
+    document.body.appendChild(back);
+    document.body.appendChild(panel);
+    _panel = panel;
+    _panel._back = back;
+    _panelOpen = true;
+
+    // toast aktif tidak perlu menumpuk di atas panel
+    clearNotifications();
+    markAllRead();
+    _unread = 0;
+    renderPanelList();
+    emitChanged();
+
+    document.addEventListener('keydown', onKey);
+    _tickTimer = setInterval(function () { if (_panelOpen) renderPanelList(); }, 30000);
+    requestAnimationFrame(function () { back.classList.add('np-show'); panel.classList.add('np-show'); });
+}
+
+export function closeNotificationPanel() {
+    if (!_panelOpen) return;
+    _panelOpen = false;
+    document.removeEventListener('keydown', onKey);
+    clearInterval(_tickTimer); _tickTimer = null;
+    var p = _panel, b = p && p._back;
+    _panel = null;
+    if (p) p.classList.remove('np-show');
+    if (b) b.classList.remove('np-show');
+    setTimeout(function () {
+        if (p && p.parentNode) p.parentNode.removeChild(p);
+        if (b && b.parentNode) b.parentNode.removeChild(b);
+    }, 240);
+    syncBadge();
+}
+
+export function toggleNotificationPanel() {
+    if (_panelOpen) closeNotificationPanel(); else openNotificationPanel();
+}
+
+export function isNotificationPanelOpen() { return _panelOpen; }
+export function getUnreadCount() { return _unread; }
+
+export function clearHistory() {
+    _history = [];
+    _unread = 0;
+    renderPanelList();
+    emitChanged();
+}
+
 // ------------------------------------------------------------ public API
 
 export function renderNotification(container, payload) {
@@ -293,12 +540,23 @@ export function renderNotification(container, payload) {
     updateTop(container);
     if (!_resizeBound) {
         _resizeBound = true;
-        window.addEventListener('resize', function () { updateTop(container); });
+        window.addEventListener('resize', function () {
+            updateTop(container);
+            if (_panel) {
+                var tp = headerBottom() + 'px';
+                _panel.style.setProperty('--np-top', tp);
+                if (_panel._back) _panel._back.style.setProperty('--np-top', tp);
+            }
+        });
     }
 
     var type = normalizeType(payload.type);
     var msg = String(payload.message || '');
     if (!msg) return;
+
+    recordHistory(type, msg, payload);
+    // Panel sedang terbuka: pesan langsung masuk daftar, tidak perlu toast
+    if (_panelOpen) return;
 
     // Pesan sama masih tampil -> naikkan penghitung, jangan dobel kartu
     for (var i = 0; i < _active.length; i++) {
