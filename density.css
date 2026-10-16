@@ -1,0 +1,90 @@
+/* ============================================================================
+   DENSITY LAYER — dimuat TERAKHIR (setelah style.css & profile-ui.css)
+   Mode: html[data-density="compact"] (default) | "comfortable" (tampilan lama)
+   Gaya acuan: iCloud Mail mobile — header tipis, baris rapat dengan garis
+   pemisah tipis, kartu datar tanpa bayangan/hover-lift, nav ramping.
+   ============================================================================ */
+
+html[data-density="compact"] {
+    --nav-h: 52px;
+    --r-sm: 4px; --r: 6px; --r-md: 8px; --r-lg: 10px; --r-xl: 12px;
+    --fs-base: 13px;
+}
+
+/* ---------- Header: tipis ---------- */
+html[data-density="compact"] .header-inner { gap: 1px; padding: 6px 12px 6px; }
+html[data-density="compact"] .header-row { min-height: 20px; }
+html[data-density="compact"] .header-meta { font-size: 10.5px; }
+html[data-density="compact"] .btn-icon { min-width: 30px; height: 24px; padding: 0 6px; font-size: 10.5px; }
+html[data-density="compact"] .header-controls { gap: 4px; }
+html[data-density="compact"] .header-wallet { gap: 2px; }
+html[data-density="compact"] .header-silicon { padding: 2px 7px; }
+html[data-density="compact"] .header-warn { padding: 1px 6px; }
+
+/* ---------- Area konten ---------- */
+html[data-density="compact"] .app-view {
+    padding: 8px 8px 0;
+    padding-bottom: calc(12px + var(--nav-h) + env(safe-area-inset-bottom));
+}
+
+/* ---------- Bottom nav: ramping ---------- */
+html[data-density="compact"] .nav-btn { padding: 3px 2px; min-height: 40px; gap: 1px; }
+html[data-density="compact"] .nav-btn .nav-ico { width: 20px; height: 20px; }
+html[data-density="compact"] .nav-btn .nav-label { margin-top: 1px; font-size: 9px; }
+html[data-density="compact"] .nav-btn.active .nav-ico { transform: none; animation: none; }
+html[data-density="compact"] .nav-slider { top: 4px; height: calc(100% - 8px); border-radius: 12px; }
+
+/* ---------- Kartu: datar & rapat ---------- */
+html[data-density="compact"] .card {
+    padding: 10px 12px; margin-bottom: 6px;
+    box-shadow: none;
+}
+html[data-density="compact"] .card:hover { transform: none; box-shadow: none; }
+html[data-density="compact"] .card-title { margin-bottom: 6px; letter-spacing: 0.5px; }
+
+/* ---------- KPI ---------- */
+html[data-density="compact"] .kpi-grid { gap: 6px; margin-bottom: 6px; }
+html[data-density="compact"] .kpi { padding: 8px 10px; box-shadow: none; }
+html[data-density="compact"] .kpi-label { margin-bottom: 2px; }
+html[data-density="compact"] .kpi-value { font-size: 17px; }
+html[data-density="compact"] .kpi-sub { margin-top: 2px; }
+
+/* ---------- Baris & daftar ---------- */
+html[data-density="compact"] .sum-row { padding: 6px 0; }
+html[data-density="compact"] .sum-row.total { padding-top: 8px; margin-top: 2px; }
+html[data-density="compact"] .log-entry { padding: 4px 0; }
+html[data-density="compact"] .quest-item { padding: 6px 0; gap: 8px; }
+html[data-density="compact"] .ms-list { gap: 4px; }
+html[data-density="compact"] .settings-row { padding: 9px 12px; }
+html[data-density="compact"] .node-row-wrap,
+html[data-density="compact"] .os-row,
+html[data-density="compact"] .cand-row { padding: 7px 10px; }
+html[data-density="compact"] .os-hero { padding: 9px 12px; }
+
+/* ---------- Tombol & form ---------- */
+html[data-density="compact"] .btn-primary,
+html[data-density="compact"] .btn-secondary,
+html[data-density="compact"] .btn-danger {
+    min-height: 36px; padding: 7px 12px; box-shadow: none;
+}
+html[data-density="compact"] .btn-toggle { padding: 5px 10px; }
+html[data-density="compact"] .field-label { margin-top: 4px; margin-bottom: 4px; }
+html[data-density="compact"] .field-input { padding: 9px 12px; font-size: var(--fs-base); }
+html[data-density="compact"] .diff-grid { gap: 6px; }
+html[data-density="compact"] .diff-btn { padding: 8px 12px; min-height: 48px; }
+
+/* ---------- Sub-tab ---------- */
+html[data-density="compact"] .subtab-bar { margin-bottom: 8px; padding: 3px; box-shadow: none; }
+html[data-density="compact"] .subtab-btn { padding: 6px 6px; min-height: 32px; }
+
+/* ---------- Lain-lain ---------- */
+html[data-density="compact"] .progress { height: 5px; }
+html[data-density="compact"] .progress-label { margin-bottom: 4px; }
+html[data-density="compact"] .empty { padding: 28px 16px; }
+html[data-density="compact"] .chart-wrap,
+html[data-density="compact"] .chart-canvas { height: 130px; }
+
+/* ---------- Desktop: kembalikan sedikit ruang ---------- */
+@media (min-width: 768px) {
+    html[data-density="compact"] .app-view { padding: 12px 12px 0; padding-bottom: 12px; }
+}
