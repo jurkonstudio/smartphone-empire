@@ -14,6 +14,8 @@ import {
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { renderTechNodeRow } from '../components/TechNodeCard.js';
 import { t } from '../../core/LanguageService.js';
+import { renderSilResearchBlock, renderSilSlotBoost } from '../components/SilResearchBlock.js';
+import { SiliconService } from '../../systems/SiliconService.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -139,6 +141,7 @@ function _renderSlotBar(active, maxSlots) {
                 '<div class="progress-bar" data-research-bar="' + e.nodeId + '" style="width:0%;"></div>' +
             '</div>' +
             '<div class="slot-strip-item-eta" data-research-eta="' + e.nodeId + '">—</div>' +
+            '<div class="slot-strip-item-boost">' + renderSilSlotBoost('tech', e.nodeId, SiliconService.researchFinishCost(e)) + '</div>' +
             '</div>';
     }).join('');
 
@@ -196,8 +199,13 @@ function _renderRow(it, active) {
     if (it.status === 'running') {
         var entry = (active || []).find(function (e) { return e.nodeId === it.node.id; });
         if (entry) {
-            pct = Math.round(entry.percent * 100);
-            eta = t('research.slot.eta', { n: Math.ceil(entry.remainingDays) });
+            // entry mentah dari state (tidak punya percent/remainingDays) → hitung di sini.
+            var dur = entry.durationDays || 0;
+            var prog = entry.progressDays || 0;
+            var spd = 1;
+            try { spd = window.__game.research._getSpeedMultiplier() || 1; } catch (e) {}
+            pct = dur > 0 ? Math.round(Math.min(1, prog / dur) * 100) : 0;
+            eta = t('research.slot.eta', { n: Math.ceil(Math.max(0, dur - prog) / spd) });
         }
     }
 
@@ -253,6 +261,7 @@ export function openNodeDetailModal(params) {
         ${prereqHtml}
         ${unlockComps || unlockFeat ? '<div class="card-title" style="margin-top:12px;">' + t('research.node.effects') + '</div>' + unlockComps + unlockFeat : ''}
         <div class="sum-row" style="margin-top:12px;"><span>${t('research.node.status')}</span><b>${st.reason || st.status}</b></div>
+        ${renderSilResearchBlock('tech', nodeId)}
         ${canStart
             ? `<button class="btn-primary" data-research-action="start" data-node-id="${nodeId}" style="width:100%;margin-top:12px;">${t('research.node.start')}</button>`
             : st.status === 'running'

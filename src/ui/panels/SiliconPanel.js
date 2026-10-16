@@ -1,10 +1,14 @@
 // FILE: src/ui/panels/SiliconPanel.js
 // v2027.1a — Modal Silicon.
+// v2027.40 — layout berkelompok, tombol Top Up, gaya konsisten dengan panel lain.
 import { Modal } from '../modal.js';
 import { t } from '../../core/LanguageService.js';
 import { SiliconService, SILICON_ACTIONS } from '../../systems/SiliconService.js';
 import { ToastService } from '../../core/ToastService.js';
 import { bus } from '../../core/EventBus.js';
+import { openSiliconStoreModal } from './SiliconStorePanel.js';
+
+var GROUPS = ['time', 'research', 'production', 'team'];
 
 function _esc(s) {
     if (typeof s !== 'string') return '';
@@ -18,39 +22,40 @@ function _tf(key, fallback) {
 }
 
 function _renderActions(balance) {
-    return SILICON_ACTIONS.map(function (a) {
-        var can = balance >= a.cost;
-        var opacity = can ? '1' : '0.5';
-        var btnCls = can ? 'btn-primary' : 'btn-secondary';
-        var label = _tf('silicon.action.' + a.id + '.t', a.id);
-        var desc = _tf('silicon.action.' + a.id + '.d', '');
-        return '<button class="' + btnCls + '" data-sil-action="' + a.id + '" ' +
-            (can ? '' : 'disabled ') +
-            'style="width:100%;padding:12px;text-align:left;display:flex;align-items:center;gap:10px;margin-bottom:8px;opacity:' + opacity + ';">' +
-            '<span style="font-size:20px;">' + a.icon + '</span>' +
-            '<span style="flex:1;min-width:0;">' +
-                '<span style="display:block;font-weight:700;font-size:13px;">' + _esc(label) + '</span>' +
-                (desc ? '<span style="display:block;font-size:11px;color:var(--text-mute);margin-top:2px;">' + _esc(desc) + '</span>' : '') +
-            '</span>' +
-            '<span style="font-weight:800;font-size:13px;flex-shrink:0;">' + a.cost + ' SIL</span>' +
-        '</button>';
+    return GROUPS.map(function (g) {
+        var items = SILICON_ACTIONS.filter(function (a) { return a.group === g; });
+        if (!items.length) return '';
+        var rows = items.map(function (a) {
+            var can = balance >= a.cost;
+            var label = _tf('silicon.action.' + a.id + '.t', a.id);
+            var desc = _tf('silicon.action.' + a.id + '.d', '');
+            return '<button type="button" class="sil-row' + (can ? '' : ' is-short') + '" data-sil-action="' + a.id + '"' +
+                (can ? '' : ' data-sil-short="1"') + '>' +
+                '<span class="sil-row-ico">' + a.icon + '</span>' +
+                '<span class="sil-row-text">' +
+                    '<span class="sil-row-title">' + _esc(label) + '</span>' +
+                    (desc ? '<span class="sil-row-desc">' + _esc(desc) + '</span>' : '') +
+                '</span>' +
+                '<span class="sil-cost">💎 ' + a.cost + '</span>' +
+            '</button>';
+        }).join('');
+        return '<div class="section-label"><span class="section-label-text">' + _tf('silicon.group.' + g, g) + '</span>' +
+               '<span class="section-label-line"></span></div>' +
+               '<div class="node-list">' + rows + '</div>';
     }).join('');
 }
 
 function _renderHistory(history) {
     if (!history.length) {
-        return '<div style="font-size:11px;color:var(--text-mute);padding:6px 0;">' +
-            _tf('silicon.empty', 'No transactions yet.') + '</div>';
+        return '<div class="sil-empty">' + _tf('silicon.empty', 'No transactions yet.') + '</div>';
     }
-    return history.slice(0, 6).map(function (h) {
+    return '<div class="node-list">' + history.slice(0, 6).map(function (h) {
         var positive = h.delta > 0;
-        var color = positive ? 'var(--success)' : 'var(--danger)';
-        var sign = positive ? '+' : '';
-        return '<div style="display:flex;justify-content:space-between;gap:10px;font-size:11px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">' +
-            '<span style="color:var(--text-dim);">' + _esc(h.reason || h.type) + '</span>' +
-            '<span style="color:' + color + ';font-weight:700;">' + sign + h.delta + '</span>' +
+        return '<div class="sil-hist-row">' +
+            '<span class="sil-hist-reason">' + _esc(h.reason || h.type) + '</span>' +
+            '<span class="sil-hist-delta ' + (positive ? 'pos' : 'neg') + '">' + (positive ? '+' : '') + h.delta + '</span>' +
         '</div>';
-    }).join('');
+    }).join('') + '</div>';
 }
 
 export function openSiliconModal() {
@@ -61,21 +66,21 @@ export function openSiliconModal() {
         '<div class="modal-title">💎 ' + _tf('silicon.title', 'Silicon') + '</div>' +
         '<div class="modal-sub">' + _tf('silicon.sub', 'Boost & speed up actions.') + '</div>' +
 
-        '<div style="background:linear-gradient(135deg, rgba(79,140,255,0.14), rgba(139,92,246,0.14));' +
-            'border-radius:12px;padding:14px;margin-bottom:14px;text-align:center;">' +
-            '<div style="font-size:11px;color:var(--text-mute);letter-spacing:0.5px;">' +
-                _tf('silicon.balance', 'BALANCE') + '</div>' +
-            '<div style="font-size:30px;font-weight:900;color:var(--accent);letter-spacing:-0.02em;line-height:1.1;">' +
-                balance + ' <span style="font-size:14px;color:var(--text-dim);">SIL</span></div>' +
+        '<div class="sil-balance">' +
+            '<div>' +
+                '<div class="sil-balance-label">' + _tf('silicon.balance', 'BALANCE') + '</div>' +
+                '<div class="sil-balance-value">' + balance + ' <span>SIL</span></div>' +
+            '</div>' +
+            '<button type="button" class="btn-primary sil-topup-btn" data-sil-topup>＋ ' + _tf('silicon.topup', 'Top Up') + '</button>' +
         '</div>' +
 
         _renderActions(balance) +
 
-        '<div class="card-title" style="margin-top:16px;">' +
-            _tf('silicon.history', 'History') + '</div>' +
+        '<div class="section-label"><span class="section-label-text">' + _tf('silicon.history', 'History') + '</span>' +
+            '<span class="section-label-line"></span></div>' +
         _renderHistory(history) +
 
-        '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:14px;padding:10px;">' +
+        '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:14px;">' +
             _tf('common.close', 'Close') + '</button>';
 
     Modal.open('silicon-panel', html);
@@ -84,13 +89,23 @@ export function openSiliconModal() {
     if (!root) return;
 
     root.addEventListener('click', function (e) {
+        if (e.target.closest('[data-sil-topup]')) {
+            e.preventDefault();
+            openSiliconStoreModal();
+            return;
+        }
         var btn = e.target.closest('[data-sil-action]');
         if (!btn) return;
         e.preventDefault();
-        if (btn.disabled) return;
 
-        var id = btn.dataset.silAction;
-        var res = SiliconService.runAction(id);
+        // SIL kurang → arahkan ke Top Up
+        if (btn.dataset.silShort) {
+            ToastService.warning(_tf('silicon.short', 'Silicon tidak cukup.'));
+            openSiliconStoreModal();
+            return;
+        }
+
+        var res = SiliconService.runAction(btn.dataset.silAction);
         if (!res.ok) {
             ToastService.error(res.reason || 'Gagal.');
             return;
