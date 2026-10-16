@@ -212,7 +212,7 @@ export const en = {
 
     // NEWS
     'news.panel_title':     'International News',
-    'news.panel_empty':     'No news yet. Release a product to see press reviews.',
+    'news.panel_empty':     'No news yet. Industry news and press reviews will appear here.',
     'news.new_badge':       '{n} new',
     'news.read_latest':     'Read Latest News',
     'news.score':           'Score {n}/10',
@@ -223,6 +223,8 @@ export const en = {
     'news.article.editor_score': 'Editor Score',
     'news.article.from':       'Article from {source} ({type})',
     'news.article.close':      'Close Article',
+    'news.industry_log':       'Industry news: {headline}',
+    'news.unconfirmed':        '(Unconfirmed report.)',
 
     // TIMELINE
     'timeline.header.era':      'Era',
@@ -973,7 +975,7 @@ export const en = {
 'guide.sys.exchange.t':  'Stock Exchange',
 'guide.sys.exchange.d':  'Buy/sell shares of rivals and yourself. Prices follow real history + game events.',
 'guide.sys.news.t':      'International News',
-'guide.sys.news.d':      'Headlines react to your releases and real-world events.',
+'guide.sys.news.d':      'Headlines react to your releases, competitor launches and real-world events.',
 
 'guide.term.reputation':  'Reputation',
 'guide.def.reputation':   'Market trust in your company. Affects demand.',

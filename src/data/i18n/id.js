@@ -213,7 +213,7 @@ export const id = {
 
     // NEWS
     'news.panel_title':     'Berita Internasional',
-    'news.panel_empty':     'Belum ada berita. Rilis produk untuk melihat ulasan media.',
+    'news.panel_empty':     'Belum ada berita. Berita industri dan ulasan media akan muncul di sini.',
     'news.new_badge':       '{n} baru',
     'news.read_latest':     'Baca Berita Terbaru',
     'news.score':           'Skor {n}/10',
@@ -224,6 +224,8 @@ export const id = {
     'news.article.editor_score': 'Penilaian Editor',
     'news.article.from':       'Artikel dari {source} ({type})',
     'news.article.close':      'Tutup Artikel',
+    'news.industry_log':       'Berita industri: {headline}',
+    'news.unconfirmed':        '(Laporan belum terkonfirmasi.)',
 
     // TIMELINE
     'timeline.header.era':      'Era',
@@ -974,7 +976,7 @@ export const id = {
 'guide.sys.exchange.t':  'Bursa Saham',
 'guide.sys.exchange.d':  'Beli/jual saham rival dan perusahaanmu sendiri. Harga mengikuti sejarah nyata + event game.',
 'guide.sys.news.t':      'Berita Internasional',
-'guide.sys.news.d':      'Headline bereaksi terhadap rilis produkmu dan event dunia nyata.',
+'guide.sys.news.d':      'Headline bereaksi terhadap rilis produkmu, peluncuran kompetitor, dan event dunia nyata.',
 
 'guide.term.reputation':  'Reputasi',
 'guide.def.reputation':   'Kepercayaan pasar terhadap perusahaanmu. Mempengaruhi permintaan.',
