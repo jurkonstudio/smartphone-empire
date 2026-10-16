@@ -1,5 +1,6 @@
 // FILE: src/ui/social/ProfileEditModals.js  (BARU)
 // Modal: ganti nama perusahaan (gratis 2x lalu 150 SIL) & edit profil pemain.
+import { gIcon } from '../icons/GameIcons.js';
 import { checkCompanyNameAvailable } from '../../services/cloud/CompanyNameCheck.js';
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
@@ -25,7 +26,7 @@ export function openEditCompanyNameModal() {
         ? t('pp.company.rule_paid', { cost: NAME_RULES.silCost })
         : t('pp.company.rule_free', { n: info.freeLeft, cost: NAME_RULES.silCost });
     var badge = paid
-        ? '<span class="pf-badge pf-badge-sil">💎 ' + esc(t('pp.company.paid_badge', { cost: info.cost })) + '</span>'
+        ? '<span class="pf-badge pf-badge-sil">' + gIcon('sil', 13) + ' ' + esc(t('pp.company.paid_badge', { cost: info.cost })) + '</span>'
         : '<span class="pf-badge pf-badge-free">' + esc(t('pp.company.free_left', { n: info.freeLeft })) + '</span>';
 
     var html =
@@ -83,7 +84,7 @@ export function openEditCompanyNameModal() {
             if (short > 0) {
                 payBox.innerHTML =
                     '<div class="pf-pay-line is-short">' + esc(t('pp.company.short', { n: short })) + '</div>' +
-                    '<button class="btn-secondary" data-topup type="button" style="width:100%;margin-top:8px;">💎 ' + esc(t('pp.company.topup')) + '</button>';
+                    '<button class="btn-secondary" data-topup type="button" style="width:100%;margin-top:8px;">' + gIcon('sil', 15) + ' ' + esc(t('pp.company.topup')) + '</button>';
                 payBox.style.display = 'block';
                 var tb = payBox.querySelector('[data-topup]');
                 if (tb) tb.addEventListener('click', function () {
