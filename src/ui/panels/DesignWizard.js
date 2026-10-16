@@ -455,7 +455,7 @@ function _confirm() {
         ToastService.error(res.reason || t('wiz.err.confirm_fail'));
         return;
     }
-    ToastService.success(t('wiz.success.dev_start'));
+    // Toast sukses sudah dikirim ProductSystem.startDevelopment — jangan dobel.
     _wizardState = null;
     _wizardView = 'front';
     Modal.close('design-wizard', true);
