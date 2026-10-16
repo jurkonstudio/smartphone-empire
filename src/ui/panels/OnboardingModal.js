@@ -5,6 +5,7 @@ import { bus } from '../../core/EventBus.js';
 import { DIFFICULTY } from '../../config/constants.js';
 import { t } from '../../core/LanguageService.js';
 import { validateCompanyName } from '../../data/name-blocklist.data.js';
+import { checkCompanyNameAvailable } from '../../services/cloud/CompanyNameCheck.js';
 
 const DIFF_INFO = {
     santai: { labelKey: 'onb.diff_santai', descKey: 'onb.diff_santai_desc' },
@@ -80,7 +81,11 @@ export function showOnboarding() {
             const name = nameInput.value.trim();
             if (!name) return;
             const result = validateCompanyName(name);
-            if (!result.ok) _showError(_reasonToKey(result.reason));
+            if (!result.ok) { _showError(_reasonToKey(result.reason)); return; }
+            // Cek nama sudah dipakai pemain lain (tanpa memblokir bila tidak bisa dicek).
+            checkCompanyNameAvailable(name).then(function (av) {
+                if (av === false && nameInput.value.trim() === name) _showError('onb.name.error_taken');
+            });
         });
 
         root.querySelectorAll('[data-onb-diff]').forEach(function (btn) {
@@ -91,7 +96,9 @@ export function showOnboarding() {
             });
         });
 
-        submitBtn.addEventListener('click', function () {
+        let _checking = false;
+        submitBtn.addEventListener('click', async function () {
+            if (_checking) return;
             const result = validateCompanyName(nameInput.value);
 
             if (!result.ok) {
@@ -101,6 +108,21 @@ export function showOnboarding() {
             }
 
             const finalName = nameInput.value.trim();
+
+            // Nama harus unik antar pemain.
+            _checking = true;
+            const origLabel = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = t('onb.name.checking');
+            const available = await checkCompanyNameAvailable(finalName);
+            _checking = false;
+            submitBtn.disabled = false;
+            submitBtn.textContent = origLabel;
+            if (available === false) {
+                _showError('onb.name.error_taken');
+                nameInput.focus();
+                return;
+            }
 
             Modal.close('onboarding', true);
             bus.emit('onboarding:done', { companyName: finalName, difficulty: selected });
