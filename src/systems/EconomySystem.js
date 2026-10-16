@@ -3,6 +3,7 @@
 import { bus } from '../core/EventBus.js';
 import { BALANCE } from '../data/balance.data.js';
 import { LOG_TYPES } from '../config/constants.js';
+import { getMacro } from '../core/MacroModel.js';
 
 // EconomySystem — memproses siklus bulanan:
 //   1. Potong gaji + sewa + utilitas + bunga pinjaman.
@@ -30,6 +31,23 @@ export class EconomySystem {
         bus.on('economy:add-revenue', ({ amount }) => {
             if (typeof amount === 'number') this._monthRevenue += amount;
         });
+        // Kenaikan gaji tahunan mengikuti inflasi & pertumbuhan upah dunia nyata.
+        bus.on('time:year-changed', (snap) => this._applyAnnualRaise(snap));
+    }
+
+    _applyAnnualRaise(snap) {
+        const data = this.state.data;
+        if (!Array.isArray(data.staff) || !data.staff.length) return;
+        const y = snap.currentYear;
+        const cfg = BALANCE.macro;
+        const now  = getMacro({ currentYear: y,     currentMonth: 1, currentDay: 1 }, cfg).wageIndex;
+        const prev = getMacro({ currentYear: y - 1, currentMonth: 1, currentDay: 1 }, cfg).wageIndex;
+        const ratio = now / prev;
+        if (!isFinite(ratio) || Math.abs(ratio - 1) < 0.0005) return;
+        data.staff.forEach((s) => { s.salary = Math.round((s.salary || 0) * ratio); });
+        const pct = ((ratio - 1) * 100).toFixed(1);
+        this.state.addLog('Gaji tahunan disesuaikan ' + (ratio >= 1 ? '+' : '') + pct + '% (inflasi & pasar tenaga kerja).', LOG_TYPES.info);
+        bus.emit('state:changed', data);
     }
 
     stop() {
@@ -147,12 +165,14 @@ export class EconomySystem {
             return { ok: false, error: 'Pinjaman jenis ini masih aktif.' };
         }
 
+        // Bunga mengikuti suku bunga acuan zaman (rendah 2009-2015, tinggi 2023-2024).
+        const rateFactor = getMacro(data.time, BALANCE.macro).rateFactor;
         const loan = {
             id: def.id,
             label: def.label,
             principal: def.principal,
             remaining: def.principal,
-            monthlyInterestRate: def.monthlyInterestRate,
+            monthlyInterestRate: Math.round(def.monthlyInterestRate * rateFactor * 10000) / 10000,
             termMonths: def.termMonths,
             takenAtYear: data.time.currentYear,
             takenAtMonth: data.time.currentMonth,

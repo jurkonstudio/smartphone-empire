@@ -4,6 +4,7 @@
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
+import { getMacro } from '../core/MacroModel.js';
 import { TIME_CONFIG } from '../config/time.config.js';
 import { ToastService } from '../core/ToastService.js';
 import { LOG_TYPES } from '../config/constants.js';
@@ -88,8 +89,13 @@ export class TeamSystem {
         if (changed) bus.emit('state:changed', data);
     }
 
+    // Indeks upah dunia nyata pada tanggal game saat ini (1.0 = awal 2000).
+    _wageScale() {
+        return getMacro(this.state.data.time, BALANCE.macro).wageIndex;
+    }
+
     _onSkillUp(staff) {
-        const roleBase = (BALANCE.salary && BALANCE.salary[staff.role]) || 2500;
+        const roleBase = ((BALANCE.salary && BALANCE.salary[staff.role]) || 2500) * this._wageScale();
         const skillDef = getSkillTier(staff.skill);
         const traitMult = this._traitSalaryMultiplier(staff.traits);
         staff.salary = Math.round(roleBase * skillDef.salaryMult * traitMult);
@@ -172,13 +178,13 @@ export class TeamSystem {
         const background = pickBackground();
 
         const skillDef = getSkillTier(skill);
-        const roleBase = (BALANCE.salary && BALANCE.salary[role.id]) || 2500;
+        const roleBase = ((BALANCE.salary && BALANCE.salary[role.id]) || 2500) * this._wageScale();
         const traitMult = this._traitSalaryMultiplier(traits);
         const salary = Math.round(roleBase * skillDef.salaryMult * traitMult);
 
         const signingMult = (BALANCE.team && BALANCE.team.signingBonusMult) || 0.6;
         const signingBonus = Math.round(salary * signingMult * 3);
-        const roleRecruitCost = (BALANCE.recruitCost && BALANCE.recruitCost[role.id]) || 2000;
+        const roleRecruitCost = Math.round(((BALANCE.recruitCost && BALANCE.recruitCost[role.id]) || 2000) * this._wageScale());
         const totalCost = roleRecruitCost + signingBonus;
 
         return {
@@ -235,7 +241,7 @@ export class TeamSystem {
             return { ok: false, reason: 'Kapasitas ' + cand.role + ' penuh (maks ' + cap + ').' };
         }
 
-        const roleRecruitCost = (BALANCE.recruitCost && BALANCE.recruitCost[cand.role]) || 2000;
+        const roleRecruitCost = Math.round(((BALANCE.recruitCost && BALANCE.recruitCost[cand.role]) || 2000) * this._wageScale());
         const signingMult = (BALANCE.team && BALANCE.team.signingBonusMult) || 0.6;
         const signingBonus = cand.signingBonus != null
             ? cand.signingBonus
@@ -450,7 +456,7 @@ export class TeamSystem {
         cand.role = role || 'engineer';
         cand.skill = Math.max(1, Math.min(5, skill || 3));
         const skillDef = getSkillTier(cand.skill);
-        const roleBase = (BALANCE.salary && BALANCE.salary[cand.role]) || 2500;
+        const roleBase = ((BALANCE.salary && BALANCE.salary[cand.role]) || 2500) * this._wageScale();
         cand.salary = Math.round(roleBase * skillDef.salaryMult);
 
         const newStaff = {

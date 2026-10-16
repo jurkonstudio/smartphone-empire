@@ -5,6 +5,7 @@ import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
 import { LOG_TYPES } from '../config/constants.js';
 import { getCompetitorById, getFictionalName } from '../data/competitors.data.js';
+import { getMacro } from '../core/MacroModel.js';
 
 export class MarketSystem {
     constructor(gameState) {
@@ -36,8 +37,7 @@ export class MarketSystem {
     _ensureTrends() {
         const data = this.state.data;
         if (data.market.trends) return;
-        const era = data.era || 'feature_phone';
-        data.market.trends = { ...(BALANCE.market.trendsByEra[era] || BALANCE.market.trendsByEra.feature_phone) };
+        data.market.trends = { ...getMacro(data.time, BALANCE.macro).trends };
     }
 
     _onMonthChanged(snap) {
@@ -145,9 +145,15 @@ export class MarketSystem {
     _driftTrends() {
         const data = this.state.data;
         const t = data.market.trends || {};
-        const drift = BALANCE.market.trendVariationPerMonth || 0.05;
-        for (const k in t) {
-            t[k] = Math.max(0.1, Math.min(0.95, t[k] + (Math.random() * 2 - 1) * drift));
+        const target = getMacro(data.time, BALANCE.macro).trends;
+        const pull = BALANCE.macro.trendPull;
+        const noise = BALANCE.macro.trendNoise;
+        // Mean-reverting: tren ditarik ke jangkar tahun berjalan + sedikit gejolak,
+        // bukan random walk yang bisa melenceng jauh dari sejarah.
+        for (const k in target) {
+            const cur = (t[k] !== undefined) ? t[k] : target[k];
+            const next = cur + (target[k] - cur) * pull + (Math.random() * 2 - 1) * noise;
+            t[k] = Math.max(0.1, Math.min(0.95, next));
         }
         data.market.trends = t;
         data.market.lastTrendUpdateMonth = { year: data.time.currentYear, month: data.time.currentMonth };

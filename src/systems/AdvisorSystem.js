@@ -12,6 +12,7 @@ import { bus } from '../core/EventBus.js';
 import { LanguageService } from '../core/LanguageService.js';
 import { ToastService } from '../core/ToastService.js';
 import { BALANCE } from '../data/balance.data.js';
+import { getMacro } from '../core/MacroModel.js';
 
 const DAY = 1440;                 // menit game per hari
 const SNOOZE_DAYS = 30;
@@ -167,7 +168,7 @@ const RULES = [
     },
     function hiring(c, push) {
         var t = c.team, total = t.engineers + t.designers + t.marketers;
-        var cost = (BALANCE.recruitCost && BALANCE.recruitCost.engineer) || 2000;
+        var cost = Math.round(((BALANCE.recruitCost && BALANCE.recruitCost.engineer) || 2000) * getMacro(c.d.time, BALANCE.macro).wageIndex);
         if (total === 0) {
             push('hire_first', 'tip', '👥', { cost: money(cost) }, { nav: 'team' }, 20);
             return;
@@ -312,7 +313,7 @@ export class AdvisorSystem {
         var diff = (BALANCE.difficultyMultiplier && BALANCE.difficultyMultiplier[d.difficulty]) ||
                    (BALANCE.difficultyMultiplier && BALANCE.difficultyMultiplier.normal) || { expense: 1 };
         var m = BALANCE.monthly || {};
-        var fixed = ((m.rentHQ || 0) + (m.utilities || 0) + (m.baseAdmin || 0)) * (diff.expense || 1);
+        var fixed = ((m.rentHQ || 0) + (m.utilities || 0) + (m.baseAdmin || 0)) * getMacro(d.time, BALANCE.macro).cpiIndex * (diff.expense || 1);
         var payroll = arr(d.staff).reduce(function (a, s) { return a + (s.salary || 0); }, 0);
         var burn = fixed + payroll;
         var catalog = arr((d.products || {}).catalog);

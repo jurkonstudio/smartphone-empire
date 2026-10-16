@@ -16,6 +16,7 @@ import {
 } from '../data/components.data.js';
 import { getCampaignById, MARKETING_CAMPAIGNS } from '../data/marketing.data.js';
 import { getLicenseById } from '../data/os.data.js';
+import { getMacro, reviewBaseScore } from '../core/MacroModel.js';
 
 var MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -138,14 +139,15 @@ export class ProductSystem {
         var data = this.state.data;
         var stats = this.computeStats(config);
         var era = data.era || 'feature_phone';
-        var baseDemand = BALANCE.products.baseMarketDemand[era] || 5000;
+        var macro = getMacro(data.time, BALANCE.macro);
+        var baseDemand = macro.baseDemand * macro.demandCycle;
         var ff = getComponentById(config.formFactorId);
         var baseMult = (ff && ff.baseDemandMultiplier) ? ff.baseDemandMultiplier : 1.0;
         var w = BALANCE.products.weights;
         var refs = BALANCE.products.refs;
 
-        var qualityF = Math.pow(Math.max(0.2, stats.qualityScore / refs.quality), w.quality);
-        var priceF   = Math.pow(Math.max(0.2, refs.price / Math.max(1, config.price)), w.price);
+        var qualityF = Math.pow(Math.max(0.2, stats.qualityScore / macro.qualityRef), w.quality);
+        var priceF   = Math.pow(Math.max(0.2, macro.priceRef / Math.max(1, config.price)), w.price * macro.priceSensitivity);
         var repF     = Math.pow(Math.max(0.2, (data.market.reputation || 10) / refs.reputation), w.reputation);
         var marketingF = 1.0;
         var osFactor = this._getOsFactor(config);
@@ -401,7 +403,7 @@ export class ProductSystem {
         // [v2027.1d] _pushReviewToFeed dihapus — data.reviews.feed dead data.
 
         // [v2027.1a] fix reputasi ganda: kirim delta, bukan current+delta.
-        var repDelta = (rv.score - 5) * BALANCE.products.reputationPerReviewPoint;
+        var repDelta = this._reviewReputationDelta(rv.score, 1);
         if (repDelta !== 0) this.state.addReputation(repDelta);
 
         data.products.catalog.push(product);
@@ -488,14 +490,15 @@ export class ProductSystem {
     _computeDailyDemand(p) {
         var data = this.state.data;
         var era = data.era || 'feature_phone';
-        var baseDemand = BALANCE.products.baseMarketDemand[era] || 5000;
+        var macro = getMacro(data.time, BALANCE.macro);
+        var baseDemand = macro.baseDemand * macro.demandCycle;
         var ff = getComponentById(p.config.formFactorId);
         var baseMult = (ff && ff.baseDemandMultiplier) ? ff.baseDemandMultiplier : 1.0;
         var w = BALANCE.products.weights;
         var refs = BALANCE.products.refs;
 
-        var qualityF = Math.pow(Math.max(0.2, p.stats.qualityScore / refs.quality), w.quality);
-        var priceF   = Math.pow(Math.max(0.2, refs.price / Math.max(1, p.price)), w.price);
+        var qualityF = Math.pow(Math.max(0.2, p.stats.qualityScore / macro.qualityRef), w.quality);
+        var priceF   = Math.pow(Math.max(0.2, macro.priceRef / Math.max(1, p.price)), w.price * macro.priceSensitivity);
         var repF     = Math.pow(Math.max(0.2, (data.market.reputation || 10) / refs.reputation), w.reputation);
         var marketingF = this._getMarketingFactor(p.id);
         var osFactor = this._getOsFactor(p);
@@ -503,7 +506,11 @@ export class ProductSystem {
         var competitorF = Math.max(0.4, 1 / (1 + (p.competitorPressure || 0)));
         var lifecycleF = this._getLifecycleFactor(p);
 
-        var noise = 1 + (Math.random() * 2 - 1) * BALANCE.products.dailyNoise;
+        // Noise harian dihaluskan (AR1) supaya penjualan tidak naik-turun liar.
+        var sm = BALANCE.macro.demandNoiseSmoothing;
+        var rawNoise = (Math.random() * 2 - 1) * BALANCE.products.dailyNoise;
+        p.noiseState = (p.noiseState || 0) * sm + rawNoise * (1 - sm) * 1.8;
+        var noise = 1 + Math.max(-BALANCE.products.dailyNoise, Math.min(BALANCE.products.dailyNoise, p.noiseState));
 
         var demand = baseDemand * baseMult * qualityF * priceF * repF
                      * marketingF * osFactor * trendF * competitorF
@@ -718,15 +725,16 @@ export class ProductSystem {
         var era = this.state.data.era || 'feature_phone';
         var sources = REVIEW_SOURCES[era] || REVIEW_SOURCES.feature_phone;
         var source = sources[Math.floor(Math.random() * sources.length)];
-        var q = product.stats.qualityScore;
-        var thresholds = BALANCE.products.reviewThresholds;
-        var base;
-        if (q >= thresholds.excellent) base = 9;
-        else if (q >= thresholds.good) base = 7.5;
-        else if (q >= thresholds.average) base = 6;
-        else if (q >= thresholds.poor) base = 4;
-        else base = 2.5;
-        var variance = (Math.random() * 2 - 1) * 1.2;
+        var macro = getMacro(this.state.data.time, BALANCE.macro);
+        // Kualitas dinilai relatif terhadap ekspektasi zaman: ponsel yang
+        // hebat di 2000 terasa biasa saja di 2015 (dan sebaliknya).
+        var q = product.stats.qualityScore + (BALANCE.products.refs.quality - macro.qualityRef);
+        var base = reviewBaseScore(q);
+        // Nilai-uang: harga di atas ekspektasi (untuk kualitas segitu) menurunkan skor.
+        var expectedPrice = macro.priceRef * Math.pow(Math.max(0.3, q / BALANCE.products.refs.quality), 1.2);
+        var valueAdj = -BALANCE.macro.reviewValueWeight * Math.log(Math.max(1, product.price) / expectedPrice);
+        base += Math.max(-1.2, Math.min(1.0, valueAdj));
+        var variance = (Math.random() * 2 - 1) * 0.9;
         var score = Math.round((base + variance) * 10) / 10;
         score = Math.max(1, Math.min(10, score));
 
@@ -796,10 +804,20 @@ export class ProductSystem {
                 if (p.reviews.length > 10) p.reviews.shift();
                 // [v2027.1d] _pushReviewToFeed dihapus — data.reviews.feed dead data.
                 // [v2027.1a] fix reputasi ganda: kirim delta, bukan current+delta.
-                var repDelta = (rv.score - 5) * BALANCE.products.reputationPerReviewPoint * 0.5;
+                var repDelta = this._reviewReputationDelta(rv.score, 0.5);
                 if (repDelta !== 0) this.state.addReputation(repDelta);
             }
         }.bind(this));
+    }
+
+    // Reputasi bergerak dengan redaman: makin tinggi makin sulit naik,
+    // supaya beberapa ulasan bagus tidak langsung memaksa reputasi ke 100.
+    _reviewReputationDelta(score, factor) {
+        var rep = this.state.data.market.reputation || 0;
+        var max = BALANCE.market.maxReputation || 100;
+        var raw = (score - 5) * BALANCE.products.reputationPerReviewPoint * factor;
+        var room = raw > 0 ? (1 - rep / max) * 1.5 : (0.5 + rep / max);
+        return raw * Math.max(0.1, Math.min(1.2, room));
     }
 
     // ============================================================

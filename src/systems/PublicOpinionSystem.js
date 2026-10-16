@@ -3,6 +3,7 @@
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
+import { getMacro } from '../core/MacroModel.js';
 import { TIME_CONFIG } from '../config/time.config.js';
 import { ToastService } from '../core/ToastService.js';
 import { LOG_TYPES } from '../config/constants.js';
@@ -159,7 +160,7 @@ export class PublicOpinionSystem {
         const activeBugs = (data.os.bugs || []).filter(b => b.status === 'active' || b.status === 'patching').length;
         const bugPenalty = activeBugs * 5;
 
-        const refPrice = BALANCE.products.refs.price;
+        const refPrice = getMacro(data.time, BALANCE.macro).priceRef;
         let priceScore = 50;
         if (avgPrice > 0) {
             const ratio = refPrice / avgPrice;
@@ -180,6 +181,9 @@ export class PublicOpinionSystem {
         sentiment += viralBoost * w.viralBoost;
 
         sentiment = clamp(sentiment);
+        // Sentimen publik mengejar target secara bertahap (tidak melompat).
+        const prevSent = (typeof fb.sentiment === 'number') ? fb.sentiment : sentiment;
+        sentiment = prevSent + (sentiment - prevSent) * BALANCE.macro.sentimentSmoothing;
         fb.sentiment = sentiment;
 
         fb.aspectSentiment = {
