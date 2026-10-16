@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/MarketPanel.js
-// v2027.14a — chart auto-scale + overlay kompetitor.
+// v2027.15a — fix _pct() presisi adaptif + info revenue bulan ini di share card.
 import { renderPublicOpinionPanel } from './PublicOpinionPanel.js';
 import { t } from '../../core/LanguageService.js';
 
@@ -47,10 +47,24 @@ export function renderMarketPanel(params) {
 // ============================================================
 // SUB-TAB PANGSA
 // ============================================================
-// [v2027.4] Pangsa kecil (<1%) ditampilkan 2 desimal supaya tidak terlihat "0.0%".
+// [v2027.15a] Presisi adaptif. Sebelumnya nilai < 0.005% selalu tampil
+// "0.00%" yang menyesatkan — pemain mengira share mereka benar-benar nol,
+// padahal hanya kecil. Presisi kini mengikuti orde besaran:
+//    >= 1%     -> 1 desimal   (mis. "12.3%")
+//    >= 0.1%   -> 2 desimal   (mis. "0.42%")
+//    >= 0.01%  -> 3 desimal   (mis. "0.037%")
+//    >= 0.001% -> 4 desimal   (mis. "0.0037%")
+//    < 0.001%  -> 5 desimal   (mis. "0.00042%")
+//    0         -> "0.00%"
 function _pct(v) {
     const p = (v || 0) * 100;
-    return (Math.abs(p) > 0 && Math.abs(p) < 1 ? p.toFixed(2) : p.toFixed(1)) + '%';
+    const abs = Math.abs(p);
+    if (abs === 0)     return '0.00%';
+    if (abs >= 1)      return p.toFixed(1) + '%';
+    if (abs >= 0.1)    return p.toFixed(2) + '%';
+    if (abs >= 0.01)   return p.toFixed(3) + '%';
+    if (abs >= 0.001)  return p.toFixed(4) + '%';
+    return p.toFixed(5) + '%';
 }
 
 function _renderShare(marketSystem) {
@@ -59,8 +73,38 @@ function _renderShare(marketSystem) {
     const history = data.market.shareHistory || [];
     const competitors = data.market.competitors || [];
     const delta = marketSystem.getShareDelta();
-    const arrow = delta > 0.001 ? '↑' : delta < -0.001 ? '↓' : '→';
+    const arrow = delta > 0.0001 ? '↑' : delta < -0.0001 ? '↓' : '→';
     const arrowColor = delta > 0 ? 'var(--accent)' : delta < 0 ? 'var(--danger)' : 'var(--text-mute)';
+
+    // [v2027.15a] Info diagnostik supaya pemain paham kenapa share kecil:
+    // pasar global tahun 2000 ~30 juta unit/bulan, jauh lebih besar
+    // dari skala pemain yang baru mulai.
+    const latest = history[0] || null;
+    const lastRev = latest && typeof latest.playerRevenue === 'number' ? latest.playerRevenue : 0;
+    const lastEq  = latest && typeof latest.playerRevenueEq === 'number' ? latest.playerRevenueEq : 0;
+
+    // Cari unit terjual bulan ini dari products catalog (total bulan berjalan
+    // belum disimpan langsung, jadi pakai delta revenue / harga rata-rata).
+    let lastUnits = 0;
+    try {
+        const cat = (data.products && data.products.catalog) || [];
+        // dailySales entries hanya menyimpan per hari. Ambil yang gameMinute-nya
+        // berada di bulan berjalan (approx 30 hari terakhir).
+        const elapsed = (data.time && data.time.elapsedGameMinutes) || 0;
+        const cutoff = elapsed - 30 * 24 * 60;
+        cat.forEach(function (p) {
+            (p.dailySales || []).forEach(function (d) {
+                if (d.day >= cutoff && typeof d.sold === 'number') lastUnits += d.sold;
+            });
+        });
+    } catch (e) { lastUnits = 0; }
+
+    const infoHtml =
+        '<div style="font-size:11.5px;color:var(--text-mute);margin-top:6px;line-height:1.5;">' +
+            'Pendapatan bulan ini: <b style="color:var(--text-secondary);">$' + lastRev.toLocaleString('en-US') + '</b>' +
+            (lastUnits > 0 ? ' · ' + lastUnits.toLocaleString('en-US') + ' unit terjual' : '') +
+            (lastEq > 0 ? '<br>Setara skala pasar: $' + lastEq.toLocaleString('en-US') : '') +
+        '</div>';
 
     const html = `
         <div class="card">
@@ -70,6 +114,7 @@ function _renderShare(marketSystem) {
                 <div style="font-size:13px;color:${arrowColor};">${arrow} ${_pct(Math.abs(delta))}</div>
             </div>
             <div style="font-size:11.5px;color:var(--text-mute);margin-top:4px;">${t('market.share.updated')}</div>
+            ${infoHtml}
         </div>
         ${_renderShareChart(history)}
         <div class="card">
@@ -186,7 +231,8 @@ export function drawShareChart(container) {
         const pct = v * 100;
         if (pct >= 10) return pct.toFixed(0) + '%';
         if (pct >= 1)  return pct.toFixed(1) + '%';
-        return pct.toFixed(2) + '%';
+        if (pct >= 0.1) return pct.toFixed(2) + '%';
+        return pct.toFixed(3) + '%';
     };
     ctx.fillStyle = '#6a6a6a';
     ctx.font = '10px sans-serif';
