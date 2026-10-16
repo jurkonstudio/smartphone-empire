@@ -3,6 +3,8 @@
 // Tombol memakai atribut:
 //   data-sil-research="unlock|instant|boost|finish"
 //   data-kind="tech|chip"  data-node-id="..."  [data-sil-short="1" bila SIL kurang]
+import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
+ensureIconStyles();
 import { t } from '../../core/LanguageService.js';
 import { SiliconService } from '../../systems/SiliconService.js';
 
@@ -21,7 +23,7 @@ function _btn(action, kind, nodeId, title, sub, cost, balance) {
             '<span class="sil-btn-title">' + _esc(title) + '</span>' +
             '<span class="sil-btn-sub">' + _esc(sub) + '</span>' +
         '</span>' +
-        '<span class="sil-cost">💎 ' + cost + '</span>' +
+        '<span class="sil-cost">' + gIcon('sil', 13) + ' ' + cost + '</span>' +
     '</button>';
 }
 
@@ -45,7 +47,7 @@ export function renderSilResearchBlock(kind, nodeId) {
 
     return '<div class="sil-block">' +
         '<div class="sil-block-head">' +
-            '<span class="sil-block-title">💎 ' + t('sil.title') + '</span>' +
+            '<span class="sil-block-title g-ico-title">' + gIcon('sil', 15) + t('sil.title') + '</span>' +
             '<span class="sil-block-bal">' + t('sil.research.balance', { n: bal }) + '</span>' +
         '</div>' + body +
     '</div>';

@@ -7,6 +7,8 @@
 // Modul ini mengurus event klik & update live (countdown) sendiri,
 // jadi main.js TIDAK perlu diubah.
 // ============================================================
+import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
+ensureIconStyles();
 import { t } from '../../core/LanguageService.js';
 import { bus } from '../../core/EventBus.js';
 import { Modal } from '../modal.js';
@@ -42,7 +44,7 @@ export function renderSilSpeedBar(opts) {
 
     if (showSpeed) {
         html += '<div class="sil-inline-head">' +
-            '<span class="sil-inline-title">⚡ ' + _tf('sil.speed.title', 'Percepat Waktu') + '</span>' +
+            '<span class="sil-inline-title g-ico-title">' + gIcon('bolt', 15) + _tf('sil.speed.title', 'Percepat Waktu') + '</span>' +
             '<span class="sil-inline-timer" data-sil-boost-label>' + _labelText(boost) + '</span>' +
         '</div>';
         html += '<div class="sil-speed-row">' + SPEEDS.map(function (sp) {
@@ -63,8 +65,8 @@ export function renderSilSpeedBar(opts) {
         if (def) {
             var short2 = bal < def.cost;
             html += '<button type="button" class="sil-finish-btn' + (short2 ? ' is-short' : '') + '" data-sil-finish="' + def.id + '">' +
-                '<span>⚡ ' + _tf('sil.finish.' + def.id, _tf('sil.research.finish', 'Selesaikan Sekarang')) + '</span>' +
-                '<span class="sil-cost">💎 ' + def.cost + '</span>' +
+                '<span class="g-ico-title">' + gIcon('bolt', 15) + _tf('sil.finish.' + def.id, _tf('sil.research.finish', 'Selesaikan Sekarang')) + '</span>' +
+                '<span class="sil-cost">' + gIcon('sil', 13) + ' ' + def.cost + '</span>' +
             '</button>';
         }
     }
@@ -147,11 +149,11 @@ function _onFinishClick(btn) {
 // ---------- MODAL CEPAT (tombol ⏩ di header / tombol F) ----------
 export function openSpeedModal() {
     var html =
-        '<div class="modal-title">⚡ ' + _tf('sil.speed.title', 'Percepat Waktu') + '</div>' +
+        '<div class="modal-title g-ico-title">' + gIcon('bolt', 20) + '<span>' + _tf('sil.speed.title', 'Percepat Waktu') + '</span></div>' +
         '<div class="modal-sub">' + _tf('sil.speed.modal_sub', 'Setiap pembelian punya batas waktu. Setelah habis, game kembali ke 1x.') + '</div>' +
         renderSilSpeedBar({ speed: true }) +
         '<div class="sil-inline-bal">' + _tf('sil.speed.balance', 'Saldo: {n} SIL', { n: '<b data-sil-speed-balance>' + SiliconService.getBalance() + '</b>' }) +
-            ' <button type="button" class="slot-boost" data-sil-open-store>＋ ' + _tf('silicon.topup', 'Top Up') + '</button></div>' +
+            ' <button type="button" class="slot-boost" data-sil-open-store>' + gIcon('plus', 12) + ' ' + _tf('silicon.topup', 'Top Up') + '</button></div>' +
         '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">' + _tf('common.close', 'Tutup') + '</button>';
     Modal.open('speed-quick', html);
 }
