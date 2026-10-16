@@ -73,7 +73,7 @@ import { CloudSync } from './services/cloud/CloudSync.js';
 import { bindCloudUI } from './services/cloud/CloudUI.js';
 import * as marketingModule from './data/marketing.data.js';
 import * as feedbackModule from './data/feedback.data.js';
-import { getActiveRendererIdPublic } from './ui/notifications/NotificationRenderer.js';
+import { getActiveRendererIdPublic, toggleNotificationPanel, closeNotificationPanel } from './ui/notifications/NotificationRenderer.js';
 import { initSwipe, showSwipeAnimation } from './core/SwipeService.js';
 import { initNavSliderDrag } from './core/NavSliderDrag.js';
 import { AudioService } from './core/AudioService.js';
@@ -302,6 +302,7 @@ function animateCash(from, to) {
 
 // ============ NAV ============
 function navigate(id) {
+    closeNotificationPanel();
     if (id === activeView) return;
     activeView = id;
     if (els.view) els.view.classList.add('soft-update');
@@ -455,6 +456,10 @@ function bindGlobalClicks() {
         }
 
         if (handleNewsListClick(e)) return;
+
+        // Header: ketuk nama perusahaan = Pusat Notifikasi (profil ada di Pengaturan)
+        var notifBtn = e.target.closest('[data-notif-toggle]');
+        if (notifBtn) { e.preventDefault(); vibrate(8); toggleNotificationPanel(); return; }
 
         var navBtn = e.target.closest('[data-nav]');
         if (navBtn) { e.preventDefault(); vibrate(8); navigate(navBtn.dataset.nav); return; }
