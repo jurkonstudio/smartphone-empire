@@ -180,7 +180,8 @@ export class ResearchSystem {
 
     // Kembalikan { status, reason }.
     // status: 'done' | 'running' | 'available' | 'locked'
-    getNodeStatus(nodeId) {
+    getNodeStatus(nodeId, opts) {
+        const ignoreCash = !!(opts && opts.ignoreCash);
         const data = this.state.data;
         const node = getNodeById(nodeId);
         if (!node) return { status: 'locked', reason: 'Node tidak ditemukan.' };
@@ -202,25 +203,25 @@ export class ResearchSystem {
         if (data.research.active.length >= data.research.maxSlots) {
             return { status: 'locked', reason: 'Slot riset penuh (' + data.research.active.length + '/' + data.research.maxSlots + ')' };
         }
-        if (data.cash < node.cost) {
+        if (!ignoreCash && data.cash < node.cost) {
             return { status: 'locked', reason: 'Uang tidak cukup ($' + node.cost.toLocaleString('en-US') + ')' };
         }
         return { status: 'available', reason: null };
     }
 
     // Kembalikan { ok: boolean, reason?: string }.
-    startResearch(nodeId) {
+    startResearch(nodeId, opts) {
+        const paidWithSilicon = !!(opts && opts.paidWithSilicon);
         const data = this.state.data;
         const node = getNodeById(nodeId);
         if (!node) return { ok: false, reason: 'Node tidak ditemukan.' };
 
-        const st = this.getNodeStatus(nodeId);
+        const st = this.getNodeStatus(nodeId, { ignoreCash: paidWithSilicon });
         if (st.status !== 'available') {
             return { ok: false, reason: st.reason || 'Belum bisa dimulai.' };
         }
 
-        // Potong biaya sekali
-        this.state.setCash(data.cash - node.cost);
+        if (!paidWithSilicon) this.state.setCash(data.cash - node.cost);
 
         // Daftarkan sebagai aktif
         const entry = {
@@ -274,6 +275,23 @@ export class ResearchSystem {
         bus.emit('research:cancelled', { nodeId, refund });
         bus.emit('state:changed', data);
         return { ok: true, refund };
+    }
+
+    // [SIL] Majukan progress riset aktif sebanyak `days` hari-progress
+    // (Infinity = selesaikan sekarang). Selesai lewat jalur normal sehingga
+    // toast, log, milestone & event tetap jalan.
+    boostResearch(nodeId, days) {
+        const data = this.state.data;
+        const entry = data.research.active.find(e => e.nodeId === nodeId);
+        if (!entry) return { ok: false, reason: 'Riset tidak aktif.' };
+        const add = (days === Infinity) ? (entry.durationDays - entry.progressDays) : Math.max(0, days || 0);
+        entry.progressDays = Math.min(entry.durationDays, entry.progressDays + add);
+        if (entry.progressDays >= entry.durationDays) {
+            this._completeResearch(entry);
+            return { ok: true, completed: true };
+        }
+        bus.emit('state:changed', data);
+        return { ok: true, completed: false };
     }
 
     // Ringkasan untuk UI ProgressPanel (Dashboard).

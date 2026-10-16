@@ -2,27 +2,43 @@
 // ============================================================
 // SiliconService — premium currency "Silicon" (SIL).
 // v2027.5a — tambah applyServerBalance() untuk sinkronisasi cloud.
+// v2027.40 — unlock riset & boost riset pakai SIL (tech + chip), fix boost dev.
 // ============================================================
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { ToastService } from '../core/ToastService.js';
 import { LOG_TYPES } from '../config/constants.js';
 import { t } from '../core/LanguageService.js';
+import { SILICON_COSTS } from '../data/silicon.data.js';
+import { getNodeById } from '../data/research.data.js';
+import { getChipResearchById } from '../data/chip-research.data.js';
 
 var MAX_HISTORY = 20;
 
 export var SILICON_ACTIONS = [
-    { id: 'skip7',        cost: 10, icon: '📅', ready: true },
-    { id: 'skip30',       cost: 40, icon: '🗓️', ready: true },
-    { id: 'research',     cost: 20, icon: '🔬', ready: true },
-    { id: 'chipResearch', cost: 20, icon: '💠', ready: true },
-    { id: 'dev',          cost: 30, icon: '📱', ready: true },
-    { id: 'fabBuild',     cost: 30, icon: '🏗️', ready: true },
-    { id: 'fabProd',      cost: 20, icon: '🏭', ready: true },
-    { id: 'osBugs',       cost: 10, icon: '🐞', ready: true },
-    { id: 'morale',       cost: 15, icon: '😊', ready: true },
-    { id: 'rep',          cost: 25, icon: '⭐', ready: true }
+    { id: 'skip7', group: 'time',        cost: 10, icon: '📅', ready: true },
+    { id: 'skip30', group: 'time',       cost: 40, icon: '🗓️', ready: true },
+    { id: 'research', group: 'research',     cost: 20, icon: '🔬', ready: true },
+    { id: 'chipResearch', group: 'research', cost: 20, icon: '💠', ready: true },
+    { id: 'dev', group: 'production',          cost: 30, icon: '📱', ready: true },
+    { id: 'fabBuild', group: 'production',     cost: 30, icon: '🏗️', ready: true },
+    { id: 'fabProd', group: 'production',      cost: 20, icon: '🏭', ready: true },
+    { id: 'osBugs', group: 'team',       cost: 10, icon: '🐞', ready: true },
+    { id: 'morale', group: 'team',       cost: 15, icon: '😊', ready: true },
+    { id: 'rep', group: 'team',          cost: 25, icon: '⭐', ready: true }
 ];
+
+
+// ---------- Helper riset (tech 'tech' | chip 'chip') ----------
+function _sys(kind) {
+    var g = window.__game;
+    if (!g) return null;
+    return kind === 'chip' ? g.chipResearch : g.research;
+}
+function _node(kind, id) {
+    return kind === 'chip' ? getChipResearchById(id) : getNodeById(id);
+}
+function _clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
 function _pushHistory(type, delta, reason) {
     var d = state.data;
@@ -81,6 +97,108 @@ export var SiliconService = {
         bus.emit('silicon:changed', { balance: newBalance, delta: delta, fromServer: true });
         bus.emit('state:changed', state.data);
         return { ok: true, balance: newBalance, changed: true };
+    },
+
+
+    // ============================================================
+    // RISET — unlock & boost pakai SIL
+    // ============================================================
+    // Harga bayar SIL sebagai pengganti uang tunai.
+    researchUnlockCost(node) {
+        var c = SILICON_COSTS.research;
+        return Math.round(_clamp((node.durationDays || 0) * c.unlockPerDay, c.unlockMin, c.unlockMax));
+    },
+    // Harga menyelesaikan riset aktif sekarang (berdasar sisa hari-progress).
+    researchFinishCost(entry) {
+        var c = SILICON_COSTS.research;
+        var remaining = Math.max(0, (entry.durationDays || 0) - (entry.progressDays || 0));
+        return Math.round(_clamp(Math.ceil(remaining * c.finishPerDay), c.finishMin, c.finishMax));
+    },
+    // Harga satu paket boost (+N hari progress).
+    researchBoostCost() {
+        var c = SILICON_COSTS.research;
+        return Math.max(c.boostMin, Math.ceil(c.boostDays * c.boostPerDay));
+    },
+
+    // Ringkasan opsi SIL untuk satu node (dipakai UI modal detail).
+    // return { state:'startable'|'running'|'done'|'blocked', reason?, unlockCost, instantCost, finishCost, boostCost, boostDays, canBoost }
+    getResearchOptions(kind, nodeId) {
+        var sys = _sys(kind), node = _node(kind, nodeId);
+        var out = { state: 'blocked', reason: '', unlockCost: 0, instantCost: 0, finishCost: 0,
+                    boostCost: this.researchBoostCost(), boostDays: SILICON_COSTS.research.boostDays, canBoost: false };
+        if (!sys || !node) { out.reason = 'Node tidak ditemukan.'; return out; }
+
+        out.unlockCost = this.researchUnlockCost(node);
+        var st = sys.getNodeStatus(nodeId, { ignoreCash: true });
+
+        if (st.status === 'done') { out.state = 'done'; return out; }
+        if (st.status === 'running') {
+            var list = (kind === 'chip' ? state.data.chipResearch : state.data.research).active;
+            var entry = list.find(function (e) { return e.nodeId === nodeId; });
+            out.state = 'running';
+            if (entry) {
+                out.finishCost = this.researchFinishCost(entry);
+                var remaining = entry.durationDays - entry.progressDays;
+                out.canBoost = remaining > SILICON_COSTS.research.boostDays;
+            }
+            return out;
+        }
+        if (st.status === 'available') {
+            out.state = 'startable';
+            // Unlock instan = bayar unlock + selesaikan penuh (progress 0).
+            var c = SILICON_COSTS.research;
+            out.instantCost = out.unlockCost + Math.round(_clamp(Math.ceil((node.durationDays || 0) * c.finishPerDay), c.finishMin, c.finishMax));
+            return out;
+        }
+        out.reason = st.reason || '';
+        return out;
+    },
+
+    // Mulai riset dengan SIL (tanpa uang tunai). instant=true → langsung selesai.
+    unlockResearch(kind, nodeId, instant) {
+        var sys = _sys(kind);
+        if (!sys) return { ok: false, reason: 'Game belum siap.' };
+        var opt = this.getResearchOptions(kind, nodeId);
+        if (opt.state !== 'startable') return { ok: false, reason: opt.reason || 'Belum bisa dimulai.' };
+
+        var cost = instant ? opt.instantCost : opt.unlockCost;
+        if (!this.canAfford(cost)) return { ok: false, reason: 'Silicon tidak cukup (' + cost + ' SIL).', need: cost };
+
+        var sp = this.spend(cost, (instant ? 'unlock-instant:' : 'unlock:') + nodeId);
+        if (!sp.ok) return sp;
+
+        var res = sys.startResearch(nodeId, { paidWithSilicon: true });
+        if (!res.ok) { this._refund(cost, 'unlock:' + nodeId); return res; }
+        if (instant) sys.boostResearch(nodeId, Infinity);
+        bus.emit('silicon:action-done', { id: 'unlock', cost: cost });
+        return { ok: true, spent: cost, instant: !!instant };
+    },
+
+    // mode: 'boost' (+N hari) | 'finish' (selesai sekarang)
+    boostResearch(kind, nodeId, mode) {
+        var sys = _sys(kind);
+        if (!sys) return { ok: false, reason: 'Game belum siap.' };
+        var opt = this.getResearchOptions(kind, nodeId);
+        if (opt.state !== 'running') return { ok: false, reason: 'Riset tidak sedang berjalan.' };
+
+        var finish = (mode === 'finish') || !opt.canBoost;
+        var cost = finish ? opt.finishCost : opt.boostCost;
+        if (!this.canAfford(cost)) return { ok: false, reason: 'Silicon tidak cukup (' + cost + ' SIL).', need: cost };
+
+        var sp = this.spend(cost, (finish ? 'finish:' : 'boost:') + nodeId);
+        if (!sp.ok) return sp;
+
+        var res = sys.boostResearch(nodeId, finish ? Infinity : opt.boostDays);
+        if (!res.ok) { this._refund(cost, 'boost:' + nodeId); return res; }
+        bus.emit('silicon:action-done', { id: 'boost', cost: cost });
+        return { ok: true, spent: cost, completed: !!res.completed };
+    },
+
+    _refund(amount, reason) {
+        state.data.silicon = (state.data.silicon || 0) + amount;
+        _pushHistory('earn', amount, 'refund:' + reason);
+        bus.emit('silicon:changed', { balance: state.data.silicon, delta: amount });
+        bus.emit('state:changed', state.data);
     },
 
     getHistory() {
@@ -160,20 +278,24 @@ export var SiliconService = {
             } else if (actionId === 'research') {
                 var nodes = (state.data.research.active || []).map(function (r) { return r.nodeId; });
                 nodes.forEach(function (nodeId) {
-                    if (game.research && game.research.completeResearch) game.research.completeResearch(nodeId);
+                    if (game.research) game.research.boostResearch(nodeId, Infinity);
                 });
                 ToastService.success(t('silicon.msg.research') || 'Research completed instantly.');
             } else if (actionId === 'chipResearch') {
                 var chipNodes = (state.data.chipResearch.active || []).map(function (r) { return r.nodeId; });
                 chipNodes.forEach(function (nodeId) {
-                    if (game.chipResearch && game.chipResearch.completeResearch) game.chipResearch.completeResearch(nodeId);
+                    if (game.chipResearch) game.chipResearch.boostResearch(nodeId, Infinity);
                 });
                 ToastService.success(t('silicon.msg.chipResearch') || 'Chip research completed instantly.');
             } else if (actionId === 'dev') {
-                var d = state.data.products.development;
-                if (d) {
-                    var totalMinutes = (d.totalDurationDays || 0) * 24 * 60;
-                    game.timeSystem.fastForwardDays(Math.max(1, Math.ceil(totalMinutes / (24 * 60))));
+                // Selesaikan sisa pengembangan: majukan tiap fase lewat jalur tick normal
+                // (tanpa memutar waktu dunia, sehingga gaji/sewa tidak ikut terpotong).
+                var guard = 0;
+                while (state.data.products.development && guard++ < 6) {
+                    var dv = state.data.products.development;
+                    dv.phaseProgressDays = dv.phaseDurationDays;
+                    dv.lastProcessedMinute = state.data.time.elapsedGameMinutes - 60;
+                    game.products._tickDevelopment();
                 }
                 ToastService.success(t('silicon.msg.dev') || 'Product development accelerated.');
             } else if (actionId === 'fabBuild') {
