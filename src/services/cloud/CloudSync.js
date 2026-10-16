@@ -106,36 +106,9 @@ async function syncSiliconOnLogin() {
 
         console.info('[CloudSync] SIL sync — lokal:', localBal, 'server:', serverBal, 'hasSynced:', hasSynced);
 
-        if (!hasSynced) {
-            // First sync: LOCAL WINS (pemain sudah main lokal, server masih default).
-            if (localBal > serverBal) {
-                var addDelta = localBal - serverBal;
-                console.info('[CloudSync] First sync — push +' + addDelta + ' ke server.');
-                var r1 = await CloudService.addSiliconServer(addDelta);
-                if (!r1.ok) {
-                    ToastService.warning('Sync SIL gagal (push). Coba lagi nanti.');
-                    console.warn('[CloudSync] push gagal:', r1.code);
-                    return;
-                }
-                _markSiliconSynced();
-                ToastService.success('SIL disinkronkan ke cloud (' + localBal + ' SIL).');
-            } else if (serverBal > localBal) {
-                var spendDelta = serverBal - localBal;
-                console.info('[CloudSync] First sync — spend ' + spendDelta + ' dari server.');
-                var r2 = await CloudService.spendSiliconServer(spendDelta);
-                if (!r2.ok) {
-                    ToastService.warning('Sync SIL gagal (spend). Coba lagi nanti.');
-                    console.warn('[CloudSync] spend gagal:', r2.code);
-                    return;
-                }
-                _markSiliconSynced();
-                ToastService.success('SIL disinkronkan ke cloud (' + localBal + ' SIL).');
-            } else {
-                _markSiliconSynced();
-                ToastService.info('SIL sudah sinkron dengan cloud (' + localBal + ' SIL).');
-            }
-            return;
-        }
+        // [HARDENING] Server SELALU authoritative. Saldo lokal tidak pernah
+        // dikirim naik ke server (celah 'local wins' + add_silicon dihapus).
+        if (!hasSynced) _markSiliconSynced();
 
         // Sudah pernah sync: server authoritative
         if (serverBal !== localBal) {
@@ -158,9 +131,8 @@ function _pushSiliconDelta(delta) {
 
     try {
         if (delta > 0) {
-            CloudService.addSiliconServer(delta).then(function (res) {
-                if (!res.ok) console.warn('[CloudSync] push +SIL gagal:', res.code);
-            }).catch(function () {});
+            // [HARDENING] Kredit hanya dari server (webhook pembayaran / claim_daily_silicon).
+            return;
         } else {
             CloudService.spendSiliconServer(Math.abs(delta)).then(function (res) {
                 if (!res.ok) console.warn('[CloudSync] push -SIL gagal:', res.code);

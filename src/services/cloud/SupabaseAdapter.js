@@ -306,9 +306,9 @@ export const SupabaseAdapter = {
         return res.data == null ? 0 : res.data;
     },
 
-    rpcAddSilicon: async function (delta) {
+    rpcClaimDaily: async function () {
         var c = await getClient();
-        var res = await c.rpc('add_silicon', { p_delta: Math.floor(delta) });
+        var res = await c.rpc('claim_daily_silicon');
         if (res.error) throw mk(res.error);
         return res.data == null ? 0 : res.data;
     },
