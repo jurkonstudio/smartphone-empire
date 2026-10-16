@@ -7,12 +7,14 @@ import {
     PALETTES, TREE_SPOTS, ERA_WINDOWS, SLOT_ORDER, SPRAWL_SPOTS
 } from './CampusBuildings.js';
 import { createCampusControls } from './CampusControls.js';
+import { createCampusLife } from './CampusLife.js';
 
 var BASE_VIEW = 16;
 var MAX_DPR = 1.5;              // hemat GPU di HP DPR 3+
 var MIN_RESIZE_DELTA = 2;       // piksel — skip resize kalau perubahan < 2px
 var GROW_MS = 650;              // durasi animasi bangunan tumbuh
 var TIP_MS = 2800;              // lama tooltip tampil
+var FRAME_MS = 33;              // ~30fps untuk animasi ambient (hemat baterai)
 
 function readAccent() {
     try {
@@ -64,7 +66,12 @@ export function createCampusScene(THREE, container, gameState) {
 
     var A = createAssets(THREE);
     scene.add(buildGround(A, THREE));
-    TREE_SPOTS.forEach(function (p) { scene.add(buildTree(A, THREE, p[0], p[1])); });
+    var trees = [];
+    TREE_SPOTS.forEach(function (p) { var tr = buildTree(A, THREE, p[0], p[1]); trees.push(tr); scene.add(tr); });
+    // Animasi ambient (mobil, awan, asap, drone, dll). Dimatikan bila pengguna memilih reduced-motion.
+    var life = prefersReducedMotion() ? null : createCampusLife(THREE, A, scene, trees);
+    var ambient = !!life;
+    var loopRaf = 0, lastFrame = 0, inView = true;
 
     var dyn = {};                 // key -> { group, level, era }
     var eraIdx = -1;              // era desain yang sedang dipakai
@@ -87,7 +94,25 @@ export function createCampusScene(THREE, container, gameState) {
         camera.updateProjectionMatrix();
     }
 
+    function startLoop() {
+        if (!ambient || loopRaf || disposed || document.hidden || !inView) return;
+        loopRaf = requestAnimationFrame(frame);
+    }
+
+    // Loop tunggal ~30fps; berhenti total saat tab tersembunyi / peta di luar layar.
+    function frame(now) {
+        loopRaf = 0;
+        if (disposed || document.hidden || !inView) return;
+        loopRaf = requestAnimationFrame(frame);
+        if (now - lastFrame < FRAME_MS) return;
+        lastFrame = now;
+        if (animList.length) stepGrow(now);
+        life.update(now / 1000);
+        renderer.render(scene, camera);
+    }
+
     function requestRender() {
+        if (ambient) { startLoop(); return; }
         if (raf || disposed) return;
         raf = requestAnimationFrame(function () {
             raf = 0;
@@ -97,9 +122,7 @@ export function createCampusScene(THREE, container, gameState) {
     }
 
     // ---------- animasi tumbuh (hanya jalan selama ada yang beranimasi) ----------
-    function tick(now) {
-        animRaf = 0;
-        if (disposed) return;
+    function stepGrow(now) {
         var live = [];
         for (var i = 0; i < animList.length; i++) {
             var a = animList[i];
@@ -108,6 +131,12 @@ export function createCampusScene(THREE, container, gameState) {
             if (p < 1) live.push(a);
         }
         animList = live;
+    }
+
+    function tick(now) {
+        animRaf = 0;
+        if (disposed) return;
+        stepGrow(now);
         if (!document.hidden) renderer.render(scene, camera);
         if (animList.length) animRaf = requestAnimationFrame(tick);
     }
@@ -115,7 +144,8 @@ export function createCampusScene(THREE, container, gameState) {
     function grow(obj) {
         obj.scale.y = 0.001;
         animList.push({ o: obj, t0: performance.now() });
-        if (!animRaf) animRaf = requestAnimationFrame(tick);
+        if (ambient) startLoop();
+        else if (!animRaf) animRaf = requestAnimationFrame(tick);
     }
 
     // ---------- kelola bangunan dinamis ----------
@@ -137,6 +167,7 @@ export function createCampusScene(THREE, container, gameState) {
 
     function syncBuildings(plan, animate) {
         var lv = plan.levels;
+        if (life) life.setFactory(lv.factory);
         setBuilding('hq', lv.hq, function () { return buildHQ(A, THREE, lv.hq, eraIdx); }, animate);
         SLOT_ORDER.forEach(function (id) {
             setBuilding(id, lv[id], function () { return buildSlot(A, THREE, id, lv[id], eraIdx); }, animate);
@@ -219,6 +250,7 @@ export function createCampusScene(THREE, container, gameState) {
         var w = ERA_WINDOWS[Math.max(0, eraIdx)];
         if (w) p.window = dark ? w.dark : w.light;     // warna jendela ikut era
         A.applyPalette(p, readAccent());
+        if (life) life.setTheme(dark, p.window);
         hemi.color.setHex(p.hemiSky);
         hemi.groundColor.setHex(p.hemiGround);
         hemi.intensity = p.hemiI;
@@ -236,6 +268,7 @@ export function createCampusScene(THREE, container, gameState) {
         var animate = hasApplied && !prefersReducedMotion();
         if (plan.eraIdx !== eraIdx) {
             eraIdx = plan.eraIdx;
+            if (life) life.setEra(eraIdx);
             applyTheme();
         }
         syncBuildings(plan, animate);
@@ -246,6 +279,14 @@ export function createCampusScene(THREE, container, gameState) {
     }
 
     function onVis() { if (!document.hidden) requestRender(); }
+    var io = null;
+    if (ambient && typeof IntersectionObserver !== 'undefined') {
+        io = new IntersectionObserver(function (en) {
+            inView = en[en.length - 1].isIntersecting;
+            if (inView) requestRender();
+        });
+        io.observe(container);
+    }
     document.addEventListener('visibilitychange', onVis);
 
     var ro = null;
@@ -266,6 +307,9 @@ export function createCampusScene(THREE, container, gameState) {
         dispose: function () {
             disposed = true;
             if (raf) cancelAnimationFrame(raf);
+            if (loopRaf) cancelAnimationFrame(loopRaf);
+            if (io) io.disconnect();
+            if (life) life.dispose();
             if (animRaf) cancelAnimationFrame(animRaf);
             if (tipTimer) clearTimeout(tipTimer);
             if (ro) ro.disconnect(); else window.removeEventListener('resize', resize);
