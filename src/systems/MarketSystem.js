@@ -68,13 +68,15 @@ export class MarketSystem {
 
         // ---- 3. Others — proporsi dari tracked (player + kompetitor) ----
         const othersShare = this._interpYearly(BALANCE.market.othersShareByYear, year, 0.25);
-        const tracked = playerRevenue + totalCompetitorRevenue;
-        const others = Math.round(tracked * (othersShare / Math.max(0.01, 1 - othersShare)));
-
-        const total = tracked + others;
 
         // ---- 4. Pangsa pemain ----
-        const playerShare = total > 0 ? playerRevenue / total : 0;
+        // [v2027.4] Konversi ke skala pasar + rata-rata bergerak (lihat balance).
+        const playerRevenueEq = this._toMarketScale(playerRevenue, year, snap.currentMonth);
+        const tracked = playerRevenueEq + totalCompetitorRevenue;
+        const others = Math.round(tracked * (othersShare / Math.max(0.01, 1 - othersShare)));
+        const total = tracked + others;
+        const maxShare = (BALANCE.market.playerShareScale && BALANCE.market.playerShareScale.maxShare) || 1;
+        const playerShare = total > 0 ? Math.min(maxShare, playerRevenueEq / total) : 0;
 
         // ---- 5. Simpan ----
         data.market.share = playerShare;
@@ -103,6 +105,7 @@ export class MarketSystem {
             year: snap.currentYear,
             month: snap.currentMonth,
             playerRevenue,
+            playerRevenueEq: this._lastPlayerRevenueEq || 0,
             totalRevenue: total
         });
         if (data.market.revenueHistory.length > 24) data.market.revenueHistory.length = 24;
@@ -131,6 +134,9 @@ export class MarketSystem {
             );
         }
 
+        // ---- 8b. Tekanan kompetitor ke produk pemain ----
+        this._updateCompetitorPressure();
+
         // ---- 9. Reset accumulator ----
         this._monthRevenueAccum = 0;
 
@@ -140,6 +146,62 @@ export class MarketSystem {
             competitors: data.market.competitors.map(c => ({ id: c.id, name: c.name, share: c.share }))
         });
         bus.emit('state:changed', data);
+    }
+
+    // [v2027.4] Ubah pendapatan pemain (skala game) -> setara skala pasar global,
+    // lalu haluskan dengan rata-rata bergerak beberapa bulan terakhir.
+    _toMarketScale(playerRevenue, year, month) {
+        const cfg = BALANCE.market.playerShareScale;
+        if (!cfg || cfg.enabled === false) return playerRevenue;
+
+        const data = this.state.data;
+        const units   = this._interpYearly(BALANCE.market.marketUnitsByYear, year, 30000000);
+        const macro   = getMacro({ currentYear: year, currentMonth: month, currentDay: 15 }, BALANCE.macro);
+        const gameMonthlyBaseUnits = Math.max(1, macro.baseDemand * 30.4);
+        const scale = (units * cfg.referenceShare) / gameMonthlyBaseUnits;
+
+        let eq = playerRevenue * scale;
+
+        // Rata-rata bergerak (bulan berjalan + N-1 bulan sebelumnya).
+        const n = Math.max(1, cfg.smoothMonths || 1);
+        if (n > 1) {
+            const hist = (data.market.revenueHistory || []).slice(0, n - 1);
+            let sum = eq, cnt = 1;
+            hist.forEach(h => {
+                if (typeof h.playerRevenueEq === 'number') { sum += h.playerRevenueEq; cnt++; }
+            });
+            eq = sum / cnt;
+        }
+        this._lastPlayerRevenueEq = Math.round(eq);
+        return Math.round(eq);
+    }
+
+    // [v2027.4] Hitung tekanan kompetitor per produk: pangsa kompetitor
+    // x seberapa jauh kualitas mereka (tier) melampaui kualitas produk.
+    _updateCompetitorPressure() {
+        const data = this.state.data;
+        const cfg = BALANCE.competitors.pressure;
+        const catalog = (data.products && data.products.catalog) || [];
+        if (!cfg || !catalog.length) return;
+
+        const aggrMap = BALANCE.market.competitorAggressionMultiplier || {};
+        const aggr = aggrMap[data.difficulty] || 1.0;
+        const entities = (data.competitorState && data.competitorState.entities) || {};
+        const comps = data.market.competitors || [];
+
+        catalog.forEach(p => {
+            if (p.status !== 'selling' || !p.stats) return;
+            let pressure = cfg.base;
+            comps.forEach(c => {
+                const e = entities[c.id];
+                const tier = e ? e.currentTier : 1;
+                const compQuality = tier * cfg.tierToQuality + cfg.tierOffset;
+                const gap = Math.max(0, Math.min(cfg.maxGap,
+                    (compQuality - p.stats.qualityScore) / cfg.gapDivisor));
+                pressure += c.share * gap * cfg.gainPerShare;
+            });
+            p.competitorPressure = Math.min(cfg.maxPressure, pressure * aggr);
+        });
     }
 
     _driftTrends() {
