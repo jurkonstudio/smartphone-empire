@@ -9,6 +9,7 @@ import { openChipDesigner } from './ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './FabPanel.js';
 import { renderChipMockup } from '../phone/ChipMockup.js';
 import { t } from '../../core/LanguageService.js';
+import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -130,6 +131,7 @@ function _renderDesignTab(productSystem) {
             '<div class="progress-label"><span data-prod-dev-phase>' + phaseLabel + '</span><span data-prod-dev-pct>' + Math.round(percent) + '%</span></div>' +
             '<div class="progress"><div class="progress-bar" data-prod-dev-bar style="width:' + Math.round(percent) + '%;"></div></div>' +
             '<div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;" data-prod-dev-eta>' + t('prod.design.dev_eta') + '</div>' +
+            renderSilSpeedBar({ speed: true, finish: 'dev' }) +
             '<button class="btn-danger" data-prod-action="cancel-dev" style="margin-top:12px;width:100%;">' + t('prod.design.cancel') + '</button>' +
             '</div>';
     }

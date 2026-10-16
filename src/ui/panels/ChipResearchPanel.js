@@ -11,6 +11,7 @@ import { renderIcon } from '../icons/FeatureIcons.js';
 import { renderTechNodeRow } from '../components/TechNodeCard.js';
 import { t } from '../../core/LanguageService.js';
 import { renderSilResearchBlock, renderSilSlotBoost } from '../components/SilResearchBlock.js';
+import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
 import { SiliconService } from '../../systems/SiliconService.js';
 
 function escapeHtml(s) {
@@ -116,6 +117,7 @@ function _renderSlotBar(active, maxSlots, completedCount, total) {
         '</div>' +
         '<div class="slot-strip-hint">' + summaryLine + '</div>' +
         rows +
+        renderSilSpeedBar({ speed: true }) +
         '</div>';
 }
 

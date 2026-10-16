@@ -8,6 +8,7 @@ import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
 import { state } from '../../core/GameState.js';
 import { t } from '../../core/LanguageService.js';
+import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -133,6 +134,7 @@ function _renderBuiltFab(summary, data) {
             '<div style="font-size:11.5px;color:var(--text-mute);margin-top:6px;">' +
                 t('fab.days_left', { n: Math.max(0, Math.ceil(u.durationDays - u.progressDays)) }) +
             '</div>' +
+            renderSilSpeedBar({ speed: true, finish: 'fabBuild' }) +
             '<button class="btn-danger" data-fab-action="cancel-upgrade" style="width:100%;margin-top:10px;font-size:12px;">' + t('fab.cancel_upgrade') + '</button>' +
             '</div>';
     }
@@ -148,6 +150,7 @@ function _renderBuiltFab(summary, data) {
             '<div style="font-size:11.5px;color:var(--text-mute);margin-top:6px;">' +
                 t('fab.producing_info', { yield: Math.round(p.yieldRate * 100), days: Math.max(0, Math.ceil(p.durationDays - (p.progressUnits / p.totalUnits * p.durationDays))) }) +
             '</div>' +
+            renderSilSpeedBar({ speed: !summary.upgrade, finish: 'fabProd' }) +
             '<button class="btn-danger" data-fab-action="cancel-prod" style="width:100%;margin-top:10px;font-size:12px;">' + t('fab.cancel_prod') + '</button>' +
             '</div>';
     }
