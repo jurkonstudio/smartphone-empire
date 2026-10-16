@@ -1,157 +1,64 @@
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0f0f0f">
-
-<!-- ============================================================
-     FAVICON SVG (HD) — Pastikan file logo.svg ada di folder yang sama
-     ============================================================ -->
-<link rel="icon" type="image/svg+xml" href="./logo.svg">
-<link rel="apple-touch-icon" href="./logo.svg">
-
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
-<title>Smartphone Empire</title>
-
-<!-- ============================================================
-     VERSION CHECK — paksa reload kalau versi deploy berubah.
-     Fetch version.json dengan cache: 'no-store'.
-     Kalau versi beda → reload sekali dengan query _v.
-     Setelah reload, versi disimpan → tidak ada loop.
-     ============================================================ -->
-<script>
-(function () {
-    try {
-        var KEY = 'se_deploy_v';
-        var url = new URL(window.location.href);
-        var incoming = url.searchParams.get('_v');
-        var stored = localStorage.getItem(KEY);
-
-        // Kalau baru reload dari version-check, simpan & bersihkan URL
-        if (incoming) {
-            try { localStorage.setItem(KEY, incoming); } catch (e) {}
-            url.searchParams.delete('_v');
-            try { history.replaceState(null, '', url.toString()); } catch (e) {}
-            return;
-        }
-
-        // Cek versi terbaru dari server
-        fetch('./version.json?t=' + Date.now(), { cache: 'no-store' })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                var v = data && data.v;
-                if (!v) return;
-                if (stored && stored !== v) {
-                    // Versi berubah — paksa reload
-                    url.searchParams.set('_v', v);
-                    window.location.replace(url.toString());
-                } else if (!stored) {
-                    // Pertama kali — simpan saja
-                    try { localStorage.setItem(KEY, v); } catch (e) {}
-                }
-            })
-            .catch(function () { /* silent — kalau version.json tidak ada, lanjut normal */ });
-    } catch (e) { /* silent */ }
-})();
-</script>
-
-<!-- ============================================================
-     GLOBAL ERROR OVERLAY
-     Menampilkan detail error ke layar jika ada exception / promise
-     rejection yang tidak tertangani.
-     ============================================================ -->
-<script>
-window.addEventListener('error', function (e) {
-    var msg = 'GLOBAL ERROR\n\n';
-    msg += 'Message: ' + (e.message || (e.error && e.error.message) || 'unknown') + '\n';
-    msg += 'File: ' + (e.filename || '-') + '\n';
-    msg += 'Line: ' + (e.lineno || '-') + ':' + (e.colno || '-') + '\n\n';
-    msg += 'Stack:\n' + ((e.error && e.error.stack) ? e.error.stack : '-');
-    var box = document.createElement('pre');
-    box.style.cssText = 'position:fixed;inset:0;background:#000;color:#f44;font:12px monospace;padding:20px;padding-top:80px;overflow:auto;z-index:999999;white-space:pre-wrap;word-break:break-word;margin:0;';
-    box.textContent = msg;
-    if (document.body) document.body.appendChild(box);
-    else document.addEventListener('DOMContentLoaded', function () { document.body.appendChild(box); });
-});
-window.addEventListener('unhandledrejection', function (e) {
-    var msg = 'PROMISE REJECTED\n\nReason: ' +
-        ((e.reason && e.reason.message) ? e.reason.message : e.reason) + '\n\nStack:\n' +
-        ((e.reason && e.reason.stack) ? e.reason.stack : '-');
-    var box = document.createElement('pre');
-    box.style.cssText = 'position:fixed;inset:0;background:#000;color:#fa0;font:12px monospace;padding:20px;padding-top:80px;overflow:auto;z-index:999999;white-space:pre-wrap;word-break:break-word;margin:0;';
-    box.textContent = msg;
-    if (document.body) document.body.appendChild(box);
-});
-</script>
-
-<!-- ============================================================
-     MODULEPRELOAD — mempercepat load module penting.
-     ============================================================ -->
-<link rel="modulepreload" href="./src/core/GameState.js">
-<link rel="modulepreload" href="./src/core/EventBus.js">
-<link rel="modulepreload" href="./src/core/TimeSystem.js">
-<link rel="modulepreload" href="./src/core/SaveService.js">
-
-<link rel="modulepreload" href="./src/config/time.config.js">
-<link rel="modulepreload" href="./src/config/app.config.js">
-<link rel="modulepreload" href="./src/config/constants.js">
-
-<link rel="modulepreload" href="./src/data/components.data.js">
-<link rel="modulepreload" href="./src/data/os.data.js">
-<link rel="modulepreload" href="./src/data/research.data.js">
-<link rel="modulepreload" href="./src/data/balance.data.js">
-<link rel="modulepreload" href="./src/data/era-design.data.js">
-<link rel="modulepreload" href="./src/data/historical-timeline.data.js">
-<link rel="modulepreload" href="./src/data/phone-specs.data.js">
-
-<link rel="modulepreload" href="./src/systems/ResearchSystem.js">
-<link rel="modulepreload" href="./src/systems/OSSystem.js">
-<link rel="modulepreload" href="./src/systems/ProductSystem.js">
-<link rel="modulepreload" href="./src/systems/MarketSystem.js">
-
-<link rel="modulepreload" href="./src/ui/panels/ProductPanel.js">
-<link rel="modulepreload" href="./src/ui/panels/OSPanel.js">
-<link rel="modulepreload" href="./src/ui/panels/ResearchPanel.js">
-<link rel="modulepreload" href="./src/ui/panels/TimelinePanel.js">
-
-<link rel="modulepreload" href="./src/ui/phone/PhoneMockup.js">
-<link rel="modulepreload" href="./src/ui/phone/OsScreenMockup.js">
-
-<link rel="stylesheet" href="./style.css">
-<link rel="stylesheet" href="./profile-ui.css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Debug</title>
+<style>
+body{font-family:monospace;font-size:12px;background:#111;color:#eee;padding:10px;line-height:1.5;word-break:break-all;}
+.ok{color:#4CAF50;}
+.bad{color:#f44336;font-weight:700;}
+</style>
 </head>
 <body>
-    <div id="app">
-        <header id="app-header" class="app-header"></header>
-        <main id="app-view" class="app-view" role="main"></main>
-        <nav id="mobile-nav" class="mobile-nav" aria-label="Navigasi utama"></nav>
-        <aside id="sidebar" aria-hidden="true"></aside>
-    </div>
-
-    <div id="toast-container" class="toast-container" aria-live="polite"></div>
-    <div id="loading-screen" class="loading-screen">Memuat Smartphone Empire…</div>
-    <div id="error-message" class="error-message" role="alert"></div>
-
-    <script type="module" src="./src/main.js"></script>
-
-    <!-- ============================================================
-         FALLBACK — tampilkan pesan jika modul gagal dimuat.
-         ============================================================ -->
-    <script>
-    window.addEventListener('error', function (e) {
-        if (e.target && e.target.tagName === 'SCRIPT') {
-            var ld = document.getElementById('loading-screen');
-            var er = document.getElementById('error-message');
-            if (ld) ld.style.display = 'none';
-            if (er) {
-                er.style.display = 'block';
-                er.textContent = 'Gagal memuat: ' + (e.target.src || 'unknown');
-            }
-        }
-    }, true);
-    </script>
+<pre id="out">Loading...</pre>
+<script type="module">
+const out = document.getElementById('out');
+const files = [
+    'src/data/competitors.data.js',
+    'src/data/competitors/helpers.js',
+    'src/data/competitors/index.js',
+    'src/data/competitors/nokia.js',
+    'src/data/competitors/motorola.js',
+    'src/data/competitors/sony_ericsson.js',
+    'src/data/competitors/siemens.js',
+    'src/data/competitors/palm.js',
+    'src/data/competitors/blackberry.js',
+    'src/data/competitors/samsung.js',
+    'src/data/competitors/lg.js',
+    'src/data/competitors/htc.js',
+    'src/data/competitors/apple.js',
+    'src/data/competitors/google_android.js',
+    'src/data/competitors/huawei.js',
+    'src/data/competitors/oppo.js',
+    'src/data/competitors/vivo.js',
+    'src/data/competitors/microsoft_nokia.js',
+    'src/data/competitors/honor.js',
+    'src/data/competitors/oneplus.js',
+    'src/data/competitors/nothing.js',
+    'src/data/competitors/asus.js',
+    'src/data/competitors/sony_mobile.js',
+    'src/data/competitors/realme.js',
+    'src/data/competitors/meizu.js',
+    'src/data/competitors/lenovo.js',
+    'src/data/competitors/tecno.js',
+    'src/data/competitors/zte.js'
+];
+let txt = '';
+for (const f of files) {
+    try {
+        await import('./' + f);
+        txt += 'OK  ' + f + '\n';
+    } catch (e) {
+        txt += 'ERR ' + f + '\n';
+        txt += '    -> ' + (e && e.message ? e.message : e) + '\n';
+    }
+    out.textContent = txt;
+}
+out.innerHTML = txt
+    .replace(/^OK /gm, '<span class="ok">OK  </span>')
+    .replace(/^ERR /gm, '<span class="bad">ERR </span>')
+    .replace(/^    -> /gm, '<span class="bad">    -> </span>');
+</script>
 </body>
 </html>
