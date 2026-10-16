@@ -1214,8 +1214,7 @@ export const id = {
     'silicon.action.fabProd.t': 'Selesaikan Produksi Fab',
     'silicon.action.fabProd.d': 'Produksi chip di fab selesai seketika.',
     'silicon.msg.fabBuild': 'Build fab selesai seketika.',
-    'silicon.msg.fabProd': 'Produksi fab selesai seketika.',
-    
+    'silicon.msg.fabProd': 'Produksi fab selesai seketika.',  
 // [v2027.42] Home focus tab — live sales chart
 'home.focus.sales_title': 'Penjualan · Hari Ini',
 'home.focus.today': 'Hari ini',
