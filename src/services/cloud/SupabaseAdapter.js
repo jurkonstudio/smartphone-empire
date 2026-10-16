@@ -304,6 +304,13 @@ export const SupabaseAdapter = {
         return res.data || [];
     },
 
+    rpcCompanyNameAvailable: async function (name) {
+        var c = await getClient();
+        var res = await c.rpc('company_name_available', { p_name: name });
+        if (res.error) throw mk(res.error);
+        return res.data;
+    },
+
     rpcSyncProfile: async function (fields) {
         var c = await getClient();
         var res = await c.rpc('sync_player_profile', fields);
