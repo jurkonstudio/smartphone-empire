@@ -2,6 +2,7 @@
 // v2027.3a — state silicon + dailyLogin.
 import { TIME_CONFIG } from '../config/time.config.js';
 import { BALANCE } from '../data/balance.data.js';
+import { getMacro } from './MacroModel.js';
 import { DIFFICULTY, LOG_TYPES } from '../config/constants.js';
 import { bus } from './EventBus.js';
 import { generateRandomName, rollTraits } from '../data/staff.data.js';
@@ -499,7 +500,9 @@ class GameState {
 
     getMonthlyFixedCost() {
         const m = BALANCE.monthly;
-        return m.rentHQ + m.utilities + m.baseAdmin;
+        // Sewa/utilitas/admin ikut inflasi dunia nyata (CPI), 1.0 = awal 2000.
+        const cpi = getMacro(this.data.time, BALANCE.macro).cpiIndex;
+        return Math.round((m.rentHQ + m.utilities + m.baseAdmin) * cpi);
     }
 }
 
