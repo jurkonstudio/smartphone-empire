@@ -1,5 +1,6 @@
 // FILE: src/systems/AdvisorSystem.js
-// v2027.36a — Asisten bisnis berbasis aturan.
+// v2027.37 — Asisten bisnis berbasis aturan + percakapan lokal (AdvisorBrain).
+// icon = id ikon SVG (src/ui/icons/GameIcons.js), bukan emoji.
 //
 // - getAdvice(): daftar saran berurutan (kritis -> info) dari kondisi game.
 // - Saran bisa ditunda (snooze) pemain; disimpan di state.data.advisor.
@@ -13,6 +14,7 @@ import { LanguageService } from '../core/LanguageService.js';
 import { ToastService } from '../core/ToastService.js';
 import { BALANCE } from '../data/balance.data.js';
 import { getMacro } from '../core/MacroModel.js';
+import { AdvisorBrain } from './AdvisorBrain.js';
 
 const DAY = 1440;                 // menit game per hari
 const SNOOZE_DAYS = 30;
@@ -30,7 +32,11 @@ const DICT = {
         'ui.open': 'Buka',
         'ui.snooze': 'Tunda 30 hari',
         'ui.close': 'Tutup',
-        'ui.ask_ph': 'Tanya asisten…',
+        'ui.ask_ph': 'Tanya apa saja atau ketik "buka riset"…',
+        'ui.advice': 'Saran untuk kamu',
+        'ui.show_all': 'Lihat semua',
+        'ui.hide': 'Sembunyikan',
+        'ui.clear': 'Mulai ulang',
         'ui.ask_send': 'Kirim',
         'ui.thinking': 'Berpikir…',
         'ui.ask_fail': 'Asisten AI sedang tidak tersedia.',
@@ -78,7 +84,11 @@ const DICT = {
         'ui.open': 'Open',
         'ui.snooze': 'Snooze 30 days',
         'ui.close': 'Close',
-        'ui.ask_ph': 'Ask the advisor…',
+        'ui.ask_ph': 'Ask anything or type "open research"…',
+        'ui.advice': 'Suggestions',
+        'ui.show_all': 'Show all',
+        'ui.hide': 'Hide',
+        'ui.clear': 'Restart',
         'ui.ask_send': 'Send',
         'ui.thinking': 'Thinking…',
         'ui.ask_fail': 'The AI advisor is unavailable right now.',
@@ -150,9 +160,9 @@ const RULES = [
     function cash(c, push) {
         if (c.burn <= 0) return;
         if (c.cash < c.burn) {
-            push('cash_crit', 'critical', '💸', { cash: money(c.cash), burn: money(c.burn) }, { nav: 'settings' }, 0);
+            push('cash_crit', 'critical', 'cash-alert', { cash: money(c.cash), burn: money(c.burn) }, { nav: 'settings' }, 0);
         } else if (c.runway < 3) {
-            push('cash_low', c.selling.length ? 'tip' : 'warn', '⚠️',
+            push('cash_low', c.selling.length ? 'tip' : 'warn', 'warn',
                 { months: c.runway.toFixed(1), burn: money(c.burn) }, { nav: 'products', subtab: 'sales' }, 5);
         }
     },
@@ -160,9 +170,9 @@ const RULES = [
         c.selling.forEach(function (p) {
             var cap = p.baseCapacity || p.totalProduced || 0;
             if ((p.stock || 0) <= 0) {
-                push('stock_out:' + p.id, 'critical', '📦', { name: p.name }, { nav: 'products', subtab: 'sales' }, 1);
+                push('stock_out:' + p.id, 'critical', 'package', { name: p.name }, { nav: 'products', subtab: 'sales' }, 1);
             } else if (cap > 0 && p.stock < cap * 0.2 && !(p.autoRestock && p.autoRestock.enabled)) {
-                push('stock_low:' + p.id, 'warn', '📦', { name: p.name, stock: money(p.stock) }, { nav: 'products', subtab: 'sales' }, 10);
+                push('stock_low:' + p.id, 'warn', 'package', { name: p.name, stock: money(p.stock) }, { nav: 'products', subtab: 'sales' }, 10);
             }
         });
     },
@@ -170,14 +180,14 @@ const RULES = [
         var t = c.team, total = t.engineers + t.designers + t.marketers;
         var cost = Math.round(((BALANCE.recruitCost && BALANCE.recruitCost.engineer) || 2000) * getMacro(c.d.time, BALANCE.macro).wageIndex);
         if (total === 0) {
-            push('hire_first', 'tip', '👥', { cost: money(cost) }, { nav: 'team' }, 20);
+            push('hire_first', 'tip', 'users', { cost: money(cost) }, { nav: 'team' }, 20);
             return;
         }
         if (t.designers === 0 && t.engineers >= 1 && c.catalog.length === 0) {
-            push('hire_designer', 'tip', '🎨', {}, { nav: 'team' }, 30);
+            push('hire_designer', 'tip', 'palette', {}, { nav: 'team' }, 30);
         }
         if (t.marketers === 0 && c.selling.length > 0) {
-            push('hire_marketer', 'tip', '📣', {}, { nav: 'team' }, 32);
+            push('hire_marketer', 'tip', 'megaphone', {}, { nav: 'team' }, 32);
         }
     },
     function research(c, push) {
@@ -196,19 +206,19 @@ const RULES = [
                 });
             } catch (e) { best = null; }
             if (best) {
-                push('research_idle', active === 0 ? 'warn' : 'tip', '🔬',
+                push('research_idle', active === 0 ? 'warn' : 'tip', 'research',
                     { free: max - active, name: best.name, cost: money(best.cost) }, { nav: 'research', subtab: 'tech' }, 25);
             }
         } else if (active >= max && max < ((BALANCE.research && BALANCE.research.maxSlots) || 3) && c.team.engineers > 0) {
             var need = Math.max(1, 2 * max - c.team.engineers);
-            push('research_slots', 'info', '🔬', { need: need }, { nav: 'team' }, 60);
+            push('research_slots', 'info', 'research', { need: need }, { nav: 'team' }, 60);
         }
     },
     function design(c, push) {
         var p = c.d.products || {};
         if (c.catalog.length === 0 && !p.designing && !p.development &&
             (c.team.engineers + c.team.designers) >= 1) {
-            push('design_first', 'tip', '📱', {}, { nav: 'products', subtab: 'design' }, 22);
+            push('design_first', 'tip', 'phone', {}, { nav: 'products', subtab: 'design' }, 22);
         }
     },
     function marketing(c, push) {
@@ -221,7 +231,7 @@ const RULES = [
             var age = (c.now - (p.releaseGameMinute || 0)) / DAY;
             var has = camps.some(function (m) { return m.productId === p.id; });
             if (!has && age <= window_ && (p.stock || 0) > 0) {
-                push('campaign', 'tip', '📣', { name: p.name }, { nav: 'products', subtab: 'sales' }, 35);
+                push('campaign', 'tip', 'megaphone', { name: p.name }, { nav: 'products', subtab: 'sales' }, 35);
                 return;
             }
         }
@@ -236,35 +246,35 @@ const RULES = [
         var lc = (BALANCE.products && BALANCE.products.lifecycle) || {};
         var threshold = (lc.riseDays || 60) + (lc.peakDays || 120);
         if (days >= threshold) {
-            push('successor', days >= (lc.declineDays || 200) + 60 ? 'warn' : 'tip', '⏳',
+            push('successor', days >= (lc.declineDays || 200) + 60 ? 'warn' : 'tip', 'hourglass',
                 { name: newest.name, days: days }, { nav: 'products', subtab: 'design' }, 28);
         }
     },
     function os(c, push) {
         var o = c.d.os || {};
         if (c.catalog.length >= 1 && arr(o.versions).length === 0 && c.team.engineers >= 1) {
-            push('os_missing', 'info', '🧩', {}, { nav: 'research', subtab: 'os' }, 70);
+            push('os_missing', 'info', 'puzzle', {}, { nav: 'research', subtab: 'os' }, 70);
         }
         var bugs = arr(o.bugs).length;
-        if (bugs >= 3) push('os_bugs', 'tip', '🐞', { n: bugs }, { nav: 'research', subtab: 'os' }, 40);
+        if (bugs >= 3) push('os_bugs', 'tip', 'bug', { n: bugs }, { nav: 'research', subtab: 'os' }, 40);
     },
     function fab(c, push) {
         var f = c.d.fab || {};
         var done = arr((c.d.chipResearch || {}).completed);
         if (!f.built && done.indexOf('fab_construction') >= 0) {
-            push('fab_ready', 'tip', '🏭', {}, { nav: 'research', subtab: 'chip' }, 38);
+            push('fab_ready', 'tip', 'factory', {}, { nav: 'research', subtab: 'chip' }, 38);
         }
     },
     function morale(c, push) {
         var s = arr(c.d.staff);
         if (!s.length) return;
         var avg = s.reduce(function (a, x) { return a + (x.morale || 0); }, 0) / s.length;
-        if (avg < 50) push('morale', 'warn', '😟', { n: Math.round(avg) }, { nav: 'team' }, 15);
+        if (avg < 50) push('morale', 'warn', 'mood-low', { n: Math.round(avg) }, { nav: 'team' }, 15);
     },
     function reputation(c, push) {
         var rep = (c.d.market || {}).reputation;
         if (c.catalog.length >= 1 && typeof rep === 'number' && rep < 20) {
-            push('reputation', 'info', '⭐', { n: Math.round(rep) }, { nav: 'market' }, 80);
+            push('reputation', 'info', 'star', { n: Math.round(rep) }, { nav: 'market' }, 80);
         }
     }
 ];
@@ -280,7 +290,11 @@ export class AdvisorSystem {
         this._lastSig = '';
         this._timer = null;
         this._lastCheckDay = -1;
+        this.brain = new AdvisorBrain(this);
+        this._chat = [];                 // riwayat percakapan (sesi berjalan)
     }
+
+    _lang() { return curLang(); }
 
     start() {
         var self = this;
@@ -363,7 +377,7 @@ export class AdvisorSystem {
         out = out.slice(0, MAX_ADVICE);
 
         if (!out.length) {
-            out.push({ id: 'all_good', sev: 'info', icon: '✅', pri: 99,
+            out.push({ id: 'all_good', sev: 'info', icon: 'check-circle', pri: 99,
                 title: tx('all_good.t'), detail: tx('all_good.d'), action: null });
         }
         return out;
@@ -423,8 +437,8 @@ export class AdvisorSystem {
             if (typeof last === 'number' && now - last < TOAST_COOLDOWN_DAYS * DAY) continue;
             store.toasted[a.id] = now;
             try {
-                if (a.sev === 'critical') ToastService.error(a.icon + ' ' + a.title);
-                else ToastService.warning(a.icon + ' ' + a.title);
+                if (a.sev === 'critical') ToastService.error(a.title);
+                else ToastService.warning(a.title);
             } catch (e) {}
             break;                                              // satu toast per pengecekan
         }
@@ -461,6 +475,31 @@ export class AdvisorSystem {
             market: { share: (d.market || {}).share, reputation: (d.market || {}).reputation },
             activeCampaigns: arr((d.marketing || {}).activeCampaigns).length
         };
+    }
+
+    // ---------- percakapan (lokal, tanpa API) ----------
+    getChat() {
+        if (!this._chat.length) this._chat.push(Object.assign({ role: 'bot' }, this.brain.greeting()));
+        return this._chat;
+    }
+    resetChat() { this._chat = []; this.brain.mem = { last: null, lastProduct: null, depth: 0, turns: 0, asked: {} }; }
+
+    // Balasan lokal; bila yakin rendah dan ada provider AI, tanya provider.
+    async chat(text) {
+        var q = String(text || '').trim();
+        if (!q) return null;
+        this.getChat().push({ role: 'user', text: q });
+        var res;
+        try { res = this.brain.reply(q); }
+        catch (e) { console.warn('[Advisor] brain gagal:', e); res = { text: tx('ui.ask_fail'), actions: [], chips: [] }; }
+        if (res.intent === 'unknown' && this._provider) {
+            var ai = await this.ask(q);
+            if (ai.ok && ai.text) res = { text: ai.text, actions: res.actions || [], chips: res.chips || [], intent: 'ai' };
+        }
+        var msg = Object.assign({ role: 'bot' }, res);
+        this._chat.push(msg);
+        if (this._chat.length > 60) this._chat.splice(0, this._chat.length - 60);
+        return msg;
     }
 
     async ask(question) {
