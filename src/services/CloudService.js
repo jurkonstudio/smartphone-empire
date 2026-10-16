@@ -1,5 +1,5 @@
 // FILE: src/services/CloudService.js
-// v2027.40a — Fasad cloud. + subscribePresence().
+// v2027.42 — Fasad cloud. + syncPlayerProfile(), getPlayerAssetUrls(), listProfiles(orderBy).
 import { bus } from '../core/EventBus.js';
 
 const SLOT_KEY = 'smartphone-empire:cloud-slot';
@@ -250,11 +250,28 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
-    async listProfiles() {
+    async listProfiles(orderBy) {
         if (!_adapter) return NOT_CONFIGURED;
         if (!_userId) return NOT_SIGNED_IN;
         if (typeof _adapter.listProfiles !== 'function') return NOT_CONFIGURED;
-        try { return { ok: true, rows: await _adapter.listProfiles() }; }
+        try { return { ok: true, rows: await _adapter.listProfiles(orderBy) }; }
+        catch (err) { return _fail(err); }
+    },
+
+    // Kirim nama pemain, nama perusahaan & statistik ke profil publik (leaderboard).
+    async syncPlayerProfile(fields) {
+        if (!_adapter) return NOT_CONFIGURED;
+        if (!_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.rpcSyncProfile !== 'function') return NOT_CONFIGURED;
+        try { await _adapter.rpcSyncProfile(fields); return { ok: true }; }
+        catch (err) { return _fail(err); }
+    },
+
+    // Signed URL banyak foto sekaligus (foto pemain lain).
+    async getPlayerAssetUrls(paths, expiresSec) {
+        if (!_adapter || !_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.getPlayerAssetUrls !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, items: await _adapter.getPlayerAssetUrls(paths, expiresSec) }; }
         catch (err) { return _fail(err); }
     },
 
