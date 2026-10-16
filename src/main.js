@@ -57,6 +57,9 @@ import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
 import { openNewsArticleModal } from './ui/panels/NewsArticleModal.js';
 import { openSiliconModal } from './ui/panels/SiliconPanel.js';
+import { openSiliconStoreModal } from './ui/panels/SiliconStorePanel.js';
+import { PaymentService } from './systems/PaymentService.js';
+import { t as tr } from './core/LanguageService.js';
 import { handleNewsListClick } from './ui/panels/NewsListPanel.js';
 import { renderChipMockup } from './ui/phone/ChipMockup.js';
 import { renderChipRadarChart } from './ui/charts/ChipRadarChart.js';
@@ -437,6 +440,32 @@ function bindGlobalClicks() {
         var siliconBtn = e.target.closest('[data-silicon-open]');
         if (siliconBtn) { e.preventDefault(); vibrate(8); openSiliconModal(); return; }
 
+        // [SIL] Unlock / boost riset pakai Silicon (tech & chip).
+        var silRes = e.target.closest('[data-sil-research]');
+        if (silRes) {
+            e.preventDefault(); vibrate(8);
+            if (silRes.dataset.silShort) { ToastService.warning(tr('silicon.short')); openSiliconStoreModal(); return; }
+            var silMode = silRes.dataset.silResearch;
+            var silKind = silRes.dataset.kind;
+            var silNode = silRes.dataset.nodeId;
+            var silR = (silMode === 'unlock' || silMode === 'instant')
+                ? SiliconService.unlockResearch(silKind, silNode, silMode === 'instant')
+                : SiliconService.boostResearch(silKind, silNode, silMode);
+            if (!silR.ok) {
+                ToastService.error(silR.reason || 'Gagal.');
+                if (silR.need) openSiliconStoreModal();
+                return;
+            }
+            if (silMode === 'unlock') ToastService.success(tr('sil.research.msg.unlock', { n: silR.spent }));
+            else if (silMode === 'instant') ToastService.success(tr('sil.research.msg.instant', { n: silR.spent }));
+            else if (silR.completed) ToastService.success(tr('sil.research.msg.finish', { n: silR.spent }));
+            else ToastService.success(tr('sil.research.msg.boost', { n: silR.spent }));
+            Modal.close('node-detail', true);
+            Modal.close('chip-node-detail', true);
+            renderAll();
+            return;
+        }
+
         var timeBtn = e.target.closest('[data-time-action]');
         if (timeBtn) {
             e.preventDefault(); vibrate(12);
@@ -705,6 +734,18 @@ function _openChipDetail(chip) {
     Modal.open('chip-detail', html);
 }
 
+// [SIL] Perbarui label harga "Selesaikan" di slot-strip saat progress berjalan.
+function _refreshFinishCost(kind, nodeId) {
+    var btn = els.view.querySelector('[data-sil-research="finish"][data-kind="' + kind + '"][data-node-id="' + nodeId + '"]');
+    if (!btn) return;
+    var list = kind === 'chip' ? state.get().chipResearch.active : state.get().research.active;
+    var entry = list.find(function (e) { return e.nodeId === nodeId; });
+    if (!entry) return;
+    var cost = SiliconService.researchFinishCost(entry);
+    var b = btn.querySelector('b'); if (b) b.textContent = cost;
+    if (SiliconService.canAfford(cost)) btn.removeAttribute('data-sil-short'); else btn.setAttribute('data-sil-short', '1');
+}
+
 function bindProgressEvents() {
     bus.on('research:progress', function (data) {
         if (activeView !== 'research' || activeSubtab !== 'tech') return;
@@ -715,6 +756,7 @@ function bindProgressEvents() {
             var bar = els.view.querySelector('[data-research-bar="' + r.nodeId + '"]'); if (bar) bar.style.width = pct + '%';
             var pctEl = els.view.querySelector('[data-research-pct="' + r.nodeId + '"]'); if (pctEl) pctEl.textContent = pct + '%';
             var etaEl = els.view.querySelector('[data-research-eta="' + r.nodeId + '"]'); if (etaEl) etaEl.textContent = 'Sisa ~' + Math.ceil(r.remainingDays) + ' hari';
+            _refreshFinishCost('tech', r.nodeId);
         });
     });
     bus.on('os:progress', function (data) {
@@ -742,6 +784,7 @@ function bindProgressEvents() {
             var bar = els.view.querySelector('[data-chip-research-bar="' + r.nodeId + '"]'); if (bar) bar.style.width = pct + '%';
             var pctEl = els.view.querySelector('[data-chip-research-pct="' + r.nodeId + '"]'); if (pctEl) pctEl.textContent = pct + '%';
             var etaEl = els.view.querySelector('[data-chip-research-eta="' + r.nodeId + '"]'); if (etaEl) etaEl.textContent = 'Sisa ~' + Math.ceil(r.remainingDays) + ' hari';
+            _refreshFinishCost('chip', r.nodeId);
         });
     });
 
@@ -954,6 +997,8 @@ async function boot() {
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
             silicon: SiliconService,
+            payment: PaymentService,
+            openSiliconStore: openSiliconStoreModal,
             LanguageService: LanguageService,
             SaveService: SaveService, ToastService: ToastService, Modal: Modal, navigate: navigate, render: renderAll,
             modules: { marketing: marketingModule, feedbackData: feedbackModule },
