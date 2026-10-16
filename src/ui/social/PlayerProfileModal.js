@@ -1,54 +1,68 @@
 // FILE: src/ui/social/PlayerProfileModal.js
-// v1.0 — Modal profil pemain lain.
+// v2.0 — Profil pemain lain: foto, nama pemain, statistik leaderboard.
 import { Modal } from '../modal.js';
+import { LanguageService, t } from '../../core/LanguageService.js';
+import { avatarHtml, resolveAvatarUrls, esc } from './AvatarView.js';
 
-function _esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-}
+var MONTHS = {
+    id: ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'],
+    en: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+};
 
-var MONTHS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+function _lang() { var l = 'en'; try { l = LanguageService.getLang(); } catch (e) {} return MONTHS[l] ? l : 'en'; }
 
 function _fmtFounded(year, month) {
     if (!year) return '—';
-    var m = (month >= 1 && month <= 12) ? MONTHS[month - 1] + ' ' : '';
+    var m = (month >= 1 && month <= 12) ? MONTHS[_lang()][month - 1] + ' ' : '';
     return m + year;
 }
 
 function _fmtDate(iso) {
     if (!iso) return '—';
-    try {
-        var d = new Date(iso);
-        if (isNaN(d.getTime())) return '—';
-        return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-    } catch (e) { return '—'; }
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    try { return d.toLocaleDateString(_lang() === 'id' ? 'id-ID' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }); }
+    catch (e) { return '—'; }
 }
 
-export function openPlayerProfileModal(profile) {
+export function compactNumber(n) {
+    n = Number(n) || 0;
+    if (n >= 1e12) return (n / 1e12).toFixed(1).replace(/\.0$/, '') + 'T';
+    if (n >= 1e9)  return (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
+    if (n >= 1e6)  return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (n >= 1e3)  return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+    return String(Math.round(n));
+}
+
+function _stat(label, value) {
+    return '<div class="pf-mini"><div class="pf-mini-label">' + esc(label) + '</div><div class="pf-mini-value">' + esc(value) + '</div></div>';
+}
+
+export async function openPlayerProfileModal(profile) {
     if (!profile) return;
 
-    var name = profile.company_name || profile.display_name || '(tanpa nama)';
-    var initial = name.charAt(0).toUpperCase();
-    var founded = _fmtFounded(profile.founded_year, profile.founded_month);
-    var lastActive = _fmtDate(profile.updated_at);
-    var joined = _fmtDate(profile.created_at);
+    var company = profile.company_name || t('pp.lb.no_name');
+    var player = profile.display_name || '';
+    var urls = {};
+    try { urls = await resolveAvatarUrls([profile]); } catch (e) {}
 
-    var html = '' +
-        '<div class="modal-title">👤 Profil Pemain</div>' +
-        '<div class="modal-sub">' + _esc(name) + '</div>' +
-        '<div style="display:flex;flex-direction:column;align-items:center;padding:18px 0 14px 0;">' +
-            '<div style="width:80px;height:80px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;margin-bottom:12px;letter-spacing:-0.02em;">' +
-                _esc(initial) +
-            '</div>' +
-            '<div style="font-size:17px;font-weight:700;color:var(--text-primary);text-align:center;word-break:break-word;">' +
-                _esc(name) +
-            '</div>' +
+    var html =
+        '<div class="modal-title">' + esc(t('pp.view.title')) + '</div>' +
+        '<div class="pf-view-hero">' +
+            avatarHtml({ src: urls[profile.id], name: company, size: 84, cls: 'pp-avatar-lg' }) +
+            '<div class="pf-view-company">' + esc(company) + '</div>' +
+            (player ? '<div class="pf-view-player">' + esc(player) + '</div>' : '') +
         '</div>' +
-        '<div class="sum-row"><span>Didirikan</span><b>' + _esc(founded) + '</b></div>' +
-        '<div class="sum-row"><span>Bergabung</span><b>' + _esc(joined) + '</b></div>' +
-        '<div class="sum-row"><span>Terakhir aktif</span><b>' + _esc(lastActive) + '</b></div>' +
-        '<button type="button" class="btn-secondary" data-modal-close style="width:100%;margin-top:16px;padding:10px;">Tutup</button>';
+        '<div class="pf-mini-grid">' +
+            _stat(t('pp.stats.revenue'), '$' + compactNumber(profile.stat_revenue)) +
+            _stat(t('pp.stats.sold'), compactNumber(profile.stat_sold)) +
+            _stat(t('pp.stats.reputation'), Number(profile.stat_reputation || 0).toFixed(1)) +
+            _stat(t('pp.stats.share'), Number(profile.stat_share || 0).toFixed(1) + '%') +
+        '</div>' +
+        '<div class="sum-row"><span>' + esc(t('pp.view.founded')) + '</span><b>' + esc(_fmtFounded(profile.founded_year, profile.founded_month)) + '</b></div>' +
+        '<div class="sum-row"><span>' + esc(t('pp.view.joined')) + '</span><b>' + esc(_fmtDate(profile.created_at)) + '</b></div>' +
+        '<div class="sum-row"><span>' + esc(t('pp.view.last_active')) + '</span><b>' + esc(_fmtDate(profile.updated_at)) + '</b></div>' +
+        '<button type="button" class="btn-secondary" data-modal-close style="width:100%;margin-top:16px;padding:10px;">' + esc(t('pp.view.close')) + '</button>';
 
     Modal.open('player-profile', html);
 }
