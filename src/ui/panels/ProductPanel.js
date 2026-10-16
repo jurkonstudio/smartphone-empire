@@ -146,31 +146,105 @@ function _renderDesignTab(productSystem) {
 // ============================================================
 // SUB-TAB KATALOG
 // ============================================================
+// Fallback teks bila kunci i18n belum ada (t() mengembalikan key apa adanya).
+function tx(key, fallback, vars) {
+    var v = t(key, vars);
+    return (v === key) ? fallback : v;
+}
+
+var _catalogFilter = 'all';     // all | selling | disc
+var _catalogSort = 'newest';    // newest | sold | rating | stock
+
+export function setCatalogView(kind, value) {
+    if (kind === 'filter') _catalogFilter = value;
+    else if (kind === 'sort') _catalogSort = value;
+}
+
+function _avgReview(p) {
+    return (p.reviews && p.reviews.length)
+        ? p.reviews.reduce(function (s, r) { return s + r.score; }, 0) / p.reviews.length : null;
+}
+
+function _stockPct(p) {
+    var cap = p.baseCapacity || p.totalProduced || 0;
+    if (cap <= 0) return p.stock > 0 ? 100 : 0;
+    return Math.max(0, Math.min(100, Math.round((p.stock / cap) * 100)));
+}
+
 function _renderCatalog() {
     var data = state.get();
     var catalog = (data.products && data.products.catalog) ? data.products.catalog : [];
     if (!catalog.length) {
         return '<div class="empty"><div class="empty-ico">📦</div><div class="empty-title">' + t('prod.catalog.empty') + '</div><div class="empty-desc">' + t('prod.catalog.empty_desc') + '</div></div>';
     }
+
+    var selling = catalog.filter(function (p) { return p.status === 'selling'; });
+    var lowStock = selling.filter(function (p) { return p.stock <= 0 || _stockPct(p) < 20; }).length;
+    var totalRev = catalog.reduce(function (s, p) { return s + (p.totalRevenue || 0); }, 0);
+    var summary = '<div class="kpi-grid cat-summary">' +
+        '<div class="kpi"><div class="kpi-label">' + tx('prod.catalog.sum_active', 'Dijual') + '</div><div class="kpi-value">' + selling.length + '/' + catalog.length + '</div></div>' +
+        '<div class="kpi ' + (lowStock ? 'warn' : 'blue') + '"><div class="kpi-label">' + tx('prod.catalog.sum_low', 'Stok menipis') + '</div><div class="kpi-value">' + lowStock + '</div></div>' +
+        '<div class="kpi"><div class="kpi-label">' + tx('prod.catalog.sum_rev', 'Pendapatan') + '</div><div class="kpi-value" style="font-size:14px;">$' + totalRev.toLocaleString('en-US') + '</div></div>' +
+        '</div>';
+
+    var filters = [['all', tx('prod.catalog.f_all', 'Semua')], ['selling', t('prod.catalog.status_selling')], ['disc', t('prod.catalog.status_discontinued')]];
+    var sorts = [['newest', tx('prod.catalog.s_new', 'Terbaru')], ['sold', tx('prod.catalog.s_sold', 'Terlaris')], ['rating', tx('prod.catalog.s_rating', 'Rating')], ['stock', tx('prod.catalog.s_stock', 'Stok')]];
+    var bar = '<div class="cat-chips">';
+    filters.forEach(function (f) { bar += '<button class="chip-small ' + (_catalogFilter === f[0] ? 'active' : '') + '" data-catalog-filter="' + f[0] + '">' + f[1] + '</button>'; });
+    bar += '</div><div class="cat-chips">';
+    sorts.forEach(function (f) { bar += '<button class="chip-small ' + (_catalogSort === f[0] ? 'active' : '') + '" data-catalog-sort="' + f[0] + '">' + f[1] + '</button>'; });
+    bar += '</div>';
+
+    var list = catalog.slice().filter(function (p) {
+        if (_catalogFilter === 'selling') return p.status === 'selling';
+        if (_catalogFilter === 'disc') return p.status !== 'selling';
+        return true;
+    });
+    list.sort(function (a, b) {
+        if (_catalogSort === 'sold') return (b.totalSold || 0) - (a.totalSold || 0);
+        if (_catalogSort === 'rating') return (_avgReview(b) || 0) - (_avgReview(a) || 0);
+        if (_catalogSort === 'stock') return (a.stock || 0) - (b.stock || 0);
+        return (b.releaseGameMinute || 0) - (a.releaseGameMinute || 0);
+    });
+    if (!list.length) {
+        return summary + bar + '<div class="empty"><div class="empty-desc">' + tx('prod.catalog.none_match', 'Tidak ada produk pada filter ini.') + '</div></div>';
+    }
+
     var cards = '';
-    for (var i = 0; i < catalog.length; i++) {
-        var p = catalog[i];
-        var avgReview = (p.reviews && p.reviews.length) ? (p.reviews.reduce(function (s, r) { return s + r.score; }, 0) / p.reviews.length).toFixed(1) : '-';
-        var statusLabel = p.status === 'selling' ? t('prod.catalog.status_selling') : t('prod.catalog.status_discontinued');
-        var autoActive = p.autoRestock && p.autoRestock.enabled;
-        cards += '<div class="card prod-card" data-prod-detail="' + p.id + '">' +
+    for (var i = 0; i < list.length; i++) {
+        var p = list[i];
+        var avg = _avgReview(p);
+        var avgTxt = avg === null ? '-' : avg.toFixed(1);
+        var avgCls = avg === null ? '' : (avg >= 7 ? 'good' : (avg >= 5 ? 'mid' : 'bad'));
+        var isSelling = p.status === 'selling';
+        var statusLabel = isSelling ? t('prod.catalog.status_selling') : t('prod.catalog.status_discontinued');
+        var autoActive = !!(p.autoRestock && p.autoRestock.enabled);
+        var pct = _stockPct(p);
+        var stockCls = p.stock <= 0 ? 'out' : (pct < 20 ? 'low' : '');
+        var stockNote = !isSelling ? '' : (p.stock <= 0
+            ? '<span class="cat-warn">' + tx('prod.catalog.out', 'Stok habis') + '</span>'
+            : (pct < 20 ? '<span class="cat-warn">' + tx('prod.catalog.low', 'Stok menipis') + '</span>' : ''));
+        var toggle = isSelling
+            ? '<div class="cat-auto"><span>' + tx('prod.catalog.auto_short', 'Auto-restock') + '</span>' +
+              '<button class="toggle-switch ' + (autoActive ? 'on' : '') + '" data-auto-toggle data-prod-id="' + p.id + '" aria-pressed="' + autoActive + '" aria-label="Auto-restock"><span class="toggle-thumb"></span></button></div>'
+            : '';
+
+        cards += '<div class="card prod-card ' + (isSelling ? '' : 'is-disc') + '" data-prod-detail="' + p.id + '">' +
             '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
             '<div style="flex:1;min-width:0;">' +
             '<div style="font-size:14px;font-weight:700;">' + escapeHtml(p.name) + (autoActive ? ' <span style="color:var(--accent);font-size:12px;">' + t('prod.catalog.auto_tag') + '</span>' : '') + '</div>' +
-            '<div style="font-size:11px;color:var(--text-mute);">' + p.releaseDate.day + '/' + p.releaseDate.month + '/' + p.releaseDate.year + ' - ' + statusLabel + '</div>' +
+            '<div style="font-size:11px;color:var(--text-mute);">' + p.releaseDate.day + '/' + p.releaseDate.month + '/' + p.releaseDate.year + '</div>' +
             '</div>' +
-            '<div class="prod-badge ' + (p.status === 'selling' ? 'selling' : 'disc') + '">' + statusLabel + '</div>' +
+            '<div class="prod-badge ' + (isSelling ? 'selling' : 'disc') + '">' + statusLabel + '</div>' +
             '</div>' +
-            '<div class="prod-stats-mini"><span>' + t('prod.catalog.review', { n: avgReview }) + '</span><span>' + t('prod.catalog.stock', { n: p.stock.toLocaleString('en-US') }) + '</span><span>' + t('prod.catalog.revenue', { n: p.totalRevenue.toLocaleString('en-US') }) + '</span></div>' +
-            '<div class="prod-stats-mini"><span>' + t('prod.catalog.sold', { n: p.totalSold.toLocaleString('en-US') }) + '</span><span>' + t('prod.catalog.price', { n: p.price }) + '</span><span>' + t('prod.catalog.quality', { n: p.stats.qualityScore }) + '</span></div>' +
+            '<div class="prod-stats-mini"><span class="cat-rate ' + avgCls + '">' + t('prod.catalog.review', { n: avgTxt }) + '</span><span>' + t('prod.catalog.price', { n: p.price }) + '</span><span>' + t('prod.catalog.quality', { n: p.stats.qualityScore }) + '</span></div>' +
+            '<div class="prod-stats-mini"><span>' + t('prod.catalog.sold', { n: p.totalSold.toLocaleString('en-US') }) + '</span><span>' + t('prod.catalog.revenue', { n: p.totalRevenue.toLocaleString('en-US') }) + '</span></div>' +
+            '<div class="cat-stock"><div class="cat-stock-head"><span>' + t('prod.catalog.stock', { n: p.stock.toLocaleString('en-US') }) + '</span>' + stockNote + '</div>' +
+            '<div class="cat-bar"><div class="cat-bar-fill ' + stockCls + '" style="width:' + pct + '%;"></div></div></div>' +
+            toggle +
             '</div>';
     }
-    return '<div class="prod-list">' + cards + '</div>';
+    return summary + bar + '<div class="prod-list">' + cards + '</div>';
 }
 
 // ============================================================
@@ -301,6 +375,16 @@ function _renderChipTab() {
     return labHeader + designHtml + catalogHtml + fabHtml;
 }
 
+// Chip ambang auto-restock (tampil saat auto-restock aktif).
+function _thresholdChips(prodId, current) {
+    var opts = [10, 20, 30, 50];
+    var html = '<div class="auto-restock-sub"><div class="auto-label">' + tx('prod.detail.auto_threshold', 'Restock saat stok di bawah') + '</div><div class="threshold-chips">';
+    opts.forEach(function (v) {
+        html += '<button class="chip-small ' + (v === current ? 'active' : '') + '" data-auto-threshold="' + v + '" data-prod-id="' + prodId + '">' + v + '%</button>';
+    });
+    return html + '</div></div>';
+}
+
 // ============================================================
 // MODAL: DETAIL PRODUK
 // ============================================================
@@ -337,8 +421,9 @@ export function openProductDetailModal(params) {
               '<div style="font-size:13px;font-weight:600;">' + t('prod.detail.auto_label') + '</div>' +
               '<div style="font-size:11px;color:var(--text-mute);margin-top:2px;">' + (autoRestock.enabled ? t('prod.detail.auto_on') : t('prod.detail.auto_off')) + '</div>' +
               '</div>' +
-              '<button class="toggle-switch ' + (autoRestock.enabled ? 'on' : '') + '" data-auto-toggle data-prod-id="' + p.id + '"><span class="toggle-thumb"></span></button>' +
-              '</div>'
+              '<button class="toggle-switch ' + (autoRestock.enabled ? 'on' : '') + '" data-auto-toggle data-prod-id="' + p.id + '" aria-pressed="' + !!autoRestock.enabled + '" aria-label="Auto-restock"><span class="toggle-thumb"></span></button>' +
+              '</div>' +
+              (autoRestock.enabled ? _thresholdChips(p.id, autoRestock.thresholdPercent) : '')
             : '';
 
         var actionsHtml = p.status === 'selling'
