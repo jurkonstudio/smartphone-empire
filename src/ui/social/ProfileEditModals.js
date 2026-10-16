@@ -1,5 +1,6 @@
 // FILE: src/ui/social/ProfileEditModals.js  (BARU)
 // Modal: ganti nama perusahaan (gratis 2x lalu 150 SIL) & edit profil pemain.
+import { checkCompanyNameAvailable } from '../../services/cloud/CompanyNameCheck.js';
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
 import { state } from '../../core/GameState.js';
@@ -64,10 +65,16 @@ export function openEditCompanyNameModal() {
     }
     input.addEventListener('input', clearError);
 
-    btn.addEventListener('click', function () {
+    btn.addEventListener('click', async function () {
         var v = validateName(input.value);
         if (!v.ok) { showError(t(nameErrorKey(v.reason))); input.focus(); return; }
         if (v.name === String(s.companyName || '').trim()) { showError(t('pp.company.same')); return; }
+
+        // Nama harus unik antar pemain (dicek sebelum konfirmasi bayar).
+        if (!armed) {
+            var av = await checkCompanyNameAvailable(v.name);
+            if (av === false) { showError(t('onb.name.error_taken')); input.focus(); return; }
+        }
 
         // Berbayar: konfirmasi 2 langkah supaya SIL tidak terpotong tak sengaja.
         if (paid && !armed) {
