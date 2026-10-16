@@ -18,8 +18,11 @@ import { getPrehistoryHeadlines, PREHISTORY_HEADLINES } from '../data/news-prehi
 import { MONTHLY_HEADLINES_EN } from '../data/news-headlines.en.js';
 import { PREHISTORY_HEADLINES_EN } from '../data/news-prehistory.en.js';
 import { LanguageService } from '../core/LanguageService.js';
+import { getCompetitorReleasesForMonth, getReleaseDay } from '../data/news-competitor-releases.data.js';
+import { getActiveCompetitors, getCompetitorById } from '../data/competitors.data.js';
 
-var MAX_ARTICLES = 30;
+var MAX_ARTICLES = 60; // naik dari 30: berita rilis kompetitor menambah volume
+var MAX_COMPETITOR_NEWS_PER_DAY = 2; // batas toast per pergantian hari
 var _articleSeq = 1;
 
 // ============================================================
@@ -285,6 +288,68 @@ function _makeRecapArticle(h) {
 }
 
 // ============================================================
+// [V8] _makeCompetitorReleaseArticle — berita rilis produk /
+// peristiwa kompetitor dunia nyata (news-competitor-releases).
+// Outlet dipilih stabil (hash id) dari outlet yang aktif di tahun itu.
+// ============================================================
+function _hashStr(str) {
+    var h = 0;
+    for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 100003;
+    return h;
+}
+
+function _makeCompetitorReleaseArticle(e, day) {
+    if (!e) return null;
+    var data = state.get();
+    var outlets = getOutletsForYear(e.year) || [];
+    var outlet = outlets.length ? outlets[_hashStr(e.id) % outlets.length] : null;
+    var en = _currentLang() === 'en';
+    var comp = getCompetitorById(e.cid);
+
+    var byline = 'Redaksi ' + (outlet ? outlet.name : 'Media');
+    var dateline = 'Global';
+    if (outlet) {
+        try { var j = getJournalistForCountry(outlet.country); if (j) byline = j; } catch (err) { /* diamkan */ }
+        try { var c = getDatelineForRegion(outlet.region); if (c) dateline = c; } catch (err2) { /* diamkan */ }
+    }
+    var text = en ? e.t_en : e.t;
+    if (e.speculative) text += en ? ' (Unconfirmed report.)' : ' (Laporan belum terkonfirmasi.)';
+
+    return {
+        id: e.id,
+        headline: en ? e.h_en : e.h,
+        subheadline: '',
+        byline: byline,
+        dateline: dateline,
+        paragraphs: text ? [text] : [],
+        pullQuote: '',
+        source: outlet ? outlet.name : 'Media',
+        sourceId: outlet ? outlet.id : null,
+        sourceCountry: outlet ? outlet.country : null,
+        sourceRegion: outlet ? outlet.region : null,
+        sourceType: outlet ? outlet.type : 'media',
+        score: _toneToScore(e.tone),
+        sentiment: e.tone || 'mixed',
+        articleType: 'competitor_release',
+        competitorId: e.cid,
+        competitorName: comp ? comp.name : e.cid,
+        productId: null,
+        productName: null,
+        createdAt: {
+            year: e.year,
+            month: e.month,
+            day: day,
+            gameMinute: data.time.elapsedGameMinutes
+        },
+        era: data.era,
+        read: false,
+        headlineYear: e.year,
+        headlineMonth: e.month,
+        tags: Array.isArray(e.tags) ? e.tags.slice() : []
+    };
+}
+
+// ============================================================
 // [V7a-4] _trimArticles — buang artikel non-recap terlama.
 // Arsip (isRecap: true) selalu dipertahankan.
 // ============================================================
@@ -317,6 +382,8 @@ export var NewsSystem = {
         // Muncul mulai hari ke-2 bulan berjalan.
         bus.on('time:day-changed', function (snapshot) {
     NewsSystem._onMonthlyHeadline(snapshot);
+    // [V8] Berita rilis produk kompetitor dunia nyata.
+    NewsSystem._onCompetitorReleases(snapshot);
 });
 // Re-seed arsip pra-2000 saat bahasa berubah
 bus.on('lang:changed', function () {
@@ -485,6 +552,52 @@ if (!h) return;
             bus.emit('state:changed', data);
         } catch (err) {
             console.error('[NewsSystem] _onMonthlyHeadline error:', err);
+        }
+    },
+
+    // [V8] Handler berita rilis kompetitor. Dipicu tiap pergantian hari;
+    // artikel muncul pada hari yang ditentukan data (getReleaseDay),
+    // hanya untuk kompetitor yang sedang aktif di tahun game.
+    _onCompetitorReleases: function (snapshot) {
+        try {
+            var data = state.get();
+            if (!data.news) data.news = { articles: [], lastMilestone: {}, headlineHistory: [], recapSeeded: false };
+            if (!Array.isArray(data.news.headlineHistory)) data.news.headlineHistory = [];
+
+            var year = (snapshot && snapshot.currentYear) || data.time.currentYear;
+            var month = (snapshot && snapshot.currentMonth) || data.time.currentMonth;
+            var day = (snapshot && snapshot.currentDay) || data.time.currentDay;
+
+            var list = getCompetitorReleasesForMonth(year, month);
+            if (!list.length) return;
+
+            var active = {};
+            var actives = getActiveCompetitors(year);
+            for (var a = 0; a < actives.length; a++) active[actives[a].id] = true;
+
+            var published = [];
+            for (var i = 0; i < list.length && published.length < MAX_COMPETITOR_NEWS_PER_DAY; i++) {
+                var e = list[i];
+                if (!active[e.cid]) continue;
+                if (day < getReleaseDay(e)) continue;
+                if (data.news.headlineHistory.indexOf(e.id) !== -1) continue;
+
+                var art = _makeCompetitorReleaseArticle(e, day);
+                if (!art) continue;
+                data.news.headlineHistory.push(e.id);
+                data.news.articles.unshift(art);
+                published.push(art);
+            }
+            if (!published.length) return;
+
+            _trimArticles(data.news.articles, MAX_ARTICLES);
+            for (var p = 0; p < published.length; p++) {
+                bus.emit('news:published', { article: published[p] });
+                state.addLog('Berita industri: ' + published[p].headline, LOG_TYPES.info);
+            }
+            bus.emit('state:changed', data);
+        } catch (err) {
+            console.error('[NewsSystem] _onCompetitorReleases error:', err);
         }
     },
 
