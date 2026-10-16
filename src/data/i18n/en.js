@@ -776,6 +776,8 @@ export const en = {
     'onb.name.error_too_long':  'Name must be at most 24 characters.',
     'onb.name.error_competitor':'This name is used by a competitor. Pick another.',
     'onb.name.error_brand':     'This name is similar to a famous brand. Pick another.',
+    'onb.name.error_taken':     'This company name is already taken by another player. Pick another.',
+    'onb.name.checking':        'Checking name...',
     'onb.name.error_profanity': 'Name contains inappropriate words. Pick another.',
 
     // GAME OVER

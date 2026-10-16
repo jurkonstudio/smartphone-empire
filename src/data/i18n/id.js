@@ -777,6 +777,8 @@ export const id = {
     'onb.name.error_too_long':  'Nama maksimal 24 karakter.',
     'onb.name.error_competitor':'Nama ini sudah dipakai kompetitor. Pilih nama lain.',
     'onb.name.error_brand':     'Nama ini mirip merek terkenal. Pilih nama lain.',
+    'onb.name.error_taken':     'Nama perusahaan ini sudah dipakai pemain lain. Pilih nama lain.',
+    'onb.name.checking':        'Memeriksa nama...',
     'onb.name.error_profanity': 'Nama mengandung kata yang tidak pantas. Pilih nama lain.',
 
     // GAME OVER
