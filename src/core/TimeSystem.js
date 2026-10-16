@@ -45,6 +45,7 @@ export class TimeSystem {
     start() {
         if (this._running) return;
         this._running = true;
+        this._sanitizeBoost();
         document.addEventListener('visibilitychange', this._boundVis);
         this._rafId = requestAnimationFrame(this._boundLoop);
     }
@@ -54,6 +55,44 @@ export class TimeSystem {
         if (this._rafId !== null) cancelAnimationFrame(this._rafId);
         this._rafId = null;
         document.removeEventListener('visibilitychange', this._boundVis);
+    }
+
+    // Kecepatan > 1x hanya sah bila ada boost berbayar yang masih aktif.
+    // Mencegah save lama / cloud sync membawa 10x gratis.
+    _sanitizeBoost() {
+        const d = this.state.data;
+        const b = d.speedBoost;
+        const valid = b && typeof b.speed === 'number' && b.speed > 1 && b.remainingSec > 0;
+        if (valid) {
+            if (d.gameSpeed !== b.speed) d.gameSpeed = b.speed;
+        } else {
+            if (b) d.speedBoost = null;
+            if (d.gameSpeed !== 1) d.gameSpeed = 1;
+        }
+    }
+
+    getBoost() {
+        const b = this.state.data.speedBoost;
+        if (!b || !(b.remainingSec > 0) || !(b.speed > 1)) return null;
+        return { speed: b.speed, remainingSec: b.remainingSec };
+    }
+
+    // Dipanggil SiliconService setelah SIL dibayar.
+    activateBoost(speed, remainingSec) {
+        if (!TIME_CONFIG.speedOptions.includes(speed) || speed <= 1) return;
+        const d = this.state.data;
+        d.speedBoost = { speed: speed, remainingSec: remainingSec };
+        d.gameSpeed = speed;
+        d.isPaused = false;
+        bus.emit('time:speed-changed', this.snapshot());
+    }
+
+    clearBoost(reason) {
+        const d = this.state.data;
+        d.speedBoost = null;
+        d.gameSpeed = 1;
+        bus.emit('time:speed-changed', this.snapshot());
+        if (reason === 'expired') bus.emit('time:boost-expired', this.snapshot());
     }
 
     _handleVisibility() {
@@ -70,7 +109,16 @@ export class TimeSystem {
         if (dt > TIME_CONFIG.maxDeltaSeconds) dt = TIME_CONFIG.maxDeltaSeconds;
         if (dt < 0) dt = 0;
 
+        // Jaga-jaga: kecepatan > 1x tanpa boost aktif → balik ke 1x.
+        if (this.state.data.gameSpeed > 1 && !this.getBoost()) this._sanitizeBoost();
+
         if (dt > 0 && !this.state.data.isPaused) {
+            // Hitung mundur boost (detik nyata, hanya saat game berjalan).
+            const b = this.state.data.speedBoost;
+            if (b && b.remainingSec > 0) {
+                b.remainingSec -= dt;
+                if (b.remainingSec <= 0) this.clearBoost('expired');
+            }
             const minutesPerSecond =
                 (TIME_CONFIG.minutesPerHour * TIME_CONFIG.hoursPerDay) /
                 TIME_CONFIG.realSecondsPerGameDay;
@@ -144,17 +192,17 @@ export class TimeSystem {
         bus.emit('time:speed-changed', this.snapshot());
     }
 
+    // Kecepatan > 1x TIDAK bisa diset langsung: harus lewat SiliconService.buySpeed().
+    // Hanya 1x yang diizinkan di sini (membatalkan boost yang sedang berjalan).
     setSpeed(speed) {
-        if (!TIME_CONFIG.speedOptions.includes(speed)) return;
-        this.state.data.gameSpeed = speed;
+        if (speed !== 1) return;
+        this.clearBoost('manual');
         this.state.data.isPaused = false;
-        bus.emit('time:speed-changed', this.snapshot());
     }
 
+    // Tombol ⏩ / tombol F: buka panel percepatan (didengarkan oleh SilSpeedBar.js).
     cycleSpeed() {
-        const opts = TIME_CONFIG.speedOptions;
-        const idx = opts.indexOf(this.state.data.gameSpeed);
-        this.setSpeed(opts[(idx + 1) % opts.length]);
+        bus.emit('sil:open-speed', this.snapshot());
     }
 
     // Untuk testing manual via console:

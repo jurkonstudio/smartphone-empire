@@ -3,6 +3,7 @@
 import { bus } from './EventBus.js';
 import { APP_CONFIG } from '../config/app.config.js';
 import { SCHEMA_VERSION } from './GameState.js';
+import { Integrity } from './Integrity.js';
 
 const SAVE_KEY = APP_CONFIG.saveKey;
 const AUTOSAVE_INTERVAL_MS = 30000;
@@ -17,6 +18,7 @@ export const SaveService = {
                 savedAt: Date.now(),
                 data: state.serialize()
             };
+            payload.sig = Integrity.sign(payload.data, payload.savedAt);
             localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
             // Satu event saja — CloudSync mendengarkan ini untuk autosync.
             bus.emit('save:success', { savedAt: payload.savedAt, at: payload.savedAt });
@@ -34,11 +36,24 @@ export const SaveService = {
             if (!raw) return null;
             const payload = JSON.parse(raw);
             if (!payload || typeof payload !== 'object') return null;
-            return payload.data;
+            return this._check(payload);
         } catch (err) {
             console.error('[SaveService] Gagal memuat:', err);
             return null;
         }
+    },
+
+    // Verifikasi tanda tangan. Save lama (tanpa sig) diterima sekali lalu
+    // ditandatangani saat save berikutnya. Sig tidak cocok → SIL di-nol-kan.
+    _check: function (payload) {
+        var d = payload.data;
+        if (!d) return null;
+        if (!payload.sig) return d;
+        if (!Integrity.verify(d, payload.savedAt, payload.sig)) {
+            console.warn('[SaveService] Save terdeteksi diubah manual.');
+            return Integrity.penalize(d);
+        }
+        return d;
     },
 
     // Ambil payload penuh (dengan metadata) — dipakai untuk cek timestamp.
@@ -80,6 +95,7 @@ export const SaveService = {
                 savedAt: Date.now(),
                 data: state.serialize()
             };
+            payload.sig = Integrity.sign(payload.data, payload.savedAt);
             return JSON.stringify(payload);
         } catch (err) {
             console.error('[SaveService] Export gagal:', err);
@@ -92,7 +108,7 @@ export const SaveService = {
             const payload = JSON.parse(text);
             if (!payload || typeof payload !== 'object') return null;
             if (!payload.data) return null;
-            return payload.data;
+            return this._check(payload);
         } catch (err) {
             console.error('[SaveService] Import gagal:', err);
             return null;
