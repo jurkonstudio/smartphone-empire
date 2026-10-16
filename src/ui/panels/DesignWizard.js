@@ -17,6 +17,7 @@ import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
 
 let _wizardState = null;
+let _wizardView = 'front'; // 'front' | 'back' (live preview)
 
 const OPTIONAL_CATEGORIES = ['camera'];
 
@@ -218,6 +219,7 @@ export function openDesignWizard(params) {
     if (colors.length) s.bodyColorId = colors[colors.length - 1].id;
 
     _wizardState = s;
+    _wizardView = 'front';
     _render();
 }
 
@@ -247,6 +249,10 @@ function _render() {
         <div class="wiz-mockup-live" data-wiz-mockup-container></div>
         <div class="wiz-spec-strip" data-wiz-spec-strip></div>
         <div class="wiz-mockup-actions">
+            <div class="wiz-view-toggle">
+                <button type="button" data-wiz-view="front" class="${_wizardView === 'front' ? 'active' : ''}">${t('wiz.view.front') === 'wiz.view.front' ? 'Depan' : t('wiz.view.front')}</button>
+                <button type="button" data-wiz-view="back" class="${_wizardView === 'back' ? 'active' : ''}">${t('wiz.view.back') === 'wiz.view.back' ? 'Belakang' : t('wiz.view.back')}</button>
+            </div>
             <button class="btn-secondary" data-wiz-detail style="font-size:12px;min-height:34px;padding:6px 12px;">${t('wiz.detail.btn_show')}</button>
         </div>
 
@@ -299,7 +305,20 @@ function _bindStep() {
             const key = parts[0];
             const value = parts.slice(1).join(':');
             _wizardState[key] = value;
+            // Preview otomatis menunjukkan sisi yang relevan dengan pilihan
+            if (key === 'cameraId') _wizardView = 'back';
+            else if (key === 'displayId' || key === 'formFactorId') _wizardView = 'front';
             _render();
+        });
+    });
+
+    root.querySelectorAll('[data-wiz-view]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            _wizardView = btn.dataset.wizView === 'back' ? 'back' : 'front';
+            root.querySelectorAll('[data-wiz-view]').forEach(function (b) {
+                b.classList.toggle('active', b.dataset.wizView === _wizardView);
+            });
+            _refreshPreview();
         });
     });
 
@@ -438,6 +457,7 @@ function _confirm() {
     }
     ToastService.success(t('wiz.success.dev_start'));
     _wizardState = null;
+    _wizardView = 'front';
     Modal.close('design-wizard', true);
     if (game.render) game.render();
 }
@@ -638,8 +658,8 @@ function _step4(s) {
 // LIVE PREVIEW
 // ============================================================
 function _getAdaptiveSize() {
-    if (typeof window === 'undefined') return 220;
-    return window.innerWidth < 380 ? 200 : 220;
+    if (typeof window === 'undefined') return 250;
+    return window.innerWidth < 380 ? 220 : 250;
 }
 
 function _refreshPreview() {
@@ -650,7 +670,14 @@ function _refreshPreview() {
     if (mockupContainer) {
         try {
             const size = _getAdaptiveSize();
-            mockupContainer.innerHTML = renderPhoneMockup(_wizardState, { size: size });
+            const yr = DesignEraService.getCurrentYear();
+            const sp = resolveSpec(yr, state.get().research.completed || []);
+            mockupContainer.innerHTML = renderPhoneMockup(_wizardState, {
+                size: size,
+                view: _wizardView,
+                isStatic: mockupContainer.childNodes.length > 0,
+                label: sp.label + ' • ' + yr
+            });
         } catch (e) {
             console.error('[DesignWizard] Mockup error:', e);
             mockupContainer.innerHTML = '';
@@ -790,7 +817,7 @@ function _openDetailModal() {
     const spec = resolveSpec(year, completed);
 
     let mockupHtml = '';
-    try { mockupHtml = renderPhoneMockup(s, { size: 240 }); }
+    try { mockupHtml = '<div style="display:flex;gap:10px;justify-content:center;align-items:flex-end;">' + renderPhoneMockup(s, { size: 200, view: 'front', isStatic: true }) + renderPhoneMockup(s, { size: 200, view: 'back', isStatic: true, showBrand: false }) + '</div>'; }
     catch (e) { mockupHtml = '<div style="color:var(--danger);font-size:12px;">Mockup error</div>'; }
 
     const compInfo = [
