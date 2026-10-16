@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Gradasi untuk efek kilau pada huruf J -->
+    <linearGradient id="jGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#C0C0C0"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background Hitam dengan sudut membulat -->
+  <rect width="512" height="512" fill="#121212" rx="64"/>
+
+  <!-- Aksen Biru -->
+  <polygon points="160,170 220,170 220,210 160,210" fill="#1E90FF"/>
+
+  <!-- Bentuk Huruf J -->
+  <path d="M 220 170 L 280 170 L 280 340 Q 280 400 220 400 Q 160 400 160 340 L 160 320 L 200 320 L 200 340 Q 200 360 220 360 Q 240 360 240 340 L 240 210 L 220 210 Z" fill="url(#jGrad)"/>
+
+  <!-- Teks JURKON -->
+  <text x="256" y="450" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="68" fill="#FFFFFF" text-anchor="middle" letter-spacing="4">JURKON</text>
+
+  <!-- Teks STUDIO -->
+  <text x="256" y="490" font-family="Arial, Helvetica, sans-serif" font-weight="400" font-size="24" fill="#A0A0A0" text-anchor="middle" letter-spacing="12">— STUDIO —</text>
+</svg>
