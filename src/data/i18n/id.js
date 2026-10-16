@@ -176,6 +176,11 @@ export const id = {
     'home.placeholder.body':  'Peta 3D kantor pusat akan muncul di sini. Untuk sekarang, buka tab HQ untuk mengelola perusahaan.',
     'home.campus.aria':    'Peta kampus 3D interaktif. Geser untuk berpindah, cubit untuk zoom.',
     'home.campus.loading': 'Memuat peta kampus…',
+    'home.tab.focus':     'Fokus',
+    'home.tab.news':      'Berita',
+    'home.tab.activity':  'Aktivitas',
+    'home.dock.collapse': 'Ciutkan panel',
+    'home.dock.expand':   'Bentangkan panel',
     'campus.placeholder.title': 'Campus 3D Map',
     'campus.placeholder.body':  'Peta 3D kantor pusat dan sistem upgrade gedung akan tersedia di update berikutnya.',
 
