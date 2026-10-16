@@ -1,0 +1,220 @@
+/* ============================================================================
+   PROFILE UI v2027.42  (BARU — dimuat setelah style.css)
+   Panel Profil (Perusahaan | Pemain), hero Setelan, avatar, modal edit,
+   leaderboard. Memakai token tema yang sudah ada (--bg-*, --accent, dst).
+   ============================================================================ */
+
+/* ---------- Avatar ---------- */
+.pp-avatar {
+    --pp-size: 40px;
+    position: relative; flex-shrink: 0;
+    width: var(--pp-size); height: var(--pp-size);
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+    color: #fff; display: inline-flex; align-items: center; justify-content: center;
+    font-weight: var(--fw-black); letter-spacing: -0.02em;
+    font-size: calc(var(--pp-size) * 0.42);
+    box-shadow: 0 3px 12px var(--accent-glow);
+    user-select: none;
+}
+.pp-avatar.has-img { background: var(--bg-3); box-shadow: 0 0 0 2px var(--bg-2), 0 3px 12px rgba(0,0,0,0.25); }
+.pp-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.pp-avatar-letter { line-height: 1; }
+.pp-avatar-lg { box-shadow: 0 0 0 3px var(--bg-2), 0 6px 20px var(--accent-glow); }
+.pp-avatar-edit {
+    position: absolute; right: -2px; bottom: -2px;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--bg-4); color: var(--text-primary);
+    border: 2px solid var(--bg-2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; line-height: 1;
+}
+.pp-avatar-dot {
+    position: absolute; right: -1px; bottom: -1px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--text-tertiary); border: 2px solid var(--bg-2);
+    transition: background 0.3s, box-shadow 0.3s;
+}
+.pp-avatar-dot.is-online { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.7); }
+
+/* ---------- Tab Profil (memakai .settings-tabs) ---------- */
+.pf-tabs .settings-tab { flex: 1; justify-content: center; }
+
+/* ---------- Hero ---------- */
+.pf-hero {
+    background: linear-gradient(135deg, var(--bg-2) 0%, var(--bg-3) 100%);
+    border: 1px solid var(--border); border-radius: var(--r-lg);
+    padding: 16px; margin-bottom: 10px; box-shadow: var(--shadow-sm);
+    animation: fadeIn 0.25s ease-out;
+}
+.pf-hero-top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.pf-logo {
+    flex-shrink: 0; width: 52px; height: 52px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+    color: #fff; font-size: 24px; font-weight: var(--fw-black);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px var(--accent-glow);
+}
+.pf-hero-info { flex: 1; min-width: 0; }
+.pf-name {
+    font-size: var(--fs-lg); font-weight: var(--fw-black); letter-spacing: -0.02em;
+    line-height: 1.2; margin-bottom: 6px; word-break: break-word;
+}
+.pf-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.pf-tags-center { justify-content: center; margin-top: 10px; }
+.pf-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px; border-radius: var(--r-pill);
+    background: var(--bg-4); color: var(--text-secondary);
+    font-size: var(--fs-xs); font-weight: var(--fw-semibold); white-space: nowrap;
+}
+.pf-tag i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.pf-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    padding-top: 12px; border-top: 1px solid var(--border);
+}
+.pf-stat { min-width: 0; }
+.pf-stat-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--text-tertiary); font-weight: var(--fw-semibold); margin-bottom: 3px;
+}
+.pf-stat-value {
+    font-size: 15px; font-weight: var(--fw-bold); color: var(--text-primary);
+    font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pf-stat-value small, .pf-dim { color: var(--text-tertiary); font-size: 11px; font-weight: var(--fw-medium); }
+
+/* hero tab Pemain */
+.pf-hero-player { text-align: center; padding: 22px 16px 16px; }
+.pf-avatar-btn { background: none; border: 0; padding: 0; cursor: pointer; margin-bottom: 12px; border-radius: 50%; }
+.pf-avatar-btn:active { transform: scale(0.96); }
+.pf-player-name { font-size: var(--fs-xl); font-weight: var(--fw-black); letter-spacing: -0.03em; word-break: break-word; }
+.pf-player-company {
+    display: inline-flex; align-items: center; gap: 5px; margin-top: 4px;
+    color: var(--text-secondary); font-size: var(--fs-sm);
+}
+.pf-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+.pf-actions button { padding: 11px 8px; font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+
+/* ---------- Card & umum ---------- */
+.pf-card { animation: fadeIn 0.22s ease-out; }
+.pf-btn-block { width: 100%; font-size: 12px; padding: 10px; font-weight: var(--fw-bold); }
+.pf-btn-sm { flex-shrink: 0; padding: 8px 14px; font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.pf-hint { font-size: 11px; color: var(--text-tertiary); line-height: 1.5; margin-top: 8px; }
+
+/* Meter */
+.pf-meter { margin-bottom: 12px; }
+.pf-meter-head { display: flex; justify-content: space-between; font-size: var(--fs-sm); margin-bottom: 5px; color: var(--text-secondary); }
+.pf-meter-head b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.pf-meter-track { height: 6px; border-radius: var(--r-pill); background: var(--bg-4); overflow: hidden; }
+.pf-meter-fill { height: 100%; border-radius: var(--r-pill); transition: width 0.4s ease; }
+.pf-meter-fill.is-good { background: var(--success); }
+.pf-meter-fill.is-mid  { background: var(--warn); }
+.pf-meter-fill.is-bad  { background: var(--danger); }
+
+/* Timeline milestone */
+.pf-timeline { position: relative; max-height: 280px; overflow-y: auto; padding-left: 14px; }
+.pf-timeline::before { content: ''; position: absolute; left: 3px; top: 6px; bottom: 6px; width: 2px; background: var(--border-strong); border-radius: 2px; }
+.pf-ms { position: relative; display: flex; gap: 10px; padding: 6px 0; font-size: var(--fs-sm); line-height: var(--lh-base); }
+.pf-ms::before { content: ''; position: absolute; left: -15px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--bg-2); }
+.pf-ms-year { flex-shrink: 0; min-width: 38px; font-weight: var(--fw-bold); color: var(--accent); font-variant-numeric: tabular-nums; }
+.pf-ms-text { color: var(--text-secondary); }
+
+/* Cloud */
+.pf-cloud-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.pf-cloud-label { font-size: var(--fs-base); color: var(--text-secondary); }
+.pf-cloud-state { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-base); font-weight: var(--fw-bold); }
+.pf-cloud-state i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.pf-cloud-sum { font-size: 11.5px; color: var(--text-tertiary); line-height: 1.5; margin-bottom: 10px; }
+
+/* Baris nama perusahaan */
+.pf-company-row { display: flex; align-items: center; gap: 12px; }
+.pf-company-main { flex: 1; min-width: 0; }
+.pf-company-name { font-size: var(--fs-md); font-weight: var(--fw-bold); word-break: break-word; margin-bottom: 5px; }
+.pf-company-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--text-tertiary); }
+
+/* Badge */
+.pf-badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: var(--fw-bold); white-space: nowrap; }
+.pf-badge-free { background: var(--success-soft); color: var(--success); }
+.pf-badge-sil  { background: var(--info-soft); color: var(--info); }
+
+/* Grid mini stat */
+.pf-mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+.pf-mini { background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--r-md); padding: 10px 12px; min-width: 0; }
+.pf-mini-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-tertiary); font-weight: var(--fw-semibold); margin-bottom: 3px; }
+.pf-mini-value { font-size: var(--fs-md); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Modal edit ---------- */
+.pf-rule {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: 9px 12px; margin-bottom: 12px; font-size: var(--fs-xs); color: var(--text-secondary); line-height: 1.45;
+}
+.pf-field-error { display: none; color: var(--danger); font-size: var(--fs-sm); margin-top: 6px; line-height: 1.4; }
+.field-input.is-invalid { border-color: var(--danger); }
+.pf-pay { margin-top: 12px; background: var(--info-soft); border-radius: var(--r-md); padding: 10px 12px; }
+.pf-pay-line { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--text-primary); }
+.pf-pay-line.is-short { color: var(--danger); }
+.pf-pay-sub { font-size: var(--fs-xs); color: var(--text-tertiary); margin-top: 3px; }
+.pf-modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+.pf-modal-actions button { flex: 1; }
+.pf-photo-edit { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 14px; }
+.pf-photo-actions { display: flex; gap: 8px; width: 100%; }
+.pf-photo-actions button { flex: 1; padding: 9px 8px; font-size: var(--fs-sm); }
+.pf-photo-edit .pf-hint { margin-top: 0; text-align: center; }
+
+/* ---------- Profil pemain lain ---------- */
+.pf-view-hero { display: flex; flex-direction: column; align-items: center; padding: 8px 0 16px; }
+.pf-view-company { margin-top: 12px; font-size: var(--fs-lg); font-weight: var(--fw-bold); text-align: center; word-break: break-word; }
+.pf-view-player { margin-top: 2px; font-size: var(--fs-sm); color: var(--text-secondary); }
+.pf-view-hero + .pf-mini-grid { margin-bottom: 10px; }
+
+/* ---------- Leaderboard ---------- */
+.pf-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; margin-bottom: 8px; }
+.pf-chips::-webkit-scrollbar { display: none; }
+.pf-chip {
+    flex-shrink: 0; padding: 6px 12px; border-radius: var(--r-pill);
+    background: var(--bg-3); color: var(--text-secondary); border: 1px solid var(--border);
+    font-size: var(--fs-sm); font-weight: var(--fw-semibold); cursor: pointer; font-family: inherit;
+}
+.pf-chip.active { background: var(--accent); color: #fff; border-color: transparent; box-shadow: 0 2px 8px var(--accent-glow); }
+.pf-lb-me { background: var(--accent-soft); color: var(--text-primary); border-radius: var(--r-md); padding: 8px 12px; margin-bottom: 8px; font-size: var(--fs-sm); font-weight: var(--fw-bold); text-align: center; }
+.pf-lb-list { max-height: 52vh; overflow-y: auto; }
+.pf-lb-msg { text-align: center; padding: 24px 12px; color: var(--text-tertiary); font-size: var(--fs-base); line-height: 1.5; }
+.pf-lb-row {
+    width: 100%; display: flex; align-items: center; gap: 10px; text-align: left;
+    background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: 9px 12px; margin-bottom: 8px; cursor: pointer; font-family: inherit; color: inherit;
+}
+.pf-lb-row:active { background: var(--bg-3); }
+.pf-lb-row.is-me { border-color: var(--accent); background: var(--accent-soft); }
+.pf-lb-rank { flex-shrink: 0; width: 24px; text-align: center; font-weight: var(--fw-black); color: var(--text-tertiary); font-size: var(--fs-base); font-variant-numeric: tabular-nums; }
+.pf-lb-rank.is-medal { font-size: 18px; }
+.pf-lb-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pf-lb-name { font-weight: var(--fw-bold); font-size: var(--fs-base); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-lb-sub { font-size: var(--fs-xs); color: var(--text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-lb-you { font-style: normal; font-size: 10px; font-weight: var(--fw-bold); padding: 1px 6px; border-radius: var(--r-pill); background: var(--accent); color: #fff; margin-left: 4px; vertical-align: 1px; }
+.pf-lb-metric { flex-shrink: 0; font-weight: var(--fw-black); font-size: var(--fs-md); font-variant-numeric: tabular-nums; color: var(--accent); }
+
+/* ---------- Setelan: hero & baris ---------- */
+.settings-hero-link {
+    width: 100%; background: none; border: 0; padding: 0; text-align: left;
+    color: inherit; font-family: inherit; cursor: pointer;
+}
+.settings-hero-link:active { opacity: 0.8; }
+.settings-hero-company { display: flex; align-items: center; gap: 5px; font-size: var(--fs-sm); color: var(--text-secondary); margin-bottom: 3px; min-width: 0; }
+.settings-hero-company span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.settings-hero-kpi.is-4 { grid-template-columns: repeat(4, 1fr); }
+.settings-row-ico {
+    flex-shrink: 0; width: 30px; height: 30px; border-radius: 9px;
+    background: var(--accent-soft); color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.settings-row { align-items: center; }
+
+@media (max-width: 380px) {
+    .settings-hero-kpi.is-4 { grid-template-columns: 1fr 1fr; row-gap: 10px; }
+    .pf-stats { gap: 6px; }
+    .pf-stat-value { font-size: 14px; }
+}
