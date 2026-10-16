@@ -1,7 +1,9 @@
 // FILE: src/ui/panels/MarketPanel.js
-// v2027.15a — fix _pct() presisi adaptif + info revenue bulan ini di share card.
+// v2027.16a — tambah tombol zoom chart (ChartZoomModal) di share chart.
 import { renderPublicOpinionPanel } from './PublicOpinionPanel.js';
 import { t } from '../../core/LanguageService.js';
+// [v2027.16] Side-effect import: modal zoom chart self-bound ke tombol [data-chart-zoom].
+import '../charts/ChartZoomModal.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -164,7 +166,12 @@ function _renderShareChart(history) {
 
     return `
         <div class="card">
-            <div class="card-title">${t('market.share.chart_title')}</div>
+            <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                <span>${t('market.share.chart_title')}</span>
+                <button type="button" data-chart-zoom="share"
+                    aria-label="Perbesar grafik"
+                    style="padding:2px 8px;font-size:14px;line-height:1;background:var(--bg-3);border:1px solid var(--border);border-radius:6px;color:var(--text-dim);cursor:pointer;">⛶</button>
+            </div>
             <div class="chart-wrap" id="${id}" style="height:140px;">
                 <canvas class="chart-canvas" data-share-chart="${id}" style="height:140px;"></canvas>
             </div>
