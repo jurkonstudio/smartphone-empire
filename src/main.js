@@ -6,6 +6,7 @@ import { bus } from './core/EventBus.js';
 import { state } from './core/GameState.js';
 import { TimeSystem } from './core/TimeSystem.js';
 import { SaveService } from './core/SaveService.js';
+import { DEV_BUILD } from './config/dev.config.js';
 import { ToastService } from './core/ToastService.js';
 import { ThemeService } from './core/ThemeService.js';
 import { LanguageService } from './core/LanguageService.js';
@@ -206,6 +207,9 @@ function renderView(opts) {
         html = '<div class="card" style="border-color:var(--danger);margin-top:20px;"><div class="card-title" style="color:var(--danger);">Error Render</div><div style="font-size:13px;line-height:1.6;word-break:break-word;"><b>View:</b> ' + activeView + '<br><b>Error:</b> ' + (err && err.message ? err.message : 'Unknown') + '</div></div>';
     }
     unmountCampusMap();
+    // Home = layar penuh tanpa scroll (peta + dock); halaman lain scroll biasa.
+    els.view.classList.toggle('view-home', activeView === 'dashboard');
+    document.body.classList.toggle('is-home', activeView === 'dashboard');
     els.view.innerHTML = html;
 
     if (!soft) {
@@ -1033,6 +1037,9 @@ async function boot() {
                 claimDaily: function () { return SiliconService.claimDailyLogin(); }
             }
         };
+
+        // [HARDENING] Objek cheat tidak ada sama sekali di build produksi.
+        if (!DEV_BUILD) { delete window.__game.cheat; }
 
         window.render = renderAll;
         window.navigate = navigate;
