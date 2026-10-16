@@ -155,7 +155,7 @@ export const BALANCE = {
         },
         warehouseCostPerUnitPerDay: 0.02,
         productionSetupCost: 2000,
-        dailyNoise: 0.12,
+        dailyNoise: 0.09,
         discontinueDiscountPercent: 0.6,
         reviewThresholds: { excellent: 85, good: 70, average: 50, poor: 30, bad: 0 },
         reputationPerReviewPoint: 0.4,
@@ -203,6 +203,24 @@ export const BALANCE = {
         avgPriceByYear: {
             2000: 200, 2005: 150, 2010: 220, 2015: 280, 2020: 320, 2026: 350
         }
+    },
+
+    // [v2027.3] Parameter efek makro-ekonomi dunia nyata (lihat core/MacroModel.js).
+    macro: {
+        cycleElasticity: 0.045,        // 1 poin PDB di bawah tren -> permintaan -4.5%
+        cycleMin: 0.80,
+        cycleMax: 1.12,
+        priceCycleSensitivity: 0.06,   // resesi -> konsumen lebih sensitif harga
+        wagePassThrough: 0.6,          // porsi pertumbuhan pendapatan riil yang masuk ke upah
+        priceIncomePassThrough: 0.5,   // porsi pertumbuhan pendapatan riil yang masuk ke harga referensi
+        basePriceRef: 150,             // harga referensi awal 2000 (USD)
+        rateBase: 0.8,                 // faktor bunga pinjaman = rateBase + ratePerPoint * suku bunga acuan
+        ratePerPoint: 0.08,
+        demandNoiseSmoothing: 0.7,     // 0 = noise harian acak penuh, 0.9 = sangat halus
+        sentimentSmoothing: 0.25,      // kecepatan sentimen publik mengejar target (0-1)
+        trendPull: 0.15,               // tarikan tren pasar ke jangkar historis per bulan
+        trendNoise: 0.02,              // gejolak acak tren per bulan
+        reviewValueWeight: 0.8         // pengaruh "harga vs nilai" pada skor ulasan
     },
 
     marketing: { perMarketerBonus: 0.1, maxMarketingFactor: 2.5 },
