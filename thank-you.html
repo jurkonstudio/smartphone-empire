@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pendaftaran Berhasil - Smartphone Empire</title>
+    <style>
+        :root {
+            /* Palet warna khas Apple */
+            --canvas: #f5f5f7;
+            --ink: #1d1d1f;
+            --accent: #0071e3;
+            --grey: #6e6e73;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--canvas);
+            color: var(--ink);
+            /* Font sistem Apple (San Francisco) */
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+
+        .container {
+            padding: 60px 24px;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .icon {
+            width: 72px;
+            height: 72px;
+            background-color: #e8f5e9; /* Hijau pastel lembut */
+            color: #34c759; /* Hijau Apple */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            margin-bottom: 32px;
+            box-shadow: 0 4px 12px rgba(52, 199, 89, 0.15);
+        }
+
+        h1 {
+            font-size: clamp(2.2rem, 5vw, 3.2rem); /* Responsif untuk layar HP */
+            font-weight: 700;
+            letter-spacing: -0.04em; /* Membuat huruf terasa tajam dan rapat */
+            line-height: 1.1;
+            margin: 0 0 16px 0;
+        }
+
+        p {
+            font-size: 1.15rem;
+            color: var(--grey);
+            line-height: 1.5;
+            margin: 0 0 40px 0;
+            font-weight: 400;
+        }
+
+        .btn-back {
+            display: inline-block;
+            background-color: var(--accent);
+            color: #ffffff;
+            padding: 14px 32px;
+            border-radius: 8px; /* Sudut presisi */
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        .btn-back:active {
+            transform: scale(0.98);
+            background-color: #005bb5;
+        }
+    </style>
+    <script>
+        // Mengarahkan pemain kembali ke game secara otomatis setelah 4 detik
+        setTimeout(function() {
+            window.location.href = '/';
+        }, 4000);
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">✓</div>
+        <h1>Selamat Bergabung.</h1>
+        <p>Akunmu berhasil dibuat. Kamu akan dialihkan ke game dalam beberapa detik, atau klik tombol di bawah ini.</p>
+        <a href="/" class="btn-back">Mulai Bermain</a>
+    </div>
+</body>
+</html>
