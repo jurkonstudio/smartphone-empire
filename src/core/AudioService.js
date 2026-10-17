@@ -1,21 +1,18 @@
 // FILE: src/core/AudioService.js
-// v2028.29 — [FIX] Menambahkan Audio Unlocker untuk kebijakan Autoplay HP & Path resolver.
+// v2028.31 — Path disesuaikan dengan folder 'assets' dan file 'succes.mp3'.
 
 var _enabled = false;
-var _audioCtx = null;
 var _unlocked = false;
 
 // ============================================================
-// DAFTAR SUARA (Sesuaikan path-nya dengan lokasi file di GitHub)
-// Jika kamu taruh di folder root, gunakan './click.mp3'
-// Jika di folder assets/audio/, gunakan './assets/audio/click.mp3'
+// DAFTAR SUARA (Sesuai dengan folder GitHub kamu saat ini)
 // ============================================================
 var SOUNDS = {
-    tap:     './assets/audio/tap.mp3',     // Suara klik biasa
-    select:  './assets/audio/select.mp3',  // Suara pilih menu
-    toggle:  './assets/audio/toggle.mp3',  // Suara switch
-    success: './assets/audio/success.mp3', // Suara berhasil (misal: Top Up)
-    error:   './assets/audio/error.mp3'    // Suara error/gagal
+    tap:     './assets/audio/tap.mp3',
+    toggle:  './assets/audio/toggle.mp3',
+    success: './assets/audio/succes.mp3', // Sesuai dengan typo di file-mu
+    error:   './assets/audio/error.mp3',
+    select:  './assets/audio/select.mp3'  // Biarkan saja, jika tidak ada hanya muncul warning
 };
 
 var _cache = {};
@@ -71,10 +68,7 @@ export const AudioService = {
         if (!_unlocked) return; // Jika browser belum dibuka kuncinya
 
         var audio = _cache[id];
-        if (!audio) {
-            console.warn('[AudioService] Suara tidak ditemukan:', id);
-            return;
-        }
+        if (!audio) return;
 
         try {
             // Reset waktu agar bisa diputar berulang kali dengan cepat
