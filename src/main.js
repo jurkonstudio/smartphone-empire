@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2028.17 — [FIX] Memperbarui logika updateNavSlider agar presisi (hanya bergerak di X, lebar dikunci).
+// v2028.18 — [FIX] Memperbarui logika updateNavSlider & menambahkan popstate (anti-close tab).
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -182,7 +182,7 @@ function updateNavSlider(animated) {
     var count = buttons.length;
     var itemW = navW / count;
     
-    // [PRESISI] Lebar slider dikunci 46px agar pas di tengah ikon
+    // PRESISI: Lebar slider dikunci 46px
     var sliderW = 46; 
     var x = (idx * itemW) + ((itemW - sliderW) / 2);
 
@@ -1138,6 +1138,36 @@ async function boot() {
                 else if (activeView === 'team')     activeHqSubtab = id;
                 renderView();
                 showSwipeAnimation(direction);
+            }
+        });
+
+        // ============================================================
+        // POPSTATE HANDLER (Anti-close Tab & Back Button)
+        // ============================================================
+        if (window.history && window.history.pushState) {
+            history.pushState({ game: true }, document.title);
+        }
+        
+        window.addEventListener('popstate', function(e) {
+            // 1. Jika ada Modal yang terbuka, tutup modalnya terlebih dahulu
+            var openModal = document.querySelector('[data-modal-id]');
+            if (openModal) {
+                Modal.closeAll();
+                history.pushState({ game: true }, document.title);
+                return;
+            }
+
+            // 2. Jika tidak ada Modal, tampilkan konfirmasi keluar
+            if (window.confirm("Yakin ingin keluar dari Smartphone Empire? Progres permainan akan disimpan.")) {
+                // Simpan game sebelum keluar
+                if (window.__game && window.__game.SaveService) {
+                    window.__game.SaveService.save(window.__game.state);
+                }
+                // Izinkan browser untuk kembali (keluar dari game)
+                window.history.back();
+            } else {
+                // Tahan pemain di dalam game
+                history.pushState({ game: true }, document.title);
             }
         });
 
