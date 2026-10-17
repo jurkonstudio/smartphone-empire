@@ -1,6 +1,5 @@
 // FILE: src/services/CloudService.js
-// v2027.42 — Fasad cloud. + syncPlayerProfile(), getPlayerAssetUrls(), listProfiles(orderBy).
-// v2028.12 — [PAYMENT] Menambahkan fungsi untuk pembuatan pesanan & cek status manual.
+// v2028.16 — [ADMIN] Menambahkan fungsi getPendingPayments & adminApprovePayment.
 import { bus } from '../core/EventBus.js';
 
 const SLOT_KEY = 'smartphone-empire:cloud-slot';
@@ -259,7 +258,6 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
-    // Kirim nama pemain, nama perusahaan & statistik ke profil publik (leaderboard).
     async syncPlayerProfile(fields) {
         if (!_adapter) return NOT_CONFIGURED;
         if (!_userId) return NOT_SIGNED_IN;
@@ -268,7 +266,6 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
-    // Signed URL banyak foto sekaligus (foto pemain lain).
     async getPlayerAssetUrls(paths, expiresSec) {
         if (!_adapter || !_userId) return NOT_SIGNED_IN;
         if (typeof _adapter.getPlayerAssetUrls !== 'function') return NOT_CONFIGURED;
@@ -292,7 +289,6 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
-    // [HARDENING] addSiliconServer dihapus: kredit SIL hanya boleh dari server.
     async addSiliconServer() { return { ok: false, code: 'FORBIDDEN' }; },
 
     async claimDailySilicon() {
@@ -311,9 +307,6 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
-    // ==========================================
-    // PAYMENT RPC (BARU)
-    // ==========================================
     async createPaymentOrder(orderId, packageId, priceIdr, silAmount) {
         if (!_adapter) return NOT_CONFIGURED;
         if (!_userId) return NOT_SIGNED_IN;
@@ -335,5 +328,20 @@ export const CloudService = {
         } catch (err) {
             return _fail(err);
         }
+    },
+
+    // [ADMIN PANEL]
+    async getPendingPayments() {
+        if (!_adapter || !_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.rpcGetPendingPayments !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, data: await _adapter.rpcGetPendingPayments() }; }
+        catch (err) { return _fail(err); }
+    },
+
+    async adminApprovePayment(orderId) {
+        if (!_adapter || !_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.rpcAdminApprove !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, data: await _adapter.rpcAdminApprove(orderId) }; }
+        catch (err) { return _fail(err); }
     }
 };
