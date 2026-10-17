@@ -1,11 +1,13 @@
 // FILE: src/ui/panels/OSPanel.js
 // Sub-tab OS dalam tab Riset.
-// v2028.1 — Menambahkan Version History (Riwayat Versi) & UI yang lebih rapi.
+// v2028.2 — Menambahkan Silicon Boost pada OS yang sedang dikembangkan.
 import { renderOsStatBar } from './OsStatBar.js';
 import { OS_FEATURES, OS_LICENSES, BUILTIN_APPS, OS_ERAS, getOsFeatureById } from '../../data/os.data.js';
 import { renderOsScreenMockup } from '../phone/OsScreenMockup.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
+import { renderSilSlotBoost } from '../components/SilResearchBlock.js';
+import { SiliconService } from '../../systems/SiliconService.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -105,14 +107,11 @@ function _renderHero(os, currentVersion, osSystem) {
 function _renderVersionHistory(os, currentVersion) {
     if (!os.versions || !os.versions.length) return '';
 
-    // Urutkan dari versi terbaru ke terlama
     const versions = [...os.versions].reverse();
-    
     const rows = versions.map(v => {
         const isCurrent = currentVersion && v.id === currentVersion.id;
         const dateStr = v.releasedAt ? `${v.releasedAt.month}/${v.releasedAt.year}` : 'Unknown';
         
-        // Ambil 3 fitur teratas untuk ditampilkan sebagai highlight
         const featureNames = v.features.slice(0, 3).map(fid => {
             const f = getOsFeatureById(fid);
             return f ? f.name : fid;
@@ -149,9 +148,14 @@ function _renderVersionHistory(os, currentVersion) {
 }
 
 // ============================================================
-// DEV STRIP
+// DEV STRIP (DENGAN SILICON BOOST)
 // ============================================================
 function _renderDevStrip(developing) {
+    let finishCost = 10; 
+    try { 
+        finishCost = SiliconService.researchFinishCost(developing); 
+    } catch(e) { console.warn('[OSPanel] Silicon cost error:', e); }
+
     return '<div class="slot-strip">' +
         '<div class="slot-strip-top">' +
             '<span class="slot-strip-label">' + t('os.dev.title') + '</span>' +
@@ -168,8 +172,14 @@ function _renderDevStrip(developing) {
                 '<div class="progress-bar" data-os-dev-bar style="width:0%;"></div>' +
             '</div>' +
             '<div class="slot-strip-item-eta" data-os-dev-eta>' + t('os.dev.eta_calc') + '</div>' +
+            
+            // TOMBOL SILICON
+            '<div class="slot-strip-item-boost" style="margin-top: 8px;">' + 
+                renderSilSlotBoost('os', developing.versionString, finishCost) + 
+            '</div>' +
+            
         '</div>' +
-        '<button class="btn-danger os-dev-cancel" data-os-action="cancel-deving">' +
+        '<button class="btn-danger os-dev-cancel" data-os-action="cancel-deving" style="margin-top: 8px;">' +
             t('os.dev.cancel') +
         '</button>' +
         '</div>';
@@ -563,4 +573,4 @@ function _statusLabel(st) {
     if (st.status === 'developing') return t('os.feature_detail.status_deving');
     if (st.status === 'available') return t('os.feature_detail.status_available');
     return st.reason || t('os.feature.badge_locked');
-}
+            }
