@@ -58,6 +58,7 @@ import { openCandidateDetailModal, setRecruitFilter, setTeamMode } from './ui/pa
 import { renderHqPanel } from './ui/panels/HqPanel.js';
 import { renderHomePanel, initHomeTabs, refreshHomeSlides } from './ui/panels/HomePanel.js';
 import { mountCampusMap, unmountCampusMap } from './ui/campus/CampusMap.js';
+import { mountOfficeMap, unmountOfficeMap, isOfficeMounted } from './ui/office/OfficeMap.js';
 import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
 import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
@@ -199,6 +200,9 @@ function updateNavSlider(animated) {
 function renderView(opts) {
     if (!els.view) return;
     var soft = !!(opts && opts.soft);
+    // Office 3D Map memperbarui dirinya sendiri lewat event state; render ulang soft
+    // akan membuangnya & memuat ulang scene — jadi dilewati selama peta aktif.
+    if (soft && activeView === 'team' && activeHqSubtab === 'office' && isOfficeMounted()) return;
     var prevScroll = els.view.scrollTop;
     if (soft) els.view.classList.add('soft-update');
 
@@ -218,6 +222,7 @@ function renderView(opts) {
         html = '<div class="card" style="border-color:var(--danger);margin-top:20px;"><div class="card-title" style="color:var(--danger);">Error Render</div><div style="font-size:13px;line-height:1.6;word-break:break-word;"><b>View:</b> ' + activeView + '<br><b>Error:</b> ' + (err && err.message ? err.message : 'Unknown') + '</div></div>';
     }
     unmountCampusMap();
+    unmountOfficeMap();
     // Home = layar penuh tanpa scroll (peta + dock); halaman lain scroll biasa.
     els.view.classList.toggle('view-home', activeView === 'dashboard');
     document.body.classList.toggle('is-home', activeView === 'dashboard');
@@ -248,6 +253,10 @@ function renderView(opts) {
         if (activeView === 'team' && activeHqSubtab === 'exchange') {
             var exChart = els.view.querySelector('[data-ex-chart]');
             if (exChart) drawExchangeChart(exChart);
+        }
+        if (activeView === 'team' && activeHqSubtab === 'office') {
+            var officeEl = els.view.querySelector('#office-map');
+            if (officeEl) mountOfficeMap(officeEl, state.get());
         }
         if (activeView === 'dashboard') {
             var campusEl = els.view.querySelector('#campus-map');
