@@ -1,9 +1,5 @@
 // FILE: src/services/cloud/CloudSync.js
-// v2027.38c — Sinkron cloud otomatis & senyap setelah pernah sinkron (tanpa dialog konflik).
-// Dialog konflik hanya muncul untuk akun/slot yang BELUM pernah sinkron di perangkat ini.
-// Akar masalah: payload upload dibuat dari state live (sudah maju beberapa menit game)
-// sedangkan save lokal lebih lama → cloud selalu 'lebih maju' saat reload. Kini save lokal
-// ditulis senyap tepat sebelum upload sehingga lokal == cloud.
+// v2028.13 — [ADMIN] Menambahkan fitur forcePull() untuk memaksa tarik data dari server.
 import { bus } from '../../core/EventBus.js';
 import { SaveService } from '../../core/SaveService.js';
 import { SCHEMA_VERSION } from '../../core/GameState.js';
@@ -89,10 +85,6 @@ function _isConnected() {
     return CloudService.getStatus() === 'connected' && !!CloudService.getUserId();
 }
 
-
-// ============================================================
-// FLAG 'PERNAH SINKRON' (per akun + slot, tersimpan di perangkat ini)
-// ============================================================
 function _syncedKey(slot) {
     return SYNCED_PREFIX + (CloudService.getUserId() || 'anon') + ':' + (slot || CloudService.getSlot());
 }
@@ -116,8 +108,6 @@ function _clearAllSynced() {
     } catch (e) {}
 }
 
-// Muat ulang agar seluruh UI memakai state dari cloud. Pengaman: tidak mengulang
-// reload otomatis bila baru saja dilakukan (mencegah loop).
 function _reloadAfterApply(silent, delay) {
     if (silent) {
         try {
@@ -134,7 +124,7 @@ function _applyRemoteNow() {
     if (!_remotePending || !_state || !_isConnected()) return;
     _remotePending = false;
     applyCloud(CloudService.getSlot(), { silent: true }).then(function (r) {
-        if (!r || !r.ok) _remotePending = true;   // coba lagi saat tab disembunyikan berikutnya
+        if (!r || !r.ok) _remotePending = true;
     }).catch(function () { _remotePending = true; });
 }
 
@@ -144,7 +134,6 @@ function _onVisibilityChange() {
         return;
     }
     if (_reloadOnVisible) { _reloadOnVisible = false; location.reload(); return; }
-    // Pulihkan auto-sync yang terjeda karena gagal (jaringan), tanpa dialog.
     if (_isConnected() && !_ready && !_checking && !_conflictOpen && !_laterChosen && _hasSynced()) {
         if (Date.now() - _lastRetryAt < 30000) return;
         _lastRetryAt = Date.now();
@@ -177,13 +166,8 @@ async function syncSiliconOnLogin() {
         var localBal = SiliconService.getBalance();
         var hasSynced = _hasSyncedSilicon();
 
-        console.info('[CloudSync] SIL sync — lokal:', localBal, 'server:', serverBal, 'hasSynced:', hasSynced);
-
-        // [HARDENING] Server SELALU authoritative. Saldo lokal tidak pernah
-        // dikirim naik ke server (celah 'local wins' + add_silicon dihapus).
         if (!hasSynced) _markSiliconSynced();
 
-        // Sudah pernah sync: server authoritative
         if (serverBal !== localBal) {
             console.info('[CloudSync] Pull dari server:', serverBal, '(lokal:', localBal + ')');
             SiliconService.applyServerBalance(serverBal);
@@ -204,7 +188,6 @@ function _pushSiliconDelta(delta) {
 
     try {
         if (delta > 0) {
-            // [HARDENING] Kredit hanya dari server (webhook pembayaran / claim_daily_silicon).
             return;
         } else {
             CloudService.spendSiliconServer(Math.abs(delta)).then(function (res) {
@@ -226,7 +209,6 @@ async function uploadNow(opts) {
     _busy = true;
     try {
         const slot = CloudService.getSlot();
-        // Tulis save lokal senyap tepat sebelum membangun payload → lokal == cloud.
         try { SaveService.save(_state, { silent: true }); } catch (e) {}
         const payload = _buildPayload(slot);
         if (JSON.stringify(payload.data).length > CLOUD.maxSaveBytes) {
@@ -277,7 +259,6 @@ async function checkOnConnect() {
             _lastUploadMinutes = local.minutes;
             _markSynced(slot);
         } else if (_hasSynced(slot)) {
-            // Sudah pernah sinkron: selesaikan otomatis & senyap (tanpa dialog).
             await _autoResolve(slot, local, cloud, dec.reason);
         } else {
             _conflictOpen = true;
@@ -288,9 +269,6 @@ async function checkOnConnect() {
     }
 }
 
-
-// Aturan otomatis: cloud menang kecuali pada kasus 'perusahaan berbeda' di mana
-// progres lokal lebih jauh (maka lokal diunggah).
 async function _autoResolve(slot, local, cloud, reason) {
     const cm = Number(cloud.game_minutes) || 0;
     if (reason === 'different' && local.minutes > cm) {
@@ -299,7 +277,7 @@ async function _autoResolve(slot, local, cloud, reason) {
         return;
     }
     const r = await applyCloud(slot, { silent: true });
-    if (!r.ok) _ready = false;      // gagal (mis. jaringan): jeda diam-diam, dicoba lagi nanti
+    if (!r.ok) _ready = false;
 }
 
 async function applyCloud(slot, opts) {
@@ -330,7 +308,6 @@ async function _startRealtime() {
         const local = localInfo(_state);
         if ((Number(row.game_minutes) || 0) > local.minutes) {
             if (_hasSynced(row.slot)) {
-                // Senyap: tahan unggahan lokal, terapkan cloud saat tab disembunyikan / dibuka lagi.
                 _remotePending = true;
                 if (document.visibilityState === 'hidden') _applyRemoteNow();
             } else {
@@ -350,7 +327,6 @@ export const CloudSync = {
         _inited = true;
         _state = state;
         bus.on('save:success', _onLocalSaved);
-        // Reset game / impor manual = pemain sengaja mengubah progres → minta keputusan lagi.
         bus.on('save:cleared', _clearAllSynced);
         bus.on('save:imported', _clearAllSynced);
         document.addEventListener('visibilitychange', _onVisibilityChange);
@@ -398,10 +374,35 @@ export const CloudSync = {
 
     syncSilicon: syncSiliconOnLogin,
 
-    // Untuk memaksa test ulang rekonsiliasi (debug)
     resetSiliconSync: function () {
         try { localStorage.removeItem(SILICON_SYNC_KEY); } catch (e) {}
         console.info('[CloudSync] silicon-synced flag di-reset.');
+    },
+
+    // ============================================================
+    // FORCE PULL (FITUR ADMIN)
+    // ============================================================
+    forcePull: async function () {
+        if (!_state) return { ok: false, reason: 'Game belum siap.' };
+        if (!_isConnected()) return { ok: false, reason: 'Kamu belum login ke Cloud.' };
+        
+        // Reset semua flag yang mungkin memblokir proses
+        _conflictOpen = false;
+        _remotePending = false;
+        _busy = false;
+
+        console.log('[CloudSync] Memaksa tarik data dari server...');
+        ToastService.warning('Menarik data dari server, harap tunggu...');
+        
+        // Panggil applyCloud secara langsung (ini akan menimpa localStorage & reload halaman)
+        const res = await applyCloud(CloudService.getSlot(), { silent: false });
+        
+        if (res.ok) {
+            ToastService.success('Data berhasil ditarik dari server!');
+        } else {
+            ToastService.error('Gagal menarik data: ' + (res.reason || res.code));
+        }
+        return res;
     },
 
     _reset: function () { _inited = false; _ready = false; _busy = false; _checking = false; _conflictOpen = false; _remotePending = false; _reloadOnVisible = false; _laterChosen = false; _lastUploadAt = 0; _lastUploadMinutes = -1; _stopRealtime(); }
