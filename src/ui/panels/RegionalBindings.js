@@ -7,11 +7,13 @@ import { t } from '../../core/LanguageService.js';
 import { setPromoProduct, getPromoProduct, openPromoConfirmModal } from './PromotionPanel.js';
 import {
     openBankApplyModal, updateBankApply, getBankApply,
-    openBankPrepayModal, updateBankPrepay, getBankPrepay
+    openBankPrepayModal, updateBankPrepay, getBankPrepay,
+    openDepositModal, updateDeposit, getDeposit,
+    openWithdrawModal, updateWithdraw, getWithdraw
 } from './BankPanel.js';
 
 var _bound = false;
-var OWN_MODALS = ['bank-apply', 'bank-prepay', 'promo-confirm'];
+var OWN_MODALS = ['bank-apply', 'bank-prepay', 'promo-confirm', 'dep-open', 'dep-withdraw'];
 
 function refreshUi() { bus.emit('regional:ui', {}); }
 
@@ -119,6 +121,69 @@ export function bindRegionalActions() {
             if (!pr.ok) { ToastService.error(pr.error || t('bank.err.generic')); return; }
             ToastService.success(t('bank.toast.prepaid'));
             Modal.close('bank-prepay', true);
+            refreshUi();
+            return;
+        }
+
+        // ---- SIMPANAN: setor / tarik / dana darurat ----
+        if ((el = e.target.closest('[data-dep-open]'))) {
+            e.preventDefault(); vibrateSoft();
+            openDepositModal(el.dataset.depOpen);
+            return;
+        }
+        if ((el = e.target.closest('[data-dep-bank]'))) {
+            e.preventDefault();
+            updateDeposit({ bankId: el.dataset.depBank });
+            return;
+        }
+        if ((el = e.target.closest('[data-dep-kind]'))) {
+            e.preventDefault();
+            var kv = el.dataset.depKind;
+            if (kv === 'flex') updateDeposit({ kind: 'flex', term: 0 });
+            else updateDeposit({ kind: 'term', term: Number(kv) });
+            return;
+        }
+        if ((el = e.target.closest('[data-dep-amount]'))) {
+            e.preventDefault();
+            updateDeposit({ amount: Number(el.dataset.depAmount) });
+            return;
+        }
+        if (e.target.closest('[data-dep-confirm]')) {
+            e.preventDefault();
+            var dreq = getDeposit();
+            if (!dreq) return;
+            var dres = g.bank.deposit(dreq);
+            if (!dres.ok) { ToastService.error(dres.error || t('bank.err.generic')); return; }
+            ToastService.success(t('dep.toast.deposit'));
+            Modal.close('dep-open', true);
+            refreshUi();
+            return;
+        }
+        if ((el = e.target.closest('[data-dep-withdraw]'))) {
+            e.preventDefault(); vibrateSoft();
+            openWithdrawModal(el.dataset.depWithdraw);
+            return;
+        }
+        if ((el = e.target.closest('[data-dep-fraction]'))) {
+            e.preventDefault();
+            updateWithdraw({ fraction: Number(el.dataset.depFraction) });
+            return;
+        }
+        if (e.target.closest('[data-dep-withdraw-confirm]')) {
+            e.preventDefault();
+            var wreq = getWithdraw();
+            if (!wreq) return;
+            var wres = g.bank.withdraw(wreq.uid, wreq.fraction);
+            if (!wres.ok) { ToastService.error(wres.error || t('bank.err.generic')); return; }
+            ToastService.success(t('dep.toast.withdraw'));
+            Modal.close('dep-withdraw', true);
+            refreshUi();
+            return;
+        }
+        if (e.target.closest('[data-dep-autocover]')) {
+            e.preventDefault(); vibrateSoft();
+            var on = g.bank.setAutoCover(!g.bank.bank.autoCover);
+            ToastService.info(on ? t('dep.toast.auto_on') : t('dep.toast.auto_off'));
             refreshUi();
             return;
         }
