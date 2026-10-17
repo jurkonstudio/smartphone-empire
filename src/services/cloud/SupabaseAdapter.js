@@ -1,5 +1,6 @@
 // FILE: src/services/cloud/SupabaseAdapter.js
 // v2027.42 — Adapter Supabase. + profil pemain (leaderboard, foto, rpcSyncProfile).
+// v2028.12 — [PAYMENT] Menambahkan RPC untuk pesanan manual & cek status.
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_LIB_URLS, CLOUD } from './supabase.config.js';
 
 var _client = null;
@@ -342,5 +343,29 @@ export const SupabaseAdapter = {
         var res = await c.rpc('spend_silicon', { p_amount: Math.floor(amount) });
         if (res.error) throw mk(res.error);
         return res.data == null ? 0 : res.data;
+    },
+
+    // ============================================================
+    // PAYMENT RPC (BARU)
+    // ============================================================
+    rpcCreatePaymentOrder: async function (orderId, packageId, priceIdr, silAmount) {
+        var c = await getClient();
+        var res = await c.rpc('create_payment_order', {
+            p_order_id: orderId,
+            p_package_id: packageId,
+            p_amount: priceIdr,
+            p_sil_amount: silAmount
+        });
+        if (res.error) throw mk(res.error);
+        return { ok: true, data: res.data };
+    },
+
+    rpcCheckPaymentStatus: async function (orderId) {
+        var c = await getClient();
+        var res = await c.rpc('check_payment_status', {
+            p_order_id: orderId
+        });
+        if (res.error) throw mk(res.error);
+        return res.data;
     }
 };
