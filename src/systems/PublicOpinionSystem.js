@@ -1,6 +1,5 @@
 // FILE: src/systems/PublicOpinionSystem.js
-// v2027.2 — fix normalisasi bobot sentiment (sebelumnya max hanya 60, bukan 100).
-// v2027.1a — fix reputasi ganda di _startViralEvent & respondToViral.
+// v2028.6 — [LOGIC] Reaksi konsumen sekarang sangat sensitif terhadap Harga vs Kualitas (Value for Money).
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
@@ -67,9 +66,6 @@ export class PublicOpinionSystem {
         bus.emit('state:changed', this.state.data);
     }
 
-    // ============================================================
-    // HELPER
-    // ============================================================
     _hasReleasedProducts() {
         return (this.state.data.products.catalog || []).length > 0;
     }
@@ -85,17 +81,11 @@ export class PublicOpinionSystem {
         return (this.state.data.time.elapsedGameMinutes - earliest) / MINUTES_PER_DAY;
     }
 
-    // ============================================================
-    // HARIAN
-    // ============================================================
     _onDayChanged() {
         this._tickViral();
         if (this._hasReleasedProducts()) this._maybeGenerateReview();
     }
 
-    // ============================================================
-    // BULANAN
-    // ============================================================
     _onMonthChanged() {
         this._recomputeSentiment();
         this._updateSuggestions();
@@ -112,6 +102,16 @@ export class PublicOpinionSystem {
         const rv = this._generateReviewForProduct(p, true);
         this._pushToFeed(rv);
         data.feedback.perProductSatisfaction[p.id] = Math.round((rv.score || 5) * 10);
+    }
+
+    // ============================================================
+    // HELPER: HARGA EKSPEKTASI
+    // ============================================================
+    _getExpectedPrice(qualityScore, data) {
+        const refPrice = getMacro(data.time, BALANCE.macro).priceRef;
+        const q = Math.max(10, qualityScore);
+        // Skala 1.3: HP kualitas 100 diharapkan ~2.5x harga referensi
+        return refPrice * Math.pow(q / 50, 1.3);
     }
 
     // ============================================================
@@ -132,22 +132,33 @@ export class PublicOpinionSystem {
         }
 
         const activeProducts = data.products.catalog.filter(p => p.status === 'selling');
-        let avgQuality = 50, avgPrice = 0;
+        let avgQuality = 50;
         let cDesign = 0, cCam = 0, cBat = 0, cPerf = 0, count = 0;
+        let priceScoreSum = 0;
 
         activeProducts.forEach(p => {
             avgQuality += (p.stats.qualityScore || 50);
-            avgPrice += p.price;
             cDesign += p.stats.design || 50;
             cCam += p.stats.camera || 50;
             cBat += p.stats.battery || 50;
             cPerf += p.stats.performance || 50;
+            
+            // Hitung skor harga berdasarkan ekspektasi pasar
+            const expected = this._getExpectedPrice(p.stats.qualityScore || 50, data);
+            const ratio = p.price / expected;
+            let pScore = 50;
+            if (ratio <= 0.6) pScore = 100; // Sangat murah
+            else if (ratio <= 0.9) pScore = 80; // Murah
+            else if (ratio <= 1.1) pScore = 50; // Wajar
+            else if (ratio <= 1.4) pScore = 20; // Mahal
+            else pScore = 0; // Terlalu mahal
+            
+            priceScoreSum += pScore;
             count++;
         });
 
         if (count > 0) {
             avgQuality = avgQuality / (count + 1);
-            avgPrice = avgPrice / count;
             cDesign /= count;
             cCam /= count;
             cBat /= count;
@@ -160,18 +171,10 @@ export class PublicOpinionSystem {
         const reputation = data.market.reputation || 10;
         const activeBugs = (data.os.bugs || []).filter(b => b.status === 'active' || b.status === 'patching').length;
         const bugPenalty = activeBugs * 5;
+        
+        // Rata-rata skor harga
+        let priceScore = count > 0 ? (priceScoreSum / count) : 50;
 
-        const refPrice = getMacro(data.time, BALANCE.macro).priceRef;
-        let priceScore = 50;
-        if (avgPrice > 0) {
-            const ratio = refPrice / avgPrice;
-            priceScore = Math.max(0, Math.min(100, 50 + (ratio - 1) * 60));
-        }
-
-        // [v2027.2] FIX: bobot quality(0.25) + price(0.15) + reputation(0.20) = 0.60.
-        // Tanpa normalisasi, sentiment maksimum hanya ~60 sehingga label
-        // "very good" (>=70) tidak mungkin tercapai. Normalisasi weighted
-        // average agar skala penuh 0-100 tetap konsisten.
         const w = BALANCE.feedback.sentimentWeights;
         const totalW = (w.quality + w.price + w.reputation) || 1;
         let sentiment = (
@@ -188,7 +191,6 @@ export class PublicOpinionSystem {
         sentiment += viralBoost * w.viralBoost;
 
         sentiment = clamp(sentiment);
-        // Sentimen publik mengejar target secara bertahap (tidak melompat).
         const prevSent = (typeof fb.sentiment === 'number') ? fb.sentiment : sentiment;
         sentiment = prevSent + (sentiment - prevSent) * BALANCE.macro.sentimentSmoothing;
         fb.sentiment = sentiment;
@@ -215,9 +217,6 @@ export class PublicOpinionSystem {
         return Math.round((st.stability + st.speed + st.features + st.security + st.design) / 5);
     }
 
-    // ============================================================
-    // SARAN PELANGGAN
-    // ============================================================
     _updateSuggestions() {
         const data = this.state.data;
         const fb = data.feedback;
@@ -265,9 +264,6 @@ export class PublicOpinionSystem {
         });
     }
 
-    // ============================================================
-    // REVIEW HARIAN
-    // ============================================================
     _maybeGenerateReview() {
         const data = this.state.data;
         const active = (data.products.catalog || []).filter(p => p.status === 'selling');
@@ -287,15 +283,42 @@ export class PublicOpinionSystem {
         const era = data.era || 'feature_phone';
         const sources = sourcesForEra(era);
         const source = sources[Math.floor(Math.random() * sources.length)];
+        
         const q = product.stats.qualityScore || 50;
         const bugHit = (data.os.bugs || []).filter(b => b.status === 'active').length * 2;
+        
         let base;
         if (q >= 85) base = 9;
         else if (q >= 70) base = 7.5;
         else if (q >= 50) base = 6;
         else if (q >= 30) base = 4;
         else base = 2.5;
+        
+        // ============================================================
+        // EFEK DOMINO HARGA vs KUALITAS
+        // ============================================================
+        const expectedPrice = this._getExpectedPrice(q, data);
+        const priceRatio = product.price / expectedPrice;
+        let pricePenalty = 0;
+        let forcedText = null;
+        
+        if (priceRatio > 1.5) {
+            pricePenalty = -6; // Penalti sangat besar
+            forcedText = `Gila, ${product.name} dijual $${product.price}?! Kualitas pas-pasan tapi harga selangit. Bukan beli!`;
+        } else if (priceRatio > 1.2) {
+            pricePenalty = -3;
+            forcedText = `${product.name} terlalu mahal untuk spesifikasi segini. Mending beli merk lain.`;
+        } else if (priceRatio < 0.5) {
+            pricePenalty = +3; // Bonus
+            forcedText = `Murah banget! ${product.name} cuma $${product.price} tapi lumayan buat sehari-hari. Worth it!`;
+        } else if (priceRatio < 0.8) {
+            pricePenalty = +1.5;
+            forcedText = `${product.name} harganya sangat bersahabat untuk kantong. Rekomendasi!`;
+        }
+
+        base += pricePenalty;
         base -= bugHit;
+        
         const variance = (Math.random() * 2 - 1) * 1.2;
         let score = Math.max(1, Math.min(10, Math.round((base + variance) * 10) / 10));
 
@@ -307,11 +330,17 @@ export class PublicOpinionSystem {
         });
         const strongLabel = (STAT_LABELS[best] || {}).strong || 'berkualitas';
         const weakLabel   = (STAT_LABELS[worst] || {}).weak   || 'ada kekurangan';
-        const templates = REVIEW_TEMPLATES[templateCategory(score)] || REVIEW_TEMPLATES.mixed;
-        let text = templates[Math.floor(Math.random() * templates.length)]
-            .replace(/{name}/g, product.name)
-            .replace(/{strong}/g, strongLabel)
-            .replace(/{weak}/g, weakLabel);
+        
+        let text;
+        if (forcedText) {
+            text = forcedText;
+        } else {
+            const templates = REVIEW_TEMPLATES[templateCategory(score)] || REVIEW_TEMPLATES.mixed;
+            text = templates[Math.floor(Math.random() * templates.length)]
+                .replace(/{name}/g, product.name)
+                .replace(/{strong}/g, strongLabel)
+                .replace(/{weak}/g, weakLabel);
+        }
 
         return {
             id: 'rv_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
@@ -333,9 +362,6 @@ export class PublicOpinionSystem {
         bus.emit('feedback:review-received', { review: rv });
     }
 
-    // ============================================================
-    // VIRAL
-    // ============================================================
     _rollForViralEvent() {
         const fb = this.state.data.feedback;
         if (!this._hasReleasedProducts()) return;
@@ -367,7 +393,6 @@ export class PublicOpinionSystem {
             endsAtMinute: data.time.elapsedGameMinutes + dur * MINUTES_PER_DAY
         };
         fb.activeViral.push(viral);
-        // [v2027.1a] fix reputasi ganda: kirim delta, bukan current+delta.
         if (ev.effects.reputation) this.state.addReputation(ev.effects.reputation);
 
         const isPos = ev.type === 'positive';
@@ -401,7 +426,6 @@ export class PublicOpinionSystem {
         if (!resp) return { ok: false, reason: 'Respons tidak valid.' };
         if (data.cash < resp.cost) return { ok: false, reason: 'Uang tidak cukup.' };
         if (resp.cost > 0) this.state.setCash(data.cash - resp.cost);
-        // [v2027.1a] fix reputasi ganda: kirim delta, bukan current+delta.
         if (resp.effect.reputation) this.state.addReputation(resp.effect.reputation);
         this._recomputeSentiment();
         if (responseId !== 'ignore') fb.activeViral = fb.activeViral.filter(v => v.id !== viralId);
@@ -412,9 +436,6 @@ export class PublicOpinionSystem {
         return { ok: true };
     }
 
-    // ============================================================
-    // API
-    // ============================================================
     getSentiment()           { return this.state.data.feedback.sentiment || 50; }
     getAspectSentiment()     { return this.state.data.feedback.aspectSentiment || {}; }
     getFeed(limit)           { return (this.state.data.feedback.feed || []).slice(0, limit || 30); }
@@ -449,4 +470,4 @@ export class PublicOpinionSystem {
         bus.emit('state:changed', this.state.data);
         return { ok: true, review: rv };
     }
-}
+            }
