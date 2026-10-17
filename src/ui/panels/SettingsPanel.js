@@ -187,32 +187,26 @@ function _tabAudio(s) {
 }
 
 function _tabKeuangan(s) {
-    const activeLoans = (s.finance && s.finance.loans) ? s.finance.loans : [];
-
-    let activeHtml = '';
-    if (activeLoans.length) {
-        activeHtml = activeLoans.map(function (l) {
-            return _row({
-                label: escapeHtml(l.label || l.id),
-                hint: 'Sisa ' + formatCurrency(l.remaining) + ' · ' + Math.round((l.monthlyInterestRate || 0) * 100) + '%/mo'
+    // [v2027.44] Pinjaman dipindah ke HQ > Bank. Tab ini hanya ringkasan + pintasan.
+    const bank = (window.__game && window.__game.bank) ? window.__game.bank : null;
+    let summaryHtml = '';
+    if (bank) {
+        const sm = bank.getSummary();
+        summaryHtml =
+            _row({ label: t('settings.bank.rating'), value: escapeHtml(sm.rating) + ' · ' + sm.score + '/100' }) +
+            _row({ label: t('settings.bank.available'), value: escapeHtml(formatCurrency(sm.available)) }) +
+            _row({ label: t('settings.bank.monthly'), value: escapeHtml(formatCurrency(sm.monthly)) }) +
+            _row({
+                label: t('settings.bank.open'),
+                hint: t('settings.bank.hint'),
+                action: true,
+                attrs: 'data-open-bank',
+                chevron: true
             });
-        }).join('');
     } else {
-        activeHtml = '<div class="settings-empty">' + escapeHtml(t('settings.empty.loans')) + '</div>';
+        summaryHtml = '<div class="settings-empty">' + escapeHtml(t('settings.empty.loans')) + '</div>';
     }
-
-    const offersHtml = BALANCE.loans.map(function (l) {
-        return _row({
-            label: escapeHtml(l.label),
-            hint: formatCurrency(l.principal) + ' · ' + Math.round(l.monthlyInterestRate * 100) + '%/mo · ' + l.termMonths + ' mo',
-            action: true,
-            attrs: 'data-loan="' + l.id + '"',
-            chevron: true
-        });
-    }).join('');
-
-    return _section('coin', t('settings.section.loans_active'), activeHtml) +
-           _section('coin', t('settings.section.loans_take'), offersHtml);
+    return _section('coin', t('settings.bank.title'), summaryHtml);
 }
 
 function _tabBahasa() {
