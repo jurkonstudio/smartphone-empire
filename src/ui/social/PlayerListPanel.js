@@ -1,5 +1,5 @@
 // FILE: src/ui/social/PlayerListPanel.js
-// v2.0 — LEADERBOARD pemain (urut per statistik profil) + indikator online.
+// v2.1 — Menampilkan progres tahun bermain (game_minutes) alih-alih "Didirikan 2000".
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
 import { CloudService } from '../../services/CloudService.js';
@@ -38,12 +38,32 @@ function _rankBadge(i) {
     return '<span class="pf-lb-rank">' + (_sort === 'recent' ? '' : (i + 1)) + '</span>';
 }
 
+// Fungsi untuk memformat menit game menjadi Tahun/Bulan
+function _formatPlaytime(minutes) {
+    if (!minutes) return 'Baru mulai';
+    var days = Math.floor(minutes / 1440);
+    var years = Math.floor(days / 365);
+    var months = Math.floor((days % 365) / 30);
+    
+    if (years > 0) {
+        return years + ' Tahun' + (months > 0 ? ' ' + months + ' Bln' : '');
+    }
+    if (months > 0) return months + ' Bulan';
+    return days + ' Hari';
+}
+
 function _rowHtml(p, i, myId) {
     var def = _sortDef();
     var name = p.company_name || t('pp.lb.no_name');
     var sub = [];
+    
     if (p.display_name) sub.push(p.display_name);
-    if (p.founded_year) sub.push(t('pp.lb.founded', { y: p.founded_year }));
+    
+    // Tampilkan progres waktu bermain alih-alih tahun didirikan
+    if (p.game_minutes) {
+        sub.push('⏳ ' + _formatPlaytime(p.game_minutes));
+    }
+    
     var me = p.id === myId;
     return '<button type="button" class="pf-lb-row' + (me ? ' is-me' : '') + '" data-player-id="' + esc(p.id) + '">' +
         _rankBadge(i) +
@@ -101,7 +121,7 @@ async function _load(root) {
     if (listEl) listEl.innerHTML = _stateMsg(t('pp.lb.loading'));
 
     var res = await CloudService.listProfiles(_sort);
-    if (seq !== _seq) return;   // ganti urutan saat memuat
+    if (seq !== _seq) return;   
     if (!res || !res.ok) {
         var code = (res && res.code) || 'unknown';
         var msg = code === 'db_setup' ? t('pp.lb.db_setup') : t('pp.lb.load_fail', { code: code });
