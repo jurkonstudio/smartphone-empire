@@ -1,5 +1,5 @@
 // FILE: src/core/SaveService.js
-// v2027.38a — emit save:success satu kali dengan payload lengkap (untuk CloudSync).
+// v2027.38c — save(state, {silent}) tanpa event; parseImport emit 'save:imported'.
 import { bus } from './EventBus.js';
 import { APP_CONFIG } from '../config/app.config.js';
 import { SCHEMA_VERSION } from './GameState.js';
@@ -11,7 +11,7 @@ const AUTOSAVE_INTERVAL_MS = 30000;
 export const SaveService = {
     _timerId: null,
 
-    save: function (state) {
+    save: function (state, opts) {
         try {
             const payload = {
                 version: SCHEMA_VERSION,
@@ -21,7 +21,7 @@ export const SaveService = {
             payload.sig = Integrity.sign(payload.data, payload.savedAt);
             localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
             // Satu event saja — CloudSync mendengarkan ini untuk autosync.
-            bus.emit('save:success', { savedAt: payload.savedAt, at: payload.savedAt });
+            if (!opts || !opts.silent) bus.emit('save:success', { savedAt: payload.savedAt, at: payload.savedAt });
             return true;
         } catch (err) {
             console.error('[SaveService] Gagal menyimpan:', err);
@@ -108,7 +108,9 @@ export const SaveService = {
             const payload = JSON.parse(text);
             if (!payload || typeof payload !== 'object') return null;
             if (!payload.data) return null;
-            return this._check(payload);
+            var checked = this._check(payload);
+            if (checked) bus.emit('save:imported');
+            return checked;
         } catch (err) {
             console.error('[SaveService] Import gagal:', err);
             return null;
