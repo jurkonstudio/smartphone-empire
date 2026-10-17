@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/AdminPanel.js
-// v2028.24 — [ULTIMATE FIX] Update saldo lokal secara langsung & hancurkan DOM Pop-up QRIS.
+// v2028.26 — [GOD MODE] Menghancurkan elemen DOM modal secara langsung & update header tanpa render.
 import { ToastService } from '../../core/ToastService.js';
 import { CloudService } from '../../services/CloudService.js';
 
@@ -70,12 +70,11 @@ export async function openAdminPanel() {
     overlay.querySelectorAll('.btn-approve').forEach(btn => {
         btn.onclick = async function() {
             const orderId = this.dataset.id;
-            const btnElement = this;
-            btnElement.textContent = '⏳ Memproses...';
-            btnElement.style.background = '#555';
-            btnElement.disabled = true;
+            this.textContent = '⏳ Memproses...';
+            this.style.background = '#555';
+            this.disabled = true;
 
-            // 1. Tembak Database
+            // 1. Tembak Database Supabase
             const approveRes = await CloudService.adminApprovePayment(orderId);
             
             if (approveRes.ok) {
@@ -84,38 +83,50 @@ export async function openAdminPanel() {
                 // 2. Ambil saldo terbaru dari database
                 const balRes = await CloudService.getSiliconBalance();
                 
-                if (balRes.ok && window.__game && window.__game.state) {
-                    // 3. Ubah saldo di memori game secara paksa
-                    window.__game.state.get().silicon = balRes.balance;
-                    
-                    // 4. Simpan ke HP
-                    window.__game.SaveService.save(window.__game.state);
-                    
-                    // 5. Hancurkan Pop-up QRIS & TopUp dari layar
-                    const qrModal = document.querySelector('[data-modal-id="payment-qr"]');
-                    if (qrModal) qrModal.remove();
-                    const topupModal = document.querySelector('[data-modal-id="silicon-store"]');
-                    if (topupModal) topupModal.remove();
+                if (balRes.ok && window.__game) {
+                    // 3. Paksa ubah memori game
+                    window.__game.state.data.silicon = balRes.balance;
+                    if (window.__game.silicon && window.__game.silicon.applyServerBalance) {
+                        window.__game.silicon.applyServerBalance(balRes.balance);
+                    }
 
-                    // 6. Render ulang UI agar angka di pojok kanan atas berubah
-                    window.__game.render();
+                    // 4. Paksa ubah teks di header tanpa render ulang
+                    const headerSil = document.querySelector('[data-silicon-value]');
+                    if (headerSil) {
+                        headerSil.textContent = balRes.balance;
+                    }
+
+                    // 5. Simpan state ke HP (LocalStorage)
+                    if (window.__game.SaveService) {
+                        window.__game.SaveService.save(window.__game.state);
+                    }
+
+                    // 6. HANCURKAN SEMUA POP-UP DARI DOM SECARA PAKSA
+                    const modals = document.querySelectorAll('.modal-backdrop');
+                    for (let i = 0; i < modals.length; i++) {
+                        modals[i].remove();
+                    }
                     
-                    ToastService.success('Saldo berhasil diperbarui menjadi ' + balRes.balance + ' SIL!');
+                    // Bersihkan juga state modal di memori
+                    if (window.__game.Modal) {
+                        window.__game.Modal.closeAll();
+                    }
+
+                    ToastService.success('Saldo diperbarui menjadi ' + balRes.balance + ' SIL');
                 }
 
-                // 7. Tutup panel admin
-                overlay.remove();
-                
-                // 8. Sinkronisasi ulang ke server (agar waktu game tidak bentrok)
-                setTimeout(() => {
-                    if (window.__game.cloudSync) window.__game.cloudSync.uploadNow({ manual: true });
-                }, 1000);
+                // 7. Hapus kartu pesanan dari Admin Panel
+                const card = document.getElementById('order-' + orderId);
+                if (card) {
+                    card.style.opacity = '0';
+                    setTimeout(() => card.remove(), 300);
+                }
 
             } else {
                 ToastService.error(approveRes.reason || 'Gagal menyetujui.');
-                btnElement.textContent = '✓ Setujui Pesanan';
-                btnElement.style.background = '#00c853';
-                btnElement.disabled = false;
+                this.textContent = '✓ Setujui Pesanan';
+                this.style.background = '#00c853';
+                this.disabled = false;
             }
         };
     });
