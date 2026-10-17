@@ -1,4 +1,4 @@
-// FILE: src/data/i18n/office.i18n.js  (BARU)
+// FILE: src/data/i18n/office.i18n.js  (REPLACE — v2027.51a)
 // Kamus Office 3D Map (ID / EN). Digabung di src/data/i18n/index.js.
 export const OFFICE_I18N = {
     id: {
@@ -78,7 +78,23 @@ export const OFFICE_I18N = {
 
         'office.staff.sub': '{role} · {tier} · Moral {m}%',
         'office.staff.salary': 'Gaji {v}/bln',
-        'office.staff.empty': 'Meja kosong — rekrut staf untuk mengisinya.'
+        'office.staff.empty': 'Meja kosong — rekrut staf untuk mengisinya.',
+        'office.staff.traits': 'Trait: {list}',
+        'office.staff.from': 'Asal: {c}',
+        'office.staff.lowmorale': 'Moral rendah — kinerja dan loyalitas terancam.',
+
+        'office.alert.morale': '{n} staf bermoral rendah (<40%)',
+        'office.alert.bugs': '{n} bug OS belum diperbaiki',
+        'office.alert.stock': '{n} produk dijual tapi stok habis',
+        'office.alert.cash': 'Kas negatif! Segera cari dana.',
+
+        'office.legend.title': 'Legenda',
+        'office.legend.morale.high': 'Moral tinggi (≥70%)',
+        'office.legend.morale.mid': 'Moral sedang (40–69%)',
+        'office.legend.morale.low': 'Moral rendah (<40%)',
+        'office.legend.tier': 'Plat meja = tier skill',
+        'office.legend.alert': 'Gelembung ! = perlu perhatian',
+        'office.legend.locked': 'Ruangan terkunci'
     },
     en: {
         'office.aria': '3D office interior map. Drag to explore, pinch to zoom, tap a room for details.',
@@ -157,6 +173,22 @@ export const OFFICE_I18N = {
 
         'office.staff.sub': '{role} · {tier} · Morale {m}%',
         'office.staff.salary': 'Salary {v}/mo',
-        'office.staff.empty': 'Empty desk — hire staff to fill it.'
+        'office.staff.empty': 'Empty desk — hire staff to fill it.',
+        'office.staff.traits': 'Traits: {list}',
+        'office.staff.from': 'From: {c}',
+        'office.staff.lowmorale': 'Low morale — performance and loyalty at risk.',
+
+        'office.alert.morale': '{n} staff with low morale (<40%)',
+        'office.alert.bugs': '{n} OS bugs still open',
+        'office.alert.stock': '{n} products on sale are out of stock',
+        'office.alert.cash': 'Cash is negative! Find funds fast.',
+
+        'office.legend.title': 'Legend',
+        'office.legend.morale.high': 'High morale (≥70%)',
+        'office.legend.morale.mid': 'Medium morale (40–69%)',
+        'office.legend.morale.low': 'Low morale (<40%)',
+        'office.legend.tier': 'Desk plate = skill tier',
+        'office.legend.alert': '! bubble = needs attention',
+        'office.legend.locked': 'Locked room'
     }
 };
