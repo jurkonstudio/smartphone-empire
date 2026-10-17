@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f0f0f">
 
 <!-- ============================================================
-     FAVICON SVG (HD) — Pastikan file logo.svg ada di folder yang sama
+     FAVICON SVG (HD)
      ============================================================ -->
 <link rel="icon" type="image/svg+xml" href="./logo.svg">
 <link rel="apple-touch-icon" href="./logo.svg">
@@ -17,40 +17,43 @@
 <title>Smartphone Empire</title>
 
 <!-- ============================================================
-     ERUDA SECRET TAP
-     Eruda akan dimuat, tapi tombolnya disembunyikan.
-     Ketuk pojok kiri atas layar sebanyak 5x dengan cepat untuk membuka.
+     SEMBUNYIKAN ERUDA SECARA DEFAULT
+     ============================================================ -->
+<style>
+    /* Menyembunyikan seluruh elemen Eruda (termasuk ikon roda gigi) */
+    #eruda { display: none !important; }
+</style>
+
+<!-- ============================================================
+     ERUDA SECRET TAP (5x Ketukan di Pojok Kiri Atas)
      ============================================================ -->
 <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
 <script>
     (function() {
-        // Inisialisasi Eruda di latar belakang
+        // Inisialisasi Eruda
         eruda.init();
         
-        // Sembunyikan tombol Eruda secara default
-        eruda.hide(); 
-
         var tapCount = 0;
         var tapTimer;
 
-        // Deteksi ketukan di pojok kiri atas (area logo)
+        // Deteksi ketukan di area header (pojok kiri atas)
         document.addEventListener('click', function(e) {
-            // Cek apakah yang diketuk adalah area header bagian kiri (logo/nama perusahaan)
-            // atau kita bisa mendeteksi ketukan di mana saja pada 100px pertama dari atas
             if (e.clientY < 100 && e.clientX < 200) {
                 tapCount++;
                 
-                // Reset hitungan jika jeda antar ketukan lebih dari 1 detik
                 clearTimeout(tapTimer);
-                tapTimer = setTimeout(function() {
-                    tapCount = 0;
-                }, 1000);
+                tapTimer = setTimeout(function() { tapCount = 0; }, 1000);
 
-                // Jika mencapai 5 ketukan
                 if (tapCount >= 5) {
-                    eruda.show();
+                    // Paksa tampilkan Eruda dengan menimpa CSS
+                    var erudaDiv = document.getElementById('eruda');
+                    if (erudaDiv) {
+                        erudaDiv.style.setProperty('display', 'block', 'important');
+                    }
+                    eruda.show(); // Buka panel console
+                    
                     tapCount = 0;
-                    // Tampilkan notifikasi kecil bahwa debug mode aktif
+                    
                     var toast = document.createElement('div');
                     toast.textContent = '🛠️ Debug Mode Aktif';
                     toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;z-index:999999;';
@@ -63,7 +66,7 @@
 </script>
 
 <!-- ============================================================
-     VERSION CHECK — paksa reload kalau versi deploy berubah.
+     VERSION CHECK
      ============================================================ -->
 <script>
 (function () {
