@@ -17,17 +17,53 @@
 <title>Smartphone Empire</title>
 
 <!-- ============================================================
-     ERUDA CONSOLE (Untuk HP)
-     Menampilkan console virtual di layar HP agar bisa mengetik perintah JS.
+     ERUDA SECRET TAP
+     Eruda akan dimuat, tapi tombolnya disembunyikan.
+     Ketuk pojok kiri atas layar sebanyak 5x dengan cepat untuk membuka.
      ============================================================ -->
 <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
+<script>
+    (function() {
+        // Inisialisasi Eruda di latar belakang
+        eruda.init();
+        
+        // Sembunyikan tombol Eruda secara default
+        eruda.hide(); 
+
+        var tapCount = 0;
+        var tapTimer;
+
+        // Deteksi ketukan di pojok kiri atas (area logo)
+        document.addEventListener('click', function(e) {
+            // Cek apakah yang diketuk adalah area header bagian kiri (logo/nama perusahaan)
+            // atau kita bisa mendeteksi ketukan di mana saja pada 100px pertama dari atas
+            if (e.clientY < 100 && e.clientX < 200) {
+                tapCount++;
+                
+                // Reset hitungan jika jeda antar ketukan lebih dari 1 detik
+                clearTimeout(tapTimer);
+                tapTimer = setTimeout(function() {
+                    tapCount = 0;
+                }, 1000);
+
+                // Jika mencapai 5 ketukan
+                if (tapCount >= 5) {
+                    eruda.show();
+                    tapCount = 0;
+                    // Tampilkan notifikasi kecil bahwa debug mode aktif
+                    var toast = document.createElement('div');
+                    toast.textContent = '🛠️ Debug Mode Aktif';
+                    toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;z-index:999999;';
+                    document.body.appendChild(toast);
+                    setTimeout(function() { toast.remove(); }, 3000);
+                }
+            }
+        });
+    })();
+</script>
 
 <!-- ============================================================
      VERSION CHECK — paksa reload kalau versi deploy berubah.
-     Fetch version.json dengan cache: 'no-store'.
-     Kalau versi beda → reload sekali dengan query _v.
-     Setelah reload, versi disimpan → tidak ada loop.
      ============================================================ -->
 <script>
 (function () {
@@ -37,7 +73,6 @@
         var incoming = url.searchParams.get('_v');
         var stored = localStorage.getItem(KEY);
 
-        // Kalau baru reload dari version-check, simpan & bersihkan URL
         if (incoming) {
             try { localStorage.setItem(KEY, incoming); } catch (e) {}
             url.searchParams.delete('_v');
@@ -45,30 +80,25 @@
             return;
         }
 
-        // Cek versi terbaru dari server
         fetch('./version.json?t=' + Date.now(), { cache: 'no-store' })
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 var v = data && data.v;
                 if (!v) return;
                 if (stored && stored !== v) {
-                    // Versi berubah — paksa reload
                     url.searchParams.set('_v', v);
                     window.location.replace(url.toString());
                 } else if (!stored) {
-                    // Pertama kali — simpan saja
                     try { localStorage.setItem(KEY, v); } catch (e) {}
                 }
             })
-            .catch(function () { /* silent — kalau version.json tidak ada, lanjut normal */ });
-    } catch (e) { /* silent */ }
+            .catch(function () { });
+    } catch (e) { }
 })();
 </script>
 
 <!-- ============================================================
      GLOBAL ERROR OVERLAY
-     Menampilkan detail error ke layar jika ada exception / promise
-     rejection yang tidak tertangani.
      ============================================================ -->
 <script>
 window.addEventListener('error', function (e) {
@@ -95,7 +125,7 @@ window.addEventListener('unhandledrejection', function (e) {
 </script>
 
 <!-- ============================================================
-     MODULEPRELOAD — mempercepat load module penting.
+     MODULEPRELOAD
      ============================================================ -->
 <link rel="modulepreload" href="./src/core/GameState.js">
 <link rel="modulepreload" href="./src/core/EventBus.js">
@@ -144,9 +174,6 @@ window.addEventListener('unhandledrejection', function (e) {
 
     <script type="module" src="./src/main.js"></script>
 
-    <!-- ============================================================
-         FALLBACK — tampilkan pesan jika modul gagal dimuat.
-         ============================================================ -->
     <script>
     window.addEventListener('error', function (e) {
         if (e.target && e.target.tagName === 'SCRIPT') {
