@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SiliconStorePanel.js
-// Modal Top Up Silicon: paket + slot metode pembayaran + riwayat order.
+// v2028.8 — [UI] Rombak tampilan QR Code: Timer, Auto-Polling, Loading State, & Mock Success.
 import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 import { Modal } from '../modal.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
@@ -10,9 +10,9 @@ import { ToastService } from '../../core/ToastService.js';
 import { bus } from '../../core/EventBus.js';
 
 var MODAL_ID = 'silicon-store';
-
-// Pilihan UI (tidak disimpan ke save).
 var _sel = { pkg: 'pkg_l', method: null, busy: false };
+var _pollingTimer = null;
+var _countdownTimer = null;
 
 function _esc(s) {
     if (typeof s !== 'string') return '';
@@ -74,7 +74,7 @@ function _renderOrders() {
     var rows = orders.map(function (o) {
         var cls = o.status === 'paid' ? 'pos' : (o.status === 'pending' ? 'warn' : 'neg');
         var refresh = o.status === 'pending'
-            ? ' <button type="button" class="slot-boost" data-sil-order-refresh="' + o.id + '">' + _tf('silicon.store.check', 'Cek status') + '</button>' : '';
+            ? ' <button type="button" class="slot-boost" data-sil-order-refresh="' + o.id + '">' + _tf('silicon.store.check', 'Cek') + '</button>' : '';
         return '<div class="sil-hist-row">' +
             '<span class="sil-hist-reason">' + _esc(o.packageId.replace('pkg_', '').toUpperCase()) + ' · ' + o.sil + ' SIL' + refresh + '</span>' +
             '<span class="sil-hist-delta ' + cls + '">' + _tf('silicon.store.status.' + o.status, o.status) + '</span>' +
@@ -88,7 +88,6 @@ function _build() {
     var methods = PaymentService.getMethods();
     var anyAvail = methods.some(function (m) { return m.status === 'available'; });
 
-    // Pilih default: metode pertama yang aktif.
     var cur = methods.find(function (m) { return m.id === _sel.method && m.status === 'available'; });
     if (!cur) {
         var first = methods.find(function (m) { return m.status === 'available'; });
@@ -98,37 +97,25 @@ function _build() {
     var pkg = PaymentService.getPackage(_sel.pkg) || PaymentService.getPackages()[0];
     var canPay = !!_sel.method && !_sel.busy;
 
-    var html =
-        '<div class="modal-title g-ico-title">' + gIcon('sil', 20) + '<span>' + _tf('silicon.store.title', 'Top Up Silicon') + '</span></div>' +
+    return '<div class="modal-title g-ico-title">' + gIcon('sil', 20) + '<span>' + _tf('silicon.store.title', 'Top Up Silicon') + '</span></div>' +
         '<div class="modal-sub">' + _tf('silicon.store.sub', 'Pilih paket dan metode pembayaran.') + '</div>' +
-
         '<div class="sil-balance sil-balance-compact">' +
             '<div class="sil-balance-label">' + _tf('silicon.balance', 'SALDO') + '</div>' +
             '<div class="sil-balance-value">' + SiliconService.getBalance() + ' <span>SIL</span></div>' +
         '</div>' +
-
-        '<div class="section-label"><span class="section-label-text">' + _tf('silicon.store.packages', 'Paket') + '</span>' +
-            '<span class="section-label-line"></span></div>' +
+        '<div class="section-label"><span class="section-label-text">' + _tf('silicon.store.packages', 'Paket') + '</span><span class="section-label-line"></span></div>' +
         _renderPackages() +
-
-        '<div class="section-label"><span class="section-label-text">' + _tf('silicon.store.methods', 'Metode Pembayaran') + '</span>' +
-            '<span class="section-label-line"></span></div>' +
+        '<div class="section-label"><span class="section-label-text">' + _tf('silicon.store.methods', 'Metode Pembayaran') + '</span><span class="section-label-line"></span></div>' +
         (anyAvail ? '' : '<div class="sil-hint">' + _tf('silicon.store.none', 'Metode pembayaran belum aktif. Segera hadir.') + '</div>') +
         '<div class="sil-methods">' + _renderMethods(methods) + '</div>' +
-
         '<div class="sil-summary">' +
             '<div class="sum-row"><span>' + _tf('silicon.store.you_get', 'Kamu dapat') + '</span><b>' + (pkg.sil + pkg.bonus) + ' SIL</b></div>' +
             '<div class="sum-row total"><span>' + _tf('silicon.store.total', 'Total') + '</span><b>' + _price(pkg) + '</b></div>' +
         '</div>' +
-
         '<button type="button" class="btn-primary" data-sil-pay style="width:100%;margin-top:12px;"' + (canPay ? '' : ' disabled') + '>' +
             (_sel.busy ? _tf('silicon.store.processing', 'Memproses…') : _tf('silicon.store.pay', 'Bayar') + ' · ' + _price(pkg)) + '</button>' +
-
         _renderOrders() +
-
         '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:8px;">' + _tf('common.close', 'Close') + '</button>';
-
-    return html;
 }
 
 function _onClick(e) {
@@ -142,6 +129,8 @@ function _onClick(e) {
 
     var rf = e.target.closest('[data-sil-order-refresh]');
     if (rf) {
+        var btn = rf;
+        btn.textContent = '...';
         PaymentService.refresh(rf.dataset.silOrderRefresh).then(function (r) {
             if (r.ok && r.sil) ToastService.success(_tf('silicon.store.done', '+{n} SIL ditambahkan.', { n: r.sil }));
             else if (r.pending) ToastService.info(_tf('silicon.store.still_pending', 'Masih menunggu pembayaran.'));
@@ -154,22 +143,132 @@ function _onClick(e) {
         if (!_sel.method || _sel.busy) return;
         _sel.busy = true;
         _render();
+        
         PaymentService.pay(_sel.pkg, _sel.method).then(function (r) {
             _sel.busy = false;
             if (r.ok && r.sil) {
                 ToastService.success(_tf('silicon.store.done', '+{n} SIL ditambahkan.', { n: r.sil }));
+                _render();
             } else if (r.ok && r.pending) {
-                ToastService.info(_tf('silicon.store.pending', 'Menunggu pembayaran. Cek statusnya nanti.'));
-                if (r.order && r.order.redirectUrl) { try { window.open(r.order.redirectUrl, '_blank', 'noopener'); } catch (err) {} }
+                _render();
+                _showPaymentModal(r.order);
             } else {
                 ToastService.error(r.reason || _tf('silicon.store.failed', 'Pembayaran gagal.'));
+                _render();
             }
-            _render();
         });
     }
 }
 
-// Render ulang isi modal di tempat (tanpa animasi buka ulang).
+// ============================================================
+// MODAL QR CODE (UI PREMIUM)
+// ============================================================
+function _showPaymentModal(order) {
+    // Generate dummy QR string jika belum ada (untuk testing UI)
+    var qrData = order.qrString || ('DUMMY_QR_' + order.id + '_' + order.sil + 'SIL');
+    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(qrData);
+    
+    // Timer 15 menit (900 detik)
+    var timeLeft = 15 * 60;
+
+    var html = `
+        <div class="modal-title" style="text-align:center; font-size:18px;">Selesaikan Pembayaran</div>
+        <div class="modal-sub" style="text-align:center; margin-bottom:16px;">
+            Sisa waktu: <b id="qr-timer" style="color:var(--danger); font-family:monospace; font-size:14px;">15:00</b>
+        </div>
+        
+        <div style="text-align:center; padding: 12px; background: #fff; border-radius: 12px; margin-bottom:16px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);">
+            <img src="${qrUrl}" style="width:100%; max-width:250px; display:block; margin:0 auto;" alt="QR Code" />
+        </div>
+
+        <div style="font-size:13px; color:var(--text-secondary); text-align:center; margin-bottom:16px; line-height:1.5;">
+            Scan QR Code di atas dengan aplikasi <b>${_esc(order.methodId.toUpperCase())}</b> atau M-Banking.<br>
+            Total: <b>${_price(order)}</b>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:8px;">
+            <button type="button" class="btn-primary" data-qr-check style="width:100%;">Saya Sudah Bayar (Cek Status)</button>
+            <button type="button" class="btn-secondary" data-qr-cancel style="width:100%;">Batalkan Pesanan</button>
+        </div>
+        
+        <!-- TOMBOL MOCK UNTUK TESTING -->
+        <div style="margin-top:24px; padding-top:16px; border-top:1px dashed var(--border); text-align:center;">
+            <button type="button" data-qr-mock style="background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger); padding:8px; border-radius:8px; font-size:11px; width:100%; cursor:pointer;">
+                [DEV ONLY] Simulasi Pembayaran Sukses
+            </button>
+        </div>
+    `;
+
+    Modal.open('payment-qr', html);
+    var root = document.querySelector('[data-modal-id="payment-qr"]');
+    if (!root) return;
+
+    var timerEl = root.querySelector('#qr-timer');
+    var btnCheck = root.querySelector('[data-qr-check]');
+    
+    // Setup Countdown
+    if (_countdownTimer) clearInterval(_countdownTimer);
+    _countdownTimer = setInterval(function() {
+        timeLeft--;
+        var m = Math.floor(timeLeft / 60);
+        var s = timeLeft % 60;
+        if (timerEl) timerEl.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        
+        if (timeLeft <= 0) {
+            clearInterval(_countdownTimer);
+            clearInterval(_pollingTimer);
+            ToastService.error('Waktu pembayaran habis.');
+            Modal.close('payment-qr', true);
+        }
+    }, 1000);
+
+    // Fungsi Cek Status
+    function checkStatus(isManual) {
+        if (isManual) btnCheck.textContent = 'Mengecek...';
+        PaymentService.refresh(order.id).then(function(r) {
+            if (r.ok && r.sil) {
+                clearInterval(_countdownTimer);
+                clearInterval(_pollingTimer);
+                Modal.close('payment-qr', true);
+                ToastService.success('Pembayaran Berhasil! ' + r.sil + ' SIL ditambahkan.');
+                _render();
+            } else {
+                if (isManual) {
+                    btnCheck.textContent = 'Saya Sudah Bayar (Cek Status)';
+                    ToastService.warning('Pembayaran belum masuk. Tunggu 1-2 menit lalu cek lagi.');
+                }
+            }
+        });
+    }
+
+    // Setup Auto-Polling tiap 4 detik
+    if (_pollingTimer) clearInterval(_pollingTimer);
+    _pollingTimer = setInterval(function() { checkStatus(false); }, 4000);
+
+    // Bind Buttons
+    btnCheck.addEventListener('click', function() { checkStatus(true); });
+    
+    root.querySelector('[data-qr-cancel]').addEventListener('click', function() {
+        clearInterval(_countdownTimer);
+        clearInterval(_pollingTimer);
+        PaymentService.cancel(order.id);
+        Modal.close('payment-qr', true);
+        _render();
+    });
+
+    // MOCK BUTTON UNTUK TESTING UI
+    root.querySelector('[data-qr-mock]').addEventListener('click', function() {
+        // Memaksa sistem menganggap pembayaran lunas
+        PaymentService._fulfill(order); 
+        clearInterval(_countdownTimer);
+        clearInterval(_pollingTimer);
+        Modal.close('payment-qr', true);
+        ToastService.success('(MOCK) Pembayaran Berhasil!');
+        _render();
+    });
+}
+
+// Render ulang isi modal di tempat
 function _render() {
     if (!Modal.isOpen(MODAL_ID)) return;
     var card = document.querySelector('[data-modal-id="' + MODAL_ID + '"] .modal-card');
@@ -186,5 +285,4 @@ export function openSiliconStoreModal() {
     if (root) root.addEventListener('click', _onClick);
 }
 
-// Saldo berubah saat modal terbuka (mis. setelah bayar) → segarkan.
 bus.on('silicon:changed', function () { _render(); });
