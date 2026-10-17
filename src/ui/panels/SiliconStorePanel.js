@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SiliconStorePanel.js
-// v2028.8 — [UI] Rombak tampilan QR Code: Timer, Auto-Polling, Loading State, & Mock Success.
+// v2028.10 — [SECURITY] Menyembunyikan tombol Mock (Simulasi) di mode Production.
 import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 import { Modal } from '../modal.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
@@ -8,11 +8,15 @@ import { PaymentService } from '../../systems/PaymentService.js';
 import { PAYMENT_GROUPS } from '../../data/silicon.data.js';
 import { ToastService } from '../../core/ToastService.js';
 import { bus } from '../../core/EventBus.js';
+import { DEV_BUILD } from '../../config/dev.config.js'; // <-- IMPORT PENTING
 
 var MODAL_ID = 'silicon-store';
 var _sel = { pkg: 'pkg_l', method: null, busy: false };
 var _pollingTimer = null;
 var _countdownTimer = null;
+
+// GANTI URL DI BAWAH INI DENGAN LINK GAMBAR QRIS MILIKMU
+var STATIC_QRIS_URL = 'https://i.ibb.co/3s6G6F5/qris-gopay.jpg'; // <--- GANTI DENGAN LINK GAMBAR ASLIMU
 
 function _esc(s) {
     if (typeof s !== 'string') return '';
@@ -133,7 +137,7 @@ function _onClick(e) {
         btn.textContent = '...';
         PaymentService.refresh(rf.dataset.silOrderRefresh).then(function (r) {
             if (r.ok && r.sil) ToastService.success(_tf('silicon.store.done', '+{n} SIL ditambahkan.', { n: r.sil }));
-            else if (r.pending) ToastService.info(_tf('silicon.store.still_pending', 'Masih menunggu pembayaran.'));
+            else if (r.pending) ToastService.info(_tf('silicon.store.still_pending', 'Menunggu konfirmasi Admin.'));
             _render();
         });
         return;
@@ -161,15 +165,19 @@ function _onClick(e) {
 }
 
 // ============================================================
-// MODAL QR CODE (UI PREMIUM)
+// MODAL QR CODE MANUAL
 // ============================================================
 function _showPaymentModal(order) {
-    // Generate dummy QR string jika belum ada (untuk testing UI)
-    var qrData = order.qrString || ('DUMMY_QR_' + order.id + '_' + order.sil + 'SIL');
-    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(qrData);
+    var pkg = PaymentService.getPackage(order.packageId);
     
-    // Timer 15 menit (900 detik)
-    var timeLeft = 15 * 60;
+    // Cek apakah game berjalan di mode Development
+    var mockBtnHtml = DEV_BUILD ? `
+        <div style="margin-top:24px; padding-top:16px; border-top:1px dashed var(--border); text-align:center;">
+            <button type="button" data-qr-mock style="background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger); padding:8px; border-radius:8px; font-size:11px; width:100%; cursor:pointer;">
+                [DEV ONLY] Simulasi Sukses (Tanpa Transfer)
+            </button>
+        </div>
+    ` : '';
 
     var html = `
         <div class="modal-title" style="text-align:center; font-size:18px;">Selesaikan Pembayaran</div>
@@ -177,26 +185,27 @@ function _showPaymentModal(order) {
             Sisa waktu: <b id="qr-timer" style="color:var(--danger); font-family:monospace; font-size:14px;">15:00</b>
         </div>
         
+        <div style="text-align:center; margin-bottom:12px;">
+            <div style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">Total Tagihan:</div>
+            <div style="font-size:24px; font-weight:bold; color:var(--accent);">${_price(pkg)}</div>
+        </div>
+
+        <!-- GAMBAR QRIS KAMU -->
         <div style="text-align:center; padding: 12px; background: #fff; border-radius: 12px; margin-bottom:16px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);">
-            <img src="${qrUrl}" style="width:100%; max-width:250px; display:block; margin:0 auto;" alt="QR Code" />
+            <img src="${STATIC_QRIS_URL}" style="width:100%; max-width:250px; display:block; margin:0 auto; border-radius:8px;" alt="QRIS" />
         </div>
 
         <div style="font-size:13px; color:var(--text-secondary); text-align:center; margin-bottom:16px; line-height:1.5;">
-            Scan QR Code di atas dengan aplikasi <b>${_esc(order.methodId.toUpperCase())}</b> atau M-Banking.<br>
-            Total: <b>${_price(order)}</b>
+            Scan QRIS di atas menggunakan aplikasi GoPay, OVO, Dana, atau M-Banking.<br>
+            <b>PENTING:</b> Cantumkan Order ID <b>${_esc(order.id)}</b> pada berita transfer (jika ada).
         </div>
 
         <div style="display:flex; flex-direction:column; gap:8px;">
-            <button type="button" class="btn-primary" data-qr-check style="width:100%;">Saya Sudah Bayar (Cek Status)</button>
+            <button type="button" class="btn-primary" data-qr-check style="width:100%;">Saya Sudah Transfer (Cek Status)</button>
             <button type="button" class="btn-secondary" data-qr-cancel style="width:100%;">Batalkan Pesanan</button>
         </div>
         
-        <!-- TOMBOL MOCK UNTUK TESTING -->
-        <div style="margin-top:24px; padding-top:16px; border-top:1px dashed var(--border); text-align:center;">
-            <button type="button" data-qr-mock style="background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger); padding:8px; border-radius:8px; font-size:11px; width:100%; cursor:pointer;">
-                [DEV ONLY] Simulasi Pembayaran Sukses
-            </button>
-        </div>
+        ${mockBtnHtml}
     `;
 
     Modal.open('payment-qr', html);
@@ -206,7 +215,7 @@ function _showPaymentModal(order) {
     var timerEl = root.querySelector('#qr-timer');
     var btnCheck = root.querySelector('[data-qr-check]');
     
-    // Setup Countdown
+    var timeLeft = 15 * 60;
     if (_countdownTimer) clearInterval(_countdownTimer);
     _countdownTimer = setInterval(function() {
         timeLeft--;
@@ -222,7 +231,6 @@ function _showPaymentModal(order) {
         }
     }, 1000);
 
-    // Fungsi Cek Status
     function checkStatus(isManual) {
         if (isManual) btnCheck.textContent = 'Mengecek...';
         PaymentService.refresh(order.id).then(function(r) {
@@ -234,18 +242,16 @@ function _showPaymentModal(order) {
                 _render();
             } else {
                 if (isManual) {
-                    btnCheck.textContent = 'Saya Sudah Bayar (Cek Status)';
-                    ToastService.warning('Pembayaran belum masuk. Tunggu 1-2 menit lalu cek lagi.');
+                    btnCheck.textContent = 'Saya Sudah Transfer (Cek Status)';
+                    ToastService.warning('Pembayaran belum dikonfirmasi Admin. Tunggu 1-5 menit lalu cek lagi.');
                 }
             }
         });
     }
 
-    // Setup Auto-Polling tiap 4 detik
     if (_pollingTimer) clearInterval(_pollingTimer);
-    _pollingTimer = setInterval(function() { checkStatus(false); }, 4000);
+    _pollingTimer = setInterval(function() { checkStatus(false); }, 5000); // Cek tiap 5 detik
 
-    // Bind Buttons
     btnCheck.addEventListener('click', function() { checkStatus(true); });
     
     root.querySelector('[data-qr-cancel]').addEventListener('click', function() {
@@ -256,19 +262,20 @@ function _showPaymentModal(order) {
         _render();
     });
 
-    // MOCK BUTTON UNTUK TESTING UI
-    root.querySelector('[data-qr-mock]').addEventListener('click', function() {
-        // Memaksa sistem menganggap pembayaran lunas
-        PaymentService._fulfill(order); 
-        clearInterval(_countdownTimer);
-        clearInterval(_pollingTimer);
-        Modal.close('payment-qr', true);
-        ToastService.success('(MOCK) Pembayaran Berhasil!');
-        _render();
-    });
+    // Tombol Mock hanya dipasang event-nya jika DEV_BUILD true
+    var btnMock = root.querySelector('[data-qr-mock]');
+    if (btnMock) {
+        btnMock.addEventListener('click', function() {
+            PaymentService._fulfill(order); 
+            clearInterval(_countdownTimer);
+            clearInterval(_pollingTimer);
+            Modal.close('payment-qr', true);
+            ToastService.success('(MOCK) Pembayaran Berhasil!');
+            _render();
+        });
+    }
 }
 
-// Render ulang isi modal di tempat
 function _render() {
     if (!Modal.isOpen(MODAL_ID)) return;
     var card = document.querySelector('[data-modal-id="' + MODAL_ID + '"] .modal-card');
