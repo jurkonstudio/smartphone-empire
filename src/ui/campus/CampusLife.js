@@ -1,4 +1,5 @@
 // FILE: src/ui/campus/CampusLife.js
+// v2027.38 — + kapal kargo di teluk, monorail, kincir angin, helikopter HQ, jalan lebih panjang.
 // v2027.37a — "Kampus hidup": animasi ambient ringan (mobil + bus, pejalan kaki di
 // trotoar, awan + bayangan, asap pabrik, drone era modern, pohon bergoyang, jendela
 // menyala di mode gelap, lampu peringatan berkedip, riak kolam, burung terbang,
@@ -7,10 +8,12 @@
 
 var CAR_COLORS = [0xef4444, 0xf59e0b, 0x10b981, 0x6366f1, 0xf8fafc, 0x1f2937, 0xec4899];
 var WALK_COLORS = [0xf97316, 0x3b82f6, 0xa855f7, 0x14b8a6, 0xeab308, 0xef4444];
-var ROAD_Z = { from: 10.4, to: 3.6 };     // jalan selatan: x = lane, z dari tepi ke plaza
-var ROAD_X = { from: -10.4, to: -3.6 };   // jalan barat:   z = lane, x dari tepi ke plaza
+var ROAD_Z = { from: 14.6, to: 3.6 };     // jalan selatan: x = lane, z dari tepi ke plaza
+var ROAD_X = { from: -14.6, to: -3.6 };   // jalan barat:   z = lane, x dari tepi ke plaza
 var FACTORY = { x: 6.6, z: 0.6, W: [0, 3.2, 3.4, 3.6], H: [0, 1.3, 1.5, 1.8] }; // sama dgn buildFactory
 var POND = { x: 0.5, z: -6, r: 1.4 };     // sama dgn POND di CampusBuildings
+var PORT = { x: 12.5, z: 11.8 };          // kapal bersandar di sisi dermaga (slot port 11.0,6.8 + BAY)
+var RAIL = { z: -10.2, y: 1.5, x0: -11.5, x1: 11.5 };   // sama dgn RAIL di CampusBuildings
 var CURB_Y = 0.09;                        // tinggi trotoar (pejalan berdiri di atasnya)
 var PUFFS = 9;
 var FLY_BASE = [[-1.4, -6.6], [2.5, -5.6], [-3, -5.5], [4.4, -4.4], [-7, -6], [8, -4], [-8, 5], [7.5, 6.5]];
@@ -23,6 +26,7 @@ export function createCampusLife(THREE, A, scene, trees) {
     var windowHex = 0x8fb4e8;
     var chimneys = [];
     var droneOn = false;
+    var portLvl = 0, railOn = false, heliOn = false, windRotors = null;
 
     function mk(color, opts) {
         var m = new THREE.MeshLambertMaterial(Object.assign({ color: color, flatShading: true }, opts || {}));
@@ -173,6 +177,45 @@ export function createCampusLife(THREE, A, scene, trees) {
     droneShadow.visible = false;
     root.add(drone, droneShadow);
 
+    // ---------- kapal kargo (Pelabuhan Lv2+) ----------
+    var ship = new THREE.Group();
+    var hullM = mk(0x334155), deckM = mk(0xcbd5e1), cabinM = mk(0xf8fafc);
+    ship.add(put(A.box(1.3, 0.26, 3.4), hullM, 0, 0.04, 0));
+    ship.add(put(A.box(1.18, 0.04, 3.2), deckM, 0, 0.19, 0));
+    ship.add(put(A.box(0.7, 0.5, 0.55), cabinM, 0, 0.45, -1.2));
+    ship.add(put(A.box(0.74, 0.06, 0.6), A.mat('roof'), 0, 0.72, -1.2));
+    ship.add(put(A.cyl(0.1, 0.12, 0.3, 8), A.mat('roof'), 0, 0.85, -1.2));
+    [[-0.3, 0.2], [0.3, 0.2], [-0.3, 0.7], [0.3, 0.7], [0, 1.2]].forEach(function (o, k) {
+        ship.add(put(A.box(0.5, 0.28, 0.4), k % 2 ? A.mat('gold') : A.mat('roof'), o[0], 0.35, o[1]));
+    });
+    ship.visible = false;
+    root.add(ship);
+
+    // ---------- monorail ----------
+    var train = new THREE.Group();
+    var trainM = mk(0xf8fafc);
+    for (i = 0; i < 3; i++) {
+        train.add(put(A.box(0.95, 0.34, 0.5), trainM, i * 1.02, 0, 0));
+        train.add(put(A.box(0.85, 0.1, 0.52), carDark, i * 1.02, 0.07, 0));
+        train.add(put(A.box(0.95, 0.05, 0.5), A.mat('roof'), i * 1.02, 0.2, 0));
+    }
+    train.add(put(A.box(0.05, 0.08, 0.1), A.mat('glow'), 3.06, 0, 0));
+    train.visible = false;
+    root.add(train);
+
+    // ---------- helikopter (HQ Lv3+) ----------
+    var heli = new THREE.Group();
+    var heliM = mk(0xef4444);
+    var hb = put(A.sph(0.2, 8, 6), heliM, 0, 0, 0);
+    hb.scale.set(1.3, 0.8, 0.9);
+    heli.add(hb);
+    heli.add(put(A.box(0.5, 0.05, 0.05), heliM, -0.4, 0.03, 0));
+    heli.add(put(A.box(0.02, 0.02, 0.5), A.mat('metal'), 0, 0.2, 0));
+    var heliRotor = put(A.box(0.8, 0.012, 0.06), A.mat('metal'), 0, 0.2, 0);
+    heli.add(heliRotor);
+    heli.visible = false;
+    root.add(heli);
+
     // ---------- update per frame ----------
     var tmpDir = { x: 0, z: 0 };
 
@@ -200,10 +243,10 @@ export function createCampusLife(THREE, A, scene, trees) {
             var w = walkers[i];
             var q = (w.s0 + t * w.speed) % 2;
             if (q > 1) q = 2 - q;
-            var wp = lerp(-9.6, -3.9, q);
+            var wp = lerp(-13.8, -3.9, q);
             var bob = CURB_Y + Math.abs(Math.sin(t * 8 + i)) * 0.035;
             if (w.axis === 'x') w.g.position.set(wp, bob, w.side);
-            else w.g.position.set(w.side, bob, lerp(10, 3.9, q));
+            else w.g.position.set(w.side, bob, lerp(14, 3.9, q));
         }
 
         // awan + bayangan
@@ -273,6 +316,34 @@ export function createCampusLife(THREE, A, scene, trees) {
             for (i = 0; i < rotors.length; i++) rotors[i].rotation.y = t * 40;
         }
 
+        // kapal kargo: bergoyang pelan di dermaga
+        if (portLvl >= 2) {
+            ship.position.set(PORT.x, 0.1 + Math.sin(t * 1.1) * 0.025, PORT.z + Math.sin(t * 0.35) * 0.18);
+            ship.rotation.z = Math.sin(t * 1.1) * 0.02;
+            ship.scale.setScalar(portLvl >= 3 ? 1 : 0.82);
+        }
+
+        // monorail: bolak-balik dengan jeda halus di ujung
+        if (railOn) {
+            var ph = (t * 0.045) % 2;
+            var sp = ph <= 1 ? ph : 2 - ph;
+            var es = sp * sp * (3 - 2 * sp);
+            train.position.set(lerp(RAIL.x0, RAIL.x1, es) - 1.5, RAIL.y + 0.34, RAIL.z);
+        }
+
+        // helikopter mengitari HQ
+        if (heliOn) {
+            var ha = -t * 0.28;
+            heli.position.set(Math.cos(ha) * 7.2, 4.3 + Math.sin(t * 1.7) * 0.1, Math.sin(ha) * 7.2);
+            heli.rotation.y = -ha + Math.PI / 2;
+            heliRotor.rotation.y = t * 35;
+        }
+
+        // kincir angin
+        if (windRotors) {
+            for (i = 0; i < windRotors.length; i++) windRotors[i].rotation.z = t * (1.5 + i * 0.25);
+        }
+
         // pohon bergoyang
         for (i = 0; i < trees.length; i++) {
             trees[i].rotation.z = Math.sin(t * 1.3 + i * 1.7) * 0.035;
@@ -306,6 +377,21 @@ export function createCampusLife(THREE, A, scene, trees) {
             droneOn = idx >= 3;
             drone.visible = droneOn;
             droneShadow.visible = droneOn;
+        },
+        setPort: function (level) {
+            portLvl = level || 0;
+            ship.visible = portLvl >= 2;
+        },
+        setRail: function (on) {
+            railOn = !!on;
+            train.visible = railOn;
+        },
+        setHq: function (level) {
+            heliOn = (level || 0) >= 3;
+            heli.visible = heliOn;
+        },
+        setWind: function (rotors) {
+            windRotors = (rotors && rotors.length) ? rotors : null;
         },
         setFactory: function (level) {
             chimneys = [];

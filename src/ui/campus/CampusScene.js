@@ -1,16 +1,18 @@
 // FILE: src/ui/campus/CampusScene.js
+// v2027.38 — peta 30x30: pandangan lebih lebar, batas geser & zoom-out lebih luas,
+// dekorasi era (ladang angin, monorail), kapal/helikopter/kereta ikut level.
 // v2027.37a — kampus tumbuh: bangunan muncul/naik level otomatis, gaya ikut era,
 // animasi tumbuh singkat, tap bangunan untuk info. Tetap render-on-demand.
 // Upgrade detail: cahaya hangat/dingin per tema, zoom lebih dalam, kontrol inertia.
 import {
     createAssets, buildGround, buildTree, buildHQ, buildSlot, buildSprawl,
-    computePlan, rememberPeak, describeBuilding,
+    computePlan, rememberPeak, describeBuilding, buildWind, buildRail,
     PALETTES, TREE_SPOTS, ERA_WINDOWS, SLOT_ORDER, SPRAWL_SPOTS
 } from './CampusBuildings.js';
 import { createCampusControls } from './CampusControls.js';
 import { createCampusLife } from './CampusLife.js';
 
-var BASE_VIEW = 16;
+var BASE_VIEW = 22;
 var MAX_DPR = 1.5;              // hemat GPU di HP DPR 3+
 var MIN_RESIZE_DELTA = 2;       // piksel — skip resize kalau perubahan < 2px
 var GROW_MS = 650;              // durasi animasi bangunan tumbuh
@@ -168,11 +170,19 @@ export function createCampusScene(THREE, container, gameState) {
 
     function syncBuildings(plan, animate) {
         var lv = plan.levels;
-        if (life) life.setFactory(lv.factory);
+        if (life) {
+            life.setFactory(lv.factory);
+            life.setPort(lv.port);
+            life.setHq(lv.hq);
+            life.setRail(plan.rail);
+        }
         setBuilding('hq', lv.hq, function () { return buildHQ(A, THREE, lv.hq, eraIdx); }, animate);
         SLOT_ORDER.forEach(function (id) {
             setBuilding(id, lv[id], function () { return buildSlot(A, THREE, id, lv[id], eraIdx); }, animate);
         });
+        setBuilding('rail', plan.rail ? 1 : 0, function () { return buildRail(A, THREE); }, animate);
+        setBuilding('wind', plan.wind ? 1 : 0, function () { return buildWind(A, THREE); }, animate);
+        if (life) life.setWind(dyn.wind ? dyn.wind.group.userData.rotors : null);
         for (var i = 0; i < SPRAWL_SPOTS.length; i++) {
             (function (idx) {
                 setBuilding('blk' + idx, idx < plan.sprawl ? 1 : 0,
@@ -221,7 +231,9 @@ export function createCampusScene(THREE, container, gameState) {
 
     var controls = createCampusControls(canvas, {
         unitsPerPixel: function (zoom) { return (BASE_VIEW / zoom) / Math.max(1, container.clientHeight); },
-        maxZoom: 3,                  // detail baru cukup halus untuk zoom lebih dekat
+        maxZoom: 3.2,                // detail halus untuk zoom dekat
+        minZoom: 0.5,                // zoom-out cukup jauh untuk melihat seluruh pulau 30x30
+        limit: 11,                   // batas geser (pulau lebih besar)
         onChange: function () { applyCamera(); requestRender(); },
         onTap: handleTap
     });
