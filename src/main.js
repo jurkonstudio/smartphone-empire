@@ -129,7 +129,11 @@ var els = {
 };
 
 function getTime() { return timeSystem.snapshot(); }
-function hideLoading() { if (els.loading) els.loading.style.display = 'none'; }
+function hideLoading() {
+    if (window.__splash) window.__splash.finish();
+    else if (els.loading) els.loading.style.display = 'none';
+}
+function splash(pct) { if (window.__splash) window.__splash.set(pct); }
 
 function renderHeaderOnly() {
     if (!els.header) return;
@@ -965,6 +969,7 @@ function bindStateEvents() {
 
 async function boot() {
     try {
+        splash(72);
         if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML utama tidak ditemukan.');
         ThemeService.init();
         LanguageService.init();
@@ -974,12 +979,13 @@ async function boot() {
         initTutorialOverlay();
         initMonthlySummary();
         initGameOverScreen();
-        hideLoading();
+        splash(80);
 
         if (SaveService.hasSave()) {
             var saved = SaveService.load();
             if (saved) { state.hydrate(saved); console.info('[boot] Save dimuat.'); }
         } else {
+            hideLoading();
             var onb = await showOnboarding();
             state.patch({ companyName: onb.companyName, difficulty: onb.difficulty });
             var mod = await import('./data/balance.data.js');
@@ -989,6 +995,8 @@ async function boot() {
             state.addLog('Perusahaan ' + onb.companyName + ' didirikan.', 'success');
             SaveService.save(state);
         }
+
+        splash(88);
 
         if (!state.get().settings.competitorMode) state.get().settings.competitorMode = 'real';
 
@@ -1027,6 +1035,7 @@ async function boot() {
         bank.start();
         bindRegionalActions();
         mountAdvisorButton(advisor);
+        splash(96);
 
         try {
             CloudService.registerAdapter(SupabaseAdapter);
@@ -1171,6 +1180,7 @@ async function boot() {
             }
         });
 
+        hideLoading();
         console.info('[' + APP_CONFIG.name + '] siap. Era: ' + state.get().era + ', Lang: ' + LanguageService.getLang() + ', SIL: ' + SiliconService.getBalance());
     } catch (err) {
         console.error('[boot] gagal:', err);
