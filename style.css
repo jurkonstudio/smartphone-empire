@@ -4170,13 +4170,31 @@ body {
 
 /* ---------- 10. NAVIGASI BAWAH: putih, mengikuti tema UI ---------- */
 .mobile-nav {
-    background: var(--bg-nav) !important;
-    -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
-    border-top: 1px solid var(--border) !important;
-    box-shadow: none;
+    position: fixed !important; left: 0; right: 0; bottom: 0;
     height: calc(var(--nav-h) + env(safe-area-inset-bottom));
     padding-bottom: env(safe-area-inset-bottom) !important;
-    position: relative;
+    /* kaca: konten di belakang tampak kabur & menyala menembus bar (seperti header iCloud) */
+    background: rgba(255,255,255,0.58) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(210%) brightness(1.04) !important;
+    backdrop-filter: blur(28px) saturate(210%) brightness(1.04) !important;
+    border-top: 1px solid rgba(255,255,255,0.65) !important;
+    box-shadow: 0 -1px 0 rgba(0,0,0,0.06), 0 -8px 24px rgba(0,0,0,0.05);
+    z-index: 30;
+}
+[data-theme="dark"] .mobile-nav {
+    background: rgba(28,28,30,0.55) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(190%) brightness(1.15) !important;
+    backdrop-filter: blur(28px) saturate(190%) brightness(1.15) !important;
+    border-top: 1px solid rgba(255,255,255,0.14) !important;
+    box-shadow: 0 -1px 0 rgba(0,0,0,0.5), 0 -8px 24px rgba(0,0,0,0.25);
+}
+/* header ikut kaca tipis */
+.app-header {
+    background: rgba(255,255,255,0.72) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(200%) !important; backdrop-filter: blur(24px) saturate(200%) !important;
+}
+[data-theme="dark"] .app-header {
+    background: rgba(18,18,20,0.68) !important;
 }
 .nav-btn {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -4187,6 +4205,9 @@ body {
     z-index: 2;
 }
 .nav-btn.active { color: var(--accent) !important; }
+.mobile-nav .nav-btn:not(.active) { color: #515154 !important; }
+[data-theme="dark"] .mobile-nav .nav-btn:not(.active) { color: rgba(235,235,245,0.78) !important; text-shadow: 0 1px 2px rgba(0,0,0,0.45); }
+[data-theme="dark"] .mobile-nav .nav-btn.active { color: #4da3ff !important; }
 .nav-btn:active { transform: scale(0.94); transition: transform 0.1s; }
 .nav-ico-wrap { height: 24px; display: flex; align-items: center; justify-content: center; position: relative; }
 .nav-btn .nav-ico { width: 22px; height: 22px; }
@@ -4206,40 +4227,41 @@ body {
     transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), width 0.38s cubic-bezier(0.32, 0.72, 0, 1) !important;
     pointer-events: none; z-index: 1; will-change: transform, width;
 }
-.nav-slider::before {            /* badan kaca */
+.nav-slider::before {            /* lensa kaca */
     content: ""; position: absolute; inset: 0; border-radius: inherit;
-    background: linear-gradient(180deg, rgba(255,255,255,0.80) 0%, rgba(0,113,227,0.10) 100%);
-    border: 1px solid rgba(0,113,227,0.20);
-    -webkit-backdrop-filter: blur(14px) saturate(190%); backdrop-filter: blur(14px) saturate(190%);
-    box-shadow: 0 4px 14px rgba(0,60,140,0.14),
-                inset 0 1px 0 rgba(255,255,255,0.95),
-                inset 0 -1px 0 rgba(0,113,227,0.10);
+    background:
+        radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 60%),
+        linear-gradient(180deg, rgba(255,255,255,0.40) 0%, rgba(0,113,227,0.10) 100%);
+    border: 1px solid rgba(255,255,255,0.85);
+    -webkit-backdrop-filter: blur(6px) saturate(220%) brightness(1.08); backdrop-filter: blur(6px) saturate(220%) brightness(1.08);
+    box-shadow: 0 2px 10px rgba(0,40,120,0.16), 0 0 0 1px rgba(0,113,227,0.14),
+                inset 0 1px 1px rgba(255,255,255,1),
+                inset 0 -8px 14px rgba(0,113,227,0.10);
     transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s, background 0.2s;
 }
-.nav-slider::after {             /* kilau (specular) di sisi atas */
-    content: ""; position: absolute; left: 12%; right: 12%; top: 3px; height: 38%;
-    border-radius: 12px 12px 40% 40%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.75), rgba(255,255,255,0));
-    opacity: 0.8; pointer-events: none;
+.nav-slider::after {             /* kilau tepi bawah (refleksi) */
+    content: ""; position: absolute; left: 18%; right: 18%; bottom: 3px; height: 22%;
+    border-radius: 0 0 14px 14px;
+    background: linear-gradient(0deg, rgba(255,255,255,0.55), rgba(255,255,255,0));
+    opacity: 0.7; pointer-events: none;
 }
 [data-theme="dark"] .nav-slider::before {
-    background: linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(10,132,255,0.22) 100%);
-    border: 1px solid rgba(255,255,255,0.16);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.55),
-                inset 0 1px 0 rgba(255,255,255,0.28),
-                inset 0 -1px 0 rgba(10,132,255,0.25);
+    background:
+        radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0) 60%),
+        linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(10,132,255,0.20) 100%);
+    border: 1px solid rgba(255,255,255,0.28);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.5), 0 0 0 1px rgba(10,132,255,0.22),
+                inset 0 1px 1px rgba(255,255,255,0.45),
+                inset 0 -8px 14px rgba(10,132,255,0.22);
 }
-[data-theme="dark"] .nav-slider::after {
-    background: linear-gradient(180deg, rgba(255,255,255,0.30), rgba(255,255,255,0));
-    opacity: 0.7;
-}
+[data-theme="dark"] .nav-slider::after { background: linear-gradient(0deg, rgba(255,255,255,0.22), rgba(255,255,255,0)); }
 /* saat digeser: kaca membesar sedikit & lebih terang, tanpa delay */
 .mobile-nav.dragging .nav-slider { transition: none !important; }
 .mobile-nav.dragging .nav-slider::before {
-    transform: scale(1.1, 1.14);
-    box-shadow: 0 8px 24px rgba(0,60,140,0.24),
-                inset 0 1px 0 rgba(255,255,255,1),
-                inset 0 -1px 0 rgba(0,113,227,0.16);
+    transform: scale(1.12, 1.16);
+    box-shadow: 0 8px 26px rgba(0,40,120,0.24), 0 0 0 1px rgba(0,113,227,0.20),
+                inset 0 1px 1px rgba(255,255,255,1),
+                inset 0 -8px 14px rgba(0,113,227,0.14);
 }
 [data-theme="dark"] .mobile-nav.dragging .nav-slider::before {
     background: linear-gradient(180deg, rgba(255,255,255,0.24) 0%, rgba(10,132,255,0.32) 100%);
@@ -4249,7 +4271,7 @@ body {
 }
 .mobile-nav { touch-action: pan-y; }
 .mobile-nav .nav-btn.drag-hover { color: var(--accent) !important; transform: none; }
-.mobile-nav.dragging .nav-btn.active:not(.drag-hover) { color: var(--text-tertiary) !important; }
+.mobile-nav.dragging .nav-btn.active:not(.drag-hover) { color: #8e8e93 !important; }
 .mobile-nav .nav-btn.drag-hover .nav-ico { transform: scale(1.12); }
 .nav-btn .nav-ico { transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), color 0.15s; }
 
