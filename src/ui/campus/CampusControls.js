@@ -1,5 +1,6 @@
 // FILE: src/ui/campus/CampusControls.js
-// Kontrol sentuh: drag 1 jari = geser, pinch 2 jari = zoom, roda mouse = zoom.
+// Kontrol sentuh: drag 1 jari = geser (dengan inertia), pinch 2 jari = zoom,
+// roda mouse = zoom, double-tap = zoom in/out halus.
 // view = { x, z, zoom } dibaca oleh CampusScene untuk menaruh kamera.
 var S = Math.SQRT1_2;
 var SQRT3 = Math.sqrt(3); // 1 / sin(elevasi kamera isometrik)
@@ -9,6 +10,13 @@ export function createCampusControls(el, cfg) {
     var ptrs = new Map();
     var pinchDist = 0, moved = 0, downT = 0;
     var minZoom = cfg.minZoom || 0.7, maxZoom = cfg.maxZoom || 2.4, limit = cfg.limit || 7;
+
+    // inertia & animasi zoom
+    var vel = { x: 0, y: 0 };      // px per ms
+    var lastMoveT = 0;
+    var zoomTarget = 0;            // 0 = tidak ada animasi zoom
+    var raf = 0, lastT = 0;
+    var lastTap = { t: 0, x: 0, y: 0 };
 
     el.style.touchAction = 'none'; // cegah scroll/zoom bawaan browser di atas peta
 
@@ -29,10 +37,42 @@ export function createCampusControls(el, cfg) {
         return Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
     }
 
+    // Satu loop kecil: hanya hidup selama ada inertia / animasi zoom.
+    function kick() {
+        if (raf) return;
+        lastT = performance.now();
+        raf = requestAnimationFrame(loop);
+    }
+    function loop(now) {
+        raf = 0;
+        var dt = Math.min(48, now - lastT) || 16;
+        lastT = now;
+        var active = false;
+
+        if (!ptrs.size && (Math.abs(vel.x) > 0.02 || Math.abs(vel.y) > 0.02)) {
+            panBy(vel.x * dt, vel.y * dt);
+            var fr = Math.pow(0.92, dt / 16);
+            vel.x *= fr; vel.y *= fr;
+            active = true;
+        } else if (!ptrs.size) {
+            vel.x = vel.y = 0;
+        }
+        if (zoomTarget) {
+            var k = 1 - Math.pow(0.82, dt / 16);
+            view.zoom += (zoomTarget - view.zoom) * k;
+            if (Math.abs(zoomTarget - view.zoom) < 0.005) { view.zoom = zoomTarget; zoomTarget = 0; }
+            else active = true;
+        }
+        changed();
+        if (active) raf = requestAnimationFrame(loop);
+    }
+
     function onDown(e) {
         try { el.setPointerCapture(e.pointerId); } catch (err) {}
         ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-        if (ptrs.size === 1) { moved = 0; downT = Date.now(); }
+        vel.x = vel.y = 0;           // sentuhan menghentikan inertia
+        zoomTarget = 0;
+        if (ptrs.size === 1) { moved = 0; downT = Date.now(); lastMoveT = performance.now(); }
         if (ptrs.size === 2) { pinchDist = dist(); moved += 99; }
     }
     function onMove(e) {
@@ -43,6 +83,11 @@ export function createCampusControls(el, cfg) {
         if (ptrs.size === 1) {
             moved += Math.abs(dx) + Math.abs(dy);
             panBy(dx, dy);
+            var now = performance.now();
+            var ms = Math.max(1, now - lastMoveT);
+            lastMoveT = now;
+            vel.x = vel.x * 0.6 + (dx / ms) * 0.4;   // rata-rata bergerak
+            vel.y = vel.y * 0.6 + (dy / ms) * 0.4;
             changed();
         } else if (ptrs.size === 2) {
             var nd = dist();
@@ -55,10 +100,23 @@ export function createCampusControls(el, cfg) {
         var wasTap = ptrs.size === 1 && moved < 8 && Date.now() - downT < 300;
         ptrs.delete(e.pointerId);
         if (ptrs.size < 2) pinchDist = 0;
-        if (wasTap && e.type === 'pointerup' && cfg.onTap) cfg.onTap(e.clientX, e.clientY);
+        if (wasTap) { vel.x = vel.y = 0; }
+        else if (!ptrs.size && performance.now() - lastMoveT < 80) kick();   // lepas sambil bergerak -> luncur
+        if (wasTap && e.type === 'pointerup') {
+            var nowT = Date.now();
+            if (nowT - lastTap.t < 320 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 28) {
+                lastTap.t = 0;
+                zoomTarget = view.zoom > (minZoom + maxZoom) / 2 ? 1 : Math.min(maxZoom, 2);
+                kick();
+            } else {
+                lastTap.t = nowT; lastTap.x = e.clientX; lastTap.y = e.clientY;
+                if (cfg.onTap) cfg.onTap(e.clientX, e.clientY);
+            }
+        }
     }
     function onWheel(e) {
         e.preventDefault();
+        zoomTarget = 0;
         zoomBy(Math.exp(-e.deltaY * 0.001));
         changed();
     }
@@ -72,6 +130,8 @@ export function createCampusControls(el, cfg) {
     return {
         view: view,
         dispose: function () {
+            if (raf) cancelAnimationFrame(raf);
+            raf = 0;
             el.removeEventListener('pointerdown', onDown);
             el.removeEventListener('pointermove', onMove);
             el.removeEventListener('pointerup', onUp);
