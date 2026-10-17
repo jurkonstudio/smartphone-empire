@@ -16,7 +16,7 @@ var _pollingTimer = null;
 var _countdownTimer = null;
 
 // GANTI URL DI BAWAH INI DENGAN LINK GAMBAR QRIS MILIKMU
-var STATIC_QRIS_URL = 'https://i.ibb.co/3s6G6F5/qris-gopay.jpg'; // <--- GANTI DENGAN LINK GAMBAR ASLIMU
+var STATIC_QRIS_URL = 'https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/qris-gopay.png'; // <--- GANTI DENGAN LINK GAMBAR ASLIMU
 
 function _esc(s) {
     if (typeof s !== 'string') return '';
