@@ -220,7 +220,7 @@ export const BUILTIN_APPS = [
     { id: 'app_maps',       name: 'Peta',           devCost: 12000, devDays: 18, requiresFeature: 'fw_gps',              appealBonus: 6 },
     { id: 'app_store',      name: 'Toko App',       devCost: 20000, devDays: 25, requiresFeature: 'fw_appstore',         appealBonus: 10 },
     { id: 'app_wallet',     name: 'Dompet Digital', devCost: 25000, devDays: 30, requiresFeature: 'fw_digital_pay',      appealBonus: 8 },
-    { id: 'app_health',     name: 'Kesehatan',      devCost: 22000, devDays: 28, requiresFeature: 'fw_health',           appealBonus: 6 },
+    { id: 'app_health',     name: 'Kesehatan',      devCost: 22000, devDays: 28, requiresFeature: 'fw_fingerprint',           appealBonus: 6 },
     { id: 'app_arkit',      name: 'Studio AR',      devCost: 55000, devDays: 55, requiresFeature: 'fw_arkit',            appealBonus: 10 },
     { id: 'app_assistant',  name: 'Asisten AI',     devCost: 40000, devDays: 40, requiresFeature: 'fw_ai_on_device',     appealBonus: 12 }
 ];
