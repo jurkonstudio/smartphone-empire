@@ -24,6 +24,7 @@ function _show(e) {
             <b style="color:${netColor}">${e.net >= 0 ? '+' : ''}${fmt(e.net)}</b>
         </div>
         ${(e.breakdown.loanPrincipal || 0) > 0 ? `<div class="sum-row" style="color:var(--text-mute);"><span>${t('monthly.loan_principal')}</span><b>-${fmt(e.breakdown.loanPrincipal)}</b></div>` : ''}
+        ${(e.breakdown.depositInterest || 0) > 0 ? `<div class="sum-row" style="color:var(--text-mute);"><span>${t('monthly.deposit_interest')}</span><b>+${fmt(e.breakdown.depositInterest)}</b></div>` : ''}
         <div class="sum-row"><span>${t('monthly.cash_end')}</span><b>${fmt(e.cash)}</b></div>
         <button class="btn-primary" data-modal-close style="margin-top:16px;">${t('monthly.close')}</button>
     `;
