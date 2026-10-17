@@ -1,5 +1,5 @@
 // FILE: src/ui/social/PlayerListPanel.js
-// v2.1 — Menampilkan progres tahun bermain (game_minutes) alih-alih "Didirikan 2000".
+// v2.2 — Menampilkan status real-life "Terakhir Aktif".
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
 import { CloudService } from '../../services/CloudService.js';
@@ -23,33 +23,30 @@ var _sort = 'revenue';
 var _seq = 0;
 
 function _sortDef() { return SORTS.filter(function (s) { return s.id === _sort; })[0] || SORTS[0]; }
+function _cleanup() { if (_unsubPresence) { try { _unsubPresence(); } catch (e) {} _unsubPresence = null; } }
+function _stateMsg(text, color) { return '<div class="pf-lb-msg"' + (color ? ' style="color:' + color + ';"' : '') + '>' + esc(text) + '</div>'; }
 
-function _cleanup() {
-    if (_unsubPresence) { try { _unsubPresence(); } catch (e) {} _unsubPresence = null; }
-}
-
-function _stateMsg(text, color) {
-    return '<div class="pf-lb-msg"' + (color ? ' style="color:' + color + ';"' : '') + '>' + esc(text) + '</div>';
+// Fungsi untuk mengubah tanggal menjadi "2 jam lalu", "3 hari lalu", dll.
+function _timeAgo(iso) {
+    if (!iso) return '—';
+    var date = new Date(iso);
+    var diffMs = Date.now() - date.getTime();
+    var diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'Baru saja';
+    if (diffMins < 60) return diffMins + ' mnt lalu';
+    var diffHrs = Math.floor(diffMins / 60);
+    if (diffHrs < 24) return diffHrs + ' jam lalu';
+    var diffDays = Math.floor(diffHrs / 24);
+    if (diffDays < 30) return diffDays + ' hari lalu';
+    
+    return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 }
 
 function _rankBadge(i) {
     var medals = ['🥇', '🥈', '🥉'];
     if (_sort !== 'recent' && i < 3) return '<span class="pf-lb-rank is-medal">' + medals[i] + '</span>';
     return '<span class="pf-lb-rank">' + (_sort === 'recent' ? '' : (i + 1)) + '</span>';
-}
-
-// Fungsi untuk memformat menit game menjadi Tahun/Bulan
-function _formatPlaytime(minutes) {
-    if (!minutes) return 'Baru mulai';
-    var days = Math.floor(minutes / 1440);
-    var years = Math.floor(days / 365);
-    var months = Math.floor((days % 365) / 30);
-    
-    if (years > 0) {
-        return years + ' Tahun' + (months > 0 ? ' ' + months + ' Bln' : '');
-    }
-    if (months > 0) return months + ' Bulan';
-    return days + ' Hari';
 }
 
 function _rowHtml(p, i, myId) {
@@ -59,9 +56,9 @@ function _rowHtml(p, i, myId) {
     
     if (p.display_name) sub.push(p.display_name);
     
-    // Tampilkan progres waktu bermain alih-alih tahun didirikan
-    if (p.game_minutes) {
-        sub.push('⏳ ' + _formatPlaytime(p.game_minutes));
+    // Tampilkan status real-life
+    if (p.updated_at) {
+        sub.push('🟢 ' + _timeAgo(p.updated_at));
     }
     
     var me = p.id === myId;
