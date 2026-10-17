@@ -1,11 +1,9 @@
 // FILE: src/ui/panels/AdminPanel.js
-// v2028.21 — [PERMANENT FIX] Menggunakan Full-Screen Overlay mutlak (z-index tertinggi).
-// Dijamin muncul di atas QRIS, Eruda, dan elemen game apapun.
+// v2028.22 — [SYNC] Mengirim sinyal 'payment:approved' agar pop-up QRIS tertutup otomatis.
 import { ToastService } from '../../core/ToastService.js';
 import { CloudService } from '../../services/CloudService.js';
 
 export async function openAdminPanel() {
-    // 1. Hapus panel lama jika ada
     const existing = document.getElementById('admin-panel-overlay');
     if (existing) existing.remove();
 
@@ -24,7 +22,6 @@ export async function openAdminPanel() {
 
     const orders = res.data || [];
 
-    // 2. Buat Overlay Z-Index Maksimal
     const overlay = document.createElement('div');
     overlay.id = 'admin-panel-overlay';
     overlay.style.cssText = `
@@ -67,11 +64,9 @@ export async function openAdminPanel() {
     overlay.innerHTML = html;
     document.body.appendChild(overlay);
 
-    // 3. Event Tutup
     document.getElementById('btn-close-admin').onclick = () => overlay.remove();
     document.getElementById('btn-close-bottom').onclick = () => overlay.remove();
 
-    // 4. Event Approve
     overlay.querySelectorAll('.btn-approve').forEach(btn => {
         btn.onclick = async function() {
             const orderId = this.dataset.id;
@@ -88,6 +83,12 @@ export async function openAdminPanel() {
                     card.style.opacity = '0';
                     setTimeout(() => card.remove(), 300);
                 }
+
+                // Sinyal ke UI QRIS untuk menutup pop-up
+                if (window.__game && window.__game.bus) {
+                    window.__game.bus.emit('payment:approved', orderId);
+                }
+
             } else {
                 ToastService.error(approveRes.reason || 'Gagal menyetujui.');
                 this.textContent = '✓ Setujui Pesanan';
