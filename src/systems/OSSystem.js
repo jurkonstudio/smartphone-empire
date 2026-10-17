@@ -6,6 +6,7 @@ import { BALANCE } from '../data/balance.data.js';
 import { TIME_CONFIG } from '../config/time.config.js';
 import { ToastService } from '../core/ToastService.js';
 import { LOG_TYPES } from '../config/constants.js';
+import { getNodeById } from '../data/research.data.js'; // <-- TAMBAHAN IMPORT
 import {
     OS_FEATURES,
     OS_LICENSES,
@@ -37,7 +38,6 @@ export class OSSystem {
         this._unsubs.push(bus.on('time:day-changed',   (s) => this._onDayChanged(s)));
         this._unsubs.push(bus.on('time:month-changed', (s) => this._onMonthChanged(s)));
         this._unsubs.push(bus.on('state:hydrated',     () => this._onHydrated()));
-        // [v2026.4] Jalankan sekali saat boot untuk migrasi save lama.
         this._onHydrated();
         console.info('[OSSystem] siap.');
     }
@@ -60,21 +60,17 @@ export class OSSystem {
             if (typeof d.lastProcessedMinute !== 'number') d.lastProcessedMinute = data.time.elapsedGameMinutes;
             if (typeof d.startedAtGameMinute !== 'number') d.startedAtGameMinute = data.time.elapsedGameMinutes;
         }
-
-        // [v2026.4] Migrasi: starter features tidak boleh ada di developing.
-        // Fitur dasar kini dimiliki otomatis — buang dari pengembangan + refund.
         this._migrateStarterInDeveloping(data);
     }
 
     _migrateStarterInDeveloping(data) {
         const d = data.os.developing;
         if (!d || !Array.isArray(d.features) || !d.features.length) return;
-
         const starterIds = _getStarterFeatureIds();
         if (!starterIds.length) return;
 
         const filtered = d.features.filter(function (id) { return starterIds.indexOf(id) === -1; });
-        if (filtered.length === d.features.length) return; // tidak ada yang perlu diubah
+        if (filtered.length === d.features.length) return;
 
         let newCost = 0, newDays = 0;
         filtered.forEach(function (id) {
@@ -99,7 +95,6 @@ export class OSSystem {
         bus.emit('state:changed', data);
     }
 
-    // ---------- PROGRESS HARIAN ----------
     _onDayChanged(_snap) {
         const data = this.state.data;
         if (data.os.developing) this._tickDeveloping();
@@ -144,11 +139,7 @@ export class OSSystem {
             features: d.features.slice(),
             stats,
             devCost: d.cost,
-            releasedAt: {
-                year: data.time.currentYear,
-                month: data.time.currentMonth,
-                day: data.time.currentDay
-            }
+            releasedAt: { year: data.time.currentYear, month: data.time.currentMonth, day: data.time.currentDay }
         };
         data.os.versions.push(versionEntry);
         data.os.currentVersionId = versionEntry.id;
@@ -165,7 +156,6 @@ export class OSSystem {
         bus.emit('state:changed', data);
     }
 
-    // ---------- BUG ----------
     _rollForBug() {
         const data = this.state.data;
         const activeBugs = data.os.bugs.filter(b => b.status === 'active');
@@ -184,16 +174,11 @@ export class OSSystem {
         const tpl = BUG_TEMPLATES[Math.floor(Math.random() * BUG_TEMPLATES.length)];
         const bug = {
             id: 'bug_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-            templateId: tpl.id,
-            name: tpl.name,
-            severity: tpl.severity,
-            satisfactionHit: tpl.satisfactionHit,
-            reputationHit: tpl.reputationHit,
-            patchCost: tpl.patchCost,
-            patchDays: tpl.patchDays,
+            templateId: tpl.id, name: tpl.name, severity: tpl.severity,
+            satisfactionHit: tpl.satisfactionHit, reputationHit: tpl.reputationHit,
+            patchCost: tpl.patchCost, patchDays: tpl.patchDays,
             appearedAtGameMinute: data.time.elapsedGameMinutes,
-            status: 'active',
-            patchCompleteAtMinute: null
+            status: 'active', patchCompleteAtMinute: null
         };
         data.os.bugs.push(bug);
         data.market.reputation = Math.max(0, (data.market.reputation || 0) - tpl.reputationHit);
@@ -219,7 +204,6 @@ export class OSSystem {
         }
     }
 
-    // ---------- APLIKASI ----------
     _onMonthChanged(_snap) {
         const data = this.state.data;
         if (!this.hasFeature('fw_appstore')) return;
@@ -228,24 +212,16 @@ export class OSSystem {
         const cs = this.getCurrentStats();
         const stability = cs ? cs.stability : 50;
 
-        const growth = Math.floor(
-            DEV_TEMPLATES.baseGrowthPerMonth +
-            rep * DEV_TEMPLATES.perReputationBonus +
-            stability * DEV_TEMPLATES.perStabilityBonus
-        );
+        const growth = Math.floor(DEV_TEMPLATES.baseGrowthPerMonth + rep * DEV_TEMPLATES.perReputationBonus + stability * DEV_TEMPLATES.perStabilityBonus);
         const capped = Math.min(DEV_TEMPLATES.maxApps - data.os.apps.thirdParty, growth);
         if (capped > 0) {
             data.os.apps.thirdParty += capped;
-            if (capped >= 5) {
-                this.state.addLog(capped + ' aplikasi pihak ketiga baru ditambahkan.', LOG_TYPES.info);
-            }
+            if (capped >= 5) this.state.addLog(capped + ' aplikasi pihak ketiga baru ditambahkan.', LOG_TYPES.info);
         }
         bus.emit('state:changed', data);
     }
 
-    // ---------- HELPER ----------
     _calculateStats(featureIds) {
-        // [v2026.4] Starter features selalu dihitung, dedupe dengan input.
         const merged = new Set(_getStarterFeatureIds());
         (featureIds || []).forEach(function (id) { merged.add(id); });
 
@@ -274,18 +250,12 @@ export class OSSystem {
 
     _getSpeedMultiplier() {
         const eng = this.state.data.team.engineers || 0;
-        return Math.min(
-            BALANCE.os.baseSpeed + eng * BALANCE.os.perEngineerSpeed,
-            BALANCE.os.maxSpeedMultiplier
-        );
+        return Math.min(BALANCE.os.baseSpeed + eng * BALANCE.os.perEngineerSpeed, BALANCE.os.maxSpeedMultiplier);
     }
 
     _getMaxFeatureSlots() {
         const eng = this.state.data.team.engineers || 0;
-        return Math.min(
-            BALANCE.os.maxFeatureSlots,
-            BALANCE.os.baseFeatureSlots + Math.floor(eng * BALANCE.os.perEngineerFeatureSlots)
-        );
+        return Math.min(BALANCE.os.maxFeatureSlots, BALANCE.os.baseFeatureSlots + Math.floor(eng * BALANCE.os.perEngineerFeatureSlots));
     }
 
     _nextVersionString() {
@@ -300,7 +270,6 @@ export class OSSystem {
         return 'v' + major + '.' + minor;
     }
 
-    // ---------- API PUBLIK ----------
     createOs(name) {
         const data = this.state.data;
         if (data.os.name) return { ok: false, reason: 'OS sudah dibuat.' };
@@ -309,11 +278,7 @@ export class OSSystem {
         if (trimmed.length > 24) return { ok: false, reason: 'Nama maksimal 24 karakter.' };
 
         data.os.name = trimmed;
-        data.os.createdAt = {
-            year: data.time.currentYear,
-            month: data.time.currentMonth,
-            day: data.time.currentDay
-        };
+        data.os.createdAt = { year: data.time.currentYear, month: data.time.currentMonth, day: data.time.currentDay };
         this.state.addLog('OS "' + trimmed + '" dibuat.', LOG_TYPES.success);
         bus.emit('os:created', { name: trimmed });
         bus.emit('state:changed', data);
@@ -345,13 +310,8 @@ export class OSSystem {
 
         const versionString = this._nextVersionString();
         data.os.developing = {
-            versionString,
-            features: ids,
-            cost: totalCost,
-            durationDays: totalDays,
-            progressDays: 0,
-            startedAtGameMinute: data.time.elapsedGameMinutes,
-            lastProcessedMinute: data.time.elapsedGameMinutes
+            versionString, features: ids, cost: totalCost, durationDays: totalDays,
+            progressDays: 0, startedAtGameMinute: data.time.elapsedGameMinutes, lastProcessedMinute: data.time.elapsedGameMinutes
         };
         this.state.addLog('Mulai kembangkan OS ' + versionString + ' (' + ids.length + ' fitur, $' + totalCost.toLocaleString('en-US') + ').', LOG_TYPES.info);
         bus.emit('os:version-started', { versionString, features: ids, cost: totalCost, durationDays: totalDays });
@@ -391,7 +351,6 @@ export class OSSystem {
         const f = getOsFeatureById(featureId);
         if (!f) return { status: 'locked', reason: 'Fitur tidak ditemukan.' };
 
-        // [v2026.4] Starter features selalu dimiliki (SMS, Kontak, Kalender).
         if (f.starter === true) return { status: 'owned', reason: null };
 
         const currentVersion = this.getCurrentVersionObject();
@@ -405,8 +364,15 @@ export class OSSystem {
             return { status: 'locked', reason: 'Butuh fitur: ' + names.join(', ') };
         }
 
+        // ===> PERBAIKAN DI SINI <===
         const missingResearch = (f.requiresResearch || []).filter(rId => !data.research.completed.includes(rId));
-        if (missingResearch.length) return { status: 'locked', reason: 'Butuh riset: ' + missingResearch.length + ' node' };
+        if (missingResearch.length) {
+            const names = missingResearch.map(rId => {
+                const node = getNodeById(rId);
+                return node ? node.name : rId;
+            });
+            return { status: 'locked', reason: 'Butuh riset: ' + names.join(', '), missingResearch: missingResearch };
+        }
 
         return { status: 'available', reason: null };
     }
@@ -420,7 +386,6 @@ export class OSSystem {
 
     hasFeature(featureId) {
         if (!featureId) return false;
-        // [v2026.4] Starter features selalu true.
         const f = getOsFeatureById(featureId);
         if (f && f.starter === true) return true;
         const v = this.getCurrentVersionObject();
@@ -490,25 +455,11 @@ export class OSSystem {
         const data = this.state.data;
         const options = [];
         data.os.versions.forEach(v => {
-            options.push({
-                id: 'own:' + v.id,
-                source: 'own',
-                label: (data.os.name || 'OS') + ' ' + v.versionString,
-                stats: { ...v.stats },
-                costPerUnit: 0,
-                versionId: v.id
-            });
+            options.push({ id: 'own:' + v.id, source: 'own', label: (data.os.name || 'OS') + ' ' + v.versionString, stats: { ...v.stats }, costPerUnit: 0, versionId: v.id });
         });
         OS_LICENSES.forEach(lic => {
             if (data.time.currentYear < lic.availableFromYear) return;
-            options.push({
-                id: 'license:' + lic.id,
-                source: 'license',
-                label: lic.name,
-                stats: { ...lic.stats },
-                costPerUnit: lic.costPerUnit,
-                licenseId: lic.id
-            });
+            options.push({ id: 'license:' + lic.id, source: 'license', label: lic.name, stats: { ...lic.stats }, costPerUnit: lic.costPerUnit, licenseId: lic.id });
         });
         return options;
     }
@@ -523,11 +474,7 @@ export class OSSystem {
 
     escapeHtml(s) { return escapeHtml(s); }
 
-    // ---------- CHEAT ----------
-    spawnBug() {
-        this._spawnBug();
-        return { ok: true, total: this.state.data.os.bugs.length };
-    }
+    spawnBug() { this._spawnBug(); return { ok: true, total: this.state.data.os.bugs.length }; }
 
     quickSetup(featuresList) {
         const data = this.state.data;
@@ -536,19 +483,12 @@ export class OSSystem {
         const versionString = this._nextVersionString();
         const stats = this._calculateStats(ids);
         data.os.versions.push({
-            id: versionString, versionString,
-            features: ids, stats, devCost: 0,
-            releasedAt: {
-                year: data.time.currentYear,
-                month: data.time.currentMonth,
-                day: data.time.currentDay
-            }
+            id: versionString, versionString, features: ids, stats, devCost: 0,
+            releasedAt: { year: data.time.currentYear, month: data.time.currentMonth, day: data.time.currentDay }
         });
         data.os.currentVersionId = versionString;
         this.state.addLog('(cheat) OS ' + versionString + ' dirilis.', LOG_TYPES.info);
         bus.emit('state:changed', data);
         return { ok: true, versionString, stats };
     }
-}
-
-export { escapeHtml };
+                }
