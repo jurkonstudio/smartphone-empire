@@ -1,9 +1,8 @@
 // FILE: src/ui/panels/OSPanel.js
 // Sub-tab OS dalam tab Riset.
-// v2026.3 — row-based, section-grouped (konsisten dengan Research v2026.2).
-// v2027.13c — i18n.
+// v2028.1 — Menambahkan Version History (Riwayat Versi) & UI yang lebih rapi.
 import { renderOsStatBar } from './OsStatBar.js';
-import { OS_FEATURES, OS_LICENSES, BUILTIN_APPS, OS_ERAS } from '../../data/os.data.js';
+import { OS_FEATURES, OS_LICENSES, BUILTIN_APPS, OS_ERAS, getOsFeatureById } from '../../data/os.data.js';
 import { renderOsScreenMockup } from '../phone/OsScreenMockup.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
@@ -40,13 +39,14 @@ export function renderOSPanel(params) {
 
     const hero = _renderHero(os, currentVersion, osSystem);
     const devStrip = developing ? _renderDevStrip(developing) : '';
+    const history = _renderVersionHistory(os, currentVersion);
 
     const bugsHtml = _renderBugsSection(os.bugs);
     const featuresHtml = _renderFeaturesSection(osSystem);
     const appsHtml = _renderAppsSection(osSystem, os);
     const licensesHtml = _renderLicensesSection(data);
 
-    return hero + devStrip + bugsHtml + featuresHtml + appsHtml + licensesHtml;
+    return hero + devStrip + history + bugsHtml + featuresHtml + appsHtml + licensesHtml;
 }
 
 // ============================================================
@@ -97,6 +97,55 @@ function _renderHero(os, currentVersion, osSystem) {
         '</div>' +
         '<div class="os-hero-stats">' + statHtml + '</div>' +
         '</div>';
+}
+
+// ============================================================
+// VERSION HISTORY (RIWAYAT VERSI)
+// ============================================================
+function _renderVersionHistory(os, currentVersion) {
+    if (!os.versions || !os.versions.length) return '';
+
+    // Urutkan dari versi terbaru ke terlama
+    const versions = [...os.versions].reverse();
+    
+    const rows = versions.map(v => {
+        const isCurrent = currentVersion && v.id === currentVersion.id;
+        const dateStr = v.releasedAt ? `${v.releasedAt.month}/${v.releasedAt.year}` : 'Unknown';
+        
+        // Ambil 3 fitur teratas untuk ditampilkan sebagai highlight
+        const featureNames = v.features.slice(0, 3).map(fid => {
+            const f = getOsFeatureById(fid);
+            return f ? f.name : fid;
+        });
+        const moreCount = v.features.length - 3;
+        const featureText = featureNames.join(', ') + (moreCount > 0 ? ` +${moreCount} lainnya` : '');
+
+        return `<div class="os-row" style="align-items: flex-start; ${isCurrent ? 'background: var(--accent-soft);' : ''}">
+            <div class="os-row-main">
+                <div class="os-row-title" style="display:flex; justify-content:space-between;">
+                    <span>${escapeHtml(v.versionString)}</span>
+                    <span style="font-size:10px; color:var(--text-tertiary); font-weight:normal;">${dateStr}</span>
+                </div>
+                <div class="os-row-meta" style="margin-top:4px; line-height:1.4;">
+                    ${escapeHtml(featureText)}
+                </div>
+            </div>
+            <div class="os-row-actions">
+                ${isCurrent 
+                    ? '<span class="os-status-badge os-status-owned">Aktif</span>' 
+                    : '<span class="os-status-badge os-status-locked">Usang</span>'}
+            </div>
+        </div>`;
+    }).join('');
+
+    const header = '<summary class="section-summary">' +
+        '<span class="section-summary-text">Riwayat Versi · ' + os.versions.length + '</span>' +
+        '<span class="section-summary-line"></span>' +
+        '</summary>';
+
+    return '<details class="section-collapsible" open>' + header +
+        '<div class="os-list" style="margin-top:8px;">' + rows + '</div>' +
+        '</details>';
 }
 
 // ============================================================
@@ -355,7 +404,6 @@ export function openOsWizardModal(params) {
     var osSystem = params.osSystem;
     const available = osSystem.getAvailableFeatures();
     
-    // PERBAIKAN UX: Pesan jika tidak ada fitur
     if (!available.length) {
         window.__game.ToastService.warning('Belum ada fitur yang bisa dipakai. Selesaikan riset di tab Teknologi terlebih dahulu.');
         return;
@@ -483,7 +531,6 @@ export function openFeatureDetailModal(params) {
     if (!f) return;
     const st = osSystem.getFeatureStatus(featureId);
     
-    // PERBAIKAN UX: Tombol pintas ke Riset jika terkunci karena riset hardware
     let actionBtn = '';
     if (st.status === 'locked' && st.missingResearch && st.missingResearch.length > 0) {
         actionBtn = `<button class="btn-secondary" data-nav="research" style="width:100%;margin-top:8px;background:var(--accent-soft);color:var(--accent);border-color:var(--accent);">👉 Buka Tab Riset</button>`;
