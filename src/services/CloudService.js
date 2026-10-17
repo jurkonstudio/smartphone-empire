@@ -1,5 +1,5 @@
 // FILE: src/services/CloudService.js
-// v2028.16 — [ADMIN] Menambahkan fungsi getPendingPayments & adminApprovePayment.
+// v2028.27 — [ADMIN] Menambahkan fungsi adminGetAllProfiles & adminSetSilicon.
 import { bus } from '../core/EventBus.js';
 
 const SLOT_KEY = 'smartphone-empire:cloud-slot';
@@ -330,7 +330,6 @@ export const CloudService = {
         }
     },
 
-    // [ADMIN PANEL]
     async getPendingPayments() {
         if (!_adapter || !_userId) return NOT_SIGNED_IN;
         if (typeof _adapter.rpcGetPendingPayments !== 'function') return NOT_CONFIGURED;
@@ -343,16 +342,20 @@ export const CloudService = {
         if (typeof _adapter.rpcAdminApprove !== 'function') return NOT_CONFIGURED;
         try { return { ok: true, data: await _adapter.rpcAdminApprove(orderId) }; }
         catch (err) { return _fail(err); }
-    }
-},
-async adminGetAllProfiles() {
-    if (!_adapter || !_userId) return NOT_SIGNED_IN;
-    try { return { ok: true, data: await _adapter.rpcAdminGetProfiles() }; }
-    catch (err) { return _fail(err); }
-},
+    },
 
-async adminSetSilicon(userId, amount) {
-    if (!_adapter || !_userId) return NOT_SIGNED_IN;
-    try { return { ok: true, data: await _adapter.rpcAdminSetSilicon(userId, amount) }; }
-    catch (err) { return _fail(err); }
+    // [ADMIN PANEL - MANAJEMEN PEMAIN]
+    async adminGetAllProfiles() {
+        if (!_adapter || !_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.rpcAdminGetProfiles !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, data: await _adapter.rpcAdminGetProfiles() }; }
+        catch (err) { return _fail(err); }
+    },
+
+    async adminSetSilicon(userId, amount) {
+        if (!_adapter || !_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.rpcAdminSetSilicon !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, data: await _adapter.rpcAdminSetSilicon(userId, amount) }; }
+        catch (err) { return _fail(err); }
+    },
 };
