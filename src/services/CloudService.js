@@ -1,5 +1,6 @@
 // FILE: src/services/CloudService.js
 // v2027.42 — Fasad cloud. + syncPlayerProfile(), getPlayerAssetUrls(), listProfiles(orderBy).
+// v2028.12 — [PAYMENT] Menambahkan fungsi untuk pembuatan pesanan & cek status manual.
 import { bus } from '../core/EventBus.js';
 
 const SLOT_KEY = 'smartphone-empire:cloud-slot';
@@ -308,5 +309,31 @@ export const CloudService = {
         if (typeof _adapter.rpcSpendSilicon !== 'function') return NOT_CONFIGURED;
         try { return { ok: true, balance: await _adapter.rpcSpendSilicon(amount) }; }
         catch (err) { return _fail(err); }
+    },
+
+    // ==========================================
+    // PAYMENT RPC (BARU)
+    // ==========================================
+    async createPaymentOrder(orderId, packageId, priceIdr, silAmount) {
+        if (!_adapter) return NOT_CONFIGURED;
+        if (!_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.rpcCreatePaymentOrder !== 'function') return NOT_CONFIGURED;
+        try {
+            return await _adapter.rpcCreatePaymentOrder(orderId, packageId, priceIdr, silAmount);
+        } catch (err) {
+            return _fail(err);
+        }
+    },
+
+    async checkPaymentStatus(orderId) {
+        if (!_adapter) return NOT_CONFIGURED;
+        if (!_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.rpcCheckPaymentStatus !== 'function') return NOT_CONFIGURED;
+        try {
+            var status = await _adapter.rpcCheckPaymentStatus(orderId);
+            return { ok: true, data: status };
+        } catch (err) {
+            return _fail(err);
+        }
     }
 };
