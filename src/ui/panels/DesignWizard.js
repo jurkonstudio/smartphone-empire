@@ -2,6 +2,8 @@
 // v2027.12a — Auto-fill "Isi Rekomendasi"
 // v2027.13c — i18n.
 // v2027.14a — [PATCH] validasi nama produk duplikat di step 1.
+// v2027.44a — [UI] Pratinjau ponsel sticky + stepper berlabel, tag stat di opsi,
+//             tombol Lanjut sticky, scroll tidak reset saat memilih, bug label "TEST …" diperbaiki.
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
 import { state } from '../../core/GameState.js';
@@ -14,12 +16,143 @@ import { renderPhoneMockup } from '../phone/PhoneMockup.js';
 import { getDesignEraForYear } from '../../data/era-design.data.js';
 import { resolveSpec } from '../../data/phone-specs.data.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
-import { t } from '../../core/LanguageService.js';
+import { t, LanguageService } from '../../core/LanguageService.js';
 
 let _wizardState = null;
 let _wizardView = 'front'; // 'front' | 'back' (live preview)
 
 const OPTIONAL_CATEGORIES = ['camera'];
+
+// ============================================================
+// UI v2027.44a — helper tampilan
+// ============================================================
+let _phoneShown = false;   // animasi masuk ponsel hanya sekali per sesi wizard
+
+function _isEn() {
+    try { return LanguageService.getLang() === 'en'; } catch (e) { return false; }
+}
+
+const STAT_LABELS = {
+    id: { display: 'Layar', camera: 'Kamera', battery: 'Baterai', performance: 'Performa', connectivity: 'Jaringan', quality: 'Mutu', design: 'Desain', usability: 'Kegunaan' },
+    en: { display: 'Display', camera: 'Camera', battery: 'Battery', performance: 'Performance', connectivity: 'Network', quality: 'Quality', design: 'Design', usability: 'Usability' }
+};
+
+// Tag efek utama sebuah komponen, mis. "Layar +12". Mutu dipakai bila tak ada stat lain.
+function _statTag(c) {
+    if (!c || !c.stats) return '';
+    const L = STAT_LABELS[_isEn() ? 'en' : 'id'];
+    let key = null, val = 0;
+    for (const k in c.stats) {
+        if (k === 'quality') continue;
+        if (c.stats[k] > val) { key = k; val = c.stats[k]; }
+    }
+    if (!key && c.stats.quality) { key = 'quality'; val = c.stats.quality; }
+    return key ? (L[key] || key) + ' +' + val : '';
+}
+
+// Biaya produksi awal vs kas perusahaan (rumus sama dengan ringkasan & ProductSystem).
+function _affordInfo(s) {
+    const ps = window.__game && window.__game.products;
+    let unitCost = 0;
+    try { unitCost = ps && ps.computeUnitCost ? ps.computeUnitCost(s) : 0; } catch (e) {}
+    const cost = unitCost * (s.productionQty || 0) + 2000;
+    let cash = 0;
+    try { cash = state.get().cash || 0; } catch (e) {}
+    return { cost: cost, cash: cash, ok: cost <= cash };
+}
+
+function _fmtUsd(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
+
+function _shortText(str, max) {
+    str = String(str || '');
+    return str.length > max ? str.slice(0, max - 1).trimEnd() + '…' : str;
+}
+
+const WZ_CSS = `
+[data-modal-id="design-wizard"] .modal-card { padding-top: 0; padding-bottom: 0; scroll-behavior: auto; }
+.wz-stage {
+    position: sticky; top: 0; z-index: 6;
+    margin: 0 -18px 12px; padding: 12px 18px 12px;
+    background: var(--bg-2); border-bottom: 1px solid var(--border);
+    box-shadow: 0 10px 18px -14px rgba(0,0,0,0.7);
+}
+.wz-steps { display: flex; gap: 6px; margin: 0 0 12px; padding: 0; list-style: none; }
+.wz-steps li {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px;
+    padding: 5px 8px; border-radius: 999px; background: var(--bg-3);
+    color: var(--text-tertiary); font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.wz-steps li b {
+    flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 800; background: var(--bg-2); color: inherit;
+    font-variant-numeric: tabular-nums;
+}
+.wz-steps li span { overflow: hidden; text-overflow: ellipsis; }
+.wz-steps li.done { color: var(--text-primary); }
+.wz-steps li.done b { background: var(--accent); color: #fff; }
+.wz-steps li.active { background: var(--accent); color: #fff; flex: 2.2; }
+.wz-steps li.active b { background: rgba(255,255,255,0.22); }
+@media (max-width: 440px) { .wz-steps li:not(.active) span { display: none; } .wz-steps li:not(.active) { justify-content: center; padding: 5px 0; } }
+
+.wz-stage-body { display: flex; align-items: center; gap: 14px; }
+.wz-phone {
+    flex: 0 0 96px; min-height: 138px; display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-end;
+    border-radius: var(--r-lg);
+    background: radial-gradient(ellipse at 50% 88%, var(--bg-3) 0%, transparent 70%);
+}
+.wz-live { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.wz-era { font-size: 11px; color: var(--text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wz-era b { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.wz-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.wz-name { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wz-price { font-size: 15px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+.wz-meter-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-secondary); }
+.wz-meter { flex: 1; height: 6px; border-radius: 99px; background: var(--bg-3); overflow: hidden; }
+.wz-meter i { display: block; height: 100%; border-radius: 99px; transition: width 0.3s ease, background 0.3s; }
+.wz-meter-row b { font-variant-numeric: tabular-nums; color: var(--text-primary); min-width: 46px; text-align: right; }
+.wz-kv { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--text-tertiary); }
+.wz-kv b { color: var(--text-primary); font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wz-warn { font-size: 11px; line-height: 1.35; color: var(--warn); }
+.wz-tools { display: flex; align-items: center; gap: 6px; }
+.wz-tools .wiz-view-toggle button { font-size: 11px; padding: 4px 10px; min-height: 28px; }
+.wz-tools .btn-secondary { font-size: 11px; min-height: 28px; padding: 4px 10px; margin-left: auto; }
+
+[data-modal-id="design-wizard"] .wiz-nav {
+    position: sticky; bottom: 0; z-index: 5; margin: 14px -18px 0;
+    padding: 10px 18px calc(10px + env(safe-area-inset-bottom));
+    background: var(--bg-2); border-top: 1px solid var(--border);
+}
+.wz-step-title { font-size: 12px; color: var(--text-tertiary); margin: 0 0 10px; }
+.wz-era-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.45; margin: 0 0 12px; }
+.wz-scroll { padding-bottom: 4px; }
+.wz-cap {
+    font-size: 11px; line-height: 1.45; color: var(--text-tertiary); margin-top: 6px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.wz-cap em { font-style: normal; color: var(--text-secondary); }
+[data-modal-id="design-wizard"] .wiz-option { position: relative; }
+[data-modal-id="design-wizard"] .wiz-option.selected::after {
+    content: "✓"; position: absolute; top: 6px; right: 8px;
+    font-size: 11px; font-weight: 800; color: var(--accent);
+}
+[data-modal-id="design-wizard"] .wiz-option:focus-visible,
+[data-modal-id="design-wizard"] .wiz-color:focus-visible,
+[data-modal-id="design-wizard"] .wiz-view-toggle button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wiz-opt-tag { color: var(--accent); font-weight: 600; }
+[data-modal-id="design-wizard"] .wiz-option.selected .wiz-opt-name { padding-right: 16px; }
+@media (prefers-reduced-motion: reduce) { .wz-meter i { transition: none; } }
+`;
+
+function _injectStyles() {
+    if (document.getElementById('wz-style')) return;
+    const el = document.createElement('style');
+    el.id = 'wz-style';
+    el.textContent = WZ_CSS;
+    document.head.appendChild(el);
+}
+
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -218,6 +351,8 @@ export function openDesignWizard(params) {
     const colors = filterBodyColorsByEra();
     if (colors.length) s.bodyColorId = colors[colors.length - 1].id;
 
+    _injectStyles();
+    _phoneShown = false;
     _wizardState = s;
     _wizardView = 'front';
     _render();
@@ -231,48 +366,68 @@ function _render() {
     if (!s) return;
 
     const era = currentEraInfo();
+    const year = DesignEraService.getCurrentYear();
     let stepBody = '';
     if (s.step === 1)      stepBody = _step1(s);
     else if (s.step === 2) stepBody = _step2(s);
     else if (s.step === 3) stepBody = _step3(s);
     else                   stepBody = _step4(s);
 
+    const en = _isEn();
+    const lblFront = t('wiz.view.front') === 'wiz.view.front' ? (en ? 'Front' : 'Depan') : t('wiz.view.front');
+    const lblBack  = t('wiz.view.back')  === 'wiz.view.back'  ? (en ? 'Back' : 'Belakang') : t('wiz.view.back');
+
+    const stepper = [1, 2, 3, 4].map(function (i) {
+        const cls = i === s.step ? 'active' : (i < s.step ? 'done' : '');
+        return '<li class="' + cls + '"' + (i === s.step ? ' aria-current="step"' : '') + '>' +
+            '<b>' + (i < s.step ? '✓' : i) + '</b><span>' + escapeHtml(_stepTitle(i)) + '</span></li>';
+    }).join('');
+
     const html = `
-        <div class="wiz-era-banner" data-era="${era.id}">
-    <div class="wiz-era-year">${DesignEraService.getCurrentYear()}</div>
-    <div class="wiz-era-info">
-        <div class="wiz-era-label">${escapeHtml(era.label)}</div>
-        <div class="wiz-era-desc">${escapeHtml(era.description)}</div>
-    </div>
-</div>
-
-        <div class="wiz-mockup-live" data-wiz-mockup-container></div>
-        <div class="wiz-spec-strip" data-wiz-spec-strip></div>
-        <div class="wiz-mockup-actions">
-            <div class="wiz-view-toggle">
-                <button type="button" data-wiz-view="front" class="${_wizardView === 'front' ? 'active' : ''}">${t('wiz.view.front') === 'wiz.view.front' ? 'Depan' : t('wiz.view.front')}</button>
-                <button type="button" data-wiz-view="back" class="${_wizardView === 'back' ? 'active' : ''}">${t('wiz.view.back') === 'wiz.view.back' ? 'Belakang' : t('wiz.view.back')}</button>
+        <div class="wz-stage" data-era="${era.id}">
+            <ol class="wz-steps" aria-label="${escapeHtml(t('wiz.step_of', { n: s.step, title: _stepTitle(s.step) }))}">${stepper}</ol>
+            <div class="wz-stage-body">
+                <div class="wz-phone" data-wiz-mockup-container></div>
+                <div class="wz-live">
+                    <div class="wz-era"><b>${year}</b> · ${escapeHtml(era.label)}</div>
+                    <div data-wiz-spec-strip></div>
+                    <div class="wz-tools">
+                        <div class="wiz-view-toggle">
+                            <button type="button" data-wiz-view="front" aria-pressed="${_wizardView === 'front'}" class="${_wizardView === 'front' ? 'active' : ''}">${lblFront}</button>
+                            <button type="button" data-wiz-view="back" aria-pressed="${_wizardView === 'back'}" class="${_wizardView === 'back' ? 'active' : ''}">${lblBack}</button>
+                        </div>
+                        <button class="btn-secondary" data-wiz-detail>${t('wiz.detail.btn_show')}</button>
+                    </div>
+                </div>
             </div>
-            <button class="btn-secondary" data-wiz-detail style="font-size:12px;min-height:34px;padding:6px 12px;">${t('wiz.detail.btn_show')}</button>
         </div>
 
-        <div class="wiz-step-indicator">
-            ${[1,2,3,4].map(function (i) { return '<span class="wiz-dot ' + (i === s.step ? 'active' : '') + ' ' + (i < s.step ? 'done' : '') + '"></span>'; }).join('')}
-        </div>
-        <div class="modal-sub" style="margin-bottom:12px;">${t('wiz.step_of', { n: s.step, title: _stepTitle(s.step) })}</div>
-
+        ${s.step === 1 ? '<div class="wz-era-desc">' + escapeHtml(era.description) + '</div>' : ''}
         ${stepBody}
     `;
 
-    if (Modal.isOpen && Modal.isOpen('design-wizard')) {
-        const root = document.querySelector('[data-modal-id="design-wizard"]');
-        if (root) {
-            root.querySelector('.modal-card').innerHTML = html;
-            _bindStep();
-            requestAnimationFrame(_refreshPreview);
+    const open = Modal.isOpen && Modal.isOpen('design-wizard');
+    const root = open ? document.querySelector('[data-modal-id="design-wizard"]') : null;
+    if (root) {
+        const card = root.querySelector('.modal-card');
+        // Simpan posisi scroll supaya memilih opsi tidak melempar pemain ke atas.
+        const sameStep = card.dataset.wzStep === String(s.step);
+        const top = card.scrollTop;
+        const rows = Array.prototype.map.call(card.querySelectorAll('.wiz-options-row'), function (r) { return r.scrollLeft; });
+        card.innerHTML = html;
+        card.dataset.wzStep = String(s.step);
+        if (sameStep) {
+            card.scrollTop = top;
+            card.querySelectorAll('.wiz-options-row').forEach(function (r, i) { if (rows[i]) r.scrollLeft = rows[i]; });
+        } else {
+            card.scrollTop = 0;
         }
+        _bindStep();
+        requestAnimationFrame(_refreshPreview);
     } else {
         Modal.open('design-wizard', html, { dismissible: false });
+        const r2 = document.querySelector('[data-modal-id="design-wizard"] .modal-card');
+        if (r2) r2.dataset.wzStep = String(s.step);
         _bindStep();
         requestAnimationFrame(_refreshPreview);
     }
@@ -338,6 +493,7 @@ function _bindStep() {
         qtyInput.addEventListener('input', function (e) {
             _wizardState.productionQty = parseInt(e.target.value, 10) || 0;
             _refreshPreview();
+            _updateConfirmButtonState();
         });
     }
 
@@ -370,7 +526,8 @@ function _updateConfirmButtonState() {
     let unitCost = 0;
     try { unitCost = ps.computeUnitCost ? ps.computeUnitCost(s) : 0; } catch (e) {}
     const margin = (s.price || 0) - unitCost;
-    const canRelease = margin >= 0;
+    const afford = _affordInfo(s);
+    const canRelease = margin >= 0 && afford.ok;
 
     if (canRelease) {
         btn.disabled = false;
@@ -381,7 +538,7 @@ function _updateConfirmButtonState() {
         btn.disabled = true;
         btn.style.opacity = '0.5';
         btn.style.cursor = 'not-allowed';
-        btn.textContent = t('wiz.step4.price_low');
+        btn.textContent = margin < 0 ? t('wiz.step4.price_low') : (_isEn() ? 'Not enough cash' : 'Dana tidak cukup');
     }
 }
 
@@ -520,7 +677,7 @@ function _step2(s) {
         let options = list.map(function (c) {
             return '<button class="wiz-option ' + (selected === c.id ? 'selected' : '') + '" data-wiz-pick="' + stateKey + ':' + c.id + '">' +
                 '<div class="wiz-opt-name">' + escapeHtml(c.name) + '</div>' +
-                '<div class="wiz-opt-meta">$' + c.costPerUnit + '/unit</div>' +
+                '<div class="wiz-opt-meta">$' + c.costPerUnit + '/unit' + (_statTag(c) ? ' · <span class="wiz-opt-tag">' + escapeHtml(_statTag(c)) + '</span>' : '') + '</div>' +
                 '</button>';
         }).join('');
 
@@ -544,14 +701,20 @@ function _step2(s) {
             ? t('wiz.step2.cat_count_opt', { n: list.length })
             : t('wiz.step2.cat_count', { n: list.length });
 
+        const selComp = (selected && selected !== 'none') ? getComponentById(selected) : null;
+        const capHtml = selComp && selComp.description
+            ? '<div class="wz-cap">' + escapeHtml(selComp.description) + (selComp.realReference ? ' <em>' + escapeHtml(selComp.realReference) + '</em>' : '') + '</div>'
+            : '';
+
         return '<div class="wiz-cat">' +
             '<div class="wiz-cat-title" style="text-transform:none;">' + iconHtml + escapeHtml(cat.name) + ' <span style="color:var(--text-mute);font-weight:500;">' + countLabel + '</span></div>' +
             '<div class="wiz-options-row">' + options + '</div>' +
+            capHtml +
             '</div>';
     }).join('');
 
     return `
-        <div style="max-height:45vh;overflow-y:auto;padding-right:4px;">${groups}</div>
+        <div class="wz-scroll">${groups}</div>
         <div class="wiz-nav">
             <button class="btn-secondary" data-wiz-back style="flex:1;">${t('wiz.step2.back')}</button>
             <button class="btn-primary" data-wiz-next style="flex:2;">${t('wiz.step2.next')}</button>
@@ -574,7 +737,7 @@ function _step3(s) {
     }
 
     return `
-        <div style="max-height:45vh;overflow-y:auto;padding-right:4px;">
+        <div class="wz-scroll">
             <div class="wiz-cat">
                 <div class="wiz-cat-title" style="text-transform:none;">${renderIcon('disc', 14, 'style="vertical-align:middle;margin-right:5px;"')}${t('wiz.step3.os_label')}</div>
                 <div class="wiz-options-row">
@@ -594,7 +757,7 @@ function _step3(s) {
                     ${bodies.length ? bodies.map(function (b) {
                         return '<button class="wiz-option ' + (s.bodyId === b.id ? 'selected' : '') + '" data-wiz-pick="bodyId:' + b.id + '">' +
                             '<div class="wiz-opt-name">' + escapeHtml(b.name) + '</div>' +
-                            '<div class="wiz-opt-meta">$' + b.costPerUnit + '/unit</div>' +
+                            '<div class="wiz-opt-meta">$' + b.costPerUnit + '/unit' + (_statTag(b) ? ' · <span class="wiz-opt-tag">' + escapeHtml(_statTag(b)) + '</span>' : '') + '</div>' +
                             '</button>';
                     }).join('') : '<div class="wiz-empty">' + t('wiz.step3.body_empty') + '</div>'}
                 </div>
@@ -626,7 +789,10 @@ function _step4(s) {
     let unitCost = 0;
     try { unitCost = ps && ps.computeUnitCost ? ps.computeUnitCost(s) : 0; } catch (e) {}
     const margin = (s.price || 0) - unitCost;
-    const canRelease = margin >= 0;
+    const afford = _affordInfo(s);
+    const canRelease = margin >= 0 && afford.ok;
+    const releaseLabel = margin < 0 ? t('wiz.step4.price_low')
+        : (!afford.ok ? (_isEn() ? 'Not enough cash' : 'Dana tidak cukup') : t('wiz.step4.release'));
 
     return `
         <div class="wiz-price-layout">
@@ -648,7 +814,7 @@ function _step4(s) {
         <div class="wiz-nav">
             <button class="btn-secondary" data-wiz-back style="flex:1;">${t('wiz.step4.back')}</button>
             <button class="btn-primary" data-wiz-confirm style="flex:2;" ${canRelease ? '' : 'disabled'}>
-                ${canRelease ? t('wiz.step4.release') : t('wiz.step4.price_low')}
+                ${releaseLabel}
             </button>
         </div>
     `;
@@ -659,7 +825,7 @@ function _step4(s) {
 // ============================================================
 function _getAdaptiveSize() {
     if (typeof window === 'undefined') return 250;
-    return window.innerWidth < 380 ? 220 : 250;
+    return window.innerWidth < 380 ? 124 : 140;
 }
 
 function _refreshPreview() {
@@ -675,9 +841,10 @@ function _refreshPreview() {
             mockupContainer.innerHTML = renderPhoneMockup(_wizardState, {
                 size: size,
                 view: _wizardView,
-                isStatic: mockupContainer.childNodes.length > 0,
-                label: sp.label + ' • ' + yr
+                isStatic: _phoneShown,
+                showBrand: false
             });
+            _phoneShown = true;
         } catch (e) {
             console.error('[DesignWizard] Mockup error:', e);
             mockupContainer.innerHTML = '';
@@ -731,45 +898,41 @@ function _specStripHtml(s) {
     const price = s.price || 0;
 
     let unitCost = 0;
-    let qualityScore = 0;
+    let stats = {};
     try {
         unitCost = ps.computeUnitCost ? ps.computeUnitCost(s) : 0;
-        const stats = _computeStats(s);
-        qualityScore = stats.qualityScore || 0;
+        stats = _computeStats(s) || {};
     } catch (e) {}
+    const qualityScore = Math.max(0, Math.min(100, stats.qualityScore || 0));
 
     const margin = price - unitCost;
     const marginPct = price > 0 ? Math.round((margin / price) * 100) : 0;
     const marginColor = margin >= 0 ? 'var(--success)' : 'var(--danger)';
+    const meterColor = qualityScore >= 70 ? 'var(--success)' : (qualityScore >= 40 ? 'var(--warn)' : 'var(--danger)');
 
     const displayComp = s.displayId ? getComponentById(s.displayId) : null;
     const chipComp = s.chipId ? getComponentById(s.chipId) : null;
-    const displayLabel = displayComp ? displayComp.name : '—';
-    const chipLabel = chipComp ? chipComp.name : '—';
+
+    const warnings = [];
+    if (stats.performance > 60 && stats.battery < 40) warnings.push(t('wiz.preview.warn_chip_bat'));
+    if (stats.camera > 60 && stats.display < 40) warnings.push(t('wiz.preview.warn_cam_disp'));
+    if (margin < 0) warnings.push(t('wiz.preview.warn_margin'));
+    if (s.step === 4 && !_affordInfo(s).ok) warnings.push(_isEn() ? 'Not enough cash for this batch' : 'Dana tidak cukup untuk batch ini');
 
     return `
-        <div class="wiz-spec-head">
-            <span class="wiz-spec-name">${displayName}</span>
-            <span class="wiz-spec-price">$${price}</span>
+        <div class="wz-head">
+            <span class="wz-name">${displayName}</span>
+            <span class="wz-price">$${price}</span>
         </div>
-        <div class="wiz-spec-meta">
-            <div class="wiz-spec-item">
-                <span class="wiz-spec-label">${t('wiz.spec.quality')}</span>
-                <span class="wiz-spec-value">${qualityScore}/100</span>
-            </div>
-            <div class="wiz-spec-item">
-                <span class="wiz-spec-label">${t('wiz.spec.margin')}</span>
-                <span class="wiz-spec-value" style="color:${marginColor};">$${margin} (${marginPct}%)</span>
-            </div>
-            <div class="wiz-spec-item">
-                <span class="wiz-spec-label">${t('wiz.spec.screen')}</span>
-                <span class="wiz-spec-value wiz-spec-trunc" title="${escapeHtml(displayLabel)}">${escapeHtml(displayLabel)}</span>
-            </div>
-            <div class="wiz-spec-item">
-                <span class="wiz-spec-label">${t('wiz.spec.chip')}</span>
-                <span class="wiz-spec-value wiz-spec-trunc" title="${escapeHtml(chipLabel)}">${escapeHtml(chipLabel)}</span>
-            </div>
+        <div class="wz-meter-row" role="img" aria-label="${t('wiz.spec.quality')} ${qualityScore}/100">
+            <span>${t('wiz.spec.quality')}</span>
+            <span class="wz-meter"><i style="width:${qualityScore}%;background:${meterColor};"></i></span>
+            <b>${qualityScore}/100</b>
         </div>
+        <div class="wz-kv"><span>${t('wiz.spec.margin')}</span><b style="color:${marginColor};">$${margin} (${marginPct}%)</b></div>
+        <div class="wz-kv"><span>${t('wiz.spec.screen')}</span><b title="${displayComp ? escapeHtml(displayComp.name) : ''}">${displayComp ? escapeHtml(_shortText(displayComp.name, 22)) : '—'}</b></div>
+        <div class="wz-kv"><span>${t('wiz.spec.chip')}</span><b title="${chipComp ? escapeHtml(chipComp.name) : ''}">${chipComp ? escapeHtml(_shortText(chipComp.name, 22)) : '—'}</b></div>
+        ${warnings.length ? '<div class="wz-warn">⚠ ' + escapeHtml(warnings[0]) + (warnings.length > 1 ? ' (+' + (warnings.length - 1) + ')' : '') + '</div>' : ''}
     `;
 }
 
@@ -789,6 +952,12 @@ function _previewHtml(s) {
         if (stats.performance > 60 && stats.battery < 40) warnings.push(t('wiz.preview.warn_chip_bat'));
         if (stats.camera > 60 && stats.display < 40) warnings.push(t('wiz.preview.warn_cam_disp'));
         if (margin < 0) warnings.push(t('wiz.preview.warn_margin'));
+        const afford = _affordInfo(s);
+        if (!afford.ok) {
+            warnings.push(_isEn()
+                ? 'Not enough cash: need ' + _fmtUsd(afford.cost) + ', you have ' + _fmtUsd(afford.cash) + '. Lower the production quantity.'
+                : 'Dana tidak cukup: butuh ' + _fmtUsd(afford.cost) + ', tersedia ' + _fmtUsd(afford.cash) + '. Kurangi jumlah produksi.');
+        }
 
         return `
             <div class="preview-row"><span>${t('wiz.preview.quality')}</span><b>${stats.qualityScore || 0}/100</b></div>
