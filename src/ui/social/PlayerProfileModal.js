@@ -1,5 +1,5 @@
 // FILE: src/ui/social/PlayerProfileModal.js
-// v2.1 — Menambahkan info Waktu Bermain & format tanggal yang lebih rapi.
+// v2.2 — Menampilkan Umur Akun Real-Life & Terakhir Aktif.
 import { Modal } from '../modal.js';
 import { LanguageService, t } from '../../core/LanguageService.js';
 import { avatarHtml, resolveAvatarUrls, esc } from './AvatarView.js';
@@ -25,17 +25,34 @@ function _fmtDate(iso) {
     catch (e) { return '—'; }
 }
 
-function _formatPlaytime(minutes) {
-    if (!minutes) return 'Baru mulai';
-    var days = Math.floor(minutes / 1440);
-    var years = Math.floor(days / 365);
-    var months = Math.floor((days % 365) / 30);
+function _timeAgo(iso) {
+    if (!iso) return '—';
+    var date = new Date(iso);
+    var diffMs = Date.now() - date.getTime();
+    var diffMins = Math.floor(diffMs / 60000);
     
-    if (years > 0) {
-        return years + ' Tahun' + (months > 0 ? ' ' + months + ' Bln' : '');
-    }
-    if (months > 0) return months + ' Bulan';
-    return days + ' Hari';
+    if (diffMins < 1) return 'Baru saja';
+    if (diffMins < 60) return diffMins + ' mnt lalu';
+    var diffHrs = Math.floor(diffMins / 60);
+    if (diffHrs < 24) return diffHrs + ' jam lalu';
+    var diffDays = Math.floor(diffHrs / 24);
+    if (diffDays < 30) return diffDays + ' hari lalu';
+    return _fmtDate(iso);
+}
+
+// Menghitung umur akun dalam hitungan hari/bulan real-life
+function _accountAge(iso) {
+    if (!iso) return '—';
+    var date = new Date(iso);
+    var diffMs = Date.now() - date.getTime();
+    var days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (days === 0) return 'Hari ini';
+    if (days < 30) return days + ' Hari';
+    var months = Math.floor(days / 30);
+    if (months < 12) return months + ' Bulan';
+    var years = Math.floor(months / 12);
+    return years + ' Tahun ' + (months % 12) + ' Bln';
 }
 
 export function compactNumber(n) {
@@ -59,7 +76,8 @@ export async function openPlayerProfileModal(profile) {
     var urls = {};
     try { urls = await resolveAvatarUrls([profile]); } catch (e) {}
 
-    var playtime = _formatPlaytime(profile.game_minutes);
+    var age = _accountAge(profile.created_at);
+    var lastSeen = _timeAgo(profile.updated_at);
 
     var html =
         '<div class="modal-title">' + esc(t('pp.view.title')) + '</div>' +
@@ -74,10 +92,10 @@ export async function openPlayerProfileModal(profile) {
             _stat(t('pp.stats.reputation'), Number(profile.stat_reputation || 0).toFixed(1)) +
             _stat(t('pp.stats.share'), Number(profile.stat_share || 0).toFixed(1) + '%') +
         '</div>' +
-        '<div class="sum-row"><span>⏳ Waktu Bermain</span><b style="color:var(--accent);">' + esc(playtime) + '</b></div>' +
-        '<div class="sum-row"><span>' + esc(t('pp.view.founded')) + '</span><b>' + esc(_fmtFounded(profile.founded_year, profile.founded_month)) + '</b></div>' +
+        '<div class="sum-row"><span>⏳ Lama Bermain</span><b style="color:var(--accent);">' + esc(age) + '</b></div>' +
+        '<div class="sum-row"><span>🟢 Terakhir Aktif</span><b>' + esc(lastSeen) + '</b></div>' +
         '<div class="sum-row"><span>' + esc(t('pp.view.joined')) + '</span><b>' + esc(_fmtDate(profile.created_at)) + '</b></div>' +
-        '<div class="sum-row"><span>' + esc(t('pp.view.last_active')) + '</span><b>' + esc(_fmtDate(profile.updated_at)) + '</b></div>' +
+        '<div class="sum-row"><span>' + esc(t('pp.view.founded')) + '</span><b>' + esc(_fmtFounded(profile.founded_year, profile.founded_month)) + '</b></div>' +
         '<button type="button" class="btn-secondary" data-modal-close style="width:100%;margin-top:16px;padding:10px;">' + esc(t('pp.view.close')) + '</button>';
 
     Modal.open('player-profile', html);
