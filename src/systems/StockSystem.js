@@ -7,6 +7,13 @@
 // memakai getCurrencyRateToUSD(currency, year).
 //
 // AI hook siap: _projectFuturePrice() bisa diganti panggilan AI.
+//
+// v2027.4 (sesi 1) — Penyesuaian ke indeks bursa:
+//   Berita rilis kompetitor ('news:published', articleType
+//   'competitor_release') menghasilkan impuls harga untuk saham
+//   kompetitor itu. Besarnya dihitung MarketIndexAdjuster
+//   (rezim pasar + beta terhadap indeks), meluruh tiap bulan.
+//   Harga akhir = harga dasar historis x (1 + overlay).
 // ============================================================
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
@@ -14,9 +21,14 @@ import {
     STOCKS, MARKET_INDICES, getStocksForYear,
     getStockById, getCurrencyRateToUSD
 } from '../data/stocks.data.js';
+import {
+    computeNewsImpact, findStocksForCompetitor, getOverlay,
+    pruneImpulses, getMarketRegime, getStockBeta
+} from './MarketIndexAdjuster.js';
 
 var MAX_HISTORY = 60;
 var MAX_TRANSACTIONS = 20;
+var MAX_NEWS_REACTIONS = 20;
 
 export class StockSystem {
     constructor(gameState) {
@@ -29,6 +41,7 @@ export class StockSystem {
         var self = this;
         this._unsubs.push(bus.on('time:month-changed', function () { self._recompute(); }));
         this._unsubs.push(bus.on('state:hydrated', function () { self._ensureState(); self._recompute(); }));
+        this._unsubs.push(bus.on('news:published', function (payload) { self._onNewsPublished(payload); }));
         this._ensureState();
         this._recompute();
         console.info('[StockSystem] siap.');
@@ -50,6 +63,9 @@ export class StockSystem {
         if (!d.stocks.projected) d.stocks.projected = {};
         if (!Array.isArray(d.stocks.portfolio)) d.stocks.portfolio = [];
         if (!Array.isArray(d.stocks.transactions)) d.stocks.transactions = [];
+        if (!Array.isArray(d.stocks.newsImpulses)) d.stocks.newsImpulses = [];
+        if (!Array.isArray(d.stocks.newsReactions)) d.stocks.newsReactions = [];
+        if (!d.stocks.regime || typeof d.stocks.regime !== 'object') d.stocks.regime = null;
     }
 
     // ============================================================
@@ -139,12 +155,11 @@ export class StockSystem {
     // ============================================================
     // REKALKULASI BULANAN
     // ============================================================
-    _recompute() {
+    // Hitung harga bulan ini: harga dasar historis x (1 + overlay berita).
+    _computePrices(year, month) {
         var d = this.state.data;
-        var year = d.time.currentYear;
-        var month = d.time.currentMonth;
-
-        var newPrices = {};
+        var impulses = d.stocks.newsImpulses;
+        var out = {};
         STOCKS.forEach(function (s) {
             if (s.isPlayer) return;
             if (year < s.listedFrom) return;
@@ -160,8 +175,24 @@ export class StockSystem {
             } else {
                 price = this._interpolate(s.priceByYear, year, month);
             }
-            if (price != null) newPrices[s.id] = price;
+            if (price == null) return;
+
+            var overlay = getOverlay(impulses, s.id, year, month);
+            if (overlay) price = Math.round(price * (1 + overlay) * 100) / 100;
+            out[s.id] = price;
         }.bind(this));
+        return out;
+    }
+
+    _recompute() {
+        var d = this.state.data;
+        var year = d.time.currentYear;
+        var month = d.time.currentMonth;
+
+        // Buang impuls yang sudah meluruh sebelum menghitung harga.
+        d.stocks.newsImpulses = pruneImpulses(d.stocks.newsImpulses, year, month);
+
+        var newPrices = this._computePrices(year, month);
 
         var newIndices = {};
         MARKET_INDICES.forEach(function (idx) {
@@ -171,6 +202,7 @@ export class StockSystem {
 
         d.stocks.prices = newPrices;
         d.stocks.indices = newIndices;
+        d.stocks.regime = getMarketRegime(year, month);
 
         d.stocks.history.unshift({
             year: year,
@@ -183,6 +215,79 @@ export class StockSystem {
         }
 
         bus.emit('stocks:updated', { prices: newPrices, indices: newIndices });
+    }
+
+    // ============================================================
+    // BERITA KOMPETITOR -> IMPULS HARGA (disesuaikan ke indeks)
+    // ============================================================
+    _onNewsPublished(payload) {
+        try {
+            var art = payload && payload.article;
+            if (!art || art.articleType !== 'competitor_release' || !art.competitorId) return;
+
+            this._ensureState();
+            var d = this.state.data;
+            var year = d.time.currentYear;
+            var month = d.time.currentMonth;
+
+            var stocks = findStocksForCompetitor(art.competitorId, year);
+            if (!stocks.length) return;
+
+            var entry = { tone: art.sentiment, speculative: art.speculative === true };
+            var changed = false;
+
+            for (var i = 0; i < stocks.length; i++) {
+                var stock = stocks[i];
+                var key = art.id + ':' + stock.id;
+                var dup = false;
+                for (var j = 0; j < d.stocks.newsImpulses.length; j++) {
+                    if (d.stocks.newsImpulses[j].key === key) { dup = true; break; }
+                }
+                if (dup) continue;
+
+                var r = computeNewsImpact(entry, stock, year, month);
+                if (!r.pct) continue;
+
+                d.stocks.newsImpulses.push({ key: key, stockId: stock.id, y: year, m: month, pct: r.pct });
+                d.stocks.newsReactions.unshift({
+                    articleId: art.id, stockId: stock.id, ticker: stock.ticker,
+                    pct: r.pct, regime: r.regime, beta: r.beta, y: year, m: month
+                });
+                changed = true;
+            }
+            if (!changed) return;
+
+            if (d.stocks.newsReactions.length > MAX_NEWS_REACTIONS) {
+                d.stocks.newsReactions.length = MAX_NEWS_REACTIONS;
+            }
+
+            // Perbarui harga bulan berjalan segera (tanpa menambah riwayat baru).
+            var prices = this._computePrices(year, month);
+            d.stocks.prices = prices;
+            var h0 = d.stocks.history[0];
+            if (h0 && h0.year === year && h0.month === month) {
+                h0.prices = Object.assign({}, prices);
+            }
+            bus.emit('stocks:updated', { prices: prices, indices: d.stocks.indices });
+        } catch (err) {
+            console.warn('[StockSystem] _onNewsPublished error:', err);
+        }
+    }
+
+    // API untuk UI: reaksi pasar terbaru, rezim, dan beta.
+    getNewsReactions(limit) {
+        var list = (this.state.data.stocks.newsReactions || []).slice();
+        return limit > 0 ? list.slice(0, limit) : list;
+    }
+
+    getMarketRegime() {
+        var d = this.state.data;
+        return getMarketRegime(d.time.currentYear, d.time.currentMonth);
+    }
+
+    getBeta(stockId) {
+        var stock = getStockById(stockId);
+        return getStockBeta(stock, this.state.data.time.currentYear);
     }
 
     // ============================================================

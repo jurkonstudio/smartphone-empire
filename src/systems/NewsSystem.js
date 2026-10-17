@@ -19,6 +19,10 @@ import { MONTHLY_HEADLINES_EN } from '../data/news-headlines.en.js';
 import { PREHISTORY_HEADLINES_EN } from '../data/news-prehistory.en.js';
 import { LanguageService, t } from '../core/LanguageService.js';
 import { getCompetitorReleasesForMonth, getReleaseDay } from '../data/news-competitor-releases.data.js';
+// [Sesi 1] Berita rilis kompetitor 2000-2008 (mendaftar sendiri ke daftar utama).
+import '../data/news-competitor-releases.s1.data.js';
+// [Sesi 1] Estimasi reaksi bursa, disesuaikan ke rezim indeks pasar.
+import { estimateNewsMarketReaction } from './MarketIndexAdjuster.js';
 import { getActiveCompetitors, getCompetitorById } from '../data/competitors.data.js';
 
 var MAX_ARTICLES = 60; // naik dari 30: berita rilis kompetitor menambah volume
@@ -315,6 +319,13 @@ function _makeCompetitorReleaseArticle(e, day) {
     var text = en ? e.t_en : e.t;
     if (e.speculative) text += ' ' + t('news.unconfirmed');
 
+    // [Sesi 1] Reaksi pasar saham kompetitor (info untuk UI; harga
+    // sebenarnya diubah StockSystem lewat event news:published).
+    var marketImpact = null;
+    try {
+        marketImpact = estimateNewsMarketReaction(e, e.cid, e.year, e.month);
+    } catch (errM) { marketImpact = null; }
+
     return {
         id: e.id,
         headline: en ? e.h_en : e.h,
@@ -333,6 +344,8 @@ function _makeCompetitorReleaseArticle(e, day) {
         articleType: 'competitor_release',
         competitorId: e.cid,
         competitorName: comp ? comp.name : e.cid,
+        speculative: !!e.speculative,
+        marketImpact: marketImpact,
         productId: null,
         productName: null,
         createdAt: {
