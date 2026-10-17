@@ -2,275 +2,96 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
     <title>KLVF — Independent Studio</title>
     <style>
-        :root {
-            --bg: #050505;
-            --surface: #0f0f11;
-            --surface-hover: #16161a;
-            --text-primary: #f5f5f7;
-            --text-secondary: #86868b;
-            --border: rgba(255, 255, 255, 0.08);
-            --accent: #2997ff;
-            --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
-        }
+:root{
+  --bg:#000; --surface:#1c1c1e; --surface-2:#2c2c2e;
+  --text:#fff; --text-2:#c7c7cc; --text-3:#98989f;
+  --line:rgba(255,255,255,.14);
+  --blue:#0a84ff; --blue-d:#0040dd; --orange:#ff9f0a; --green:#30d158; --red:#ff453a;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue","Inter",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+html{background:#000;-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.45;letter-spacing:-.011em;text-rendering:optimizeLegibility;padding-bottom:56px;min-height:100vh;
+  background-image:radial-gradient(900px 420px at 12% -8%,rgba(10,132,255,.38),transparent 70%),radial-gradient(700px 380px at 95% 4%,rgba(191,90,242,.26),transparent 70%);
+  background-repeat:no-repeat}
+.wrapper{max-width:1080px;margin:0 auto;padding:0 20px}
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            -webkit-font-smoothing: antialiased;
-        }
+/* HEADER */
+.header{padding:56px 0 28px;display:flex;flex-direction:column;gap:20px}
+.brand-title{font-size:clamp(3.4rem,9vw,6rem);font-weight:800;letter-spacing:-.065em;line-height:.95;color:#fff}
+.brand-title::first-letter{color:#fff}
+.brand-subtitle{font-size:1.15rem;color:var(--text-2);max-width:520px;font-weight:500;letter-spacing:-.02em;margin-top:12px;line-height:1.4}
+.section-label{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.14em;color:var(--text-3);margin-bottom:12px;font-weight:700}
+.social-grid{display:flex;flex-wrap:wrap;gap:10px}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:14px;color:#fff;text-decoration:none;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -1px 0 rgba(0,0,0,.25),0 4px 14px rgba(0,0,0,.45);
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1),filter .2s}
+.icon-btn:hover{transform:translateY(-3px) scale(1.06);filter:brightness(1.12)}
+.icon-btn:active{transform:scale(.94)}
+.icon-btn:focus-visible,.btn-primary:focus-visible,.contact-item:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.icon-btn svg{width:23px;height:23px;fill:currentColor}
+.n-github{background:linear-gradient(180deg,#8b5cf6,#5b21b6)}
+.n-instagram{background:linear-gradient(45deg,#fd5900 0%,#ff0069 50%,#7638fa 100%)}
+.n-tiktok{background:linear-gradient(180deg,#2a2a2e,#000);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35),0 4px 14px rgba(0,0,0,.45)}
+.n-x{background:linear-gradient(180deg,#3a3a3c,#0b0b0c)}
+.n-soundcloud{background:linear-gradient(180deg,#ff7a1a,#f50)}
+.n-youtube{background:linear-gradient(180deg,#ff3b30,#d70015)}
+.n-spotify{background:linear-gradient(180deg,#34e06f,#14a844);color:#001a08}
+.n-tumblr{background:linear-gradient(180deg,#3d6a99,#1f3d5e)}
 
-        body {
-            background-color: var(--bg);
-            color: var(--text-primary);
-            font-family: var(--font-display);
-            line-height: 1.5;
-            letter-spacing: -0.01em;
-            padding-bottom: 80px;
-        }
+.divider{height:1px;background:var(--line);margin:28px 0}
 
-        .wrapper {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 0 24px;
-        }
+/* STUDIO */
+.studio-title{font-size:2.4rem;font-weight:800;letter-spacing:-.045em;line-height:1.05;margin-bottom:8px}
+.studio-desc{color:var(--text-2);font-size:1.05rem;font-weight:500;margin-bottom:24px;max-width:720px;line-height:1.45}
+.bento-grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:768px){.bento-grid{grid-template-columns:repeat(2,1fr)}.col-span-2{grid-column:span 2}}
+.card{border-radius:24px;padding:26px;display:flex;flex-direction:column;position:relative;overflow:hidden;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 10px 30px rgba(0,0,0,.5);transition:transform .3s cubic-bezier(.2,.8,.2,1),filter .3s}
+.card:hover{transform:translateY(-3px);filter:brightness(1.06)}
+.card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(120% 70% at 0% 0%,rgba(255,255,255,.22),transparent 55%)}
+.card>*{position:relative;z-index:1}
+.card-blue{background:linear-gradient(135deg,#0a84ff 0%,#0040dd 100%)}
+.card-orange{background:linear-gradient(135deg,#f26a00 0%,#b92d00 100%)}
+.card-green{background:linear-gradient(135deg,#0f9d4a 0%,#06592a 100%)}
+.card-title{font-size:1.55rem;font-weight:800;letter-spacing:-.04em;margin-bottom:10px;line-height:1.1}
+.card-text{color:rgba(255,255,255,.94);font-size:.97rem;line-height:1.5;flex-grow:1;font-weight:500}
+.card-text i{font-style:normal;font-weight:700;color:#fff}
+.badge{display:inline-block;background:#fff;color:#0040dd;padding:4px 11px;border-radius:999px;font-size:.72rem;font-weight:800;letter-spacing:.02em;text-transform:uppercase;margin-bottom:12px}
+.badge-solid{background:rgba(0,0,0,.34);color:#fff;margin:0 6px 0 0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.specs-list{margin-top:14px;list-style:none;display:grid;gap:8px}
+.specs-list li{position:relative;padding:11px 14px 11px 42px;font-size:.9rem;color:rgba(255,255,255,.95);background:rgba(0,0,0,.28);border-radius:14px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);font-weight:500;line-height:1.4}
+.specs-list li b{color:#fff;font-weight:800}
+.specs-list li::before{content:"";position:absolute;left:13px;top:50%;width:20px;height:20px;margin-top:-10px;border-radius:50%;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230040dd' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/14px no-repeat}
+@media(min-width:768px){
+  .card-blue{display:grid;grid-template-columns:1.05fr 1fr;column-gap:32px;align-items:center;padding:32px}
+  .card-blue .flag-head{grid-column:1/-1;margin-bottom:6px}
+  .card-blue .flag-copy{display:flex;flex-direction:column;height:100%;justify-content:space-between}
+  .card-blue .specs-list{margin-top:0}
+}
+.flag-copy{display:flex;flex-direction:column}
+.btn-primary{display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;background:#fff;color:#0040dd;padding:14px 26px;border-radius:999px;font-size:1rem;font-weight:800;text-decoration:none;margin-top:20px;letter-spacing:-.01em;box-shadow:0 6px 18px rgba(0,0,0,.35);transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .2s}
+.btn-primary:hover{transform:scale(1.04);box-shadow:0 10px 24px rgba(0,0,0,.45)}
+.btn-primary:active{transform:scale(.97)}
 
-        /* =========================================
-           NAVIGATION & SOCIALS (Header)
-           ========================================= */
-        .header {
-            padding: 80px 0 60px 0;
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-        }
-
-        .brand-title {
-            font-size: clamp(3rem, 7vw, 5rem);
-            font-weight: 800;
-            letter-spacing: -0.06em;
-            line-height: 1;
-            background: linear-gradient(180deg, #ffffff 0%, #a1a1a6 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .brand-subtitle {
-            font-size: 1.1rem;
-            color: var(--text-secondary);
-            max-width: 480px;
-            font-weight: 400;
-            letter-spacing: -0.02em;
-        }
-
-        .social-section {
-            margin-top: 16px;
-        }
-
-        .section-label {
-            display: block;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-            color: var(--text-secondary);
-            margin-bottom: 16px;
-            font-weight: 600;
-        }
-
-        .social-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .icon-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            text-decoration: none;
-            transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
-
-        .icon-btn:hover {
-            background: var(--surface-hover);
-            border-color: rgba(255,255,255,0.2);
-            transform: translateY(-2px);
-        }
-
-        .icon-btn svg {
-            width: 18px;
-            height: 18px;
-            fill: currentColor;
-        }
-
-        /* =========================================
-           BENTO GRID (Jurkon Studio)
-           ========================================= */
-        .divider {
-            width: 100%;
-            height: 1px;
-            background: var(--border);
-            margin: 40px 0;
-        }
-
-        .studio-title {
-            font-size: 2rem;
-            font-weight: 700;
-            letter-spacing: -0.04em;
-            margin-bottom: 8px;
-        }
-
-        .studio-desc {
-            color: var(--text-secondary);
-            font-size: 1rem;
-            margin-bottom: 40px;
-        }
-
-        .bento-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 16px;
-        }
-
-        @media (min-width: 768px) {
-            .bento-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .col-span-2 {
-                grid-column: span 2;
-            }
-        }
-
-        .card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 32px;
-            display: flex;
-            flex-direction: column;
-            transition: border-color 0.3s;
-        }
-
-        .card:hover {
-            border-color: rgba(255,255,255,0.15);
-        }
-
-        .card-title {
-            font-size: 1.3rem;
-            font-weight: 700;
-            letter-spacing: -0.03em;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .card-text {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-            line-height: 1.6;
-            flex-grow: 1;
-        }
-
-        .badge {
-            display: inline-block;
-            background: rgba(41, 151, 255, 0.1);
-            color: var(--accent);
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-bottom: 16px;
-        }
-
-        /* Game Specs List */
-        .specs-list {
-            margin-top: 16px;
-            list-style: none;
-        }
-
-        .specs-list li {
-            position: relative;
-            padding-left: 16px;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-
-        .specs-list li::before {
-            content: "—";
-            position: absolute;
-            left: 0;
-            color: var(--text-primary);
-        }
-
-        /* CTA Button */
-        .btn-primary {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--text-primary);
-            color: var(--bg);
-            padding: 16px 32px;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            text-decoration: none;
-            margin-top: 24px;
-            transition: background 0.2s;
-        }
-
-        .btn-primary:hover {
-            background: #d1d1d6;
-        }
-
-        /* Contact Section */
-        .contact-section {
-            margin-top: 60px;
-            padding-top: 40px;
-            border-top: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .contact-links {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-        }
-
-        .contact-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.95rem;
-            transition: color 0.2s;
-        }
-
-        .contact-item:hover {
-            color: var(--text-primary);
-        }
-
-        .contact-item svg {
-            width: 18px;
-            height: 18px;
-            stroke: currentColor;
-            fill: none;
-            stroke-width: 2;
-        }
-    </style>
+/* CONTACT */
+.contact-section{margin-top:36px;padding-top:24px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+.contact-links{display:flex;flex-wrap:wrap;gap:10px}
+.contact-item{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-size:1rem;font-weight:700;padding:13px 20px;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 4px 14px rgba(0,0,0,.4);transition:transform .25s cubic-bezier(.34,1.56,.64,1),filter .2s}
+.contact-item:hover{transform:translateY(-2px);filter:brightness(1.1)}
+.contact-item:active{transform:scale(.96)}
+.contact-item svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2.2}
+.contact-item svg[fill="currentColor"]{fill:currentColor}
+.c-wa{background:#25d366;color:#04230f}
+.c-dc{background:#5865f2}
+.c-em{background:#0a84ff}
+@media(max-width:480px){.contact-item{flex:1 1 100%;justify-content:center}.studio-title{font-size:2rem}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
 </head>
 <body>
 
@@ -288,35 +109,35 @@
                 <span class="section-label">Networks</span>
                 <div class="social-grid">
                     <!-- GitHub -->
-                    <a href="https://github.com/jurkonstudio" target="_blank" class="icon-btn" aria-label="GitHub">
+                    <a href="https://github.com/jurkonstudio" target="_blank" class="icon-btn n-github" aria-label="GitHub" rel="noopener">
                         <svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
                     </a>
                     <!-- Instagram -->
-                    <a href="https://instagram.com/calvf1nka" target="_blank" class="icon-btn" aria-label="Instagram">
+                    <a href="https://instagram.com/calvf1nka" target="_blank" class="icon-btn n-instagram" aria-label="Instagram" rel="noopener">
                         <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
                     </a>
                     <!-- TikTok -->
-                    <a href="https://tiktok.com/@ks2908_" target="_blank" class="icon-btn" aria-label="TikTok">
+                    <a href="https://tiktok.com/@ks2908_" target="_blank" class="icon-btn n-tiktok" aria-label="TikTok" rel="noopener">
                         <svg viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1.04-.1z"/></svg>
                     </a>
                     <!-- X (Twitter) -->
-                    <a href="https://x.com/calvf1nka" target="_blank" class="icon-btn" aria-label="X">
+                    <a href="https://x.com/calvf1nka" target="_blank" class="icon-btn n-x" aria-label="X" rel="noopener">
                         <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
                     </a>
                     <!-- Soundcloud -->
-                    <a href="https://soundcloud.com/calvfinka" target="_blank" class="icon-btn" aria-label="Soundcloud">
+                    <a href="https://soundcloud.com/calvfinka" target="_blank" class="icon-btn n-soundcloud" aria-label="Soundcloud" rel="noopener">
                         <svg viewBox="0 0 24 24"><path d="M21.5 12c-1.1 0-2.1.3-3 .8C18 9.2 14.9 6.5 11 6.5c-1.1 0-2 .1-2.8.3v11.3c.8.2 1.7.3 2.8.3h10.5c1.9 0 3.5-1.6 3.5-3.5S23.4 12 21.5 12zM1 14c0 1.7.4 3.2 1.2 4.1h1.5V12.2C2.4 12.1 1 12.9 1 14zm4.5-2.7V18h1.3V10.6c-.5.1-1 .4-1.3.7zm3-.9V18h1.3V9.6c-.5.1-.9.4-1.3.8zm3.1.1V18h1.3V9.8c-.4.3-.9.5-1.3.7z"/></svg>
                     </a>
                     <!-- YouTube -->
-                    <a href="https://youtube.com/@calvfinka" target="_blank" class="icon-btn" aria-label="YouTube">
+                    <a href="https://youtube.com/@calvfinka" target="_blank" class="icon-btn n-youtube" aria-label="YouTube" rel="noopener">
                         <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
                     </a>
                     <!-- Spotify -->
-                    <a href="https://open.spotify.com/playlist/4hiTFBL8p8TaaQZxXFaANj?si=mE-jQG6ET6STrdfYQe_KQQ&utm_source=copy-link&pi=3ImTEITeQcuG9" target="_blank" class="icon-btn" aria-label="Spotify">
+                    <a href="https://open.spotify.com/playlist/4hiTFBL8p8TaaQZxXFaANj?si=mE-jQG6ET6STrdfYQe_KQQ&utm_source=copy-link&pi=3ImTEITeQcuG9" target="_blank" class="icon-btn n-spotify" aria-label="Spotify" rel="noopener">
                         <svg viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.502 17.302c-.225.369-.705.484-1.074.259-3.022-1.845-6.83-2.263-11.317-1.239-.422.096-.843-.164-.938-.586-.096-.422.164-.843.586-.938 4.905-1.12 9.094-.637 12.482 1.431.368.225.483.704.261 1.073zm1.47-3.265c-.283.46-.886.604-1.346.321-3.458-2.126-8.73-2.741-12.82-1.501-.518.158-1.066-.133-1.224-.65-.158-.518.133-1.066.65-1.224 4.68-1.419 10.482-.733 14.42 1.688.459.283.603.886.32 1.346zm.126-3.416c-4.146-2.462-10.986-2.69-14.963-1.484-.635.193-1.304-.166-1.497-.8-.193-.634.166-1.304.8-1.497 4.566-1.385 12.116-1.114 16.857 1.701.571.339.761 1.08.422 1.651-.34.57-1.081.76-1.651.421z"/></svg>
                     </a>
                     <!-- Tumblr -->
-                    <a href="https://tumblr.com/calvfinka" target="_blank" class="icon-btn" aria-label="Tumblr">
+                    <a href="https://tumblr.com/calvfinka" target="_blank" class="icon-btn n-tumblr" aria-label="Tumblr" rel="noopener">
                         <svg viewBox="0 0 24 24"><path d="M14.278 23.95c-3.14 0-5.464-1.586-5.464-5.258V11.14H4.839V8.522c3.427-.983 4.973-3.92 5.227-6.887h2.864v6.14h3.835v3.365h-3.835v6.602c0 1.567.74 2.153 1.84 2.153.54 0 1.047-.12 1.492-.33v3.086c-.523.185-1.455.31-2.442.31z"/></svg>
                     </a>
                 </div>
@@ -333,43 +154,43 @@
             <div class="bento-grid">
                 
                 <!-- Game 1: Smartphone Empire (Wide) -->
-                <div class="card col-span-2">
-                    <span class="badge">Flagship Project</span>
-                    <h3 class="card-title">Smartphone Empire</h3>
-                    <p class="card-text">
+                <div class="card col-span-2 card-blue">
+                    <div class="flag-head"><span class="badge">Flagship Project</span>
+                    <h3 class="card-title">Smartphone Empire</h3></div>
+                    <div class="flag-copy"><p class="card-text">
                         Sebuah simulasi ekonomi makro dan strategi bisnis teknologi. Pemain dituntut untuk menavigasi 
                         kompleksitas riset <i>hardware</i>, pengembangan <i>software</i>, hingga perang harga dengan AI kompetitor. 
                         Dilengkapi dengan sistem <i>Cloud Save</i> dan sinkronisasi <i>real-time</i>.
                     </p>
+                    <a href="/" class="btn-primary">Enter the Simulation &rarr;</a></div>
                     <ul class="specs-list">
                         <li><b>Dynamic Market:</b> Harga, tren, dan feedback konsumen bereaksi secara logis.</li>
                         <li><b>Deep Tech Tree:</b> Integrasi antara riset OS dan komponen Hardware.</li>
                         <li><b>Secure Backend:</b> Validasi ekonomi terpusat untuk mencegah kecurangan data.</li>
                     </ul>
-                    <a href="/" class="btn-primary" style="align-self: flex-start;">Enter the Simulation &rarr;</a>
                 </div>
 
                 <!-- Game 2: Juragan Konstruksi -->
-                <div class="card">
+                <div class="card card-orange">
                     <h3 class="card-title">Juragan Konstruksi</h3>
                     <p class="card-text">
                         Proyek simulasi infrastruktur berskala masif. Berfokus pada manajemen proyek sipil,
                         pengurusan perizinan (lisensi) yang kompleks, serta manajemen kredit dan arus kas perusahaan.
                     </p>
                     <div style="margin-top: 16px;">
-                        <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-secondary);">Simulation</span>
-                        <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-secondary);">Management</span>
+                        <span class="badge badge-solid">Simulation</span>
+                        <span class="badge badge-solid">Management</span>
                     </div>
                 </div>
 
                 <!-- Studio Info -->
-                <div class="card">
+                <div class="card card-green">
                     <h3 class="card-title">The Engine</h3>
                     <p class="card-text">
                         Dibangun murni menggunakan Vanilla JavaScript dan HTML5 Canvas untuk performa optimal di perangkat mobile. 
                         Tanpa framework berat, memastikan <i>rendering</i> 60fps dan responsivitas sentuhan yang presisi.
                     </p>
-                    <p class="card-text" style="margin-top: 12px; font-size: 0.8rem; color: var(--text-primary);">
+                    <p class="card-text" style="margin-top: 12px; font-size: 0.8rem; flex-grow:0; font-weight:600;">
                         &copy; 2026 Jurkon Studio. All rights reserved.
                     </p>
                 </div>
@@ -381,19 +202,19 @@
             <span class="section-label">Direct Contact</span>
             <div class="contact-links">
                 <!-- WhatsApp -->
-                <a href="https://wa.me/6282243562960" target="_blank" class="contact-item">
+                <a href="https://wa.me/6282243562960" target="_blank" class="contact-item c-wa" rel="noopener">
                     <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                     WhatsApp
                 </a>
                 
                 <!-- Discord -->
-                <a href="https://discord.gg/8rQGa4yYa" target="_blank" class="contact-item">
+                <a href="https://discord.gg/8rQGa4yYa" target="_blank" class="contact-item c-dc" rel="noopener">
                     <svg viewBox="0 0 24 24" stroke="none" fill="currentColor"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg>
                     Discord
                 </a>
 
                 <!-- Email -->
-                <a href="mailto:calvfinka@yahoo.com" class="contact-item">
+                <a href="mailto:calvfinka@yahoo.com" class="contact-item c-em">
                     <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
                     Email
                 </a>
