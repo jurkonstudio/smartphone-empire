@@ -1,5 +1,5 @@
 // FILE: src/ui/social/PlayerListPanel.js
-// v2.2 — Menampilkan status real-life "Terakhir Aktif".
+// v2.3 — Menghilangkan ikon hijau (emoji 🟢 dan dot avatar) dari tampilan Leaderboard.
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
 import { CloudService } from '../../services/CloudService.js';
@@ -56,15 +56,16 @@ function _rowHtml(p, i, myId) {
     
     if (p.display_name) sub.push(p.display_name);
     
-    // Tampilkan status real-life
+    // PERUBAHAN 1: Menghilangkan emoji 🟢
     if (p.updated_at) {
-        sub.push('🟢 ' + _timeAgo(p.updated_at));
+        sub.push(_timeAgo(p.updated_at));
     }
     
     var me = p.id === myId;
     return '<button type="button" class="pf-lb-row' + (me ? ' is-me' : '') + '" data-player-id="' + esc(p.id) + '">' +
         _rankBadge(i) +
-        avatarHtml({ src: _avatars[p.id], name: name, size: 38, dotId: p.id }) +
+        // PERUBAHAN 2: Menghapus dotId: p.id agar dot hijau di avatar hilang
+        avatarHtml({ src: _avatars[p.id], name: name, size: 38 }) +
         '<span class="pf-lb-main">' +
             '<span class="pf-lb-name">' + esc(name) + (me ? ' <em class="pf-lb-you">' + esc(t('pp.lb.you')) + '</em>' : '') + '</span>' +
             '<span class="pf-lb-sub">' + esc(sub.join(' · ') || '—') + '</span>' +
