@@ -1,5 +1,5 @@
 // FILE: src/services/cloud/SupabaseAdapter.js
-// v2028.27 — [ADMIN] Menambahkan RPC untuk Manajemen Pemain.
+// v2028.28 — [LEADERBOARD] Menambahkan created_at di listProfiles untuk Umur Akun Real-Life.
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_LIB_URLS, CLOUD } from './supabase.config.js';
 
 var _client = null;
@@ -254,7 +254,8 @@ export const SupabaseAdapter = {
         var col = cols[orderBy] || cols.revenue;
         var c = await getClient();
         var res = await c.from('public_profiles')
-            .select('id, display_name, avatar_path, company_name, founded_year, founded_month, game_minutes, updated_at, stat_revenue, stat_sold, stat_reputation, stat_share')
+            // TAMBAHAN: created_at
+            .select('id, display_name, avatar_path, company_name, founded_year, founded_month, game_minutes, created_at, updated_at, stat_revenue, stat_sold, stat_reputation, stat_share')
             .order(col, { ascending: false, nullsFirst: false })
             .limit(100);
         if (res.error) throw mk(res.error);
