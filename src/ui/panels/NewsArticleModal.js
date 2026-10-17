@@ -1,7 +1,8 @@
 // FILE: src/ui/panels/NewsArticleModal.js
 // v2027.13c — i18n.
+// Sesi 1: kotak "Reaksi Bursa" untuk berita rilis kompetitor.
 import { Modal } from '../modal.js';
-import { t } from '../../core/LanguageService.js';
+import { t, LanguageService } from '../../core/LanguageService.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -27,6 +28,35 @@ function _sentimentLabel(sentiment) {
     if (sentiment === 'positive') return t('news.sentiment.positive');
     if (sentiment === 'negative') return t('news.sentiment.negative');
     return t('news.sentiment.mixed');
+}
+
+var REGIME_LABELS = {
+    id: { euphoria: 'Euforia', bull: 'Pasar naik', neutral: 'Netral', bear: 'Pasar turun', crash: 'Krisis' },
+    en: { euphoria: 'Euphoria', bull: 'Bull market', neutral: 'Neutral', bear: 'Bear market', crash: 'Crash' }
+};
+
+function _marketReactionHtml(article) {
+    var mi = article && article.marketImpact;
+    if (!mi || typeof mi.pct !== 'number') return '';
+    var en = false;
+    try { en = LanguageService.getLang() === 'en'; } catch (e) {}
+    var labels = REGIME_LABELS[en ? 'en' : 'id'];
+    var pct = mi.pct * 100;
+    var color = pct > 0 ? 'var(--success)' : (pct < 0 ? 'var(--danger)' : 'var(--warn)');
+    var sign = pct > 0 ? '+' : '';
+    var idx12 = (mi.indexReturn12m || 0) * 100;
+    var idxSign = idx12 > 0 ? '+' : '';
+    return '<div class="news-score-bar" style="margin-top:10px;display:block;">' +
+        '<div class="news-score-label">' + (en ? 'Market reaction' : 'Reaksi bursa') + '</div>' +
+        '<div class="news-score-value" style="color:' + color + ';">' +
+        escapeHtml(mi.ticker || '') + ' ' + sign + pct.toFixed(2) + '%' +
+        '</div>' +
+        '<div class="news-footer-meta" style="margin-top:4px;">' +
+        (en ? 'Market: ' : 'Pasar: ') + escapeHtml(labels[mi.regime] || mi.regime) +
+        ' (' + (en ? 'index 12m ' : 'indeks 12 bln ') + idxSign + idx12.toFixed(0) + '%)' +
+        ' \u00b7 beta ' + (mi.beta != null ? Number(mi.beta).toFixed(2) : '1.00') +
+        '</div>' +
+        '</div>';
 }
 
 export function openNewsArticleModal(article) {
@@ -92,6 +122,8 @@ export function openNewsArticleModal(article) {
         _sentimentLabel(article.sentiment) +
         '</div>' +
         '</div>' +
+
+        _marketReactionHtml(article) +
 
         '<div class="news-footer">' +
         '<div class="news-footer-meta">' + t('news_article.from', { source: escapeHtml(article.source), type: escapeHtml(article.sourceType || 'media') }) + '</div>' +
