@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2028.16 — [ADMIN] Menambahkan import dan expose openAdminPanel ke window.__game.
+// v2028.17 — [FIX] Memperbarui logika updateNavSlider agar presisi (hanya bergerak di X, lebar dikunci).
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -64,7 +64,7 @@ import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
 import { openNewsArticleModal } from './ui/panels/NewsArticleModal.js';
 import { openSiliconModal } from './ui/panels/SiliconPanel.js';
 import { openSiliconStoreModal } from './ui/panels/SiliconStorePanel.js';
-import { openAdminPanel } from './ui/panels/AdminPanel.js'; // <-- TAMBAHAN ADMIN PANEL
+import { openAdminPanel } from './ui/panels/AdminPanel.js';
 import { PaymentService } from './systems/PaymentService.js';
 import { t as tr } from './core/LanguageService.js';
 import { handleNewsListClick } from './ui/panels/NewsListPanel.js';
@@ -161,7 +161,6 @@ function renderNavOnly() {
 }
 
 function updateNavSlider(animated) {
-function updateNavSlider(animated) {
     if (!els.nav) return;
     if (els.nav.dataset.dragging === '1') return;
 
@@ -183,10 +182,8 @@ function updateNavSlider(animated) {
     var count = buttons.length;
     var itemW = navW / count;
     
-    // PRESISI: Lebar slider dipatok 46px (pas untuk ikon 22px)
+    // [PRESISI] Lebar slider dikunci 46px agar pas di tengah ikon
     var sliderW = 46; 
-    
-    // Kalkulasi posisi X agar tepat di tengah itemW
     var x = (idx * itemW) + ((itemW - sliderW) / 2);
 
     if (!animated) {
@@ -1054,7 +1051,7 @@ async function boot() {
             cloud: CloudService,
             cloudSync: CloudSync,
             forcePull: function() { return CloudSync.forcePull(); },
-            openAdminPanel: openAdminPanel, // <-- TAMBAHAN ADMIN PANEL
+            openAdminPanel: openAdminPanel,
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
