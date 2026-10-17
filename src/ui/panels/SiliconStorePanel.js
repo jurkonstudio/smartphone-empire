@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SiliconStorePanel.js
-// v2028.18 — [FIX] Menambahkan auto-check status saat tab game kembali dibuka (visibilitychange).
+// v2028.22 — [SYNC] Mendengarkan sinyal 'payment:approved' dari Admin Panel.
 import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 import { Modal } from '../modal.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
@@ -14,6 +14,7 @@ var MODAL_ID = 'silicon-store';
 var _sel = { pkg: 'pkg_l', method: null, busy: false };
 var _pollingTimer = null;
 var _countdownTimer = null;
+var _adminApprovedUnsub = null; // Untuk menyimpan fungsi unsubscribe
 
 var STATIC_QRIS_URL = 'https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/qris-gopay.png';
 
@@ -212,18 +213,34 @@ function _showPaymentModal(order) {
     var timerEl = root.querySelector('#qr-timer');
     var btnCheck = root.querySelector('[data-qr-check]');
     
-    // Cleanup function untuk mencegah memory leak
+    // --- LISTENER UNTUK ADMIN APPROVE ---
+    function handleAdminApproved(approvedId) {
+        if (approvedId === order.id) {
+            cleanupTimers();
+            Modal.close('payment-qr', true);
+            ToastService.success('Pembayaran disetujui Admin! Saldo ditarik.');
+            // Tarik saldo terbaru secara paksa
+            setTimeout(() => window.__game.forcePull(), 300);
+        }
+    }
+    if (_adminApprovedUnsub) _adminApprovedUnsub();
+    _adminApprovedUnsub = bus.on('payment:approved', handleAdminApproved);
+    // ------------------------------------
+
     function cleanupTimers() {
         if (_countdownTimer) clearInterval(_countdownTimer);
         if (_pollingTimer) clearInterval(_pollingTimer);
         document.removeEventListener('visibilitychange', _onVisibilityChange);
+        if (_adminApprovedUnsub) {
+            _adminApprovedUnsub();
+            _adminApprovedUnsub = null;
+        }
     }
 
-    // FITUR BARU: Cek status saat tab game kembali dibuka (dari aplikasi Supabase)
     function _onVisibilityChange() {
         if (document.visibilityState === 'visible') {
             console.log('[PaymentModal] Tab kembali aktif, memaksa cek status...');
-            checkStatus(false); // Cek status secara instan
+            checkStatus(false); 
         }
     }
     document.addEventListener('visibilitychange', _onVisibilityChange);
@@ -263,7 +280,7 @@ function _showPaymentModal(order) {
     }
 
     if (_pollingTimer) clearInterval(_pollingTimer);
-    _pollingTimer = setInterval(function() { checkStatus(false); }, 5000); // Cek tiap 5 detik
+    _pollingTimer = setInterval(function() { checkStatus(false); }, 5000); 
 
     btnCheck.addEventListener('click', function() { checkStatus(true); });
     
