@@ -116,7 +116,10 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
         competitorState: {
             entities: {},
             lastLifeEventYear: 2000,
-            initialized: false
+            initialized: false,
+            // [v2027.5] Aksi dinamis kompetitor (CompetitorActionSystem).
+            actionMods: {},       // { [brandId]: { modifier, untilTick, lastAction } }
+            threatActive: false   // anti-spam competitor:threat (histeresis)
         },
 
         feedback: {
@@ -440,7 +443,10 @@ class GameState {
             },
             competitorState: {
                 ...base.competitorState, ...(incoming.competitorState || {}),
-                entities: { ...base.competitorState.entities, ...((incoming.competitorState && incoming.competitorState.entities) || {}) }
+                entities: { ...base.competitorState.entities, ...((incoming.competitorState && incoming.competitorState.entities) || {}) },
+                // [v2027.5] Save lama tanpa field ini -> default {} / false.
+                actionMods: { ...((incoming.competitorState && incoming.competitorState.actionMods) || {}) },
+                threatActive: !!(incoming.competitorState && incoming.competitorState.threatActive)
             },
             feedback: {
                 ...base.feedback, ...(incoming.feedback || {}),
