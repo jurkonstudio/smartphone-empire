@@ -1,4 +1,5 @@
 {
+  "id": "./",
   "name": "Smartphone Empire",
   "short_name": "Smartphone Empire",
   "description": "Bangun perusahaan ponsel dari nol. Dibuat oleh Jurkon Studio.",
@@ -6,13 +7,20 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#fafafa",
+  "background_color": "#e9e8e8",
   "theme_color": "#0f0f0f",
   "lang": "id",
+  "categories": ["games", "simulation"],
   "icons": [
-    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "assets/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "assets/icon/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon/icon-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/icon/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/icon/icon-maskable-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "assets/img/cover-wide-2560x1440.png", "sizes": "2560x1440", "type": "image/png", "form_factor": "wide", "label": "Smartphone Empire by Jurkon Studio" },
+    { "src": "assets/img/cover-narrow-1440x2560.png", "sizes": "1440x2560", "type": "image/png", "form_factor": "narrow", "label": "Smartphone Empire by Jurkon Studio" }
   ]
 }
