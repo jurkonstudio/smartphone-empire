@@ -1,5 +1,5 @@
 // FILE: src/services/cloud/CloudSync.js
-// v2028.13 — [ADMIN] Menambahkan fitur forcePull() untuk memaksa tarik data dari server.
+// v2028.14 — [FIX] ForcePull sekarang menarik saldo dari tabel profiles DAN game_saves.
 import { bus } from '../../core/EventBus.js';
 import { SaveService } from '../../core/SaveService.js';
 import { SCHEMA_VERSION } from '../../core/GameState.js';
@@ -380,29 +380,58 @@ export const CloudSync = {
     },
 
     // ============================================================
-    // FORCE PULL (FITUR ADMIN)
+    // FORCE PULL (FITUR ADMIN - DIPERBAIKI)
     // ============================================================
     forcePull: async function () {
         if (!_state) return { ok: false, reason: 'Game belum siap.' };
         if (!_isConnected()) return { ok: false, reason: 'Kamu belum login ke Cloud.' };
         
-        // Reset semua flag yang mungkin memblokir proses
+        // Kunci auto-sync agar data lokal tidak menimpa server saat proses tarik berjalan
         _conflictOpen = false;
         _remotePending = false;
-        _busy = false;
-
-        console.log('[CloudSync] Memaksa tarik data dari server...');
+        _busy = true; 
+        
+        console.log('[CloudSync] Memaksa tarik data & Silicon dari server...');
         ToastService.warning('Menarik data dari server, harap tunggu...');
         
-        // Panggil applyCloud secara langsung (ini akan menimpa localStorage & reload halaman)
-        const res = await applyCloud(CloudService.getSlot(), { silent: false });
-        
-        if (res.ok) {
-            ToastService.success('Data berhasil ditarik dari server!');
-        } else {
-            ToastService.error('Gagal menarik data: ' + (res.reason || res.code));
+        try {
+            // 1. Paksa tarik Saldo Silicon dari tabel `profiles` (Angka 0)
+            var silRes = await CloudService.getSiliconBalance();
+            if (silRes.ok) {
+                console.log('[ForcePull] Silicon server:', silRes.balance);
+                SiliconService.applyServerBalance(silRes.balance);
+            }
+
+            // 2. Tarik Save File (tabel `game_saves`)
+            var cloudRes = await CloudService.downloadSave(CloudService.getSlot());
+            if (cloudRes.ok && cloudRes.payload && cloudRes.payload.data) {
+                _state.hydrate(cloudRes.payload.data);
+            }
+
+            // 3. TARIK ULANG SILICON: Agar data dari game_saves (yang mungkin 56936) tertimpa jadi 0
+            if (silRes.ok) {
+                SiliconService.applyServerBalance(silRes.balance);
+            }
+
+            // 4. Simpan state baru (0) ke HP secara senyap
+            try { SaveService.save(_state, { silent: true }); } catch (e) {}
+            
+            _lastUploadMinutes = localInfo(_state).minutes;
+            _markSynced(CloudService.getSlot());
+
+            ToastService.success('Data dan Silicon berhasil ditarik!');
+            
+            // 5. Reload halaman untuk menerapkan efeknya
+            setTimeout(function () { location.reload(); }, 1000);
+            return { ok: true };
+            
+        } catch (e) {
+            console.error('[ForcePull] Error:', e);
+            ToastService.error('Gagal menarik data: ' + e.message);
+            return { ok: false, reason: e.message };
+        } finally {
+            _busy = false;
         }
-        return res;
     },
 
     _reset: function () { _inited = false; _ready = false; _busy = false; _checking = false; _conflictOpen = false; _remotePending = false; _reloadOnVisible = false; _laterChosen = false; _lastUploadAt = 0; _lastUploadMinutes = -1; _stopRealtime(); }
