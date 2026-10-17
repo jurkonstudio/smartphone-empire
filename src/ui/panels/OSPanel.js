@@ -354,10 +354,13 @@ function _renderLicensesSection(data) {
 export function openOsWizardModal(params) {
     var osSystem = params.osSystem;
     const available = osSystem.getAvailableFeatures();
+    
+    // PERBAIKAN UX: Pesan jika tidak ada fitur
     if (!available.length) {
-        window.__game.ToastService.warning(t('os.wizard.no_features'));
+        window.__game.ToastService.warning('Belum ada fitur yang bisa dipakai. Selesaikan riset di tab Teknologi terlebih dahulu.');
         return;
     }
+    
     const maxSlots = osSystem._getMaxFeatureSlots();
     const baseStats = osSystem.previewStats([]);
 
@@ -479,6 +482,13 @@ export function openFeatureDetailModal(params) {
     const f = OS_FEATURES.find(function (x) { return x.id === featureId; });
     if (!f) return;
     const st = osSystem.getFeatureStatus(featureId);
+    
+    // PERBAIKAN UX: Tombol pintas ke Riset jika terkunci karena riset hardware
+    let actionBtn = '';
+    if (st.status === 'locked' && st.missingResearch && st.missingResearch.length > 0) {
+        actionBtn = `<button class="btn-secondary" data-nav="research" style="width:100%;margin-top:8px;background:var(--accent-soft);color:var(--accent);border-color:var(--accent);">👉 Buka Tab Riset</button>`;
+    }
+
     const html = `
         <div class="modal-title">${escapeHtml(f.name)}</div>
         <div class="modal-sub">${escapeHtml(f.description)}</div>
@@ -495,7 +505,8 @@ export function openFeatureDetailModal(params) {
             design: f.statEffects.design || 0
         }, { compact: true })}
         <div class="sum-row" style="margin-top:12px;"><span>${t('os.feature_detail.status')}</span><b>${_statusLabel(st)}</b></div>
-        <button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">${t('os.feature_detail.close')}</button>
+        ${actionBtn}
+        <button class="btn-secondary" data-modal-close style="width:100%;margin-top:8px;">${t('os.feature_detail.close')}</button>
     `;
     window.__game.Modal.open('feature-detail', html);
 }
