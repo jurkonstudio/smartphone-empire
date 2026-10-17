@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SiliconStorePanel.js
-// v2028.31 — [FIX] Pop-up QRIS mendengarkan event 'silicon:changed' agar langsung tertutup saat saldo disinkronkan.
+// v2028.32 — [EXCHANGE] Menambahkan fitur Tukar Silicon menjadi Uang Tunai (Cash).
 import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 import { Modal } from '../modal.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
@@ -9,12 +9,14 @@ import { PAYMENT_GROUPS } from '../../data/silicon.data.js';
 import { ToastService } from '../../core/ToastService.js';
 import { bus } from '../../core/EventBus.js';
 import { DEV_BUILD } from '../../config/dev.config.js';
+import { state } from '../../core/GameState.js';
 
 var MODAL_ID = 'silicon-store';
 var _sel = { pkg: 'pkg_l', method: null, busy: false };
 var _pollingTimer = null;
 var _countdownTimer = null;
 var _adminApprovedUnsub = null;
+var _storeTab = 'buy'; // 'buy' | 'exchange'
 
 var STATIC_QRIS_URL = 'https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/qris-gopay.png';
 
@@ -36,6 +38,85 @@ function _price(o) {
     return '$' + o.priceUsd.toFixed(2);
 }
 
+// ============================================================
+// LOGIKA TUKAR SILICON KE UANG (EXCHANGE)
+// ============================================================
+function _getExchangePackages() {
+    var year = state.get().time.currentYear || 2000;
+    // Nilai uang naik seiring inflasi tahun
+    var multiplier = 1 + ((year - 2000) * 0.15); 
+    
+    return [
+        { sil: 10,  cash: Math.round(25000 * multiplier),  label: 'Kantong Kecil' },
+        { sil: 50,  cash: Math.round(150000 * multiplier), label: 'Kantong Besar' },
+        { sil: 100, cash: Math.round(400000 * multiplier), label: 'Koper Uang' },
+        { sil: 500, cash: Math.round(2500000 * multiplier), label: 'Truk Brinks' }
+    ];
+}
+
+function _renderExchangeTab() {
+    var pkgs = _getExchangePackages();
+    var balance = SiliconService.getBalance();
+
+    var cards = pkgs.map(function(p) {
+        var canAfford = balance >= p.sil;
+        var btnStyle = canAfford ? 'background:#00c853; color:#fff;' : 'background:#333; color:#666; cursor:not-allowed;';
+        
+        return `
+            <div style="background:var(--bg-3); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:10px; display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-weight:bold; color:var(--text-primary); font-size:15px;">${p.label}</div>
+                    <div style="color:var(--accent); font-weight:bold;">${p.sil} SIL</div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-size:12px; color:var(--text-tertiary);">Mendapatkan Uang:</div>
+                    <div style="color:var(--success); font-weight:bold; font-size:16px;">$${p.cash.toLocaleString('en-US')}</div>
+                </div>
+                <button class="btn-exchange" data-sil="${p.sil}" data-cash="${p.cash}" style="width:100%; padding:8px; border-radius:8px; border:none; font-weight:bold; font-size:13px; ${btnStyle}" ${canAfford ? '' : 'disabled'}>
+                    ${canAfford ? 'Tukar Sekarang' : 'Silicon Kurang'}
+                </button>
+            </div>
+        `;
+    }).join('');
+
+    return `
+        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:16px; text-align:center;">
+            Tukarkan Silicon premiummu dengan Uang Tunai untuk mempercepat pertumbuhan perusahaan.
+        </div>
+        ${cards}
+    `;
+}
+
+function _handleExchange(silCost, cashReward) {
+    if (SiliconService.getBalance() < silCost) {
+        ToastService.error('Saldo Silicon tidak mencukupi.');
+        return;
+    }
+
+    // 1. Potong Silicon (Aman, tersinkron dengan Supabase jika login)
+    var res = SiliconService.spend(silCost, 'exchange-cash');
+    if (!res.ok) {
+        ToastService.error(res.reason || 'Gagal memotong Silicon.');
+        return;
+    }
+
+    // 2. Tambahkan Uang Tunai
+    state.addCash(cashReward);
+    
+    // 3. Notifikasi & Render Ulang
+    ToastService.success(`Berhasil menukar ${silCost} SIL menjadi $${cashReward.toLocaleString('en-US')}!`);
+    
+    // Mainkan suara sukses
+    if (window.__game && window.__game.AudioService) {
+        window.__game.AudioService.play('success');
+    }
+    
+    _render();
+}
+
+// ============================================================
+// RENDER TAB BELI (BAWAAN)
+// ============================================================
 function _renderPackages() {
     return '<div class="sil-pkg-grid">' + PaymentService.getPackages().map(function (p) {
         var tag = p.tag ? '<span class="sil-pkg-tag sil-pkg-tag-' + p.tag + '">' + _tf('silicon.store.tag.' + p.tag, p.tag) + '</span>' : '';
@@ -72,6 +153,32 @@ function _renderMethods(methods) {
     return html;
 }
 
+function _renderBuyTab() {
+    var methods = PaymentService.getMethods();
+    var anyAvail = methods.some(function (m) { return m.status === 'available'; });
+
+    var cur = methods.find(function (m) { return m.id === _sel.method && m.status === 'available'; });
+    if (!cur) {
+        var first = methods.find(function (m) { return m.status === 'available'; });
+        _sel.method = first ? first.id : null;
+    }
+
+    var pkg = PaymentService.getPackage(_sel.pkg) || PaymentService.getPackages()[0];
+    var canPay = !!_sel.method && !_sel.busy;
+
+    return '<div class="section-label"><span class="section-label-text">' + _tf('silicon.store.packages', 'Paket') + '</span><span class="section-label-line"></span></div>' +
+        _renderPackages() +
+        '<div class="section-label"><span class="section-label-text">' + _tf('silicon.store.methods', 'Metode Pembayaran') + '</span><span class="section-label-line"></span></div>' +
+        (anyAvail ? '' : '<div class="sil-hint">' + _tf('silicon.store.none', 'Metode pembayaran belum aktif. Segera hadir.') + '</div>') +
+        '<div class="sil-methods">' + _renderMethods(methods) + '</div>' +
+        '<div class="sil-summary">' +
+            '<div class="sum-row"><span>' + _tf('silicon.store.you_get', 'Kamu dapat') + '</span><b>' + (pkg.sil + pkg.bonus) + ' SIL</b></div>' +
+            '<div class="sum-row total"><span>' + _tf('silicon.store.total', 'Total') + '</span><b>' + _price(pkg) + '</b></div>' +
+        '</div>' +
+        '<button type="button" class="btn-primary" data-sil-pay style="width:100%;margin-top:12px;"' + (canPay ? '' : ' disabled') + '>' +
+            (_sel.busy ? _tf('silicon.store.processing', 'Memproses…') : _tf('silicon.store.pay', 'Bayar') + ' · ' + _price(pkg)) + '</button>';
+}
+
 function _renderOrders() {
     var orders = PaymentService.getOrders().slice(0, 4);
     if (!orders.length) return '';
@@ -88,43 +195,51 @@ function _renderOrders() {
         '<span class="section-label-line"></span></div><div class="node-list">' + rows + '</div>';
 }
 
+// ============================================================
+// RENDER UTAMA
+// ============================================================
 function _build() {
-    var methods = PaymentService.getMethods();
-    var anyAvail = methods.some(function (m) { return m.status === 'available'; });
+    var isBuy = (_storeTab === 'buy');
+    var btnBuyStyle = isBuy ? 'background:var(--accent); color:#fff;' : 'background:var(--bg-3); color:var(--text-secondary);';
+    var btnExStyle = !isBuy ? 'background:var(--accent); color:#fff;' : 'background:var(--bg-3); color:var(--text-secondary);';
 
-    var cur = methods.find(function (m) { return m.id === _sel.method && m.status === 'available'; });
-    if (!cur) {
-        var first = methods.find(function (m) { return m.status === 'available'; });
-        _sel.method = first ? first.id : null;
-    }
-
-    var pkg = PaymentService.getPackage(_sel.pkg) || PaymentService.getPackages()[0];
-    var canPay = !!_sel.method && !_sel.busy;
-
-    return '<div class="modal-title g-ico-title">' + gIcon('sil', 20) + '<span>' + _tf('silicon.store.title', 'Top Up Silicon') + '</span></div>' +
-        '<div class="modal-sub">' + _tf('silicon.store.sub', 'Pilih paket dan metode pembayaran.') + '</div>' +
+    return '<div class="modal-title g-ico-title">' + gIcon('sil', 20) + '<span>' + _tf('silicon.store.title', 'Silicon Store') + '</span></div>' +
         '<div class="sil-balance sil-balance-compact">' +
             '<div class="sil-balance-label">' + _tf('silicon.balance', 'SALDO') + '</div>' +
             '<div class="sil-balance-value">' + SiliconService.getBalance() + ' <span>SIL</span></div>' +
         '</div>' +
-        '<div class="section-label"><span class="section-label-text">' + _tf('silicon.store.packages', 'Paket') + '</span><span class="section-label-line"></span></div>' +
-        _renderPackages() +
-        '<div class="section-label"><span class="section-label-text">' + _tf('silicon.store.methods', 'Metode Pembayaran') + '</span><span class="section-label-line"></span></div>' +
-        (anyAvail ? '' : '<div class="sil-hint">' + _tf('silicon.store.none', 'Metode pembayaran belum aktif. Segera hadir.') + '</div>') +
-        '<div class="sil-methods">' + _renderMethods(methods) + '</div>' +
-        '<div class="sil-summary">' +
-            '<div class="sum-row"><span>' + _tf('silicon.store.you_get', 'Kamu dapat') + '</span><b>' + (pkg.sil + pkg.bonus) + ' SIL</b></div>' +
-            '<div class="sum-row total"><span>' + _tf('silicon.store.total', 'Total') + '</span><b>' + _price(pkg) + '</b></div>' +
+        
+        // Tab Switcher
+        '<div style="display:flex; gap:8px; margin-bottom:16px;">' +
+            '<button id="tab-buy" style="flex:1; padding:10px; border-radius:8px; border:none; font-weight:bold; font-size:13px; cursor:pointer; ' + btnBuyStyle + '">Beli Silicon</button>' +
+            '<button id="tab-exchange" style="flex:1; padding:10px; border-radius:8px; border:none; font-weight:bold; font-size:13px; cursor:pointer; ' + btnExStyle + '">Tukar ke Uang</button>' +
         '</div>' +
-        '<button type="button" class="btn-primary" data-sil-pay style="width:100%;margin-top:12px;"' + (canPay ? '' : ' disabled') + '>' +
-            (_sel.busy ? _tf('silicon.store.processing', 'Memproses…') : _tf('silicon.store.pay', 'Bayar') + ' · ' + _price(pkg)) + '</button>' +
+
+        (isBuy ? _renderBuyTab() : _renderExchangeTab()) +
+        
         _renderOrders() +
-        '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:8px;">' + _tf('common.close', 'Close') + '</button>';
+        '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">' + _tf('common.close', 'Tutup') + '</button>';
 }
 
 function _onClick(e) {
     if (e.target.closest('[data-modal-close]')) { Modal.close(MODAL_ID); return; }
 
+    // Tab switching
+    if (e.target.closest('#tab-buy')) { _storeTab = 'buy'; _render(); return; }
+    if (e.target.closest('#tab-exchange')) { _storeTab = 'exchange'; _render(); return; }
+
+    // Exchange Button
+    var exBtn = e.target.closest('.btn-exchange');
+    if (exBtn && !exBtn.disabled) {
+        var sil = parseInt(exBtn.dataset.sil, 10);
+        var cash = parseInt(exBtn.dataset.cash, 10);
+        if (confirm(`Tukar ${sil} SIL menjadi $${cash.toLocaleString('en-US')}?`)) {
+            _handleExchange(sil, cash);
+        }
+        return;
+    }
+
+    // --- SISA LOGIKA BELI SILICON (BAWAAN) ---
     var pk = e.target.closest('[data-sil-pkg]');
     if (pk) { _sel.pkg = pk.dataset.silPkg; _render(); return; }
 
@@ -164,6 +279,9 @@ function _onClick(e) {
     }
 }
 
+// ============================================================
+// MODAL QR CODE MANUAL
+// ============================================================
 function _showPaymentModal(order) {
     var pkg = PaymentService.getPackage(order.packageId);
     
@@ -210,7 +328,6 @@ function _showPaymentModal(order) {
     var timerEl = root.querySelector('#qr-timer');
     var btnCheck = root.querySelector('[data-qr-check]');
     
-    // 1. Listener untuk Admin Approve
     if (_adminApprovedUnsub) _adminApprovedUnsub();
     _adminApprovedUnsub = bus.on('payment:approved', function(approvedId) {
         if (approvedId === order.id) {
@@ -221,7 +338,6 @@ function _showPaymentModal(order) {
         }
     });
 
-    // 2. Listener PENTING: Tutup pop-up jika saldo berubah (berarti sync dari CloudSync berhasil)
     function handleSiliconChange(payload) {
         if (payload && payload.delta > 0) {
             cleanupTimers();
@@ -240,7 +356,7 @@ function _showPaymentModal(order) {
             _adminApprovedUnsub();
             _adminApprovedUnsub = null;
         }
-        bus.off('silicon:changed', handleSiliconChange); // Hapus listener saat pop-up ditutup
+        bus.off('silicon:changed', handleSiliconChange);
     }
 
     function _onVisibilityChange() {
@@ -319,6 +435,7 @@ function _render() {
 
 export function openSiliconStoreModal() {
     ensureIconStyles();
+    _storeTab = 'buy'; // Default tab saat dibuka
     Modal.open(MODAL_ID, _build());
     var root = document.querySelector('[data-modal-id="' + MODAL_ID + '"]');
     if (root) root.addEventListener('click', _onClick);
