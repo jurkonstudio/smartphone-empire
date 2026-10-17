@@ -76,10 +76,12 @@ export class EconomySystem {
         // Utang: bunga (+ denda telat) masuk beban; cicilan pokok hanya mengurangi kas.
         let loanInterest = 0;
         let loanPrincipal = 0;
+        let depositInterest = 0;
         if (this.bank) {
             const debt = this.bank.processMonthly();
             loanInterest = debt.interest + debt.lateFees;
             loanPrincipal = debt.principal;
+            depositInterest = debt.depositInterest || 0;
         } else {
             loanInterest = this._calcMonthlyLoanInterest();
         }
@@ -102,7 +104,9 @@ export class EconomySystem {
         // ---- Update cash ----
         // [v2027.1b] Revenue harian sudah menambah cash. Hanya potong expense + tax.
         const cashBefore = data.cash;
-        const cashAfter = cashBefore - expense - tax - loanPrincipal;
+        let cashAfter = cashBefore - expense - tax - loanPrincipal;
+        // Dana darurat: tabungan fleksibel menutup kekurangan kas (bila fitur aktif).
+        if (this.bank && cashAfter < 0) cashAfter += this.bank.coverShortfall(-cashAfter);
         this.state.setCash(cashAfter);
 
         // ---- Riwayat ----
@@ -115,7 +119,7 @@ export class EconomySystem {
             net,
             cash: cashAfter,
             breakdown: {
-                salary, fixed, loanInterest, loanPrincipal,
+                salary, fixed, loanInterest, loanPrincipal, depositInterest,
                 tax,
                 expenseRaw: expenseBase
             }

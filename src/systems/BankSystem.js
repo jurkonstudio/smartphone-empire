@@ -20,7 +20,7 @@ import { LOG_TYPES } from '../config/constants.js';
 import { getMacro } from '../core/MacroModel.js';
 import { t } from '../core/LanguageService.js';
 import {
-    RATINGS, AGE_SCORE_CAPS, BANK_RULES, BANKS,
+    RATINGS, AGE_SCORE_CAPS, BANK_RULES, BANKS, DEPOSIT_CONFIG,
     getBankById, getProductById, getRatingById, ratingRank, ratingFromScore
 } from '../data/bank.data.js';
 
@@ -75,6 +75,9 @@ export class BankSystem {
         if (!Array.isArray(b.missed)) b.missed = [];           // [{abs: bulan absolut}]
         if (typeof b.seq !== 'number') b.seq = 1;
         if (typeof b.blockedUntilMinute !== 'number') b.blockedUntilMinute = 0;
+        if (!Array.isArray(b.deposits)) b.deposits = [];
+        if (typeof b.autoCover !== 'boolean') b.autoCover = true;
+        if (typeof b.depSeq !== 'number') b.depSeq = 1;
         if (!b.line || typeof b.line !== 'object') b.line = { drawn: 0 };
         if (typeof b.line.drawn !== 'number') b.line.drawn = 0;
         this._migrateLegacyLoans();
@@ -165,12 +168,14 @@ export class BankSystem {
 
         // 2) Likuiditas / runway (0-20)
         var monthlyCost = Math.max(1, this.state.getMonthlySalary() + this.state.getMonthlyFixedCost());
-        var runway = d.cash > 0 ? d.cash / monthlyCost : 0;
+        var dep = this.getDepositTotals();
+        var liquid = Math.max(0, d.cash) + dep.flex + dep.term * 0.5;
+        var runway = liquid > 0 ? liquid / monthlyCost : 0;
         var liquidity = clamp(runway / 6, 0, 1) * 20;
 
         // 3) Beban utang (0-20)
         var debt = this.getTotalDebt();
-        var base = Math.max(1, Math.max(0, d.cash) + avgIncome * 6);
+        var base = Math.max(1, Math.max(0, d.cash) + dep.total + avgIncome * 6);
         var leverage = (1 - clamp((debt / base) / 1.5, 0, 1)) * 20;
 
         // 4) Keandalan bayar (0-20)
@@ -484,8 +489,9 @@ export class BankSystem {
         var b = this._ensure();
         var self = this;
         var interestTotal = 0, principalTotal = 0, lateFees = 0;
+        var depRes = this.processDeposits();
         var opCosts = this.state.getMonthlySalary() + this.state.getMonthlyFixedCost();
-        var available = d.cash - opCosts;
+        var available = d.cash - opCosts + (b.autoCover ? this.getDepositTotals().flex : 0);
         var abs = this._absMonth();
 
         var survivors = [];
@@ -539,7 +545,193 @@ export class BankSystem {
             this._log('payment', principalTotal + interestTotal + lateFees, 'bank.log.payment');
         }
         bus.emit('bank:changed', {});
-        return { interest: interestTotal, principal: principalTotal, lateFees: lateFees };
+        return {
+            interest: interestTotal, principal: principalTotal, lateFees: lateFees,
+            depositInterest: depRes.interest, depositTax: depRes.tax
+        };
+    }
+
+    // ------------------------------------------------------------ simpanan (tabungan & deposito)
+
+    getDepositTotals() {
+        var flex = 0, term = 0;
+        (this.bank.deposits || []).forEach(function (x) {
+            if (x.kind === 'flex') flex += x.balance; else term += x.balance;
+        });
+        return { flex: flex, term: term, total: flex + term };
+    }
+
+    // Bunga tahunan (%) untuk jenis simpanan di bank tertentu.
+    getDepositAnnualPct(bankId, kind, term) {
+        var bank = getBankById(bankId);
+        var pr = this._macro().policyRate || 0;
+        var mult = kind === 'flex' ? DEPOSIT_CONFIG.flexMult : (DEPOSIT_CONFIG.termMult[term] || 1);
+        var pct = pr * mult + (kind === 'term' ? (DEPOSIT_CONFIG.termBonusPct[term] || 0) : 0);
+        pct = Math.max(DEPOSIT_CONFIG.minAnnualPct, pct) * ((bank && bank.depositMult) || 1);
+        return Math.round(pct * 100) / 100;
+    }
+
+    getDepositMonthlyRate(bankId, kind, term) {
+        return this.getDepositAnnualPct(bankId, kind, term) / 100 / 12;
+    }
+
+    getDepositMin() {
+        return niceRound(DEPOSIT_CONFIG.minDeposit * this._scale(), true) || DEPOSIT_CONFIG.minDeposit;
+    }
+
+    getDepositAmountOptions() {
+        var cash = this.state.data.cash;
+        var min = this.getDepositMin();
+        var out = [];
+        [0.1, 0.25, 0.5, 1].forEach(function (p) {
+            var v = niceRound(cash * p, true);
+            if (p === 1) v = Math.floor(cash);
+            if (v >= min && v <= cash && out.indexOf(v) < 0) out.push(v);
+        });
+        return out;
+    }
+
+    quoteDeposit(req) {
+        var bank = getBankById(req.bankId);
+        if (!bank) return { ok: false, error: t('bank.err.product') };
+        var kind = req.kind === 'term' ? 'term' : 'flex';
+        var term = kind === 'term' ? req.term : 0;
+        if (kind === 'term' && DEPOSIT_CONFIG.termOptions.indexOf(term) < 0) return { ok: false, error: t('bank.err.term') };
+        var amount = Math.floor(req.amount || 0);
+        var min = this.getDepositMin();
+        if (amount < min) return { ok: false, error: t('dep.err.min', { n: '$' + min.toLocaleString('en-US') }) };
+        if (amount > this.state.data.cash) return { ok: false, error: t('bank.err.no_cash') };
+
+        var annual = this.getDepositAnnualPct(bank.id, kind, term);
+        var r = annual / 100 / 12;
+        var netR = r * (1 - DEPOSIT_CONFIG.taxPct);
+        var out = {
+            ok: true, bank: bank, kind: kind, term: term, amount: amount, annualPct: annual,
+            monthlyNet: Math.round(amount * netR), taxPct: DEPOSIT_CONFIG.taxPct
+        };
+        if (kind === 'term') {
+            out.maturity = Math.round(amount * Math.pow(1 + netR, term));
+            out.profit = out.maturity - amount;
+        }
+        return out;
+    }
+
+    deposit(req) {
+        var d = this.state.data;
+        if (d.gameOver) return { ok: false, error: t('bank.err.gameover') };
+        var q = this.quoteDeposit(req);
+        if (!q.ok) return q;
+        var b = this.bank;
+        this.state.addCash(-q.amount);
+        var kindLabel = q.kind === 'flex' ? t('dep.kind.flex') : t('dep.kind.term', { n: q.term });
+        var bankName = t('bank.name.' + q.bank.id);
+        var acc = null;
+        if (q.kind === 'flex') {
+            acc = b.deposits.find(function (x) { return x.kind === 'flex' && x.bankId === q.bank.id; });
+            if (acc) { acc.balance += q.amount; acc.principal += q.amount; }
+        }
+        if (!acc) {
+            b.deposits.push({
+                uid: 'dp_' + (b.depSeq++), kind: q.kind, bankId: q.bank.id,
+                principal: q.amount, balance: q.amount,
+                term: q.term, remainingTerm: q.term,
+                rate: q.kind === 'term' ? q.annualPct / 100 / 12 : 0,
+                openedY: d.time.currentYear, openedM: d.time.currentMonth
+            });
+        }
+        this._log('deposit', q.amount, 'dep.log.deposit', { bank: bankName });
+        this.state.addLog(t('dep.log.deposit_main', { amount: '$' + q.amount.toLocaleString('en-US'), bank: bankName, kind: kindLabel }), LOG_TYPES.info);
+        bus.emit('bank:changed', {});
+        bus.emit('state:changed', d);
+        return { ok: true, quote: q };
+    }
+
+    getWithdrawQuote(uid, fraction) {
+        var dep = this.bank.deposits.find(function (x) { return x.uid === uid; });
+        if (!dep) return null;
+        if (dep.kind === 'flex') {
+            var amount = fraction >= 1 ? dep.balance : Math.max(1, Math.round(dep.balance * fraction));
+            return { dep: dep, flex: true, amount: amount, penalty: 0, forfeited: 0, payout: amount, full: amount >= dep.balance };
+        }
+        var matured = dep.remainingTerm <= 0;
+        var penalty = matured ? 0 : Math.round(dep.principal * DEPOSIT_CONFIG.earlyPenaltyPct);
+        var forfeited = matured ? 0 : Math.max(0, dep.balance - dep.principal);
+        var payout = matured ? dep.balance : Math.max(0, dep.principal - penalty);
+        return { dep: dep, flex: false, amount: dep.balance, penalty: penalty, forfeited: forfeited, payout: payout, full: true };
+    }
+
+    withdraw(uid, fraction) {
+        var d = this.state.data;
+        var wq = this.getWithdrawQuote(uid, fraction);
+        if (!wq) return { ok: false, error: t('dep.err.missing') };
+        var dep = wq.dep;
+        var b = this.bank;
+        this.state.addCash(wq.payout);
+        if (wq.full) b.deposits = b.deposits.filter(function (x) { return x !== dep; });
+        else { dep.balance -= wq.amount; dep.principal = Math.max(0, dep.principal - wq.amount); }
+        var bankName = t('bank.name.' + dep.bankId);
+        this._log('withdraw', wq.payout, 'dep.log.withdraw', { bank: bankName });
+        this.state.addLog(t('dep.log.withdraw_main', { amount: '$' + wq.payout.toLocaleString('en-US'), bank: bankName }), LOG_TYPES.info);
+        bus.emit('bank:changed', {});
+        bus.emit('state:changed', d);
+        return { ok: true, quote: wq };
+    }
+
+    setAutoCover(on) {
+        this.bank.autoCover = !!on;
+        bus.emit('bank:changed', {});
+        return this.bank.autoCover;
+    }
+
+    // Menutup kekurangan kas dari tabungan fleksibel. Kas TIDAK diubah di sini (EconomySystem yang set).
+    coverShortfall(need) {
+        var b = this.bank;
+        if (!b.autoCover || !(need > 0)) return 0;
+        var flex = b.deposits.filter(function (x) { return x.kind === 'flex' && x.balance > 0; })
+            .sort(function (x, y) { return y.balance - x.balance; });
+        var covered = 0;
+        for (var i = 0; i < flex.length && covered < need; i++) {
+            var take = Math.min(flex[i].balance, Math.ceil(need - covered));
+            flex[i].balance -= take;
+            flex[i].principal = Math.max(0, flex[i].principal - take);
+            covered += take;
+        }
+        b.deposits = b.deposits.filter(function (x) { return x.kind !== 'flex' || x.balance > 0; });
+        if (covered > 0) {
+            this.state.addLog(t('dep.log.cover', { amount: '$' + covered.toLocaleString('en-US') }), LOG_TYPES.warning);
+            this._log('cover', covered, 'dep.log.cover_short');
+            bus.emit('bank:changed', {});
+        }
+        return covered;
+    }
+
+    // Bunga bulanan simpanan (bersih pajak) masuk ke saldo; deposito jatuh tempo cair ke kas.
+    processDeposits() {
+        var b = this.bank;
+        var self = this;
+        var interest = 0, tax = 0;
+        var keep = [];
+        b.deposits.forEach(function (x) {
+            var r = x.kind === 'flex' ? self.getDepositMonthlyRate(x.bankId, 'flex', 0) : x.rate;
+            var gross = Math.round(x.balance * r);
+            var tx = Math.round(gross * DEPOSIT_CONFIG.taxPct);
+            var net = gross - tx;
+            x.balance += net;
+            interest += net; tax += tx;
+            if (x.kind === 'term') {
+                x.remainingTerm = Math.max(0, x.remainingTerm - 1);
+                if (x.remainingTerm <= 0) {
+                    self.state.addCash(x.balance);
+                    var nm = t('bank.name.' + x.bankId);
+                    self.state.addLog(t('dep.log.matured', { bank: nm, amount: '$' + x.balance.toLocaleString('en-US') }), LOG_TYPES.success);
+                    self._log('matured', x.balance, 'dep.log.matured_short', { bank: nm });
+                    return;
+                }
+            }
+            keep.push(x);
+        });
+        b.deposits = keep;
+        return { interest: interest, tax: tax };
     }
 
     // ------------------------------------------------------------ ringkasan
@@ -550,7 +742,8 @@ export class BankSystem {
         return {
             rating: lim.info.rating.id, score: lim.info.score,
             total: lim.total, used: lim.used, available: lim.available,
-            monthly: pm.total, loans: this.state.data.finance.loans.length
+            monthly: pm.total, loans: this.state.data.finance.loans.length,
+            deposits: this.getDepositTotals().total
         };
     }
 
