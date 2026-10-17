@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SiliconStorePanel.js
-// v2028.15 — [FIX] Polling sekarang bisa mendeteksi status 'paid' dan menutup modal meski aplikasi sempat tidur.
+// v2028.18 — [FIX] Menambahkan auto-check status saat tab game kembali dibuka (visibilitychange).
 import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 import { Modal } from '../modal.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
@@ -15,7 +15,6 @@ var _sel = { pkg: 'pkg_l', method: null, busy: false };
 var _pollingTimer = null;
 var _countdownTimer = null;
 
-// GANTI URL DI BAWAH INI DENGAN LINK GAMBAR QRIS MILIKMU
 var STATIC_QRIS_URL = 'https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/qris-gopay.png';
 
 function _esc(s) {
@@ -213,6 +212,22 @@ function _showPaymentModal(order) {
     var timerEl = root.querySelector('#qr-timer');
     var btnCheck = root.querySelector('[data-qr-check]');
     
+    // Cleanup function untuk mencegah memory leak
+    function cleanupTimers() {
+        if (_countdownTimer) clearInterval(_countdownTimer);
+        if (_pollingTimer) clearInterval(_pollingTimer);
+        document.removeEventListener('visibilitychange', _onVisibilityChange);
+    }
+
+    // FITUR BARU: Cek status saat tab game kembali dibuka (dari aplikasi Supabase)
+    function _onVisibilityChange() {
+        if (document.visibilityState === 'visible') {
+            console.log('[PaymentModal] Tab kembali aktif, memaksa cek status...');
+            checkStatus(false); // Cek status secara instan
+        }
+    }
+    document.addEventListener('visibilitychange', _onVisibilityChange);
+
     var timeLeft = 15 * 60;
     if (_countdownTimer) clearInterval(_countdownTimer);
     _countdownTimer = setInterval(function() {
@@ -222,8 +237,7 @@ function _showPaymentModal(order) {
         if (timerEl) timerEl.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         
         if (timeLeft <= 0) {
-            clearInterval(_countdownTimer);
-            clearInterval(_pollingTimer);
+            cleanupTimers();
             ToastService.error('Waktu pembayaran habis.');
             Modal.close('payment-qr', true);
         }
@@ -232,12 +246,10 @@ function _showPaymentModal(order) {
     function checkStatus(isManual) {
         if (isManual) btnCheck.textContent = 'Mengecek...';
         PaymentService.refresh(order.id).then(function(r) {
-            // Cek apakah sukses DAN (ada sil ATAU status order sudah paid)
             var isPaid = r.ok && (r.sil || (r.order && r.order.status === 'paid'));
             
             if (isPaid) {
-                clearInterval(_countdownTimer);
-                clearInterval(_pollingTimer);
+                cleanupTimers();
                 Modal.close('payment-qr', true);
                 ToastService.success('Pembayaran Berhasil! Saldo telah diperbarui.');
                 _render();
@@ -256,8 +268,7 @@ function _showPaymentModal(order) {
     btnCheck.addEventListener('click', function() { checkStatus(true); });
     
     root.querySelector('[data-qr-cancel]').addEventListener('click', function() {
-        clearInterval(_countdownTimer);
-        clearInterval(_pollingTimer);
+        cleanupTimers();
         PaymentService.cancel(order.id);
         Modal.close('payment-qr', true);
         _render();
@@ -267,8 +278,7 @@ function _showPaymentModal(order) {
     if (btnMock) {
         btnMock.addEventListener('click', function() {
             PaymentService._fulfill(order); 
-            clearInterval(_countdownTimer);
-            clearInterval(_pollingTimer);
+            cleanupTimers();
             Modal.close('payment-qr', true);
             ToastService.success('(MOCK) Pembayaran Berhasil!');
             _render();
