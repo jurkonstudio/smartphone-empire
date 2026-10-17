@@ -1,15 +1,19 @@
 // FILE: src/ui/campus/CampusLife.js
-// v2027.36a — "Kampus hidup": animasi ambient super ringan (mobil, pejalan kaki,
-// awan + bayangan, asap pabrik, drone era modern, pohon bergoyang, jendela menyala
-// di mode gelap, pulse cahaya). Semua geometri dari cache createAssets, jumlah
-// objek kecil (~60 mesh), tanpa shadow map & tanpa alokasi per-frame.
+// v2027.37a — "Kampus hidup": animasi ambient ringan (mobil + bus, pejalan kaki di
+// trotoar, awan + bayangan, asap pabrik, drone era modern, pohon bergoyang, jendela
+// menyala di mode gelap, lampu peringatan berkedip, riak kolam, burung terbang,
+// kunang-kunang malam). Semua geometri dari cache createAssets, objek sedikit,
+// tanpa shadow map & tanpa alokasi per-frame.
 
 var CAR_COLORS = [0xef4444, 0xf59e0b, 0x10b981, 0x6366f1, 0xf8fafc, 0x1f2937, 0xec4899];
-var WALK_COLORS = [0xf97316, 0x3b82f6, 0xa855f7, 0x14b8a6];
+var WALK_COLORS = [0xf97316, 0x3b82f6, 0xa855f7, 0x14b8a6, 0xeab308, 0xef4444];
 var ROAD_Z = { from: 10.4, to: 3.6 };     // jalan selatan: x = lane, z dari tepi ke plaza
 var ROAD_X = { from: -10.4, to: -3.6 };   // jalan barat:   z = lane, x dari tepi ke plaza
 var FACTORY = { x: 6.6, z: 0.6, W: [0, 3.2, 3.4, 3.6], H: [0, 1.3, 1.5, 1.8] }; // sama dgn buildFactory
+var POND = { x: 0.5, z: -6, r: 1.4 };     // sama dgn POND di CampusBuildings
+var CURB_Y = 0.09;                        // tinggi trotoar (pejalan berdiri di atasnya)
 var PUFFS = 9;
+var FLY_BASE = [[-1.4, -6.6], [2.5, -5.6], [-3, -5.5], [4.4, -4.4], [-7, -6], [8, -4], [-8, 5], [7.5, 6.5]];
 
 export function createCampusLife(THREE, A, scene, trees) {
     var root = new THREE.Group();
@@ -31,30 +35,47 @@ export function createCampusLife(THREE, A, scene, trees) {
         return m;
     }
 
-    // ---------- mobil ----------
+    // ---------- mobil + bus ----------
     var carDark = mk(0x111827);
     var cars = [];
-    function makeCar(color) {
+    function makeCar(color, kind) {
         var g = new THREE.Group();
         var body = mk(color);
-        g.add(put(A.box(0.72, 0.2, 0.38), body, 0, 0.14, 0));
-        g.add(put(A.box(0.34, 0.16, 0.32), carDark, -0.04, 0.32, 0));
-        g.add(put(A.box(0.05, 0.06, 0.08), A.mat('glow'), 0.37, 0.15, 0.12));
-        g.add(put(A.box(0.05, 0.06, 0.08), A.mat('glow'), 0.37, 0.15, -0.12));
+        if (kind === 'bus') {
+            g.add(put(A.box(1.25, 0.3, 0.42), body, 0, 0.2, 0));
+            g.add(put(A.box(1.12, 0.1, 0.44), carDark, 0, 0.27, 0));
+            g.add(put(A.box(0.05, 0.06, 0.08), A.mat('glow'), 0.63, 0.14, 0.14));
+            g.add(put(A.box(0.05, 0.06, 0.08), A.mat('glow'), 0.63, 0.14, -0.14));
+        } else {
+            g.add(put(A.box(0.72, 0.2, 0.38), body, 0, 0.14, 0));
+            g.add(put(A.box(0.34, 0.16, 0.32), carDark, -0.04, 0.32, 0));
+            g.add(put(A.box(0.05, 0.06, 0.08), A.mat('glow'), 0.37, 0.15, 0.12));
+            g.add(put(A.box(0.05, 0.06, 0.08), A.mat('glow'), 0.37, 0.15, -0.12));
+        }
         root.add(g);
         return g;
     }
     function addCar(axis, lane, inbound, speed, s0, ci) {
-        cars.push({ axis: axis, lane: lane, inbound: inbound, speed: speed, s0: s0, g: makeCar(CAR_COLORS[ci % CAR_COLORS.length]) });
+        var bus = ci === 'bus';
+        cars.push({
+            axis: axis, lane: lane, inbound: inbound, speed: speed, s0: s0,
+            g: makeCar(bus ? 0x2563eb : CAR_COLORS[ci % CAR_COLORS.length], bus ? 'bus' : 'car')
+        });
     }
+    // Satu lajur = satu kecepatan, supaya tidak saling menembus.
     addCar('z',  0.5, true,  0.17, 0.05, 0);
+    addCar('z',  0.5, true,  0.17, 0.30, 5);
     addCar('z',  0.5, true,  0.17, 0.55, 3);
+    addCar('z',  0.5, true,  0.17, 0.80, 'bus');
     addCar('z', -0.5, false, 0.2,  0.30, 1);
+    addCar('z', -0.5, false, 0.2,  0.80, 4);
     addCar('x',  0.5, true,  0.19, 0.20, 2);
+    addCar('x',  0.5, true,  0.19, 0.70, 0);
     addCar('x', -0.5, false, 0.16, 0.10, 4);
+    addCar('x', -0.5, false, 0.16, 0.38, 5);
     addCar('x', -0.5, false, 0.16, 0.65, 6);
 
-    // ---------- pejalan kaki ----------
+    // ---------- pejalan kaki (di trotoar) ----------
     var walkers = [];
     function addWalker(axis, side, speed, s0, ci) {
         var g = new THREE.Group();
@@ -64,10 +85,12 @@ export function createCampusLife(THREE, A, scene, trees) {
         root.add(g);
         walkers.push({ axis: axis, side: side, speed: speed, s0: s0, g: g });
     }
-    addWalker('x',  1.2, 0.045, 0.1, 0);
-    addWalker('x', -1.2, 0.05, 0.7, 1);
-    addWalker('z', -1.2, 0.045, 0.4, 2);
-    addWalker('z',  1.2, 0.05, 1.2, 3);
+    addWalker('x',  1.22, 0.045, 0.1, 0);
+    addWalker('x', -1.22, 0.05, 0.7, 1);
+    addWalker('x',  1.22, 0.04, 1.4, 4);
+    addWalker('z', -1.22, 0.045, 0.4, 2);
+    addWalker('z',  1.22, 0.05, 1.2, 3);
+    addWalker('z', -1.22, 0.04, 1.7, 5);
 
     // ---------- awan + bayangan awan ----------
     var cloudMat = mk(0xffffff, { transparent: true, opacity: 0.8, depthWrite: false });
@@ -97,6 +120,44 @@ export function createCampusLife(THREE, A, scene, trees) {
         puffs.push({ m: p, mat: pm, off: i / PUFFS });
     }
 
+    // ---------- riak kolam ----------
+    var rings = [];
+    for (i = 0; i < 3; i++) {
+        var rm = mk(0xffffff, { transparent: true, opacity: 0, depthWrite: false });
+        var rg = put(A.tor(1, 0.03), rm, POND.x, 0.075, POND.z);
+        rg.rotation.x = Math.PI / 2;
+        root.add(rg);
+        rings.push({ m: rg, mat: rm, off: i / 3 });
+    }
+
+    // ---------- burung ----------
+    var birdMat = mk(0x475569);
+    var birds = [];
+    function addBird(R, y, speed, a0, k) {
+        var g = new THREE.Group();
+        g.add(put(A.box(0.16, 0.05, 0.06), birdMat, 0, 0, 0));
+        var pl = new THREE.Group(), pr = new THREE.Group();
+        pl.position.set(0, 0, 0.04); pr.position.set(0, 0, -0.04);
+        pl.add(put(A.box(0.07, 0.012, 0.22), birdMat, 0, 0, 0.11));
+        pr.add(put(A.box(0.07, 0.012, 0.22), birdMat, 0, 0, -0.11));
+        g.add(pl, pr);
+        root.add(g);
+        birds.push({ g: g, pl: pl, pr: pr, R: R, y: y, speed: speed, a0: a0, k: k });
+    }
+    addBird(7.5, 7.4, 0.12, 0.0, 0);
+    addBird(7.9, 7.7, 0.12, 0.35, 1);
+    addBird(6.4, 8.2, -0.09, 2.2, 2);
+
+    // ---------- kunang-kunang (malam) ----------
+    var flies = [];
+    for (i = 0; i < FLY_BASE.length; i++) {
+        var fm = mk(0xfff59d, { transparent: true, opacity: 0, depthWrite: false });
+        var fl = put(A.sph(0.05, 5, 4), fm, 0, 0.6, 0);
+        fl.visible = false;
+        root.add(fl);
+        flies.push({ m: fl, mat: fm, bx: FLY_BASE[i][0], bz: FLY_BASE[i][1] });
+    }
+
     // ---------- drone (era >= 3) ----------
     var drone = new THREE.Group();
     drone.add(put(A.box(0.32, 0.1, 0.32), A.mat('metal'), 0, 0, 0));
@@ -117,10 +178,10 @@ export function createCampusLife(THREE, A, scene, trees) {
 
     function lerp(a, b, s) { return a + (b - a) * s; }
 
-    function update(t, dt) {
+    function update(t) {
         var i, c, s, f;
 
-        // mobil
+        // mobil + bus
         for (i = 0; i < cars.length; i++) {
             c = cars[i];
             s = (c.s0 + t * c.speed) % 1;
@@ -134,13 +195,13 @@ export function createCampusLife(THREE, A, scene, trees) {
             c.g.scale.setScalar(Math.max(0.001, f));
         }
 
-        // pejalan (bolak-balik)
+        // pejalan (bolak-balik di trotoar)
         for (i = 0; i < walkers.length; i++) {
             var w = walkers[i];
             var q = (w.s0 + t * w.speed) % 2;
             if (q > 1) q = 2 - q;
             var wp = lerp(-9.6, -3.9, q);
-            var bob = Math.abs(Math.sin(t * 8 + i)) * 0.035;
+            var bob = CURB_Y + Math.abs(Math.sin(t * 8 + i)) * 0.035;
             if (w.axis === 'x') w.g.position.set(wp, bob, w.side);
             else w.g.position.set(w.side, bob, lerp(10, 3.9, q));
         }
@@ -166,12 +227,47 @@ export function createCampusLife(THREE, A, scene, trees) {
             pf.mat.opacity = (1 - life) * (dark ? 0.35 : 0.5);
         }
 
+        // riak kolam
+        for (i = 0; i < rings.length; i++) {
+            var rl = (t * 0.22 + rings[i].off) % 1;
+            var rs = 0.2 + rl * (POND.r - 0.25);
+            rings[i].m.scale.set(rs, rs, 1);
+            rings[i].mat.opacity = (1 - rl) * 0.45;
+        }
+        var wmat = A.mat('water');
+        wmat.emissiveIntensity = (dark ? 0.25 : 0.12) + Math.sin(t * 1.6) * 0.05;
+
+        // burung
+        for (i = 0; i < birds.length; i++) {
+            var bd = birds[i];
+            var ang = bd.a0 + t * bd.speed;
+            var sgn = bd.speed > 0 ? 1 : -1;
+            bd.g.position.set(Math.cos(ang) * bd.R, bd.y + Math.sin(t * 1.4 + bd.k) * 0.15, Math.sin(ang) * bd.R);
+            bd.g.rotation.y = Math.atan2(-Math.cos(ang) * sgn, -Math.sin(ang) * sgn);
+            var fl = Math.sin(t * 9 + bd.k * 2) * 0.7;
+            bd.pl.rotation.x = fl;
+            bd.pr.rotation.x = -fl;
+        }
+
+        // kunang-kunang
+        for (i = 0; i < flies.length; i++) {
+            var ff = flies[i];
+            ff.m.visible = dark;
+            if (!dark) continue;
+            ff.m.position.set(
+                ff.bx + Math.sin(t * 0.7 + i) * 0.6,
+                0.7 + Math.sin(t * 1.3 + i * 2) * 0.25,
+                ff.bz + Math.cos(t * 0.6 + i * 1.3) * 0.6
+            );
+            ff.mat.opacity = 0.15 + 0.75 * Math.max(0, Math.sin(t * 2 + i * 1.7));
+        }
+
         // drone
         if (droneOn) {
-            var ang = t * 0.35;
-            var dx = Math.cos(ang) * 5.6, dz = Math.sin(ang) * 5.6;
+            var da = t * 0.35;
+            var dx = Math.cos(da) * 5.6, dz = Math.sin(da) * 5.6;
             drone.position.set(dx, 5.8 + Math.sin(t * 2) * 0.12, dz);
-            drone.rotation.y = -ang;
+            drone.rotation.y = -da;
             drone.rotation.z = Math.sin(t * 2) * 0.05;
             droneShadow.position.set(dx - 3.4, 0.12, dz - 2.3);
             for (i = 0; i < rotors.length; i++) rotors[i].rotation.y = t * 40;
@@ -183,11 +279,14 @@ export function createCampusLife(THREE, A, scene, trees) {
             trees[i].rotation.x = Math.cos(t * 1.1 + i) * 0.025;
         }
 
-        // pulse cahaya
+        // pulse cahaya + kedip lampu peringatan
         var gm = A.mat('glow');
         gm.emissiveIntensity = 0.6 + Math.sin(t * 2.2) * 0.22;
         var wm = A.mat('window');
         wm.emissiveIntensity = dark ? 0.42 + Math.sin(t * 0.8) * 0.07 : 0;
+        var fm = A.mat('facade');
+        fm.emissiveIntensity = dark ? 0.88 + Math.sin(t * 0.8) * 0.06 : 0;
+        A.mat('beacon').emissiveIntensity = (Math.sin(t * 3.2) > 0.55) ? 1.5 : 0.12;
     }
 
     return {
@@ -200,6 +299,8 @@ export function createCampusLife(THREE, A, scene, trees) {
             cloudMat.color.setHex(dark ? 0x8fa0c4 : 0xffffff);
             cloudMat.opacity = dark ? 0.45 : 0.8;
             shadowMat.opacity = dark ? 0.16 : 0.1;
+            birdMat.color.setHex(dark ? 0x94a3b8 : 0x475569);
+            for (var k = 0; k < rings.length; k++) rings[k].mat.color.setHex(dark ? 0xa5d8f5 : 0xffffff);
         },
         setEra: function (idx) {
             droneOn = idx >= 3;
