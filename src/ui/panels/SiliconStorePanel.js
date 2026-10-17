@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SiliconStorePanel.js
-// v2028.22 — [SYNC] Mendengarkan sinyal 'payment:approved' dari Admin Panel.
+// v2028.23 — [CLEANUP] Versi stabil tanpa Event Bus. Mengandalkan forcePull dari Admin.
 import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 import { Modal } from '../modal.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
@@ -14,7 +14,6 @@ var MODAL_ID = 'silicon-store';
 var _sel = { pkg: 'pkg_l', method: null, busy: false };
 var _pollingTimer = null;
 var _countdownTimer = null;
-var _adminApprovedUnsub = null; // Untuk menyimpan fungsi unsubscribe
 
 var STATIC_QRIS_URL = 'https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/qris-gopay.png';
 
@@ -164,9 +163,6 @@ function _onClick(e) {
     }
 }
 
-// ============================================================
-// MODAL QR CODE MANUAL
-// ============================================================
 function _showPaymentModal(order) {
     var pkg = PaymentService.getPackage(order.packageId);
     
@@ -213,33 +209,14 @@ function _showPaymentModal(order) {
     var timerEl = root.querySelector('#qr-timer');
     var btnCheck = root.querySelector('[data-qr-check]');
     
-    // --- LISTENER UNTUK ADMIN APPROVE ---
-    function handleAdminApproved(approvedId) {
-        if (approvedId === order.id) {
-            cleanupTimers();
-            Modal.close('payment-qr', true);
-            ToastService.success('Pembayaran disetujui Admin! Saldo ditarik.');
-            // Tarik saldo terbaru secara paksa
-            setTimeout(() => window.__game.forcePull(), 300);
-        }
-    }
-    if (_adminApprovedUnsub) _adminApprovedUnsub();
-    _adminApprovedUnsub = bus.on('payment:approved', handleAdminApproved);
-    // ------------------------------------
-
     function cleanupTimers() {
         if (_countdownTimer) clearInterval(_countdownTimer);
         if (_pollingTimer) clearInterval(_pollingTimer);
         document.removeEventListener('visibilitychange', _onVisibilityChange);
-        if (_adminApprovedUnsub) {
-            _adminApprovedUnsub();
-            _adminApprovedUnsub = null;
-        }
     }
 
     function _onVisibilityChange() {
         if (document.visibilityState === 'visible') {
-            console.log('[PaymentModal] Tab kembali aktif, memaksa cek status...');
             checkStatus(false); 
         }
     }
