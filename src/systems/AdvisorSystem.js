@@ -1,14 +1,19 @@
 // FILE: src/systems/AdvisorSystem.js
-// v2027.37 — Asisten bisnis berbasis aturan + percakapan lokal (AdvisorBrain).
+// v2028.40 — Asisten Bisnis (RoboAdvisor) generasi baru.
 // icon = id ikon SVG (src/ui/icons/GameIcons.js), bukan emoji.
 //
-// - getAdvice(): daftar saran berurutan (kritis -> info) dari kondisi game.
-// - Saran bisa ditunda (snooze) pemain; disimpan di state.data.advisor.
-// - Toast peringatan untuk hal penting (ada jeda per saran, tidak spam).
-// - Titik sambung AI: setProvider(fn) + ask(question) + buildContext().
-//   Tanpa provider, asisten tetap jalan penuh secara lokal.
+// Yang baru dibanding v2027.37:
+//  - Konteks lebih kaya: pemasukan bulanan nyata, cicilan pinjaman, arus kas bersih,
+//    tren penjualan & kas (snapshot mingguan), pangsa pasar, kepuasan produk.
+//  - 13 aturan baru: pinjaman telat/berat, kas negatif, margin tipis, penjualan anjlok,
+//    pangsa turun, produk tidak disukai, katalog penuh, peluang viral, kas menganggur,
+//    staf berlebih, tren kas, dsb. Bug OS kini hanya menghitung yang AKTIF.
+//  - Rekomendasi riset cerdas (nilai/biaya, jumlah node yang dibuka, mampu dibayar).
+//  - Skor kesehatan 6 dimensi (likuiditas, pertumbuhan, produk, tim, teknologi, merek).
+//  - Prakiraan kas (dasar & pesimis) + simulasi "bagaimana jika" (rekrut / pinjam).
+//  - Kompatibel penuh dengan AdvisorPanel & main.js (API publik tidak berubah).
 //
-// Tidak mengubah state game selain data.advisor (snooze/jeda toast).
+// Tidak mengubah state game selain data.advisor (snooze/jeda toast/snapshot).
 import { bus } from '../core/EventBus.js';
 import { LanguageService } from '../core/LanguageService.js';
 import { ToastService } from '../core/ToastService.js';
@@ -20,6 +25,8 @@ const DAY = 1440;                 // menit game per hari
 const SNOOZE_DAYS = 30;
 const TOAST_COOLDOWN_DAYS = 20;
 const CHECK_EVERY_DAYS = 2;
+const SNAPSHOT_EVERY_DAYS = 7;
+const MAX_SNAPSHOTS = 26;
 const MAX_ADVICE = 8;
 const SEV = { critical: 0, warn: 1, tip: 2, info: 3 };
 
@@ -46,6 +53,32 @@ const DICT = {
         'cash_crit.d': 'Uang ${cash} kurang dari biaya bulanan ${burn}. Jual stok, tunda riset baru, atau ambil pinjaman di Setelan.',
         'cash_low.t': 'Uang mulai menipis',
         'cash_low.d': 'Uang cukup sekitar {months} bulan biaya (${burn}/bulan). Pastikan produk laku sebelum menambah staf.',
+        'cash_trend.t': 'Kas terus menyusut',
+        'cash_trend.d': 'Dengan pemasukan rata-rata ${income}/bulan, arus kas bersih {net}/bulan. Uang habis sekitar {months} bulan lagi.',
+        'negative_cash.t': 'Kas pernah minus',
+        'negative_cash.d': '{n} bulan terakhir uangmu negatif. Segera tutup defisit: jual stok, tunda pengeluaran, atau pinjam.',
+        'loan_late.t': 'Cicilan pinjaman telat',
+        'loan_late.d': '{n} pinjaman menunggak. Telat berulang kena denda dan bisa membuat bank memblokirmu.',
+        'loan_burden.t': 'Cicilan terlalu berat',
+        'loan_burden.d': 'Cicilan ${inst}/bulan memakan {pct}% pemasukan. Hindari pinjaman baru; pertimbangkan pelunasan dini.',
+        'loan_payoff.t': 'Pertimbangkan pelunasan dini',
+        'loan_payoff.d': 'Uangmu cukup longgar. Melunasi sisa pinjaman ${left} menghemat bunga bulanan.',
+        'margin_thin.t': 'Margin tipis: {name}',
+        'margin_thin.d': 'Untung per unit hanya {pct}% dari harga. Naikkan harga sedikit atau tekan biaya komponen di versi berikutnya.',
+        'sales_slump.t': 'Penjualan melambat',
+        'sales_slump.d': 'Laju jual turun sekitar {pct}% dibanding periode sebelumnya. Coba kampanye, turunkan harga, atau rilis penerus.',
+        'share_drop.t': 'Pangsa pasar turun',
+        'share_drop.d': 'Pangsa pasarmu turun dari {from}% menjadi {to}%. Pesaing sedang menekan; cek tren dan harga.',
+        'product_unhappy.t': 'Pengguna kurang puas: {name}',
+        'product_unhappy.d': 'Kepuasan {n}/100. Perbaiki bug OS dan rancang penerus yang lebih baik.',
+        'catalog_full.t': 'Katalog aktif penuh',
+        'catalog_full.d': '{n} produk dijual sekaligus (batas {max}). Hentikan yang sudah tua sebelum merilis yang baru.',
+        'viral_opportunity.t': 'Momentum viral positif',
+        'viral_opportunity.d': 'Produkmu sedang jadi perbincangan. Jalankan kampanye sekarang untuk memanfaatkan momentumnya.',
+        'idle_cash.t': 'Uang menganggur',
+        'idle_cash.d': 'Runway {months} bulan. Kelebihan uang paling baik dipakai untuk riset, produk penerus, atau OS/chip sendiri.',
+        'overstaffed.t': 'Staf terlalu banyak untuk pemasukan',
+        'overstaffed.d': 'Gaji {pct}% dari biaya bulanan padahal belum ada produk laku. Tahan rekrutmen sampai produk menghasilkan.',
         'hire_first.t': 'Rekrut anggota tim pertama',
         'hire_first.d': 'Mulai dari engineer (biaya rekrut ${cost}). Engineer mempercepat riset dan membuka slot riset.',
         'hire_designer.t': 'Butuh desainer',
@@ -53,7 +86,7 @@ const DICT = {
         'hire_marketer.t': 'Rekrut marketer',
         'hire_marketer.d': 'Kamu sudah menjual produk. Marketer memperbesar jangkauan kampanye.',
         'research_idle.t': 'Slot riset kosong',
-        'research_idle.d': '{free} slot menganggur. Riset yang tersedia: "{name}" (${cost}).',
+        'research_idle.d': '{free} slot menganggur. Rekomendasi terbaik: "{name}" (${cost}) — {why}.',
         'research_slots.t': 'Slot riset penuh',
         'research_slots.d': 'Tambah {need} engineer lagi untuk membuka slot riset berikutnya.',
         'design_first.t': 'Rancang ponsel pertamamu',
@@ -98,6 +131,32 @@ const DICT = {
         'cash_crit.d': 'Cash ${cash} is below monthly costs of ${burn}. Sell stock, delay new research, or take a loan in Settings.',
         'cash_low.t': 'Cash is running low',
         'cash_low.d': 'Cash covers about {months} months (${burn}/month). Make sure products sell before hiring more.',
+        'cash_trend.t': 'Cash keeps shrinking',
+        'cash_trend.d': 'With average revenue of ${income}/month, net cash flow is {net}/month. Cash runs out in about {months} months.',
+        'negative_cash.t': 'Cash went negative',
+        'negative_cash.d': 'Your cash was negative for {n} recent month(s). Close the gap: sell stock, cut spending, or borrow.',
+        'loan_late.t': 'Loan payment overdue',
+        'loan_late.d': '{n} loan(s) are behind. Repeated lateness adds fees and can get you blocked by the bank.',
+        'loan_burden.t': 'Loan payments too heavy',
+        'loan_burden.d': 'Installments of ${inst}/month take {pct}% of revenue. Avoid new loans; consider early repayment.',
+        'loan_payoff.t': 'Consider early repayment',
+        'loan_payoff.d': 'You have comfortable cash. Paying off the ${left} remaining saves monthly interest.',
+        'margin_thin.t': 'Thin margin: {name}',
+        'margin_thin.d': 'Profit per unit is only {pct}% of price. Raise the price slightly or cut component costs next time.',
+        'sales_slump.t': 'Sales are slowing',
+        'sales_slump.d': 'Sales pace is down about {pct}% versus the previous period. Try a campaign, lower the price, or ship a successor.',
+        'share_drop.t': 'Market share is falling',
+        'share_drop.d': 'Your share fell from {from}% to {to}%. Rivals are pushing; check trends and pricing.',
+        'product_unhappy.t': 'Users are unhappy: {name}',
+        'product_unhappy.d': 'Satisfaction {n}/100. Fix OS bugs and design a better successor.',
+        'catalog_full.t': 'Active catalog is full',
+        'catalog_full.d': '{n} products on sale (limit {max}). Retire old ones before releasing new ones.',
+        'viral_opportunity.t': 'Positive viral momentum',
+        'viral_opportunity.d': 'Your product is trending. Run a campaign now to ride the momentum.',
+        'idle_cash.t': 'Idle cash',
+        'idle_cash.d': 'Runway is {months} months. Spare cash is best spent on research, a successor product, or your own OS/chip.',
+        'overstaffed.t': 'Payroll too heavy for revenue',
+        'overstaffed.d': 'Payroll is {pct}% of monthly cost with no selling product yet. Pause hiring until products earn.',
         'hire_first.t': 'Hire your first team member',
         'hire_first.d': 'Start with an engineer (hiring cost ${cost}). Engineers speed up research and unlock research slots.',
         'hire_designer.t': 'You need a designer',
@@ -105,7 +164,7 @@ const DICT = {
         'hire_marketer.t': 'Hire a marketer',
         'hire_marketer.d': 'You are selling products. Marketers widen campaign reach.',
         'research_idle.t': 'Idle research slot',
-        'research_idle.d': '{free} slot(s) idle. Available research: "{name}" (${cost}).',
+        'research_idle.d': '{free} slot(s) idle. Best pick: "{name}" (${cost}) — {why}.',
         'research_slots.t': 'Research slots are full',
         'research_slots.d': 'Hire {need} more engineer(s) to unlock the next research slot.',
         'design_first.t': 'Design your first phone',
@@ -133,6 +192,11 @@ const DICT = {
     }
 };
 
+const WHY = {
+    id: { dependents: 'membuka {n} riset lanjutan', cheap: 'murah & cepat menaikkan skor produk', unlocks: 'membuka komponen/fitur baru', fallback: 'langkah teknologi berikutnya' },
+    en: { dependents: 'unlocks {n} follow-up research', cheap: 'cheap and quickly lifts product score', unlocks: 'unlocks new components/features', fallback: 'the next tech step' }
+};
+
 function curLang() {
     var l = 'id';
     try { l = LanguageService.getLang(); } catch (e) {}
@@ -149,8 +213,10 @@ export function tx(key, vars) {
     });
 }
 
-function money(n) { return Math.round(n).toLocaleString('en-US'); }
+function money(n) { return Math.round(n || 0).toLocaleString('en-US'); }
 function arr(a) { return Array.isArray(a) ? a : []; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function sumBy(list, fn) { return arr(list).reduce(function (a, x) { return a + (fn(x) || 0); }, 0); }
 
 // ------------------------------------------------------------
 // ATURAN. Masing-masing: function (c, push). Dibungkus try/catch.
@@ -166,6 +232,33 @@ const RULES = [
                 { months: c.runway.toFixed(1), burn: money(c.burn) }, { nav: 'products', subtab: 'sales' }, 5);
         }
     },
+    function cashTrend(c, push) {
+        // Arus kas bersih nyata (pemasukan - biaya - cicilan), bukan hanya biaya.
+        if (c.income <= 0 || c.net >= 0 || !isFinite(c.trendRunway)) return;
+        if (c.cash >= c.burn && c.trendRunway < 5) {
+            push('cash_trend', c.trendRunway < 2.5 ? 'warn' : 'tip', 'chart',
+                { income: money(c.income), net: (c.net < 0 ? '−$' : '+$') + money(Math.abs(c.net)), months: c.trendRunway.toFixed(1) },
+                { nav: 'products', subtab: 'sales' }, 8);
+        }
+    },
+    function negativeCash(c, push) {
+        var n = (c.d.finance && c.d.finance.negativeMonths) || 0;
+        if (n >= 1) push('negative_cash', 'critical', 'cash-alert', { n: n }, { nav: 'settings' }, 2);
+    },
+    function loans(c, push) {
+        if (!c.loans.length) return;
+        var late = c.loans.filter(function (l) { return (l.missed || 0) > 0; }).length;
+        if (late) push('loan_late', 'critical', 'bank', { n: late }, { nav: 'settings' }, 3);
+        var base = c.income > 0 ? c.income : c.burn;
+        if (base > 0 && c.debtService > base * 0.4) {
+            push('loan_burden', 'warn', 'bank',
+                { inst: money(c.debtService), pct: Math.round(c.debtService / base * 100) }, { nav: 'settings' }, 12);
+        }
+        var left = sumBy(c.loans, function (l) { return l.remaining; });
+        if (left > 0 && c.cash > left * 1.5 + c.burn * 6 && c.runway > 8) {
+            push('loan_payoff', 'info', 'bank', { left: money(left) }, { nav: 'settings' }, 75);
+        }
+    },
     function stock(c, push) {
         c.selling.forEach(function (p) {
             var cap = p.baseCapacity || p.totalProduced || 0;
@@ -176,9 +269,48 @@ const RULES = [
             }
         });
     },
+    function margin(c, push) {
+        c.selling.forEach(function (p) {
+            if (!(p.price > 0) || typeof p.unitCost !== 'number') return;
+            var m = (p.price - p.unitCost) / p.price;
+            if (m < 0.12) {
+                push('margin_thin:' + p.id, m < 0 ? 'warn' : 'tip', 'cash',
+                    { name: p.name, pct: Math.round(m * 100) }, { nav: 'products', subtab: 'sales' }, 18);
+            }
+        });
+    },
+    function slump(c, push) {
+        var t = c.trends;
+        if (!t || t.salesDrop === null || !c.selling.length) return;
+        if (t.salesDrop >= 0.4 && t.salesPrev >= 5) {
+            push('sales_slump', t.salesDrop >= 0.6 ? 'warn' : 'tip', 'chart',
+                { pct: Math.round(t.salesDrop * 100) }, { nav: 'products', subtab: 'sales' }, 26);
+        }
+    },
+    function shareDrop(c, push) {
+        var h = arr((c.d.market || {}).shareHistory);
+        if (h.length < 2 || !c.selling.length) return;
+        var now = h[0].playerShare, prev = h[1].playerShare;
+        if (typeof now !== 'number' || typeof prev !== 'number') return;
+        var scale = (now <= 1 && prev <= 1) ? 100 : 1;
+        if (prev * scale >= 0.5 && now < prev * 0.85) {
+            push('share_drop', 'tip', 'target',
+                { from: (prev * scale).toFixed(1), to: (now * scale).toFixed(1) }, { nav: 'market' }, 34);
+        }
+    },
+    function satisfaction(c, push) {
+        var sat = (c.d.feedback && c.d.feedback.perProductSatisfaction) || {};
+        c.selling.forEach(function (p) {
+            var v = sat[p.id];
+            if (typeof v === 'number' && v < 45) {
+                push('product_unhappy:' + p.id, 'tip', 'mood-low', { name: p.name, n: Math.round(v) },
+                    { nav: 'research', subtab: 'os' }, 36);
+            }
+        });
+    },
     function hiring(c, push) {
         var t = c.team, total = t.engineers + t.designers + t.marketers;
-        var cost = Math.round(((BALANCE.recruitCost && BALANCE.recruitCost.engineer) || 2000) * getMacro(c.d.time, BALANCE.macro).wageIndex);
+        var cost = c.recruitCost('engineer');
         if (total === 0) {
             push('hire_first', 'tip', 'users', { cost: money(cost) }, { nav: 'team' }, 20);
             return;
@@ -190,24 +322,23 @@ const RULES = [
             push('hire_marketer', 'tip', 'megaphone', {}, { nav: 'team' }, 32);
         }
     },
+    function overstaffed(c, push) {
+        if (c.selling.length || c.burn <= 0 || c.runway >= 6) return;
+        var share = c.payroll / c.burn;
+        if (share > 0.6 && (c.team.engineers + c.team.designers + c.team.marketers) >= 3) {
+            push('overstaffed', 'warn', 'users', { pct: Math.round(share * 100) }, { nav: 'team' }, 14);
+        }
+    },
     function research(c, push) {
         var r = c.d.research || {};
         var active = arr(r.active).length;
         var max = r.maxSlots || 1;
         if (active < max && c.deps.research) {
-            var best = null;
-            try {
-                var rs = c.deps.research;
-                arr(rs.getCategories()).forEach(function (cat) {
-                    arr(rs.getNodesByCategory(cat.id)).forEach(function (n) {
-                        if (rs.getNodeStatus(n.id).status !== 'available') return;
-                        if (!best || n.cost < best.cost) best = n;
-                    });
-                });
-            } catch (e) { best = null; }
-            if (best) {
+            var pick = c.bestResearch();
+            if (pick) {
                 push('research_idle', active === 0 ? 'warn' : 'tip', 'research',
-                    { free: max - active, name: best.name, cost: money(best.cost) }, { nav: 'research', subtab: 'tech' }, 25);
+                    { free: max - active, name: pick.node.name, cost: money(pick.node.cost), why: pick.why },
+                    { nav: 'research', subtab: 'tech' }, 25);
             }
         } else if (active >= max && max < ((BALANCE.research && BALANCE.research.maxSlots) || 3) && c.team.engineers > 0) {
             var need = Math.max(1, 2 * max - c.team.engineers);
@@ -219,6 +350,12 @@ const RULES = [
         if (c.catalog.length === 0 && !p.designing && !p.development &&
             (c.team.engineers + c.team.designers) >= 1) {
             push('design_first', 'tip', 'phone', {}, { nav: 'products', subtab: 'design' }, 22);
+        }
+    },
+    function catalogFull(c, push) {
+        var max = (BALANCE.products && BALANCE.products.maxActiveProducts) || 5;
+        if (c.selling.length >= max) {
+            push('catalog_full', 'info', 'package', { n: c.selling.length, max: max }, { nav: 'products', subtab: 'sales' }, 55);
         }
     },
     function marketing(c, push) {
@@ -234,6 +371,12 @@ const RULES = [
                 push('campaign', 'tip', 'megaphone', { name: p.name }, { nav: 'products', subtab: 'sales' }, 35);
                 return;
             }
+        }
+    },
+    function viral(c, push) {
+        var v = arr((c.d.feedback || {}).activeViral).filter(function (x) { return x && x.type === 'positive'; });
+        if (v.length && c.selling.length && c.team.marketers >= 1 && c.cash >= 5000) {
+            push('viral_opportunity', 'tip', 'spark', {}, { nav: 'products', subtab: 'sales' }, 24);
         }
     },
     function aging(c, push) {
@@ -252,11 +395,11 @@ const RULES = [
     },
     function os(c, push) {
         var o = c.d.os || {};
-        if (c.catalog.length >= 1 && arr(o.versions).length === 0 && c.team.engineers >= 1) {
+        if (c.catalog.length >= 1 && arr(o.versions).length === 0 && c.team.engineers >= 1 && !o.developing) {
             push('os_missing', 'info', 'puzzle', {}, { nav: 'research', subtab: 'os' }, 70);
         }
-        var bugs = arr(o.bugs).length;
-        if (bugs >= 3) push('os_bugs', 'tip', 'bug', { n: bugs }, { nav: 'research', subtab: 'os' }, 40);
+        var bugs = arr(o.bugs).filter(function (b) { return b && b.status === 'active'; }).length;
+        if (bugs >= 3) push('os_bugs', bugs >= 5 ? 'warn' : 'tip', 'bug', { n: bugs }, { nav: 'research', subtab: 'os' }, 40);
     },
     function fab(c, push) {
         var f = c.d.fab || {};
@@ -276,6 +419,10 @@ const RULES = [
         if (c.catalog.length >= 1 && typeof rep === 'number' && rep < 20) {
             push('reputation', 'info', 'star', { n: Math.round(rep) }, { nav: 'market' }, 80);
         }
+    },
+    function idleCash(c, push) {
+        if (c.burn <= 0 || !isFinite(c.runway) || c.runway < 15 || c.cash < 50000) return;
+        push('idle_cash', 'info', 'gem-s', { months: c.runway.toFixed(0) }, { nav: 'research', subtab: 'tech' }, 85);
     }
 ];
 
@@ -303,7 +450,7 @@ export class AdvisorSystem {
          'team:changed', 'product:stock-out', 'lang:changed', 'state:hydrated'].forEach(function (ev) {
             self._unsubs.push(bus.on(ev, refresh));
         });
-        this._unsubs.push(bus.on('time:day-changed', function () { self._maybeToast(); }));
+        this._unsubs.push(bus.on('time:day-changed', function () { self._snapshot(); self._maybeToast(); }));
         this._scheduleRefresh();
     }
 
@@ -319,32 +466,129 @@ export class AdvisorSystem {
         if (!d.advisor || typeof d.advisor !== 'object') d.advisor = {};
         if (!d.advisor.snoozed) d.advisor.snoozed = {};
         if (!d.advisor.toasted) d.advisor.toasted = {};
+        if (!Array.isArray(d.advisor.hist)) d.advisor.hist = [];
         return d.advisor;
+    }
+
+    // Foto kondisi mingguan untuk menghitung tren (kas, penjualan).
+    _snapshot() {
+        var d = this.state.data;
+        if (!d || !d.time) return;
+        var store = this._store();
+        var day = Math.floor((d.time.elapsedGameMinutes || 0) / DAY);
+        var last = store.hist[store.hist.length - 1];
+        if (last && day - last.day < SNAPSHOT_EVERY_DAYS) return;
+        var cat = arr((d.products || {}).catalog);
+        store.hist.push({
+            day: day,
+            cash: d.cash || 0,
+            sold: sumBy(cat, function (p) { return p.totalSold; }),
+            rev: sumBy(cat, function (p) { return p.totalRevenue; })
+        });
+        if (store.hist.length > MAX_SNAPSHOTS) store.hist.splice(0, store.hist.length - MAX_SNAPSHOTS);
+    }
+
+    _trends() {
+        var h = this._store().hist;
+        var out = { salesRecent: null, salesPrev: null, salesDrop: null, cashPerDay: null, points: h.length };
+        if (h.length >= 2) {
+            var a = h[h.length - 2], b = h[h.length - 1];
+            var dd = Math.max(1, b.day - a.day);
+            out.salesRecent = (b.sold - a.sold) / dd;
+            out.cashPerDay = (b.cash - a.cash) / dd;
+        }
+        if (h.length >= 3) {
+            var p0 = h[h.length - 3], p1 = h[h.length - 2];
+            var d2 = Math.max(1, p1.day - p0.day);
+            out.salesPrev = (p1.sold - p0.sold) / d2;
+            if (out.salesPrev > 0) out.salesDrop = clamp(1 - out.salesRecent / out.salesPrev, -5, 1);
+        }
+        return out;
+    }
+
+    // ---------- helper biaya (dipakai aturan & Brain) ----------
+    _wageIndex() {
+        try { return getMacro(this.state.data.time, BALANCE.macro).wageIndex || 1; } catch (e) { return 1; }
+    }
+    recruitCostOf(role) {
+        var base = (BALANCE.recruitCost && BALANCE.recruitCost[role]) || 2000;
+        return Math.round(base * this._wageIndex());
+    }
+    salaryOf(role) {
+        var base = (BALANCE.salary && BALANCE.salary[role]) || 2200;
+        return Math.round(base * this._wageIndex());
     }
 
     _ctx() {
         var d = this.state.data;
+        var self = this;
         var diff = (BALANCE.difficultyMultiplier && BALANCE.difficultyMultiplier[d.difficulty]) ||
                    (BALANCE.difficultyMultiplier && BALANCE.difficultyMultiplier.normal) || { expense: 1 };
         var m = BALANCE.monthly || {};
-        var fixed = ((m.rentHQ || 0) + (m.utilities || 0) + (m.baseAdmin || 0)) * getMacro(d.time, BALANCE.macro).cpiIndex * (diff.expense || 1);
-        var payroll = arr(d.staff).reduce(function (a, s) { return a + (s.salary || 0); }, 0);
+        var cpi = 1;
+        try { cpi = getMacro(d.time, BALANCE.macro).cpiIndex || 1; } catch (e) {}
+        var fixed = ((m.rentHQ || 0) + (m.utilities || 0) + (m.baseAdmin || 0)) * cpi * (diff.expense || 1);
+        var payroll = sumBy(d.staff, function (s) { return s.salary; });
         var burn = fixed + payroll;
         var catalog = arr((d.products || {}).catalog);
-        return {
+        var loans = arr((d.finance || {}).loans);
+        var debtService = sumBy(loans, function (l) { return l.installment; });
+        var rh = arr((d.market || {}).revenueHistory).slice(0, 3);
+        var income = rh.length ? sumBy(rh, function (r) { return r.playerRevenue; }) / rh.length : 0;
+        var net = income - burn - debtService;
+        var cash = d.cash || 0;
+        var c = {
             d: d, deps: this.deps,
             now: (d.time && d.time.elapsedGameMinutes) || 0,
-            cash: d.cash || 0,
+            cash: cash,
             burn: burn,
-            runway: burn > 0 ? (d.cash || 0) / burn : Infinity,
+            payroll: payroll,
+            fixed: fixed,
+            runway: burn > 0 ? cash / burn : Infinity,
+            income: income,
+            debtService: debtService,
+            net: net,
+            trendRunway: net < 0 ? cash / -net : Infinity,
+            loans: loans,
             team: {
                 engineers: (d.team && d.team.engineers) || 0,
                 designers: (d.team && d.team.designers) || 0,
                 marketers: (d.team && d.team.marketers) || 0
             },
             catalog: catalog,
-            selling: catalog.filter(function (p) { return p.status === 'selling'; })
+            selling: catalog.filter(function (p) { return p.status === 'selling'; }),
+            trends: this._trends(),
+            recruitCost: function (role) { return self.recruitCostOf(role); },
+            bestResearch: function () { return self._bestResearch(c); }
         };
+        return c;
+    }
+
+    // Rekomendasi riset: nilai (node lanjutan + efek) dibanding biaya, hanya yang terjangkau.
+    _bestResearch(c) {
+        var rs = this.deps.research;
+        if (!rs) return null;
+        var best = null, W = WHY[curLang()];
+        try {
+            arr(rs.getCategories()).forEach(function (cat) {
+                arr(rs.getNodesByCategory(cat.id)).forEach(function (n) {
+                    if (rs.getNodeStatus(n.id).status !== 'available') return;
+                    if (n.cost > c.cash) return;
+                    var dep = 0;
+                    try { dep = typeof rs.getDependents === 'function' ? arr(rs.getDependents(n.id)).length : 0; } catch (e) {}
+                    var eff = n.effects || {};
+                    var unl = arr(eff.unlocksComponents).length + arr(eff.unlocksOsFeatures).length;
+                    var value = 1 + dep * 2 + unl * 1.5;
+                    var score = value / Math.max(1, n.cost);
+                    if (!best || score > best.score) best = { node: n, score: score, dep: dep, unl: unl };
+                });
+            });
+        } catch (e) { return null; }
+        if (!best) return null;
+        best.why = best.dep > 0 ? W.dependents.replace('{n}', best.dep)
+                 : best.unl > 0 ? W.unlocks
+                 : W.cheap;
+        return best;
     }
 
     // Daftar saran terurut. opts.includeSnoozed=true untuk melihat semuanya.
@@ -397,9 +641,148 @@ export class AdvisorSystem {
         return tx('ui.summary', { months: Math.max(0, c.runway).toFixed(1) });
     }
 
+    // ---------- skor kesehatan 6 dimensi ----------
+    getHealth() {
+        var c = this._ctx();
+        var L = curLang() === 'id';
+        var parts = [];
+        var add = function (id, label, score, weight, note) {
+            parts.push({ id: id, label: label, score: Math.round(clamp(score, 0, 100)), weight: weight, note: note || '' });
+        };
+
+        // 1. Likuiditas
+        var liq = 100, liqNote = '';
+        if (c.burn > 0) {
+            var r = Math.min(c.runway, c.trendRunway);
+            liq = r < 1 ? 5 : r < 3 ? 30 : r < 6 ? 60 : r < 12 ? 85 : 100;
+            liqNote = isFinite(r) ? r.toFixed(1) + (L ? ' bln' : ' mo') : '';
+        }
+        if (((c.d.finance || {}).negativeMonths || 0) > 0) liq -= 25;
+        if (c.loans.some(function (l) { return (l.missed || 0) > 0; })) liq -= 20;
+        add('liquidity', L ? 'Likuiditas' : 'Liquidity', liq, 0.28, liqNote);
+
+        // 2. Pertumbuhan
+        var gr = c.selling.length ? 65 : (c.catalog.length ? 40 : 30), grNote = '';
+        if (c.trends.salesDrop !== null && c.trends.salesPrev >= 5) {
+            gr = clamp(75 - c.trends.salesDrop * 70, 10, 100);
+            grNote = (c.trends.salesDrop >= 0 ? '-' : '+') + Math.abs(Math.round(c.trends.salesDrop * 100)) + '%';
+        } else if (c.net > 0) { gr = 85; grNote = '+$' + money(c.net); }
+        var sh = arr((c.d.market || {}).shareHistory);
+        if (sh.length >= 2 && sh[0].playerShare < sh[1].playerShare * 0.85) gr -= 12;
+        add('growth', L ? 'Pertumbuhan' : 'Growth', gr, 0.2, grNote);
+
+        // 3. Produk
+        var pr = 20, prNote = '';
+        if (c.catalog.length) {
+            pr = 70;
+            var out = c.selling.filter(function (p) { return (p.stock || 0) <= 0; }).length;
+            pr -= out * 25;
+            var sat = (c.d.feedback && c.d.feedback.perProductSatisfaction) || {};
+            var vals = c.selling.map(function (p) { return sat[p.id]; }).filter(function (v) { return typeof v === 'number'; });
+            if (vals.length) { var avg = vals.reduce(function (a, b) { return a + b; }, 0) / vals.length; pr = (pr + avg) / 2; prNote = Math.round(avg) + '/100'; }
+            if (!c.selling.length) pr -= 20;
+        }
+        add('product', L ? 'Produk' : 'Product', pr, 0.2, prNote);
+
+        // 4. Tim
+        var tm = 40, tmNote = '';
+        var staff = arr(c.d.staff);
+        if (staff.length) {
+            var mor = sumBy(staff, function (s) { return s.morale; }) / staff.length;
+            tm = mor; tmNote = Math.round(mor) + '/100';
+            if (!c.team.designers && !c.catalog.length) tm -= 10;
+            if (!c.team.marketers && c.selling.length) tm -= 10;
+        }
+        add('team', L ? 'Tim' : 'Team', tm, 0.12, tmNote);
+
+        // 5. Teknologi
+        var rsr = c.d.research || {};
+        var slots = rsr.maxSlots || 1, act = arr(rsr.active).length;
+        var te = 40 + (act / slots) * 30 + Math.min(20, arr(rsr.completed).length);
+        if (arr((c.d.os || {}).versions).length) te += 10;
+        var bugs = arr((c.d.os || {}).bugs).filter(function (b) { return b && b.status === 'active'; }).length;
+        te -= bugs * 6;
+        add('tech', L ? 'Teknologi' : 'Tech', te, 0.1, act + '/' + slots + (L ? ' slot' : ' slots'));
+
+        // 6. Merek
+        var rep = typeof (c.d.market || {}).reputation === 'number' ? c.d.market.reputation : 10;
+        add('brand', L ? 'Merek' : 'Brand', rep, 0.1, Math.round(rep) + '/100');
+
+        var score = 0, wsum = 0;
+        parts.forEach(function (p) { score += p.score * p.weight; wsum += p.weight; });
+        score = Math.max(5, Math.min(100, Math.round(score / wsum)));
+        var label = score >= 80 ? (L ? 'Sangat baik' : 'Excellent')
+                  : score >= 60 ? (L ? 'Baik' : 'Good')
+                  : score >= 40 ? (L ? 'Waspada' : 'Caution')
+                  : (L ? 'Kritis' : 'Critical');
+        var weakest = parts.slice().sort(function (a, b) { return a.score - b.score; })[0];
+        return { score: score, label: label, parts: parts, weakest: weakest };
+    }
+
+    // ---------- prakiraan kas ----------
+    // Kembalikan { base:[{m,cash}], worst:[{m,cash}], runwayBase, runwayWorst }.
+    forecast(months) {
+        var n = months || 6;
+        var c = this._ctx();
+        var base = [], worst = [], cb = c.cash, cw = c.cash;
+        var outflow = c.burn + c.debtService;
+        var firstBase = null, firstWorst = null;
+        for (var m = 1; m <= n; m++) {
+            cb += c.income - outflow;
+            cw += -outflow;
+            base.push({ m: m, cash: cb });
+            worst.push({ m: m, cash: cw });
+            if (firstBase === null && cb < 0) firstBase = m;
+            if (firstWorst === null && cw < 0) firstWorst = m;
+        }
+        return {
+            base: base, worst: worst,
+            income: c.income, outflow: outflow, net: c.income - outflow,
+            runwayBase: (c.income - outflow) < 0 ? c.cash / (outflow - c.income) : Infinity,
+            runwayWorst: outflow > 0 ? c.cash / outflow : Infinity
+        };
+    }
+
+    // ---------- simulasi "bagaimana jika" ----------
+    // opts: { hire:{engineer:n,designer:n,marketer:n}, loan:amount }
+    simulate(opts) {
+        var c = this._ctx(), o = opts || {};
+        var addBurn = 0, upfront = 0, desc = [];
+        var hire = o.hire || {};
+        Object.keys(hire).forEach(function (role) {
+            var n = hire[role] | 0;
+            if (n <= 0) return;
+            addBurn += n * this.salaryOf(role);
+            upfront += n * this.recruitCostOf(role);
+            desc.push(n + ' ' + role);
+        }, this);
+        var loanAmt = Math.max(0, o.loan || 0);
+        var loanInst = 0;
+        if (loanAmt > 0) {
+            var rate = 0.03, term = 12;
+            loanInst = loanAmt * rate / (1 - Math.pow(1 + rate, -term));
+        }
+        var cashAfter = c.cash - upfront + loanAmt;
+        var newBurn = c.burn + addBurn;
+        var outflow = newBurn + c.debtService + loanInst;
+        var runway = newBurn > 0 ? cashAfter / newBurn : Infinity;
+        var net = c.income - outflow;
+        return {
+            desc: desc, upfront: upfront, addBurn: addBurn, loanAmt: loanAmt, loanInst: loanInst,
+            cashAfter: cashAfter, newBurn: newBurn, runwayBefore: c.runway, runwayAfter: runway,
+            netBefore: c.net, netAfter: net,
+            trendRunwayAfter: net < 0 ? cashAfter / -net : Infinity,
+            safe: cashAfter >= newBurn * 3 && (net >= 0 || cashAfter / -net >= 6)
+        };
+    }
+
     snooze(id, days) {
         var c = this._ctx();
-        this._store().snoozed[id] = c.now + (days || SNOOZE_DAYS) * DAY;
+        var store = this._store();
+        store.snoozed[id] = c.now + (days || SNOOZE_DAYS) * DAY;
+        Object.keys(store.snoozed).forEach(function (k) {          // buang yang sudah kedaluwarsa
+            if (store.snoozed[k] <= c.now) delete store.snoozed[k];
+        });
         this._scheduleRefresh();
     }
 
@@ -454,13 +837,18 @@ export class AdvisorSystem {
         var c = this._ctx();
         var d = c.d;
         var t = d.time || {};
+        var h = this.getHealth();
         return {
             date: { year: t.currentYear, month: t.currentMonth, day: t.currentDay },
             company: d.companyName,
             difficulty: d.difficulty,
             cash: c.cash,
             monthlyBurn: Math.round(c.burn),
+            monthlyRevenue: Math.round(c.income),
+            netMonthly: Math.round(c.net),
+            debtService: Math.round(c.debtService),
             runwayMonths: isFinite(c.runway) ? Math.round(c.runway * 10) / 10 : null,
+            health: { score: h.score, label: h.label, weakest: h.weakest && h.weakest.id },
             team: c.team,
             research: {
                 active: arr((d.research || {}).active).map(function (e) { return e.name; }),
@@ -468,9 +856,11 @@ export class AdvisorSystem {
                 completedCount: arr((d.research || {}).completed).length
             },
             products: c.catalog.map(function (p) {
-                return { name: p.name, status: p.status, stock: p.stock, price: p.price, sold: p.totalSold };
+                return { name: p.name, status: p.status, stock: p.stock, price: p.price, unitCost: p.unitCost, sold: p.totalSold };
             }),
-            os: { versions: arr((d.os || {}).versions).length, bugs: arr((d.os || {}).bugs).length },
+            loans: c.loans.map(function (l) { return { remaining: l.remaining, installment: l.installment, missed: l.missed }; }),
+            trends: { salesDrop: c.trends.salesDrop, salesPerDay: c.trends.salesRecent },
+            os: { versions: arr((d.os || {}).versions).length, bugs: arr((d.os || {}).bugs).filter(function (b) { return b && b.status === 'active'; }).length },
             fab: { built: !!(d.fab && d.fab.built), level: d.fab && d.fab.level },
             market: { share: (d.market || {}).share, reputation: (d.market || {}).reputation },
             activeCampaigns: arr((d.marketing || {}).activeCampaigns).length
@@ -482,7 +872,7 @@ export class AdvisorSystem {
         if (!this._chat.length) this._chat.push(Object.assign({ role: 'bot' }, this.brain.greeting()));
         return this._chat;
     }
-    resetChat() { this._chat = []; this.brain.mem = { last: null, lastProduct: null, depth: 0, turns: 0, asked: {} }; }
+    resetChat() { this._chat = []; this.brain.resetMemory(); }
 
     // Balasan lokal; bila yakin rendah dan ada provider AI, tanya provider.
     async chat(text) {

@@ -1,17 +1,22 @@
-// FILE: src/systems/AdvisorBrain.js  (BARU)
-// v2027.37 — "Otak" lokal Asisten Bisnis. Tanpa server / API key.
+// FILE: src/systems/AdvisorBrain.js
+// v2028.40 — "Otak" lokal Asisten Bisnis. Tanpa server / API key.
 //
 // Kemampuan:
 //  - Memahami pertanyaan bebas (Indonesia + Inggris), toleran typo (fuzzy match).
 //  - Mengingat konteks percakapan (topik terakhir, produk yang disebut,
-//    pertanyaan lanjutan seperti "kenapa?" / "detail" / "lanjut").
-//  - Menjawab dengan data nyata game: kas, runway, tim, riset, stok, produk, OS, fab.
-//  - Skor kesehatan bisnis, prediksi kas, rencana langkah demi langkah.
+//    pertanyaan lanjutan seperti "kenapa?" / "detail" / "lanjut"), dan memperdalam
+//    jawaban bila pertanyaan yang sama diulang.
+//  - Meminta klarifikasi bila dua maksud sama kuatnya (tidak menebak asal).
+//  - Menjawab dengan data nyata: kas, arus kas bersih, runway, pinjaman, tim, riset,
+//    stok, harga & margin, pesaing, tren, OS, fab.
+//  - Skor kesehatan 6 dimensi + rekomendasi area terlemah.
+//  - Prakiraan kas dan simulasi "bagaimana jika" ("kalau rekrut 2 engineer",
+//    "kalau pinjam 50 ribu").
 //  - Perintah navigasi ("buka riset", "ke tim", "go to sales").
 //  - Selalu mengembalikan tombol aksi + saran pertanyaan lanjutan.
 //
 // Kontrak: reply(text) -> { text, actions:[{label,nav,subtab}], chips:[string],
-//                           intent, confidence }
+//                           intent, confidence, navigate? }
 // Tidak mengubah state game.
 
 var DAY = 1440;
@@ -55,9 +60,21 @@ function matchWord(tok, kw) {
     return 0;
 }
 
-function money(n) { return Math.round(n).toLocaleString('en-US'); }
+function money(n) { return Math.round(n || 0).toLocaleString('en-US'); }
 function arr(a) { return Array.isArray(a) ? a : []; }
 function pick(list, n) { return list[n % list.length]; }
+function pct(x, d) { return (x * 100).toFixed(d === undefined ? 0 : d) + '%'; }
+
+// "50 ribu" / "50k" / "2 juta" / "50.000" -> angka
+function parseAmount(numStr, unit) {
+    var s = String(numStr || '').replace(/[.,](?=\d{3}\b)/g, '').replace(',', '.');
+    var v = parseFloat(s);
+    if (!isFinite(v)) return 0;
+    var u = String(unit || '').toLowerCase();
+    if (u === 'k' || u === 'rb' || u === 'ribu') v *= 1000;
+    else if (u === 'jt' || u === 'juta' || u === 'm') v *= 1000000;
+    return Math.round(v);
+}
 
 // ------------------------------------------------------------
 // Kamus intent
@@ -66,24 +83,42 @@ var INTENTS = {
     greet:     { w: 1, kw: ['halo', 'hai', 'hi', 'hello', 'hey', 'pagi', 'siang', 'sore', 'malam', 'assalamualaikum', 'woi'] },
     thanks:    { w: 1, kw: ['makasih', 'terima', 'kasih', 'thanks', 'thx', 'thank', 'mantap', 'sip', 'keren', 'good'] },
     help:      { w: 1, kw: ['bantuan', 'help', 'bisa', 'fitur', 'menu', 'cara', 'bantu', 'kemampuan', 'can'] },
-    status:    { w: 1.2, kw: ['kondisi', 'keadaan', 'status', 'ringkasan', 'summary', 'overview', 'situasi', 'laporan', 'report', 'gimana', 'bagaimana', 'sehat', 'health', 'perusahaan', 'company', 'bisnis', 'business', 'skor', 'score'] },
+    status:    { w: 1.2, kw: ['kondisi', 'keadaan', 'status', 'ringkasan', 'summary', 'overview', 'situasi', 'laporan', 'report', 'gimana', 'bagaimana', 'perusahaan', 'company', 'bisnis', 'business', 'briefing'] },
+    health:    { w: 1.6, kw: ['sehat', 'health', 'skor', 'score', 'nilai', 'rapor', 'terlemah', 'weakest', 'kelemahan', 'weakness'] },
     next:      { w: 1.3, kw: ['saran', 'next', 'prioritas', 'harus', 'lakukan', 'todo', 'langkah', 'rekomendasi', 'recommend', 'suggestion', 'priority', 'sekarang', 'now', 'selanjutnya', 'should', 'penting', 'urgent', 'mendesak'] },
     plan:      { w: 1.4, kw: ['rencana', 'strategi', 'plan', 'strategy', 'roadmap', 'panduan', 'guide', 'tahap', 'mulai', 'start', 'awal', 'pemula', 'beginner'] },
-    cash:      { w: 1.4, kw: ['uang', 'kas', 'cash', 'duit', 'saldo', 'dana', 'bokek', 'runway', 'burn', 'biaya', 'pengeluaran', 'boros', 'hemat', 'cost', 'money', 'pinjaman', 'loan', 'gaji', 'bangkrut', 'bankrupt', 'napas'] },
+    cash:      { w: 1.4, kw: ['uang', 'kas', 'cash', 'duit', 'saldo', 'dana', 'bokek', 'runway', 'burn', 'biaya', 'pengeluaran', 'boros', 'hemat', 'cost', 'money', 'gaji', 'bangkrut', 'bankrupt', 'napas', 'pemasukan', 'income', 'revenue', 'pendapatan', 'profit', 'untung', 'rugi'] },
+    loan:      { w: 1.7, kw: ['pinjaman', 'loan', 'utang', 'hutang', 'cicilan', 'kredit', 'bank', 'bunga', 'interest', 'debt', 'installment', 'lunasi', 'melunasi', 'tunggakan'] },
     forecast:  { w: 1.5, kw: ['prediksi', 'forecast', 'proyeksi', 'depan', 'nanti', 'habis', 'kapan', 'when', 'predict', 'ramalan', 'bertahan', 'survive', 'lama'] },
+    trend:     { w: 1.6, kw: ['tren', 'trend', 'naik', 'turun', 'menurun', 'meningkat', 'perkembangan', 'progress', 'grafik', 'laju', 'melambat', 'anjlok', 'slump', 'growth', 'pertumbuhan', 'declining'] },
     research:  { w: 1.4, kw: ['riset', 'research', 'teknologi', 'tech', 'slot', 'inovasi', 'unlock', 'node'] },
     team:      { w: 1.4, kw: ['tim', 'team', 'staf', 'staff', 'rekrut', 'hire', 'hiring', 'engineer', 'desainer', 'designer', 'marketer', 'karyawan', 'pegawai', 'employee', 'sdm', 'recruit', 'pecat', 'fire'] },
-    product:   { w: 1.3, kw: ['produk', 'product', 'ponsel', 'phone', 'hp', 'smartphone', 'penjualan', 'sales', 'jual', 'laku', 'rilis', 'release', 'desain', 'design', 'rancang', 'harga', 'price', 'terjual', 'sold', 'katalog'] },
+    product:   { w: 1.3, kw: ['produk', 'product', 'ponsel', 'phone', 'hp', 'smartphone', 'penjualan', 'sales', 'jual', 'laku', 'rilis', 'release', 'desain', 'design', 'rancang', 'terjual', 'sold', 'katalog'] },
+    price:     { w: 1.7, kw: ['harga', 'price', 'pricing', 'margin', 'markup', 'diskon', 'discount', 'mahal', 'murah', 'expensive', 'cheap', 'tarif'] },
     stock:     { w: 1.5, kw: ['stok', 'stock', 'produksi', 'restock', 'persediaan', 'inventory', 'habis', 'produce', 'gudang'] },
     marketing: { w: 1.5, kw: ['iklan', 'kampanye', 'marketing', 'campaign', 'promosi', 'promo', 'ads', 'advertising', 'pemasaran'] },
     os:        { w: 1.5, kw: ['os', 'sistem', 'operasi', 'bug', 'software', 'update', 'versi', 'version', 'appstore'] },
     chip:      { w: 1.5, kw: ['chip', 'fab', 'pabrik', 'prosesor', 'processor', 'soc', 'semikonduktor', 'foundry', 'wafer'] },
     morale:    { w: 1.5, kw: ['moral', 'semangat', 'mood', 'bahagia', 'happy', 'morale', 'resign', 'keluar', 'quit', 'burnout'] },
-    reputation:{ w: 1.4, kw: ['reputasi', 'reputation', 'ulasan', 'review', 'rating', 'pangsa', 'share', 'pasar', 'market', 'saingan', 'kompetitor', 'competitor', 'pesaing', 'brand', 'citra'] },
+    reputation:{ w: 1.4, kw: ['reputasi', 'reputation', 'ulasan', 'review', 'rating', 'brand', 'citra'] },
+    competitor:{ w: 1.7, kw: ['pesaing', 'saingan', 'kompetitor', 'competitor', 'rival', 'lawan', 'pangsa', 'share', 'pasar', 'market', 'apple', 'samsung', 'nokia'] },
+    whatif:    { w: 1.0, kw: ['simulasi', 'simulate', 'seandainya', 'misalnya', 'andai', 'bagaimana', 'jika', 'kalau', 'if'] },
     silicon:   { w: 1.6, kw: ['silicon', 'sil', 'topup', 'top', 'up', 'premium', 'percepat', 'speed', 'boost', 'gem'] },
     glossary:  { w: 1.2, kw: ['itu', 'artinya', 'maksud', 'definisi', 'arti', 'what', 'means', 'meaning', 'define', 'istilah'] },
     why:       { w: 1.0, kw: ['kenapa', 'mengapa', 'why', 'alasan', 'sebab', 'reason', 'bagaimana'] },
     more:      { w: 0.5, kw: ['lanjut', 'detail', 'lagi', 'terus', 'jelasin', 'jelaskan', 'lengkap', 'more', 'continue', 'elaborate', 'next', 'oke', 'ok', 'ya', 'yes', 'iya', 'boleh'] }
+};
+
+// Nama intent untuk pertanyaan klarifikasi.
+var INTENT_LABEL = {
+    status: ['kondisi bisnis', 'business status'], health: ['skor kesehatan', 'health score'],
+    next: ['prioritas sekarang', 'priorities'], plan: ['rencana', 'plan'], cash: ['uang & arus kas', 'cash & cash flow'],
+    loan: ['pinjaman', 'loans'], forecast: ['prediksi uang', 'cash forecast'], trend: ['tren', 'trends'],
+    research: ['riset', 'research'], team: ['tim', 'team'], product: ['produk', 'products'],
+    price: ['harga & margin', 'price & margin'], stock: ['stok', 'stock'], marketing: ['kampanye', 'campaigns'],
+    os: ['OS', 'OS'], chip: ['chip & fab', 'chips & fab'], morale: ['moral tim', 'team morale'],
+    reputation: ['reputasi', 'reputation'], competitor: ['pesaing & pasar', 'rivals & market'],
+    whatif: ['simulasi', 'simulation']
 };
 
 var NAV_STRONG = ['buka', 'open', 'pergi', 'tampilkan', 'show', 'lihat', 'menuju', 'bawa', 'antar', 'navigate', 'arahkan', 'masuk'];
@@ -97,8 +132,8 @@ var NAV_TARGETS = [
     { id: 'design',   label: ['Rancang Ponsel', 'Design Phone'], nav: 'products', subtab: 'design', kw: ['desain', 'design', 'rancang', 'wizard'] },
     { id: 'sales',    label: ['Penjualan', 'Sales'],           nav: 'products', subtab: 'sales',  kw: ['penjualan', 'sales', 'stok', 'stock', 'jual', 'kampanye', 'campaign'] },
     { id: 'products', label: ['Produk', 'Products'],           nav: 'products', subtab: null,     kw: ['produk', 'product', 'ponsel', 'phone', 'hp'] },
-    { id: 'market',   label: ['Pasar', 'Market'],              nav: 'market',   subtab: null,     kw: ['pasar', 'market', 'saham', 'stock market', 'kompetitor', 'saingan'] },
-    { id: 'settings', label: ['Setelan', 'Settings'],          nav: 'settings', subtab: null,     kw: ['setelan', 'setting', 'settings', 'pengaturan', 'pinjaman', 'loan', 'opsi'] },
+    { id: 'market',   label: ['Pasar', 'Market'],              nav: 'market',   subtab: null,     kw: ['pasar', 'market', 'saham', 'kompetitor', 'saingan', 'pesaing'] },
+    { id: 'settings', label: ['Setelan', 'Settings'],          nav: 'settings', subtab: null,     kw: ['setelan', 'setting', 'settings', 'pengaturan', 'pinjaman', 'loan', 'opsi', 'bank'] },
     { id: 'home',     label: ['Beranda', 'Home'],              nav: 'home',     subtab: null,     kw: ['beranda', 'home', 'utama', 'dashboard'] }
 ];
 
@@ -107,6 +142,12 @@ var GLOSSARY = {
              'Runway = how many months your cash lasts at the current monthly cost (cash ÷ monthly cost). Under 3 months is the danger zone.'],
     burn:   ['Burn (biaya bulanan) = sewa HQ + utilitas + administrasi + gaji seluruh staf. Menambah staf langsung menaikkan burn.',
              'Burn (monthly cost) = HQ rent + utilities + admin + all staff salaries. Hiring raises burn immediately.'],
+    margin: ['Margin = (harga − biaya per unit) ÷ harga. Di bawah ~12% terlalu tipis; 25–45% biasanya sehat.',
+             'Margin = (price − unit cost) ÷ price. Under ~12% is too thin; 25–45% is usually healthy.'],
+    cicilan:['Cicilan = pembayaran bulanan pinjaman (pokok + bunga). Total cicilan sebaiknya di bawah ~40% pemasukan.',
+             'Installment = the monthly loan payment (principal + interest). Keep total installments under ~40% of revenue.'],
+    arus:   ['Arus kas bersih = pemasukan − biaya bulanan − cicilan. Negatif berarti uangmu menyusut tiap bulan.',
+             'Net cash flow = revenue − monthly cost − installments. Negative means your cash shrinks every month.'],
     moral:  ['Moral staf (0-100) dipengaruhi kondisi kerja. Di bawah 50 kinerja turun dan staf bisa keluar.',
              'Staff morale (0-100) reflects working conditions. Below 50 performance drops and staff may quit.'],
     morale: ['Moral staf (0-100) dipengaruhi kondisi kerja. Di bawah 50 kinerja turun dan staf bisa keluar.',
@@ -123,58 +164,46 @@ var GLOSSARY = {
               'Reputation (0-100) grows with quality products and good reviews. High reputation makes selling easier.'],
     kampanye:['Kampanye iklan mendorong penjualan produk, paling efektif saat produk masih baru (fase naik & puncak). Butuh marketer.',
               'Ad campaigns push sales, most effective while a product is new (rise & peak phases). Needs a marketer.'],
-    campaign:['Ad campaigns push sales, most effective while a product is new (rise & peak phases). Needs a marketer.',
+    campaign:['Kampanye iklan mendorong penjualan produk, paling efektif saat produk masih baru (fase naik & puncak). Butuh marketer.',
               'Ad campaigns push sales, most effective while a product is new (rise & peak phases). Needs a marketer.'],
     stok:   ['Stok = unit siap jual. Kalau habis penjualan berhenti. Aktifkan auto-restock agar produksi ulang otomatis.',
              'Stock = units ready to sell. At zero, sales stop. Enable auto-restock to re-produce automatically.'],
-    stock:  ['Stock = units ready to sell. At zero, sales stop. Enable auto-restock to re-produce automatically.',
+    stock:  ['Stok = unit siap jual. Kalau habis penjualan berhenti. Aktifkan auto-restock agar produksi ulang otomatis.',
              'Stock = units ready to sell. At zero, sales stop. Enable auto-restock to re-produce automatically.']
 };
-GLOSSARY.stock[0] = GLOSSARY.stok[0];
+
+var HEALTH_ACTION = {
+    liquidity: { nav: 'products', subtab: 'sales', id: 'sales' },
+    growth:    { nav: 'products', subtab: 'sales', id: 'sales' },
+    product:   { nav: 'products', subtab: 'design', id: 'design' },
+    team:      { nav: 'team', subtab: null, id: 'team' },
+    tech:      { nav: 'research', subtab: 'tech', id: 'research' },
+    brand:     { nav: 'market', subtab: null, id: 'market' }
+};
 
 // ------------------------------------------------------------
 export class AdvisorBrain {
-    // sys: AdvisorSystem (butuh _ctx(), getAdvice(), lang via sys.lang())
+    // sys: AdvisorSystem (butuh _ctx(), getAdvice(), getHealth(), forecast(), simulate(), _lang())
     constructor(sys) {
         this.sys = sys;
-        this.mem = { last: null, lastProduct: null, depth: 0, turns: 0, asked: {} };
+        this.resetMemory();
     }
+
+    resetMemory() { this.mem = { last: null, lastProduct: null, depth: 0, turns: 0, asked: {}, pending: null }; }
 
     lang() { return this.sys._lang(); }
     L(id, en) { return this.lang() === 'id' ? id : en; }
 
-    // ---------- skor kesehatan 0-100 ----------
+    // ---------- skor kesehatan (didelegasikan ke sistem, 6 dimensi) ----------
     health() {
-        var c = this.sys._ctx();
-        var score = 100, notes = [];
-        if (c.burn > 0) {
-            if (c.cash < c.burn) { score -= 40; notes.push('cash'); }
-            else if (c.runway < 3) { score -= 22; notes.push('cash'); }
-            else if (c.runway < 6) { score -= 8; }
-        }
-        var adv = this.sys.getAdvice();
-        adv.forEach(function (a) {
-            if (a.sev === 'critical') score -= 12;
-            else if (a.sev === 'warn') score -= 6;
-        });
-        if (!c.catalog.length) score -= 6;
-        var staff = arr(c.d.staff);
-        if (staff.length) {
-            var avg = staff.reduce(function (s, x) { return s + (x.morale || 0); }, 0) / staff.length;
-            if (avg < 50) score -= 8;
-        }
-        score = Math.max(5, Math.min(100, Math.round(score)));
-        var label = score >= 80 ? this.L('Sangat baik', 'Excellent')
-                  : score >= 60 ? this.L('Baik', 'Good')
-                  : score >= 40 ? this.L('Waspada', 'Caution')
-                  : this.L('Kritis', 'Critical');
-        return { score: score, label: label };
+        var h = this.sys.getHealth();
+        return { score: h.score, label: h.label, parts: h.parts, weakest: h.weakest };
     }
 
     // ---------- deteksi intent ----------
     _detect(text) {
         var toks = tokens(text);
-        var scores = {}, self = this;
+        var scores = {};
         Object.keys(INTENTS).forEach(function (k) {
             var def = INTENTS[k], s = 0;
             toks.forEach(function (tk) {
@@ -192,24 +221,35 @@ export class AdvisorBrain {
         if (/apa (itu|arti|maksud)|what is|what does|apa yang dimaksud/.test(n)) scores.glossary += 3;
         if (/(apa|what).*(harus|should|lakukan|do)|(prioritas|priority)/.test(n)) scores.next += 3;
         if (/(bisa|can) .*(bertahan|survive)|kapan.*(habis|bangkrut)|berapa lama/.test(n)) scores.forecast += 3;
-        if (/kondisi|keadaan|ringkasan|how am i|how is|gimana (bisnis|perusahaan)|status/.test(n)) scores.status += 2.5;
+        if (/kondisi|keadaan|ringkasan|how am i|how is (my )?(business|company)|gimana (bisnis|perusahaan)|status|briefing/.test(n)) scores.status += 2.5;
+        if (/skor|score|nilai (bisnis|perusahaan)|kesehatan|health|terlemah|weakest|kelemahan/.test(n)) scores.health += 3;
         if (/rekrut|hire|cari (staf|karyawan)/.test(n)) scores.team += 2;
         if (/(naik|tingkat|tambah)\w* (penjualan|sales)|jual lebih|(more|increase|boost|raise|improve) (my )?sales|sell more/.test(n)) scores.marketing += 4;
+        if (/(pinjam|pinjaman|loan|utang|hutang|cicilan)/.test(n)) scores.loan += 2;
+        if (/(harga|price|margin)/.test(n)) scores.price += 2;
+        if (/(tren|trend|menurun|melambat|anjlok|naik turun)/.test(n)) scores.trend += 2;
+        if (/(pesaing|saingan|kompetitor|competitor|rival|pangsa|market share)/.test(n)) scores.competitor += 2;
+        // "bagaimana jika / kalau ..." + aksi (rekrut / pinjam) = simulasi
+        if (/(kalau|jika|bagaimana jika|gimana kalau|what if|if i|seandainya|misal)/.test(n) &&
+            /(rekrut|hire|tambah|pinjam|loan|utang|kredit|\d+ (engineer|desainer|designer|marketer))/.test(n)) {
+            scores.whatif += 6; scores.team -= 2; scores.loan -= 2;
+        }
         // "habis" ambigu: stok vs uang
         if (/(uang|kas|cash|duit).*habis|habis.*(uang|kas|cash|duit)|running out of (cash|money)/.test(n)) { scores.forecast += 3; scores.stock -= 3; }
         if (/stok.*habis|habis.*stok|out of stock/.test(n)) { scores.stock += 3; scores.forecast -= 3; }
+        // "naik/turun" saja jangan dianggap tren bila ada konteks lain yang jelas
+        if (/(harga).*(naik|turun)|(naik|turun).*(harga)/.test(n)) { scores.price += 2; scores.trend -= 1.5; }
 
-        var top = null, topS = 0, second = 0;
+        var top = null, topS = 0, second = 0, secondK = null;
         Object.keys(scores).forEach(function (k) {
             if (k === 'more') return;
-            if (scores[k] > topS) { second = topS; topS = scores[k]; top = k; }
-            else if (scores[k] > second) second = scores[k];
+            if (scores[k] > topS) { second = topS; secondK = top; topS = scores[k]; top = k; }
+            else if (scores[k] > second) { second = scores[k]; secondK = k; }
         });
-        // kalimat pendek lanjutan
         var moreScore = scores.more;
         var isFollow = toks.length <= 3 && moreScore >= 1 && topS < 2.5 && this.mem.last;
         var conf = top ? Math.min(1, (topS - second * 0.5) / 3) : 0;
-        return { intent: top, score: topS, confidence: conf, follow: isFollow, toks: toks };
+        return { intent: top, score: topS, second: second, secondIntent: secondK, confidence: conf, follow: isFollow, toks: toks };
     }
 
     _detectNav(text) {
@@ -226,7 +266,6 @@ export class AdvisorBrain {
             });
             if (s > bestS) { bestS = s; best = tg; }
         });
-        // tolak jika kata "ke/to" saja tanpa target jelas
         return bestS >= 1.1 ? best : null;
     }
 
@@ -253,11 +292,42 @@ export class AdvisorBrain {
     reply(text) {
         var m = this.mem;
         m.turns++;
+
+        // Jawaban untuk pertanyaan klarifikasi sebelumnya ("A atau B?")
+        if (m.pending) {
+            var pend = m.pending; m.pending = null;
+            var nq = norm(text);
+            for (var i = 0; i < pend.length; i++) {
+                var lab = INTENT_LABEL[pend[i]];
+                if (lab && (nq.indexOf(norm(lab[0])) >= 0 || nq.indexOf(norm(lab[1])) >= 0)) {
+                    return this._run(pend[i], { detail: false, text: text, product: null, toks: tokens(text) }, 0.8);
+                }
+            }
+        }
+
         var nav = this._detectNav(text);
         if (nav) {
             m.last = 'navigate';
             return this._navigate(nav);
         }
+        // "apa itu margin?" -> kamus istilah (jangan dikalahkan intent harga)
+        var nq0 = norm(text);
+        if (/apa (itu|arti|maksud)|what is|what does|apa yang dimaksud|arti dari|definisi/.test(nq0)) {
+            var tk0 = tokens(text);
+            for (var gi = 0; gi < tk0.length; gi++) {
+                for (var gk in GLOSSARY) {
+                    if (matchWord(tk0[gi], gk) >= 1.5) {
+                        m.last = 'glossary';
+                        return { text: GLOSSARY[gk][this.lang() === 'id' ? 0 : 1], actions: [], chips: this.chips(), intent: 'glossary', confidence: 1 };
+                    }
+                }
+            }
+        }
+        // "kalau rekrut 2 engineer?" / "what if I borrow 50k" -> simulasi
+        if (/(kalau|jika|bagaimana jika|gimana kalau|what if|if i|seandainya|misal)/.test(nq0) && this._parseWhatIf(text)) {
+            return this._run('whatif', { detail: false, text: text, product: null, toks: tokens(text) }, 0.95);
+        }
+
         var d = this._detect(text);
         var prod = this._findProduct(text);
         if (prod) m.lastProduct = prod.id;
@@ -265,18 +335,44 @@ export class AdvisorBrain {
         var intent = d.intent;
         var detail = false;
         if (d.follow) { intent = m.last; detail = true; m.depth++; }
-        else if (prod && (!intent || ['stock', 'marketing'].indexOf(intent) < 0 || d.score < 2.5)) { intent = 'product'; }
+        else if (prod && (!intent || ['stock', 'marketing', 'price'].indexOf(intent) < 0 || d.score < 2.5)) { intent = 'product'; }
         else m.depth = 0;
 
         var minScore = prod ? 1 : 1.5;
         if (!intent || (!d.follow && d.score < minScore)) {
             return this._fallback(text);
         }
-        var res = this._handle(intent, { detail: detail || m.depth > 0, text: text, product: prod, toks: d.toks });
+
+        // Dua maksud sama kuat → tanya balik, jangan menebak.
+        if (!d.follow && !prod && d.secondIntent && INTENT_LABEL[d.intent] && INTENT_LABEL[d.secondIntent] &&
+            d.second >= d.score * 0.8 && d.score < 4 && d.toks.length >= 3) {
+            return this._clarify(d.intent, d.secondIntent);
+        }
+        return this._run(intent, { detail: detail, text: text, product: prod, toks: d.toks }, d.confidence);
+    }
+
+    _run(intent, o, conf) {
+        var m = this.mem;
+        m.asked[intent] = (m.asked[intent] || 0) + 1;
+        // pertanyaan yang sama diulang → jawab lebih dalam, bukan copy-paste
+        var detail = o.detail || m.depth > 0 || m.asked[intent] > 1;
+        o.detail = detail;
+        var res = this._handle(intent, o);
         res.intent = intent;
-        res.confidence = d.confidence;
+        res.confidence = conf;
         m.last = intent;
         return res;
+    }
+
+    _clarify(a, b) {
+        var la = INTENT_LABEL[a], lb = INTENT_LABEL[b];
+        this.mem.pending = [a, b];
+        var A = this.L(la[0], la[1]), B = this.L(lb[0], lb[1]);
+        return {
+            text: this.L('Maksudmu **' + A + '** atau **' + B + '**? Pilih salah satu biar jawabanku tepat.',
+                         'Do you mean **' + A + '** or **' + B + '**? Pick one so I can answer precisely.'),
+            actions: [], chips: [A, B], intent: 'clarify', confidence: 0.4
+        };
     }
 
     // Jawaban pembuka saat panel dibuka.
@@ -285,9 +381,10 @@ export class AdvisorBrain {
         var adv = this.sys.getAdvice();
         var top = adv[0];
         var txt;
+        var weak = h.weakest ? h.weakest.label : '';
         if (top && top.id !== 'all_good') {
-            txt = this.L('Halo! Skor kesehatan bisnismu **' + h.score + '/100** (' + h.label + '). Hal terpenting sekarang: **' + top.title + '**. Mau aku jelaskan atau antar langsung?',
-                         'Hi! Your business health is **' + h.score + '/100** (' + h.label + '). Most important right now: **' + top.title + '**. Want me to explain or take you there?');
+            txt = this.L('Halo! Skor kesehatan bisnismu **' + h.score + '/100** (' + h.label + '), area terlemah: **' + weak + '**. Hal terpenting sekarang: **' + top.title + '**. Mau aku jelaskan atau antar langsung?',
+                         'Hi! Your business health is **' + h.score + '/100** (' + h.label + '), weakest area: **' + weak + '**. Most important right now: **' + top.title + '**. Want me to explain or take you there?');
         } else {
             txt = this.L('Halo! Skor kesehatan bisnismu **' + h.score + '/100** (' + h.label + '). Semua terkendali, mau bahas strategi ke depan?',
                          'Hi! Your business health is **' + h.score + '/100** (' + h.label + '). Everything is under control; want to talk strategy?');
@@ -298,11 +395,12 @@ export class AdvisorBrain {
     chips() {
         var c = this.sys._ctx();
         var out = [this.L('Apa prioritas sekarang?', 'What should I do now?'),
-                   this.L('Kondisi bisnis', 'Business status')];
+                   this.L('Skor kesehatan', 'Health score')];
         if (c.burn > 0) out.push(this.L('Prediksi uang', 'Cash forecast'));
-        if (c.catalog.length) out.push(this.L('Analisis produk', 'Analyze products'));
+        if (c.loans.length) out.push(this.L('Cek pinjaman', 'Check loans'));
+        if (c.catalog.length) out.push(this.L('Cek harga & margin', 'Check price & margin'));
         else out.push(this.L('Rencana awal', 'Starter plan'));
-        out.push(this.L('Buka riset', 'Open research'));
+        out.push(this.L('Kalau rekrut 1 engineer?', 'What if I hire 1 engineer?'));
         return out.slice(0, 5);
     }
 
@@ -332,8 +430,8 @@ export class AdvisorBrain {
     _fallback(text) {
         var adv = this.sys.getAdvice();
         var top = adv[0];
-        var base = this.L('Hmm, aku belum yakin maksudmu. Aku paham soal uang, tim, riset, produk, stok, kampanye, OS, chip, moral, dan reputasi. Coba tanya seperti "kenapa uangku cepat habis?" atau "buka riset".',
-                          'Hmm, I\'m not sure what you mean. I know about cash, team, research, products, stock, campaigns, OS, chips, morale and reputation. Try "why is my cash dropping?" or "open research".');
+        var base = this.L('Hmm, aku belum yakin maksudmu. Aku paham soal uang, pinjaman, harga, tim, riset, produk, stok, kampanye, pesaing, OS, chip, moral, dan reputasi. Coba tanya seperti "kenapa uangku cepat habis?", "kalau rekrut 2 engineer?" atau "buka riset".',
+                          'Hmm, I\'m not sure what you mean. I know about cash, loans, pricing, team, research, products, stock, campaigns, rivals, OS, chips, morale and reputation. Try "why is my cash dropping?", "what if I hire 2 engineers?" or "open research".');
         var acts = [];
         if (top && top.id !== 'all_good') {
             base += this.L('\n\nSementara itu, saran teratas: **' + top.title + '**.', '\n\nMeanwhile, top suggestion: **' + top.title + '**.');
@@ -354,14 +452,20 @@ export class AdvisorBrain {
     _followChips(intent) {
         var L = this.L.bind(this);
         var map = {
-            cash: [L('Prediksi uang', 'Cash forecast'), L('Cara hemat', 'How to save'), L('Apa prioritas sekarang?', 'What should I do now?')],
-            forecast: [L('Cara hemat', 'How to save'), L('Kondisi bisnis', 'Business status')],
-            status: [L('Apa prioritas sekarang?', 'What should I do now?'), L('Prediksi uang', 'Cash forecast'), L('Analisis produk', 'Analyze products')],
-            next: [L('Kenapa?', 'Why?'), L('Rencana awal', 'Starter plan'), L('Kondisi bisnis', 'Business status')],
-            product: [L('Cek stok', 'Check stock'), L('Perlu kampanye?', 'Need a campaign?'), L('Kapan buat produk baru?', 'When to make a new one?')],
+            cash: [L('Prediksi uang', 'Cash forecast'), L('Cara hemat', 'How to save'), L('Cek pinjaman', 'Check loans')],
+            loan: [L('Kalau pinjam 50 ribu?', 'What if I borrow 50k?'), L('Prediksi uang', 'Cash forecast')],
+            forecast: [L('Cara hemat', 'How to save'), L('Tren penjualan', 'Sales trend'), L('Kondisi bisnis', 'Business status')],
+            trend: [L('Cek harga & margin', 'Check price & margin'), L('Perlu kampanye?', 'Need a campaign?')],
+            status: [L('Apa prioritas sekarang?', 'What should I do now?'), L('Skor kesehatan', 'Health score'), L('Prediksi uang', 'Cash forecast')],
+            health: [L('Apa prioritas sekarang?', 'What should I do now?'), L('Rencana awal', 'Starter plan')],
+            next: [L('Kenapa?', 'Why?'), L('Skor kesehatan', 'Health score'), L('Kondisi bisnis', 'Business status')],
+            product: [L('Cek stok', 'Check stock'), L('Cek harga & margin', 'Check price & margin'), L('Kapan buat produk baru?', 'When to make a new one?')],
+            price: [L('Tren penjualan', 'Sales trend'), L('Perlu kampanye?', 'Need a campaign?')],
             stock: [L('Analisis produk', 'Analyze products'), L('Perlu kampanye?', 'Need a campaign?')],
             research: [L('Rekrut engineer?', 'Hire engineers?'), L('Buka riset', 'Open research')],
-            team: [L('Cek moral tim', 'Check morale'), L('Kondisi bisnis', 'Business status')]
+            team: [L('Cek moral tim', 'Check morale'), L('Kalau rekrut 1 desainer?', 'What if I hire 1 designer?')],
+            competitor: [L('Tren penjualan', 'Sales trend'), L('Cek reputasi', 'Check reputation')],
+            whatif: [L('Prediksi uang', 'Cash forecast'), L('Kondisi bisnis', 'Business status')]
         };
         return map[intent] || this.chips();
     }
@@ -382,21 +486,26 @@ export class AdvisorBrain {
     }
     _h_help() {
         return { text: this.L(
-            'Aku bisa:\n• Menilai **kondisi bisnis** + skor kesehatan\n• Menentukan **prioritas** sekarang & **rencana** langkah demi langkah\n• Menganalisis **uang**, **prediksi kas**, produk, stok, tim, riset, OS, chip\n• Menjelaskan istilah (runway, burn, moral…)\n• **Navigasi**: "buka riset", "ke tim", "lihat penjualan"\n\nTanya bebas, aku mengerti bahasa sehari-hari.',
-            'I can:\n• Rate your **business health** with a score\n• Pick current **priorities** and give a step-by-step **plan**\n• Analyze **cash**, **forecast**, products, stock, team, research, OS, chips\n• Explain terms (runway, burn, morale…)\n• **Navigate**: "open research", "go to team", "show sales"\n\nAsk freely; I understand everyday language.'),
+            'Aku bisa:\n• Menilai **kondisi bisnis** + **skor kesehatan** 6 dimensi\n• Menentukan **prioritas** & **rencana** langkah demi langkah\n• Menganalisis **uang & arus kas**, **pinjaman**, **harga & margin**, **tren**, **pesaing**, produk, stok, tim, riset, OS, chip\n• **Prakiraan kas** dan simulasi: "kalau rekrut 2 engineer?", "kalau pinjam 50 ribu?"\n• Menjelaskan istilah (runway, burn, margin, cicilan…)\n• **Navigasi**: "buka riset", "ke tim", "lihat penjualan"\n\nTanya bebas, aku mengerti bahasa sehari-hari.',
+            'I can:\n• Rate your **business health** across 6 dimensions\n• Pick **priorities** and give a step-by-step **plan**\n• Analyze **cash & cash flow**, **loans**, **price & margin**, **trends**, **rivals**, products, stock, team, research, OS, chips\n• **Cash forecast** and simulations: "what if I hire 2 engineers?", "what if I borrow 50k?"\n• Explain terms (runway, burn, margin, installment…)\n• **Navigate**: "open research", "go to team", "show sales"\n\nAsk freely; I understand everyday language.'),
             chips: this.chips() };
     }
 
-    _h_status(o) {
+    _h_status() {
         var c = this.sys._ctx(), h = this.health(), adv = this.sys.getAdvice();
         var L = this.L.bind(this);
         var lines = [L('Skor kesehatan bisnis: **' + h.score + '/100** (' + h.label + ')',
                        'Business health: **' + h.score + '/100** (' + h.label + ')')];
         lines.push(L('• Uang $' + money(c.cash) + ' · biaya $' + money(c.burn) + '/bulan · ' + (isFinite(c.runway) ? 'runway ' + c.runway.toFixed(1) + ' bln' : 'belum ada biaya'),
                      '• Cash $' + money(c.cash) + ' · cost $' + money(c.burn) + '/mo · ' + (isFinite(c.runway) ? 'runway ' + c.runway.toFixed(1) + ' mo' : 'no costs yet')));
+        if (c.income > 0) {
+            lines.push(L('• Pemasukan ≈ $' + money(c.income) + '/bulan · arus kas bersih ' + (c.net >= 0 ? '+' : '−') + '$' + money(Math.abs(c.net)),
+                         '• Revenue ≈ $' + money(c.income) + '/mo · net cash flow ' + (c.net >= 0 ? '+' : '−') + '$' + money(Math.abs(c.net))));
+        }
         lines.push(L('• Tim: ' + c.team.engineers + ' engineer, ' + c.team.designers + ' desainer, ' + c.team.marketers + ' marketer',
                      '• Team: ' + c.team.engineers + ' engineers, ' + c.team.designers + ' designers, ' + c.team.marketers + ' marketers'));
         lines.push(L('• Produk: ' + c.catalog.length + ' (' + c.selling.length + ' dijual)', '• Products: ' + c.catalog.length + ' (' + c.selling.length + ' on sale)'));
+        if (c.loans.length) lines.push(L('• Pinjaman aktif: ' + c.loans.length + ' · cicilan $' + money(c.debtService) + '/bulan', '• Active loans: ' + c.loans.length + ' · installments $' + money(c.debtService) + '/mo'));
         var top = adv.filter(function (a) { return a.id !== 'all_good'; }).slice(0, 2);
         if (top.length) {
             lines.push(L('\nPerlu perhatian:', '\nNeeds attention:'));
@@ -404,6 +513,32 @@ export class AdvisorBrain {
         } else lines.push(L('\nTidak ada masalah mendesak.', '\nNothing urgent.'));
         var acts = top.filter(function (a) { return a.action; }).slice(0, 2).map(this._actionFor, this);
         return { text: lines.join('\n'), actions: acts };
+    }
+
+    _h_health(o) {
+        var h = this.health(), L = this.L.bind(this);
+        var bar = function (s) { var n = Math.round(s / 10); return '█'.repeat(n) + '░'.repeat(10 - n); };
+        var lines = [L('Skor kesehatan: **' + h.score + '/100** (' + h.label + ')', 'Health score: **' + h.score + '/100** (' + h.label + ')'), ''];
+        h.parts.forEach(function (p) {
+            lines.push('• ' + p.label + ' ' + bar(p.score) + ' ' + p.score + (p.note ? ' (' + p.note + ')' : ''));
+        });
+        var w = h.weakest;
+        var acts = [];
+        if (w) {
+            lines.push('');
+            var tips = {
+                liquidity: L('Tambah pemasukan (kampanye, stok), tunda rekrutmen, dan lunasi cicilan berat.', 'Raise revenue (campaigns, stock), pause hiring, and clear heavy installments.'),
+                growth:    L('Jalankan kampanye, cek harga, dan siapkan produk penerus.', 'Run campaigns, review pricing, and prepare a successor product.'),
+                product:   L('Jaga stok, perbaiki bug OS, dan rancang produk yang lebih disukai.', 'Keep stock, fix OS bugs, and design a better-liked product.'),
+                team:      L('Naikkan moral staf dan lengkapi peran yang kosong.', 'Raise staff morale and fill missing roles.'),
+                tech:      L('Isi semua slot riset dan rilis versi OS.', 'Fill every research slot and ship an OS version.'),
+                brand:     L('Rilis produk berkualitas dan jaga ulasan.', 'Ship quality products and watch reviews.')
+            };
+            lines.push(L('Area terlemah: **' + w.label + '** (' + w.score + '). ', 'Weakest area: **' + w.label + '** (' + w.score + '). ') + (tips[w.id] || ''));
+            var ha = HEALTH_ACTION[w.id];
+            if (ha) acts.push(this._act(ha.id));
+        }
+        return { text: lines.join('\n'), actions: acts.filter(Boolean) };
     }
 
     _h_next(o) {
@@ -417,7 +552,8 @@ export class AdvisorBrain {
         var top = adv[0];
         var lines = [L('Prioritas #1: **' + top.title + '**', 'Priority #1: **' + top.title + '**'), top.detail];
         if (o.detail && adv[1]) lines.push(L('\nSetelah itu: **' + adv[1].title + '** — ' + adv[1].detail, '\nThen: **' + adv[1].title + '** — ' + adv[1].detail));
-        if (o.detail && adv[2]) lines.push(L('Lalu: **' + adv[2].title + '**', 'Then: **' + adv[2].title + '**'));
+        if (o.detail && adv[2]) lines.push(L('Lalu: **' + adv[2].title + '** — ' + adv[2].detail, 'Then: **' + adv[2].title + '** — ' + adv[2].detail));
+        if (o.detail && adv[3]) lines.push(L('Berikutnya: **' + adv[3].title + '**', 'Next: **' + adv[3].title + '**'));
         if (!o.detail && adv.length > 1) lines.push(L('\nAda ' + (adv.length - 1) + ' saran lain. Ketik "lanjut" untuk lihat.', '\n' + (adv.length - 1) + ' more suggestions. Type "more" to see them.'));
         var acts = [];
         if (top.action) acts.push(this._actionFor(top));
@@ -427,7 +563,7 @@ export class AdvisorBrain {
 
     _h_why(o) {
         var last = this.mem.last;
-        if (last && ['why', 'navigate', 'greet', 'thanks', 'help', 'unknown', 'more'].indexOf(last) < 0) {
+        if (last && ['why', 'navigate', 'greet', 'thanks', 'help', 'unknown', 'more', 'clarify'].indexOf(last) < 0) {
             var r = this._handle(last, { detail: true, text: o.text, product: o.product });
             r.text = this.L('Alasannya:\n', 'The reasoning:\n') + r.text;
             return r;
@@ -449,7 +585,9 @@ export class AdvisorBrain {
             steps.push(L('Rancang & rilis **ponsel pertama** agar ada pemasukan.', 'Design & release your **first phone** to earn revenue.')); acts.push(this._act('design'));
             steps.push(L('Jaga uang > 3 bulan biaya selama pengembangan.', 'Keep cash above 3 months of costs during development.'));
         } else {
+            if (c.runway < 3) steps.push(L('**Amankan kas dulu**: tunda rekrutmen & riset mahal sampai runway > 3 bulan.', '**Secure cash first**: pause hiring & costly research until runway > 3 months.'));
             steps.push(L('Pastikan **stok** produk laris tidak habis (auto-restock).', 'Keep best sellers **in stock** (auto-restock).')); acts.push(this._act('sales'));
+            steps.push(L('Cek **harga & margin** tiap produk (target margin 25–45%).', 'Check each product\'s **price & margin** (target 25–45%).'));
             if (!t.marketers) steps.push(L('Rekrut **marketer**, jalankan kampanye saat produk masih baru.', 'Hire a **marketer**; run campaigns while the product is new.'));
             else steps.push(L('Jalankan **kampanye** untuk produk baru.', 'Run **campaigns** for new products.'));
             steps.push(L('Pakai slot riset penuh; kejar teknologi yang menaikkan skor produk.', 'Keep research slots busy; chase tech that raises product score.')); acts.push(this._act('research'));
@@ -464,18 +602,22 @@ export class AdvisorBrain {
     _h_cash(o) {
         var c = this.sys._ctx(), L = this.L.bind(this);
         if (c.burn <= 0) return { text: L('Belum ada biaya bulanan berarti, uangmu $' + money(c.cash) + ' aman untuk sekarang.', 'No significant monthly costs yet; your $' + money(c.cash) + ' is safe for now.') };
-        var payroll = arr(c.d.staff).reduce(function (a, s) { return a + (s.salary || 0); }, 0);
-        var share = c.burn > 0 ? Math.round(payroll / c.burn * 100) : 0;
+        var share = c.burn > 0 ? Math.round(c.payroll / c.burn * 100) : 0;
         var lines = [L('Uang **$' + money(c.cash) + '**, biaya **$' + money(c.burn) + '/bulan** → runway **' + c.runway.toFixed(1) + ' bulan**.',
                        'Cash **$' + money(c.cash) + '**, cost **$' + money(c.burn) + '/mo** → runway **' + c.runway.toFixed(1) + ' months**.')];
+        if (c.income > 0 || c.debtService > 0) {
+            lines.push(L('Pemasukan rata-rata ≈ $' + money(c.income) + '/bulan, cicilan $' + money(c.debtService) + '/bulan → arus kas bersih **' + (c.net >= 0 ? '+' : '−') + '$' + money(Math.abs(c.net)) + '/bulan**.',
+                         'Average revenue ≈ $' + money(c.income) + '/mo, installments $' + money(c.debtService) + '/mo → net cash flow **' + (c.net >= 0 ? '+' : '−') + '$' + money(Math.abs(c.net)) + '/mo**.'));
+            if (c.net < 0 && isFinite(c.trendRunway)) lines.push(L('Dengan tren ini uang habis ≈ **' + c.trendRunway.toFixed(1) + ' bulan** lagi.', 'At this pace cash runs out in ≈ **' + c.trendRunway.toFixed(1) + ' months**.'));
+        }
         lines.push(L('Gaji staf ≈ ' + share + '% dari biaya bulanan.', 'Payroll ≈ ' + share + '% of monthly cost.'));
         if (c.cash < c.burn) lines.push(L('⚠ Kritis: uang kurang dari satu bulan biaya. Jual stok, tunda riset/rekrutmen, atau ambil pinjaman di Setelan.', 'Critical: cash is below one month of costs. Sell stock, delay research/hiring, or take a loan in Settings.'));
         else if (c.runway < 3) lines.push(L('Hati-hati: di bawah 3 bulan. Tahan rekrutmen sampai penjualan stabil.', 'Careful: under 3 months. Hold off hiring until sales stabilize.'));
         else if (c.runway >= 6) lines.push(L('Sehat. Ada ruang untuk investasi riset atau produk baru.', 'Healthy. You have room to invest in research or a new product.'));
         else lines.push(L('Cukup aman, tapi pantau saat menambah staf.', 'Reasonably safe, but watch it when hiring.'));
         if (o.detail) {
-            lines.push(L('\nCara menaikkan runway: (1) naikkan penjualan lewat kampanye, (2) jaga stok, (3) hindari rekrut sebelum produk laku, (4) pinjaman hanya sebagai jaring pengaman.',
-                         '\nWays to extend runway: (1) lift sales with campaigns, (2) keep stock, (3) avoid hiring before products sell, (4) loans only as a safety net.'));
+            lines.push(L('\nCara menaikkan runway: (1) naikkan penjualan lewat kampanye, (2) jaga stok, (3) cek margin harga, (4) hindari rekrut sebelum produk laku, (5) pinjaman hanya sebagai jaring pengaman.',
+                         '\nWays to extend runway: (1) lift sales with campaigns, (2) keep stock, (3) check price margins, (4) avoid hiring before products sell, (5) loans only as a safety net.'));
         }
         return { text: lines.join('\n'), actions: [c.cash < c.burn ? this._act('settings') : this._act('sales')].filter(Boolean) };
     }
@@ -483,16 +625,162 @@ export class AdvisorBrain {
     _h_forecast() {
         var c = this.sys._ctx(), L = this.L.bind(this);
         if (c.burn <= 0) return { text: L('Belum ada biaya bulanan, jadi belum ada yang perlu diprediksi.', 'No monthly costs yet, nothing to forecast.') };
-        var lines = [L('Jika **tanpa pemasukan** dan biaya tetap $' + money(c.burn) + '/bulan:', 'With **no revenue** and costs fixed at $' + money(c.burn) + '/mo:')];
+        var f = this.sys.forecast(6);
+        var lines = [L('Prakiraan kas (biaya + cicilan $' + money(f.outflow) + '/bulan):', 'Cash forecast (costs + installments $' + money(f.outflow) + '/mo):')];
+        lines.push(L('• **Skenario dasar** (pemasukan ≈ $' + money(f.income) + '/bulan):', '• **Base case** (revenue ≈ $' + money(f.income) + '/mo):'));
         [1, 3, 6].forEach(function (m) {
-            var v = c.cash - c.burn * m;
-            lines.push('• ' + m + L(' bulan: ', ' mo: ') + (v >= 0 ? '$' + money(v) : L('HABIS (kurang $', 'BROKE (short $') + money(-v) + ')'));
+            var v = f.base[m - 1].cash;
+            lines.push('   ' + m + L(' bln: ', ' mo: ') + (v >= 0 ? '$' + money(v) : L('HABIS (kurang $', 'BROKE (short $') + money(-v) + ')'));
         });
-        var zero = c.runway;
-        lines.push(L('Uang habis sekitar **' + zero.toFixed(1) + ' bulan** lagi.', 'Cash runs out in about **' + zero.toFixed(1) + ' months**.'));
-        if (c.selling.length) lines.push(L('Kamu sudah menjual produk, jadi kenyataannya lebih baik dari angka ini selama stok tersedia.', 'You are selling products, so reality beats this as long as stock lasts.'));
-        else lines.push(L('Belum ada produk dijual; rilis produk pertama adalah cara tercepat memperpanjang napas.', 'No products on sale yet; releasing your first one is the fastest way to extend your runway.'));
+        lines.push(L('• **Skenario pesimis** (tanpa pemasukan):', '• **Worst case** (no revenue):'));
+        [1, 3, 6].forEach(function (m) {
+            var v = f.worst[m - 1].cash;
+            lines.push('   ' + m + L(' bln: ', ' mo: ') + (v >= 0 ? '$' + money(v) : L('HABIS (kurang $', 'BROKE (short $') + money(-v) + ')'));
+        });
+        lines.push(isFinite(f.runwayBase)
+            ? L('\nDengan pemasukan sekarang, uang habis ≈ **' + f.runwayBase.toFixed(1) + ' bulan**. Tanpa pemasukan: **' + f.runwayWorst.toFixed(1) + ' bulan**.',
+                '\nAt current revenue, cash lasts ≈ **' + f.runwayBase.toFixed(1) + ' months**. With none: **' + f.runwayWorst.toFixed(1) + ' months**.')
+            : L('\nPemasukanmu menutup biaya — kas tidak menyusut. Pertahankan!', '\nYour revenue covers costs — cash is not shrinking. Keep it up!'));
+        if (!c.selling.length) lines.push(L('Belum ada produk dijual; rilis produk pertama adalah cara tercepat memperpanjang napas.', 'No products on sale yet; releasing your first one is the fastest way to extend your runway.'));
         return { text: lines.join('\n'), actions: [this._act(c.selling.length ? 'sales' : 'design')].filter(Boolean) };
+    }
+
+    _h_trend() {
+        var c = this.sys._ctx(), L = this.L.bind(this), t = c.trends;
+        var lines = [];
+        if (t.points < 2) {
+            lines.push(L('Data tren masih terkumpul (butuh beberapa minggu permainan). Cek lagi nanti.', 'Trend data is still being collected (needs a few in-game weeks). Check back later.'));
+        } else {
+            if (t.salesRecent !== null) lines.push(L('• Laju jual terkini: **' + t.salesRecent.toFixed(1) + ' unit/hari**', '• Current sales pace: **' + t.salesRecent.toFixed(1) + ' units/day**'));
+            if (t.salesDrop !== null && t.salesPrev >= 1) {
+                var dir = t.salesDrop >= 0.15 ? L('turun', 'down') : t.salesDrop <= -0.15 ? L('naik', 'up') : L('stabil', 'steady');
+                lines.push(L('• Dibanding periode sebelumnya: **' + dir + (Math.abs(t.salesDrop) >= 0.15 ? ' ' + Math.abs(Math.round(t.salesDrop * 100)) + '%' : '') + '**',
+                             '• Versus the previous period: **' + dir + (Math.abs(t.salesDrop) >= 0.15 ? ' ' + Math.abs(Math.round(t.salesDrop * 100)) + '%' : '') + '**'));
+            }
+            if (t.cashPerDay !== null) lines.push(L('• Perubahan kas: **' + (t.cashPerDay >= 0 ? '+' : '−') + '$' + money(Math.abs(t.cashPerDay * 30)) + '/bulan** (rata-rata terakhir)',
+                                                    '• Cash change: **' + (t.cashPerDay >= 0 ? '+' : '−') + '$' + money(Math.abs(t.cashPerDay * 30)) + '/mo** (recent average)'));
+        }
+        var sh = arr((c.d.market || {}).shareHistory);
+        if (sh.length >= 2 && typeof sh[0].playerShare === 'number') {
+            var k = sh[0].playerShare <= 1 ? 100 : 1;
+            lines.push(L('• Pangsa pasar: ' + (sh[1].playerShare * k).toFixed(1) + '% → **' + (sh[0].playerShare * k).toFixed(1) + '%**',
+                         '• Market share: ' + (sh[1].playerShare * k).toFixed(1) + '% → **' + (sh[0].playerShare * k).toFixed(1) + '%**'));
+        }
+        if (!lines.length) lines.push(L('Belum ada data tren. Rilis produk dan biarkan waktu berjalan.', 'No trend data yet. Release a product and let time pass.'));
+        if (t.salesDrop !== null && t.salesDrop >= 0.4 && t.salesPrev >= 5) lines.push(L('\nPenjualan melambat tajam: coba kampanye, tinjau harga, atau siapkan penerus.', '\nSales are slowing sharply: try a campaign, review pricing, or prep a successor.'));
+        return { text: lines.join('\n'), actions: [this._act('sales')] };
+    }
+
+    _h_loan(o) {
+        var c = this.sys._ctx(), L = this.L.bind(this);
+        if (!c.loans.length) {
+            return { text: L('Kamu tidak punya pinjaman aktif. Pinjaman hanya sebagai jaring pengaman; bunganya menggerus margin. Mau simulasi? Ketik "kalau pinjam 50 ribu".',
+                             'You have no active loans. Use loans only as a safety net; interest erodes margin. Want a simulation? Type "what if I borrow 50k".'),
+                     actions: [this._act('settings')] };
+        }
+        var left = c.loans.reduce(function (a, l) { return a + (l.remaining || 0); }, 0);
+        var late = c.loans.filter(function (l) { return (l.missed || 0) > 0; }).length;
+        var base = c.income > 0 ? c.income : c.burn;
+        var ratio = base > 0 ? c.debtService / base : 0;
+        var lines = [L('Pinjaman aktif: **' + c.loans.length + '** · sisa total **$' + money(left) + '** · cicilan **$' + money(c.debtService) + '/bulan**.',
+                       'Active loans: **' + c.loans.length + '** · total remaining **$' + money(left) + '** · installments **$' + money(c.debtService) + '/mo**.')];
+        lines.push(L('Cicilan = ' + pct(ratio) + ' dari ' + (c.income > 0 ? 'pemasukan' : 'biaya bulanan') + (ratio > 0.4 ? ' (terlalu berat)' : ' (aman)') + '.',
+                     'Installments = ' + pct(ratio) + ' of ' + (c.income > 0 ? 'revenue' : 'monthly cost') + (ratio > 0.4 ? ' (too heavy)' : ' (OK)') + '.'));
+        if (late) lines.push(L('⚠ ' + late + ' pinjaman menunggak — bayar segera agar tidak kena denda & blokir bank.', '⚠ ' + late + ' loan(s) overdue — pay now to avoid fees and a bank block.'));
+        else if (c.cash > left * 1.5 + c.burn * 6) lines.push(L('Uangmu longgar: pertimbangkan **pelunasan dini** untuk menghemat bunga.', 'Your cash is comfortable: consider **early repayment** to save interest.'));
+        if (o.detail) lines.push(L('\nUrutan bijak: lunasi yang bunganya tertinggi dulu, jangan ambil pinjaman baru saat arus kas bersih negatif.', '\nSmart order: repay the highest-interest loan first; do not borrow more while net cash flow is negative.'));
+        return { text: lines.join('\n'), actions: [this._act('settings')] };
+    }
+
+    _h_price(o) {
+        var c = this.sys._ctx(), L = this.L.bind(this);
+        var list = o.product ? [o.product] : c.selling;
+        if (!c.catalog.length) return { text: L('Belum ada produk, jadi belum ada harga untuk dianalisis.', 'No products yet, so no pricing to analyze.'), actions: [this._act('design')] };
+        if (!list.length) list = c.catalog;
+        var lines = [], t = c.trends;
+        list.slice(0, 4).forEach(function (p) {
+            if (!(p.price > 0) || typeof p.unitCost !== 'number') return;
+            var m = (p.price - p.unitCost) / p.price;
+            var verdict;
+            if (m < 0) verdict = L('RUGI per unit — naikkan harga!', 'LOSS per unit — raise the price!');
+            else if (m < 0.12) verdict = L('terlalu tipis — naikkan sedikit', 'too thin — raise slightly');
+            else if (m > 0.55 && t.salesDrop !== null && t.salesDrop > 0.2) verdict = L('margin tebal tapi penjualan turun — pertimbangkan diskon', 'fat margin but sales falling — consider a discount');
+            else if (m > 0.55) verdict = L('margin tebal; aman selama laku', 'fat margin; fine while it sells');
+            else verdict = L('sehat', 'healthy');
+            lines.push('**' + p.name + '** — ' + L('harga $', 'price $') + money(p.price) + L(', biaya $', ', cost $') + money(p.unitCost) + ', margin ' + pct(m) + ' → ' + verdict);
+        });
+        if (!lines.length) return { text: L('Data biaya produk belum tersedia.', 'Product cost data is not available yet.') };
+        lines.push(L('\nPatokan: margin 25–45% sehat; di bawah 12% terlalu tipis.', '\nRule of thumb: 25–45% margin is healthy; under 12% is too thin.'));
+        return { text: lines.join('\n'), actions: [this._act('sales')] };
+    }
+
+    _h_competitor() {
+        var c = this.sys._ctx(), L = this.L.bind(this), m = c.d.market || {};
+        var comps = arr(m.competitors).slice().sort(function (a, b) { return (b.share || 0) - (a.share || 0); });
+        var k = (typeof m.share === 'number' && m.share <= 1) ? 100 : 1;
+        var lines = [];
+        if (typeof m.share === 'number') lines.push(L('Pangsa pasarmu: **' + (m.share * k).toFixed(1) + '%**', 'Your market share: **' + (m.share * k).toFixed(1) + '%**'));
+        if (comps.length) {
+            var ks = (comps[0].share <= 1) ? 100 : 1;
+            lines.push(L('Pesaing terbesar:', 'Top rivals:'));
+            comps.slice(0, 3).forEach(function (cp) {
+                lines.push('• ' + (cp.name || cp.id) + ' — ' + ((cp.share || 0) * ks).toFixed(1) + '%');
+            });
+        }
+        var sh = arr(m.shareHistory);
+        if (sh.length >= 2 && typeof sh[0].playerShare === 'number') {
+            var kk = sh[0].playerShare <= 1 ? 100 : 1;
+            var diff = (sh[0].playerShare - sh[1].playerShare) * kk;
+            lines.push(L('Bulan ini pangsamu ' + (diff >= 0 ? 'naik ' : 'turun ') + Math.abs(diff).toFixed(1) + ' poin.', 'This month your share ' + (diff >= 0 ? 'rose ' : 'fell ') + Math.abs(diff).toFixed(1) + ' pts.'));
+        }
+        if (!lines.length) lines.push(L('Data pasar belum tersedia. Rilis produk agar masuk persaingan.', 'No market data yet. Release a product to enter the competition.'));
+        lines.push(L('Cara melawan: produk berkualitas, harga kompetitif, kampanye saat rilis, dan reputasi yang kuat.', 'How to compete: quality products, competitive pricing, launch campaigns, and strong reputation.'));
+        return { text: lines.join('\n'), actions: [this._act('market')] };
+    }
+
+    // ----- simulasi "bagaimana jika" -----
+    _parseWhatIf(text) {
+        var s = String(text || '').toLowerCase();
+        var hire = {}, found = false;
+        var roleMap = { engineer: 'engineer', insinyur: 'engineer', desainer: 'designer', designer: 'designer', marketer: 'marketer', pemasar: 'marketer' };
+        var re = /(\d+)\s*(engineer|insinyur|desainer|designer|marketer|pemasar)/g, mt;
+        while ((mt = re.exec(s))) { hire[roleMap[mt[2]]] = (hire[roleMap[mt[2]]] || 0) + parseInt(mt[1], 10); found = true; }
+        if (!found) {
+            var re2 = /(rekrut|hire|tambah)\s+(engineer|insinyur|desainer|designer|marketer|pemasar)/g;
+            while ((mt = re2.exec(s))) { hire[roleMap[mt[2]]] = (hire[roleMap[mt[2]]] || 0) + 1; found = true; }
+        }
+        var loan = 0;
+        var lm = /(pinjam|pinjaman|loan|utang|kredit|borrow)\D{0,14}?\$?\s*(\d[\d.,]*)\s*(k|rb|ribu|jt|juta|m)?\b/.exec(s);
+        if (lm) { loan = parseAmount(lm[2], lm[3]); if (loan > 0) found = true; }
+        return found ? { hire: hire, loan: loan } : null;
+    }
+
+    _h_whatif(o) {
+        var L = this.L.bind(this);
+        var p = this._parseWhatIf(o.text);
+        if (!p) {
+            return { text: L('Simulasi apa? Contoh: "kalau rekrut 2 engineer", "kalau rekrut 1 desainer dan 1 marketer", atau "kalau pinjam 50 ribu".',
+                             'Simulate what? For example: "what if I hire 2 engineers", "what if I hire 1 designer and 1 marketer", or "what if I borrow 50k".'),
+                     chips: [L('Kalau rekrut 1 engineer?', 'What if I hire 1 engineer?'), L('Kalau pinjam 50 ribu?', 'What if I borrow 50k?')] };
+        }
+        var s = this.sys.simulate(p);
+        var lines = [];
+        var what = [];
+        if (s.desc.length) what.push(L('rekrut ', 'hire ') + s.desc.map(function (x) { return L(x.replace('designer', 'desainer'), x); }).join(', '));
+        if (s.loanAmt > 0) what.push(L('pinjam $', 'borrow $') + money(s.loanAmt));
+        lines.push(L('Simulasi: **' + what.join(' + ') + '**', 'Simulation: **' + what.join(' + ') + '**'));
+        if (s.upfront > 0) lines.push(L('• Biaya rekrut sekali bayar: $' + money(s.upfront), '• One-off hiring cost: $' + money(s.upfront)));
+        if (s.addBurn > 0) lines.push(L('• Gaji bulanan bertambah: +$' + money(s.addBurn), '• Monthly payroll increases: +$' + money(s.addBurn)));
+        if (s.loanAmt > 0) lines.push(L('• Cicilan perkiraan (12 bln, 3%/bln): ≈ $' + money(s.loanInst) + '/bulan', '• Estimated installment (12 mo, 3%/mo): ≈ $' + money(s.loanInst) + '/mo'));
+        lines.push(L('• Uang setelahnya: $' + money(s.cashAfter), '• Cash afterwards: $' + money(s.cashAfter)));
+        lines.push(L('• Runway: ' + (isFinite(s.runwayBefore) ? s.runwayBefore.toFixed(1) : '∞') + ' → **' + (isFinite(s.runwayAfter) ? s.runwayAfter.toFixed(1) : '∞') + ' bulan**',
+                     '• Runway: ' + (isFinite(s.runwayBefore) ? s.runwayBefore.toFixed(1) : '∞') + ' → **' + (isFinite(s.runwayAfter) ? s.runwayAfter.toFixed(1) : '∞') + ' months**'));
+        lines.push(L('• Arus kas bersih: ' + (s.netBefore >= 0 ? '+' : '−') + '$' + money(Math.abs(s.netBefore)) + ' → **' + (s.netAfter >= 0 ? '+' : '−') + '$' + money(Math.abs(s.netAfter)) + '/bulan**',
+                     '• Net cash flow: ' + (s.netBefore >= 0 ? '+' : '−') + '$' + money(Math.abs(s.netBefore)) + ' → **' + (s.netAfter >= 0 ? '+' : '−') + '$' + money(Math.abs(s.netAfter)) + '/mo**'));
+        if (s.cashAfter < 0) lines.push(L('\n⛔ Uangmu **tidak cukup** untuk ini.', '\n⛔ You **cannot afford** this.'));
+        else if (s.safe) lines.push(L('\n✅ Aman dilakukan: runway tetap sehat.', '\n✅ Safe to do: runway stays healthy.'));
+        else lines.push(L('\n⚠ Berisiko: runway jadi tipis. Tunggu penjualan naik atau kecilkan skalanya.', '\n⚠ Risky: runway gets thin. Wait for sales to grow or scale it down.'));
+        return { text: lines.join('\n'), actions: [this._act(s.loanAmt > 0 ? 'settings' : 'team')].filter(Boolean) };
     }
 
     _h_research() {
@@ -502,10 +790,16 @@ export class AdvisorBrain {
         var lines = [L('Slot riset: **' + active.length + '/' + max + '** terpakai, ' + arr(r.completed).length + ' riset selesai.',
                        'Research slots: **' + active.length + '/' + max + '** used, ' + arr(r.completed).length + ' researched.')];
         if (active.length) lines.push(L('Sedang berjalan: ' + active.map(function (e) { return e.name; }).join(', ') + '.', 'In progress: ' + active.map(function (e) { return e.name; }).join(', ') + '.'));
-        var idle = this.sys.getAdvice({ includeSnoozed: true }).filter(function (a) { return a.id === 'research_idle'; })[0];
-        if (idle) lines.push('• ' + idle.detail);
-        else if (active.length >= max) lines.push(L('Slot penuh. Tambah engineer untuk membuka slot berikutnya.', 'Slots full. Hire engineers to unlock the next slot.'));
-        lines.push(L('Tips: riset murah dulu untuk cepat menaikkan skor produk; Silicon bisa mempercepat/membuka riset.', 'Tip: cheap research first to quickly raise product score; Silicon can speed up/unlock research.'));
+        var pickRs = active.length < max ? c.bestResearch() : null;
+        if (pickRs) {
+            lines.push(L('Rekomendasi: **' + pickRs.node.name + '** ($' + money(pickRs.node.cost) + ') — ' + pickRs.why + '.',
+                         'Recommended: **' + pickRs.node.name + '** ($' + money(pickRs.node.cost) + ') — ' + pickRs.why + '.'));
+        } else if (active.length >= max) {
+            lines.push(L('Slot penuh. Tambah engineer untuk membuka slot berikutnya.', 'Slots full. Hire engineers to unlock the next slot.'));
+        } else if (this.sys.deps.research) {
+            lines.push(L('Tidak ada riset terjangkau saat ini — kumpulkan uang atau selesaikan prasyaratnya.', 'No affordable research right now — gather cash or finish prerequisites.'));
+        }
+        lines.push(L('Tips: riset yang membuka banyak riset lanjutan memberi nilai terbesar; Silicon bisa mempercepat/membuka riset.', 'Tip: research that unlocks many follow-ups gives the most value; Silicon can speed up/unlock research.'));
         return { text: lines.join('\n'), actions: [this._act('research')] };
     }
 
@@ -518,10 +812,20 @@ export class AdvisorBrain {
             var avg = Math.round(staff.reduce(function (a, x) { return a + (x.morale || 0); }, 0) / staff.length);
             lines.push(L('Moral rata-rata: ' + avg + '/100' + (avg < 50 ? ' (rendah!)' : ''), 'Average morale: ' + avg + '/100' + (avg < 50 ? ' (low!)' : '')));
         }
-        if (!(t.engineers + t.designers + t.marketers)) lines.push(L('Mulai dari engineer; ia membuka riset.', 'Start with an engineer; it unlocks research.'));
-        else if (!t.designers && !c.catalog.length) lines.push(L('Kamu butuh desainer sebelum merancang ponsel.', 'You need a designer before designing a phone.'));
-        else if (!t.marketers && c.selling.length) lines.push(L('Sudah menjual produk: rekrut marketer untuk kampanye.', 'You are selling: hire a marketer for campaigns.'));
-        else lines.push(L('Komposisi tim sudah masuk akal. Tambah staf hanya jika runway > 3 bulan.', 'Team mix looks reasonable. Only add staff if runway > 3 months.'));
+        // rekomendasi peran berikutnya + uji kemampuan finansial
+        var role = null, why = '';
+        if (!(t.engineers + t.designers + t.marketers)) { role = 'engineer'; why = L('membuka riset', 'unlocks research'); }
+        else if (!t.designers && !c.catalog.length) { role = 'designer'; why = L('dibutuhkan sebelum merancang ponsel', 'needed before designing a phone'); }
+        else if (!t.marketers && c.selling.length) { role = 'marketer'; why = L('sudah menjual, saatnya kampanye', 'you are selling, time for campaigns'); }
+        else if (t.engineers < 2 * ((c.d.research || {}).maxSlots || 1) && t.engineers > 0) { role = 'engineer'; why = L('membuka slot riset berikutnya', 'unlocks the next research slot'); }
+        if (role) {
+            var s = this.sys.simulate({ hire: (function (r) { var h = {}; h[r] = 1; return h; })(role) });
+            var rn = role === 'engineer' ? 'engineer' : role === 'designer' ? L('desainer', 'designer') : 'marketer';
+            lines.push(L('Rekrut berikutnya: **' + rn + '** (' + why + '). Gaji +$' + money(s.addBurn) + '/bln, runway jadi ' + (isFinite(s.runwayAfter) ? s.runwayAfter.toFixed(1) : '∞') + ' bln — ' + (s.safe ? 'aman ✅' : 'berisiko ⚠') + '.',
+                         'Next hire: **' + rn + '** (' + why + '). Salary +$' + money(s.addBurn) + '/mo, runway becomes ' + (isFinite(s.runwayAfter) ? s.runwayAfter.toFixed(1) : '∞') + ' mo — ' + (s.safe ? 'safe ✅' : 'risky ⚠') + '.'));
+        } else {
+            lines.push(L('Komposisi tim sudah masuk akal. Tambah staf hanya jika runway > 3 bulan.', 'Team mix looks reasonable. Only add staff if runway > 3 months.'));
+        }
         return { text: lines.join('\n'), actions: [this._act('team')] };
     }
 
@@ -543,10 +847,11 @@ export class AdvisorBrain {
         if (!c.catalog.length) {
             return { text: L('Belum ada produk. Rancang ponsel pertamamu di Produk → Rancang.', 'No products yet. Design your first phone in Products → Design.'), actions: [this._act('design')] };
         }
-        var list = o.product ? [o.product]
-                 : (this.mem.lastProduct && o.detail ? c.catalog.filter(function (p, i, a) { return p.id === this.mem.lastProduct; }, this) : c.catalog);
-        if (!list.length) list = c.catalog;
         var self = this;
+        var list = o.product ? [o.product]
+                 : (this.mem.lastProduct && o.detail ? c.catalog.filter(function (p) { return p.id === self.mem.lastProduct; }) : c.catalog);
+        if (!list.length) list = c.catalog;
+        var sat = (c.d.feedback && c.d.feedback.perProductSatisfaction) || {};
         var lines = [];
         list.slice(0, 4).forEach(function (p) {
             var age = Math.floor((c.now - (p.releaseGameMinute || 0)) / DAY);
@@ -559,6 +864,8 @@ export class AdvisorBrain {
                 var camps = arr((c.d.marketing || {}).activeCampaigns).some(function (m) { return m.productId === p.id; });
                 if (!camps && age < 180) tags.push(L('tanpa kampanye', 'no campaign'));
                 if (age > 180) tags.push(L('mulai menua', 'aging'));
+                if (p.price > 0 && typeof p.unitCost === 'number' && (p.price - p.unitCost) / p.price < 0.12) tags.push(L('margin tipis', 'thin margin'));
+                if (typeof sat[p.id] === 'number' && sat[p.id] < 45) tags.push(L('pengguna kurang puas', 'users unhappy'));
             }
             lines.push('**' + p.name + '** — ' + L('terjual ', 'sold ') + money(p.totalSold || 0) + L(', stok ', ', stock ') + money(p.stock || 0) +
                        (p.status === 'selling' ? L(', umur ' + age + ' hari', ', age ' + age + ' days') : '') +
@@ -593,7 +900,7 @@ export class AdvisorBrain {
         var camps = arr((c.d.marketing || {}).activeCampaigns);
         var lines = [L('Kampanye aktif: **' + camps.length + '**.', 'Active campaigns: **' + camps.length + '**.')];
         if (!c.team.marketers) lines.push(L('Kamu belum punya marketer; rekrut dulu untuk memperbesar jangkauan.', 'No marketer yet; hire one to widen reach.'));
-        var cand = this.sys.getAdvice({ includeSnoozed: true }).filter(function (a) { return a.id.indexOf('campaign') === 0; })[0];
+        var cand = this.sys.getAdvice({ includeSnoozed: true }).filter(function (a) { return a.id.indexOf('campaign') === 0 || a.id === 'viral_opportunity'; })[0];
         if (cand) lines.push('• ' + cand.title + ' — ' + cand.detail);
         else if (c.selling.length) lines.push(L('Semua produk baru sudah punya kampanye atau sudah lewat masa efektif.', 'All new products have campaigns or are past the effective window.'));
         else lines.push(L('Rilis produk dulu, baru kampanye berguna.', 'Release a product first; campaigns help after that.'));
@@ -603,7 +910,8 @@ export class AdvisorBrain {
 
     _h_os() {
         var c = this.sys._ctx(), L = this.L.bind(this), o = c.d.os || {};
-        var v = arr(o.versions).length, b = arr(o.bugs).length;
+        var v = arr(o.versions).length;
+        var b = arr(o.bugs).filter(function (x) { return x && x.status === 'active'; }).length;
         var txt;
         if (!v) txt = L('Kamu belum punya OS sendiri. OS stabil menaikkan skor produk dan membuka toko aplikasi; mulai setelah ada produk dan engineer.', 'You have no OS of your own yet. A stable OS raises product score and unlocks the app store; start once you have a product and engineers.');
         else txt = L('OS: ' + v + ' versi, ' + b + ' bug aktif.' + (b >= 3 ? ' Bug menumpuk — perbaiki agar kepuasan pengguna tidak turun.' : ' Kondisi baik.'),
@@ -644,6 +952,6 @@ export class AdvisorBrain {
                 if (matchWord(toks[i], k) >= 1.5) return { text: GLOSSARY[k][this.lang() === 'id' ? 0 : 1] };
             }
         }
-        return { text: this.L('Istilah mana yang ingin kamu ketahui? Contoh: runway, burn, moral, fab, kampanye, stok, reputasi, silicon.', 'Which term? For example: runway, burn, morale, fab, campaign, stock, reputation, silicon.') };
+        return { text: this.L('Istilah mana yang ingin kamu ketahui? Contoh: runway, burn, margin, cicilan, arus kas, moral, fab, kampanye, stok, reputasi, silicon.', 'Which term? For example: runway, burn, margin, installment, cash flow, morale, fab, campaign, stock, reputation, silicon.') };
     }
 }
