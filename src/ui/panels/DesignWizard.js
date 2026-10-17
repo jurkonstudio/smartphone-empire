@@ -1,6 +1,5 @@
 // FILE: src/ui/panels/DesignWizard.js
-// v2028.5 — [LOGIC] Menambahkan batas harga bawah (rugi) dan atas (tidak masuk akal).
-// v2028.4 — [UI] Menambahkan tombol Saran Harga (Auto-Pricing) di Step 4.
+// v2028.30 — [SMART NAMING] Auto-fill sekarang men-generate nama brand sesuai perusahaan & era.
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
 import { state } from '../../core/GameState.js';
@@ -42,6 +41,56 @@ function _statTag(c) {
     return key ? (L[key] || key) + ' +' + val : '';
 }
 
+// ============================================================
+// SMART NAME GENERATOR
+// ============================================================
+function _generateBrandedName(companyName, year) {
+    // 1. Bersihkan nama perusahaan (hapus Inc, Corp, Ltd, dll)
+    let brand = String(companyName || 'My').replace(/\b(inc|ltd|corp|co|tech|group|labs|gooday)\b/gi, '').trim();
+    if (!brand) brand = 'Smart';
+    
+    // Ambil maksimal 2 kata pertama agar tidak kepanjangan (misal "Kopi Gooday Inc" -> "Kopi Gooday")
+    brand = brand.split(' ').slice(0, 2).join(' ');
+
+    // 2. Tentukan akhiran berdasarkan Era/Tahun
+    let suffixes, numbers;
+    if (year < 2006) { 
+        // Era Feature Phone
+        suffixes = ['Classic', 'Color', 'Slim', 'Mini', 'Flip', 'Basic'];
+        numbers = ['2000', '2001', '2002', '3300', '5110', '1100'];
+    } else if (year < 2013) { 
+        // Era Touchscreen Awal
+        suffixes = ['Touch', 'Smart', 'Eco', 'Wave', 'Spark', 'Pro'];
+        numbers = ['1', '2', '3', 'S', 'HD', 'Plus'];
+    } else if (year < 2019) { 
+        // Era Modern
+        suffixes = ['Edge', 'Prime', 'Note', 'Studio', 'Max', 'Lite'];
+        numbers = ['8', '9', '10', '20', '30', 'X'];
+    } else { 
+        // Era AI & Foldable
+        suffixes = ['Fold', 'AI', 'Ultra', 'Infinity', 'Nova', 'Vision'];
+        numbers = ['21', '22', '23', '40', '50', '100'];
+    }
+
+    // 3. Pilih secara acak
+    const randSuffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+    const randNum = numbers[Math.floor(Math.random() * numbers.length)];
+    
+    // Tipe penamaan: 0 = Brand + Suffix, 1 = Brand + Number, 2 = Brand + Suffix + Number
+    const type = Math.floor(Math.random() * 3);
+    let finalName = '';
+
+    if (type === 0) finalName = brand + ' ' + randSuffix;
+    else if (type === 1) finalName = brand + ' ' + randNum;
+    else finalName = brand + ' ' + randSuffix + ' ' + randNum;
+
+    // 4. Potong jika lebih dari 24 karakter
+    if (finalName.length > 24) {
+        finalName = finalName.substring(0, 24).trim();
+    }
+    return finalName;
+}
+
 function _affordInfo(s) {
     const ps = window.__game && window.__game.products;
     let unitCost = 0;
@@ -60,75 +109,45 @@ function _shortText(str, max) {
 }
 
 // ============================================================
-// ALGORITMA BATAS HARGA (FLOOR & CEILING)
+// SARAN HARGA OTOMATIS
 // ============================================================
 function _getPriceLimits(s) {
     const ps = window.__game && window.__game.products;
     let unitCost = 50; 
     try { unitCost = ps.computeUnitCost(s); } catch(e) {}
-    
-    // Batas bawah: Harus di atas biaya produksi (minimal margin $1)
     const minPrice = unitCost + 1;
-
-    // Batas atas: Maksimal 3x dari harga saran premium (atau 4x dari unit cost)
     const round5 = (n) => Math.ceil(n / 5) * 5;
     const premiumPrice = round5(unitCost * 2.20);
     const maxPrice = Math.max(premiumPrice * 1.5, unitCost * 4);
-
-    return {
-        min: minPrice,
-        max: Math.ceil(maxPrice)
-    };
+    return { min: minPrice, max: Math.ceil(maxPrice) };
 }
 
 function _getSuggestedPrices(s) {
     const ps = window.__game && window.__game.products;
     let unitCost = 50; 
     try { unitCost = ps.computeUnitCost(s); } catch(e) {}
-    
     const round5 = (n) => Math.ceil(n / 5) * 5;
-    
     return {
-        budget:   Math.max(10, round5(unitCost * 1.15)), // Margin ~15%
-        balanced: Math.max(15, round5(unitCost * 1.50)), // Margin ~50%
-        premium:  Math.max(20, round5(unitCost * 2.20))  // Margin ~120%
+        budget:   Math.max(10, round5(unitCost * 1.15)),
+        balanced: Math.max(15, round5(unitCost * 1.50)),
+        premium:  Math.max(20, round5(unitCost * 2.20))
     };
 }
 
 const WZ_CSS = `
 [data-modal-id="design-wizard"] .modal-card { padding-top: 0; padding-bottom: 0; scroll-behavior: auto; }
-.wz-stage {
-    position: sticky; top: 0; z-index: 6;
-    margin: 0 -18px 12px; padding: 12px 18px 12px;
-    background: var(--bg-2); border-bottom: 1px solid var(--border);
-    box-shadow: 0 10px 18px -14px rgba(0,0,0,0.7);
-}
+.wz-stage { position: sticky; top: 0; z-index: 6; margin: 0 -18px 12px; padding: 12px 18px 12px; background: var(--bg-2); border-bottom: 1px solid var(--border); box-shadow: 0 10px 18px -14px rgba(0,0,0,0.7); }
 .wz-steps { display: flex; gap: 6px; margin: 0 0 12px; padding: 0; list-style: none; }
-.wz-steps li {
-    flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px;
-    padding: 5px 8px; border-radius: 999px; background: var(--bg-3);
-    color: var(--text-tertiary); font-size: 11px; font-weight: 600; white-space: nowrap;
-}
-.wz-steps li b {
-    flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 800; background: var(--bg-2); color: inherit;
-    font-variant-numeric: tabular-nums;
-}
+.wz-steps li { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 999px; background: var(--bg-3); color: var(--text-tertiary); font-size: 11px; font-weight: 600; white-space: nowrap; }
+.wz-steps li b { flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; background: var(--bg-2); color: inherit; font-variant-numeric: tabular-nums; }
 .wz-steps li span { overflow: hidden; text-overflow: ellipsis; }
 .wz-steps li.done { color: var(--text-primary); }
 .wz-steps li.done b { background: var(--accent); color: #fff; }
 .wz-steps li.active { background: var(--accent); color: #fff; flex: 2.2; }
 .wz-steps li.active b { background: rgba(255,255,255,0.22); }
 @media (max-width: 440px) { .wz-steps li:not(.active) span { display: none; } .wz-steps li:not(.active) { justify-content: center; padding: 5px 0; } }
-
 .wz-stage-body { display: flex; align-items: center; gap: 14px; }
-.wz-phone {
-    flex: 0 0 96px; min-height: 138px; display: flex; flex-direction: column;
-    align-items: center; justify-content: flex-end;
-    border-radius: var(--r-lg);
-    background: radial-gradient(ellipse at 50% 88%, var(--bg-3) 0%, transparent 70%);
-}
+.wz-phone { flex: 0 0 96px; min-height: 138px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; border-radius: var(--r-lg); background: radial-gradient(ellipse at 50% 88%, var(--bg-3) 0%, transparent 70%); }
 .wz-live { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
 .wz-era { font-size: 11px; color: var(--text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wz-era b { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
@@ -145,39 +164,22 @@ const WZ_CSS = `
 .wz-tools { display: flex; align-items: center; gap: 6px; }
 .wz-tools .wiz-view-toggle button { font-size: 11px; padding: 4px 10px; min-height: 28px; }
 .wz-tools .btn-secondary { font-size: 11px; min-height: 28px; padding: 4px 10px; margin-left: auto; }
-
-[data-modal-id="design-wizard"] .wiz-nav {
-    position: sticky; bottom: 0; z-index: 5; margin: 14px -18px 0;
-    padding: 10px 18px calc(10px + env(safe-area-inset-bottom));
-    background: var(--bg-2); border-top: 1px solid var(--border);
-}
+[data-modal-id="design-wizard"] .wiz-nav { position: sticky; bottom: 0; z-index: 5; margin: 14px -18px 0; padding: 10px 18px calc(10px + env(safe-area-inset-bottom)); background: var(--bg-2); border-top: 1px solid var(--border); }
 .wz-step-title { font-size: 12px; color: var(--text-tertiary); margin: 0 0 10px; }
 .wz-era-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.45; margin: 0 0 12px; }
 .wz-scroll { padding-bottom: 4px; }
-.wz-cap {
-    font-size: 11px; line-height: 1.45; color: var(--text-tertiary); margin-top: 6px;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
+.wz-cap { font-size: 11px; line-height: 1.45; color: var(--text-tertiary); margin-top: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .wz-cap em { font-style: normal; color: var(--text-secondary); }
 [data-modal-id="design-wizard"] .wiz-option { position: relative; }
-[data-modal-id="design-wizard"] .wiz-option.selected::after {
-    content: "✓"; position: absolute; top: 6px; right: 8px;
-    font-size: 11px; font-weight: 800; color: var(--accent);
-}
-[data-modal-id="design-wizard"] .wiz-option:focus-visible,
-[data-modal-id="design-wizard"] .wiz-color:focus-visible,
-[data-modal-id="design-wizard"] .wiz-view-toggle button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[data-modal-id="design-wizard"] .wiz-option.selected::after { content: "✓"; position: absolute; top: 6px; right: 8px; font-size: 11px; font-weight: 800; color: var(--accent); }
+[data-modal-id="design-wizard"] .wiz-option:focus-visible, [data-modal-id="design-wizard"] .wiz-color:focus-visible, [data-modal-id="design-wizard"] .wiz-view-toggle button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .wiz-opt-tag { color: var(--accent); font-weight: 600; }
 [data-modal-id="design-wizard"] .wiz-option.selected .wiz-opt-name { padding-right: 16px; }
 @media (prefers-reduced-motion: reduce) { .wz-meter i { transition: none; } }
-
-/* Saran Harga */
 .wz-suggest-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px; border-radius:8px; background:var(--bg-3); border:1px solid var(--border); flex:1; cursor:pointer; }
 .wz-suggest-btn.active { border-color:var(--accent); background:var(--accent-soft); }
 .wz-suggest-btn b { font-size:12px; color:var(--text-primary); }
 .wz-suggest-btn span { font-size:10px; color:var(--text-tertiary); margin-top:2px; }
-
-/* Peringatan Harga */
 .wz-price-warning { font-size: 11px; color: var(--danger); margin-top: 4px; display: none; }
 `;
 
@@ -197,20 +199,9 @@ function escapeHtml(s) {
 
 function defaultState() {
     return {
-        step: 1,
-        name: '',
-        formFactorId: null,
-        displayId: null,
-        cameraId: 'none',
-        batteryId: null,
-        chipId: null,
-        networkId: null,
-        osOptionId: null,
-        bodyId: null,
-        bodyColorId: null,
-        price: 100,
-        priceManuallyEdited: false,
-        productionQty: 5000
+        step: 1, name: '', formFactorId: null, displayId: null, cameraId: 'none',
+        batteryId: null, chipId: null, networkId: null, osOptionId: null,
+        bodyId: null, bodyColorId: null, price: 100, priceManuallyEdited: false, productionQty: 5000
     };
 }
 
@@ -334,8 +325,10 @@ function _handleAutoFill() {
     const s = _wizardState;
     if (!s) return;
 
-    if (!s.name.trim()) {
-        s.name = 'Model ' + DesignEraService.getCurrentYear();
+    // [PERUBAHAN] Menggunakan generator nama random berbasis brand
+    if (!s.name.trim() || s.name.startsWith('Model ')) {
+        const rawCompany = state.get().companyName || 'Star';
+        s.name = _generateBrandedName(rawCompany, DesignEraService.getCurrentYear());
     }
 
     _autoFillBest(s);
@@ -553,7 +546,6 @@ function _updateConfirmButtonState() {
     const limits = _getPriceLimits(s);
     const afford = _affordInfo(s);
     
-    // Cek Validasi Harga (Terlalu Murah / Terlalu Mahal)
     let priceError = null;
     if (s.price < limits.min) {
         priceError = `Harga terlalu murah! Minimal $${limits.min} (Biaya produksi).`;
@@ -627,7 +619,6 @@ function _confirm() {
     const game = window.__game;
     if (!game || !game.products) { ToastService.error(t('wiz.err.not_ready')); return; }
 
-    // Cek Ulang Validasi Harga sebelum submit
     const limits = _getPriceLimits(s);
     if (s.price < limits.min || s.price > limits.max) {
         ToastService.error("Harga di luar batas wajar pasar.");
