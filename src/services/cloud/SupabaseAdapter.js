@@ -1,6 +1,5 @@
 // FILE: src/services/cloud/SupabaseAdapter.js
-// v2027.42 — Adapter Supabase. + profil pemain (leaderboard, foto, rpcSyncProfile).
-// v2028.12 — [PAYMENT] Menambahkan RPC untuk pesanan manual & cek status.
+// v2028.16 — [ADMIN] Menambahkan RPC untuk Panel Admin.
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_LIB_URLS, CLOUD } from './supabase.config.js';
 
 var _client = null;
@@ -210,9 +209,6 @@ export const SupabaseAdapter = {
         return function () { try { c.removeChannel(ch); } catch (e) {} };
     },
 
-    // ============================================================
-    // PRESENCE (online indicator)
-    // ============================================================
     subscribePresence: async function (userId, meta, onSync) {
         var c = await getClient();
         var ch = c.channel('online-users', {
@@ -258,7 +254,6 @@ export const SupabaseAdapter = {
         return res.data;
     },
 
-    // orderBy: 'revenue' | 'sold' | 'reputation' | 'share' | 'recent'
     listProfiles: async function (orderBy) {
         var cols = { revenue: 'stat_revenue', sold: 'stat_sold', reputation: 'stat_reputation', share: 'stat_share', recent: 'updated_at' };
         var col = cols[orderBy] || cols.revenue;
@@ -345,9 +340,6 @@ export const SupabaseAdapter = {
         return res.data == null ? 0 : res.data;
     },
 
-    // ============================================================
-    // PAYMENT RPC (BARU)
-    // ============================================================
     rpcCreatePaymentOrder: async function (orderId, packageId, priceIdr, silAmount) {
         var c = await getClient();
         var res = await c.rpc('create_payment_order', {
@@ -367,5 +359,20 @@ export const SupabaseAdapter = {
         });
         if (res.error) throw mk(res.error);
         return res.data;
-    }
+    },
+
+    // [ADMIN PANEL]
+    rpcGetPendingPayments: async function () {
+        var c = await getClient();
+        var res = await c.rpc('get_pending_payments');
+        if (res.error) throw mk(res.error);
+        return res.data;
+    },
+
+    rpcAdminApprove: async function (orderId) {
+        var c = await getClient();
+        var res = await c.rpc('admin_approve_payment', { p_order_id: orderId });
+        if (res.error) throw mk(res.error);
+        return res.data;
+    },
 };
