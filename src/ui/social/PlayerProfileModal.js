@@ -1,5 +1,5 @@
 // FILE: src/ui/social/PlayerProfileModal.js
-// v2.0 — Profil pemain lain: foto, nama pemain, statistik leaderboard.
+// v2.1 — Menambahkan info Waktu Bermain & format tanggal yang lebih rapi.
 import { Modal } from '../modal.js';
 import { LanguageService, t } from '../../core/LanguageService.js';
 import { avatarHtml, resolveAvatarUrls, esc } from './AvatarView.js';
@@ -25,6 +25,19 @@ function _fmtDate(iso) {
     catch (e) { return '—'; }
 }
 
+function _formatPlaytime(minutes) {
+    if (!minutes) return 'Baru mulai';
+    var days = Math.floor(minutes / 1440);
+    var years = Math.floor(days / 365);
+    var months = Math.floor((days % 365) / 30);
+    
+    if (years > 0) {
+        return years + ' Tahun' + (months > 0 ? ' ' + months + ' Bln' : '');
+    }
+    if (months > 0) return months + ' Bulan';
+    return days + ' Hari';
+}
+
 export function compactNumber(n) {
     n = Number(n) || 0;
     if (n >= 1e12) return (n / 1e12).toFixed(1).replace(/\.0$/, '') + 'T';
@@ -46,6 +59,8 @@ export async function openPlayerProfileModal(profile) {
     var urls = {};
     try { urls = await resolveAvatarUrls([profile]); } catch (e) {}
 
+    var playtime = _formatPlaytime(profile.game_minutes);
+
     var html =
         '<div class="modal-title">' + esc(t('pp.view.title')) + '</div>' +
         '<div class="pf-view-hero">' +
@@ -59,6 +74,7 @@ export async function openPlayerProfileModal(profile) {
             _stat(t('pp.stats.reputation'), Number(profile.stat_reputation || 0).toFixed(1)) +
             _stat(t('pp.stats.share'), Number(profile.stat_share || 0).toFixed(1) + '%') +
         '</div>' +
+        '<div class="sum-row"><span>⏳ Waktu Bermain</span><b style="color:var(--accent);">' + esc(playtime) + '</b></div>' +
         '<div class="sum-row"><span>' + esc(t('pp.view.founded')) + '</span><b>' + esc(_fmtFounded(profile.founded_year, profile.founded_month)) + '</b></div>' +
         '<div class="sum-row"><span>' + esc(t('pp.view.joined')) + '</span><b>' + esc(_fmtDate(profile.created_at)) + '</b></div>' +
         '<div class="sum-row"><span>' + esc(t('pp.view.last_active')) + '</span><b>' + esc(_fmtDate(profile.updated_at)) + '</b></div>' +
