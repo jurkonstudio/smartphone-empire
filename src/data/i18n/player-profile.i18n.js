@@ -88,7 +88,10 @@ export const PLAYER_PROFILE_I18N = {
         'pp.settings.row_leaderboard': 'Leaderboard',
         'pp.settings.row_leaderboard_hint': 'Peringkat semua pemain',
         'pp.settings.row_players': 'Pemain Online',
-        'pp.settings.row_players_hint': 'Lihat profil pemain lain'
+        'pp.settings.row_players_hint': 'Lihat profil pemain lain',
+        'pp.settings.section_about': 'Tentang',
+        'pp.settings.row_studio': 'Jurkon Studio',
+        'pp.settings.row_studio_hint': 'Kontak, sosial media & download APK'
     },
     en: {
         'pp.tab.company': 'Company',
@@ -177,6 +180,9 @@ export const PLAYER_PROFILE_I18N = {
         'pp.settings.row_leaderboard': 'Leaderboard',
         'pp.settings.row_leaderboard_hint': 'Ranking of all players',
         'pp.settings.row_players': 'Online Players',
-        'pp.settings.row_players_hint': 'Browse other players'
+        'pp.settings.row_players_hint': 'Browse other players',
+        'pp.settings.section_about': 'About',
+        'pp.settings.row_studio': 'Jurkon Studio',
+        'pp.settings.row_studio_hint': 'Contact, socials & APK download'
     }
 };
