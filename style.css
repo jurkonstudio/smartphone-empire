@@ -4027,20 +4027,6 @@ html[data-density="compact"] .ov-qa { min-height: 62px; }
    ============================================================================ */
 
 /* ---------- 1. Token warna: iCloud light & dark ---------- */
-[data-theme="light"] {
-    --bg-0: #f5f5f7; --bg-1: #ffffff; --bg-2: #ffffff;
-    --bg-3: #f0f0f3; --bg-4: #e4e4e9;
-    --border: #e1e1e6;
-    --border-strong: #c7c7cc;
-    --text-primary: #1d1d1f; --text-secondary: #515154;
-    --text-tertiary: #6e6e73; --text-disabled: #aeaeb2;
-    --shadow-sm: 0 0 0 0 transparent;
-    --shadow: 0 1px 3px rgba(0,0,0,0.08);
-    --shadow-lg: 0 8px 28px rgba(0,0,0,0.16);
-    --bg-overlay: rgba(0,0,0,0.42);
-    --bg-header: #ffffff;
-    --bg-nav: #ffffff;
-}
 :root,
 [data-theme="dark"] {
     --bg-0: #000000; --bg-1: #121214; --bg-2: #1c1c1e;
@@ -4055,6 +4041,20 @@ html[data-density="compact"] .ov-qa { min-height: 62px; }
     --bg-overlay: rgba(0,0,0,0.65);
     --bg-header: #121214;
     --bg-nav: #121214;
+}
+[data-theme="light"] {
+    --bg-0: #f5f5f7; --bg-1: #ffffff; --bg-2: #ffffff;
+    --bg-3: #f0f0f3; --bg-4: #e4e4e9;
+    --border: #e1e1e6;
+    --border-strong: #c7c7cc;
+    --text-primary: #1d1d1f; --text-secondary: #515154;
+    --text-tertiary: #6e6e73; --text-disabled: #aeaeb2;
+    --shadow-sm: 0 0 0 0 transparent;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 28px rgba(0,0,0,0.16);
+    --bg-overlay: rgba(0,0,0,0.42);
+    --bg-header: #ffffff;
+    --bg-nav: #ffffff;
 }
 /* aksen biru ala Apple (lebih tajam) */
 [data-theme="light"][data-accent="blue"] { --accent:#0071e3; --accent-hover:#0062c4; --accent-soft:rgba(0,113,227,0.10); --accent-glow:rgba(0,113,227,0.0); }
@@ -4197,15 +4197,61 @@ body {
     line-height: 1 !important; letter-spacing: 0 !important; margin-top: 1px;
 }
 .nav-btn.active .nav-label { font-weight: 700 !important; }
+/* Slider kaca (liquid glass): kapsul di belakang ikon+label, bisa digeser */
 .nav-slider {
-    position: absolute; top: 2px !important; height: 28px !important;
-    background: var(--accent-soft) !important;
-    border: 0 !important; border-radius: 8px !important; box-shadow: none !important;
-    -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
-    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
-    z-index: 1;
+    position: absolute; left: 0; top: 4px !important;
+    height: calc(var(--nav-h) - 8px) !important;
+    background: transparent !important; border: 0 !important; box-shadow: none !important;
+    border-radius: 16px !important;
+    transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), width 0.38s cubic-bezier(0.32, 0.72, 0, 1) !important;
+    pointer-events: none; z-index: 1; will-change: transform, width;
 }
-.mobile-nav.dragging .nav-slider { background: var(--accent-soft) !important; border: 0 !important; box-shadow: none !important; transition: none !important; }
+.nav-slider::before {            /* badan kaca */
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    background: linear-gradient(180deg, rgba(255,255,255,0.80) 0%, rgba(0,113,227,0.10) 100%);
+    border: 1px solid rgba(0,113,227,0.20);
+    -webkit-backdrop-filter: blur(14px) saturate(190%); backdrop-filter: blur(14px) saturate(190%);
+    box-shadow: 0 4px 14px rgba(0,60,140,0.14),
+                inset 0 1px 0 rgba(255,255,255,0.95),
+                inset 0 -1px 0 rgba(0,113,227,0.10);
+    transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s, background 0.2s;
+}
+.nav-slider::after {             /* kilau (specular) di sisi atas */
+    content: ""; position: absolute; left: 12%; right: 12%; top: 3px; height: 38%;
+    border-radius: 12px 12px 40% 40%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.75), rgba(255,255,255,0));
+    opacity: 0.8; pointer-events: none;
+}
+[data-theme="dark"] .nav-slider::before {
+    background: linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(10,132,255,0.22) 100%);
+    border: 1px solid rgba(255,255,255,0.16);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.55),
+                inset 0 1px 0 rgba(255,255,255,0.28),
+                inset 0 -1px 0 rgba(10,132,255,0.25);
+}
+[data-theme="dark"] .nav-slider::after {
+    background: linear-gradient(180deg, rgba(255,255,255,0.30), rgba(255,255,255,0));
+    opacity: 0.7;
+}
+/* saat digeser: kaca membesar sedikit & lebih terang, tanpa delay */
+.mobile-nav.dragging .nav-slider { transition: none !important; }
+.mobile-nav.dragging .nav-slider::before {
+    transform: scale(1.1, 1.14);
+    box-shadow: 0 8px 24px rgba(0,60,140,0.24),
+                inset 0 1px 0 rgba(255,255,255,1),
+                inset 0 -1px 0 rgba(0,113,227,0.16);
+}
+[data-theme="dark"] .mobile-nav.dragging .nav-slider::before {
+    background: linear-gradient(180deg, rgba(255,255,255,0.24) 0%, rgba(10,132,255,0.32) 100%);
+    box-shadow: 0 10px 26px rgba(0,0,0,0.65),
+                inset 0 1px 0 rgba(255,255,255,0.38),
+                inset 0 -1px 0 rgba(10,132,255,0.35);
+}
+.mobile-nav { touch-action: pan-y; }
+.mobile-nav .nav-btn.drag-hover { color: var(--accent) !important; transform: none; }
+.mobile-nav.dragging .nav-btn.active:not(.drag-hover) { color: var(--text-tertiary) !important; }
+.mobile-nav .nav-btn.drag-hover .nav-ico { transform: scale(1.12); }
+.nav-btn .nav-ico { transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), color 0.15s; }
 
 /* ---------- 11. Desktop ---------- */
 @media (min-width: 768px) {
