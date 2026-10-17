@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/AdminPanel.js
-// v2028.26 — [GOD MODE] Menghancurkan elemen DOM modal secara langsung & update header tanpa render.
+// v2028.27 — [FEATURE] Menambahkan Tab Manajemen Pemain & Fitur Reset Silicon.
 import { ToastService } from '../../core/ToastService.js';
 import { CloudService } from '../../services/CloudService.js';
 
@@ -12,16 +12,6 @@ export async function openAdminPanel() {
         return;
     }
 
-    ToastService.info('Memuat pesanan...');
-    const res = await CloudService.getPendingPayments();
-    
-    if (!res.ok) {
-        ToastService.error(res.reason || 'Gagal memuat data.');
-        return;
-    }
-
-    const orders = res.data || [];
-
     const overlay = document.createElement('div');
     overlay.id = 'admin-panel-overlay';
     overlay.style.cssText = `
@@ -33,101 +23,151 @@ export async function openAdminPanel() {
         color: #fff; font-family: sans-serif;
     `;
 
-    let html = `
+    // Kerangka UI
+    overlay.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:16px;">
             <h2 style="margin:0; font-size:20px; color:#ffaa00;">👑 Admin Panel</h2>
             <button id="btn-close-admin" style="background:none; border:none; color:#aaa; font-size:24px; cursor:pointer;">✕</button>
         </div>
+        
+        <div style="display:flex; gap:10px; margin-bottom:16px;">
+            <button id="tab-pesanan" style="flex:1; padding:10px; border-radius:8px; border:1px solid #444; background:#00c853; color:#fff; font-weight:bold; cursor:pointer;">Pesanan</button>
+            <button id="tab-pemain" style="flex:1; padding:10px; border-radius:8px; border:1px solid #444; background:#333; color:#fff; font-weight:bold; cursor:pointer;">Manajemen Pemain</button>
+        </div>
+
+        <div id="admin-content" style="flex:1;">
+            <div style="text-align:center; padding:20px;">⏳ Memuat data...</div>
+        </div>
+        
+        <button id="btn-close-bottom" style="margin-top:20px; padding:12px; background:#444; color:#fff; border:none; border-radius:6px; width:100%; font-size:14px; cursor:pointer;">Tutup Panel</button>
     `;
 
-    if (orders.length === 0) {
-        html += `<div style="text-align:center; padding:20px; color:#888; font-size:14px;">Tidak ada pesanan pending.</div>`;
-    } else {
-        orders.forEach(o => {
-            const safeAmount = Number(o.amount) || 0;
-            const safeSil = Number(o.sil_amount) || 0;
-            
-            html += `
-                <div id="order-${o.id}" style="background:#222; border:1px solid #444; border-radius:8px; padding:12px; margin-bottom:10px;">
-                    <div style="font-size:12px; color:#aaa; margin-bottom:4px;">${o.email} · ${o.company_name || 'Tanpa Nama'}</div>
-                    <div style="font-size:16px; font-weight:bold; color:#00d4ff; margin-bottom:8px;">Rp ${safeAmount.toLocaleString('id-ID')} (${safeSil} SIL)</div>
-                    <button class="btn-approve" data-id="${o.id}" style="width:100%; padding:10px; background:#00c853; color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:14px; cursor:pointer;">
-                        ✓ Setujui Pesanan
-                    </button>
-                </div>
-            `;
-        });
-    }
-
-    html += `<button id="btn-close-bottom" style="margin-top:20px; padding:12px; background:#444; color:#fff; border:none; border-radius:6px; width:100%; font-size:14px; cursor:pointer;">Tutup Panel</button>`;
-
-    overlay.innerHTML = html;
     document.body.appendChild(overlay);
 
+    // Event Tutup
     document.getElementById('btn-close-admin').onclick = () => overlay.remove();
     document.getElementById('btn-close-bottom').onclick = () => overlay.remove();
 
-    overlay.querySelectorAll('.btn-approve').forEach(btn => {
-        btn.onclick = async function() {
-            const orderId = this.dataset.id;
-            this.textContent = '⏳ Memproses...';
-            this.style.background = '#555';
-            this.disabled = true;
+    const contentDiv = document.getElementById('admin-content');
+    const btnPesanan = document.getElementById('tab-pesanan');
+    const btnPemain = document.getElementById('tab-pemain');
 
-            // 1. Tembak Database Supabase
-            const approveRes = await CloudService.adminApprovePayment(orderId);
-            
-            if (approveRes.ok) {
-                ToastService.success('Database disetujui!');
-                
-                // 2. Ambil saldo terbaru dari database
-                const balRes = await CloudService.getSiliconBalance();
-                
-                if (balRes.ok && window.__game) {
-                    // 3. Paksa ubah memori game
-                    window.__game.state.data.silicon = balRes.balance;
-                    if (window.__game.silicon && window.__game.silicon.applyServerBalance) {
-                        window.__game.silicon.applyServerBalance(balRes.balance);
-                    }
+    // ==========================================
+    // TAB 1: PESANAN PENDING
+    // ==========================================
+    async function loadOrders() {
+        btnPesanan.style.background = '#00c853';
+        btnPemain.style.background = '#333';
+        contentDiv.innerHTML = '<div style="text-align:center; padding:20px;">⏳ Memuat pesanan...</div>';
 
-                    // 4. Paksa ubah teks di header tanpa render ulang
-                    const headerSil = document.querySelector('[data-silicon-value]');
-                    if (headerSil) {
-                        headerSil.textContent = balRes.balance;
-                    }
+        const res = await CloudService.getPendingPayments();
+        if (!res.ok) {
+            contentDiv.innerHTML = `<div style="color:#f44; text-align:center;">${res.reason}</div>`;
+            return;
+        }
 
-                    // 5. Simpan state ke HP (LocalStorage)
-                    if (window.__game.SaveService) {
-                        window.__game.SaveService.save(window.__game.state);
-                    }
+        const orders = res.data || [];
+        if (orders.length === 0) {
+            contentDiv.innerHTML = `<div style="text-align:center; color:#888; padding:20px;">Tidak ada pesanan pending.</div>`;
+            return;
+        }
 
-                    // 6. HANCURKAN SEMUA POP-UP DARI DOM SECARA PAKSA
-                    const modals = document.querySelectorAll('.modal-backdrop');
-                    for (let i = 0; i < modals.length; i++) {
-                        modals[i].remove();
-                    }
-                    
-                    // Bersihkan juga state modal di memori
-                    if (window.__game.Modal) {
-                        window.__game.Modal.closeAll();
-                    }
+        let html = '';
+        orders.forEach(o => {
+            html += `
+                <div id="order-${o.id}" style="background:#222; border:1px solid #444; border-radius:8px; padding:12px; margin-bottom:10px;">
+                    <div style="font-size:12px; color:#aaa; margin-bottom:4px;">${o.email} · ${o.company_name || 'Tanpa Nama'}</div>
+                    <div style="font-size:16px; font-weight:bold; color:#00d4ff; margin-bottom:8px;">Rp ${Number(o.amount).toLocaleString('id-ID')} (${o.sil_amount} SIL)</div>
+                    <button class="btn-approve" data-id="${o.id}" style="width:100%; padding:10px; background:#00c853; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">✓ Setujui Pesanan</button>
+                </div>
+            `;
+        });
+        contentDiv.innerHTML = html;
 
-                    ToastService.success('Saldo diperbarui menjadi ' + balRes.balance + ' SIL');
+        contentDiv.querySelectorAll('.btn-approve').forEach(btn => {
+            btn.onclick = async function() {
+                const orderId = this.dataset.id;
+                this.textContent = '⏳ Memproses...';
+                this.disabled = true;
+
+                const approveRes = await CloudService.adminApprovePayment(orderId);
+                if (approveRes.ok) {
+                    ToastService.success('Pesanan disetujui!');
+                    this.parentElement.remove();
+                    // Trigger update lokal via event bus
+                    if (window.__game && window.__game.bus) window.__game.bus.emit('payment:approved', orderId);
+                } else {
+                    ToastService.error(approveRes.reason);
+                    this.textContent = '✓ Setujui Pesanan';
+                    this.disabled = false;
                 }
+            };
+        });
+    }
 
-                // 7. Hapus kartu pesanan dari Admin Panel
-                const card = document.getElementById('order-' + orderId);
-                if (card) {
-                    card.style.opacity = '0';
-                    setTimeout(() => card.remove(), 300);
+    // ==========================================
+    // TAB 2: MANAJEMEN PEMAIN
+    // ==========================================
+    async function loadPlayers() {
+        btnPesanan.style.background = '#333';
+        btnPemain.style.background = '#00c853';
+        contentDiv.innerHTML = '<div style="text-align:center; padding:20px;">⏳ Memuat pemain...</div>';
+
+        const res = await CloudService.adminGetAllProfiles();
+        if (!res.ok) {
+            contentDiv.innerHTML = `<div style="color:#f44; text-align:center;">${res.reason}</div>`;
+            return;
+        }
+
+        const players = res.data || [];
+        if (players.length === 0) {
+            contentDiv.innerHTML = `<div style="text-align:center; color:#888; padding:20px;">Belum ada pemain.</div>`;
+            return;
+        }
+
+        let html = '';
+        players.forEach(p => {
+            html += `
+                <div id="player-${p.id}" style="background:#222; border:1px solid #444; border-radius:8px; padding:12px; margin-bottom:10px;">
+                    <div style="font-size:14px; font-weight:bold; margin-bottom:2px;">${p.company_name || 'Tanpa Nama'}</div>
+                    <div style="font-size:11px; color:#aaa; margin-bottom:8px;">${p.email}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-size:14px; color:#00d4ff; font-weight:bold;">${p.silicon_balance} SIL</div>
+                        <button class="btn-reset" data-id="${p.id}" data-name="${p.company_name}" style="padding:6px 12px; background:#d32f2f; color:#fff; border:none; border-radius:6px; font-size:12px; cursor:pointer;">Reset ke 0</button>
+                    </div>
+                </div>
+            `;
+        });
+        contentDiv.innerHTML = html;
+
+        contentDiv.querySelectorAll('.btn-reset').forEach(btn => {
+            btn.onclick = async function() {
+                const userId = this.dataset.id;
+                const name = this.dataset.name;
+                if (!confirm(`Yakin ingin mereset Silicon ${name} menjadi 0?`)) return;
+
+                this.textContent = '⏳...';
+                this.disabled = true;
+
+                const resetRes = await CloudService.adminSetSilicon(userId, 0);
+                if (resetRes.ok) {
+                    ToastService.success(`${name} berhasil di-reset!`);
+                    this.parentElement.querySelector('div').textContent = '0 SIL';
+                    this.textContent = 'Reset ke 0';
+                    this.disabled = false;
+                } else {
+                    ToastService.error(resetRes.reason);
+                    this.textContent = 'Reset ke 0';
+                    this.disabled = false;
                 }
+            };
+        });
+    }
 
-            } else {
-                ToastService.error(approveRes.reason || 'Gagal menyetujui.');
-                this.textContent = '✓ Setujui Pesanan';
-                this.style.background = '#00c853';
-                this.disabled = false;
-            }
-        };
-    });
+    // Bind Tabs
+    btnPesanan.onclick = loadOrders;
+    btnPemain.onclick = loadPlayers;
+
+    // Load awal
+    loadOrders();
 }
