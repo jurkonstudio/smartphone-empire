@@ -3804,3 +3804,186 @@ body.is-home.home-dock-collapsed .advisor-fab {
 .cat-bar-fill.out { background: var(--danger); }
 .cat-auto { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border, rgba(255,255,255,0.08)); font-size: 12px; color: var(--text-secondary); }
 .cat-auto .toggle-switch { touch-action: manipulation; }
+
+
+/* ============================================================================
+   OV — HQ OVERVIEW (v2027.31a)
+   Semua class berawalan "ov-" supaya tidak bentrok dengan panel lain.
+   Padding bawah aman: .app-view sudah menambah nav-h + safe-area-inset-bottom.
+   ============================================================================ */
+.ov-wrap { display: flex; flex-direction: column; gap: 12px; padding-bottom: 8px; min-width: 0; }
+.ov-wrap > .collapsible-card { margin-bottom: 0; }
+.ov-sec { min-width: 0; }
+
+.ov-card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--r-xl); padding: 14px 16px; box-shadow: var(--shadow-sm);
+}
+.ov-sec-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; min-width: 0; }
+.ov-sec-title {
+    margin: 0; font-size: var(--fs-2xs); font-weight: var(--fw-bold); letter-spacing: 0.7px;
+    text-transform: uppercase; color: var(--text-secondary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.ov-label {
+    font-size: var(--fs-2xs); font-weight: var(--fw-semibold); letter-spacing: 0.6px;
+    text-transform: uppercase; color: var(--text-secondary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.ov-muted { font-size: var(--fs-xs); color: var(--text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+/* chip ikon kecil (kanan atas kartu) */
+.ov-chip {
+    display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+    width: 26px; height: 26px; border-radius: 9px;
+    color: var(--ov-tone, var(--accent)); background: var(--bg-4);
+}
+.ov-chip svg { display: block; }
+
+/* pill perubahan */
+.ov-delta {
+    display: inline-flex; align-items: center; gap: 3px; flex: 0 0 auto;
+    font-size: var(--fs-xs); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums;
+    padding: 2px 8px; border-radius: var(--r-pill); white-space: nowrap;
+    color: var(--text-secondary); background: var(--bg-4);
+}
+.ov-delta.up   { color: var(--success); }
+.ov-delta.down { color: var(--danger); }
+
+/* ① HERO */
+.ov-hero {
+    position: relative; overflow: hidden; padding: 16px;
+    background: linear-gradient(160deg, var(--bg-3) 0%, var(--bg-2) 70%);
+    border: 1px solid var(--border); border-radius: var(--r-xl); box-shadow: var(--shadow-sm);
+}
+.ov-hero::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(120% 90% at 100% 0%, rgba(59, 130, 246, 0.16), transparent 60%);
+}
+.ov-hero--neg::before { background: radial-gradient(120% 90% at 100% 0%, rgba(239, 68, 68, 0.16), transparent 60%); }
+.ov-hero > * { position: relative; }
+.ov-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ov-hero-value {
+    margin-top: 6px; font-size: var(--fs-3xl); font-weight: var(--fw-black);
+    letter-spacing: -0.03em; line-height: 1.1; font-variant-numeric: tabular-nums;
+    color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ov-hero-sub { display: flex; align-items: center; gap: 8px; margin-top: 8px; min-width: 0; }
+.ov-split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.ov-stat {
+    min-width: 0; padding: 10px 12px; background: var(--bg-1);
+    border: 1px solid var(--border); border-radius: var(--r-lg);
+}
+.ov-stat-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; color: var(--ov-tone, var(--text-secondary)); }
+.ov-stat-value {
+    margin-top: 4px; font-size: var(--fs-lg); font-weight: var(--fw-black);
+    font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--text-primary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ov-runway {
+    display: flex; align-items: flex-start; gap: 8px; margin-top: 10px;
+    font-size: var(--fs-xs); font-weight: var(--fw-semibold); line-height: 1.4;
+    color: var(--ov-tone, var(--text-secondary));
+}
+.ov-runway svg { flex: 0 0 auto; margin-top: 1px; }
+
+/* ② METRICS 2x2 */
+.ov-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ov-metric {
+    min-width: 0; display: flex; flex-direction: column; padding: 12px 14px;
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--r-xl); box-shadow: var(--shadow-sm);
+}
+.ov-metric-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+.ov-metric-value {
+    margin: 8px 0 8px; font-size: var(--fs-2xl); font-weight: var(--fw-black); line-height: 1;
+    letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--text-primary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ov-metric-unit { margin-left: 3px; font-size: var(--fs-sm); font-weight: var(--fw-semibold); letter-spacing: 0; color: var(--text-tertiary); }
+.ov-meter { height: 5px; border-radius: var(--r-pill); background: var(--bg-4); overflow: hidden; }
+.ov-meter > i { display: block; height: 100%; width: var(--w, 0%); background: var(--ov-tone, var(--accent)); border-radius: inherit; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+.ov-meter--off { visibility: hidden; }
+.ov-metric-sub {
+    margin-top: 6px; font-size: var(--fs-xs); font-weight: var(--fw-semibold);
+    color: var(--ov-tone, var(--text-secondary)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ③ LIVE FEED */
+.ov-live { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: var(--fw-bold); letter-spacing: 0.8px; color: var(--success); }
+.ov-live-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: ovPulse 1.8s ease-in-out infinite; }
+@keyframes ovPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.7); } }
+.ov-feed-row { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 8px 0; font-size: var(--fs-sm); }
+.ov-feed-row + .ov-feed-row { border-top: 1px solid var(--border); }
+.ov-feed-dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; background: var(--ov-tone, var(--text-tertiary)); }
+.ov-feed-time { flex: 0 0 auto; min-width: 32px; font-size: var(--fs-2xs); color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+.ov-feed-text { flex: 1 1 auto; min-width: 0; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ov-feed-empty { padding: 8px 0 2px; font-size: var(--fs-sm); color: var(--text-tertiary); }
+
+/* ④ CHART */
+.ov-chart .chart-canvas { touch-action: pan-y; }
+
+/* ⑤ QUICK ACTIONS */
+.ov-qa-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.ov-qa {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    min-width: 0; min-height: 76px; padding: 10px 6px; font-family: inherit;
+    font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--text-primary);
+    background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-xl);
+    box-shadow: var(--shadow-sm); cursor: pointer; -webkit-tap-highlight-color: transparent;
+    transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s;
+}
+.ov-qa:active { transform: scale(0.96); background: var(--bg-3); }
+.ov-qa .ov-chip { width: 34px; height: 34px; border-radius: 11px; }
+.ov-qa-label { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* SOROTAN PUBLIK (ringkas) */
+.ov-pulse {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px;
+    text-align: left; font-family: inherit; color: inherit;
+    background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-xl);
+    box-shadow: var(--shadow-sm); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.ov-pulse:active { background: var(--bg-3); }
+.ov-pulse-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.ov-pulse-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ov-pulse-score { flex: 0 0 auto; font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--ov-tone, var(--text-secondary)); }
+.ov-pulse-viral { font-size: var(--fs-xs); font-weight: var(--fw-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ov-pulse-text {
+    font-size: var(--fs-sm); line-height: 1.4; color: var(--text-primary);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ov-pulse-go { flex: 0 0 auto; font-size: 20px; line-height: 1; color: var(--text-tertiary); }
+
+/* tint modern bila browser mendukung color-mix */
+@supports (background: color-mix(in srgb, red 10%, transparent)) {
+    .ov-chip { background: color-mix(in srgb, var(--ov-tone, var(--accent)) 16%, transparent); }
+    .ov-delta.up   { background: color-mix(in srgb, var(--success) 15%, transparent); }
+    .ov-delta.down { background: color-mix(in srgb, var(--danger) 15%, transparent); }
+}
+
+/* animasi masuk (ikut view-fresh yang sudah ada) */
+.view-fresh .ov-sec { animation: viewCardIn 0.32s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.view-fresh .ov-wrap > .ov-sec:nth-child(2) { animation-delay: 0.03s; }
+.view-fresh .ov-wrap > .ov-sec:nth-child(3) { animation-delay: 0.06s; }
+.view-fresh .ov-wrap > .ov-sec:nth-child(4) { animation-delay: 0.09s; }
+.view-fresh .ov-wrap > .ov-sec:nth-child(n+5) { animation-delay: 0.12s; }
+@media (prefers-reduced-motion: reduce) {
+    .ov-live-dot, .view-fresh .ov-sec { animation: none; }
+}
+
+/* layar sempit */
+@media (max-width: 360px) {
+    .ov-hero-value { font-size: 28px; }
+    .ov-metric-value { font-size: 22px; }
+}
+
+/* mode compact (density.css tidak perlu diubah) */
+html[data-density="compact"] .ov-wrap { gap: 8px; }
+html[data-density="compact"] .ov-card { padding: 10px 12px; }
+html[data-density="compact"] .ov-hero { padding: 12px; }
+html[data-density="compact"] .ov-hero-value { font-size: var(--fs-2xl); }
+html[data-density="compact"] .ov-split { margin-top: 10px; }
+html[data-density="compact"] .ov-metric { padding: 9px 11px; }
+html[data-density="compact"] .ov-metric-value { font-size: var(--fs-xl); margin: 6px 0; }
+html[data-density="compact"] .ov-qa { min-height: 62px; }
