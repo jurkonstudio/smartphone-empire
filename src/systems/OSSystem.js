@@ -1,7 +1,6 @@
 // FILE: src/systems/OSSystem.js
-// v2028.34 — [FULL FIX] Context-Aware Bugs (Tahun & Fitur). Menggabungkan seluruh fungsi asli.
+// v2028.35 — Context-Aware Bugs (Tahun & Fitur), lengkap & kompatibel dengan os.data.js baru.
 import { bus } from '../core/EventBus.js';
-import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
 import { TIME_CONFIG } from '../config/time.config.js';
 import { ToastService } from '../core/ToastService.js';
@@ -49,8 +48,11 @@ export class OSSystem {
 
     _onHydrated() {
         const data = this.state.data;
-        if (!data.os.bugs) data.os.bugs = [];
+        if (!Array.isArray(data.os.versions)) data.os.versions = [];
+        if (!Array.isArray(data.os.bugs)) data.os.bugs = [];
         if (!data.os.apps) data.os.apps = { builtin: [], thirdParty: 0 };
+        if (!Array.isArray(data.os.apps.builtin)) data.os.apps.builtin = [];
+        if (typeof data.os.apps.thirdParty !== 'number') data.os.apps.thirdParty = 0;
         if (typeof data.os.appsAccumulator !== 'number') data.os.appsAccumulator = 0;
         if (typeof data.os.licenseChoice === 'undefined') data.os.licenseChoice = null;
         if (data.os.developing) {
@@ -192,7 +194,7 @@ export class OSSystem {
                 const randomBug = validBugs[Math.floor(Math.random() * validBugs.length)];
                 this._spawnBug(randomBug);
             } else {
-                this._spawnBug(BUG_TEMPLATES[0]); // Fallback bug dasar
+                if (BUG_TEMPLATES.length) this._spawnBug(BUG_TEMPLATES[0]); // Fallback bug dasar
             }
         }
     }
@@ -412,13 +414,13 @@ export class OSSystem {
         if (data.os.developing && data.os.developing.features.includes(featureId)) return { status: 'developing', reason: null };
         if (data.time.currentYear < f.minYear) return { status: 'locked', reason: 'Tersedia tahun ' + f.minYear };
 
-        const missingFeatures = (f.requiresFeatures || []).filter(rf => !currentVersion || !currentVersion.features.includes(rf));
+        const missingFeatures = (f.requiresFeatures || []).filter(rf => !this.hasFeature(rf));
         if (missingFeatures.length) {
             const names = missingFeatures.map(rf => (getOsFeatureById(rf) || {}).name || rf);
             return { status: 'locked', reason: 'Butuh fitur: ' + names.join(', ') };
         }
 
-        const missingResearch = (f.requiresResearch || []).filter(rId => !data.research.completed.includes(rId));
+        const missingResearch = (f.requiresResearch || []).filter(rId => !(data.research && data.research.completed || []).includes(rId));
         if (missingResearch.length) {
             const names = missingResearch.map(rId => {
                 const node = getNodeById(rId);
@@ -529,8 +531,9 @@ export class OSSystem {
 
     spawnBug() { 
         // Menggunakan bug pertama sebagai default untuk cheat
-        this._spawnBug(BUG_TEMPLATES[0]); 
-        return { ok: true, total: this.state.data.os.bugs.length }; 
+        if (!BUG_TEMPLATES.length) return { ok: false, total: this.state.data.os.bugs.length };
+        this._spawnBug(BUG_TEMPLATES[0]);
+        return { ok: true, total: this.state.data.os.bugs.length };
     }
 
     quickSetup(featuresList) {
@@ -548,4 +551,4 @@ export class OSSystem {
         bus.emit('state:changed', data);
         return { ok: true, versionString, stats };
     }
-            }
+}
