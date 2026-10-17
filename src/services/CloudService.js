@@ -345,3 +345,14 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     }
 };
+async adminGetAllProfiles() {
+    if (!_adapter || !_userId) return NOT_SIGNED_IN;
+    try { return { ok: true, data: await _adapter.rpcAdminGetProfiles() }; }
+    catch (err) { return _fail(err); }
+},
+
+async adminSetSilicon(userId, amount) {
+    if (!_adapter || !_userId) return NOT_SIGNED_IN;
+    try { return { ok: true, data: await _adapter.rpcAdminSetSilicon(userId, amount) }; }
+    catch (err) { return _fail(err); }
+},
