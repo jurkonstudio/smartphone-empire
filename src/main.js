@@ -1,6 +1,6 @@
 // FILE: src/main.js
 // v2027.44 — Promosi regional (Global/Asia/Eropa) + Bank v2.
-// v2027.35c — Silicon + daily login aktif.
+// v2028.13 — [ADMIN] Ekspos forcePull di window.__game.
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -200,8 +200,6 @@ function updateNavSlider(animated) {
 function renderView(opts) {
     if (!els.view) return;
     var soft = !!(opts && opts.soft);
-    // Office 3D Map memperbarui dirinya sendiri lewat event state; render ulang soft
-    // akan membuangnya & memuat ulang scene — jadi dilewati selama peta aktif.
     if (soft && activeView === 'team' && activeHqSubtab === 'office' && isOfficeMounted()) return;
     var prevScroll = els.view.scrollTop;
     if (soft) els.view.classList.add('soft-update');
@@ -223,7 +221,6 @@ function renderView(opts) {
     }
     unmountCampusMap();
     unmountOfficeMap();
-    // Home = layar penuh tanpa scroll (peta + dock); halaman lain scroll biasa.
     els.view.classList.toggle('view-home', activeView === 'dashboard');
     document.body.classList.toggle('is-home', activeView === 'dashboard');
     els.view.innerHTML = html;
@@ -379,8 +376,6 @@ function _updateSellTotal() {
     el.textContent = '$' + (priceUSD * qty).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// Render ulang halaman + modal detail produk bila sedang terbuka
-// (perbaikan: toggle auto-restock di modal tidak terlihat berubah).
 function _refreshProductUi(productId) {
     var modalOpen = Modal.isOpen('product-detail');
     renderAll();
@@ -477,7 +472,6 @@ function bindGlobalClicks() {
 
         if (handleNewsListClick(e)) return;
 
-        // Header: ketuk nama perusahaan = Pusat Notifikasi (profil ada di Pengaturan)
         var notifBtn = e.target.closest('[data-notif-toggle]');
         if (notifBtn) { e.preventDefault(); vibrate(8); toggleNotificationPanel(); return; }
 
@@ -490,7 +484,6 @@ function bindGlobalClicks() {
         var siliconBtn = e.target.closest('[data-silicon-open]');
         if (siliconBtn) { e.preventDefault(); vibrate(8); openSiliconModal(); return; }
 
-        // [SIL] Unlock / boost riset pakai Silicon (tech & chip).
         var silRes = e.target.closest('[data-sil-research]');
         if (silRes) {
             e.preventDefault(); vibrate(8);
@@ -784,7 +777,6 @@ function _openChipDetail(chip) {
     Modal.open('chip-detail', html);
 }
 
-// [SIL] Perbarui label harga "Selesaikan" di slot-strip saat progress berjalan.
 function _refreshFinishCost(kind, nodeId) {
     var btn = els.view.querySelector('[data-sil-research="finish"][data-kind="' + kind + '"][data-node-id="' + nodeId + '"]');
     if (!btn) return;
@@ -898,7 +890,6 @@ function bindStateEvents() {
     bus.on('team:recruited', function () { if (activeView === 'team') renderView({ soft: true }); });
     bus.on('team:fired', function () { if (activeView === 'team') renderView({ soft: true }); });
 
-    // Promosi regional & Bank: segarkan layar yang sedang terbuka.
     function refreshRegionalView() {
         if ((activeView === 'market' && activeMarketSubtab === 'promo') ||
             (activeView === 'team' && activeHqSubtab === 'bank') ||
@@ -999,7 +990,6 @@ async function boot() {
 
         if (!state.get().settings.competitorMode) state.get().settings.competitorMode = 'real';
 
-        // [PATCH 6] Daily login bonus Silicon
         try {
             var dl = SiliconService.claimDailyLogin();
             if (dl && dl.ok) {
@@ -1053,25 +1043,17 @@ async function boot() {
         }
 
         window.__game = {
-            report: function (opts) {
-                return buildReport(state.get(), window.__game, opts || {});
-            },
-            reportText: function (opts) {
-                return formatReportText(buildReport(state.get(), window.__game, opts || {}));
-            },
-            reportShow: function () {
-                openDiagnosticModal();
-            },
+            report: function (opts) { return buildReport(state.get(), window.__game, opts || {}); },
+            reportText: function (opts) { return formatReportText(buildReport(state.get(), window.__game, opts || {})); },
+            reportShow: function () { openDiagnosticModal(); },
             cloud: CloudService,
+            cloudSync: CloudSync, // <-- EKSPOS KE CONSOLE
+            forcePull: function() { return CloudSync.forcePull(); }, // <-- FUNGSI FORCE PULL
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
-            silicon: SiliconService,
-            promotion: promotion,
-            bank: bank,
-            payment: PaymentService,
-            openSiliconStore: openSiliconStoreModal,
-            LanguageService: LanguageService,
+            silicon: SiliconService, promotion: promotion, bank: bank, payment: PaymentService,
+            openSiliconStore: openSiliconStoreModal, LanguageService: LanguageService,
             SaveService: SaveService, ToastService: ToastService, Modal: Modal, navigate: navigate, render: renderAll,
             modules: { marketing: marketingModule, feedbackData: feedbackModule },
             cheat: {
@@ -1106,7 +1088,6 @@ async function boot() {
             }
         };
 
-        // [HARDENING] Objek cheat tidak ada sama sekali di build produksi.
         if (!DEV_BUILD) { delete window.__game.cheat; }
 
         window.render = renderAll;
