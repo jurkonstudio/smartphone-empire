@@ -4,12 +4,14 @@
 import { Modal } from '../modal.js';
 import { t } from '../../core/LanguageService.js';
 import { formatCurrency } from '../../utils/format.js';
-import { BANKS } from '../../data/bank.data.js';
+import { BANKS, DEPOSIT_CONFIG } from '../../data/bank.data.js';
 import { REGION_COLORS } from '../../data/region.data.js';
 import { ensureRegionalStyle } from './RegionalStyle.js';
 
 var _apply = null;    // { bankId, productId, amount, term }
 var _prepay = null;   // { uid, fraction }
+var _dep = null;      // { bankId, kind:'flex'|'term', term, amount }
+var _wd = null;       // { uid, fraction }
 
 var MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
@@ -176,6 +178,55 @@ function _logCard(data) {
     return '<div class="card"><div class="card-title">' + esc(t('bank.section.log')) + '</div>' + rows + '</div>';
 }
 
+function _depositCard(bank, data) {
+    var tot = bank.getDepositTotals();
+    var auto = bank.bank.autoCover;
+    var min = bank.getDepositMin();
+
+    var kpis = '<div class="rg-kpis">' +
+        '<div class="rg-kpi"><div class="rg-kpi-label">' + esc(t('dep.kpi.total')) + '</div><div class="rg-kpi-value">' + esc(money(tot.total)) + '</div></div>' +
+        '<div class="rg-kpi"><div class="rg-kpi-label">' + esc(t('dep.kpi.flex')) + '</div><div class="rg-kpi-value">' + esc(money(tot.flex)) + '</div></div>' +
+        '</div>';
+
+    var autoRow = '<div class="rg-row"><div class="rg-row-main"><div class="rg-row-name">' + esc(t('dep.autocover')) + '</div>' +
+        '<div class="rg-row-meta">' + esc(t('dep.autocover.hint')) + '</div></div>' +
+        '<button class="' + (auto ? 'btn-primary' : 'btn-secondary') + '" data-dep-autocover style="min-width:72px;min-height:34px;">' +
+        esc(auto ? t('dep.on') : t('dep.off')) + '</button></div>';
+
+    var banks = BANKS.map(function (b) {
+        var color = REGION_COLORS[b.region] || REGION_COLORS.global;
+        var flexPct = bank.getDepositAnnualPct(b.id, 'flex', 0);
+        var t12 = bank.getDepositAnnualPct(b.id, 'term', 12);
+        return '<div class="rg-row"><div class="rg-row-main"><div class="rg-row-name">' + dot(color) + esc(t('bank.name.' + b.id)) + '</div>' +
+            '<div class="rg-row-meta">' + esc(t('dep.rates', { a: flexPct.toFixed(2), b: t12.toFixed(2) })) + '</div></div>' +
+            '<button class="btn-primary" data-dep-open="' + b.id + '" style="min-width:76px;min-height:34px;">' + esc(t('dep.btn.open')) + '</button></div>';
+    }).join('');
+
+    var list = (bank.bank.deposits || []);
+    var items;
+    if (!list.length) {
+        items = '<div class="rg-row-meta" style="margin-top:4px;">' + esc(t('dep.none')) + '</div>';
+    } else {
+        items = list.map(function (x) {
+            var kindLabel = x.kind === 'flex' ? t('dep.kind.flex') : t('dep.kind.term', { n: x.term });
+            var annual = x.kind === 'flex' ? bank.getDepositAnnualPct(x.bankId, 'flex', 0) : (x.rate * 12 * 100);
+            var progress = x.kind === 'term' && x.term > 0 ? (x.term - x.remainingTerm) / x.term : 0;
+            return '<div class="rg-pkg"><div class="rg-pkg-head"><div class="rg-pkg-name">' + esc(t('bank.name.' + x.bankId)) + '</div>' +
+                '<span class="rg-tag info">' + esc(kindLabel) + '</span></div>' +
+                '<div class="rg-pkg-meta" style="margin-top:6px;">' +
+                '<span class="rg-tag good">' + esc(t('dep.balance')) + ' ' + esc(money(x.balance)) + '</span>' +
+                '<span class="rg-tag">' + esc(t('dep.rate', { r: annual.toFixed(2) })) + '</span>' +
+                (x.kind === 'term' ? '<span class="rg-tag">' + esc(t('dep.matures', { n: x.remainingTerm })) + '</span>' : '') +
+                '</div>' + (x.kind === 'term' ? _meter(progress, '#0a84ff') : '') +
+                '<div class="rg-btn-row"><button class="btn-secondary" data-dep-withdraw="' + esc(x.uid) + '">' + esc(t('dep.btn.withdraw')) + '</button></div></div>';
+        }).join('');
+    }
+
+    return '<div class="card"><div class="card-title">' + esc(t('dep.section')) + '</div>' + kpis + autoRow +
+        '<div class="rg-row-meta" style="margin:8px 0;">' + esc(t('dep.modal.min', { n: money(min) })) + '</div>' +
+        banks + '<div style="margin-top:8px;">' + items + '</div></div>';
+}
+
 // ------------------------------------------------------------ panel utama
 
 export function renderBankPanel() {
@@ -186,7 +237,7 @@ export function renderBankPanel() {
     var lim = bank.getLimits();
 
     return '<div class="rg-sub">' + esc(t('bank.sub')) + '</div>' +
-        _ratingCard(bank, lim) + _kpis(bank, lim) +
+        _ratingCard(bank, lim) + _kpis(bank, lim) + _depositCard(bank, data) +
         '<div class="card-title" style="margin:6px 4px;">' + esc(t('bank.section.banks')) + '</div>' +
         _bankCards(bank) + _lineCard(bank, lim) + _loansCard(bank, data) + _logCard(data);
 }
@@ -296,3 +347,110 @@ export function updateBankPrepay(patch) {
 }
 
 export function getBankPrepay() { return _prepay; }
+
+// ------------------------------------------------------------ modal setor
+
+function _depHtml() {
+    var bank = window.__game.bank;
+    var data = window.__game.state.get();
+    var amounts = bank.getDepositAmountOptions();
+    var q = bank.quoteDeposit(_dep);
+
+    var bankChips = '<div class="rg-modal-chips">' + BANKS.map(function (b) {
+        return '<button class="rg-chip' + (b.id === _dep.bankId ? ' active' : '') + '" data-dep-bank="' + b.id + '">' + esc(t('bank.name.' + b.id)) + '</button>';
+    }).join('') + '</div>';
+
+    var kindChips = '<div class="rg-modal-chips"><button class="rg-chip' + (_dep.kind === 'flex' ? ' active' : '') + '" data-dep-kind="flex">' + esc(t('dep.kind.flex')) + '</button>' +
+        DEPOSIT_CONFIG.termOptions.map(function (n) {
+            return '<button class="rg-chip' + (_dep.kind === 'term' && _dep.term === n ? ' active' : '') + '" data-dep-kind="' + n + '">' + esc(t('dep.kind.term', { n: n })) + '</button>';
+        }).join('') + '</div>';
+
+    var amountChips = '<div class="rg-modal-chips">' + (amounts.length ? amounts.map(function (a) {
+        return '<button class="rg-chip' + (a === _dep.amount ? ' active' : '') + '" data-dep-amount="' + a + '">' + esc(money(a)) + '</button>';
+    }).join('') : '<span class="rg-row-meta">' + esc(t('dep.modal.min', { n: money(bank.getDepositMin()) })) + '</span>') + '</div>';
+
+    var summary;
+    if (q.ok) {
+        summary =
+            '<div class="rg-sum"><span>' + esc(t('dep.modal.rate')) + '</span><b>' + q.annualPct.toFixed(2) + '%</b></div>' +
+            '<div class="rg-sum"><span>' + esc(t('dep.modal.tax', { n: Math.round(q.taxPct * 100) })) + '</span><b>✓</b></div>' +
+            (q.kind === 'flex'
+                ? '<div class="rg-sum"><span>' + esc(t('dep.modal.monthly')) + '</span><b style="color:var(--success,#34c759)">+' + esc(money(q.monthlyNet)) + '</b></div>'
+                : '<div class="rg-sum"><span>' + esc(t('dep.modal.maturity')) + '</span><b>' + esc(money(q.maturity)) + '</b></div>' +
+                  '<div class="rg-sum"><span>' + esc(t('dep.modal.profit')) + '</span><b style="color:var(--success,#34c759)">+' + esc(money(q.profit)) + '</b></div>') +
+            '<div class="rg-sum"><span>' + esc(t('dep.modal.cash_after')) + '</span><b>' + esc(money(data.cash - q.amount)) + '</b></div>';
+    } else {
+        summary = '<div class="rg-lock">' + esc(q.error || '') + '</div>';
+    }
+
+    return '<div class="modal-title">' + esc(t('dep.modal.title')) + '</div>' +
+        '<label class="field-label">' + esc(t('dep.modal.bank')) + '</label>' + bankChips +
+        '<label class="field-label">' + esc(t('dep.modal.type')) + '</label>' + kindChips +
+        '<label class="field-label">' + esc(t('dep.modal.amount')) + '</label>' + amountChips + summary +
+        '<button class="btn-primary" data-dep-confirm style="width:100%;margin-top:14px;"' + (q.ok ? '' : ' disabled') + '>' + esc(t('dep.modal.confirm')) + '</button>' +
+        '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:6px;">' + esc(t('bank.modal.cancel')) + '</button>';
+}
+
+export function openDepositModal(bankId) {
+    ensureRegionalStyle();
+    var bank = window.__game.bank;
+    var amounts = bank.getDepositAmountOptions();
+    _dep = {
+        bankId: bankId || 'global_bank', kind: 'flex', term: 0,
+        amount: amounts.length ? amounts[Math.min(1, amounts.length - 1)] : 0
+    };
+    Modal.open('dep-open', _depHtml());
+}
+
+export function updateDeposit(patch) {
+    if (!_dep) return;
+    Object.assign(_dep, patch);
+    var card = document.querySelector('[data-modal-id="dep-open"] .modal-card');
+    if (card) card.innerHTML = _depHtml();
+}
+
+export function getDeposit() { return _dep; }
+
+// ------------------------------------------------------------ modal tarik
+
+function _wdHtml() {
+    var bank = window.__game.bank;
+    var wq = bank.getWithdrawQuote(_wd.uid, _wd.fraction);
+    if (!wq) return '<div class="modal-title">' + esc(t('dep.err.missing')) + '</div>' +
+        '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:10px;">' + esc(t('bank.modal.cancel')) + '</button>';
+
+    var body;
+    if (wq.flex) {
+        var chips = '<div class="rg-modal-chips">' + [0.25, 0.5, 0.75, 1].map(function (f) {
+            return '<button class="rg-chip' + (f === _wd.fraction ? ' active' : '') + '" data-dep-fraction="' + f + '">' +
+                esc(f === 1 ? t('dep.wd.all') : (f * 100) + '%') + '</button>';
+        }).join('') + '</div>';
+        body = '<label class="field-label">' + esc(t('dep.wd.amount')) + '</label>' + chips;
+    } else {
+        body = '<div class="rg-tip">' + esc(t('dep.wd.term_note', { n: Math.round(DEPOSIT_CONFIG.earlyPenaltyPct * 100) })) + '</div>';
+    }
+
+    return '<div class="modal-title">' + esc(t('dep.wd.title')) + '</div>' +
+        '<div class="modal-sub">' + esc(t('bank.name.' + wq.dep.bankId)) + ' · ' + esc(money(wq.dep.balance)) + '</div>' + body +
+        '<div class="rg-sum"><span>' + esc(t('bank.modal.principal')) + '</span><b>' + esc(money(wq.amount)) + '</b></div>' +
+        (wq.penalty > 0 ? '<div class="rg-sum"><span>' + esc(t('dep.wd.penalty')) + '</span><b>-' + esc(money(wq.penalty)) + '</b></div>' : '') +
+        (wq.forfeited > 0 ? '<div class="rg-sum"><span>' + esc(t('dep.wd.forfeit')) + '</span><b>-' + esc(money(wq.forfeited)) + '</b></div>' : '') +
+        '<div class="rg-sum"><span>' + esc(t('dep.wd.receive')) + '</span><b style="color:var(--success,#34c759)">' + esc(money(wq.payout)) + '</b></div>' +
+        '<button class="btn-primary" data-dep-withdraw-confirm style="width:100%;margin-top:14px;">' + esc(t('dep.wd.confirm')) + '</button>' +
+        '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:6px;">' + esc(t('bank.modal.cancel')) + '</button>';
+}
+
+export function openWithdrawModal(uid) {
+    ensureRegionalStyle();
+    _wd = { uid: uid, fraction: 1 };
+    Modal.open('dep-withdraw', _wdHtml());
+}
+
+export function updateWithdraw(patch) {
+    if (!_wd) return;
+    Object.assign(_wd, patch);
+    var card = document.querySelector('[data-modal-id="dep-withdraw"] .modal-card');
+    if (card) card.innerHTML = _wdHtml();
+}
+
+export function getWithdraw() { return _wd; }
