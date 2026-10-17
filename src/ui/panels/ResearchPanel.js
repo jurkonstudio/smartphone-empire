@@ -11,7 +11,7 @@
 // Kontrak atribut dengan main.js tidak berubah:
 //   data-subtab, data-filter-cat, data-node-detail, data-research-action,
 //   data-research-slots / -bar / -pct / -eta (live update).
-import { RESEARCH_CATEGORIES, getNodeById } from '../../data/research.data.js';
+import { RESEARCH_CATEGORIES, getNodeById, RESEARCH_NODES } from '../../data/research.data.js';
 import { getComponentById } from '../../data/components.data.js';
 import { getOsFeatureById } from '../../data/os.data.js';
 import { BALANCE } from '../../data/balance.data.js';
@@ -114,9 +114,23 @@ function renderTechSection(params) {
     const active = data.research.active || [];
     const maxSlots = data.research.maxSlots || 1;
 
+    // PERBAIKAN UX: Cek apakah ada riset yang tersedia di tahun ini
+    const hasAvailable = RESEARCH_NODES.some(n => researchSystem.getNodeStatus(n.id).status === 'available');
+    let emptyMessage = t('research.slot.hint');
+    
+    if (!hasAvailable && active.length === 0) {
+        const nextYearNodes = RESEARCH_NODES.filter(n => data.time.currentYear < n.minYear);
+        if (nextYearNodes.length) {
+            const nextYear = Math.min(...nextYearNodes.map(n => n.minYear));
+            emptyMessage = `Semua riset tahun ${data.time.currentYear} telah selesai. Majukan waktu ke tahun ${nextYear} untuk meriset teknologi baru.`;
+        } else {
+            emptyMessage = "Selamat! Semua teknologi di game ini telah diselesaikan.";
+        }
+    }
+
     return '<div class="rs-root">' +
         _renderHero(researchSystem, data) +
-        _renderSlotBar(active, maxSlots) +
+        _renderSlotBar(active, maxSlots, emptyMessage) +
         _renderCategoryBar(researchSystem) +
         _renderToolbar() +
         '<div class="rs-body" data-rs-body>' + _renderBody(researchSystem) + '</div>' +
@@ -151,12 +165,13 @@ function _renderHero(sys, data) {
     '</div>';
 }
 
-// ---------- SLOT STRIP (atribut live dipertahankan) ----------
-function _renderSlotBar(active, maxSlots) {
+// ---------- SLOT STRIP ----------
+function _renderSlotBar(active, maxSlots, emptyMessage) {
+    emptyMessage = emptyMessage || t('research.slot.hint');
     var emptyCount = Math.max(0, maxSlots - active.length);
     var emptySlots = '';
     for (var i = 0; i < emptyCount; i++) {
-        emptySlots += '<div class="rs-slot-empty">' + escapeHtml(_tf('research.slot.hint', 'Belum ada riset berjalan. Pilih node di bawah.')) + '</div>';
+        emptySlots += '<div class="rs-slot-empty" style="line-height: 1.4; text-align: left; padding: 10px;">' + escapeHtml(emptyMessage) + '</div>';
         if (active.length) break;   // satu penanda cukup bila sudah ada yang berjalan
     }
 
@@ -166,7 +181,7 @@ function _renderSlotBar(active, maxSlots) {
                 '<span class="slot-strip-label">' + t('research.slot.title') + '</span>' +
                 '<span class="slot-strip-count" data-research-slots>0/' + maxSlots + '</span>' +
             '</div>' +
-            '<div class="slot-strip-hint">' + t('research.slot.hint') + '</div>' +
+            '<div class="slot-strip-hint" style="line-height: 1.4; padding: 4px 0;">' + escapeHtml(emptyMessage) + '</div>' +
             '</div>';
     }
 
@@ -631,7 +646,6 @@ function _kv(label, value) {
 
 // ============================================================
 // STYLE (disuntik sekali; namespace .rs-* + sedikit tambahan .node-row-*)
-// Mengikuti pola GameIcons.ensureIconStyles → style.css tidak perlu diubah.
 // ============================================================
 let _stylesInjected = false;
 function _ensureStyles() {
