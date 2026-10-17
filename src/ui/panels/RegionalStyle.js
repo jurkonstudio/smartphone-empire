@@ -1,0 +1,68 @@
+// FILE: src/ui/panels/RegionalStyle.js  (BARU)
+// CSS panel Promosi Regional & Bank. Di-inject sekali, style.css tidak perlu diubah.
+export function ensureRegionalStyle() {
+    if (typeof document === 'undefined' || document.getElementById('rg-style')) return;
+    var css = [
+        '.rg-sub{font-size:12px;color:var(--text-secondary);margin:-4px 0 12px;line-height:1.5}',
+        '.rg-chips{display:flex;flex-wrap:wrap;gap:6px}',
+        '.rg-chip{padding:7px 12px;border-radius:999px;background:var(--bg-3);color:var(--text-primary);',
+        'border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;min-height:34px;',
+        'transition:background .15s,border-color .15s,transform .1s}',
+        '.rg-chip:active{transform:scale(.96)}',
+        '.rg-chip.active{background:var(--accent);border-color:var(--accent);color:#fff}',
+        '.rg-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;flex:0 0 auto}',
+        '.rg-title{display:flex;align-items:center;font-size:14px;font-weight:700;margin-bottom:4px}',
+        '.rg-desc{font-size:12px;color:var(--text-secondary);line-height:1.5;margin-bottom:10px}',
+        '.rg-split{display:flex;height:12px;border-radius:999px;overflow:hidden;background:var(--bg-4);margin:6px 0 10px}',
+        '.rg-split i{display:block;height:100%}',
+        '.rg-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}',
+        '.rg-row-main{flex:1;min-width:0}',
+        '.rg-row-name{display:flex;align-items:center;font-size:13px;font-weight:600}',
+        '.rg-row-meta{font-size:11px;color:var(--text-secondary);margin-top:2px;line-height:1.45}',
+        '.rg-meter{height:6px;border-radius:999px;background:var(--bg-4);overflow:hidden;margin-top:5px}',
+        '.rg-meter i{display:block;height:100%;border-radius:999px;transition:width .4s ease}',
+        '.rg-val{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}',
+        '.rg-pkg{border:1px solid var(--border);border-radius:var(--r-md,12px);padding:10px 12px;margin-bottom:8px;',
+        'background:var(--bg-3)}',
+        '.rg-pkg.rg-pkg-active{opacity:.7}',
+        '.rg-pkg-head{display:flex;align-items:center;justify-content:space-between;gap:8px}',
+        '.rg-pkg-name{font-size:13px;font-weight:700}',
+        '.rg-pkg-desc{font-size:11.5px;color:var(--text-secondary);line-height:1.45;margin:3px 0 6px}',
+        '.rg-pkg-meta{display:flex;flex-wrap:wrap;gap:6px;font-size:11px;margin-bottom:8px}',
+        '.rg-tag{padding:2px 8px;border-radius:999px;background:var(--bg-4);color:var(--text-secondary);font-weight:600}',
+        '.rg-tag.good{background:rgba(52,199,89,.16);color:#34c759}',
+        '.rg-tag.warn{background:rgba(255,159,10,.16);color:#ff9f0a}',
+        '.rg-tag.info{background:rgba(10,132,255,.16);color:#0a84ff}',
+        '.rg-btn{width:100%;min-height:38px;font-size:12.5px}',
+        '.rg-kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}',
+        '.rg-kpi{background:var(--bg-3);border:1px solid var(--border);border-radius:var(--r-md,12px);padding:10px 12px}',
+        '.rg-kpi-label{font-size:10.5px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.6px;font-weight:700}',
+        '.rg-kpi-value{font-size:16px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}',
+        '.rg-rating{display:flex;gap:14px;align-items:center;margin-bottom:12px}',
+        '.rg-rating-badge{flex:0 0 auto;width:64px;height:64px;border-radius:18px;display:flex;align-items:center;',
+        'justify-content:center;font-size:24px;font-weight:900;color:#fff;letter-spacing:-.5px}',
+        '.rg-rating-info{flex:1;min-width:0}',
+        '.rg-rating-score{font-size:13px;font-weight:700;margin-bottom:6px}',
+        '.rg-factor{display:flex;align-items:center;gap:8px;font-size:11.5px;margin-bottom:6px}',
+        '.rg-factor-name{flex:0 0 110px;color:var(--text-secondary)}',
+        '.rg-factor .rg-meter{flex:1;margin-top:0}',
+        '.rg-tip{font-size:12px;color:var(--text-secondary);line-height:1.5;margin-top:8px;padding:8px 10px;',
+        'border-radius:var(--r-sm,8px);background:var(--bg-3)}',
+        '.rg-lock{font-size:11.5px;color:var(--warn,#ff9f0a);line-height:1.5;margin-top:6px}',
+        '.rg-ok{font-size:11.5px;color:var(--success,#34c759);margin-top:6px}',
+        '.rg-btn-row{display:flex;gap:6px;margin-top:8px}',
+        '.rg-btn-row button{flex:1;min-height:36px;font-size:12px}',
+        '.rg-log{font-size:12px;display:flex;justify-content:space-between;gap:8px;padding:6px 0;',
+        'border-bottom:1px solid var(--border)}',
+        '.rg-log:last-child{border-bottom:none}',
+        '.rg-log span:first-child{color:var(--text-secondary)}',
+        '.rg-modal-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}',
+        '.rg-sum{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)}',
+        '.rg-sum:last-of-type{border-bottom:none}',
+        '.rg-sum b{font-variant-numeric:tabular-nums}'
+    ].join('');
+    var el = document.createElement('style');
+    el.id = 'rg-style';
+    el.textContent = css;
+    document.head.appendChild(el);
+}
