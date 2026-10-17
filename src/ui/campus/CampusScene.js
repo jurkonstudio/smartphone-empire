@@ -1,6 +1,7 @@
 // FILE: src/ui/campus/CampusScene.js
-// v2027.35a — kampus tumbuh: bangunan muncul/naik level otomatis, gaya ikut era,
+// v2027.37a — kampus tumbuh: bangunan muncul/naik level otomatis, gaya ikut era,
 // animasi tumbuh singkat, tap bangunan untuk info. Tetap render-on-demand.
+// Upgrade detail: cahaya hangat/dingin per tema, zoom lebih dalam, kontrol inertia.
 import {
     createAssets, buildGround, buildTree, buildHQ, buildSlot, buildSprawl,
     computePlan, rememberPeak, describeBuilding,
@@ -60,8 +61,8 @@ export function createCampusScene(THREE, container, gameState) {
     var scene = new THREE.Scene();
     var camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
     var hemi = new THREE.HemisphereLight(0xffffff, 0xcccccc, 1);
-    var sun = new THREE.DirectionalLight(0xffffff, 0.8);
-    sun.position.set(6, 10, 4);
+    var sun = new THREE.DirectionalLight(0xfff1da, 0.8);
+    sun.position.set(8, 10, 5);
     scene.add(hemi, sun);
 
     var A = createAssets(THREE);
@@ -220,6 +221,7 @@ export function createCampusScene(THREE, container, gameState) {
 
     var controls = createCampusControls(canvas, {
         unitsPerPixel: function (zoom) { return (BASE_VIEW / zoom) / Math.max(1, container.clientHeight); },
+        maxZoom: 3,                  // detail baru cukup halus untuk zoom lebih dekat
         onChange: function () { applyCamera(); requestRender(); },
         onTap: handleTap
     });
@@ -255,6 +257,7 @@ export function createCampusScene(THREE, container, gameState) {
         hemi.groundColor.setHex(p.hemiGround);
         hemi.intensity = p.hemiI;
         sun.intensity = p.dirI;
+        if (p.sunCol !== undefined) sun.color.setHex(p.sunCol);   // hangat siang, kebiruan malam
     }
 
     // Dipanggil sering (setiap state:changed) — murah: keluar cepat kalau plan sama.
