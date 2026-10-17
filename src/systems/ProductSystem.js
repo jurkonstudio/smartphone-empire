@@ -31,7 +31,11 @@ export class ProductSystem {
     constructor(gameState) {
         this.state = gameState;
         this._unsubs = [];
+        this._promotion = null;
     }
+
+    // Promosi regional (PromotionSystem) menambah lift ke faktor pemasaran.
+    setPromotionSystem(ps) { this._promotion = ps; }
 
     start() {
         var self = this;
@@ -445,6 +449,8 @@ export class ProductSystem {
             p.totalRevenue += revenue;
             totalDailyRevenue += revenue;
 
+            bus.emit('product:sale', { productId: p.id, sold: sold, revenue: revenue });
+
             if (!p.dailySales) p.dailySales = [];
             p.dailySales.push({ day: data.time.elapsedGameMinutes, sold: sold, revenue: revenue });
             if (p.dailySales.length > 400) p.dailySales.shift();
@@ -522,9 +528,11 @@ export class ProductSystem {
     _getMarketingFactor(productId) {
         var data = this.state.data;
         var campaigns = data.marketing.activeCampaigns.filter(function (c) { return c.productId === productId; });
-        if (!campaigns.length) return 1.0;
         var sum = 0;
         campaigns.forEach(function (c) { sum += c.effectiveReach || 0; });
+        // Promosi regional (Global/Asia/Eropa) + brand wilayah.
+        if (this._promotion) sum += this._promotion.getLiftForProduct(productId);
+        if (sum <= 0) return 1.0;
         return Math.min(BALANCE.marketing.maxMarketingFactor, 1 + sum);
     }
 

@@ -1,4 +1,5 @@
 // FILE: src/systems/EconomySystem.js
+// v2027.44 — utang lewat BankSystem (cicilan anuitas: bunga masuk laba, pokok mengurangi kas).
 // v2027.1b — fix revenue ganda: cash tidak di-add income lagi di bulanan.
 import { bus } from '../core/EventBus.js';
 import { BALANCE } from '../data/balance.data.js';
@@ -22,7 +23,10 @@ export class EconomySystem {
         this.state = gameState;
         this._unsubMonth = null;
         this._monthRevenue = 0;
+        this.bank = null;
     }
+
+    setBank(bank) { this.bank = bank; }
 
     start() {
         this._unsubMonth = bus.on('time:month-changed', (snapshot) => {
@@ -69,7 +73,16 @@ export class EconomySystem {
         // ---- Pengeluaran ----
         const salary = this.state.getMonthlySalary();
         const fixed = this.state.getMonthlyFixedCost();
-        const loanInterest = this._calcMonthlyLoanInterest();
+        // Utang: bunga (+ denda telat) masuk beban; cicilan pokok hanya mengurangi kas.
+        let loanInterest = 0;
+        let loanPrincipal = 0;
+        if (this.bank) {
+            const debt = this.bank.processMonthly();
+            loanInterest = debt.interest + debt.lateFees;
+            loanPrincipal = debt.principal;
+        } else {
+            loanInterest = this._calcMonthlyLoanInterest();
+        }
         const expenseBase = salary + fixed + loanInterest;
         const expense = Math.round(expenseBase * mul);
 
@@ -89,7 +102,7 @@ export class EconomySystem {
         // ---- Update cash ----
         // [v2027.1b] Revenue harian sudah menambah cash. Hanya potong expense + tax.
         const cashBefore = data.cash;
-        const cashAfter = cashBefore - expense - tax;
+        const cashAfter = cashBefore - expense - tax - loanPrincipal;
         this.state.setCash(cashAfter);
 
         // ---- Riwayat ----
@@ -102,7 +115,7 @@ export class EconomySystem {
             net,
             cash: cashAfter,
             breakdown: {
-                salary, fixed, loanInterest,
+                salary, fixed, loanInterest, loanPrincipal,
                 tax,
                 expenseRaw: expenseBase
             }
@@ -140,7 +153,7 @@ export class EconomySystem {
         bus.emit('state:changed', data);
 
         // ---- Burn rate warning ----
-        const monthlyCost = expenseBase * mul;
+        const monthlyCost = expenseBase * mul + loanPrincipal;
         if (monthlyCost > 0 && cashAfter >= 0) {
             const monthsLeft = cashAfter / monthlyCost;
             if (monthsLeft < BALANCE.burnRateWarnThreshold) {
@@ -159,6 +172,7 @@ export class EconomySystem {
     takeLoan(loanId) {
         const def = BALANCE.loans.find(l => l.id === loanId);
         if (!def) return { ok: false, error: 'Jenis pinjaman tidak ditemukan.' };
+        if (this.bank) return this.bank.takeLegacyLoan(def);
         const data = this.state.data;
         if (data.gameOver) return { ok: false, error: 'Permainan sudah berakhir.' };
         if (data.finance.loans.some(l => l.id === loanId)) {
@@ -186,6 +200,7 @@ export class EconomySystem {
     }
 
     repayLoan(loanId) {
+        if (this.bank) return this.bank.prepay(loanId, 1);
         const data = this.state.data;
         const idx = data.finance.loans.findIndex(l => l.id === loanId);
         if (idx < 0) return { ok: false, error: 'Pinjaman tidak ada.' };
@@ -200,7 +215,10 @@ export class EconomySystem {
 
     getMonthlyCostEstimate() {
         const diff = BALANCE.difficultyMultiplier[this.state.data.difficulty] || BALANCE.difficultyMultiplier.normal;
-        const base = this.state.getMonthlySalary() + this.state.getMonthlyFixedCost() + this._calcMonthlyLoanInterest();
+        let debtService = 0;
+        if (this.bank) debtService = this.bank.previewMonthly().total;
+        else debtService = this._calcMonthlyLoanInterest();
+        const base = this.state.getMonthlySalary() + this.state.getMonthlyFixedCost() + debtService;
         return Math.round(base * diff.expense);
     }
 }
