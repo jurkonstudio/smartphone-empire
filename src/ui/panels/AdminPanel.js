@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/AdminPanel.js
-// v2028.23 — [BULLETPROOF] Memaksa tutup semua modal & tarik saldo setelah approve.
+// v2028.24 — [ULTIMATE FIX] Update saldo lokal secara langsung & hancurkan DOM Pop-up QRIS.
 import { ToastService } from '../../core/ToastService.js';
 import { CloudService } from '../../services/CloudService.js';
 
@@ -70,31 +70,52 @@ export async function openAdminPanel() {
     overlay.querySelectorAll('.btn-approve').forEach(btn => {
         btn.onclick = async function() {
             const orderId = this.dataset.id;
-            this.textContent = '⏳ Memproses...';
-            this.style.background = '#555';
-            this.disabled = true;
+            const btnElement = this;
+            btnElement.textContent = '⏳ Memproses...';
+            btnElement.style.background = '#555';
+            btnElement.disabled = true;
 
+            // 1. Tembak Database
             const approveRes = await CloudService.adminApprovePayment(orderId);
             
             if (approveRes.ok) {
-                ToastService.success('Pesanan berhasil disetujui!');
+                ToastService.success('Database disetujui!');
                 
-                // 1. Tutup paksa Panel Admin
+                // 2. Ambil saldo terbaru dari database
+                const balRes = await CloudService.getSiliconBalance();
+                
+                if (balRes.ok && window.__game && window.__game.state) {
+                    // 3. Ubah saldo di memori game secara paksa
+                    window.__game.state.get().silicon = balRes.balance;
+                    
+                    // 4. Simpan ke HP
+                    window.__game.SaveService.save(window.__game.state);
+                    
+                    // 5. Hancurkan Pop-up QRIS & TopUp dari layar
+                    const qrModal = document.querySelector('[data-modal-id="payment-qr"]');
+                    if (qrModal) qrModal.remove();
+                    const topupModal = document.querySelector('[data-modal-id="silicon-store"]');
+                    if (topupModal) topupModal.remove();
+
+                    // 6. Render ulang UI agar angka di pojok kanan atas berubah
+                    window.__game.render();
+                    
+                    ToastService.success('Saldo berhasil diperbarui menjadi ' + balRes.balance + ' SIL!');
+                }
+
+                // 7. Tutup panel admin
                 overlay.remove();
                 
-                // 2. Paksa tutup Pop-up QRIS dan tarik saldo terbaru (BULLETPROOF)
-                if (window.__game && window.__game.Modal) {
-                    window.__game.Modal.closeAll();
-                }
-                if (window.__game && window.__game.forcePull) {
-                    setTimeout(() => window.__game.forcePull(), 300);
-                }
+                // 8. Sinkronisasi ulang ke server (agar waktu game tidak bentrok)
+                setTimeout(() => {
+                    if (window.__game.cloudSync) window.__game.cloudSync.uploadNow({ manual: true });
+                }, 1000);
 
             } else {
                 ToastService.error(approveRes.reason || 'Gagal menyetujui.');
-                this.textContent = '✓ Setujui Pesanan';
-                this.style.background = '#00c853';
-                this.disabled = false;
+                btnElement.textContent = '✓ Setujui Pesanan';
+                btnElement.style.background = '#00c853';
+                btnElement.disabled = false;
             }
         };
     });
