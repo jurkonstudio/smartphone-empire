@@ -1,5 +1,5 @@
 // FILE: src/systems/PaymentService.js
-// v2028.11 — [FIX] Mendaftarkan provider 'gopay' & 'qris' ke sistem manual.
+// v2028.15 — [FIX] Memastikan _fulfill dan refresh selalu mengembalikan objek sukses agar UI bisa menutup modal.
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { isDevMode, DEV_BUILD } from '../config/dev.config.js';
@@ -112,7 +112,14 @@ export var PaymentService = {
     async refresh(orderId) {
         var order = _findOrder(orderId);
         if (!order) return { ok: false, reason: 'Order tidak ditemukan.' };
-        if (order.status !== 'pending') return { ok: true, order: order };
+        
+        // JIKA SUDAH PAID DI MEMORI LOKAL, LANGSUNG KEMBALIKAN SUKSES
+        if (order.status === 'paid') {
+            return { ok: true, order: order, sil: order.sil };
+        }
+        if (order.status === 'cancelled' || order.status === 'failed') {
+            return { ok: false, order: order, reason: 'Pesanan dibatalkan/gagal.' };
+        }
         
         var provider = _providers[order.provider];
         if (!provider || typeof provider.verify !== 'function') {
@@ -155,11 +162,13 @@ export var PaymentService = {
     },
 
     _fulfill(order) {
-        if (order.status === 'paid') return { ok: true, order: order, already: true };
+        if (order.status === 'paid') {
+            // UBAH DI SINI: Tetap kembalikan sil agar UI bisa nutup modal
+            return { ok: true, order: order, already: true, sil: order.sil }; 
+        }
         order.status = 'paid';
         order.fulfilledAt = Date.now();
         
-        // Tarik saldo terbaru dari server jika sedang login
         if (CloudService.getStatus() === 'connected') {
             import('../services/cloud/CloudSync.js').then(function(cs) {
                 cs.syncSilicon();
@@ -197,7 +206,6 @@ const ManualProvider = {
     }
 };
 
-// Daftarkan ke dua ID berbeda agar sesuai dengan UI
 PaymentService.registerProvider({ id: 'gopay', ...ManualProvider });
 PaymentService.registerProvider({ id: 'qris', ...ManualProvider });
 
