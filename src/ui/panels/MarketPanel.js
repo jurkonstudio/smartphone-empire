@@ -2,6 +2,7 @@
 // v2027.15a — fix _pct() presisi adaptif + info revenue bulan ini di share card.
 import { renderPublicOpinionPanel } from './PublicOpinionPanel.js';
 import { t } from '../../core/LanguageService.js';
+import { renderPromotionPanel } from './PromotionPanel.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -33,12 +34,14 @@ export function renderMarketPanel(params) {
             <button class="subtab-btn ${subtab === 'share'       ? 'active' : ''}" data-market-subtab="share">${t('market.subtab.share')}</button>
             <button class="subtab-btn ${subtab === 'competitors' ? 'active' : ''}" data-market-subtab="competitors">${t('market.subtab.competitors')}</button>
             <button class="subtab-btn ${subtab === 'trends'      ? 'active' : ''}" data-market-subtab="trends">${t('market.subtab.trends')}</button>
+            <button class="subtab-btn ${subtab === 'promo'       ? 'active' : ''}" data-market-subtab="promo">${t('market.subtab.promo')}</button>
             <button class="subtab-btn ${subtab === 'public'      ? 'active' : ''}" data-market-subtab="public">${t('market.subtab.public')}</button>
         </div>
     `;
     let body = '';
     if (subtab === 'competitors') body = _renderCompetitors(competitorSystem);
     else if (subtab === 'trends') body = _renderTrends(marketSystem);
+    else if (subtab === 'promo') body = renderPromotionPanel();
     else if (subtab === 'public') body = renderPublicOpinionPanel({ opinionSystem });
     else body = _renderShare(marketSystem);
     return subtabBar + body;
