@@ -184,29 +184,31 @@ export class ResearchSystem {
         const ignoreCash = !!(opts && opts.ignoreCash);
         const data = this.state.data;
         const node = getNodeById(nodeId);
-        if (!node) return { status: 'locked', reason: 'Node tidak ditemukan.' };
+        if (!node) return { status: 'locked', reason: 'Node tidak ditemukan.', blocker: 'missing' };
 
         if (data.research.completed.includes(nodeId)) {
-            return { status: 'done', reason: null };
+            return { status: 'done', reason: null, blocker: null };
         }
         if (data.research.active.some(e => e.nodeId === nodeId)) {
-            return { status: 'running', reason: null };
+            return { status: 'running', reason: null, blocker: null };
         }
+        // `blocker` (baru): 'year' | 'prereq' | 'slots' | 'cash' — dipakai UI untuk
+        // membedakan node yang "belum waktunya" dari node yang siap tapi tertahan.
         if (data.time.currentYear < node.minYear) {
-            return { status: 'locked', reason: 'Tersedia tahun ' + node.minYear };
+            return { status: 'locked', reason: 'Tersedia tahun ' + node.minYear, blocker: 'year' };
         }
         const missing = (node.prerequisites || []).filter(p => !data.research.completed.includes(p));
         if (missing.length) {
             const names = missing.map(m => (getNodeById(m) || {}).name || m);
-            return { status: 'locked', reason: 'Butuh: ' + names.join(', ') };
+            return { status: 'locked', reason: 'Butuh: ' + names.join(', '), blocker: 'prereq' };
         }
         if (data.research.active.length >= data.research.maxSlots) {
-            return { status: 'locked', reason: 'Slot riset penuh (' + data.research.active.length + '/' + data.research.maxSlots + ')' };
+            return { status: 'locked', reason: 'Slot riset penuh (' + data.research.active.length + '/' + data.research.maxSlots + ')', blocker: 'slots' };
         }
         if (!ignoreCash && data.cash < node.cost) {
-            return { status: 'locked', reason: 'Uang tidak cukup ($' + node.cost.toLocaleString('en-US') + ')' };
+            return { status: 'locked', reason: 'Uang tidak cukup ($' + node.cost.toLocaleString('en-US') + ')', blocker: 'cash' };
         }
-        return { status: 'available', reason: null };
+        return { status: 'available', reason: null, blocker: null };
     }
 
     // Kembalikan { ok: boolean, reason?: string }.
@@ -352,6 +354,73 @@ export class ResearchSystem {
     // Kategori untuk filter chip di UI.
     getCategories() {
         return RESEARCH_CATEGORIES;
+    }
+
+    // ============================================================
+    // API TAMBAHAN UNTUK HALAMAN RISET (v2028)
+    // ============================================================
+
+    // Versi publik dari _getSpeedMultiplier + info cap.
+    getSpeedInfo() {
+        const speed = this._getSpeedMultiplier();
+        const cap = BALANCE.research.maxSpeedMultiplier;
+        return { speed, cap, atCap: speed >= cap - 1e-9 };
+    }
+
+    // Estimasi hari nyata-game untuk menyelesaikan node pada kecepatan sekarang.
+    getEtaDays(nodeOrId) {
+        const node = typeof nodeOrId === 'string' ? getNodeById(nodeOrId) : nodeOrId;
+        if (!node) return 0;
+        return Math.ceil(node.durationDays / Math.max(0.01, this._getSpeedMultiplier()));
+    }
+
+    // Node yang menjadikan `nodeId` sebagai prasyarat (apa yang dibuka riset ini).
+    getDependents(nodeId) {
+        return RESEARCH_NODES.filter(n => (n.prerequisites || []).includes(nodeId));
+    }
+
+    // Ringkasan global + per kategori.
+    getSummary() {
+        const data = this.state.data;
+        const done = new Set(data.research.completed);
+        const byCategory = {};
+        RESEARCH_CATEGORIES.forEach(c => { byCategory[c.id] = { id: c.id, total: 0, done: 0, running: 0 }; });
+        const runningIds = new Set(data.research.active.map(e => e.nodeId));
+        RESEARCH_NODES.forEach(n => {
+            const b = byCategory[n.category];
+            if (!b) return;
+            b.total++;
+            if (done.has(n.id)) b.done++;
+            else if (runningIds.has(n.id)) b.running++;
+        });
+        const total = RESEARCH_NODES.length;
+        const completed = RESEARCH_NODES.filter(n => done.has(n.id)).length;
+        return {
+            total,
+            completed,
+            percent: total > 0 ? completed / total : 0,
+            running: data.research.active.length,
+            maxSlots: data.research.maxSlots,
+            byCategory
+        };
+    }
+
+    // Rekomendasi riset berikutnya: dari node yang bisa langsung dimulai, pilih
+    // yang paling "membuka jalan" (jumlah dependen terbanyak), lalu termurah.
+    // Kembalikan { node, dependents } atau null.
+    getRecommended() {
+        const candidates = [];
+        RESEARCH_NODES.forEach(n => {
+            if (this.getNodeStatus(n.id).status !== 'available') return;
+            candidates.push({ node: n, dependents: this.getDependents(n.id).length });
+        });
+        if (!candidates.length) return null;
+        candidates.sort((a, b) => {
+            if (b.dependents !== a.dependents) return b.dependents - a.dependents;
+            if (a.node.cost !== b.node.cost) return a.node.cost - b.node.cost;
+            return a.node.durationDays - b.node.durationDays;
+        });
+        return candidates[0];
     }
 
     // ============================================================
