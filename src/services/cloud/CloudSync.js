@@ -1,5 +1,9 @@
 // FILE: src/services/cloud/CloudSync.js
-// v2027.38b — Fix logika rekonsiliasi SIL + toast feedback.
+// v2027.38c — Sinkron cloud otomatis & senyap setelah pernah sinkron (tanpa dialog konflik).
+// Dialog konflik hanya muncul untuk akun/slot yang BELUM pernah sinkron di perangkat ini.
+// Akar masalah: payload upload dibuat dari state live (sudah maju beberapa menit game)
+// sedangkan save lokal lebih lama → cloud selalu 'lebih maju' saat reload. Kini save lokal
+// ditulis senyap tepat sebelum upload sehingga lokal == cloud.
 import { bus } from '../../core/EventBus.js';
 import { SaveService } from '../../core/SaveService.js';
 import { SCHEMA_VERSION } from '../../core/GameState.js';
@@ -11,6 +15,8 @@ import { CLOUD } from './supabase.config.js';
 const DEVICE_KEY = 'smartphone-empire:device-id';
 const LAST_SYNC_KEY = 'smartphone-empire:cloud-last-sync';
 const SILICON_SYNC_KEY = 'smartphone-empire:silicon-synced';
+const SYNCED_PREFIX = 'smartphone-empire:cloud-synced:';
+const AUTOAPPLY_KEY = 'smartphone-empire:cloud-autoapply-at';
 
 let _state = null;
 let _inited = false;
@@ -22,6 +28,10 @@ let _lastUploadAt = 0;
 let _lastUploadMinutes = -1;
 let _unsubRealtime = null;
 let _siliconSyncing = false;
+let _remotePending = false;
+let _reloadOnVisible = false;
+let _laterChosen = false;
+let _lastRetryAt = 0;
 
 export function getDeviceId() {
     try {
@@ -77,6 +87,69 @@ function _buildPayload(slot) {
 
 function _isConnected() {
     return CloudService.getStatus() === 'connected' && !!CloudService.getUserId();
+}
+
+
+// ============================================================
+// FLAG 'PERNAH SINKRON' (per akun + slot, tersimpan di perangkat ini)
+// ============================================================
+function _syncedKey(slot) {
+    return SYNCED_PREFIX + (CloudService.getUserId() || 'anon') + ':' + (slot || CloudService.getSlot());
+}
+
+function _hasSynced(slot) {
+    try { return localStorage.getItem(_syncedKey(slot)) === '1'; } catch (e) { return false; }
+}
+
+function _markSynced(slot) {
+    try { localStorage.setItem(_syncedKey(slot), '1'); } catch (e) {}
+}
+
+function _clearAllSynced() {
+    try {
+        const del = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.indexOf(SYNCED_PREFIX) === 0) del.push(k);
+        }
+        del.forEach(function (k) { localStorage.removeItem(k); });
+    } catch (e) {}
+}
+
+// Muat ulang agar seluruh UI memakai state dari cloud. Pengaman: tidak mengulang
+// reload otomatis bila baru saja dilakukan (mencegah loop).
+function _reloadAfterApply(silent, delay) {
+    if (silent) {
+        try {
+            const last = parseInt(sessionStorage.getItem(AUTOAPPLY_KEY), 10) || 0;
+            if (Date.now() - last < 15000) return;
+            sessionStorage.setItem(AUTOAPPLY_KEY, String(Date.now()));
+        } catch (e) {}
+        if (document.visibilityState === 'hidden') { _reloadOnVisible = true; return; }
+    }
+    setTimeout(function () { location.reload(); }, delay);
+}
+
+function _applyRemoteNow() {
+    if (!_remotePending || !_state || !_isConnected()) return;
+    _remotePending = false;
+    applyCloud(CloudService.getSlot(), { silent: true }).then(function (r) {
+        if (!r || !r.ok) _remotePending = true;   // coba lagi saat tab disembunyikan berikutnya
+    }).catch(function () { _remotePending = true; });
+}
+
+function _onVisibilityChange() {
+    if (document.visibilityState === 'hidden') {
+        if (_remotePending) _applyRemoteNow();
+        return;
+    }
+    if (_reloadOnVisible) { _reloadOnVisible = false; location.reload(); return; }
+    // Pulihkan auto-sync yang terjeda karena gagal (jaringan), tanpa dialog.
+    if (_isConnected() && !_ready && !_checking && !_conflictOpen && !_laterChosen && _hasSynced()) {
+        if (Date.now() - _lastRetryAt < 30000) return;
+        _lastRetryAt = Date.now();
+        checkOnConnect();
+    }
 }
 
 // ============================================================
@@ -148,11 +221,13 @@ async function uploadNow(opts) {
     if (!_state) return { ok: false, reason: 'not_inited', code: 'unknown' };
     if (!_isConnected()) return { ok: false, reason: 'Belum login.', code: 'not_signed_in' };
     if (_busy) return { ok: false, reason: 'busy', code: 'busy' };
-    if (_conflictOpen && !opts.manual) return { ok: false, reason: 'conflict', code: 'conflict' };
+    if ((_conflictOpen || _remotePending) && !opts.manual) return { ok: false, reason: 'conflict', code: 'conflict' };
 
     _busy = true;
     try {
         const slot = CloudService.getSlot();
+        // Tulis save lokal senyap tepat sebelum membangun payload → lokal == cloud.
+        try { SaveService.save(_state, { silent: true }); } catch (e) {}
         const payload = _buildPayload(slot);
         if (JSON.stringify(payload.data).length > CLOUD.maxSaveBytes) {
             return { ok: false, reason: 'Save terlalu besar.', code: 'too_large' };
@@ -162,6 +237,7 @@ async function uploadNow(opts) {
             _lastUploadAt = Date.now();
             _lastUploadMinutes = payload.meta.gameMinutes;
             if (opts.manual) _ready = true;
+            _markSynced(slot);
             try { localStorage.setItem(LAST_SYNC_KEY, String(_lastUploadAt)); } catch (e) {}
             res.slot = slot;
         } else if (opts.auto) {
@@ -174,7 +250,7 @@ async function uploadNow(opts) {
 }
 
 function _onLocalSaved() {
-    if (!_ready || _busy || _conflictOpen || !_isConnected() || !_state) return;
+    if (!_ready || _busy || _conflictOpen || _remotePending || !_isConnected() || !_state) return;
     const info = localInfo(_state);
     if (info.minutes === _lastUploadMinutes) return;
     if (Date.now() - _lastUploadAt < CLOUD.autoUploadMinMs) return;
@@ -199,6 +275,10 @@ async function checkOnConnect() {
         } else if (dec.action === 'same') {
             _ready = true;
             _lastUploadMinutes = local.minutes;
+            _markSynced(slot);
+        } else if (_hasSynced(slot)) {
+            // Sudah pernah sinkron: selesaikan otomatis & senyap (tanpa dialog).
+            await _autoResolve(slot, local, cloud, dec.reason);
         } else {
             _conflictOpen = true;
             bus.emit('cloud:conflict', { slot: slot, local: local, cloud: cloud, reason: dec.reason });
@@ -208,7 +288,22 @@ async function checkOnConnect() {
     }
 }
 
-async function applyCloud(slot) {
+
+// Aturan otomatis: cloud menang kecuali pada kasus 'perusahaan berbeda' di mana
+// progres lokal lebih jauh (maka lokal diunggah).
+async function _autoResolve(slot, local, cloud, reason) {
+    const cm = Number(cloud.game_minutes) || 0;
+    if (reason === 'different' && local.minutes > cm) {
+        _ready = true;
+        await uploadNow({ manual: true });
+        return;
+    }
+    const r = await applyCloud(slot, { silent: true });
+    if (!r.ok) _ready = false;      // gagal (mis. jaringan): jeda diam-diam, dicoba lagi nanti
+}
+
+async function applyCloud(slot, opts) {
+    opts = opts || {};
     slot = slot || CloudService.getSlot();
     const res = await CloudService.downloadSave(slot);
     _conflictOpen = false;
@@ -221,8 +316,9 @@ async function applyCloud(slot) {
     const info = localInfo(_state);
     _lastUploadMinutes = info.minutes;
     _ready = true;
-    bus.emit('cloud:applied', { slot: slot });
-    setTimeout(function () { location.reload(); }, 800);
+    _markSynced(slot);
+    if (!opts.silent) bus.emit('cloud:applied', { slot: slot });
+    _reloadAfterApply(!!opts.silent, opts.silent ? 300 : 800);
     return { ok: true, slot: slot };
 }
 
@@ -233,7 +329,13 @@ async function _startRealtime() {
         if (row.slot !== CloudService.getSlot()) return;
         const local = localInfo(_state);
         if ((Number(row.game_minutes) || 0) > local.minutes) {
-            bus.emit('cloud:remote-newer', { slot: row.slot, local: local, cloud: row });
+            if (_hasSynced(row.slot)) {
+                // Senyap: tahan unggahan lokal, terapkan cloud saat tab disembunyikan / dibuka lagi.
+                _remotePending = true;
+                if (document.visibilityState === 'hidden') _applyRemoteNow();
+            } else {
+                bus.emit('cloud:remote-newer', { slot: row.slot, local: local, cloud: row });
+            }
         }
     });
 }
@@ -248,6 +350,10 @@ export const CloudSync = {
         _inited = true;
         _state = state;
         bus.on('save:success', _onLocalSaved);
+        // Reset game / impor manual = pemain sengaja mengubah progres → minta keputusan lagi.
+        bus.on('save:cleared', _clearAllSynced);
+        bus.on('save:imported', _clearAllSynced);
+        document.addEventListener('visibilitychange', _onVisibilityChange);
         bus.on('cloud:status-changed', function (e) {
             if (e && e.status === 'connected') {
                 _startRealtime();
@@ -257,6 +363,8 @@ export const CloudSync = {
                 _stopRealtime();
                 _ready = false;
                 _conflictOpen = false;
+                _remotePending = false;
+                _laterChosen = false;
             }
         });
 
@@ -271,13 +379,15 @@ export const CloudSync = {
     recheck: checkOnConnect,
     beginConflict: function () { _conflictOpen = true; },
     resolve: async function (choice) {
-        if (choice === 'cloud') return applyCloud(CloudService.getSlot());
+        if (choice === 'cloud') { _laterChosen = false; return applyCloud(CloudService.getSlot()); }
         if (choice === 'local') {
+            _laterChosen = false;
             _conflictOpen = false;
             return uploadNow({ manual: true });
         }
         _conflictOpen = false;
         _ready = false;
+        _laterChosen = true;
         return { ok: true, deferred: true };
     },
 
@@ -294,5 +404,5 @@ export const CloudSync = {
         console.info('[CloudSync] silicon-synced flag di-reset.');
     },
 
-    _reset: function () { _inited = false; _ready = false; _busy = false; _checking = false; _conflictOpen = false; _lastUploadAt = 0; _lastUploadMinutes = -1; _stopRealtime(); }
+    _reset: function () { _inited = false; _ready = false; _busy = false; _checking = false; _conflictOpen = false; _remotePending = false; _reloadOnVisible = false; _laterChosen = false; _lastUploadAt = 0; _lastUploadMinutes = -1; _stopRealtime(); }
 };
