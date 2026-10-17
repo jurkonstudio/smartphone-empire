@@ -1,9 +1,6 @@
 // FILE: src/ui/panels/DesignWizard.js
-// v2027.12a — Auto-fill "Isi Rekomendasi"
-// v2027.13c — i18n.
-// v2027.14a — [PATCH] validasi nama produk duplikat di step 1.
-// v2027.44a — [UI] Pratinjau ponsel sticky + stepper berlabel, tag stat di opsi,
-//             tombol Lanjut sticky, scroll tidak reset saat memilih, bug label "TEST …" diperbaiki.
+// v2028.5 — [LOGIC] Menambahkan batas harga bawah (rugi) dan atas (tidak masuk akal).
+// v2028.4 — [UI] Menambahkan tombol Saran Harga (Auto-Pricing) di Step 4.
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
 import { state } from '../../core/GameState.js';
@@ -19,14 +16,10 @@ import { renderIcon } from '../icons/FeatureIcons.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
 
 let _wizardState = null;
-let _wizardView = 'front'; // 'front' | 'back' (live preview)
+let _wizardView = 'front';
 
 const OPTIONAL_CATEGORIES = ['camera'];
-
-// ============================================================
-// UI v2027.44a — helper tampilan
-// ============================================================
-let _phoneShown = false;   // animasi masuk ponsel hanya sekali per sesi wizard
+let _phoneShown = false;
 
 function _isEn() {
     try { return LanguageService.getLang() === 'en'; } catch (e) { return false; }
@@ -37,7 +30,6 @@ const STAT_LABELS = {
     en: { display: 'Display', camera: 'Camera', battery: 'Battery', performance: 'Performance', connectivity: 'Network', quality: 'Quality', design: 'Design', usability: 'Usability' }
 };
 
-// Tag efek utama sebuah komponen, mis. "Layar +12". Mutu dipakai bila tak ada stat lain.
 function _statTag(c) {
     if (!c || !c.stats) return '';
     const L = STAT_LABELS[_isEn() ? 'en' : 'id'];
@@ -50,7 +42,6 @@ function _statTag(c) {
     return key ? (L[key] || key) + ' +' + val : '';
 }
 
-// Biaya produksi awal vs kas perusahaan (rumus sama dengan ringkasan & ProductSystem).
 function _affordInfo(s) {
     const ps = window.__game && window.__game.products;
     let unitCost = 0;
@@ -66,6 +57,42 @@ function _fmtUsd(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
 function _shortText(str, max) {
     str = String(str || '');
     return str.length > max ? str.slice(0, max - 1).trimEnd() + '…' : str;
+}
+
+// ============================================================
+// ALGORITMA BATAS HARGA (FLOOR & CEILING)
+// ============================================================
+function _getPriceLimits(s) {
+    const ps = window.__game && window.__game.products;
+    let unitCost = 50; 
+    try { unitCost = ps.computeUnitCost(s); } catch(e) {}
+    
+    // Batas bawah: Harus di atas biaya produksi (minimal margin $1)
+    const minPrice = unitCost + 1;
+
+    // Batas atas: Maksimal 3x dari harga saran premium (atau 4x dari unit cost)
+    const round5 = (n) => Math.ceil(n / 5) * 5;
+    const premiumPrice = round5(unitCost * 2.20);
+    const maxPrice = Math.max(premiumPrice * 1.5, unitCost * 4);
+
+    return {
+        min: minPrice,
+        max: Math.ceil(maxPrice)
+    };
+}
+
+function _getSuggestedPrices(s) {
+    const ps = window.__game && window.__game.products;
+    let unitCost = 50; 
+    try { unitCost = ps.computeUnitCost(s); } catch(e) {}
+    
+    const round5 = (n) => Math.ceil(n / 5) * 5;
+    
+    return {
+        budget:   Math.max(10, round5(unitCost * 1.15)), // Margin ~15%
+        balanced: Math.max(15, round5(unitCost * 1.50)), // Margin ~50%
+        premium:  Math.max(20, round5(unitCost * 2.20))  // Margin ~120%
+    };
 }
 
 const WZ_CSS = `
@@ -143,6 +170,15 @@ const WZ_CSS = `
 .wiz-opt-tag { color: var(--accent); font-weight: 600; }
 [data-modal-id="design-wizard"] .wiz-option.selected .wiz-opt-name { padding-right: 16px; }
 @media (prefers-reduced-motion: reduce) { .wz-meter i { transition: none; } }
+
+/* Saran Harga */
+.wz-suggest-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px; border-radius:8px; background:var(--bg-3); border:1px solid var(--border); flex:1; cursor:pointer; }
+.wz-suggest-btn.active { border-color:var(--accent); background:var(--accent-soft); }
+.wz-suggest-btn b { font-size:12px; color:var(--text-primary); }
+.wz-suggest-btn span { font-size:10px; color:var(--text-tertiary); margin-top:2px; }
+
+/* Peringatan Harga */
+.wz-price-warning { font-size: 11px; color: var(--danger); margin-top: 4px; display: none; }
 `;
 
 function _injectStyles() {
@@ -152,7 +188,6 @@ function _injectStyles() {
     el.textContent = WZ_CSS;
     document.head.appendChild(el);
 }
-
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -173,15 +208,12 @@ function defaultState() {
         osOptionId: null,
         bodyId: null,
         bodyColorId: null,
-        price: 200,
+        price: 100,
         priceManuallyEdited: false,
         productionQty: 5000
     };
 }
 
-// ============================================================
-// FILTER
-// ============================================================
 function filterComponentsByEra(catId) {
     const year = DesignEraService.getCurrentYear();
     const completed = state.get().research.completed || [];
@@ -229,9 +261,6 @@ function currentEraInfo() {
     return getDesignEraForYear(year);
 }
 
-// ============================================================
-// AUTO-FILL
-// ============================================================
 function _pickMostExpensive(list) {
     if (!list || !list.length) return null;
     let best = list[0];
@@ -276,16 +305,6 @@ function _autoFillBest(s) {
     const colors = filterBodyColorsByEra();
     if (colors.length) s.bodyColorId = colors[0].id;
 
-    const ps = window.__game && window.__game.products;
-    if (ps && ps.computeUnitCost) {
-        let unitCost = 0;
-        try { unitCost = ps.computeUnitCost(s); } catch (e) {}
-        if (unitCost > 0) {
-            const raw = unitCost * 2;
-            const rounded = Math.ceil(raw / 50) * 50;
-            s.price = Math.max(200, rounded);
-        }
-    }
     s.priceManuallyEdited = false;
 }
 
@@ -302,9 +321,6 @@ function _validateComplete(s) {
     return missing;
 }
 
-// ============================================================
-// [PATCH v2027.14a] VALIDASI NAMA UNIK PRODUK
-// ============================================================
 function _isNameDuplicate(name) {
     var norm = (name || '').trim().toLowerCase();
     if (!norm) return false;
@@ -336,9 +352,6 @@ function _handleAutoFill() {
     ToastService.success(t('wiz.success.autofill'));
 }
 
-// ============================================================
-// OPEN
-// ============================================================
 export function openDesignWizard(params) {
     if (state.get().products.development) {
         ToastService.warning(t('wiz.err.dev_active'));
@@ -358,9 +371,6 @@ export function openDesignWizard(params) {
     _render();
 }
 
-// ============================================================
-// RENDER
-// ============================================================
 function _render() {
     const s = _wizardState;
     if (!s) return;
@@ -410,7 +420,6 @@ function _render() {
     const root = open ? document.querySelector('[data-modal-id="design-wizard"]') : null;
     if (root) {
         const card = root.querySelector('.modal-card');
-        // Simpan posisi scroll supaya memilih opsi tidak melempar pemain ke atas.
         const sameStep = card.dataset.wzStep === String(s.step);
         const top = card.scrollTop;
         const rows = Array.prototype.map.call(card.querySelectorAll('.wiz-options-row'), function (r) { return r.scrollLeft; });
@@ -438,9 +447,6 @@ function _stepTitle(step) {
     return t(map[step] || '');
 }
 
-// ============================================================
-// BIND
-// ============================================================
 function _bindStep() {
     const root = document.querySelector('[data-modal-id="design-wizard"]');
     if (!root) return;
@@ -460,7 +466,6 @@ function _bindStep() {
             const key = parts[0];
             const value = parts.slice(1).join(':');
             _wizardState[key] = value;
-            // Preview otomatis menunjukkan sisi yang relevan dengan pilihan
             if (key === 'cameraId') _wizardView = 'back';
             else if (key === 'displayId' || key === 'formFactorId') _wizardView = 'front';
             _render();
@@ -483,10 +488,28 @@ function _bindStep() {
         priceInput.addEventListener('input', function (e) {
             _wizardState.price = parseInt(e.target.value, 10) || 0;
             _wizardState.priceManuallyEdited = true;
+            root.querySelectorAll('[data-wiz-suggest]').forEach(b => b.classList.remove('active'));
             _refreshPreview();
             _updateConfirmButtonState();
         });
     }
+    
+    root.querySelectorAll('[data-wiz-suggest]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const type = btn.dataset.wizSuggest;
+            const prices = _getSuggestedPrices(_wizardState);
+            _wizardState.price = prices[type];
+            _wizardState.priceManuallyEdited = true;
+            
+            root.querySelectorAll('[data-wiz-suggest]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            if(priceInput) priceInput.value = _wizardState.price;
+            _refreshPreview();
+            _updateConfirmButtonState();
+        });
+    });
+
     const qtyInput = root.querySelector('[data-wiz-qty]');
     if (qtyInput) {
         qtyInput.value = _wizardState.productionQty;
@@ -516,6 +539,7 @@ function _updateConfirmButtonState() {
     const root = document.querySelector('[data-modal-id="design-wizard"]');
     if (!root) return;
     const btn = root.querySelector('[data-wiz-confirm]');
+    const warnEl = root.querySelector('[data-wz-price-warning]');
     if (!btn) return;
     const s = _wizardState;
     if (!s) return;
@@ -525,9 +549,28 @@ function _updateConfirmButtonState() {
 
     let unitCost = 0;
     try { unitCost = ps.computeUnitCost ? ps.computeUnitCost(s) : 0; } catch (e) {}
-    const margin = (s.price || 0) - unitCost;
+    
+    const limits = _getPriceLimits(s);
     const afford = _affordInfo(s);
-    const canRelease = margin >= 0 && afford.ok;
+    
+    // Cek Validasi Harga (Terlalu Murah / Terlalu Mahal)
+    let priceError = null;
+    if (s.price < limits.min) {
+        priceError = `Harga terlalu murah! Minimal $${limits.min} (Biaya produksi).`;
+    } else if (s.price > limits.max) {
+        priceError = `Harga terlalu mahal! Pasar tidak akan membeli di atas $${limits.max}.`;
+    }
+
+    const canRelease = !priceError && afford.ok;
+
+    if (warnEl) {
+        if (priceError) {
+            warnEl.textContent = "⚠ " + priceError;
+            warnEl.style.display = 'block';
+        } else {
+            warnEl.style.display = 'none';
+        }
+    }
 
     if (canRelease) {
         btn.disabled = false;
@@ -538,13 +581,10 @@ function _updateConfirmButtonState() {
         btn.disabled = true;
         btn.style.opacity = '0.5';
         btn.style.cursor = 'not-allowed';
-        btn.textContent = margin < 0 ? t('wiz.step4.price_low') : (_isEn() ? 'Not enough cash' : 'Dana tidak cukup');
+        btn.textContent = priceError ? "Harga Tidak Valid" : (!afford.ok ? (_isEn() ? 'Not enough cash' : 'Dana tidak cukup') : t('wiz.step4.release'));
     }
 }
 
-// ============================================================
-// NAV
-// ============================================================
 function _next() {
     const s = _wizardState;
     if (s.step === 1) {
@@ -567,14 +607,7 @@ function _next() {
             return;
         }
         if (!s.priceManuallyEdited) {
-            const ps = window.__game && window.__game.products;
-            let unitCost = 0;
-            try { unitCost = ps && ps.computeUnitCost ? ps.computeUnitCost(s) : 0; } catch (e) {}
-            if (unitCost > 0) {
-                const raw = unitCost * 2;
-                const rounded = Math.ceil(raw / 50) * 50;
-                s.price = Math.max(200, rounded);
-            }
+            s.price = _getSuggestedPrices(s).balanced;
         }
     }
     if (s.step >= 4) return;
@@ -594,6 +627,13 @@ function _confirm() {
     const game = window.__game;
     if (!game || !game.products) { ToastService.error(t('wiz.err.not_ready')); return; }
 
+    // Cek Ulang Validasi Harga sebelum submit
+    const limits = _getPriceLimits(s);
+    if (s.price < limits.min || s.price > limits.max) {
+        ToastService.error("Harga di luar batas wajar pasar.");
+        return;
+    }
+
     const res = game.products.confirmDesign({
         name: s.name.trim(),
         formFactorId: s.formFactorId,
@@ -612,16 +652,12 @@ function _confirm() {
         ToastService.error(res.reason || t('wiz.err.confirm_fail'));
         return;
     }
-    // Toast sukses sudah dikirim ProductSystem.startDevelopment — jangan dobel.
     _wizardState = null;
     _wizardView = 'front';
     Modal.close('design-wizard', true);
     if (game.render) game.render();
 }
 
-// ============================================================
-// STEP 1
-// ============================================================
 function _step1(s) {
     const ffs = filterFormFactorsByEra();
     if (!ffs.length) {
@@ -660,9 +696,6 @@ function _step1(s) {
     `;
 }
 
-// ============================================================
-// STEP 2
-// ============================================================
 function _step2(s) {
     const cats = ['display', 'camera', 'battery', 'chip', 'network'];
     const stateKeys = { display: 'displayId', camera: 'cameraId', battery: 'batteryId', chip: 'chipId', network: 'networkId' };
@@ -722,9 +755,6 @@ function _step2(s) {
     `;
 }
 
-// ============================================================
-// STEP 3
-// ============================================================
 function _step3(s) {
     const osOptions = (window.__game && window.__game.os && window.__game.os.getOsOptionsForPhone)
         ? window.__game.os.getOsOptionsForPhone()
@@ -781,24 +811,21 @@ function _step3(s) {
     `;
 }
 
-// ============================================================
-// STEP 4
-// ============================================================
 function _step4(s) {
     const ps = window.__game && window.__game.products;
     let unitCost = 0;
     try { unitCost = ps && ps.computeUnitCost ? ps.computeUnitCost(s) : 0; } catch (e) {}
-    const margin = (s.price || 0) - unitCost;
+    const limits = _getPriceLimits(s);
     const afford = _affordInfo(s);
-    const canRelease = margin >= 0 && afford.ok;
-    const releaseLabel = margin < 0 ? t('wiz.step4.price_low')
-        : (!afford.ok ? (_isEn() ? 'Not enough cash' : 'Dana tidak cukup') : t('wiz.step4.release'));
+    const prices = _getSuggestedPrices(s);
 
     return `
         <div class="wiz-price-layout">
             <div>
                 <label class="field-label">${t('wiz.step4.price_label')}</label>
-                <input class="field-input" data-wiz-price type="number" min="1" value="${s.price}" />
+                <input class="field-input" data-wiz-price type="number" min="${limits.min}" max="${limits.max}" value="${s.price}" />
+                <div style="font-size:10px; color:var(--text-tertiary); margin-top:4px;">Batas pasar: $${limits.min} - $${limits.max}</div>
+                <div class="wz-price-warning" data-wz-price-warning></div>
             </div>
             <div>
                 <label class="field-label">${t('wiz.step4.qty_label')}</label>
@@ -806,23 +833,35 @@ function _step4(s) {
             </div>
         </div>
 
-        <div style="margin-top:14px;">
+        <div style="display:flex; gap:8px; margin-top:8px; margin-bottom:16px;">
+            <button class="wz-suggest-btn" data-wiz-suggest="budget">
+                <b>$${prices.budget}</b>
+                <span>Ekonomis</span>
+            </button>
+            <button class="wz-suggest-btn ${!s.priceManuallyEdited || s.price === prices.balanced ? 'active' : ''}" data-wiz-suggest="balanced">
+                <b>$${prices.balanced}</b>
+                <span>Pasar</span>
+            </button>
+            <button class="wz-suggest-btn" data-wiz-suggest="premium">
+                <b>$${prices.premium}</b>
+                <span>Premium</span>
+            </button>
+        </div>
+
+        <div>
             <div class="card-title">${t('wiz.step4.summary')}</div>
             <div data-wiz-preview>${_previewHtml(s)}</div>
         </div>
 
         <div class="wiz-nav">
             <button class="btn-secondary" data-wiz-back style="flex:1;">${t('wiz.step4.back')}</button>
-            <button class="btn-primary" data-wiz-confirm style="flex:2;" ${canRelease ? '' : 'disabled'}>
-                ${releaseLabel}
+            <button class="btn-primary" data-wiz-confirm style="flex:2;">
+                ${t('wiz.step4.release')}
             </button>
         </div>
     `;
 }
 
-// ============================================================
-// LIVE PREVIEW
-// ============================================================
 function _getAdaptiveSize() {
     if (typeof window === 'undefined') return 250;
     return window.innerWidth < 380 ? 124 : 140;
@@ -886,9 +925,6 @@ function _computeStats(s) {
     return stat;
 }
 
-// ============================================================
-// SPEC STRIP
-// ============================================================
 function _specStripHtml(s) {
     const ps = window.__game && window.__game.products;
     if (!ps) return '';
@@ -973,9 +1009,6 @@ function _previewHtml(s) {
     }
 }
 
-// ============================================================
-// DETAIL MODAL
-// ============================================================
 function _openDetailModal() {
     const s = _wizardState;
     if (!s) return;
@@ -1028,4 +1061,4 @@ function _openDetailModal() {
     `;
 
     Modal.open('design-wizard-detail', html);
-}
+        }
