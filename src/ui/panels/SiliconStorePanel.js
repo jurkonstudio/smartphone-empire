@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SiliconStorePanel.js
-// v2028.30 — [SYNC] Mendengarkan sinyal payment:approved & auto-close paksa.
+// v2028.31 — [FIX] Pop-up QRIS mendengarkan event 'silicon:changed' agar langsung tertutup saat saldo disinkronkan.
 import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 import { Modal } from '../modal.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
@@ -14,7 +14,7 @@ var MODAL_ID = 'silicon-store';
 var _sel = { pkg: 'pkg_l', method: null, busy: false };
 var _pollingTimer = null;
 var _countdownTimer = null;
-var _adminApprovedUnsub = null; // Menyimpan referensi unsubscribe
+var _adminApprovedUnsub = null;
 
 var STATIC_QRIS_URL = 'https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/qris-gopay.png';
 
@@ -210,17 +210,27 @@ function _showPaymentModal(order) {
     var timerEl = root.querySelector('#qr-timer');
     var btnCheck = root.querySelector('[data-qr-check]');
     
-    // --- LISTENER UNTUK ADMIN APPROVE ---
+    // 1. Listener untuk Admin Approve
     if (_adminApprovedUnsub) _adminApprovedUnsub();
     _adminApprovedUnsub = bus.on('payment:approved', function(approvedId) {
         if (approvedId === order.id) {
             cleanupTimers();
             Modal.close('payment-qr', true);
-            ToastService.success('Pembayaran disetujui Admin! Saldo ditarik.');
+            ToastService.success('Pembayaran disetujui Admin!');
             setTimeout(() => window.__game.forcePull(), 300);
         }
     });
-    // ------------------------------------
+
+    // 2. Listener PENTING: Tutup pop-up jika saldo berubah (berarti sync dari CloudSync berhasil)
+    function handleSiliconChange(payload) {
+        if (payload && payload.delta > 0) {
+            cleanupTimers();
+            Modal.close('payment-qr', true);
+            ToastService.success('Pembayaran Berhasil! Saldo telah disinkronkan.');
+            _render();
+        }
+    }
+    bus.on('silicon:changed', handleSiliconChange);
 
     function cleanupTimers() {
         if (_countdownTimer) clearInterval(_countdownTimer);
@@ -230,11 +240,11 @@ function _showPaymentModal(order) {
             _adminApprovedUnsub();
             _adminApprovedUnsub = null;
         }
+        bus.off('silicon:changed', handleSiliconChange); // Hapus listener saat pop-up ditutup
     }
 
     function _onVisibilityChange() {
         if (document.visibilityState === 'visible') {
-            console.log('[PaymentModal] Tab aktif kembali, cek status...');
             checkStatus(false); 
         }
     }
@@ -268,7 +278,7 @@ function _showPaymentModal(order) {
             } else {
                 if (isManual) {
                     btnCheck.textContent = 'Saya Sudah Transfer (Cek Status)';
-                    ToastService.warning('Pembayaran belum dikonfirmasi Admin. Tunggu 1-2 menit lalu cek lagi.');
+                    ToastService.warning('Pembayaran belum dikonfirmasi Admin.');
                 }
             }
         });
