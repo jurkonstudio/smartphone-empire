@@ -1,5 +1,5 @@
 // FILE: src/services/cloud/CloudSync.js
-// v2028.17 — [SECURITY] Menyimpan status email admin ke localStorage untuk kunci Eruda.
+// v2028.19 — [SYNC] Memaksa Server (Supabase) menjadi sumber kebenaran mutlak untuk Silicon.
 import { bus } from '../../core/EventBus.js';
 import { SaveService } from '../../core/SaveService.js';
 import { SCHEMA_VERSION } from '../../core/GameState.js';
@@ -65,6 +65,9 @@ export function decideSync(local, cloud) {
 
 function _buildPayload(slot) {
     const data = _state.serialize();
+    // [TRANSPARANSI] Hapus Silicon dari payload save game agar tidak bentrok dengan tabel profiles
+    data.silicon = 0; 
+    
     const t = data.time || {};
     return {
         slot: slot,
@@ -141,6 +144,9 @@ function _onVisibilityChange() {
     }
 }
 
+// ============================================================
+// SILICON — SERVER IS THE BOSS
+// ============================================================
 function _hasSyncedSilicon() {
     try { return localStorage.getItem(SILICON_SYNC_KEY) === '1'; } catch (e) { return false; }
 }
@@ -155,24 +161,24 @@ async function syncSiliconOnLogin() {
     _siliconSyncing = true;
     try {
         var res = await CloudService.getSiliconBalance();
-        if (!res.ok) {
-            console.info('[CloudSync] SIL pull gagal:', res.code);
-            return;
-        }
+        if (!res.ok) return;
+
         var serverBal = Math.floor(res.balance || 0);
         var localBal = SiliconService.getBalance();
         var hasSynced = _hasSyncedSilicon();
 
+        // [TRANSPARANSI MUTLAK]
+        // Jika server berbeda dengan lokal, SELALU ikuti server.
+        if (serverBal !== localBal) {
+            console.info('[CloudSync] Menimpa Silicon lokal (', localBal, ') dengan Server (', serverBal, ')');
+            SiliconService.applyServerBalance(serverBal);
+            ToastService.info('Saldo Silicon disinkronkan dari Cloud (' + serverBal + ' SIL).');
+        }
+        
         if (!hasSynced) _markSiliconSynced();
 
-        if (serverBal !== localBal) {
-            console.info('[CloudSync] Pull dari server:', serverBal, '(lokal:', localBal + ')');
-            SiliconService.applyServerBalance(serverBal);
-            ToastService.info('SIL disinkronkan dari cloud (' + serverBal + ' SIL).');
-        }
     } catch (e) {
         console.warn('[CloudSync] syncSiliconOnLogin error:', e);
-        ToastService.warning('Sync SIL error. Coba lagi nanti.');
     } finally {
         _siliconSyncing = false;
     }
@@ -185,7 +191,7 @@ function _pushSiliconDelta(delta) {
 
     try {
         if (delta > 0) {
-            return;
+            return; // Hanya server yang boleh menambah saldo
         } else {
             CloudService.spendSiliconServer(Math.abs(delta)).then(function (res) {
                 if (!res.ok) console.warn('[CloudSync] push -SIL gagal:', res.code);
@@ -255,6 +261,8 @@ async function checkOnConnect() {
             _ready = true;
             _lastUploadMinutes = local.minutes;
             _markSynced(slot);
+            // [TAMBAHAN] Paksa tarik Silicon dari server walau waktu sama
+            await syncSiliconOnLogin();
         } else if (_hasSynced(slot)) {
             await _autoResolve(slot, local, cloud, dec.reason);
         } else {
@@ -287,6 +295,10 @@ async function applyCloud(slot, opts) {
     if (!payload.data || !_state.hydrate(payload.data)) {
         return { ok: false, reason: 'Data cloud tidak valid.', code: 'unknown' };
     }
+    
+    // [TAMBAHAN] Setelah memuat Save File, paksa tarik Silicon asli dari tabel profil
+    await syncSiliconOnLogin();
+
     SaveService.save(_state);
     const info = localInfo(_state);
     _lastUploadMinutes = info.minutes;
@@ -330,12 +342,10 @@ export const CloudSync = {
         
         bus.on('cloud:status-changed', function (e) {
             if (e && e.status === 'connected') {
-                // --- [SECURITY] Simpan email admin ke localStorage ---
                 try {
                     var email = CloudService.getEmail();
                     if (email) localStorage.setItem('smartphone-empire:admin-email', email);
                 } catch (err) {}
-                // -----------------------------------------------------
 
                 _startRealtime();
                 checkOnConnect();
@@ -393,21 +403,15 @@ export const CloudSync = {
         _remotePending = false;
         _busy = true; 
         
-        console.log('[CloudSync] Memaksa tarik data & Silicon dari server...');
         ToastService.warning('Menarik data dari server, harap tunggu...');
         
         try {
-            var silRes = await CloudService.getSiliconBalance();
-            if (silRes.ok) {
-                console.log('[ForcePull] Silicon server:', silRes.balance);
-                SiliconService.applyServerBalance(silRes.balance);
-            }
-
             var cloudRes = await CloudService.downloadSave(CloudService.getSlot());
             if (cloudRes.ok && cloudRes.payload && cloudRes.payload.data) {
                 _state.hydrate(cloudRes.payload.data);
             }
 
+            var silRes = await CloudService.getSiliconBalance();
             if (silRes.ok) {
                 SiliconService.applyServerBalance(silRes.balance);
             }
@@ -417,14 +421,12 @@ export const CloudSync = {
             _lastUploadMinutes = localInfo(_state).minutes;
             _markSynced(CloudService.getSlot());
 
-            ToastService.success('Data dan Silicon berhasil ditarik!');
-            
+            ToastService.success('Data dan Silicon ditarik dari server!');
             setTimeout(function () { location.reload(); }, 1000);
             return { ok: true };
             
         } catch (e) {
             console.error('[ForcePull] Error:', e);
-            ToastService.error('Gagal menarik data: ' + e.message);
             return { ok: false, reason: e.message };
         } finally {
             _busy = false;
