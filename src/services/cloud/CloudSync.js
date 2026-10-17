@@ -1,5 +1,5 @@
 // FILE: src/services/cloud/CloudSync.js
-// v2028.14 — [FIX] ForcePull sekarang menarik saldo dari tabel profiles DAN game_saves.
+// v2028.17 — [SECURITY] Menyimpan status email admin ke localStorage untuk kunci Eruda.
 import { bus } from '../../core/EventBus.js';
 import { SaveService } from '../../core/SaveService.js';
 import { SCHEMA_VERSION } from '../../core/GameState.js';
@@ -141,9 +141,6 @@ function _onVisibilityChange() {
     }
 }
 
-// ============================================================
-// SILICON
-// ============================================================
 function _hasSyncedSilicon() {
     try { return localStorage.getItem(SILICON_SYNC_KEY) === '1'; } catch (e) { return false; }
 }
@@ -330,12 +327,21 @@ export const CloudSync = {
         bus.on('save:cleared', _clearAllSynced);
         bus.on('save:imported', _clearAllSynced);
         document.addEventListener('visibilitychange', _onVisibilityChange);
+        
         bus.on('cloud:status-changed', function (e) {
             if (e && e.status === 'connected') {
+                // --- [SECURITY] Simpan email admin ke localStorage ---
+                try {
+                    var email = CloudService.getEmail();
+                    if (email) localStorage.setItem('smartphone-empire:admin-email', email);
+                } catch (err) {}
+                // -----------------------------------------------------
+
                 _startRealtime();
                 checkOnConnect();
                 syncSiliconOnLogin();
             } else if (e && e.status === 'disconnected') {
+                try { localStorage.removeItem('smartphone-empire:admin-email'); } catch(err) {}
                 _stopRealtime();
                 _ready = false;
                 _conflictOpen = false;
@@ -379,14 +385,10 @@ export const CloudSync = {
         console.info('[CloudSync] silicon-synced flag di-reset.');
     },
 
-    // ============================================================
-    // FORCE PULL (FITUR ADMIN - DIPERBAIKI)
-    // ============================================================
     forcePull: async function () {
         if (!_state) return { ok: false, reason: 'Game belum siap.' };
         if (!_isConnected()) return { ok: false, reason: 'Kamu belum login ke Cloud.' };
         
-        // Kunci auto-sync agar data lokal tidak menimpa server saat proses tarik berjalan
         _conflictOpen = false;
         _remotePending = false;
         _busy = true; 
@@ -395,25 +397,21 @@ export const CloudSync = {
         ToastService.warning('Menarik data dari server, harap tunggu...');
         
         try {
-            // 1. Paksa tarik Saldo Silicon dari tabel `profiles` (Angka 0)
             var silRes = await CloudService.getSiliconBalance();
             if (silRes.ok) {
                 console.log('[ForcePull] Silicon server:', silRes.balance);
                 SiliconService.applyServerBalance(silRes.balance);
             }
 
-            // 2. Tarik Save File (tabel `game_saves`)
             var cloudRes = await CloudService.downloadSave(CloudService.getSlot());
             if (cloudRes.ok && cloudRes.payload && cloudRes.payload.data) {
                 _state.hydrate(cloudRes.payload.data);
             }
 
-            // 3. TARIK ULANG SILICON: Agar data dari game_saves (yang mungkin 56936) tertimpa jadi 0
             if (silRes.ok) {
                 SiliconService.applyServerBalance(silRes.balance);
             }
 
-            // 4. Simpan state baru (0) ke HP secara senyap
             try { SaveService.save(_state, { silent: true }); } catch (e) {}
             
             _lastUploadMinutes = localInfo(_state).minutes;
@@ -421,7 +419,6 @@ export const CloudSync = {
 
             ToastService.success('Data dan Silicon berhasil ditarik!');
             
-            // 5. Reload halaman untuk menerapkan efeknya
             setTimeout(function () { location.reload(); }, 1000);
             return { ok: true };
             
