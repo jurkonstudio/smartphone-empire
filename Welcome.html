@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Welcome to Smartphone Empire</title>
+    <style>
+        :root {
+            --bg: #fbfbfd;
+            --card-bg: #ffffff;
+            --text-main: #1d1d1f;
+            --text-sub: #515154; /* Warna abu-abu khas Apple */
+            --border: #d2d2d7;
+            --accent: #0071e3;
+            --accent-hover: #0077ed;
+            --success: #34c759;
+            --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: var(--font-stack);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            /* Latar belakang dengan grid samar untuk kesan teknis/tajam */
+            background-image: radial-gradient(var(--border) 1px, transparent 1px);
+            background-size: 24px 24px;
+            background-position: -12px -12px;
+        }
+
+        /* Kartu Utama - Lebih Padat dan Tajam */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px; /* Squircle radius */
+            padding: 40px 32px;
+            width: 90%;
+            max-width: 400px; /* Dibuat lebih ramping */
+            text-align: center;
+            box-shadow: 
+                0 10px 30px -10px rgba(0, 0, 0, 0.08),
+                0 1px 3px rgba(0, 0, 0, 0.04); /* Bayangan tajam */
+            position: relative;
+            overflow: hidden;
+            
+            /* Animasi masuk yang cepat dan tegas */
+            opacity: 0;
+            transform: translateY(10px) scale(0.98);
+            animation: cardEnter 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
+        @keyframes cardEnter {
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* Garis Aksen di Atas Kartu */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+        }
+
+        /* Ikon Centang - Presisi */
+        .icon-box {
+            width: 64px; height: 64px;
+            background: #f5f5f7;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .checkmark {
+            width: 32px; height: 32px;
+            stroke-width: 4; /* Lebih tebal */
+            stroke: var(--success);
+            fill: none;
+        }
+
+        /* Tipografi Padat & Tajam */
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.05em; /* Sangat rapat */
+            line-height: 1.1;
+            margin: 0 0 12px 0;
+            color: var(--text-main);
+        }
+
+        p {
+            font-size: 0.95rem;
+            color: var(--text-sub);
+            line-height: 1.4;
+            margin: 0 0 24px 0;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+        }
+
+        /* Tombol Presisi */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--accent);
+            color: #ffffff;
+            padding: 14px 24px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            letter-spacing: -0.01em;
+            transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+            width: 100%;
+            border: 1px solid transparent;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 113, 227, 0.25);
+        }
+
+        .btn:active {
+            transform: translateY(1px) scale(0.98);
+            box-shadow: none;
+        }
+
+        /* Timer */
+        .footer-text {
+            margin-top: 20px;
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em; /* Spasi lebar untuk teks kecil */
+            font-variant-numeric: tabular-nums;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        
+        .footer-text span {
+            color: var(--text-main);
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon-box">
+            <svg class="checkmark" viewBox="0 0 32 32">
+                <path d="M6 16 L13 23 L26 9" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+        
+        <h1>Welcome Aboard.</h1>
+        <p>Akun kamu berhasil dibuat. Bersiaplah untuk membangun kerajaan teknologi duniamu.</p>
+        
+        <a href="/" class="btn">Mulai Bermain</a>
+        
+        <div class="footer-text">
+            Redirect dalam <span id="countdown">4</span> detik
+        </div>
+    </div>
+
+    <script>
+        let timeLeft = 4;
+        const countdownEl = document.getElementById('countdown');
+        
+        const timer = setInterval(() => {
+            timeLeft--;
+            countdownEl.textContent = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                window.location.href = '/';
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
