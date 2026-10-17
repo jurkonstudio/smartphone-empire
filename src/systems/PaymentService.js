@@ -1,27 +1,10 @@
 // FILE: src/systems/PaymentService.js
-// ============================================================
-// PaymentService — skema pembayaran top-up Silicon.
-//
-// Alur:  createOrder(paket, metode) → provider.checkout(order)
-//        → 'paid' | 'pending' | 'failed' | 'cancelled'
-//        → jika paid: fulfill (idempoten) → SiliconService.add()
-//
-// Kontrak provider (didaftarkan lewat registerProvider):
-//   {
-//     id: 'gopay',
-//     serverVerified: true,           // WAJIB true untuk produksi
-//     checkout(order)  → Promise<{ status, externalId?, redirectUrl? }>
-//     verify(order)    → Promise<{ status }>   // untuk order pending
-//   }
-//
-// KEAMANAN: SIL hanya boleh dikreditkan setelah pembayaran diverifikasi
-// server (webhook / RPC Supabase). Provider tanpa serverVerified hanya
-// diizinkan pada DEV_BUILD (sandbox).
-// ============================================================
+// v2028.11 — [FIX] Mendaftarkan provider 'gopay' & 'qris' ke sistem manual.
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { isDevMode, DEV_BUILD } from '../config/dev.config.js';
 import { SiliconService } from './SiliconService.js';
+import { CloudService } from '../services/CloudService.js';
 import {
     SILICON_PACKAGES,
     PAYMENT_METHODS,
@@ -57,7 +40,6 @@ export var PaymentService = {
     getPackage(id) { return SILICON_PACKAGES.find(function (p) { return p.id === id; }) || null; },
     getOrders() { return _orders().slice(); },
 
-    // ---------- Provider registry ----------
     registerProvider(provider) {
         if (!provider || !provider.id || typeof provider.checkout !== 'function') return false;
         _providers[provider.id] = provider;
@@ -67,7 +49,6 @@ export var PaymentService = {
     unregisterProvider(id) { delete _providers[id]; },
     hasProvider(id) { return !!_providers[id]; },
 
-    // Daftar slot metode bayar + status. status: 'available' | 'soon'
     getMethods() {
         var dev = isDevMode();
         return PAYMENT_METHODS
@@ -79,7 +60,6 @@ export var PaymentService = {
             });
     },
 
-    // ---------- Order ----------
     createOrder(packageId, methodId) {
         var pkg = this.getPackage(packageId);
         if (!pkg) return { ok: false, reason: 'Paket tidak ditemukan.' };
@@ -98,6 +78,7 @@ export var PaymentService = {
             status: 'created',
             externalId: null,
             redirectUrl: null,
+            qrString: null,
             createdAt: Date.now(),
             fulfilledAt: null
         };
@@ -110,6 +91,13 @@ export var PaymentService = {
         if (!created.ok) return created;
         var order = created.order;
         var provider = _providers[order.provider];
+        
+        if (!provider) {
+            order.status = 'failed';
+            _save(order);
+            return { ok: false, order: order, reason: 'Provider tidak ditemukan.' };
+        }
+
         try {
             var res = await provider.checkout(Object.assign({}, order));
             return this._applyResult(order, res);
@@ -117,15 +105,15 @@ export var PaymentService = {
             console.error('[PaymentService] checkout gagal:', err);
             order.status = 'failed';
             _save(order);
-            return { ok: false, order: order, reason: 'Pembayaran gagal. Coba lagi.' };
+            return { ok: false, order: order, reason: err.message || 'Pembayaran gagal.' };
         }
     },
 
-    // Cek ulang order yang masih pending (mis. setelah user kembali dari app e-wallet).
     async refresh(orderId) {
         var order = _findOrder(orderId);
         if (!order) return { ok: false, reason: 'Order tidak ditemukan.' };
         if (order.status !== 'pending') return { ok: true, order: order };
+        
         var provider = _providers[order.provider];
         if (!provider || typeof provider.verify !== 'function') {
             return { ok: false, order: order, reason: 'Provider tidak mendukung verifikasi.' };
@@ -152,6 +140,8 @@ export var PaymentService = {
         res = res || {};
         if (res.externalId) order.externalId = res.externalId;
         if (res.redirectUrl) order.redirectUrl = res.redirectUrl;
+        if (res.qrString) order.qrString = res.qrString;
+        
         var status = res.status;
         if (status === 'paid') return this._fulfill(order);
         if (status === 'pending') {
@@ -164,21 +154,54 @@ export var PaymentService = {
         return { ok: false, order: order, reason: order.status === 'cancelled' ? 'Dibatalkan.' : 'Pembayaran gagal.' };
     },
 
-    // Idempoten: order 'paid' tidak pernah dikreditkan dua kali.
     _fulfill(order) {
         if (order.status === 'paid') return { ok: true, order: order, already: true };
         order.status = 'paid';
         order.fulfilledAt = Date.now();
-        var r = SiliconService.add(order.sil, 'topup:' + order.packageId);
+        
+        // Tarik saldo terbaru dari server jika sedang login
+        if (CloudService.getStatus() === 'connected') {
+            import('../services/cloud/CloudSync.js').then(function(cs) {
+                cs.syncSilicon();
+            });
+        } else {
+            SiliconService.add(order.sil, 'topup:' + order.packageId);
+        }
+        
         _save(order);
-        if (!r.ok) return { ok: false, order: order, reason: r.reason };
         bus.emit('payment:fulfilled', { orderId: order.id, sil: order.sil });
         return { ok: true, order: order, sil: order.sil };
     }
 };
 
+// ============================================================
+// DAFTARKAN PROVIDER MANUAL UNTUK GOPAY & QRIS
+// ============================================================
+const ManualProvider = {
+    serverVerified: true,
+    checkout: async function(order) {
+        if (CloudService.getStatus() === 'connected') {
+            var res = await CloudService.createPaymentOrder(order.id, order.packageId, order.priceIdr, order.sil);
+            if (!res.ok) throw new Error('Gagal menyimpan pesanan ke server. Cek koneksi.');
+        }
+        return { status: 'pending' };
+    },
+    verify: async function(order) {
+        if (CloudService.getStatus() === 'connected') {
+            var res = await CloudService.checkPaymentStatus(order.id);
+            if (res.ok && res.data && res.data.status === 'paid') {
+                return { status: 'paid' };
+            }
+        }
+        return { status: 'pending' };
+    }
+};
+
+// Daftarkan ke dua ID berbeda agar sesuai dengan UI
+PaymentService.registerProvider({ id: 'gopay', ...ManualProvider });
+PaymentService.registerProvider({ id: 'qris', ...ManualProvider });
+
 // ---------- Provider Sandbox (khusus dev) ----------
-// Langsung 'paid' tanpa uang sungguhan. Hanya terdaftar jika DEV_BUILD.
 if (DEV_BUILD) {
     PaymentService.registerProvider({
         id: 'sandbox',
