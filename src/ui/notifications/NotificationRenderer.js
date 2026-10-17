@@ -1,5 +1,5 @@
 // FILE: src/ui/notifications/NotificationRenderer.js  (REPLACE)
-// v3.1 — [GLASSMORPHISM] Menerapkan efek kaca iCloud pada Panel Notifikasi & Toast.
+// v3.2 — [DEEP GLASSMORPHISM] Menyesuaikan warna, blur, dan border agar persis seperti iCloud.
 import { t } from '../../core/LanguageService.js';
 import { bus } from '../../core/EventBus.js';
 
@@ -13,8 +13,6 @@ var OUT_MS = 260;
 var SWIPE_PX = 56;
 
 var _active = [];
-
-// ---- riwayat (pusat notifikasi)
 var HISTORY_MAX = 50;
 var _history = [];
 var _unread = 0;
@@ -24,26 +22,11 @@ var _panelOpen = false;
 var _tickTimer = null;
 
 var TYPES = {
-    info: {
-        rgb: '10,132,255',
-        icon: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.8" r=".6" fill="currentColor"/>'
-    },
-    success: {
-        rgb: '52,199,89',
-        icon: '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.8"/>'
-    },
-    warning: {
-        rgb: '255,159,10',
-        icon: '<path d="M12 4l9 16H3z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/>'
-    },
-    error: {
-        rgb: '255,69,58',
-        icon: '<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>'
-    },
-    news: {
-        rgb: '168,85,247',
-        icon: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 12.5h8M8 16h5"/>'
-    }
+    info: { rgb: '10,132,255', icon: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.8" r=".6" fill="currentColor"/>' },
+    success: { rgb: '52,199,89', icon: '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.8"/>' },
+    warning: { rgb: '255,159,10', icon: '<path d="M12 4l9 16H3z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/>' },
+    error: { rgb: '255,69,58', icon: '<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>' },
+    news: { rgb: '168,85,247', icon: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 12.5h8M8 16h5"/>' }
 };
 
 function escapeHtml(s) {
@@ -82,12 +65,15 @@ function ensureStyle() {
         'padding-bottom:0!important;border-width:0!important;box-shadow:none!important;',
         'transition:max-height .26s ease,margin .26s ease,padding .26s ease,border-width .26s ease,opacity .24s ease,transform .24s ease}',
         
-        // [GLASSMORPHISM] Toast Notifikasi
+        // --- TOAST NOTIFIKASI (MELAYANG DI ATAS) ---
         '.ni{position:relative;box-sizing:border-box;width:100%;max-width:calc(100vw - 24px);margin:0 auto;',
-        '--ni-rgb:10,132,255;background:rgba(20,20,24,.75);-webkit-backdrop-filter:blur(24px) saturate(180%);',
-        'backdrop-filter:blur(24px) saturate(180%);color:#fff;border-radius:22px;padding:9px 10px 12px 10px;',
-        'border:1px solid rgba(255,255,255,.1);',
-        'box-shadow:0 10px 28px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05);',
+        '--ni-rgb:10,132,255;',
+        'background:rgba(30, 30, 35, 0.75);', /* Lebih transparan seperti iCloud */
+        '-webkit-backdrop-filter:blur(24px) saturate(180%);',
+        'backdrop-filter:blur(24px) saturate(180%);',
+        'color:#fff;border-radius:22px;padding:9px 10px 12px 10px;',
+        'border:1px solid rgba(255,255,255,.12);',
+        'box-shadow:0 12px 32px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);',
         'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;cursor:pointer;overflow:hidden;',
         'touch-action:none;user-select:none;-webkit-user-select:none;outline:none;',
         'animation:niIn .38s cubic-bezier(.34,1.4,.64,1);',
@@ -128,18 +114,23 @@ function ensureStyle() {
         '.ni-bar i.ni-run{animation:niBar var(--ni-dur,4000ms) linear forwards}',
         '.ni.ni-paused .ni-bar i{animation-play-state:paused}',
         
-        // [GLASSMORPHISM] Backdrop (Latar belakang gelap dengan blur)
+        // --- PANEL NOTIFIKASI (SAAT KLIK NAMA PERUSAHAAN) ---
+        // Backdrop di belakang panel
         '.np-backdrop{position:fixed;left:0;right:0;bottom:0;top:var(--np-top,0px);z-index:9998;',
-        'background:rgba(0,0,0,.4);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);',
+        'background:rgba(0,0,0,.2);', /* Lebih tipis agar game tetap terlihat */
+        '-webkit-backdrop-filter:blur(8px);',
+        'backdrop-filter:blur(8px);',
         'opacity:0;transition:opacity .2s ease;-webkit-tap-highlight-color:transparent}',
         '.np-backdrop.np-show{opacity:1}',
         
-        // [GLASSMORPHISM] Panel Notifikasi Utama
+        // Panel utama
         '.np-panel{position:fixed;z-index:9999;left:50%;top:calc(var(--np-top,0px) + 6px);width:min(94vw,420px);',
         'max-height:min(70vh,calc(100dvh - var(--np-top,0px) - 90px));display:flex;flex-direction:column;box-sizing:border-box;',
-        'background:rgba(25,25,30,.65);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);',
-        'color:var(--text-primary,#fff);border:1px solid rgba(255,255,255,.1);',
-        'border-radius:20px;box-shadow:0 24px 64px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05);overflow:hidden;',
+        'background:rgba(30, 30, 35, 0.7);', /* Kaca transparan */
+        '-webkit-backdrop-filter:blur(28px) saturate(200%);',
+        'backdrop-filter:blur(28px) saturate(200%);',
+        'color:var(--text-primary,#fff);border:1px solid rgba(255,255,255,.12);',
+        'border-radius:20px;box-shadow:0 24px 64px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);overflow:hidden;',
         'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;',
         'opacity:0;transform:translate(-50%,-10px) scale(.97);transform-origin:top left;',
         'transition:opacity .2s ease,transform .22s cubic-bezier(.34,1.3,.64,1)}',
@@ -150,20 +141,21 @@ function ensureStyle() {
         '.np-sub{font-size:11px;font-weight:600;color:var(--text-tertiary,#8e8e93)}',
         '.np-btn{border:0;background:transparent;color:var(--accent,#0a84ff);font:600 12px -apple-system,sans-serif;',
         'padding:6px 8px;border-radius:10px;cursor:pointer}',
-        '.np-btn:active{background:var(--accent-soft,rgba(10,132,255,.15))}',
+        '.np-btn:active{background:rgba(10,132,255,.15)}',
         '.np-btn[disabled]{opacity:.35;pointer-events:none}',
-        '.np-list{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:6px}',
+        '.np-list{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:8px}',
         
-        // [GLASSMORPHISM] Item di dalam Panel
-        '.np-item{--ni-rgb:10,132,255;display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:12px;position:relative;',
-        'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.02);transition:background .2s}',
-        '.np-item+.np-item{margin-top:4px}',
-        '.np-item.np-unread{background:rgba(var(--ni-rgb),.12);border-color:rgba(var(--ni-rgb),.2)}',
+        // Kotak item di dalam panel (Efek kaca bertumpuk)
+        '.np-item{--ni-rgb:10,132,255;display:flex;align-items:flex-start;gap:10px;padding:12px 10px;border-radius:14px;position:relative;',
+        'background:rgba(255,255,255,.05);', /* Sedikit lebih terang dari panel */
+        'border:1px solid rgba(255,255,255,.03);transition:background .2s}',
+        '.np-item+.np-item{margin-top:6px}',
+        '.np-item.np-unread{background:rgba(var(--ni-rgb),.15);border-color:rgba(var(--ni-rgb),.2)}',
         '.np-item:active{background:rgba(255,255,255,.08)}',
         '.np-item .ni-ico{width:28px;height:28px}',
         '.np-body{flex:1;min-width:0}',
         '.np-msg{font-size:13px;line-height:1.4;font-weight:500;word-break:break-word}',
-        '.np-meta{margin-top:3px;font-size:11px;color:var(--text-tertiary,#8e8e93);display:flex;gap:6px;align-items:center}',
+        '.np-meta{margin-top:4px;font-size:11px;color:var(--text-tertiary,#8e8e93);display:flex;gap:6px;align-items:center}',
         '.np-meta b{font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:rgb(var(--ni-rgb));font-size:10px}',
         '.np-act{flex:0 0 auto;align-self:center;min-height:30px;padding:0 12px;border:0;border-radius:15px;',
         'background:rgb(var(--ni-rgb));color:#fff;font:700 12px -apple-system,sans-serif;cursor:pointer}',
@@ -182,13 +174,11 @@ function ensureStyle() {
         'background:#ff453a;color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;',
         'font-variant-numeric:tabular-nums}',
         '.header-notif-badge[hidden]{display:none}',
-        '@media (prefers-reduced-motion:reduce){.np-panel,.np-backdrop{transition:none}}',
+        
         '@keyframes niIn{from{opacity:0;transform:translateY(-14px) scale(.92)}to{opacity:1;transform:none}}',
         '@keyframes niBump{0%{transform:scale(1)}40%{transform:scale(1.04)}100%{transform:scale(1)}}',
         '@keyframes niBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}',
-        '@media (max-width:380px){.ni-msg{font-size:12px}.ni-action{padding:0 11px}}',
-        '@media (prefers-reduced-motion:reduce){.ni,.ni.ni-bump{animation:none}.ni{transition:none}',
-        '.ni-bar i.ni-run{animation-duration:0s}}'
+        '@media (prefers-reduced-motion:reduce){.ni,.ni.ni-bump{animation:none}.ni{transition:none}.ni-bar i.ni-run{animation-duration:0s}.np-panel,.np-backdrop{transition:none}}'
     ].join('');
     var el = document.createElement('style');
     el.id = 'ni-style';
@@ -335,10 +325,8 @@ function bindGestures(entry) {
 
     n.addEventListener('pointerup', function () { end(false); });
     n.addEventListener('pointercancel', function () { end(true); });
-
     n.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') pause(entry); });
     n.addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse') resume(entry); });
-
     n.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(entry, !entry.expanded); }
         else if (e.key === 'Escape') { removeEntry(entry, 'up'); }
@@ -379,7 +367,7 @@ function recordHistory(type, msg, payload) {
     if (last && last.type === type && last.msg === msg && (Date.now() - last.ts) < 60000) {
         last.count++;
         last.ts = Date.now();
-        if (!last.read) { /* tetap belum dibaca */ } else { last.read = false; _unread++; }
+        if (!last.read) { } else { last.read = false; _unread++; }
         if (payload && payload.action && typeof payload.action.onClick === 'function') last.action = payload.action;
     } else {
         _history.unshift({
@@ -632,4 +620,4 @@ export function clearNotifications() {
 
 export function getActiveRendererIdPublic() {
     return 'dynamic_island';
-        }
+}
