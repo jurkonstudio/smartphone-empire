@@ -4,6 +4,7 @@
 // v2027.5a — tambah applyServerBalance() untuk sinkronisasi cloud.
 // v2027.40 — unlock riset & boost riset pakai SIL (tech + chip), fix boost dev.
 // v2027.41 — percepatan waktu 2x/5x/10x berbayar SIL (batas waktu per 10 SIL); hapus skip7/skip30.
+// v2028.3  — Menambahkan dukungan percepatan OS (kind === 'os').
 // ============================================================
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
@@ -180,22 +181,46 @@ export var SiliconService = {
 
     // mode: 'boost' (+N hari) | 'finish' (selesai sekarang)
     boostResearch(kind, nodeId, mode) {
+        var g = window.__game;
+        if (!g) return { ok: false, reason: 'Game belum siap.' };
+
+        // === [TAMBAHAN v2028.3] DUKUNGAN PERCEPATAN OS ===
+        if (kind === 'os') {
+            var d = state.data.os.developing;
+            if (!d || d.versionString !== nodeId) return { ok: false, reason: 'Pengembangan OS tidak ditemukan.' };
+            
+            var finish = (mode === 'finish') || (mode === 'instant');
+            var cost = this.researchFinishCost(d);
+            
+            if (!this.canAfford(cost)) return { ok: false, reason: 'Silicon tidak cukup (' + cost + ' SIL).', need: cost };
+            
+            var sp = this.spend(cost, (finish ? 'finish-os:' : 'boost-os:') + nodeId);
+            if (!sp.ok) return sp;
+            
+            var res = g.os.boostResearch(nodeId, finish ? Infinity : SILICON_COSTS.research.boostDays);
+            if (!res.ok) { this._refund(cost, 'boost-os:' + nodeId); return res; }
+            
+            bus.emit('silicon:action-done', { id: 'boost', cost: cost });
+            return { ok: true, spent: cost, completed: !!res.completed };
+        }
+        // =================================================
+
         var sys = _sys(kind);
         if (!sys) return { ok: false, reason: 'Game belum siap.' };
         var opt = this.getResearchOptions(kind, nodeId);
         if (opt.state !== 'running') return { ok: false, reason: 'Riset tidak sedang berjalan.' };
 
-        var finish = (mode === 'finish') || !opt.canBoost;
-        var cost = finish ? opt.finishCost : opt.boostCost;
-        if (!this.canAfford(cost)) return { ok: false, reason: 'Silicon tidak cukup (' + cost + ' SIL).', need: cost };
+        var finishTech = (mode === 'finish') || !opt.canBoost;
+        var costTech = finishTech ? opt.finishCost : opt.boostCost;
+        if (!this.canAfford(costTech)) return { ok: false, reason: 'Silicon tidak cukup (' + costTech + ' SIL).', need: costTech };
 
-        var sp = this.spend(cost, (finish ? 'finish:' : 'boost:') + nodeId);
-        if (!sp.ok) return sp;
+        var spTech = this.spend(costTech, (finishTech ? 'finish:' : 'boost:') + nodeId);
+        if (!spTech.ok) return spTech;
 
-        var res = sys.boostResearch(nodeId, finish ? Infinity : opt.boostDays);
-        if (!res.ok) { this._refund(cost, 'boost:' + nodeId); return res; }
-        bus.emit('silicon:action-done', { id: 'boost', cost: cost });
-        return { ok: true, spent: cost, completed: !!res.completed };
+        var resTech = sys.boostResearch(nodeId, finishTech ? Infinity : opt.boostDays);
+        if (!resTech.ok) { this._refund(costTech, 'boost:' + nodeId); return resTech; }
+        bus.emit('silicon:action-done', { id: 'boost', cost: costTech });
+        return { ok: true, spent: costTech, completed: !!resTech.completed };
     },
 
     _refund(amount, reason) {
@@ -335,7 +360,6 @@ export var SiliconService = {
                 ToastService.success(t('silicon.msg.chipResearch') || 'Chip research completed instantly.');
             } else if (actionId === 'dev') {
                 // Selesaikan sisa pengembangan: majukan tiap fase lewat jalur tick normal
-                // (tanpa memutar waktu dunia, sehingga gaji/sewa tidak ikut terpotong).
                 var guard = 0;
                 while (state.data.products.development && guard++ < 6) {
                     var dv = state.data.products.development;
