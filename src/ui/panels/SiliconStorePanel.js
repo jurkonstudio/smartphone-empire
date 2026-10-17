@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SiliconStorePanel.js
-// v2028.10 — [SECURITY] Menyembunyikan tombol Mock (Simulasi) di mode Production.
+// v2028.15 — [FIX] Polling sekarang bisa mendeteksi status 'paid' dan menutup modal meski aplikasi sempat tidur.
 import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 import { Modal } from '../modal.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
@@ -8,7 +8,7 @@ import { PaymentService } from '../../systems/PaymentService.js';
 import { PAYMENT_GROUPS } from '../../data/silicon.data.js';
 import { ToastService } from '../../core/ToastService.js';
 import { bus } from '../../core/EventBus.js';
-import { DEV_BUILD } from '../../config/dev.config.js'; // <-- IMPORT PENTING
+import { DEV_BUILD } from '../../config/dev.config.js';
 
 var MODAL_ID = 'silicon-store';
 var _sel = { pkg: 'pkg_l', method: null, busy: false };
@@ -16,7 +16,7 @@ var _pollingTimer = null;
 var _countdownTimer = null;
 
 // GANTI URL DI BAWAH INI DENGAN LINK GAMBAR QRIS MILIKMU
-var STATIC_QRIS_URL = 'https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/qris-gopay.png'; // <--- GANTI DENGAN LINK GAMBAR ASLIMU
+var STATIC_QRIS_URL = 'https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/qris-gopay.png';
 
 function _esc(s) {
     if (typeof s !== 'string') return '';
@@ -170,7 +170,6 @@ function _onClick(e) {
 function _showPaymentModal(order) {
     var pkg = PaymentService.getPackage(order.packageId);
     
-    // Cek apakah game berjalan di mode Development
     var mockBtnHtml = DEV_BUILD ? `
         <div style="margin-top:24px; padding-top:16px; border-top:1px dashed var(--border); text-align:center;">
             <button type="button" data-qr-mock style="background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger); padding:8px; border-radius:8px; font-size:11px; width:100%; cursor:pointer;">
@@ -190,7 +189,6 @@ function _showPaymentModal(order) {
             <div style="font-size:24px; font-weight:bold; color:var(--accent);">${_price(pkg)}</div>
         </div>
 
-        <!-- GAMBAR QRIS KAMU -->
         <div style="text-align:center; padding: 12px; background: #fff; border-radius: 12px; margin-bottom:16px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);">
             <img src="${STATIC_QRIS_URL}" style="width:100%; max-width:250px; display:block; margin:0 auto; border-radius:8px;" alt="QRIS" />
         </div>
@@ -234,16 +232,19 @@ function _showPaymentModal(order) {
     function checkStatus(isManual) {
         if (isManual) btnCheck.textContent = 'Mengecek...';
         PaymentService.refresh(order.id).then(function(r) {
-            if (r.ok && r.sil) {
+            // Cek apakah sukses DAN (ada sil ATAU status order sudah paid)
+            var isPaid = r.ok && (r.sil || (r.order && r.order.status === 'paid'));
+            
+            if (isPaid) {
                 clearInterval(_countdownTimer);
                 clearInterval(_pollingTimer);
                 Modal.close('payment-qr', true);
-                ToastService.success('Pembayaran Berhasil! ' + r.sil + ' SIL ditambahkan.');
+                ToastService.success('Pembayaran Berhasil! Saldo telah diperbarui.');
                 _render();
             } else {
                 if (isManual) {
                     btnCheck.textContent = 'Saya Sudah Transfer (Cek Status)';
-                    ToastService.warning('Pembayaran belum dikonfirmasi Admin. Tunggu 1-5 menit lalu cek lagi.');
+                    ToastService.warning('Pembayaran belum dikonfirmasi Admin. Tunggu 1-2 menit lalu cek lagi.');
                 }
             }
         });
@@ -262,7 +263,6 @@ function _showPaymentModal(order) {
         _render();
     });
 
-    // Tombol Mock hanya dipasang event-nya jika DEV_BUILD true
     var btnMock = root.querySelector('[data-qr-mock]');
     if (btnMock) {
         btnMock.addEventListener('click', function() {
