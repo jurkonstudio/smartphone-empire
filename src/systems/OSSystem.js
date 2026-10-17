@@ -331,7 +331,26 @@ export class OSSystem {
         bus.emit('state:changed', data);
         return { ok: true, refund };
     }
+// Fungsi baru untuk menerima perintah dari SiliconService
+boostResearch(nodeId, days) {
+    const data = this.state.data;
+    const d = data.os.developing;
+    if (!d || d.versionString !== nodeId) return { ok: false, reason: 'Pengembangan tidak ditemukan.' };
+    
+    const add = (days === Infinity) ? (d.durationDays - d.progressDays) : Math.max(0, days || 0);
+    d.progressDays = Math.min(d.durationDays, d.progressDays + add);
+    
+    if (d.progressDays >= d.durationDays) {
+        this._releaseVersion();
+        return { ok: true, completed: true };
+    }
+    bus.emit('state:changed', data);
+    return { ok: true, completed: false };
+}
 
+finishResearch(nodeId) {
+    return this.boostResearch(nodeId, Infinity);
+}
     getCurrentStats() {
         const v = this.getCurrentVersionObject();
         return v ? { ...v.stats } : null;
