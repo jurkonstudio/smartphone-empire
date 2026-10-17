@@ -1,11 +1,12 @@
 // FILE: src/ui/panels/HqPanel.js
-// v2027.30a — tab Office placeholder full-height.
+// v2027.50a — tab Office kini memuat Office 3D Map (lihat ui/office/OfficeMap.js).
 import { renderDashboard } from './DashboardPanel.js';
 import { renderTeamPanel } from './TeamPanel.js';
 import { renderExchangePanel } from './ExchangePanel.js';
 import { renderBankPanel } from './BankPanel.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
+import { renderOfficeLoading } from '../office/OfficeMap.js';
 
 const HQ_TABS = [
     { id: 'office',   key: 'hq.tab.office',   icon: 'building' },
@@ -28,7 +29,7 @@ export function renderHqPanel({ subtab, state, timeSnapshot, researchSystem, tea
 
     var body = '';
     if (subtab === 'office') {
-        body = _renderOfficePlaceholder();
+        body = _renderOfficeMap();
     } else if (subtab === 'team') {
         body = renderTeamPanel({ teamSystem: teamSystem });
     } else if (subtab === 'exchange') {
@@ -42,30 +43,17 @@ export function renderHqPanel({ subtab, state, timeSnapshot, researchSystem, tea
 }
 
 // ============================================================
-// PLACEHOLDER OFFICE — 3D scene akan ditambahkan di sesi berikutnya.
-// Kontainer full-height supaya 3D map bisa lega sampai bawah layar.
+// OFFICE 3D MAP — wadah peta. main.js memanggil mountOfficeMap() pada #office-map
+// setelah HTML dipasang. Class "home-map" dipakai ulang: sudah bebas dari swipe-tab
+// (SwipeService), position:relative, overflow hidden, dan touch-action:none.
 // ============================================================
-function _renderOfficePlaceholder() {
-    return '<div class="office-placeholder" style="' +
-                'min-height:calc(100vh - 220px);' +
-                'display:flex;' +
-                'flex-direction:column;' +
-                'align-items:center;' +
-                'justify-content:center;' +
-                'text-align:center;' +
-                'padding:40px 20px;' +
-                'background:linear-gradient(180deg, rgba(79,140,255,0.06) 0%, rgba(79,140,255,0.02) 100%);' +
-                'border:1px dashed rgba(79,140,255,0.25);' +
-                'border-radius:14px;' +
+function _renderOfficeMap() {
+    return '<div id="office-map" class="home-map office-map" style="' +
+                'flex:none;' +
+                'height:max(380px, calc(100dvh - 235px));' +
                 'margin-top:4px;' +
-            '">' +
-        '<div style="font-size:64px;line-height:1;margin-bottom:16px;">🏢</div>' +
-        '<div style="font-size:17px;font-weight:800;margin-bottom:8px;">' +
-            t('hq.office.title') + '</div>' +
-        '<div style="font-size:12.5px;color:var(--text-mute);line-height:1.65;max-width:340px;">' +
-            t('hq.office.desc') + '</div>' +
-        '<div style="margin-top:24px;font-size:11px;color:var(--text-mute);opacity:0.7;letter-spacing:0.5px;">' +
-            '🚧 3D MAP · COMING SOON' +
-        '</div>' +
-    '</div>';
+                'border-radius:14px;' +
+                'border:1px solid var(--border);' +
+                'background:linear-gradient(180deg, var(--accent-soft) 0%, transparent 100%);' +
+            '">' + renderOfficeLoading() + '</div>';
 }
