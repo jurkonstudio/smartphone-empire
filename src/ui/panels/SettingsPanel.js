@@ -133,6 +133,9 @@ function _tabUmum(s) {
     _section('question', t('settings.section.help'),
         _row({ label: t('settings.row.guide'), hint: t('settings.row.guide_hint'), action: true, attrs: 'data-set="guide"', chevron: true }) +
         _row({ label: t('settings.row.tutorial'), hint: t('settings.row.tutorial_hint'), action: true, attrs: 'data-set="tutorial"', chevron: true })
+    ) +
+    _section('globe', t('pp.settings.section_about'),
+        _row({ icon: 'link', label: t('pp.settings.row_studio'), hint: t('pp.settings.row_studio_hint'), action: true, attrs: 'data-set="studio"', chevron: true })
     );
 }
 
@@ -382,7 +385,17 @@ function _handleSet(action) {
         case 'leaderboard': openPlayerListModal('revenue'); break;
         case 'cloud':       openCloudPanel(); break;
         case 'player-profile': setProfileTab('player'); window.__game.navigate('profile'); break;
+        case 'studio':      _openStudioPage(); break;
     }
+}
+
+// Buka halaman studio di tab baru (di APK/WebView, jatuh ke navigasi biasa bila popup diblokir).
+function _openStudioPage() {
+    var url = (APP_CONFIG && APP_CONFIG.studioUrl) || '';
+    if (!url) return;
+    var w = null;
+    try { w = window.open(url, '_blank', 'noopener,noreferrer'); } catch (e) { w = null; }
+    if (!w) window.location.href = url;
 }
 
 function _handleToggle(key) {
