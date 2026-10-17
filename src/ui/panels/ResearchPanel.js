@@ -1,8 +1,20 @@
-// FILE: src/ui/panels/ResearchPanel.js
+// FILE: src/ui/panels/ResearchPanel.js  (REPLACE)
 // Tab Riset: sub-tab Teknologi | OS | Sejarah | Chip.
-// v2026.2 — Row-based, section-grouped (Sim Companies style).
-// v2027.13c — i18n.
+// v2028 — Pusat Riset:
+//   • Hero ringkasan (progres global, slot, kecepatan, kas)
+//   • Slot aktif + slot kosong, boost Silicon tetap ada
+//   • Filter kategori dengan hitungan selesai/total
+//   • Pencarian instan + sortir (tanpa render ulang halaman → fokus input aman)
+//   • Kartu rekomendasi riset berikutnya
+//   • Node "siap tapi tertahan" (slot penuh / kas kurang) tampil di Tersedia, bukan Terkunci
+//   • Modal detail baru: ETA, kas setelah mulai, jalur prasyarat, riset yang dibuka, bonus stat
+// Kontrak atribut dengan main.js tidak berubah:
+//   data-subtab, data-filter-cat, data-node-detail, data-research-action,
+//   data-research-slots / -bar / -pct / -eta (live update).
 import { RESEARCH_CATEGORIES, getNodeById } from '../../data/research.data.js';
+import { getComponentById } from '../../data/components.data.js';
+import { getOsFeatureById } from '../../data/os.data.js';
+import { BALANCE } from '../../data/balance.data.js';
 import { renderOSPanel, openOsWizardModal, openCreateOsModal, openFeatureDetailModal } from './OSPanel.js';
 import { renderTimelinePanel, getTimelineFilter, setTimelineFilter } from './TimelinePanel.js';
 import {
@@ -12,7 +24,7 @@ import {
     openChipNodeModal
 } from './ChipResearchPanel.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
-import { renderTechNodeRow } from '../components/TechNodeCard.js';
+import { renderTechNodeRow, statLabel } from '../components/TechNodeCard.js';
 import { t } from '../../core/LanguageService.js';
 import { renderSilResearchBlock, renderSilSlotBoost } from '../components/SilResearchBlock.js';
 import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
@@ -24,9 +36,27 @@ function escapeHtml(s) {
             .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
+// t() dengan fallback bila key belum ada di kamus.
+function _tf(key, fallback, vars) {
+    var v = t(key, vars);
+    return (v && v !== key) ? v : fallback;
+}
+
+function _money(n) { return '$' + Math.round(n || 0).toLocaleString('en-US'); }
+
+// ============================================================
+// STATE UI (hidup selama sesi; tidak disimpan ke save)
+// ============================================================
 let _filterCategory = 'all';
 export function getFilterCategory() { return _filterCategory; }
 export function setFilterCategory(cat) { _filterCategory = cat; }
+
+const _ui = {
+    query: '',
+    sort: 'tier',                 // tier | year | cost | time
+    open: { done: false, locked: false }
+};
+let _ctx = { researchSystem: null };
 
 function _isChipTabVisible() {
     try {
@@ -38,6 +68,9 @@ function _isChipTabVisible() {
     } catch (e) { return false; }
 }
 
+// ============================================================
+// PANEL UTAMA
+// ============================================================
 export function renderResearchPanel(params) {
     var subtab = params.subtab;
     var researchSystem = params.researchSystem;
@@ -73,55 +106,60 @@ export function renderResearchPanel(params) {
 // ============================================================
 function renderTechSection(params) {
     var researchSystem = params.researchSystem;
+    _ctx.researchSystem = researchSystem;
+    _ensureStyles();
+    _ensureHandlers();
+
     const data = window.__game.state.get();
     const active = data.research.active || [];
     const maxSlots = data.research.maxSlots || 1;
 
-    const slotBar = _renderSlotBar(active, maxSlots);
-    const chipBar = _renderChipFilter();
-
-    const allNodes = _filterCategory === 'all'
-        ? RESEARCH_CATEGORIES.flatMap(c => researchSystem.getNodesByCategory(c.id))
-        : researchSystem.getNodesByCategory(_filterCategory);
-
-    const groups = { running: [], available: [], done: [], locked: [] };
-    allNodes.forEach(function (n) {
-        const st = researchSystem.getNodeStatus(n.id);
-        const bucket = groups[st.status] || groups.locked;
-        bucket.push({ node: n, status: st.status, reason: st.reason });
-    });
-
-    Object.keys(groups).forEach(function (k) {
-        groups[k].sort(function (a, b) {
-            if (a.node.tier !== b.node.tier) return a.node.tier - b.node.tier;
-            return (a.node.minYear || 0) - (b.node.minYear || 0);
-        });
-    });
-
-    let html = slotBar + chipBar;
-
-    if (groups.running.length) {
-        html += _renderNodeGroup(t('research.section.running'), groups.running, active);
-    }
-    if (groups.available.length) {
-        html += _renderNodeGroup(t('research.section.available'), groups.available, active);
-    }
-    if (groups.done.length) {
-        html += _renderCollapsibleGroup(t('research.section.done'), groups.done, active);
-    }
-    if (groups.locked.length) {
-        html += _renderCollapsibleGroup(t('research.section.locked'), groups.locked, active);
-    }
-
-    if (!groups.running.length && !groups.available.length &&
-        !groups.done.length && !groups.locked.length) {
-        html += '<div class="empty"><div class="empty-title">' + t('research.section.empty') + '</div></div>';
-    }
-
-    return html;
+    return '<div class="rs-root">' +
+        _renderHero(researchSystem, data) +
+        _renderSlotBar(active, maxSlots) +
+        _renderCategoryBar(researchSystem) +
+        _renderToolbar() +
+        '<div class="rs-body" data-rs-body>' + _renderBody(researchSystem) + '</div>' +
+        '</div>';
 }
 
+// ---------- HERO ----------
+function _renderHero(sys, data) {
+    var sum = sys.getSummary();
+    var sp = sys.getSpeedInfo();
+    var pct = Math.round(sum.percent * 100);
+    var deg = Math.round(sum.percent * 360);
+    var speedTxt = sp.speed.toFixed(2).replace(/\.?0+$/, '') + 'x';
+
+    return '<div class="rs-hero">' +
+        '<div class="rs-ring" style="--rs-deg:' + deg + 'deg;" role="img" aria-label="' + pct + '%">' +
+            '<div class="rs-ring-in"><b>' + pct + '%</b></div>' +
+        '</div>' +
+        '<div class="rs-hero-main">' +
+            '<div class="rs-hero-title">' + escapeHtml(_tf('rs.hero.title', 'Pusat Riset')) + '</div>' +
+            '<div class="rs-hero-sub">' + escapeHtml(_tf('rs.hero.progress', sum.completed + ' dari ' + sum.total + ' teknologi',
+                { done: sum.completed, total: sum.total })) + '</div>' +
+            '<div class="rs-hero-stats">' +
+                '<div class="rs-stat"><span>' + escapeHtml(_tf('rs.hero.slots', 'Slot')) + '</span>' +
+                    '<b data-rs-hero-slots>' + sum.running + '/' + sum.maxSlots + '</b></div>' +
+                '<div class="rs-stat"><span>' + escapeHtml(_tf('rs.hero.speed', 'Kecepatan')) + '</span>' +
+                    '<b>' + speedTxt + (sp.atCap ? ' <em>' + escapeHtml(_tf('rs.hero.speed_max', 'maks')) + '</em>' : '') + '</b></div>' +
+                '<div class="rs-stat"><span>' + escapeHtml(_tf('rs.hero.cash', 'Kas')) + '</span>' +
+                    '<b>' + _money(data.cash) + '</b></div>' +
+            '</div>' +
+        '</div>' +
+    '</div>';
+}
+
+// ---------- SLOT STRIP (atribut live dipertahankan) ----------
 function _renderSlotBar(active, maxSlots) {
+    var emptyCount = Math.max(0, maxSlots - active.length);
+    var emptySlots = '';
+    for (var i = 0; i < emptyCount; i++) {
+        emptySlots += '<div class="rs-slot-empty">' + escapeHtml(_tf('research.slot.hint', 'Belum ada riset berjalan. Pilih node di bawah.')) + '</div>';
+        if (active.length) break;   // satu penanda cukup bila sudah ada yang berjalan
+    }
+
     if (!active.length) {
         return '<div class="slot-strip slot-strip-empty">' +
             '<div class="slot-strip-top">' +
@@ -136,12 +174,12 @@ function _renderSlotBar(active, maxSlots) {
         return '<div class="slot-strip-item">' +
             '<div class="slot-strip-item-head">' +
                 '<span class="slot-strip-item-name">' + escapeHtml(e.name) + '</span>' +
-                '<span class="slot-strip-item-pct" data-research-pct="' + e.nodeId + '">0%</span>' +
+                '<span class="slot-strip-item-pct" data-research-pct="' + escapeHtml(e.nodeId) + '">' + _pctOf(e) + '%</span>' +
             '</div>' +
             '<div class="progress slot-strip-item-progress">' +
-                '<div class="progress-bar" data-research-bar="' + e.nodeId + '" style="width:0%;"></div>' +
+                '<div class="progress-bar" data-research-bar="' + escapeHtml(e.nodeId) + '" style="width:' + _pctOf(e) + '%;"></div>' +
             '</div>' +
-            '<div class="slot-strip-item-eta" data-research-eta="' + e.nodeId + '">—</div>' +
+            '<div class="slot-strip-item-eta" data-research-eta="' + escapeHtml(e.nodeId) + '">' + _etaOf(e) + '</div>' +
             '<div class="slot-strip-item-boost">' + renderSilSlotBoost('tech', e.nodeId, SiliconService.researchFinishCost(e)) + '</div>' +
             '</div>';
     }).join('');
@@ -151,76 +189,298 @@ function _renderSlotBar(active, maxSlots) {
             '<span class="slot-strip-label">' + t('research.slot.title') + '</span>' +
             '<span class="slot-strip-count" data-research-slots>' + active.length + '/' + maxSlots + '</span>' +
         '</div>' +
-        rows +
+        rows + emptySlots +
         renderSilSpeedBar({ speed: true }) +
         '</div>';
 }
 
-function _renderChipFilter() {
+function _speed() {
+    try { return window.__game.research._getSpeedMultiplier() || 1; } catch (e) { return 1; }
+}
+function _pctOf(e) {
+    var dur = e.durationDays || 0, prog = e.progressDays || 0;
+    return dur > 0 ? Math.round(Math.min(1, prog / dur) * 100) : 0;
+}
+function _etaOf(e) {
+    var dur = e.durationDays || 0, prog = e.progressDays || 0;
+    return t('research.slot.eta', { n: Math.ceil(Math.max(0, dur - prog) / _speed()) });
+}
+
+// ---------- FILTER KATEGORI ----------
+function _renderCategoryBar(sys) {
+    var sum = sys.getSummary();
     var chips = RESEARCH_CATEGORIES.map(function (c) {
+        var b = sum.byCategory[c.id] || { done: 0, total: 0 };
         var cls = 'chip ' + (_filterCategory === c.id ? 'active' : '');
         return '<button class="' + cls + '" data-filter-cat="' + c.id + '">' +
             renderIcon(c.icon, 12) + ' ' + escapeHtml(c.name) +
+            ' <span class="rs-chip-count">' + b.done + '/' + b.total + '</span>' +
             '</button>';
     }).join('');
 
     return '<div class="chip-bar">' +
-        '<button class="chip ' + (_filterCategory === 'all' ? 'active' : '') + '" data-filter-cat="all">' + t('timeline.filter.all') + '</button>' +
+        '<button class="chip ' + (_filterCategory === 'all' ? 'active' : '') + '" data-filter-cat="all">' +
+            t('timeline.filter.all') + ' <span class="rs-chip-count">' + sum.completed + '/' + sum.total + '</span></button>' +
         chips +
         '</div>';
 }
 
-function _renderNodeGroup(label, items, active) {
+// ---------- TOOLBAR (cari + sortir) ----------
+var SORTS = [
+    { id: 'tier', key: 'rs.sort.tier', fb: 'Tier' },
+    { id: 'year', key: 'rs.sort.year', fb: 'Tahun' },
+    { id: 'cost', key: 'rs.sort.cost', fb: 'Termurah' },
+    { id: 'time', key: 'rs.sort.time', fb: 'Tercepat' }
+];
+
+function _renderToolbar() {
+    var sorts = SORTS.map(function (s) {
+        return '<button type="button" class="rs-sort-btn' + (_ui.sort === s.id ? ' active' : '') +
+            '" data-rs-sort="' + s.id + '">' + escapeHtml(_tf(s.key, s.fb)) + '</button>';
+    }).join('');
+
+    return '<div class="rs-toolbar">' +
+        '<div class="rs-search">' +
+            '<span class="rs-search-ico" aria-hidden="true">' + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' + '</span>' +
+            '<input type="search" class="rs-search-input" data-rs-search autocomplete="off" spellcheck="false" ' +
+                'placeholder="' + escapeHtml(_tf('rs.search.placeholder', 'Cari teknologi…')) + '" value="' + escapeHtml(_ui.query) + '">' +
+            '<button type="button" class="rs-search-clear" data-rs-clear aria-label="' + escapeHtml(_tf('rs.search.clear', 'Hapus')) + '"' +
+                (_ui.query ? '' : ' hidden') + '>×</button>' +
+        '</div>' +
+        '<div class="rs-sort"><span class="rs-sort-label">' + escapeHtml(_tf('rs.sort.label', 'Urutkan')) + '</span>' + sorts + '</div>' +
+    '</div>';
+}
+
+// ---------- BODY (rekomendasi + grup node) — dirender ulang saat cari/sortir ----------
+function _norm(s) { return String(s || '').toLowerCase(); }
+
+function _searchText(node, cat) {
+    var eff = node.effects || {};
+    var parts = [node.name, node.description, cat ? cat.name : '', node.id];
+    (eff.unlocksComponents || []).forEach(function (id) {
+        var c = getComponentById(id); parts.push(c ? c.name : id);
+    });
+    (eff.unlocksOsFeatures || []).forEach(function (id) {
+        var f = getOsFeatureById(id); parts.push(f ? f.name : id);
+    });
+    Object.keys(eff.statBonuses || {}).forEach(function (k) { parts.push(statLabel(k)); });
+    return _norm(parts.join(' '));
+}
+
+function _sortItems(arr) {
+    var mode = _ui.sort;
+    arr.sort(function (a, b) {
+        var x = a.node, y = b.node, d = 0;
+        if (mode === 'cost') d = x.cost - y.cost;
+        else if (mode === 'time') d = x.durationDays - y.durationDays;
+        else if (mode === 'year') d = (x.minYear || 0) - (y.minYear || 0);
+        if (d !== 0) return d;
+        if (x.tier !== y.tier) return x.tier - y.tier;
+        if ((x.minYear || 0) !== (y.minYear || 0)) return (x.minYear || 0) - (y.minYear || 0);
+        return x.cost - y.cost;
+    });
+}
+
+function _pickRecommended(sys, groups) {
+    var r = sys.getRecommended();
+    if (r) return { node: r.node, dependents: r.dependents, blocker: null };
+    // Tidak ada yang langsung bisa dimulai → pilih dari yang tertahan slot/kas.
+    var held = groups.ready.filter(function (it) { return it.blocker === 'slots' || it.blocker === 'cash'; });
+    if (!held.length) return null;
+    held.sort(function (a, b) {
+        var da = sys.getDependents(a.node.id).length, db = sys.getDependents(b.node.id).length;
+        if (db !== da) return db - da;
+        return a.node.cost - b.node.cost;
+    });
+    var top = held[0];
+    return { node: top.node, dependents: sys.getDependents(top.node.id).length, blocker: top.blocker };
+}
+
+function _renderBody(sys) {
+    const data = window.__game.state.get();
+    const active = data.research.active || [];
+    const cash = data.cash || 0;
+    const q = _norm(_ui.query).trim();
+    const sp = sys.getSpeedInfo().speed;
+
+    const allNodes = _filterCategory === 'all'
+        ? RESEARCH_CATEGORIES.flatMap(c => sys.getNodesByCategory(c.id))
+        : sys.getNodesByCategory(_filterCategory);
+
+    const groups = { running: [], ready: [], locked: [], done: [] };
+    allNodes.forEach(function (n) {
+        const cat = RESEARCH_CATEGORIES.find(function (c) { return c.id === n.category; });
+        if (q && _searchText(n, cat).indexOf(q) < 0) return;
+        const st = sys.getNodeStatus(n.id);
+        var item = { node: n, status: st.status, reason: st.reason, blocker: st.blocker || null };
+        if (st.status === 'running') groups.running.push(item);
+        else if (st.status === 'done') groups.done.push(item);
+        else if (st.status === 'available' || st.blocker === 'slots' || st.blocker === 'cash') groups.ready.push(item);
+        else groups.locked.push(item);
+    });
+    Object.keys(groups).forEach(function (k) { _sortItems(groups[k]); });
+
+    const rec = (!q) ? _pickRecommended(sys, groups) : null;
+    const recId = rec ? rec.node.id : null;
+    const ctx = { active: active, cash: cash, speed: sp, sys: sys, recId: recId };
+
+    let html = '';
+    if (rec && (_filterCategory === 'all' || rec.node.category === _filterCategory)) {
+        html += _renderRecommended(rec, ctx);
+    }
+
+    if (groups.running.length) html += _renderNodeGroup(t('research.section.running'), groups.running, ctx);
+    if (groups.ready.length) {
+        var held = groups.ready.filter(function (it) { return it.status !== 'available'; }).length;
+        var label = t('research.section.available') +
+            (held ? '  (' + held + ' ' + _tf('rs.section.blocked_note', 'tertahan') + ')' : '');
+        html += _renderNodeGroup(label, groups.ready, ctx, groups.ready.length);
+    }
+    if (groups.locked.length) html += _renderCollapsibleGroup('locked', t('research.section.locked'), groups.locked, ctx, !!q);
+    if (groups.done.length) html += _renderCollapsibleGroup('done', t('research.section.done'), groups.done, ctx, !!q);
+
+    if (!groups.running.length && !groups.ready.length && !groups.locked.length && !groups.done.length) {
+        html += q
+            ? '<div class="empty"><div class="empty-title">' + escapeHtml(_tf('rs.search.none', 'Tidak ada hasil.', { q: _ui.query })) + '</div></div>'
+            : '<div class="empty"><div class="empty-title">' + t('research.section.empty') + '</div></div>';
+    }
+    return html;
+}
+
+function _renderRecommended(rec, ctx) {
+    var n = rec.node;
+    var cat = RESEARCH_CATEGORIES.find(function (c) { return c.id === n.category; });
+    var eta = ctx.sys.getEtaDays(n);
+    var why = rec.dependents > 0
+        ? _tf('rs.rec.opens', 'Membuka ' + rec.dependents + ' riset lanjutan', { n: rec.dependents })
+        : _tf('rs.rec.cheap', 'Biaya terjangkau, cepat selesai');
+    var note = '';
+    if (rec.blocker === 'slots') note = '<div class="rs-rec-note">' + escapeHtml(_tf('rs.rec.blocked_slots', 'Slot penuh.')) + '</div>';
+    else if (rec.blocker === 'cash') note = '<div class="rs-rec-note">' + escapeHtml(_tf('rs.rec.blocked_cash', 'Kas belum cukup.')) + '</div>';
+
+    // data-node-detail HARUS di luar tombol: handler main.js mengecek detail lebih dulu daripada action.
+    return '<div class="rs-rec">' +
+        '<div class="rs-rec-ico" data-node-detail="' + escapeHtml(n.id) + '">' + (cat ? renderIcon(cat.icon, 18) : '') + '</div>' +
+        '<div class="rs-rec-main" data-node-detail="' + escapeHtml(n.id) + '">' +
+            '<div class="rs-rec-kicker">' + escapeHtml(_tf('rs.rec.title', 'Rekomendasi')) + '</div>' +
+            '<div class="rs-rec-name">' + escapeHtml(n.name) + '</div>' +
+            '<div class="rs-rec-why">' + escapeHtml(why) + ' · ' + _money(n.cost) + ' · ~' +
+                escapeHtml(_tf('rs.row.days', eta + ' hari', { n: eta })) + '</div>' +
+            note +
+        '</div>' +
+        '<button type="button" class="rs-rec-btn' + (rec.blocker ? ' is-held' : '') + '" data-research-action="start" data-node-id="' + escapeHtml(n.id) + '">' +
+            escapeHtml(_tf('rs.rec.start', 'Mulai')) + '</button>' +
+    '</div>';
+}
+
+function _renderNodeGroup(label, items, ctx) {
     var header = '<div class="section-label">' +
-        '<span class="section-label-text">' + label + ' · ' + items.length + '</span>' +
+        '<span class="section-label-text">' + escapeHtml(label) + ' · ' + items.length + '</span>' +
         '<span class="section-label-line"></span>' +
         '</div>';
-
-    var rows = items.map(function (it) { return _renderRow(it, active); }).join('');
-
+    var rows = items.map(function (it) { return _renderRow(it, ctx); }).join('');
     return header + '<div class="node-list">' + rows + '</div>';
 }
 
-function _renderCollapsibleGroup(label, items, active) {
+function _renderCollapsibleGroup(key, label, items, ctx, forceOpen) {
     var header = '<summary class="section-summary">' +
-        '<span class="section-summary-text">' + label + ' · ' + items.length + '</span>' +
+        '<span class="section-summary-text">' + escapeHtml(label) + ' · ' + items.length + '</span>' +
         '<span class="section-summary-line"></span>' +
         '</summary>';
-
-    var rows = items.map(function (it) { return _renderRow(it, active); }).join('');
-
-    return '<details class="section-collapsible">' + header +
+    var rows = items.map(function (it) { return _renderRow(it, ctx); }).join('');
+    var open = (forceOpen || _ui.open[key]) ? ' open' : '';
+    return '<details class="section-collapsible" data-rs-group="' + key + '"' + open + '>' + header +
         '<div class="node-list">' + rows + '</div>' +
         '</details>';
 }
 
-function _renderRow(it, active) {
-    var cat = RESEARCH_CATEGORIES.find(function (c) { return c.id === it.node.category; });
+function _renderRow(it, ctx) {
+    var n = it.node;
+    var cat = RESEARCH_CATEGORIES.find(function (c) { return c.id === n.category; });
 
     var pct = null, eta = null;
     if (it.status === 'running') {
-        var entry = (active || []).find(function (e) { return e.nodeId === it.node.id; });
+        var entry = (ctx.active || []).find(function (e) { return e.nodeId === n.id; });
         if (entry) {
-            // entry mentah dari state (tidak punya percent/remainingDays) → hitung di sini.
-            var dur = entry.durationDays || 0;
-            var prog = entry.progressDays || 0;
-            var spd = 1;
-            try { spd = window.__game.research._getSpeedMultiplier() || 1; } catch (e) {}
-            pct = dur > 0 ? Math.round(Math.min(1, prog / dur) * 100) : 0;
-            eta = t('research.slot.eta', { n: Math.ceil(Math.max(0, dur - prog) / spd) });
+            pct = _pctOf(entry);
+            eta = _etaOf(entry);
         }
     }
 
+    var durLabel = null;
+    if (ctx.speed > 1.05) {
+        durLabel = _tf('rs.row.days_eta', n.durationDays + ' hari (~' + Math.ceil(n.durationDays / ctx.speed) + ' hari efektif)',
+            { n: n.durationDays, eta: Math.ceil(n.durationDays / ctx.speed) });
+    }
+
     return renderTechNodeRow({
-        node: it.node,
+        node: n,
         status: it.status,
         categoryInfo: cat,
         detailAttr: 'data-node-detail',
         actionAttr: 'data-research-action',
         progressPct: pct,
         progressEta: eta,
-        reason: it.reason
+        reason: it.reason,
+        blocker: it.blocker,
+        affordable: ctx.cash >= n.cost,
+        recommended: ctx.recId === n.id && (it.status === 'available' || it.blocker === 'slots' || it.blocker === 'cash'),
+        description: (it.status === 'done' || it.status === 'running') ? '' : n.description,
+        durationLabel: durLabel
     });
+}
+
+// ============================================================
+// INTERAKSI LOKAL (cari / sortir / buka-tutup grup)
+// Dipasang sekali di document → main.js tidak perlu diubah.
+// ============================================================
+let _handlersBound = false;
+function _refreshBody() {
+    var sys = _ctx.researchSystem;
+    if (!sys) return;
+    var body = document.querySelector('[data-rs-body]');
+    if (!body) return;
+    try { body.innerHTML = _renderBody(sys); } catch (e) { console.error('[ResearchPanel] refresh body:', e); }
+    var clear = document.querySelector('[data-rs-clear]');
+    if (clear) clear.hidden = !_ui.query;
+    document.querySelectorAll('[data-rs-sort]').forEach(function (b) {
+        b.classList.toggle('active', b.dataset.rsSort === _ui.sort);
+    });
+}
+
+function _ensureHandlers() {
+    if (_handlersBound || typeof document === 'undefined') return;
+    _handlersBound = true;
+
+    document.addEventListener('input', function (e) {
+        var inp = e.target && e.target.closest && e.target.closest('[data-rs-search]');
+        if (!inp) return;
+        _ui.query = inp.value || '';
+        _refreshBody();
+    });
+
+    document.addEventListener('click', function (e) {
+        var tg = e.target;
+        if (!tg || !tg.closest) return;
+        var sortBtn = tg.closest('[data-rs-sort]');
+        if (sortBtn) { e.preventDefault(); _ui.sort = sortBtn.dataset.rsSort; _refreshBody(); return; }
+        var clear = tg.closest('[data-rs-clear]');
+        if (clear) {
+            e.preventDefault();
+            _ui.query = '';
+            var inp = document.querySelector('[data-rs-search]');
+            if (inp) { inp.value = ''; inp.focus(); }
+            _refreshBody();
+        }
+    });
+
+    // 'toggle' tidak bubble → pakai capture.
+    document.addEventListener('toggle', function (e) {
+        var d = e.target;
+        if (!d || !d.getAttribute || !d.getAttribute('data-rs-group')) return;
+        if (_ui.query) return;   // saat mencari, grup dipaksa terbuka — jangan simpan
+        _ui.open[d.getAttribute('data-rs-group')] = !!d.open;
+    }, true);
 }
 
 // ============================================================
@@ -229,51 +489,293 @@ function _renderRow(it, active) {
 export function openNodeDetailModal(params) {
     var nodeId = params.nodeId;
     var researchSystem = params.researchSystem;
+    _ensureStyles();
 
     const node = getNodeById(nodeId);
     if (!node) return;
+    const data = window.__game.state.get();
     const st = researchSystem.getNodeStatus(nodeId);
     const cat = RESEARCH_CATEGORIES.find(c => c.id === node.category);
-
-    const prereqHtml = (node.prerequisites || []).length
-        ? node.prerequisites.map(p => {
-            const pn = getNodeById(p);
-            const done = window.__game.state.get().research.completed.includes(p);
-            return `<div class="sum-row"><span>${done ? '✓' : '○'} ${pn ? escapeHtml(pn.name) : p}</span><b></b></div>`;
-        }).join('')
-        : '<div style="font-size:12px;color:var(--text-mute);">' + t('research.node.prereq_none') + '</div>';
-
+    const speed = researchSystem.getSpeedInfo().speed;
+    const eta = researchSystem.getEtaDays(node);
+    const done = data.research.completed;
     const eff = node.effects || {};
-    const unlockComps = (eff.unlocksComponents || []).length
-        ? `<div style="font-size:12px;color:var(--text-dim);">${t('research.node.effects_comp', { list: eff.unlocksComponents.join(', ') })}</div>` : '';
-    const unlockFeat = (eff.unlocksOsFeatures || []).length
-        ? `<div style="font-size:12px;color:var(--text-dim);">${t('research.node.effects_feat', { list: eff.unlocksOsFeatures.join(', ') })}</div>` : '';
 
+    // --- status pill ---
+    const pillKey = (st.status === 'locked' && (st.blocker === 'slots' || st.blocker === 'cash')) ? 'available' : st.status;
+    const pill = '<span class="rs-pill rs-pill-' + pillKey + '">' +
+        escapeHtml(_tf('rs.status.' + pillKey, pillKey)) + '</span>';
+
+    // --- kv grid ---
+    const poor = data.cash < node.cost;
+    const kv = '<div class="rs-kv">' +
+        _kv(t('research.node.cost'), '<span class="' + (poor && st.status !== 'done' && st.status !== 'running' ? 'rs-neg' : '') + '">' + _money(node.cost) + '</span>') +
+        _kv(t('research.node.duration'), t('research.node.duration_days', { n: node.durationDays })) +
+        _kv(t('research.node.available_year'), String(node.minYear)) +
+        _kv(t('research.node.tier'), 'T' + node.tier) +
+    '</div>';
+
+    // --- progress (bila berjalan) ---
+    let progressHtml = '';
+    if (st.status === 'running') {
+        const entry = data.research.active.find(e => e.nodeId === nodeId);
+        if (entry) {
+            const p = _pctOf(entry);
+            progressHtml = '<div class="rs-block"><div class="rs-block-title">' + escapeHtml(_tf('rs.detail.progress', 'Progres')) + ' · ' + p + '%</div>' +
+                '<div class="progress"><div class="progress-bar" style="width:' + p + '%;"></div></div>' +
+                '<div class="rs-muted" style="margin-top:4px;">' + escapeHtml(_etaOf(entry)) + '</div></div>';
+        }
+    }
+
+    // --- finance rows (bila belum mulai) ---
+    let finance = '';
+    if (st.status !== 'done' && st.status !== 'running') {
+        const after = data.cash - node.cost;
+        finance += '<div class="sum-row"><span>' + escapeHtml(_tf('rs.detail.eta', 'Estimasi selesai')) + '</span><b>' +
+            escapeHtml(_tf('rs.detail.eta_val', '~' + eta + ' hari pada ' + speed.toFixed(2) + 'x', { n: eta, x: speed.toFixed(2).replace(/\.?0+$/, '') })) + '</b></div>';
+        finance += '<div class="sum-row"><span>' + escapeHtml(_tf('rs.detail.cash_after', 'Kas setelah mulai')) + '</span><b class="' + (after < 0 ? 'rs-neg' : '') + '">' + _money(after) + '</b></div>';
+    }
+    if (st.status === 'running') {
+        const refund = Math.floor(node.cost * (BALANCE.research.refundPercent || 0));
+        finance += '<div class="sum-row"><span>' + escapeHtml(_tf('rs.detail.refund', 'Pengembalian jika batal')) + '</span><b>' + _money(refund) + '</b></div>';
+    }
+
+    // --- bonus stat (bar) ---
+    const sb = eff.statBonuses || {};
+    const sbKeys = Object.keys(sb);
+    const bonusHtml = sbKeys.length
+        ? '<div class="rs-block"><div class="rs-block-title">' + escapeHtml(_tf('rs.detail.bonus', 'Bonus stat')) + '</div>' +
+            sbKeys.map(function (k) {
+                const w = Math.max(4, Math.min(100, Math.round(sb[k] / 90 * 100)));
+                return '<div class="rs-bonus"><span>' + escapeHtml(statLabel(k)) + '</span>' +
+                    '<div class="rs-bonus-bar"><i style="width:' + w + '%;"></i></div><b>+' + sb[k] + '</b></div>';
+            }).join('') + '</div>'
+        : '';
+
+    // --- akses yang dibuka ---
+    const chips = [];
+    (eff.unlocksComponents || []).forEach(function (id) {
+        const c = getComponentById(id);
+        chips.push('<span class="rs-tag rs-tag-comp">' + escapeHtml(c ? c.name : id) + '</span>');
+    });
+    (eff.unlocksOsFeatures || []).forEach(function (id) {
+        const f = getOsFeatureById(id);
+        chips.push('<span class="rs-tag rs-tag-os">' + escapeHtml(f ? f.name : id) + '</span>');
+    });
+    const unlocksHtml = chips.length
+        ? '<div class="rs-block"><div class="rs-block-title">' + escapeHtml(_tf('rs.detail.unlocks', 'Membuka akses')) + '</div><div class="rs-tags">' + chips.join('') + '</div></div>'
+        : '';
+
+    // --- prasyarat ---
+    const prereqs = node.prerequisites || [];
+    const prereqHtml = '<div class="rs-block"><div class="rs-block-title">' + t('research.node.prereq') + '</div>' +
+        (prereqs.length
+            ? prereqs.map(function (p) {
+                const pn = getNodeById(p);
+                const ok = done.includes(p);
+                return '<div class="rs-link ' + (ok ? 'is-ok' : 'is-todo') + '"><i>' + (ok ? '✓' : '○') + '</i><span>' +
+                    escapeHtml(pn ? pn.name : p) + '</span>' + (pn ? '<em>' + pn.minYear + '</em>' : '') + '</div>';
+            }).join('')
+            : '<div class="rs-muted">' + t('research.node.prereq_none') + '</div>') +
+        '</div>';
+
+    // --- riset yang dibuka (dependen) ---
+    const deps = researchSystem.getDependents(nodeId);
+    const depHtml = '<div class="rs-block"><div class="rs-block-title">' + escapeHtml(_tf('rs.detail.opens', 'Membuka riset')) + '</div>' +
+        (deps.length
+            ? deps.map(function (d) {
+                return '<div class="rs-link is-next"><i>→</i><span>' + escapeHtml(d.name) + '</span><em>' + d.minYear + '</em></div>';
+            }).join('')
+            : '<div class="rs-muted">' + escapeHtml(_tf('rs.detail.opens_none', 'Ujung jalur.')) + '</div>') +
+        '</div>';
+
+    // --- tombol aksi ---
     const canStart = st.status === 'available';
+    const held = st.status === 'locked' && (st.blocker === 'slots' || st.blocker === 'cash');
+    const actionBtn = canStart
+        ? `<button class="btn-primary" data-research-action="start" data-node-id="${escapeHtml(nodeId)}" style="width:100%;margin-top:12px;">${t('research.node.start')}</button>`
+        : st.status === 'running'
+            ? `<button class="btn-danger" data-research-action="cancel" data-node-id="${escapeHtml(nodeId)}" style="width:100%;margin-top:12px;">${t('research.node.cancel')}</button>`
+            : held
+                ? `<button class="btn-secondary" data-research-action="start" data-node-id="${escapeHtml(nodeId)}" style="width:100%;margin-top:12px;opacity:0.7;">${escapeHtml(st.reason || '')}</button>`
+                : `<button class="btn-secondary" disabled style="width:100%;margin-top:12px;opacity:0.5;">${escapeHtml(st.status === 'done' ? _tf('rs.status.done', 'Selesai') : (st.reason || t('research.node.not_available')))}</button>`;
 
     const html = `
-        <div class="modal-title">${escapeHtml(node.name)}</div>
+        <div class="rs-modal-head">
+            <span class="rs-modal-ico">${cat ? renderIcon(cat.icon, 20) : ''}</span>
+            <div class="rs-modal-titles">
+                <div class="modal-title" style="margin:0;">${escapeHtml(node.name)}</div>
+                <div class="rs-muted">${cat ? escapeHtml(cat.name) : escapeHtml(node.category)} · T${node.tier}</div>
+            </div>
+            ${pill}
+        </div>
         <div class="modal-sub">${escapeHtml(node.description)}</div>
-        <div class="sum-row"><span>${t('research.node.category')}</span><b>${cat ? cat.name : node.category}</b></div>
-        <div class="sum-row"><span>${t('research.node.tier')}</span><b>${node.tier}</b></div>
-        <div class="sum-row"><span>${t('research.node.available_year')}</span><b>${node.minYear}</b></div>
-        <div class="sum-row"><span>${t('research.node.cost')}</span><b>$${node.cost.toLocaleString('en-US')}</b></div>
-        <div class="sum-row"><span>${t('research.node.duration')}</span><b>${t('research.node.duration_days', { n: node.durationDays })}</b></div>
-        <div class="card-title" style="margin-top:12px;">${t('research.node.prereq')}</div>
+        ${kv}
+        ${finance}
+        ${progressHtml}
+        ${bonusHtml}
+        ${unlocksHtml}
         ${prereqHtml}
-        ${unlockComps || unlockFeat ? '<div class="card-title" style="margin-top:12px;">' + t('research.node.effects') + '</div>' + unlockComps + unlockFeat : ''}
-        <div class="sum-row" style="margin-top:12px;"><span>${t('research.node.status')}</span><b>${st.reason || st.status}</b></div>
+        ${depHtml}
+        ${st.reason && !held ? '<div class="sum-row" style="margin-top:8px;"><span>' + t('research.node.status') + '</span><b>' + escapeHtml(st.reason) + '</b></div>' : ''}
         ${renderSilResearchBlock('tech', nodeId)}
-        ${canStart
-            ? `<button class="btn-primary" data-research-action="start" data-node-id="${nodeId}" style="width:100%;margin-top:12px;">${t('research.node.start')}</button>`
-            : st.status === 'running'
-                ? `<button class="btn-danger" data-research-action="cancel" data-node-id="${nodeId}" style="width:100%;margin-top:12px;">${t('research.node.cancel')}</button>`
-                : `<button class="btn-secondary" disabled style="width:100%;margin-top:12px;opacity:0.5;">${escapeHtml(st.reason || t('research.node.not_available'))}</button>`
-        }
+        ${actionBtn}
         <button class="btn-secondary" data-modal-close style="width:100%;margin-top:8px;">${t('common.close')}</button>
     `;
     window.__game.Modal.open('node-detail', html);
 }
+
+function _kv(label, value) {
+    return '<div class="rs-kv-item"><span>' + escapeHtml(label) + '</span><b>' + value + '</b></div>';
+}
+
+// ============================================================
+// STYLE (disuntik sekali; namespace .rs-* + sedikit tambahan .node-row-*)
+// Mengikuti pola GameIcons.ensureIconStyles → style.css tidak perlu diubah.
+// ============================================================
+let _stylesInjected = false;
+function _ensureStyles() {
+    if (_stylesInjected || typeof document === 'undefined') return;
+    _stylesInjected = true;
+    var el = document.createElement('style');
+    el.id = 'rs-research-styles';
+    el.textContent = RS_CSS;
+    document.head.appendChild(el);
+}
+
+const RS_CSS = `
+.rs-root { display: block; }
+
+/* HERO */
+.rs-hero {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px; margin-bottom: 10px;
+    background: linear-gradient(135deg, var(--bg-2), var(--bg-3));
+    border: 1px solid var(--border); border-radius: var(--r-lg);
+}
+.rs-ring {
+    --rs-deg: 0deg;
+    flex: 0 0 auto; width: 68px; height: 68px; border-radius: 50%;
+    background: conic-gradient(var(--accent) var(--rs-deg), var(--bg-4) 0);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 1px var(--border);
+}
+.rs-ring-in {
+    width: 54px; height: 54px; border-radius: 50%; background: var(--bg-2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-variant-numeric: tabular-nums; color: var(--text-primary);
+}
+.rs-hero-main { flex: 1; min-width: 0; }
+.rs-hero-title { font-size: var(--fs-md); font-weight: var(--fw-bold); letter-spacing: -0.01em; color: var(--text-primary); }
+.rs-hero-sub { font-size: var(--fs-xs); color: var(--text-tertiary); margin: 2px 0 8px; }
+.rs-hero-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.rs-stat { background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r); padding: 6px 8px; min-width: 0; }
+.rs-stat span { display: block; font-size: 9.5px; text-transform: uppercase; letter-spacing: .6px; color: var(--text-tertiary); font-weight: var(--fw-bold); }
+.rs-stat b { display: block; font-size: var(--fs-sm); color: var(--text-primary); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs-stat em { font-style: normal; font-size: 9px; color: var(--warn); margin-left: 2px; }
+
+/* SLOT KOSONG */
+.rs-slot-empty { margin-top: 8px; padding: 7px 10px; border: 1px dashed var(--border-strong); border-radius: var(--r); font-size: 11px; color: var(--text-tertiary); text-align: center; }
+
+/* KATEGORI */
+.rs-chip-count { font-size: 10px; opacity: .75; font-variant-numeric: tabular-nums; margin-left: 2px; }
+
+/* TOOLBAR */
+.rs-toolbar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.rs-search { position: relative; display: flex; align-items: center; }
+.rs-search-ico { position: absolute; left: 11px; color: var(--text-tertiary); display: flex; pointer-events: none; }
+.rs-search-input {
+    width: 100%; box-sizing: border-box; min-height: 38px;
+    padding: 8px 34px 8px 32px; font: inherit; font-size: var(--fs-base);
+    background: var(--bg-2); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: var(--r-md); outline: none;
+    -webkit-appearance: none; appearance: none;
+}
+.rs-search-input::-webkit-search-cancel-button { display: none; }
+.rs-search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.rs-search-clear {
+    position: absolute; right: 6px; width: 26px; height: 26px; border: 0; border-radius: 50%;
+    background: var(--bg-4); color: var(--text-secondary); font-size: 16px; line-height: 1; cursor: pointer;
+}
+.rs-search-clear[hidden] { display: none; }
+.rs-sort { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.rs-sort::-webkit-scrollbar { display: none; }
+.rs-sort-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--text-tertiary); font-weight: var(--fw-bold); flex-shrink: 0; }
+.rs-sort-btn {
+    flex-shrink: 0; padding: 4px 10px; font: inherit; font-size: var(--fs-xs); font-weight: var(--fw-semibold);
+    background: transparent; color: var(--text-secondary); border: 1px solid var(--border); border-radius: var(--r-pill); cursor: pointer;
+}
+.rs-sort-btn.active { background: var(--bg-4); color: var(--text-primary); border-color: var(--border-strong); }
+
+/* REKOMENDASI */
+.rs-rec {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 12px; padding: 10px 12px;
+    background: linear-gradient(135deg, var(--accent-soft), transparent 70%), var(--bg-2);
+    border: 1px solid var(--accent); border-radius: var(--r-lg);
+}
+.rs-rec-ico { cursor: pointer; width: 36px; height: 36px; flex: 0 0 auto; border-radius: var(--r-md); background: var(--bg-1); display: flex; align-items: center; justify-content: center; color: var(--accent); }
+.rs-rec-main { cursor: pointer; flex: 1; min-width: 0; }
+.rs-rec-kicker { font-size: 9.5px; font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: .8px; color: var(--accent); }
+.rs-rec-name { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs-rec-why { font-size: var(--fs-xs); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.rs-rec-note { font-size: 10.5px; color: var(--warn); margin-top: 2px; }
+.rs-rec-btn { flex: 0 0 auto; padding: 8px 14px; border: 0; border-radius: var(--r-md); background: var(--accent); color: #fff; font: inherit; font-size: var(--fs-sm); font-weight: var(--fw-bold); cursor: pointer; }
+.rs-rec-btn.is-held { background: var(--bg-4); color: var(--text-secondary); }
+
+/* BARIS NODE (tambahan) */
+.node-row-desc { font-size: 11px; color: var(--text-tertiary); line-height: 1.4; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.node-row-reason { font-size: 10.5px; color: var(--text-tertiary); margin-bottom: 4px; }
+.node-row-reason.is-held { color: var(--warn); }
+.node-row-rec { font-size: 9.5px; font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: .4px; color: var(--accent); background: var(--accent-soft); padding: 2px 6px; border-radius: var(--r-sm); flex-shrink: 0; }
+.node-row-cost.is-poor { color: var(--danger); }
+.node-row-cta-held { opacity: .45; }
+.node-row-cta-done { color: var(--success); background: transparent; border-color: transparent; cursor: default; font-size: 14px; }
+.node-row-wrap.node-held::before { background: var(--warn); }
+.node-row-wrap.node-recommended { background: linear-gradient(90deg, var(--accent-soft), transparent 40%); }
+.node-row-wrap.node-locked { opacity: .6; }
+
+/* MODAL */
+.rs-modal-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.rs-modal-ico { width: 38px; height: 38px; flex: 0 0 auto; border-radius: var(--r-md); background: var(--bg-3); display: flex; align-items: center; justify-content: center; color: var(--accent); }
+.rs-modal-titles { flex: 1; min-width: 0; }
+.rs-muted { font-size: 11.5px; color: var(--text-tertiary); line-height: 1.4; }
+.rs-pill { flex: 0 0 auto; font-size: 10px; font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: .5px; padding: 3px 8px; border-radius: var(--r-pill); }
+.rs-pill-done { background: var(--success-soft); color: var(--success); }
+.rs-pill-running { background: var(--warn-soft); color: var(--warn); }
+.rs-pill-available { background: var(--info-soft); color: var(--info); }
+.rs-pill-locked { background: var(--bg-4); color: var(--text-tertiary); }
+.rs-kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
+.rs-kv-item { background: var(--bg-3); border-radius: var(--r); padding: 8px 10px; }
+.rs-kv-item > span { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-tertiary); font-weight: var(--fw-bold); }
+.rs-kv-item b { font-size: var(--fs-md); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.rs-neg { color: var(--danger) !important; }
+.rs-block { margin-top: 12px; }
+.rs-block-title { font-size: 10px; font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: .7px; color: var(--text-tertiary); margin-bottom: 6px; }
+.rs-bonus { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: var(--fs-sm); }
+.rs-bonus span { width: 74px; flex: 0 0 auto; color: var(--text-secondary); }
+.rs-bonus-bar { flex: 1; height: 6px; border-radius: var(--r-pill); background: var(--bg-4); overflow: hidden; }
+.rs-bonus-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent-hover, var(--accent)), var(--success)); border-radius: inherit; }
+.rs-bonus b { width: 34px; text-align: right; color: var(--success); font-variant-numeric: tabular-nums; }
+.rs-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.rs-tag { font-size: 11px; padding: 3px 8px; border-radius: var(--r-pill); background: var(--bg-3); color: var(--text-secondary); border: 1px solid var(--border); }
+.rs-tag-os { background: var(--info-soft); color: var(--info); border-color: transparent; }
+.rs-link { display: flex; align-items: baseline; gap: 8px; padding: 5px 0; font-size: var(--fs-sm); border-bottom: 1px solid var(--border); }
+.rs-link:last-child { border-bottom: 0; }
+.rs-link i { font-style: normal; width: 14px; text-align: center; flex: 0 0 auto; }
+.rs-link span { flex: 1; min-width: 0; color: var(--text-primary); }
+.rs-link em { font-style: normal; font-size: 10.5px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+.rs-link.is-ok i { color: var(--success); }
+.rs-link.is-todo i { color: var(--text-tertiary); }
+.rs-link.is-next i { color: var(--accent); }
+
+@media (max-width: 380px) {
+    .rs-hero { padding: 12px; gap: 10px; }
+    .rs-ring { width: 58px; height: 58px; }
+    .rs-ring-in { width: 46px; height: 46px; font-size: 12.5px; }
+    .rs-hero-stats { gap: 6px; }
+}
+`;
 
 export {
     openOsWizardModal,
