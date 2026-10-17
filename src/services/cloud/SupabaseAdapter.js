@@ -375,7 +375,7 @@ export const SupabaseAdapter = {
         if (res.error) throw mk(res.error);
         return res.data;
     },
-};
+},
 rpcAdminGetProfiles: async function () {
     var c = await getClient();
     var res = await c.rpc('admin_get_all_profiles');
@@ -388,4 +388,4 @@ rpcAdminSetSilicon: async function (userId, amount) {
     var res = await c.rpc('admin_set_silicon', { p_user_id: userId, p_amount: amount });
     if (res.error) throw mk(res.error);
     return res.data;
-},
+};
