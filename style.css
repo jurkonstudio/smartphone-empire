@@ -4017,76 +4017,197 @@ html[data-density="compact"] .ov-split { margin-top: 10px; }
 html[data-density="compact"] .ov-metric { padding: 9px 11px; }
 html[data-density="compact"] .ov-metric-value { font-size: var(--fs-xl); margin: 6px 0; }
 html[data-density="compact"] .ov-qa { min-height: 62px; }
-/* ============================================================
-   PRECISION NAVIGATION BAR (iOS Style - Icon Only Highlight)
-   ============================================================ */
+/* ============================================================================
+   iCLOUD LAYER v2027.11 — padat, pekat, tajam, nyaman di mata
+   Dimuat paling akhir. Mengganti blok "Precision Navigation Bar" lama.
+   Prinsip: permukaan solid (tanpa blur keruh), garis hairline 1px,
+   kontras teks tinggi, radius kecil, bayangan nyaris tak terlihat,
+   angka tabular, font SF dengan antialiasing tajam.
+   Density compact sudah menyatu di sini (density.css tidak diperlukan).
+   ============================================================================ */
 
+/* ---------- 1. Token warna: iCloud light & dark ---------- */
+[data-theme="light"] {
+    --bg-0: #f5f5f7; --bg-1: #ffffff; --bg-2: #ffffff;
+    --bg-3: #f0f0f3; --bg-4: #e4e4e9;
+    --border: #e1e1e6;
+    --border-strong: #c7c7cc;
+    --text-primary: #1d1d1f; --text-secondary: #515154;
+    --text-tertiary: #6e6e73; --text-disabled: #aeaeb2;
+    --shadow-sm: 0 0 0 0 transparent;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 28px rgba(0,0,0,0.16);
+    --bg-overlay: rgba(0,0,0,0.42);
+    --bg-header: #ffffff;
+    --bg-nav: #ffffff;
+}
+:root,
+[data-theme="dark"] {
+    --bg-0: #000000; --bg-1: #121214; --bg-2: #1c1c1e;
+    --bg-3: #2c2c2e; --bg-4: #3a3a3c;
+    --border: #2f2f33;
+    --border-strong: #48484c;
+    --text-primary: #f5f5f7; --text-secondary: #b4b4ba;
+    --text-tertiary: #8e8e93; --text-disabled: #5a5a5f;
+    --shadow-sm: 0 0 0 0 transparent;
+    --shadow: 0 1px 3px rgba(0,0,0,0.5);
+    --shadow-lg: 0 8px 28px rgba(0,0,0,0.65);
+    --bg-overlay: rgba(0,0,0,0.65);
+    --bg-header: #121214;
+    --bg-nav: #121214;
+}
+/* aksen biru ala Apple (lebih tajam) */
+[data-theme="light"][data-accent="blue"] { --accent:#0071e3; --accent-hover:#0062c4; --accent-soft:rgba(0,113,227,0.10); --accent-glow:rgba(0,113,227,0.0); }
+[data-theme="dark"][data-accent="blue"]  { --accent:#0a84ff; --accent-hover:#409cff; --accent-soft:rgba(10,132,255,0.16); --accent-glow:rgba(10,132,255,0.0); }
+
+/* ---------- 2. Tipografi: tajam & padat ---------- */
+:root { --nav-h: 54px; --r-sm: 5px; --r: 8px; --r-md: 10px; --r-lg: 12px; --r-xl: 14px; }
+body {
+    font-size: 13px; line-height: 1.4; letter-spacing: -0.01em;
+    font-feature-settings: "tnum" 1, "cv11" 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+}
+.kpi-value, .header-cash, .sum-row, td, .tabular { font-variant-numeric: tabular-nums; }
+
+/* ---------- 3. Header: solid, tipis, garis hairline ---------- */
+.app-header {
+    background: var(--bg-header) !important;
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    border-bottom: 1px solid var(--border);
+}
+.header-inner { gap: 1px; padding: 6px 12px; }
+.header-row { min-height: 20px; }
+.header-company { font-weight: 700; letter-spacing: -0.02em; }
+.header-meta { font-size: 10.5px; color: var(--text-secondary); }
+.btn-icon {
+    min-width: 30px; height: 24px; padding: 0 6px; font-size: 10.5px;
+    background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--r-sm);
+}
+
+/* ---------- 4. Konten ---------- */
+.app-view {
+    padding: 8px 8px 0;
+    padding-bottom: calc(12px + var(--nav-h) + env(safe-area-inset-bottom));
+}
+
+/* ---------- 5. Kartu: datar, garis tipis, padat ---------- */
+.card {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 10px 12px; margin-bottom: 6px;
+    box-shadow: none;
+}
+@media (hover: hover) { .card:hover { transform: none; box-shadow: none; border-color: var(--border-strong); } }
+.card-title {
+    margin-bottom: 6px; font-weight: 700; letter-spacing: 0.4px;
+    color: var(--text-secondary);
+}
+.kpi-grid { gap: 6px; margin-bottom: 6px; }
+.kpi {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--r-md); padding: 8px 10px; box-shadow: none;
+}
+.kpi::before { width: 2px; animation: none; opacity: 0.9; }
+.kpi-label { margin-bottom: 2px; color: var(--text-secondary); font-weight: 700; }
+.kpi-value { font-size: 17px; font-weight: 800; letter-spacing: -0.03em; }
+.kpi-sub { margin-top: 2px; }
+
+/* ---------- 6. Baris & daftar: rapat dengan pemisah tipis ---------- */
+.sum-row { padding: 6px 0; border-bottom: 1px solid var(--border); }
+.sum-row:last-child { border-bottom: 0; }
+.sum-row.total { padding-top: 8px; margin-top: 2px; font-weight: 700; }
+.log-entry { padding: 4px 0; border-bottom: 1px solid var(--border); }
+.quest-item { padding: 6px 0; gap: 8px; }
+.settings-row { padding: 9px 12px; }
+.node-row-wrap, .os-row, .cand-row { padding: 7px 10px; }
+.os-hero { padding: 9px 12px; }
+
+/* ---------- 7. Tombol & form: tegas ---------- */
+.btn-primary, .btn-secondary, .btn-danger {
+    min-height: 36px; padding: 7px 12px; box-shadow: none;
+    border-radius: var(--r); font-weight: 600; letter-spacing: -0.01em;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); box-shadow: none; }
+.btn-secondary { background: var(--bg-3); border-color: var(--border-strong); }
+.btn-toggle { padding: 5px 10px; }
+.field-label { margin: 4px 0; font-weight: 600; color: var(--text-secondary); }
+.field-input {
+    padding: 9px 12px; font-size: 13px;
+    background: var(--bg-1); border: 1px solid var(--border-strong); border-radius: var(--r);
+}
+.field-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); outline: none; }
+.diff-grid { gap: 6px; }
+.diff-btn { padding: 8px 12px; min-height: 48px; }
+
+/* ---------- 8. Sub-tab (segmented control ala iOS) ---------- */
+.subtab-bar {
+    margin-bottom: 8px; padding: 2px; box-shadow: none;
+    background: var(--bg-3); border: 0; border-radius: var(--r);
+}
+.subtab-btn { padding: 6px; min-height: 30px; border-radius: 6px; font-weight: 600; }
+.subtab-btn.active {
+    background: var(--bg-2); color: var(--text-primary);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.18); border: 0;
+}
+[data-theme="dark"] .subtab-btn.active { background: var(--bg-4); box-shadow: none; }
+
+/* ---------- 9. Lain-lain ---------- */
+.progress { height: 5px; border-radius: 3px; }
+.progress-label { margin-bottom: 4px; }
+.empty { padding: 28px 16px; }
+.chart-wrap, .chart-canvas { height: 130px; }
+.ov-wrap { gap: 8px; }
+.ov-card, .ov-qa, .ov-pulse, .ov-metric { box-shadow: none; border-radius: var(--r-md); }
+.ov-card { padding: 10px 12px; }
+.ov-hero { padding: 12px; }
+.ov-hero-value { font-size: var(--fs-2xl); }
+.ov-metric { padding: 9px 11px; }
+.ov-metric-value { font-size: var(--fs-xl); margin: 6px 0; }
+.ov-qa { min-height: 62px; }
+
+/* ---------- 10. NAVIGASI BAWAH: putih, mengikuti tema UI ---------- */
 .mobile-nav {
-    background: rgba(18, 18, 20, 0.85) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    backdrop-filter: blur(20px) saturate(180%);
-    border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+    background: var(--bg-nav) !important;
+    -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+    border-top: 1px solid var(--border) !important;
+    box-shadow: none;
+    height: calc(var(--nav-h) + env(safe-area-inset-bottom));
     padding-bottom: env(safe-area-inset-bottom) !important;
-    /* Pastikan posisi relative agar slider bisa absolute di dalamnya */
-    position: relative; 
-}
-
-.nav-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px !important; 
-    padding: 8px 0 !important;
-    background: transparent !important; 
-    color: #8E8E93 !important; 
-    transition: color 0.2s ease !important;
-    z-index: 2; /* Tombol berada di atas slider */
-}
-
-.nav-btn.active {
-    color: #0A84FF !important; 
-}
-
-.nav-btn:active {
-    transform: scale(0.92);
-    transition: transform 0.1s;
-}
-
-/* Pembungkus ikon untuk mengukur posisi slider */
-.nav-ico-wrap {
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     position: relative;
 }
-
-.nav-btn .nav-ico svg {
-    width: 22px !important;
-    height: 22px !important;
-    stroke-width: 1.8px !important; 
+.nav-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px !important; padding: 4px 0 !important; min-height: 44px;
+    background: transparent !important;
+    color: var(--text-tertiary) !important;
+    transition: color 0.2s ease !important;
+    z-index: 2;
 }
-
+.nav-btn.active { color: var(--accent) !important; }
+.nav-btn:active { transform: scale(0.94); transition: transform 0.1s; }
+.nav-ico-wrap { height: 24px; display: flex; align-items: center; justify-content: center; position: relative; }
+.nav-btn .nav-ico { width: 22px; height: 22px; }
+.nav-btn .nav-ico svg { width: 22px !important; height: 22px !important; stroke-width: 1.9px !important; }
+.nav-btn.active .nav-ico { transform: none; animation: none; }
 .nav-btn .nav-label {
-    font-size: 10px !important;
-    font-weight: 500 !important;
-    line-height: 1 !important;
-    letter-spacing: 0.1px !important;
+    font-size: 10px !important; font-weight: 500 !important;
+    line-height: 1 !important; letter-spacing: 0 !important; margin-top: 1px;
 }
-
-.nav-btn.active .nav-label {
-    font-weight: 600 !important;
-}
-
-/* Slider (Kotak Biru di belakang ikon) */
+.nav-btn.active .nav-label { font-weight: 700 !important; }
 .nav-slider {
-    position: absolute;
-    top: 8px !important; /* Sejajar dengan padding atas nav-btn */
-    height: 28px !important; /* Tinggi pas untuk ikon 22px */
-    background: rgba(10, 132, 255, 0.15) !important; 
-    border-radius: 8px !important; /* Squircle presisi */
-    border: 1px solid rgba(10, 132, 255, 0.1) !important;
+    position: absolute; top: 2px !important; height: 28px !important;
+    background: var(--accent-soft) !important;
+    border: 0 !important; border-radius: 8px !important; box-shadow: none !important;
+    -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
     transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
-    z-index: 1; /* Berada di bawah tombol */
+    z-index: 1;
+}
+.mobile-nav.dragging .nav-slider { background: var(--accent-soft) !important; border: 0 !important; box-shadow: none !important; transition: none !important; }
+
+/* ---------- 11. Desktop ---------- */
+@media (min-width: 768px) {
+    .app-view { padding: 12px 12px 0; padding-bottom: 12px; }
 }
