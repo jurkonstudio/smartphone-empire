@@ -187,7 +187,7 @@ function updateNavSlider(animated) {
     var itemW = navW / count;
     
     // PRESISI: Lebar slider dikunci 46px
-    var sliderW = 46; 
+    var sliderW = Math.max(56, Math.min(itemW * 0.88, 80)); // harus sama dengan NavSliderDrag._readMetrics
     var x = (idx * itemW) + ((itemW - sliderW) / 2);
 
     if (!animated) {
