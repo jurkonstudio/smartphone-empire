@@ -1,5 +1,5 @@
 // FILE: src/systems/MarketSystem.js
-// v2027.2a — pangsa pasar ber-anchor historis + ekosistem di-skip.
+// v2028.6 — [LOGIC] Kompetitor lebih agresif menekan produk pemain yang harganya tidak masuk akal (overpriced).
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
@@ -44,12 +44,7 @@ export class MarketSystem {
         const data = this.state.data;
         const year = snap.currentYear;
 
-        // ---- 1. Revenue pemain ----
         const playerRevenue = Math.round(this._monthRevenueAccum);
-
-        // ---- 2. Revenue kompetitor (anchored historis) ----
-        // [v2027.2a] Skip entitas isEcosystem (Android) supaya tidak
-        // double-count dengan brand hardware.
         const cs = this._competitorSystem;
         const competitorRevenues = [];
         let totalCompetitorRevenue = 0;
@@ -59,18 +54,15 @@ export class MarketSystem {
             ids.forEach(id => {
                 const comp = getCompetitorById(id);
                 if (!comp) return;
-                if (comp.isEcosystem) return; // skip Android ecosystem
+                if (comp.isEcosystem) return;
                 const rev = Math.max(0, Math.round(cs.computeCompetitorPower(id, year)));
                 competitorRevenues.push({ id, name: comp.name, revenue: rev });
                 totalCompetitorRevenue += rev;
             });
         }
 
-        // ---- 3. Others — proporsi dari tracked (player + kompetitor) ----
         const othersShare = this._interpYearly(BALANCE.market.othersShareByYear, year, 0.25);
 
-        // ---- 4. Pangsa pemain ----
-        // [v2027.4] Konversi ke skala pasar + rata-rata bergerak (lihat balance).
         const playerRevenueEq = this._toMarketScale(playerRevenue, year, snap.currentMonth);
         const tracked = playerRevenueEq + totalCompetitorRevenue;
         const others = Math.round(tracked * (othersShare / Math.max(0.01, 1 - othersShare)));
@@ -78,7 +70,6 @@ export class MarketSystem {
         const maxShare = (BALANCE.market.playerShareScale && BALANCE.market.playerShareScale.maxShare) || 1;
         const playerShare = total > 0 ? Math.min(maxShare, playerRevenueEq / total) : 0;
 
-        // ---- 5. Simpan ----
         data.market.share = playerShare;
         data.market.competitors = competitorRevenues.map(cr => {
             const comp = getCompetitorById(cr.id);
@@ -110,10 +101,8 @@ export class MarketSystem {
         });
         if (data.market.revenueHistory.length > 24) data.market.revenueHistory.length = 24;
 
-        // ---- 6. Drift tren ----
         this._driftTrends();
 
-        // ---- 7. Milestone ----
         const pct = Math.round(playerShare * 100);
         if (pct >= 10 && !data.milestones.some(m => m.id === 'share_10')) {
             this.state.addMilestone('share_10', 'Pangsa pasar 10%.');
@@ -125,7 +114,6 @@ export class MarketSystem {
             this.state.addMilestone('share_50', 'Pangsa pasar 50% — pemimpin pasar!');
         }
 
-        // ---- 8. Log ----
         if (playerRevenue > 0) {
             this.state.addLog(
                 'Pangsa pasar: ' + (playerShare * 100).toFixed(1) +
@@ -134,13 +122,9 @@ export class MarketSystem {
             );
         }
 
-        // ---- 8b. Tekanan kompetitor ke produk pemain ----
         this._updateCompetitorPressure();
-
-        // ---- 9. Reset accumulator ----
         this._monthRevenueAccum = 0;
 
-        // ---- 10. Emit ----
         bus.emit('market:share-updated', {
             playerShare,
             competitors: data.market.competitors.map(c => ({ id: c.id, name: c.name, share: c.share }))
@@ -148,8 +132,6 @@ export class MarketSystem {
         bus.emit('state:changed', data);
     }
 
-    // [v2027.4] Ubah pendapatan pemain (skala game) -> setara skala pasar global,
-    // lalu haluskan dengan rata-rata bergerak beberapa bulan terakhir.
     _toMarketScale(playerRevenue, year, month) {
         const cfg = BALANCE.market.playerShareScale;
         if (!cfg || cfg.enabled === false) return playerRevenue;
@@ -162,7 +144,6 @@ export class MarketSystem {
 
         let eq = playerRevenue * scale;
 
-        // Rata-rata bergerak (bulan berjalan + N-1 bulan sebelumnya).
         const n = Math.max(1, cfg.smoothMonths || 1);
         if (n > 1) {
             const hist = (data.market.revenueHistory || []).slice(0, n - 1);
@@ -176,8 +157,9 @@ export class MarketSystem {
         return Math.round(eq);
     }
 
-    // [v2027.4] Hitung tekanan kompetitor per produk: pangsa kompetitor
-    // x seberapa jauh kualitas mereka (tier) melampaui kualitas produk.
+    // ============================================================
+    // TEKANAN KOMPETITOR (VALUE VS PRICE)
+    // ============================================================
     _updateCompetitorPressure() {
         const data = this.state.data;
         const cfg = BALANCE.competitors.pressure;
@@ -192,14 +174,29 @@ export class MarketSystem {
         catalog.forEach(p => {
             if (p.status !== 'selling' || !p.stats) return;
             let pressure = cfg.base;
+            
+            // Kalkulasi Value for Money pemain
+            const refPrice = getMacro(data.time, BALANCE.macro).priceRef;
+            const expectedPrice = refPrice * Math.pow(Math.max(10, p.stats.qualityScore) / 50, 1.3);
+            const priceRatio = p.price / expectedPrice;
+            
+            // Jika overpriced (>1.2), tekanan kompetitor naik drastis
+            let pricePressureMod = 1.0;
+            if (priceRatio > 1.2) {
+                pricePressureMod = 1.0 + (priceRatio - 1.2) * 2.0;
+            } else if (priceRatio < 0.7) {
+                pricePressureMod = 0.5; // Jika murah meriah, tekanan kompetitor berkurang
+            }
+
             comps.forEach(c => {
                 const e = entities[c.id];
                 const tier = e ? e.currentTier : 1;
                 const compQuality = tier * cfg.tierToQuality + cfg.tierOffset;
-                const gap = Math.max(0, Math.min(cfg.maxGap,
-                    (compQuality - p.stats.qualityScore) / cfg.gapDivisor));
-                pressure += c.share * gap * cfg.gainPerShare;
+                const gap = Math.max(0, Math.min(cfg.maxGap, (compQuality - p.stats.qualityScore) / cfg.gapDivisor));
+                
+                pressure += c.share * gap * cfg.gainPerShare * pricePressureMod;
             });
+            
             p.competitorPressure = Math.min(cfg.maxPressure, pressure * aggr);
         });
     }
@@ -210,8 +207,6 @@ export class MarketSystem {
         const target = getMacro(data.time, BALANCE.macro).trends;
         const pull = BALANCE.macro.trendPull;
         const noise = BALANCE.macro.trendNoise;
-        // Mean-reverting: tren ditarik ke jangkar tahun berjalan + sedikit gejolak,
-        // bukan random walk yang bisa melenceng jauh dari sejarah.
         for (const k in target) {
             const cur = (t[k] !== undefined) ? t[k] : target[k];
             const next = cur + (target[k] - cur) * pull + (Math.random() * 2 - 1) * noise;
@@ -238,9 +233,6 @@ export class MarketSystem {
         return map[years[years.length - 1]];
     }
 
-    // ============================================================
-    // API PUBLIK
-    // ============================================================
     getMarketShare()      { return this.state.data.market.share || 0; }
     getCompetitors()      { return this.state.data.market.competitors || []; }
     getTrends()           { return this.state.data.market.trends || {}; }
