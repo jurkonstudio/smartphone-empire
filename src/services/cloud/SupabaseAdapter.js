@@ -1,5 +1,5 @@
 // FILE: src/services/cloud/SupabaseAdapter.js
-// v2028.16 — [ADMIN] Menambahkan RPC untuk Panel Admin.
+// v2028.27 — [ADMIN] Menambahkan RPC untuk Manajemen Pemain.
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_LIB_URLS, CLOUD } from './supabase.config.js';
 
 var _client = null;
@@ -212,9 +212,7 @@ export const SupabaseAdapter = {
     subscribePresence: async function (userId, meta, onSync) {
         var c = await getClient();
         var ch = c.channel('online-users', {
-            config: {
-                presence: { key: userId }
-            }
+            config: { presence: { key: userId } }
         });
 
         ch.on('presence', { event: 'sync' }, function () {
@@ -222,15 +220,12 @@ export const SupabaseAdapter = {
                 var state = ch.presenceState() || {};
                 var ids = Object.keys(state);
                 onSync(ids);
-            } catch (e) {
-                onSync([]);
-            }
+            } catch (e) { onSync([]); }
         });
 
         ch.subscribe(function (status) {
             if (status === 'SUBSCRIBED') {
-                try { ch.track(meta || { online_at: new Date().toISOString() }); }
-                catch (e) {}
+                try { ch.track(meta || { online_at: new Date().toISOString() }); } catch (e) {}
             }
         });
 
@@ -361,7 +356,6 @@ export const SupabaseAdapter = {
         return res.data;
     },
 
-    // [ADMIN PANEL]
     rpcGetPendingPayments: async function () {
         var c = await getClient();
         var res = await c.rpc('get_pending_payments');
@@ -375,17 +369,19 @@ export const SupabaseAdapter = {
         if (res.error) throw mk(res.error);
         return res.data;
     },
-},
-rpcAdminGetProfiles: async function () {
-    var c = await getClient();
-    var res = await c.rpc('admin_get_all_profiles');
-    if (res.error) throw mk(res.error);
-    return res.data;
-},
 
-rpcAdminSetSilicon: async function (userId, amount) {
-    var c = await getClient();
-    var res = await c.rpc('admin_set_silicon', { p_user_id: userId, p_amount: amount });
-    if (res.error) throw mk(res.error);
-    return res.data;
+    // [ADMIN PANEL - MANAJEMEN PEMAIN]
+    rpcAdminGetProfiles: async function () {
+        var c = await getClient();
+        var res = await c.rpc('admin_get_all_profiles');
+        if (res.error) throw mk(res.error);
+        return res.data;
+    },
+
+    rpcAdminSetSilicon: async function (userId, amount) {
+        var c = await getClient();
+        var res = await c.rpc('admin_set_silicon', { p_user_id: userId, p_amount: amount });
+        if (res.error) throw mk(res.error);
+        return res.data;
+    },
 };
