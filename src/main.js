@@ -1,4 +1,5 @@
 // FILE: src/main.js
+// v2027.44 — Promosi regional (Global/Asia/Eropa) + Bank v2.
 // v2027.35c — Silicon + daily login aktif.
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
@@ -28,6 +29,9 @@ import { FabSystem } from './systems/FabSystem.js';
 import { NewsSystem } from './systems/NewsSystem.js';
 import { AdvisorSystem } from './systems/AdvisorSystem.js';
 import { StockSystem } from './systems/StockSystem.js';
+import { PromotionSystem } from './systems/PromotionSystem.js';
+import { BankSystem } from './systems/BankSystem.js';
+import { bindRegionalActions } from './ui/panels/RegionalBindings.js';
 import { SiliconService } from './systems/SiliconService.js';
 import { renderHeader } from './ui/layout/Header.js';
 import { renderMobileNav } from './ui/layout/MobileNav.js';
@@ -98,8 +102,13 @@ var chipSystem        = new ChipSystem(state);
 var fabSystem         = new FabSystem(state);
 var advisor           = new AdvisorSystem(state, { research: research });
 var stockSystem       = new StockSystem(state);
+var promotion         = new PromotionSystem(state);
+var bank              = new BankSystem(state);
 
 market.setCompetitorSystem(competitors);
+products.setPromotionSystem(promotion);
+bank.setPromotionSystem(promotion);
+economy.setBank(bank);
 
 // ============ STATE UI ============
 var activeView = 'dashboard';
@@ -880,6 +889,22 @@ function bindStateEvents() {
     bus.on('team:recruited', function () { if (activeView === 'team') renderView({ soft: true }); });
     bus.on('team:fired', function () { if (activeView === 'team') renderView({ soft: true }); });
 
+    // Promosi regional & Bank: segarkan layar yang sedang terbuka.
+    function refreshRegionalView() {
+        if ((activeView === 'market' && activeMarketSubtab === 'promo') ||
+            (activeView === 'team' && activeHqSubtab === 'bank') ||
+            activeView === 'settings') {
+            renderView({ soft: true });
+        }
+    }
+    bus.on('regional:ui', refreshRegionalView);
+    bus.on('promo:changed', refreshRegionalView);
+    bus.on('bank:changed', refreshRegionalView);
+    bus.on('economy:month-processed', refreshRegionalView);
+    bus.on('time:day-changed', function () {
+        if (activeView === 'market' && activeMarketSubtab === 'promo') renderView({ soft: true });
+    });
+
     bus.on('lang:changed', function () { renderAll(); });
     bus.on('silicon:changed', function () { renderHeaderOnly(); });
 
@@ -997,6 +1022,9 @@ async function boot() {
         NewsSystem.start();
         advisor.start();
         stockSystem.start();
+        promotion.start();
+        bank.start();
+        bindRegionalActions();
         mountAdvisorButton(advisor);
 
         try {
@@ -1030,6 +1058,8 @@ async function boot() {
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
             silicon: SiliconService,
+            promotion: promotion,
+            bank: bank,
             payment: PaymentService,
             openSiliconStore: openSiliconStoreModal,
             LanguageService: LanguageService,
