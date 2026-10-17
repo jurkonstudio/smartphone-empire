@@ -1,6 +1,5 @@
 // FILE: src/main.js
-// v2027.44 — Promosi regional (Global/Asia/Eropa) + Bank v2.
-// v2028.13 — [ADMIN] Ekspos forcePull di window.__game.
+// v2028.16 — [ADMIN] Menambahkan import dan expose openAdminPanel ke window.__game.
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -65,6 +64,7 @@ import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
 import { openNewsArticleModal } from './ui/panels/NewsArticleModal.js';
 import { openSiliconModal } from './ui/panels/SiliconPanel.js';
 import { openSiliconStoreModal } from './ui/panels/SiliconStorePanel.js';
+import { openAdminPanel } from './ui/panels/AdminPanel.js'; // <-- TAMBAHAN ADMIN PANEL
 import { PaymentService } from './systems/PaymentService.js';
 import { t as tr } from './core/LanguageService.js';
 import { handleNewsListClick } from './ui/panels/NewsListPanel.js';
@@ -1047,8 +1047,9 @@ async function boot() {
             reportText: function (opts) { return formatReportText(buildReport(state.get(), window.__game, opts || {})); },
             reportShow: function () { openDiagnosticModal(); },
             cloud: CloudService,
-            cloudSync: CloudSync, // <-- EKSPOS KE CONSOLE
-            forcePull: function() { return CloudSync.forcePull(); }, // <-- FUNGSI FORCE PULL
+            cloudSync: CloudSync,
+            forcePull: function() { return CloudSync.forcePull(); },
+            openAdminPanel: openAdminPanel, // <-- TAMBAHAN ADMIN PANEL
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
