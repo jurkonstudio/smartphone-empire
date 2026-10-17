@@ -194,6 +194,7 @@ export class CompetitorSystem {
         // Historical share (0-1) untuk tahun ini.
         let baseShare = getHistoricalShare(competitorId, year);
         if (baseShare === null) baseShare = e.currentShare || 0;
+        baseShare = Math.max(0, baseShare + (((this.state.data.competitorState.actionMods || {})[competitorId] || {}).modifier || 0)); // [v2027.5] modifier aksi dinamis (CompetitorActionSystem)
 
         // Ukuran pasar dan harga rata-rata (interpolasi linear).
         const units   = this._interpYearly(BALANCE.market.marketUnitsByYear, year, 30000000);
