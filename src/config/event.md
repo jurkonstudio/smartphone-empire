@@ -48,6 +48,8 @@
 
 ## Kompetitor
 - `competitor:activated` / `competitor:deactivated` / `competitor:released-product` / `competitor:life-event`
+- `competitor:action` — `{ competitorId, competitorName, action, delta, modifier, untilTick, source, year, month }` — aksi dinamis kompetitor (`source`: 'pool' | 'release'); 'diam' tidak di-emit
+- `competitor:threat` — `{ playerShare, previousShare, threshold, topCompetitorId, topCompetitorName, topCompetitorShare, year, month }` — share pemain turun melewati threshold (sekali per crossing)
 
 ## Pasar
 - `market:share-updated`
