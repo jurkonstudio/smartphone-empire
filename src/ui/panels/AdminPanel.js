@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/AdminPanel.js
-// v2028.22 — [SYNC] Mengirim sinyal 'payment:approved' agar pop-up QRIS tertutup otomatis.
+// v2028.23 — [BULLETPROOF] Memaksa tutup semua modal & tarik saldo setelah approve.
 import { ToastService } from '../../core/ToastService.js';
 import { CloudService } from '../../services/CloudService.js';
 
@@ -78,15 +78,16 @@ export async function openAdminPanel() {
             
             if (approveRes.ok) {
                 ToastService.success('Pesanan berhasil disetujui!');
-                const card = document.getElementById('order-' + orderId);
-                if (card) {
-                    card.style.opacity = '0';
-                    setTimeout(() => card.remove(), 300);
+                
+                // 1. Tutup paksa Panel Admin
+                overlay.remove();
+                
+                // 2. Paksa tutup Pop-up QRIS dan tarik saldo terbaru (BULLETPROOF)
+                if (window.__game && window.__game.Modal) {
+                    window.__game.Modal.closeAll();
                 }
-
-                // Sinyal ke UI QRIS untuk menutup pop-up
-                if (window.__game && window.__game.bus) {
-                    window.__game.bus.emit('payment:approved', orderId);
+                if (window.__game && window.__game.forcePull) {
+                    setTimeout(() => window.__game.forcePull(), 300);
                 }
 
             } else {
