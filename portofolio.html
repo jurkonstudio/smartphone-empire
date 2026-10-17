@@ -3,335 +3,385 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KLVF & Jurkon Studio</title>
+    <title>KLVF — Independent Studio</title>
     <style>
         :root {
-            --bg: #000000;
-            --surface: #1c1c1e;
-            --surface-hover: #2c2c2e;
-            --text-main: #f5f5f7;
-            --text-sub: #86868b;
-            --accent: #2997ff; /* Apple Blue */
-            --border: rgba(255, 255, 255, 0.1);
-            --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+            --bg: #050505;
+            --surface: #0f0f11;
+            --surface-hover: #16161a;
+            --text-primary: #f5f5f7;
+            --text-secondary: #86868b;
+            --border: rgba(255, 255, 255, 0.08);
+            --accent: #2997ff;
+            --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
         }
 
         * {
             box-sizing: border-box;
+            margin: 0;
+            padding: 0;
             -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
         }
 
         body {
             background-color: var(--bg);
-            color: var(--text-main);
-            font-family: var(--font-stack);
-            margin: 0;
-            padding: 0;
+            color: var(--text-primary);
+            font-family: var(--font-display);
             line-height: 1.5;
-            /* Efek pendaran halus di latar belakang */
-            background-image: radial-gradient(circle at 50% 0%, rgba(41, 151, 255, 0.15) 0%, transparent 50%);
+            letter-spacing: -0.01em;
+            padding-bottom: 80px;
         }
 
-        .container {
-            max-width: 800px;
+        .wrapper {
+            max-width: 1000px;
             margin: 0 auto;
-            padding: 80px 20px;
+            padding: 0 24px;
         }
 
         /* =========================================
-           BAGIAN 1: HERO (KLVF & SOSIAL MEDIA)
+           NAVIGATION & SOCIALS (Header)
            ========================================= */
-        .hero {
-            text-align: center;
-            margin-bottom: 80px;
-            animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            opacity: 0;
-            transform: translateY(20px);
+        .header {
+            padding: 80px 0 60px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
         }
 
-        .hero h1 {
-            font-size: clamp(3rem, 8vw, 5rem);
+        .brand-title {
+            font-size: clamp(3rem, 7vw, 5rem);
             font-weight: 800;
-            letter-spacing: -0.05em;
-            margin: 0 0 12px 0;
-            background: linear-gradient(180deg, #ffffff 0%, #86868b 100%);
+            letter-spacing: -0.06em;
+            line-height: 1;
+            background: linear-gradient(180deg, #ffffff 0%, #a1a1a6 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        .hero p {
-            font-size: 1.2rem;
-            color: var(--text-sub);
-            max-width: 500px;
-            margin: 0 auto 32px auto;
-            letter-spacing: -0.01em;
+        .brand-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 480px;
+            font-weight: 400;
+            letter-spacing: -0.02em;
         }
 
-        .social-links {
+        .social-section {
+            margin-top: 16px;
+        }
+
+        .section-label {
+            display: block;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        .social-grid {
             display: flex;
-            justify-content: center;
+            flex-wrap: wrap;
             gap: 12px;
         }
 
-        .social-btn {
+        .icon-btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background-color: var(--surface);
-            color: var(--text-main);
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--surface);
             border: 1px solid var(--border);
+            color: var(--text-primary);
             text-decoration: none;
-            transition: all 0.2s ease;
+            transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
 
-        .social-btn:hover {
-            background-color: var(--surface-hover);
-            transform: scale(1.05);
-            border-color: var(--text-sub);
+        .icon-btn:hover {
+            background: var(--surface-hover);
+            border-color: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
         }
 
-        .social-btn svg {
-            width: 20px;
-            height: 20px;
+        .icon-btn svg {
+            width: 18px;
+            height: 18px;
             fill: currentColor;
         }
 
         /* =========================================
-           BAGIAN 2: JURKON STUDIO (BENTO GRID)
+           BENTO GRID (Jurkon Studio)
            ========================================= */
-        .section-divider {
-            display: flex;
-            align-items: center;
-            text-align: center;
-            margin: 60px 0 40px;
-            color: var(--text-sub);
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            font-weight: 600;
+        .divider {
+            width: 100%;
+            height: 1px;
+            background: var(--border);
+            margin: 40px 0;
         }
 
-        .section-divider::before,
-        .section-divider::after {
-            content: '';
-            flex: 1;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .section-divider::before { margin-right: 20px; }
-        .section-divider::after { margin-left: 20px; }
-
-        .studio-header {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-
-        .studio-header h2 {
+        .studio-title {
             font-size: 2rem;
             font-weight: 700;
-            letter-spacing: -0.03em;
-            margin: 0 0 8px 0;
+            letter-spacing: -0.04em;
+            margin-bottom: 8px;
+        }
+
+        .studio-desc {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-bottom: 40px;
         }
 
         .bento-grid {
             display: grid;
             grid-template-columns: 1fr;
             gap: 16px;
-            animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
-            opacity: 0;
-            transform: translateY(20px);
         }
 
-        @media(min-width: 600px) {
+        @media (min-width: 768px) {
             .bento-grid {
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: repeat(2, 1fr);
             }
-            .bento-large {
+            .col-span-2 {
                 grid-column: span 2;
             }
         }
 
-        .bento-card {
-            background-color: var(--surface);
+        .card {
+            background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 24px; /* Squircle khas Apple */
+            border-radius: 20px;
             padding: 32px;
-            position: relative;
-            overflow: hidden;
-            transition: transform 0.2s ease, border-color 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            transition: border-color 0.3s;
         }
 
-        .bento-card:hover {
-            transform: translateY(-2px);
-            border-color: rgba(255, 255, 255, 0.2);
+        .card:hover {
+            border-color: rgba(255,255,255,0.15);
         }
 
-        .bento-title {
-            font-size: 1.25rem;
+        .card-title {
+            font-size: 1.3rem;
             font-weight: 700;
-            letter-spacing: -0.02em;
-            margin: 0 0 12px 0;
+            letter-spacing: -0.03em;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
 
-        .bento-title span {
-            font-size: 1.5rem;
-        }
-
-        .bento-text {
+        .card-text {
+            color: var(--text-secondary);
             font-size: 0.95rem;
-            color: var(--text-sub);
-            margin: 0;
-            line-height: 1.5;
+            line-height: 1.6;
+            flex-grow: 1;
         }
 
-        /* Card Khusus Game */
-        .game-card {
-            background: linear-gradient(135deg, #1c1c1e 0%, #0a0a0c 100%);
-            border: 1px solid rgba(41, 151, 255, 0.3);
-        }
-
-        .game-features {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 16px;
-        }
-
-        .tag {
-            background: rgba(41, 151, 255, 0.15);
+        .badge {
+            display: inline-block;
+            background: rgba(41, 151, 255, 0.1);
             color: var(--accent);
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 0.8rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
             font-weight: 600;
+            margin-bottom: 16px;
         }
 
-        /* Tombol Main */
-        .btn-play {
-            display: flex;
+        /* Game Specs List */
+        .specs-list {
+            margin-top: 16px;
+            list-style: none;
+        }
+
+        .specs-list li {
+            position: relative;
+            padding-left: 16px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .specs-list li::before {
+            content: "—";
+            position: absolute;
+            left: 0;
+            color: var(--text-primary);
+        }
+
+        /* CTA Button */
+        .btn-primary {
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            background-color: var(--accent);
-            color: #ffffff;
-            padding: 18px 32px;
-            border-radius: 16px;
+            background: var(--text-primary);
+            color: var(--bg);
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
             text-decoration: none;
-            font-weight: 700;
-            font-size: 1.1rem;
-            letter-spacing: -0.01em;
-            margin-top: 32px;
-            transition: all 0.2s ease;
-            box-shadow: 0 8px 24px rgba(41, 151, 255, 0.3);
+            margin-top: 24px;
+            transition: background 0.2s;
         }
 
-        .btn-play:hover {
-            background-color: #0077ed;
-            transform: scale(1.02);
-            box-shadow: 0 12px 32px rgba(41, 151, 255, 0.4);
+        .btn-primary:hover {
+            background: #d1d1d6;
         }
 
-        .btn-play:active {
-            transform: scale(0.98);
+        /* Contact Section */
+        .contact-section {
+            margin-top: 60px;
+            padding-top: 40px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
-        @keyframes fadeUp {
-            to { opacity: 1; transform: translateY(0); }
+        .contact-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        .contact-item:hover {
+            color: var(--text-primary);
+        }
+
+        .contact-item svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
+    <div class="wrapper">
         
-        <!-- BAGIAN 1: KLVF & SOSIAL MEDIA -->
-        <header class="hero">
-            <h1>KLVF.</h1>
-            <p>Digital Architect & Game Developer. Membangun pengalaman web yang presisi, cepat, dan tanpa kompromi.</p>
-            
-            <div class="social-links">
-                <!-- GitHub -->
-                <a href="https://github.com/jurkonstudio" target="_blank" class="social-btn" aria-label="GitHub">
-                    <svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
-                </a>
-                <!-- Instagram -->
-                <a href="#" target="_blank" class="social-btn" aria-label="Instagram">
-                    <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-                </a>
-                <!-- TikTok -->
-                <a href="#" target="_blank" class="social-btn" aria-label="TikTok">
-                    <svg viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1.04-.1z"/></svg>
-                </a>
+        <!-- HEADER -->
+        <header class="header">
+            <div>
+                <h1 class="brand-title">KLVF.</h1>
+                <p class="brand-subtitle">Independent Digital Architect & Audio Engineer. Building precise web experiences and deep simulation systems.</p>
+            </div>
+
+            <!-- Sosial Media -->
+            <div class="social-section">
+                <span class="section-label">Networks</span>
+                <div class="social-grid">
+                    <!-- X (Twitter) -->
+                    <a href="https://x.com/calvf1nka" target="_blank" class="icon-btn" aria-label="X">
+                        <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    </a>
+                    <!-- Soundcloud -->
+                    <a href="https://soundcloud.com/calvfinka" target="_blank" class="icon-btn" aria-label="Soundcloud">
+                        <svg viewBox="0 0 24 24"><path d="M21.5 12c-1.1 0-2.1.3-3 .8C18 9.2 14.9 6.5 11 6.5c-1.1 0-2 .1-2.8.3v11.3c.8.2 1.7.3 2.8.3h10.5c1.9 0 3.5-1.6 3.5-3.5S23.4 12 21.5 12zM1 14c0 1.7.4 3.2 1.2 4.1h1.5V12.2C2.4 12.1 1 12.9 1 14zm4.5-2.7V18h1.3V10.6c-.5.1-1 .4-1.3.7zm3-.9V18h1.3V9.6c-.5.1-.9.4-1.3.8zm3.1.1V18h1.3V9.8c-.4.3-.9.5-1.3.7z"/></svg>
+                    </a>
+                    <!-- YouTube -->
+                    <a href="https://youtube.com/@calvfinka" target="_blank" class="icon-btn" aria-label="YouTube">
+                        <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                    </a>
+                    <!-- Spotify -->
+                    <a href="https://open.spotify.com/playlist/4hiTFBL8p8TaaQZxXFaANj?si=mE-jQG6ET6STrdfYQe_KQQ&utm_source=copy-link&pi=3ImTEITeQcuG9" target="_blank" class="icon-btn" aria-label="Spotify">
+                        <svg viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.502 17.302c-.225.369-.705.484-1.074.259-3.022-1.845-6.83-2.263-11.317-1.239-.422.096-.843-.164-.938-.586-.096-.422.164-.843.586-.938 4.905-1.12 9.094-.637 12.482 1.431.368.225.483.704.261 1.073zm1.47-3.265c-.283.46-.886.604-1.346.321-3.458-2.126-8.73-2.741-12.82-1.501-.518.158-1.066-.133-1.224-.65-.158-.518.133-1.066.65-1.224 4.68-1.419 10.482-.733 14.42 1.688.459.283.603.886.32 1.346zm.126-3.416c-4.146-2.462-10.986-2.69-14.963-1.484-.635.193-1.304-.166-1.497-.8-.193-.634.166-1.304.8-1.497 4.566-1.385 12.116-1.114 16.857 1.701.571.339.761 1.08.422 1.651-.34.57-1.081.76-1.651.421z"/></svg>
+                    </a>
+                    <!-- Tumblr -->
+                    <a href="https://tumblr.com/calvfinka" target="_blank" class="icon-btn" aria-label="Tumblr">
+                        <svg viewBox="0 0 24 24"><path d="M14.278 23.95c-3.14 0-5.464-1.586-5.464-5.258V11.14H4.839V8.522c3.427-.983 4.973-3.92 5.227-6.887h2.864v6.14h3.835v3.365h-3.835v6.602c0 1.567.74 2.153 1.84 2.153.54 0 1.047-.12 1.492-.33v3.086c-.523.185-1.455.31-2.442.31z"/></svg>
+                    </a>
+                </div>
             </div>
         </header>
 
-        <div class="section-divider">Jurkon Studio</div>
+        <div class="divider"></div>
 
-        <!-- BAGIAN 2: BENTO GRID JURKON STUDIO -->
-        <div class="studio-header">
-            <h2>Membangun Masa Depan Digital</h2>
-        </div>
+        <!-- JURKON STUDIO -->
+        <section>
+            <h2 class="studio-title">Jurkon Studio</h2>
+            <p class="studio-desc">An independent game development ecosystem. Crafting deep simulation mechanics, scalable cloud architectures, and immersive user interfaces.</p>
 
-        <div class="bento-grid">
-            
-            <!-- Card 1: Game Smartphone Empire (Lebar Penuh) -->
-            <div class="bento-card bento-large game-card">
-                <div class="bento-title"><span>📱</span> Smartphone Empire</div>
-                <p class="bento-text">
-                    Sebuah game *Tycoon* simulasi bisnis di mana kamu membangun kerajaan teknologi dari nol. 
-                    Bagaimana cara kerjanya?
-                </p>
-                <ul class="bento-text" style="margin-top: 12px; padding-left: 20px; line-height: 1.6;">
-                    <li><b>Riset & Development:</b> Teliti hardware (layar, chip) & software (OS) yang saling terhubung.</li>
-                    <li><b>Manufaktur:</b> Bangun pabrik, atur staf, dan produksi ponsel dengan margin keuntungan terbaik.</li>
-                    <li><b>Pasar Dinamis:</b> Bersaing dengan AI kompetitor (Nokia, Apple, dll) yang bereaksi terhadap harga & tren.</li>
-                    <li><b>Cloud System:</b> Progres dan saldo Silicon tersinkronisasi dengan server Supabase secara *real-time*.</li>
-                </ul>
-                <div class="game-features">
-                    <span class="tag">Tycoon</span>
-                    <span class="tag">Strategy</span>
-                    <span class="tag">Cloud Sync</span>
+            <div class="bento-grid">
+                
+                <!-- Game 1: Smartphone Empire (Wide) -->
+                <div class="card col-span-2">
+                    <span class="badge">Flagship Project</span>
+                    <h3 class="card-title">Smartphone Empire</h3>
+                    <p class="card-text">
+                        Sebuah simulasi ekonomi makro dan strategi bisnis teknologi. Pemain dituntut untuk menavigasi 
+                        kompleksitas riset *hardware*, pengembangan *software*, hingga perang harga dengan AI kompetitor. 
+                        Dilengkapi dengan sistem *Cloud Save* dan sinkronisasi *real-time*.
+                    </p>
+                    <ul class="specs-list">
+                        <li><b>Dynamic Market:</b> Harga, tren, dan feedback konsumen bereaksi secara logis.</li>
+                        <li><b>Deep Tech Tree:</b> Integrasi antara riset OS dan komponen Hardware.</li>
+                        <li><b>Secure Backend:</b> Validasi ekonomi terpusat untuk mencegah kecurangan data.</li>
+                    </ul>
+                    <a href="/" class="btn-primary" style="align-self: flex-start;">Enter the Simulation &rarr;</a>
                 </div>
-                <a href="/" class="btn-play">▶ Masuk ke Game</a>
-            </div>
 
-            <!-- Card 2: Juragan Konstruksi -->
-            <div class="bento-card">
-                <div class="bento-title"><span>🏗️</span> Juragan Konstruksi</div>
-                <p class="bento-text">
-                    Proyek simulasi infrastruktur. Mengelola proyek konstruksi berskala besar dengan sistem perizinan (lisensi) yang kompleks dan manajemen kredit yang mendalam.
-                </p>
-                <div class="game-features">
-                    <span class="tag">Simulation</span>
-                    <span class="tag">Management</span>
+                <!-- Game 2: Juragan Konstruksi -->
+                <div class="card">
+                    <h3 class="card-title">Juragan Konstruksi</h3>
+                    <p class="card-text">
+                        Proyek simulasi infrastruktur berskala masif. Berfokus pada manajemen proyek sipil,
+                        pengurusan perizinan (lisensi) yang kompleks, serta manajemen kredit dan arus kas perusahaan.
+                    </p>
+                    <div style="margin-top: 16px;">
+                        <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-secondary);">Simulation</span>
+                        <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-secondary);">Management</span>
+                    </div>
+                </div>
+
+                <!-- Studio Info -->
+                <div class="card">
+                    <h3 class="card-title">The Engine</h3>
+                    <p class="card-text">
+                        Dibangun murni menggunakan Vanilla JavaScript dan HTML5 Canvas untuk performa optimal di perangkat mobile. 
+                        Tanpa framework berat, memastikan *rendering* 60fps dan responsivitas sentuhan yang presisi.
+                    </p>
+                    <p class="card-text" style="margin-top: 12px; font-size: 0.8rem; color: var(--text-primary);">
+                        &copy; 2026 Jurkon Studio. All rights reserved.
+                    </p>
                 </div>
             </div>
+        </section>
 
-            <!-- Card 3: Tech Stack & Kredit -->
-            <div class="bento-card">
-                <div class="bento-title"><span>🛠️</span> Tech & Credits</div>
-                <p class="bento-text">
-                    Dibangun dengan teknologi web modern tanpa framework berat untuk performa maksimal di HP:
-                </p>
-                <div class="game-features" style="margin-top: 12px;">
-                    <span class="tag" style="color:#f7df1e; background:rgba(247,223,30,0.1);">Vanilla JS</span>
-                    <span class="tag" style="color:#38bdf8; background:rgba(56,189,248,0.1);">CSS3</span>
-                    <span class="tag" style="color:#34c759; background:rgba(52,199,89,0.1);">Supabase</span>
-                    <span class="tag" style="color:#e34f26; background:rgba(227,79,38,0.1);">HTML5</span>
-                </div>
-                <p class="bento-text" style="margin-top: 16px; font-size: 0.85rem;">
-                    * Game ini merupakan hasil pengembangan mandiri (solo developer) dengan bantuan AI Assistant.
-                </p>
+        <!-- CONTACT SECTION -->
+        <footer class="contact-section">
+            <span class="section-label">Direct Contact</span>
+            <div class="contact-links">
+                <!-- WhatsApp -->
+                <a href="https://wa.me/6282243562960" target="_blank" class="contact-item">
+                    <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                    WhatsApp
+                </a>
+                
+                <!-- Email -->
+                <a href="mailto:contact@smartphone-empire.my.id" class="contact-item">
+                    <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    Email Us
+                </a>
             </div>
+        </footer>
 
-        </div>
     </div>
-
 </body>
 </html>
