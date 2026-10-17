@@ -3987,3 +3987,76 @@ html[data-density="compact"] .ov-split { margin-top: 10px; }
 html[data-density="compact"] .ov-metric { padding: 9px 11px; }
 html[data-density="compact"] .ov-metric-value { font-size: var(--fs-xl); margin: 6px 0; }
 html[data-density="compact"] .ov-qa { min-height: 62px; }
+/* ============================================================
+   PRECISION NAVIGATION BAR (iOS Style - Icon Only Highlight)
+   ============================================================ */
+
+.mobile-nav {
+    background: rgba(18, 18, 20, 0.85) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+    /* Pastikan posisi relative agar slider bisa absolute di dalamnya */
+    position: relative; 
+}
+
+.nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px !important; 
+    padding: 8px 0 !important;
+    background: transparent !important; 
+    color: #8E8E93 !important; 
+    transition: color 0.2s ease !important;
+    z-index: 2; /* Tombol berada di atas slider */
+}
+
+.nav-btn.active {
+    color: #0A84FF !important; 
+}
+
+.nav-btn:active {
+    transform: scale(0.92);
+    transition: transform 0.1s;
+}
+
+/* Pembungkus ikon untuk mengukur posisi slider */
+.nav-ico-wrap {
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.nav-btn .nav-ico svg {
+    width: 22px !important;
+    height: 22px !important;
+    stroke-width: 1.8px !important; 
+}
+
+.nav-btn .nav-label {
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    line-height: 1 !important;
+    letter-spacing: 0.1px !important;
+}
+
+.nav-btn.active .nav-label {
+    font-weight: 600 !important;
+}
+
+/* Slider (Kotak Biru di belakang ikon) */
+.nav-slider {
+    position: absolute;
+    top: 8px !important; /* Sejajar dengan padding atas nav-btn */
+    height: 28px !important; /* Tinggi pas untuk ikon 22px */
+    background: rgba(10, 132, 255, 0.15) !important; 
+    border-radius: 8px !important; /* Squircle presisi */
+    border: 1px solid rgba(10, 132, 255, 0.1) !important;
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+    z-index: 1; /* Berada di bawah tombol */
+}
