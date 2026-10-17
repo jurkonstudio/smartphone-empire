@@ -5,9 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0f0f0f">
 
-<!-- ============================================================
-     FAVICON SVG (HD)
-     ============================================================ -->
 <link rel="icon" type="image/svg+xml" href="./logo.svg">
 <link rel="apple-touch-icon" href="./logo.svg">
 
@@ -17,27 +14,16 @@
 <title>Smartphone Empire</title>
 
 <!-- ============================================================
-     SEMBUNYIKAN ERUDA SECARA DEFAULT
+     ERUDA SECRET TAP (DINAMIS + KEAMANAN EMAIL)
      ============================================================ -->
-<style>
-    /* Menyembunyikan seluruh elemen Eruda (termasuk ikon roda gigi) */
-    #eruda { display: none !important; }
-</style>
-
-<!-- ============================================================
-     ERUDA SECRET TAP (5x Ketukan di Pojok Kiri Atas)
-     ============================================================ -->
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
 <script>
     (function() {
-        // Inisialisasi Eruda
-        eruda.init();
-        
         var tapCount = 0;
         var tapTimer;
+        var ADMIN_EMAIL = 'jurkon@yahoo.com'; // GANTI DENGAN EMAIL ADMINMU
 
-        // Deteksi ketukan di area header (pojok kiri atas)
         document.addEventListener('click', function(e) {
+            // Hanya deteksi ketukan di pojok kiri atas (area header)
             if (e.clientY < 100 && e.clientX < 200) {
                 tapCount++;
                 
@@ -45,23 +31,51 @@
                 tapTimer = setTimeout(function() { tapCount = 0; }, 1000);
 
                 if (tapCount >= 5) {
-                    // Paksa tampilkan Eruda dengan menimpa CSS
-                    var erudaDiv = document.getElementById('eruda');
-                    if (erudaDiv) {
-                        erudaDiv.style.setProperty('display', 'block', 'important');
-                    }
-                    eruda.show(); // Buka panel console
-                    
                     tapCount = 0;
                     
-                    var toast = document.createElement('div');
-                    toast.textContent = '🛠️ Debug Mode Aktif';
-                    toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;z-index:999999;';
-                    document.body.appendChild(toast);
-                    setTimeout(function() { toast.remove(); }, 3000);
+                    // 1. Cek apakah yang login adalah Admin
+                    var currentEmail = '';
+                    try {
+                        // Ambil email dari localStorage (disimpan oleh CloudSync saat login)
+                        var cloudEmail = localStorage.getItem('smartphone-empire:admin-email');
+                        if (cloudEmail) currentEmail = cloudEmail.toLowerCase();
+                    } catch(err) {}
+
+                    if (currentEmail !== ADMIN_EMAIL.toLowerCase()) {
+                        // JIKA BUKAN ADMIN: Tampilkan pesan error dan jangan buka Eruda
+                        var toast = document.createElement('div');
+                        toast.textContent = '⚠️ Akses Ditolak: Fitur ini khusus Admin.';
+                        toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#d32f2f;color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;z-index:999999;';
+                        document.body.appendChild(toast);
+                        setTimeout(function() { toast.remove(); }, 3000);
+                        return;
+                    }
+
+                    // 2. JIKA ADMIN: Muat Eruda secara Dinamis
+                    if (typeof eruda === 'undefined') {
+                        var script = document.createElement('script');
+                        script.src = 'https://cdn.jsdelivr.net/npm/eruda';
+                        script.onload = function() {
+                            eruda.init();
+                            eruda.show();
+                            _showAdminToast();
+                        };
+                        document.head.appendChild(script);
+                    } else {
+                        eruda.show();
+                        _showAdminToast();
+                    }
                 }
             }
         });
+
+        function _showAdminToast() {
+            var toast = document.createElement('div');
+            toast.textContent = '🛠️ Debug Mode Aktif (Admin)';
+            toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;z-index:999999;';
+            document.body.appendChild(toast);
+            setTimeout(function() { toast.remove(); }, 3000);
+        }
     })();
 </script>
 
