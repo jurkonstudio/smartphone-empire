@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SiliconStorePanel.js
-// v2028.23 — [CLEANUP] Versi stabil tanpa Event Bus. Mengandalkan forcePull dari Admin.
+// v2028.30 — [SYNC] Mendengarkan sinyal payment:approved & auto-close paksa.
 import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 import { Modal } from '../modal.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
@@ -14,6 +14,7 @@ var MODAL_ID = 'silicon-store';
 var _sel = { pkg: 'pkg_l', method: null, busy: false };
 var _pollingTimer = null;
 var _countdownTimer = null;
+var _adminApprovedUnsub = null; // Menyimpan referensi unsubscribe
 
 var STATIC_QRIS_URL = 'https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/qris-gopay.png';
 
@@ -169,7 +170,7 @@ function _showPaymentModal(order) {
     var mockBtnHtml = DEV_BUILD ? `
         <div style="margin-top:24px; padding-top:16px; border-top:1px dashed var(--border); text-align:center;">
             <button type="button" data-qr-mock style="background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger); padding:8px; border-radius:8px; font-size:11px; width:100%; cursor:pointer;">
-                [DEV ONLY] Simulasi Sukses (Tanpa Transfer)
+                [DEV ONLY] Simulasi Sukses
             </button>
         </div>
     ` : '';
@@ -209,14 +210,31 @@ function _showPaymentModal(order) {
     var timerEl = root.querySelector('#qr-timer');
     var btnCheck = root.querySelector('[data-qr-check]');
     
+    // --- LISTENER UNTUK ADMIN APPROVE ---
+    if (_adminApprovedUnsub) _adminApprovedUnsub();
+    _adminApprovedUnsub = bus.on('payment:approved', function(approvedId) {
+        if (approvedId === order.id) {
+            cleanupTimers();
+            Modal.close('payment-qr', true);
+            ToastService.success('Pembayaran disetujui Admin! Saldo ditarik.');
+            setTimeout(() => window.__game.forcePull(), 300);
+        }
+    });
+    // ------------------------------------
+
     function cleanupTimers() {
         if (_countdownTimer) clearInterval(_countdownTimer);
         if (_pollingTimer) clearInterval(_pollingTimer);
         document.removeEventListener('visibilitychange', _onVisibilityChange);
+        if (_adminApprovedUnsub) {
+            _adminApprovedUnsub();
+            _adminApprovedUnsub = null;
+        }
     }
 
     function _onVisibilityChange() {
         if (document.visibilityState === 'visible') {
+            console.log('[PaymentModal] Tab aktif kembali, cek status...');
             checkStatus(false); 
         }
     }
@@ -245,7 +263,7 @@ function _showPaymentModal(order) {
             if (isPaid) {
                 cleanupTimers();
                 Modal.close('payment-qr', true);
-                ToastService.success('Pembayaran Berhasil! Saldo telah diperbarui.');
+                ToastService.success('Pembayaran Berhasil!');
                 _render();
             } else {
                 if (isManual) {
