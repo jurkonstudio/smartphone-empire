@@ -213,7 +213,7 @@ export const BALANCE = {
         // Naikkan nilainya agar lebih mudah bersaing, turunkan agar lebih sulit.
         playerShareScale: {
             enabled: true,
-            referenceShare: 0.10,
+            referenceShare: 0.20, // [v2027.5] 0.10 -> 0.20: kalibrasi simulasi 10 th (default ~6%, agresif ~52% di th-10)
             smoothMonths: 3,      // rata-rata bergerak agar grafik tidak liar
             maxShare: 0.70
         }
