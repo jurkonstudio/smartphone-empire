@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KLVF & Jurkon Studio</title>
+    <style>
+        :root {
+            --bg: #000000;
+            --surface: #1c1c1e;
+            --surface-hover: #2c2c2e;
+            --text-main: #f5f5f7;
+            --text-sub: #86868b;
+            --accent: #2997ff; /* Apple Blue */
+            --border: rgba(255, 255, 255, 0.1);
+            --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: var(--font-stack);
+            margin: 0;
+            padding: 0;
+            line-height: 1.5;
+            /* Efek pendaran halus di latar belakang */
+            background-image: radial-gradient(circle at 50% 0%, rgba(41, 151, 255, 0.15) 0%, transparent 50%);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 80px 20px;
+        }
+
+        /* =========================================
+           BAGIAN 1: HERO (KLVF & SOSIAL MEDIA)
+           ========================================= */
+        .hero {
+            text-align: center;
+            margin-bottom: 80px;
+            animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .hero h1 {
+            font-size: clamp(3rem, 8vw, 5rem);
+            font-weight: 800;
+            letter-spacing: -0.05em;
+            margin: 0 0 12px 0;
+            background: linear-gradient(180deg, #ffffff 0%, #86868b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-sub);
+            max-width: 500px;
+            margin: 0 auto 32px auto;
+            letter-spacing: -0.01em;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .social-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: var(--surface);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .social-btn:hover {
+            background-color: var(--surface-hover);
+            transform: scale(1.05);
+            border-color: var(--text-sub);
+        }
+
+        .social-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        /* =========================================
+           BAGIAN 2: JURKON STUDIO (BENTO GRID)
+           ========================================= */
+        .section-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 60px 0 40px;
+            color: var(--text-sub);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+        }
+
+        .section-divider::before,
+        .section-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-divider::before { margin-right: 20px; }
+        .section-divider::after { margin-left: 20px; }
+
+        .studio-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .studio-header h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            margin: 0 0 8px 0;
+        }
+
+        .bento-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        @media(min-width: 600px) {
+            .bento-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .bento-large {
+                grid-column: span 2;
+            }
+        }
+
+        .bento-card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 24px; /* Squircle khas Apple */
+            padding: 32px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .bento-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .bento-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin: 0 0 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bento-title span {
+            font-size: 1.5rem;
+        }
+
+        .bento-text {
+            font-size: 0.95rem;
+            color: var(--text-sub);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* Card Khusus Game */
+        .game-card {
+            background: linear-gradient(135deg, #1c1c1e 0%, #0a0a0c 100%);
+            border: 1px solid rgba(41, 151, 255, 0.3);
+        }
+
+        .game-features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .tag {
+            background: rgba(41, 151, 255, 0.15);
+            color: var(--accent);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* Tombol Main */
+        .btn-play {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--accent);
+            color: #ffffff;
+            padding: 18px 32px;
+            border-radius: 16px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: -0.01em;
+            margin-top: 32px;
+            transition: all 0.2s ease;
+            box-shadow: 0 8px 24px rgba(41, 151, 255, 0.3);
+        }
+
+        .btn-play:hover {
+            background-color: #0077ed;
+            transform: scale(1.02);
+            box-shadow: 0 12px 32px rgba(41, 151, 255, 0.4);
+        }
+
+        .btn-play:active {
+            transform: scale(0.98);
+        }
+
+        @keyframes fadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- BAGIAN 1: KLVF & SOSIAL MEDIA -->
+        <header class="hero">
+            <h1>KLVF.</h1>
+            <p>Digital Architect & Game Developer. Membangun pengalaman web yang presisi, cepat, dan tanpa kompromi.</p>
+            
+            <div class="social-links">
+                <!-- GitHub -->
+                <a href="https://github.com/jurkonstudio" target="_blank" class="social-btn" aria-label="GitHub">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+                </a>
+                <!-- Instagram -->
+                <a href="#" target="_blank" class="social-btn" aria-label="Instagram">
+                    <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                </a>
+                <!-- TikTok -->
+                <a href="#" target="_blank" class="social-btn" aria-label="TikTok">
+                    <svg viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1.04-.1z"/></svg>
+                </a>
+            </div>
+        </header>
+
+        <div class="section-divider">Jurkon Studio</div>
+
+        <!-- BAGIAN 2: BENTO GRID JURKON STUDIO -->
+        <div class="studio-header">
+            <h2>Membangun Masa Depan Digital</h2>
+        </div>
+
+        <div class="bento-grid">
+            
+            <!-- Card 1: Game Smartphone Empire (Lebar Penuh) -->
+            <div class="bento-card bento-large game-card">
+                <div class="bento-title"><span>📱</span> Smartphone Empire</div>
+                <p class="bento-text">
+                    Sebuah game *Tycoon* simulasi bisnis di mana kamu membangun kerajaan teknologi dari nol. 
+                    Bagaimana cara kerjanya?
+                </p>
+                <ul class="bento-text" style="margin-top: 12px; padding-left: 20px; line-height: 1.6;">
+                    <li><b>Riset & Development:</b> Teliti hardware (layar, chip) & software (OS) yang saling terhubung.</li>
+                    <li><b>Manufaktur:</b> Bangun pabrik, atur staf, dan produksi ponsel dengan margin keuntungan terbaik.</li>
+                    <li><b>Pasar Dinamis:</b> Bersaing dengan AI kompetitor (Nokia, Apple, dll) yang bereaksi terhadap harga & tren.</li>
+                    <li><b>Cloud System:</b> Progres dan saldo Silicon tersinkronisasi dengan server Supabase secara *real-time*.</li>
+                </ul>
+                <div class="game-features">
+                    <span class="tag">Tycoon</span>
+                    <span class="tag">Strategy</span>
+                    <span class="tag">Cloud Sync</span>
+                </div>
+                <a href="/" class="btn-play">▶ Masuk ke Game</a>
+            </div>
+
+            <!-- Card 2: Juragan Konstruksi -->
+            <div class="bento-card">
+                <div class="bento-title"><span>🏗️</span> Juragan Konstruksi</div>
+                <p class="bento-text">
+                    Proyek simulasi infrastruktur. Mengelola proyek konstruksi berskala besar dengan sistem perizinan (lisensi) yang kompleks dan manajemen kredit yang mendalam.
+                </p>
+                <div class="game-features">
+                    <span class="tag">Simulation</span>
+                    <span class="tag">Management</span>
+                </div>
+            </div>
+
+            <!-- Card 3: Tech Stack & Kredit -->
+            <div class="bento-card">
+                <div class="bento-title"><span>🛠️</span> Tech & Credits</div>
+                <p class="bento-text">
+                    Dibangun dengan teknologi web modern tanpa framework berat untuk performa maksimal di HP:
+                </p>
+                <div class="game-features" style="margin-top: 12px;">
+                    <span class="tag" style="color:#f7df1e; background:rgba(247,223,30,0.1);">Vanilla JS</span>
+                    <span class="tag" style="color:#38bdf8; background:rgba(56,189,248,0.1);">CSS3</span>
+                    <span class="tag" style="color:#34c759; background:rgba(52,199,89,0.1);">Supabase</span>
+                    <span class="tag" style="color:#e34f26; background:rgba(227,79,38,0.1);">HTML5</span>
+                </div>
+                <p class="bento-text" style="margin-top: 16px; font-size: 0.85rem;">
+                    * Game ini merupakan hasil pengembangan mandiri (solo developer) dengan bantuan AI Assistant.
+                </p>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>
