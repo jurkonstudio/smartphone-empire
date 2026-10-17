@@ -1,11 +1,5 @@
 // FILE: src/ui/notifications/NotificationRenderer.js  (REPLACE)
-// Dynamic Island v2 — stack 3 notifikasi, antrean halus, swipe untuk menutup,
-// jeda saat disentuh/diperluas, progress bar sisa waktu, ikon SVG, i18n,
-// penghitung duplikat (x2, x3), dan durasi otomatis menurut panjang pesan.
-// v3 — Pusat Notifikasi: ketuk nama perusahaan di header untuk membuka panel riwayat
-// (dropdown di bawah header, badge belum dibaca, hapus semua, tombol aksi tetap berfungsi).
-// CSS di-inject dari file ini sendiri, jadi style.css & index.html TIDAK perlu diubah.
-
+// v3.1 — [GLASSMORPHISM] Menerapkan efek kaca iCloud pada Panel Notifikasi & Toast.
 import { t } from '../../core/LanguageService.js';
 import { bus } from '../../core/EventBus.js';
 
@@ -87,15 +81,18 @@ function ensureStyle() {
         '.ni.ni-collapse{max-height:0!important;margin-top:0!important;margin-bottom:-8px!important;padding-top:0!important;',
         'padding-bottom:0!important;border-width:0!important;box-shadow:none!important;',
         'transition:max-height .26s ease,margin .26s ease,padding .26s ease,border-width .26s ease,opacity .24s ease,transform .24s ease}',
+        
+        // [GLASSMORPHISM] Toast Notifikasi
         '.ni{position:relative;box-sizing:border-box;width:100%;max-width:calc(100vw - 24px);margin:0 auto;',
-        '--ni-rgb:10,132,255;background:rgba(12,12,14,.94);-webkit-backdrop-filter:blur(18px) saturate(1.4);',
-        'backdrop-filter:blur(18px) saturate(1.4);color:#fff;border-radius:22px;padding:9px 10px 12px 10px;',
-        'border:1px solid rgba(255,255,255,.08);',
-        'box-shadow:0 10px 28px rgba(0,0,0,.45),0 0 0 1px rgba(var(--ni-rgb),.18);',
+        '--ni-rgb:10,132,255;background:rgba(20,20,24,.75);-webkit-backdrop-filter:blur(24px) saturate(180%);',
+        'backdrop-filter:blur(24px) saturate(180%);color:#fff;border-radius:22px;padding:9px 10px 12px 10px;',
+        'border:1px solid rgba(255,255,255,.1);',
+        'box-shadow:0 10px 28px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05);',
         'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;cursor:pointer;overflow:hidden;',
         'touch-action:none;user-select:none;-webkit-user-select:none;outline:none;',
         'animation:niIn .38s cubic-bezier(.34,1.4,.64,1);',
         'transition:border-radius .3s ease,transform .24s ease,opacity .24s ease;will-change:transform,opacity}',
+        
         '.ni:focus-visible{box-shadow:0 0 0 2px rgba(var(--ni-rgb),.9)}',
         '.ni.ni-drag{transition:none}',
         '.ni.ni-out{opacity:0!important;pointer-events:none}',
@@ -130,18 +127,25 @@ function ensureStyle() {
         '.ni-bar i{display:block;height:100%;background:rgb(var(--ni-rgb));transform-origin:left;transform:scaleX(1)}',
         '.ni-bar i.ni-run{animation:niBar var(--ni-dur,4000ms) linear forwards}',
         '.ni.ni-paused .ni-bar i{animation-play-state:paused}',
-        '.np-backdrop{position:fixed;left:0;right:0;bottom:0;top:var(--np-top,0px);z-index:9998;background:rgba(0,0,0,.35);',
+        
+        // [GLASSMORPHISM] Backdrop (Latar belakang gelap dengan blur)
+        '.np-backdrop{position:fixed;left:0;right:0;bottom:0;top:var(--np-top,0px);z-index:9998;',
+        'background:rgba(0,0,0,.4);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);',
         'opacity:0;transition:opacity .2s ease;-webkit-tap-highlight-color:transparent}',
         '.np-backdrop.np-show{opacity:1}',
+        
+        // [GLASSMORPHISM] Panel Notifikasi Utama
         '.np-panel{position:fixed;z-index:9999;left:50%;top:calc(var(--np-top,0px) + 6px);width:min(94vw,420px);',
         'max-height:min(70vh,calc(100dvh - var(--np-top,0px) - 90px));display:flex;flex-direction:column;box-sizing:border-box;',
-        'background:var(--bg-2,#161618);color:var(--text-primary,#fff);border:1px solid var(--border,rgba(255,255,255,.1));',
-        'border-radius:18px;box-shadow:0 18px 44px rgba(0,0,0,.5);overflow:hidden;',
-        'font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif;',
+        'background:rgba(25,25,30,.65);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);',
+        'color:var(--text-primary,#fff);border:1px solid rgba(255,255,255,.1);',
+        'border-radius:20px;box-shadow:0 24px 64px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05);overflow:hidden;',
+        'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;',
         'opacity:0;transform:translate(-50%,-10px) scale(.97);transform-origin:top left;',
         'transition:opacity .2s ease,transform .22s cubic-bezier(.34,1.3,.64,1)}',
         '.np-panel.np-show{opacity:1;transform:translate(-50%,0) scale(1)}',
-        '.np-head{display:flex;align-items:center;gap:8px;padding:12px 14px 10px;border-bottom:1px solid var(--border,rgba(255,255,255,.08))}',
+        
+        '.np-head{display:flex;align-items:center;gap:8px;padding:12px 14px 10px;border-bottom:1px solid rgba(255,255,255,.08)}',
         '.np-title{flex:1;font-size:15px;font-weight:700;letter-spacing:-.01em}',
         '.np-sub{font-size:11px;font-weight:600;color:var(--text-tertiary,#8e8e93)}',
         '.np-btn{border:0;background:transparent;color:var(--accent,#0a84ff);font:600 12px -apple-system,sans-serif;',
@@ -149,9 +153,13 @@ function ensureStyle() {
         '.np-btn:active{background:var(--accent-soft,rgba(10,132,255,.15))}',
         '.np-btn[disabled]{opacity:.35;pointer-events:none}',
         '.np-list{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:6px}',
-        '.np-item{--ni-rgb:10,132,255;display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:12px;position:relative}',
-        '.np-item+.np-item{margin-top:2px}',
-        '.np-item.np-unread{background:rgba(var(--ni-rgb),.09)}',
+        
+        // [GLASSMORPHISM] Item di dalam Panel
+        '.np-item{--ni-rgb:10,132,255;display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:12px;position:relative;',
+        'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.02);transition:background .2s}',
+        '.np-item+.np-item{margin-top:4px}',
+        '.np-item.np-unread{background:rgba(var(--ni-rgb),.12);border-color:rgba(var(--ni-rgb),.2)}',
+        '.np-item:active{background:rgba(255,255,255,.08)}',
         '.np-item .ni-ico{width:28px;height:28px}',
         '.np-body{flex:1;min-width:0}',
         '.np-msg{font-size:13px;line-height:1.4;font-weight:500;word-break:break-word}',
@@ -166,9 +174,10 @@ function ensureStyle() {
         '.np-empty{white-space:pre-line;padding:34px 20px;text-align:center;color:var(--text-tertiary,#8e8e93);font-size:13px;line-height:1.5}',
         '.np-empty svg{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;',
         'stroke-linejoin:round;opacity:.7;margin-bottom:8px}',
+        
         '.header-company-btn{position:relative}',
         '.header-company-btn .header-chevron{display:inline-block;transition:transform .2s ease}',
-        '.header-company-btn[aria-expanded=\"true\"] .header-chevron{transform:rotate(90deg)}',
+        '.header-company-btn[aria-expanded="true"] .header-chevron{transform:rotate(90deg)}',
         '.header-notif-badge{flex:0 0 auto;min-width:16px;height:16px;padding:0 4px;border-radius:8px;box-sizing:border-box;',
         'background:#ff453a;color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;',
         'font-variant-numeric:tabular-nums}',
@@ -327,7 +336,6 @@ function bindGestures(entry) {
     n.addEventListener('pointerup', function () { end(false); });
     n.addEventListener('pointercancel', function () { end(true); });
 
-    // Hover pause khusus mouse (di layar sentuh tidak dipakai agar tidak "nyangkut")
     n.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') pause(entry); });
     n.addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse') resume(entry); });
 
@@ -368,7 +376,6 @@ function emitChanged() {
 
 function recordHistory(type, msg, payload) {
     var last = _history[0];
-    // pesan identik berurutan digabung agar riwayat tidak penuh spam
     if (last && last.type === type && last.msg === msg && (Date.now() - last.ts) < 60000) {
         last.count++;
         last.ts = Date.now();
@@ -490,7 +497,6 @@ export function openNotificationPanel() {
     _panel._back = back;
     _panelOpen = true;
 
-    // toast aktif tidak perlu menumpuk di atas panel
     clearNotifications();
     markAllRead();
     _unread = 0;
@@ -555,10 +561,8 @@ export function renderNotification(container, payload) {
     if (!msg) return;
 
     recordHistory(type, msg, payload);
-    // Panel sedang terbuka: pesan langsung masuk daftar, tidak perlu toast
     if (_panelOpen) return;
 
-    // Pesan sama masih tampil -> naikkan penghitung, jangan dobel kartu
     for (var i = 0; i < _active.length; i++) {
         if (_active[i].type === type && _active[i].msg === msg && !_active[i].gone) {
             bumpEntry(_active[i], payload, msg);
@@ -566,7 +570,6 @@ export function renderNotification(container, payload) {
         }
     }
 
-    // Batasi jumlah kartu: yang paling lama keluar dengan animasi
     while (_active.length >= MAX_ACTIVE) removeEntry(_active[0], 'up');
 
     var meta = TYPES[type];
@@ -598,7 +601,6 @@ export function renderNotification(container, payload) {
         paused: false, expanded: false, gone: false
     };
 
-    // Tombol aksi (mis. "Baca" pada berita) langsung terlihat tanpa perlu expand
     if (payload.action && typeof payload.action.onClick === 'function') {
         var btn = document.createElement('button');
         btn.type = 'button';
@@ -630,4 +632,4 @@ export function clearNotifications() {
 
 export function getActiveRendererIdPublic() {
     return 'dynamic_island';
-}
+        }
