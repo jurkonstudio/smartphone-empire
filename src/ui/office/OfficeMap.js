@@ -1,4 +1,4 @@
-// FILE: src/ui/office/OfficeMap.js  (BARU)
+// FILE: src/ui/office/OfficeMap.js  (REPLACE — v2027.51a)
 // Mount/unmount Office 3D Map (tab HQ → Kantor). Three.js dimuat lazy dari CDN (versi dipin,
 // sama dengan peta kampus, jadi modul di-cache browser & tidak diunduh dua kali).
 import { createOfficeScene } from './OfficeScene.js';
@@ -53,8 +53,17 @@ export async function mountOfficeMap(containerEl, gameState) {
                 if (_active && _active.scene === scene) scene.update(currentData());
             });
         }
+        // jam dinding mengikuti waktu game; 'time:tick' sering -> dibatasi ~2x/detik
+        var lastClock = 0;
         var unsubs = [
             bus.on('theme:changed', function () { scene.refreshTheme(); }),
+            bus.on('lang:changed', function () { scene.relabel(); }),
+            bus.on('time:tick', function () {
+                var nowMs = Date.now();
+                if (nowMs - lastClock < 500) return;
+                lastClock = nowMs;
+                if (_active && _active.scene === scene) scene.updateClock(currentData());
+            }),
             bus.on('state:changed', queue),
             bus.on('team:changed', queue),
             bus.on('team:recruited', queue),
