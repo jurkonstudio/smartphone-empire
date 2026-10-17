@@ -161,6 +161,7 @@ function renderNavOnly() {
 }
 
 function updateNavSlider(animated) {
+function updateNavSlider(animated) {
     if (!els.nav) return;
     if (els.nav.dataset.dragging === '1') return;
 
@@ -181,13 +182,17 @@ function updateNavSlider(animated) {
 
     var count = buttons.length;
     var itemW = navW / count;
-    var sliderW = Math.max(56, Math.min(itemW * 0.88, 80));
+    
+    // PRESISI: Lebar slider dipatok 46px (pas untuk ikon 22px)
+    var sliderW = 46; 
+    
+    // Kalkulasi posisi X agar tepat di tengah itemW
     var x = (idx * itemW) + ((itemW - sliderW) / 2);
 
     if (!animated) {
         slider.style.transition = 'none';
         slider.style.width = sliderW + 'px';
-        slider.style.transform = 'translateX(' + x + 'px)';
+        slider.style.transform = 'translateX(' + x + 'px)'; 
         void slider.offsetWidth;
         requestAnimationFrame(function () { slider.style.transition = ''; });
     } else {
