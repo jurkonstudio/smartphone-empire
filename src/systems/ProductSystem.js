@@ -1,9 +1,6 @@
 // FILE: src/systems/ProductSystem.js
 // Versi lengkap — dengan _checkSalesMilestones untuk trigger berita milestone.
-// v2027.1d — bersih-bersih: hapus data.reviews.feed (dead data, tidak dibaca UI).
-//              Review editor tetap di p.reviews (dipakai ProductPanel).
-//              Feedback publik dikelola PublicOpinionSystem.
-// v2027.1e — [PATCH] validasi nama unik produk (cegah duplikasi nama).
+// v2028.5 — [LOGIC] Menambahkan validasi batas harga (floor & ceiling) di backend.
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
@@ -53,7 +50,6 @@ export class ProductSystem {
         var data = this.state.data;
         if (!data.products.catalog) data.products.catalog = [];
         if (!data.marketing.activeCampaigns) data.marketing.activeCampaigns = [];
-        // [v2027.1d] data.reviews.feed tidak lagi diinisialisasi (dead data).
 
         var defThreshold = (BALANCE.products.autoRestock && BALANCE.products.autoRestock.defaultThresholdPercent) || 20;
 
@@ -213,9 +209,6 @@ export class ProductSystem {
         return 0.5 + (sum / weightSum);
     }
 
-    // ============================================================
-    // [PATCH v2027.1e] VALIDASI NAMA UNIK
-    // ============================================================
     _isNameTaken(name) {
         var norm = (name || '').trim().toLowerCase();
         if (!norm) return false;
@@ -245,10 +238,23 @@ export class ProductSystem {
         if (!name) return { ok: false, reason: 'Nama produk kosong.' };
         if (this._isNameTaken(name)) return { ok: false, reason: 'Nama "' + name + '" sudah dipakai produk lain.' };
 
-        if (config.price < 1) return { ok: false, reason: 'Harga minimal $1.' };
         if (config.productionQty < 100) return { ok: false, reason: 'Jumlah produksi minimal 100 unit.' };
 
         var unitCost = this.computeUnitCost(config);
+        
+        // ============================================================
+        // VALIDASI BATAS HARGA (FLOOR & CEILING)
+        // ============================================================
+        var minPrice = unitCost + 1;
+        var maxPrice = Math.ceil(Math.max(unitCost * 2.2 * 1.5, unitCost * 4));
+        
+        if (config.price < minPrice) {
+            return { ok: false, reason: 'Harga di bawah biaya produksi (Min $' + minPrice + ').' };
+        }
+        if (config.price > maxPrice) {
+            return { ok: false, reason: 'Harga melampaui batas logis pasar (Max $' + maxPrice + ').' };
+        }
+
         var setupCost = BALANCE.products.productionSetupCost;
         var totalCost = unitCost * config.productionQty + setupCost;
 
@@ -404,9 +410,7 @@ export class ProductSystem {
 
         var rv = this._generateReview(product, true);
         product.reviews.push(rv);
-        // [v2027.1d] _pushReviewToFeed dihapus — data.reviews.feed dead data.
 
-        // [v2027.1a] fix reputasi ganda: kirim delta, bukan current+delta.
         var repDelta = this._reviewReputationDelta(rv.score, 1);
         if (repDelta !== 0) this.state.addReputation(repDelta);
 
@@ -734,11 +738,8 @@ export class ProductSystem {
         var sources = REVIEW_SOURCES[era] || REVIEW_SOURCES.feature_phone;
         var source = sources[Math.floor(Math.random() * sources.length)];
         var macro = getMacro(this.state.data.time, BALANCE.macro);
-        // Kualitas dinilai relatif terhadap ekspektasi zaman: ponsel yang
-        // hebat di 2000 terasa biasa saja di 2015 (dan sebaliknya).
         var q = product.stats.qualityScore + (BALANCE.products.refs.quality - macro.qualityRef);
         var base = reviewBaseScore(q);
-        // Nilai-uang: harga di atas ekspektasi (untuk kualitas segitu) menurunkan skor.
         var expectedPrice = macro.priceRef * Math.pow(Math.max(0.3, q / BALANCE.products.refs.quality), 1.2);
         var valueAdj = -BALANCE.macro.reviewValueWeight * Math.log(Math.max(1, product.price) / expectedPrice);
         base += Math.max(-1.2, Math.min(1.0, valueAdj));
@@ -810,16 +811,12 @@ export class ProductSystem {
                 var rv = this._generateReview(p, false);
                 p.reviews.push(rv);
                 if (p.reviews.length > 10) p.reviews.shift();
-                // [v2027.1d] _pushReviewToFeed dihapus — data.reviews.feed dead data.
-                // [v2027.1a] fix reputasi ganda: kirim delta, bukan current+delta.
                 var repDelta = this._reviewReputationDelta(rv.score, 0.5);
                 if (repDelta !== 0) this.state.addReputation(repDelta);
             }
         }.bind(this));
     }
 
-    // Reputasi bergerak dengan redaman: makin tinggi makin sulit naik,
-    // supaya beberapa ulasan bagus tidak langsung memaksa reputasi ke 100.
     _reviewReputationDelta(score, factor) {
         var rep = this.state.data.market.reputation || 0;
         var max = BALANCE.market.maxReputation || 100;
@@ -866,4 +863,4 @@ export class ProductSystem {
             productionQty: 10000
         };
     }
-    }
+                }
