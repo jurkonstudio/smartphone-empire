@@ -1,5 +1,133 @@
-// Ganti BUG_TEMPLATES di src/data/os.data.js dengan kode ini:
+// FILE: src/data/os.data.js
+// ============================================================
+// Data OS: era, fitur firmware, lisensi OS, aplikasi bawaan,
+// template pertumbuhan developer, dan template bug.
+//
+// Ekspor yang dipakai modul lain:
+//   OSSystem.js     -> OS_FEATURES, OS_LICENSES, BUILTIN_APPS, DEV_TEMPLATES,
+//                      BUG_TEMPLATES, getOsFeatureById, getBuiltinAppById
+//   OSPanel.js      -> OS_FEATURES, OS_LICENSES, BUILTIN_APPS, OS_ERAS, getOsFeatureById
+//   ProductSystem   -> getLicenseById
+//   ResearchPanel   -> getOsFeatureById
+// ============================================================
 
+export const OS_ERAS = [
+    { id: 'firmware', name: 'Firmware Dasar',    fromYear: 2000, toYear: 2006 },
+    { id: 'touch',    name: 'Era Layar Sentuh',  fromYear: 2007, toYear: 2012 },
+    { id: 'modern',   name: 'Smartphone Modern', fromYear: 2013, toYear: 2018 },
+    { id: 'ai_era',   name: 'AI & Ekosistem',    fromYear: 2019, toYear: 2025 },
+    { id: 'future',   name: 'Era AI On-Device',  fromYear: 2026, toYear: 9999 }
+];
+
+// Fitur dengan starter:true otomatis dimiliki (tidak bisa dipilih/dikembangkan).
+export const OS_FEATURES = [
+    { id: 'fw_sms', name: 'SMS & Pesan Teks', description: 'Kirim dan terima pesan teks dasar.', era: 'firmware', minYear: 2000, devCost: 0, devDays: 0,
+      statEffects: { stability: 2, speed: 0, features: 3, security: 0, design: 0 }, requiresFeatures: [], requiresResearch: [], starter: true },
+    { id: 'fw_contacts', name: 'Buku Telepon', description: 'Simpan dan kelola kontak di ponsel.', era: 'firmware', minYear: 2000, devCost: 0, devDays: 0,
+      statEffects: { stability: 2, speed: 0, features: 3, security: 0, design: 1 }, requiresFeatures: [], requiresResearch: [], starter: true },
+    { id: 'fw_poly_ringtone', name: 'Nada Dering Polifonik', description: 'Nada dering polifonik 16 suara.', era: 'firmware', minYear: 2000, devCost: 2000, devDays: 4,
+      statEffects: { stability: 0, speed: 0, features: 3, security: 0, design: 3 }, requiresFeatures: [], requiresResearch: ['net_edge'] },
+    { id: 'fw_j2me', name: 'Java Mobile (J2ME)', description: 'Platform aplikasi dan game Java.', era: 'firmware', minYear: 2000, devCost: 6000, devDays: 8,
+      statEffects: { stability: 0, speed: -1, features: 7, security: 0, design: 0 }, requiresFeatures: [], requiresResearch: ['net_gprs'] },
+    { id: 'fw_wap_browser', name: 'Browser WAP', description: 'Browser sederhana untuk situs WAP.', era: 'firmware', minYear: 2001, devCost: 5000, devDays: 7,
+      statEffects: { stability: 0, speed: 0, features: 5, security: 0, design: 0 }, requiresFeatures: [], requiresResearch: ['net_gprs'] },
+    { id: 'fw_touch_basic', name: 'Layar Sentuh Resistif', description: 'Dukungan stylus dan layar sentuh resistif.', era: 'firmware', minYear: 2003, devCost: 9000, devDays: 10,
+      statEffects: { stability: -1, speed: 0, features: 5, security: 0, design: 4 }, requiresFeatures: [], requiresResearch: ['layar_touch_res'] },
+    { id: 'fw_camera_app', name: 'Aplikasi Kamera', description: 'Aplikasi kamera dasar dan MMS.', era: 'firmware', minYear: 2003, devCost: 6000, devDays: 7,
+      statEffects: { stability: 0, speed: 0, features: 5, security: 0, design: 2 }, requiresFeatures: [], requiresResearch: ['cam_vga'] },
+    { id: 'fw_bt_basic', name: 'Bluetooth Dasar', description: 'Transfer file dan headset via Bluetooth.', era: 'firmware', minYear: 2004, devCost: 6000, devDays: 7,
+      statEffects: { stability: 1, speed: 0, features: 4, security: 1, design: 0 }, requiresFeatures: [], requiresResearch: [] },
+    { id: 'fw_camera_gallery', name: 'Galeri Foto', description: 'Galeri foto dan penyimpanan gambar.', era: 'firmware', minYear: 2005, devCost: 7000, devDays: 8,
+      statEffects: { stability: 0, speed: 0, features: 5, security: 0, design: 3 }, requiresFeatures: [], requiresResearch: ['cam_2mp'] },
+    { id: 'fw_multitasking', name: 'Multitasking', description: 'Beberapa aplikasi berjalan bersamaan.', era: 'firmware', minYear: 2005, devCost: 12000, devDays: 12,
+      statEffects: { stability: -1, speed: 3, features: 6, security: 0, design: 0 }, requiresFeatures: [], requiresResearch: ['chip_dual'] },
+    { id: 'fw_browser_mobile', name: 'Browser Mobile Penuh', description: 'Browser web penuh dengan HTML.', era: 'firmware', minYear: 2005, devCost: 10000, devDays: 10,
+      statEffects: { stability: 0, speed: 1, features: 7, security: 0, design: 1 }, requiresFeatures: ['fw_wap_browser'], requiresResearch: ['net_3g'] },
+    { id: 'fw_touch', name: 'UI Multitouch', description: 'Antarmuka kapasitif multitouch dengan gestur.', era: 'touch', minYear: 2007, devCost: 20000, devDays: 14,
+      statEffects: { stability: 1, speed: 2, features: 6, security: 0, design: 8 }, requiresFeatures: [], requiresResearch: ['layar_touch_cap'] },
+    { id: 'fw_appstore', name: 'App Store', description: 'Toko aplikasi resmi untuk developer pihak ketiga.', era: 'touch', minYear: 2008, devCost: 30000, devDays: 18,
+      statEffects: { stability: 1, speed: 0, features: 12, security: 0, design: 2 }, requiresFeatures: ['fw_browser_mobile'], requiresResearch: ['net_4g'] },
+    { id: 'fw_gps', name: 'Navigasi GPS', description: 'Peta dan navigasi berbasis lokasi.', era: 'touch', minYear: 2009, devCost: 15000, devDays: 12,
+      statEffects: { stability: 0, speed: 0, features: 7, security: 0, design: 1 }, requiresFeatures: [], requiresResearch: ['net_4g'] },
+    { id: 'fw_smart_notif', name: 'Notifikasi Pintar', description: 'Pusat notifikasi dan push notification.', era: 'touch', minYear: 2009, devCost: 12000, devDays: 10,
+      statEffects: { stability: 0, speed: 0, features: 5, security: 0, design: 3 }, requiresFeatures: ['fw_appstore'], requiresResearch: [] },
+    { id: 'fw_voice_assistant', name: 'Asisten Suara', description: 'Perintah suara dasar.', era: 'touch', minYear: 2011, devCost: 25000, devDays: 15,
+      statEffects: { stability: -1, speed: 0, features: 8, security: 0, design: 2 }, requiresFeatures: ['fw_touch'], requiresResearch: [] },
+    { id: 'fw_siri', name: 'Asisten Virtual', description: 'Asisten virtual percakapan.', era: 'touch', minYear: 2011, devCost: 28000, devDays: 16,
+      statEffects: { stability: -1, speed: 0, features: 9, security: 0, design: 2 }, requiresFeatures: ['fw_voice_assistant'], requiresResearch: [] },
+    { id: 'fw_cloud_sync', name: 'Sinkronisasi Cloud', description: 'Cadangan dan sinkronisasi data online.', era: 'touch', minYear: 2012, devCost: 22000, devDays: 14,
+      statEffects: { stability: 2, speed: 0, features: 6, security: 2, design: 0 }, requiresFeatures: ['fw_appstore'], requiresResearch: ['net_4g'] },
+    { id: 'fw_imessage', name: 'Pesan Instan Terintegrasi', description: 'Chat instan terintegrasi di OS.', era: 'modern', minYear: 2013, devCost: 20000, devDays: 12,
+      statEffects: { stability: 0, speed: 0, features: 7, security: 1, design: 1 }, requiresFeatures: ['fw_cloud_sync'], requiresResearch: [] },
+    { id: 'fw_biometric', name: 'Biometrik', description: 'Autentikasi wajah/sidik jari tingkat OS.', era: 'modern', minYear: 2013, devCost: 30000, devDays: 16,
+      statEffects: { stability: 0, speed: 0, features: 3, security: 10, design: 1 }, requiresFeatures: [], requiresResearch: ['cam_12mp'] },
+    { id: 'fw_fingerprint', name: 'Sensor Sidik Jari', description: 'Buka kunci dengan sidik jari.', era: 'modern', minYear: 2014, devCost: 25000, devDays: 14,
+      statEffects: { stability: 0, speed: 0, features: 2, security: 8, design: 0 }, requiresFeatures: ['fw_biometric'], requiresResearch: [] },
+    { id: 'fw_flat_ui', name: 'UI Flat Modern', description: 'Desain antarmuka flat dan animasi halus.', era: 'modern', minYear: 2014, devCost: 28000, devDays: 15,
+      statEffects: { stability: 0, speed: 3, features: 0, security: 0, design: 12 }, requiresFeatures: [], requiresResearch: ['layar_amoled'] },
+    { id: 'fw_notifications', name: 'Notifikasi Lanjutan', description: 'Notifikasi interaktif dan dikelompokkan.', era: 'modern', minYear: 2014, devCost: 15000, devDays: 10,
+      statEffects: { stability: 0, speed: 0, features: 5, security: 0, design: 3 }, requiresFeatures: ['fw_smart_notif'], requiresResearch: [] },
+    { id: 'fw_sign_in', name: 'Akun Terpadu', description: 'Satu akun untuk semua layanan dan sinkronisasi sandi.', era: 'modern', minYear: 2015, devCost: 18000, devDays: 11,
+      statEffects: { stability: 0, speed: 0, features: 4, security: 4, design: 1 }, requiresFeatures: ['fw_cloud_sync'], requiresResearch: [] },
+    { id: 'fw_low_power', name: 'Mode Hemat Daya', description: 'Penghematan baterai cerdas.', era: 'modern', minYear: 2015, devCost: 16000, devDays: 10,
+      statEffects: { stability: 2, speed: 0, features: 3, security: 0, design: 0 }, requiresFeatures: [], requiresResearch: [] },
+    { id: 'fw_aod', name: 'Always-On Display', description: 'Layar selalu menyala hemat daya.', era: 'modern', minYear: 2016, devCost: 18000, devDays: 10,
+      statEffects: { stability: 0, speed: 0, features: 3, security: 0, design: 6 }, requiresFeatures: ['fw_flat_ui'], requiresResearch: [] },
+    { id: 'fw_foldable_ui', name: 'UI Layar Lipat', description: 'Antarmuka adaptif untuk layar lipat.', era: 'ai_era', minYear: 2019, devCost: 45000, devDays: 20,
+      statEffects: { stability: -1, speed: 0, features: 8, security: 0, design: 10 }, requiresFeatures: ['fw_multitasking', 'fw_flat_ui'], requiresResearch: [] },
+    { id: 'fw_dark_mode', name: 'Mode Gelap', description: 'Tema gelap seluruh sistem.', era: 'ai_era', minYear: 2019, devCost: 14000, devDays: 9,
+      statEffects: { stability: 0, speed: 0, features: 2, security: 0, design: 8 }, requiresFeatures: [], requiresResearch: ['bat_big5000'] },
+    { id: 'fw_focus_mode', name: 'Mode Fokus', description: 'Kontrol gangguan dan fokus kerja.', era: 'ai_era', minYear: 2019, devCost: 16000, devDays: 10,
+      statEffects: { stability: 1, speed: 0, features: 4, security: 0, design: 2 }, requiresFeatures: ['fw_notifications'], requiresResearch: [] },
+    { id: 'fw_digital_wellbeing', name: 'Kesejahteraan Digital', description: 'Statistik dan batas waktu pemakaian.', era: 'ai_era', minYear: 2019, devCost: 16000, devDays: 10,
+      statEffects: { stability: 1, speed: 0, features: 4, security: 0, design: 2 }, requiresFeatures: ['fw_notifications'], requiresResearch: [] },
+    { id: 'fw_ai_on_device', name: 'AI On-Device', description: 'Pemrosesan AI langsung di perangkat.', era: 'ai_era', minYear: 2020, devCost: 50000, devDays: 22,
+      statEffects: { stability: 0, speed: 3, features: 12, security: 2, design: 1 }, requiresFeatures: [], requiresResearch: ['chip_npu'] },
+    { id: 'fw_privacy', name: 'Pusat Privasi', description: 'Kontrol izin dan privasi granular.', era: 'ai_era', minYear: 2020, devCost: 35000, devDays: 16,
+      statEffects: { stability: 1, speed: 0, features: 3, security: 14, design: 1 }, requiresFeatures: ['fw_biometric'], requiresResearch: [] },
+    { id: 'fw_ecosystem', name: 'Ekosistem Perangkat', description: 'Integrasi lintas perangkat dan eSIM.', era: 'ai_era', minYear: 2021, devCost: 60000, devDays: 24,
+      statEffects: { stability: 1, speed: 1, features: 10, security: 3, design: 3 }, requiresFeatures: ['fw_cloud_sync'], requiresResearch: ['net_wifi6'] },
+    { id: 'fw_ondevice_llm', name: 'LLM On-Device', description: 'Model bahasa besar berjalan di perangkat.', era: 'future', minYear: 2026, devCost: 90000, devDays: 28,
+      statEffects: { stability: 0, speed: 2, features: 14, security: 3, design: 1 }, requiresFeatures: ['fw_ai_on_device'], requiresResearch: [] },
+    { id: 'fw_ai_agent', name: 'AI Agent', description: 'Agen AI yang menjalankan tugas otomatis.', era: 'future', minYear: 2026, devCost: 110000, devDays: 32,
+      statEffects: { stability: -1, speed: 1, features: 16, security: 2, design: 2 }, requiresFeatures: ['fw_ondevice_llm'], requiresResearch: [] }
+];
+
+// Lisensi OS pihak ketiga (biaya per unit ponsel).
+export const OS_LICENSES = [
+    { id: 'lic_symbian',   name: 'Symbian OS',        availableFromYear: 2000, costPerUnit: 6,  stats: { stability: 45, speed: 40, features: 45, security: 35, design: 35 } },
+    { id: 'lic_winmobile', name: 'Windows Mobile',    availableFromYear: 2003, costPerUnit: 9,  stats: { stability: 40, speed: 40, features: 55, security: 40, design: 40 } },
+    { id: 'lic_android',   name: 'Android (Open)',    availableFromYear: 2008, costPerUnit: 3,  stats: { stability: 55, speed: 55, features: 65, security: 50, design: 55 } },
+    { id: 'lic_android_p', name: 'Android Premium',   availableFromYear: 2014, costPerUnit: 8,  stats: { stability: 70, speed: 68, features: 78, security: 68, design: 72 } },
+    { id: 'lic_android_ai',name: 'Android AI Suite',  availableFromYear: 2023, costPerUnit: 14, stats: { stability: 80, speed: 78, features: 90, security: 80, design: 82 } }
+];
+
+// Aplikasi bawaan (dibuat pemain; butuh fitur App Store).
+export const BUILTIN_APPS = [
+    { id: 'app_notes',    name: 'Catatan',        devCost: 8000,   appealBonus: 2, requiresFeature: 'fw_appstore' },
+    { id: 'app_music',    name: 'Pemutar Musik',  devCost: 12000,  appealBonus: 3, requiresFeature: 'fw_appstore' },
+    { id: 'app_maps',     name: 'Peta',           devCost: 25000,  appealBonus: 5, requiresFeature: 'fw_gps' },
+    { id: 'app_gallery',  name: 'Galeri Pintar',  devCost: 18000,  appealBonus: 4, requiresFeature: 'fw_camera_gallery' },
+    { id: 'app_chat',     name: 'Aplikasi Chat',  devCost: 30000,  appealBonus: 6, requiresFeature: 'fw_imessage' },
+    { id: 'app_wallet',   name: 'Dompet Digital', devCost: 40000,  appealBonus: 7, requiresFeature: 'fw_biometric' },
+    { id: 'app_assistant',name: 'Asisten AI',     devCost: 70000,  appealBonus: 10, requiresFeature: 'fw_ai_on_device' }
+];
+
+// Pertumbuhan aplikasi pihak ketiga per bulan (dipakai OSSystem._onMonthChanged).
+export const DEV_TEMPLATES = {
+    baseGrowthPerMonth: 5,
+    perReputationBonus: 0.5,
+    perStabilityBonus: 0.1,
+    maxApps: 2000
+};
+
+export function getOsFeatureById(id)   { return OS_FEATURES.find(function (f) { return f.id === id; }) || null; }
+export function getLicenseById(id)     { return OS_LICENSES.find(function (l) { return l.id === id; }) || null; }
+export function getBuiltinAppById(id)  { return BUILTIN_APPS.find(function (a) { return a.id === id; }) || null; }
+
+// ============================================================
+// TEMPLATE BUG (konteks tahun & fitur) — dipakai OSSystem._rollForBug
+// ============================================================
 export const BUG_TEMPLATES = [
     // ============================================================
     // ERA 1: GSM, SMS, Layar Monokrom (2000 - 2003)
