@@ -8,7 +8,7 @@ var _nav = null;
 var _getActiveView = null;
 var _navigate = null;
 
-var DRAG_START_THRESHOLD = 15;
+var DRAG_START_THRESHOLD = 8;
 var SLIDER_HIT_PADDING = 10;
 var FLICK_VELOCITY = 0.55;
 var VELOCITY_WINDOW = 80;
@@ -144,6 +144,13 @@ function _beginDrag(originX) {
     _state.count = m.count;
     _state.activeIdx = activeIdx;
     _state.startSliderX = _idxToX(activeIdx, m.itemW, m.sliderW);
+    var navLeft = _nav.getBoundingClientRect().left;
+    var sliderRect = slider.getBoundingClientRect();
+    if (originX < sliderRect.left - SLIDER_HIT_PADDING || originX > sliderRect.right + SLIDER_HIT_PADDING) {
+        // jari mulai di luar slider: kaca "melompat" ke bawah jari, lalu ikut bergeser
+        var cx = originX - navLeft - m.sliderW / 2;
+        _state.startSliderX = Math.max(_idxToX(0, m.itemW, m.sliderW), Math.min(cx, _idxToX(m.count - 1, m.itemW, m.sliderW)));
+    }
     _state.currentX = _state.startSliderX;
     _state.minX = _idxToX(0, m.itemW, m.sliderW);
     _state.maxX = _idxToX(m.count - 1, m.itemW, m.sliderW);
@@ -291,11 +298,6 @@ function _onTouchStart(e) {
     var x = e.touches[0].clientX;
     var y = e.touches[0].clientY;
 
-    if (!_isNearSlider(x)) {
-        _state.pending = false;
-        return;
-    }
-
     _state.pending = true;
     _state.startX = x;
     _state.startY = y;
@@ -318,7 +320,7 @@ function _onTouchMove(e) {
         }
 
         var moved = Math.abs(dx) > DRAG_START_THRESHOLD && Math.abs(dx) > Math.abs(dy);
-        var longEnough = dt > TAP_MAX_DURATION;
+        var longEnough = true;
 
         if (moved && longEnough) {
             if (!_beginDrag(_state.startX)) {
@@ -357,11 +359,6 @@ function _onMouseDown(e) {
     if (_state.dragging) return;
     if (Date.now() < _ignoreMouseUntil) return;
 
-    if (!_isNearSlider(e.clientX)) {
-        _state.pending = false;
-        return;
-    }
-
     _state.pending = true;
     _state.startX = e.clientX;
     _state.startY = e.clientY;
@@ -378,7 +375,7 @@ function _onMouseMove(e) {
             _state.pending = false;
             return;
         }
-        if (Math.abs(dx) > DRAG_START_THRESHOLD && Math.abs(dx) > Math.abs(dy) && dt > TAP_MAX_DURATION) {
+        if (Math.abs(dx) > DRAG_START_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
             if (!_beginDrag(_state.startX)) {
                 _state.pending = false;
                 return;
