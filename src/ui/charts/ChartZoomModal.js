@@ -4,7 +4,35 @@
 // tooltip memakai area plot, area-fill menutup di titik terakhir, label X tidak tumpang tindih.
 // Murni viewer — tidak mengubah state/ save/ sistem.
 import { Modal } from '../modal.js';
-import { t } from '../../core/LanguageService.js';
+import { t, LanguageService } from '../../core/LanguageService.js';
+
+// Terjemahan dengan fallback (aman walau file i18n belum diganti).
+function _tx(key, idText, enText) {
+    const v = t(key);
+    if (v && v !== key) return v;
+    let lang = 'id';
+    try { lang = LanguageService.getLang(); } catch (e) {}
+    return lang === 'id' ? idText : enText;
+}
+
+// Sumbu Y "cantik": 4 interval dengan langkah 1/2/2.5/5 x 10^k.
+function _niceAxis(lo, hi) {
+    const raw = Math.max(1e-9, (hi - lo) / 4);
+    const base = Math.pow(10, Math.floor(Math.log10(raw)));
+    const mult = [1, 2, 2.5, 5, 10, 20, 50];
+    for (let i = 0; i < mult.length; i++) {
+        const step = base * mult[i];
+        const nlo = Math.max(0, Math.floor(lo / step + 1e-9) * step);
+        if (nlo + 4 * step >= hi - 1e-12) return { lo: nlo, hi: nlo + 4 * step, step: step };
+    }
+    return { lo: 0, hi: hi, step: hi / 4 };
+}
+function _axisDecimals(step) {
+    const sp = step * 100;
+    let d = 0;
+    while (d < 5 && Math.abs(sp * Math.pow(10, d) - Math.round(sp * Math.pow(10, d))) > 1e-6) d++;
+    return d;
+}
 
 const COLORS = ['#4CAF50', '#6b8e23', '#c97f3c', '#8a5ec9', '#0a8aef', '#eb0028'];
 
@@ -86,7 +114,7 @@ function _openShareZoom() {
         subtitle: t('market.share.title') || 'Your Market Share',
         series: series,
         labels: labels,
-        yFmt: _fmtPctAuto,
+        yFmt: function (v, step) { return (Math.max(0, v) * 100).toFixed(_axisDecimals(step)) + '%'; },
         valueFmt: _fmtPctAuto
     });
 }
@@ -176,17 +204,22 @@ function _html(cfg) {
             '<button class="btn-secondary cz-close" data-modal-close type="button">✕</button>' +
         '</div>' +
         '<div class="cz-presets" data-cz-presets>' +
-            _presetBtn('all', 'Semua', true) +
-            _presetBtn('24', '24 bln', false) +
-            _presetBtn('12', '12 bln', false) +
-            _presetBtn('6', '6 bln', false) +
+            _presetBtn('all', _tx('chart.preset_all', 'Semua', 'All'), true) +
+            _presetBtn('24', '24 ' + _tx('chart.months_short', 'bln', 'mo'), false) +
+            _presetBtn('12', '12 ' + _tx('chart.months_short', 'bln', 'mo'), false) +
+            _presetBtn('6', '6 ' + _tx('chart.months_short', 'bln', 'mo'), false) +
         '</div>' +
         '<div class="cz-canvas-wrap" data-cz-wrap>' +
             '<canvas class="cz-canvas" data-cz-canvas></canvas>' +
             '<div class="cz-tip" data-cz-tip></div>' +
         '</div>' +
-        '<div class="cz-legend" data-cz-legend>' + legendItems + '</div>' +
-        '<div class="cz-hint">Cubit untuk zoom · Geser untuk pan · Ketuk titik untuk nilai</div>';
+        '<div class="cz-legend" data-cz-legend>' + legendItems +
+            (cfg.series.length > 1 && cfg.series.some(function (x) { return x.id === 'you'; })
+                ? '<button class="cz-legend-item" data-cz-focus type="button" style="margin-left:auto;border-color:var(--accent);color:var(--accent);">' +
+                  _esc(_tx('chart.focus_you', 'Fokus Anda', 'Focus: You')) + '</button>'
+                : '') +
+        '</div>' +
+        '<div class="cz-hint">' + _esc(_tx('chart.hint', 'Cubit untuk zoom · Geser untuk pan · Ketuk titik untuk nilai', 'Pinch to zoom · Drag to pan · Tap for values')) + '</div>';
 }
 
 function _presetBtn(id, label, active) {
@@ -225,6 +258,18 @@ function _attachPresets(root) {
 // ============================================================
 function _attachLegend(root) {
     root.querySelector('[data-cz-legend]').addEventListener('click', function (e) {
+        const focusBtn = e.target.closest('[data-cz-focus]');
+        if (focusBtn) {
+            // Toggle: sembunyikan semua selain 'you' (skala Y otomatis menyesuaikan), atau tampilkan semua.
+            const focused = _cfg.series.every(function (x) { return x.id === 'you' || _hidden[x.id]; });
+            _cfg.series.forEach(function (x) { _hidden[x.id] = focused ? false : x.id !== 'you'; });
+            root.querySelectorAll('[data-cz-toggle]').forEach(function (b) {
+                b.classList.toggle('off', !!_hidden[b.dataset.czToggle]);
+            });
+            focusBtn.textContent = focused ? _tx('chart.focus_you', 'Fokus Anda', 'Focus: You') : _tx('chart.show_all', 'Tampilkan semua', 'Show all');
+            _draw(root);
+            return;
+        }
         const btn = e.target.closest('[data-cz-toggle]');
         if (!btn) return;
         const id = btn.dataset.czToggle;
@@ -407,6 +452,10 @@ function _draw(root) {
     const pad = (maxV - minV) * 0.10;
     minV = Math.max(0, minV - pad);
     maxV = maxV + pad;
+    // Sumbu Y: bila semua nilai positif dan seri persen, ticks dibulatkan; selain itu pakai rentang apa adanya.
+    const axis = _niceAxis(minV, maxV);
+    minV = axis.lo;
+    maxV = axis.hi;
     const range = maxV - minV || 1;
 
     const padL = 48, padR = 10, padT = 14, padB = 26;
@@ -428,7 +477,7 @@ function _draw(root) {
         ctx.font = '10px sans-serif';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
-        ctx.fillText(_cfg.yFmt ? _cfg.yFmt(v) : String(v), padL - 4, y);
+        ctx.fillText(_cfg.yFmt ? _cfg.yFmt(v, axis.step) : String(v), padL - 4, y);
     }
 
     // X labels: tunjukkan ~4-5 label
@@ -437,15 +486,18 @@ function _draw(root) {
     ctx.font = '10px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    let lastLabelIdx = -Infinity;
-    for (let i = start; i < end; i += step) {
-        ctx.fillText(_cfg.labels[i], xOf(i), padT + plotH + 6);
-        lastLabelIdx = i;
+    const drawX = function (i) {
+        const txt = _cfg.labels[i];
+        const w = ctx.measureText(txt).width;
+        const x = Math.max(2 + w / 2, Math.min(cssW - 2 - w / 2, xOf(i)));
+        ctx.fillText(txt, x, padT + plotH + 6);
+    };
+    // Label interior dilewati bila terlalu dekat dengan label terakhir (yang selalu digambar).
+    for (let i = start; i < end - 1; i += step) {
+        if ((end - 1 - i) < step * 0.75) continue;
+        drawX(i);
     }
-    // Label terakhir hanya bila tidak menabrak label sebelumnya.
-    if (lastLabelIdx !== end - 1 && (end - 1 - lastLabelIdx) >= step * 0.6) {
-        ctx.fillText(_cfg.labels[end - 1], xOf(end - 1), padT + plotH + 6);
-    }
+    drawX(end - 1);
 
     // Draw each series
     _cfg.series.forEach(s => {
