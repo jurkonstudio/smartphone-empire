@@ -50,6 +50,13 @@ function escapeHtml(s) {
             .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
+// Render ulang Settings TANPA reset scroll (toggle/pilihan tidak boleh melempar layar ke atas).
+function _refresh() {
+    const g = window.__game;
+    if (g && typeof g.renderSoft === 'function') g.renderSoft();
+    else if (g && typeof g.render === 'function') g.render();
+}
+
 export function renderSettingsPanel() {
     const s = state.get();
     return _heroCard(s) + _tabBar() + _tabContent(s);
@@ -250,7 +257,7 @@ function _handleNotifToggle(key) {
     } else {
         return;
     }
-    window.__game.render();
+    _refresh();
 }
 
 function _handleNotifAction(action) {
@@ -429,6 +436,9 @@ export function bindSettingsActions(root) {
             e.preventDefault();
             _activeTab = tabBtn.dataset.setTab;
             window.__game.render();
+            // Pindah tab = konten baru, mulai dari atas.
+            var _v = document.getElementById('app-view');
+            if (_v) _v.scrollTop = 0;
             return;
         }
 
@@ -449,7 +459,7 @@ export function bindSettingsActions(root) {
             e.preventDefault();
             ThemeService.setTheme(themeBtn.dataset.themePick);
             ToastService.info(t('toast.theme_changed', { value: themeBtn.dataset.themePick }));
-            window.__game.render();
+            _refresh();
             return;
         }
 
@@ -458,7 +468,7 @@ export function bindSettingsActions(root) {
             e.preventDefault();
             ThemeService.setAccent(accentBtn.dataset.accentPick);
             ToastService.info(t('toast.accent_changed'));
-            window.__game.render();
+            _refresh();
             return;
         }
 
@@ -466,7 +476,7 @@ export function bindSettingsActions(root) {
         if (wMode) {
             e.preventDefault();
             WalletService.setMode(wMode.dataset.walletMode);
-            window.__game.render();
+            _refresh();
             return;
         }
         if (e.target.closest('[data-wallet-catalog]')) { e.preventDefault(); _openWalletCatalog(); return; }
@@ -474,7 +484,7 @@ export function bindSettingsActions(root) {
         if (wResc) {
             e.preventDefault();
             WalletService.setRescue(!WalletService.isRescueOn());
-            window.__game.render();
+            _refresh();
             return;
         }
 
@@ -530,7 +540,7 @@ function _handleToggle(key) {
     state.patch({ settings: s.settings });
     ToastService.info(key + ': ' + (s.settings[key] ? 'ON' : 'OFF'));
     bus.emit('settings:changed', s.settings);
-    window.__game.render();
+    _refresh();
 }
 
 function _openWalletCatalog() {
