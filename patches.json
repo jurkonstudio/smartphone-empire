@@ -1,0 +1,25 @@
+{
+  "latest": "0.2.1",
+  "releases": [
+    {
+      "version": "0.2.1",
+      "date": "2026-10-18",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Asisten Bisnis kini memberi tahu saat ada patch baru atau perbaikan bug.",
+            "en": "The Business Advisor now tells you when a new patch or bug fix is out."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Tanya asisten \"ada patch baru?\" untuk melihat catatan perubahan terbaru.",
+            "en": "Ask the advisor \"any new patch?\" to see the latest release notes."
+          }
+        }
+      ]
+    }
+  ]
+}
