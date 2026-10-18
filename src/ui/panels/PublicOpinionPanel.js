@@ -31,7 +31,7 @@ function _sentimentLabel(sentiment) {
 
 export function renderPublicOpinionPanel(params) {
     var opinionSystem = params.opinionSystem;
-    const sentiment = opinionSystem.getSentiment();
+    const sentiment = Math.round(Number(opinionSystem.getSentiment()) || 0);
     const aspects = opinionSystem.getAspectSentiment();
     const feed = opinionSystem.getFeed(20);
     const viral = opinionSystem.getActiveViral();
@@ -136,7 +136,7 @@ export function renderPublicOpinionPanel(params) {
     const productRows = Object.keys(perProduct).slice(0, 5).map(function (pid) {
         const p = data.products.catalog.find(function (x) { return x.id === pid; });
         if (!p) return '';
-        const score = perProduct[pid];
+        const score = Math.round(Number(perProduct[pid]) || 0);
         const col = score >= 70 ? 'var(--accent)' : score >= 45 ? 'var(--info)' : 'var(--warn)';
         return '<div class="sum-row">' +
             '<span>' + escapeHtml(p.name) + '</span>' +
