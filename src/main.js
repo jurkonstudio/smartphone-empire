@@ -914,6 +914,29 @@ function bindStateEvents() {
     bus.on('lang:changed', function () { renderAll(); });
     bus.on('silicon:changed', function () { renderHeaderOnly(); });
 
+    // Dompet Universal: beri tahu pemain saat SIL/uang dipakai lintas mata uang.
+    (function () {
+        function _id() { try { return LanguageService.getLang() === 'id'; } catch (e) { return true; } }
+        bus.on('wallet:paid-with-sil', function (p) {
+            if (!p || !p.sil) return;
+            ToastService.info(_id()
+                ? 'Dibayar dengan ' + p.sil + ' SIL' + (p.cash ? ' + $' + Number(p.cash).toLocaleString('en-US') : '') + '.'
+                : 'Paid with ' + p.sil + ' SIL' + (p.cash ? ' + $' + Number(p.cash).toLocaleString('en-US') : '') + '.');
+        });
+        bus.on('wallet:paid-with-cash', function (p) {
+            if (!p || !p.cash) return;
+            ToastService.info(_id()
+                ? 'Biaya SIL dibayar dengan uang $' + Number(p.cash).toLocaleString('en-US') + '.'
+                : 'SIL cost paid with $' + Number(p.cash).toLocaleString('en-US') + ' cash.');
+        });
+        bus.on('wallet:rescue', function (p) {
+            if (!p) return;
+            ToastService.warning(_id()
+                ? 'Dana darurat: ' + p.sil + ' SIL dipakai menutup kas minus.'
+                : 'Emergency fund: ' + p.sil + ' SIL used to cover negative cash.');
+        });
+    })();
+
     bus.on('advisor:go', function (p) {
         if (!p || !p.nav) return;
         Modal.closeAll();
