@@ -1,4 +1,5 @@
 // FILE: src/ui/campus/CampusMap.js
+// v2027.44 — + dengarkan lang:changed supaya kartu info ganti bahasa.
 // Mount/unmount peta kampus 3D. Three.js dimuat lazy dari CDN (versi dipin).
 import { createCampusScene } from './CampusScene.js';
 import { renderCampusFallback } from './CampusFallback.js';
@@ -31,6 +32,7 @@ export async function mountCampusMap(containerEl, gameState) {
         }
         var unsubs = [
             bus.on('theme:changed', function () { scene.refreshTheme(); }),
+            bus.on('lang:changed', function () { scene.refreshLang(); }),
             bus.on('state:changed', function (data) { scene.update(data); }),
             // Pergantian tahun bisa mengganti era desain walau state:changed tidak terpicu.
             bus.on('time:year-changed', function () { scene.update(currentData()); })
