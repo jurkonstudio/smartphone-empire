@@ -5,7 +5,7 @@ import { BALANCE } from '../data/balance.data.js';
 import { TIME_CONFIG } from '../config/time.config.js';
 import { ToastService } from '../core/ToastService.js';
 import { LOG_TYPES } from '../config/constants.js';
-import { getNodeById, addBuzzToState } from '../data/research.data.js';
+import { getNodeById } from '../data/research.data.js';
 import {
     OS_FEATURES,
     OS_LICENSES,
@@ -14,9 +14,6 @@ import {
     BUG_TEMPLATES,
     OS_PLATFORM_TRACKS,
     getLicenseStatsAtYear,
-    sanitizePlatform,
-    computePlatformBonus,
-    applyPlatformBonus,
     getOsFeatureById,
     getBuiltinAppById
 } from '../data/os.data.js';
@@ -107,12 +104,7 @@ export class OSSystem {
     _onDayChanged(_snap) {
         const data = this.state.data;
         if (data.os.developing) this._tickDeveloping();
-        // [FIX] R&D platform diisolasi: data rusak tidak boleh menghentikan bug/OS lain.
-        try { this._tickPlatform(); }
-        catch (err) {
-            console.error('[OSSystem] R&D platform error, dipulihkan:', err);
-            data.os.platform = sanitizePlatform(null, data.time.elapsedGameMinutes);
-        }
+        this._tickPlatform();
         if (data.os.versions.length > 0) this._rollForBug();
         if (data.os.bugs.length) this._tickBugs();
     }
@@ -547,38 +539,35 @@ export class OSSystem {
     // sendiri (seperti update OTA), tanpa harus merilis versi baru.
     // ============================================================
     _ensurePlatform() {
-        const data = this.state.data;
-        const os = data.os;
-        const p = os.platform;
-        const maxLv = BALANCE.rnd.os.maxLevel;
-        // Jalur cepat: struktur sudah valid -> tidak perlu membangun ulang.
-        let ok = p && typeof p === 'object' && p.levels && typeof p.levels === 'object' &&
-                 Number.isFinite(p.totalUpgrades) && typeof p.developing !== 'undefined';
-        if (ok) {
-            for (const t of OS_PLATFORM_TRACKS) {
-                const v = p.levels[t.id];
-                if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > maxLv || v !== Math.floor(v)) { ok = false; break; }
-            }
+        const os = this.state.data.os;
+        if (!os.platform || typeof os.platform !== 'object') os.platform = {};
+        if (!os.platform.levels || typeof os.platform.levels !== 'object') os.platform.levels = {};
+        OS_PLATFORM_TRACKS.forEach(t => { if (typeof os.platform.levels[t.id] !== 'number') os.platform.levels[t.id] = 0; });
+        if (typeof os.platform.totalUpgrades !== 'number') os.platform.totalUpgrades = 0;
+        if (typeof os.platform.developing === 'undefined') os.platform.developing = null;
+        const d = os.platform.developing;
+        if (d) {
+            if (typeof d.progressDays !== 'number') d.progressDays = 0;
+            if (typeof d.lastProcessedMinute !== 'number') d.lastProcessedMinute = this.state.data.time.elapsedGameMinutes;
         }
-        if (ok && p.developing) {
-            const d = p.developing;
-            if (typeof d !== 'object' || !Number.isFinite(d.durationDays) || !(d.durationDays > 0) ||
-                !Number.isFinite(d.progressDays) || !Number.isFinite(d.lastProcessedMinute) ||
-                !Number.isFinite(d.targetLevel) || !OS_PLATFORM_TRACKS.some(t => t.id === d.statId)) ok = false;
-        }
-        if (!ok) os.platform = sanitizePlatform(p, data.time.elapsedGameMinutes);
     }
 
     getPlatformLevels() { this._ensurePlatform(); return Object.assign({}, this.state.data.os.platform.levels); }
 
     getPlatformBonus() {
         this._ensurePlatform();
-        return computePlatformBonus(this.state.data.os.platform.levels);
+        const per = BALANCE.rnd.os.statPerLevel;
+        const lv = this.state.data.os.platform.levels;
+        const out = {};
+        OS_PLATFORM_TRACKS.forEach(t => { out[t.id] = (lv[t.id] || 0) * per; });
+        return out;
     }
 
     _applyPlatformBonus(stats) {
-        this._ensurePlatform();
-        return applyPlatformBonus(stats, this.state.data.os.platform.levels);
+        const bonus = this.getPlatformBonus();
+        const out = {};
+        for (const k in stats) out[k] = Math.max(0, Math.min(100, Math.round(stats[k] + (bonus[k] || 0))));
+        return out;
     }
 
     // Stat efektif sebuah versi = stat rilis + bonus R&D platform saat ini.
@@ -639,8 +628,7 @@ export class OSSystem {
         const info = this.getPlatformInfo(statId);
         if (info.status !== 'available') return { ok: false, reason: info.reason || 'Belum bisa dimulai.' };
 
-        const paid = WalletService.pay(info.cost, 'os-dev');
-        if (!paid || !paid.ok) return { ok: false, reason: (paid && paid.reason) || 'Pembayaran gagal.' };
+        WalletService.pay(info.cost, 'os-dev');
         data.os.platform.developing = {
             statId, name: info.name + ' Lv ' + (info.level + 1), targetLevel: info.level + 1,
             cost: info.cost, durationDays: info.days, progressDays: 0,
@@ -670,7 +658,7 @@ export class OSSystem {
         this._ensurePlatform();
         const d = this.state.data.os.platform.developing;
         if (!d) return { ok: false, reason: 'Tidak ada R&D platform berjalan.' };
-        const add = (days === Infinity) ? (d.durationDays - d.progressDays) : (Number.isFinite(days) ? Math.max(0, days) : 0);
+        const add = (days === Infinity) ? (d.durationDays - d.progressDays) : Math.max(0, days || 0);
         d.progressDays = Math.min(d.durationDays, d.progressDays + add);
         if (d.progressDays >= d.durationDays) { this._completePlatform(); return { ok: true, completed: true }; }
         bus.emit('state:changed', this.state.data);
@@ -684,13 +672,11 @@ export class OSSystem {
         if (!d) return;
         const cur = data.time.elapsedGameMinutes;
         const delta = cur - d.lastProcessedMinute;
-        const speed = this._getSpeedMultiplier();
-        if (delta > 0) {
-            d.progressDays += (delta / MINUTES_PER_DAY) * speed;
-            d.lastProcessedMinute = cur;
-        }
-        if (d.progressDays >= d.durationDays) { this._completePlatform(); return; }
         if (delta <= 0) return;
+        const speed = this._getSpeedMultiplier();
+        d.progressDays += (delta / MINUTES_PER_DAY) * speed;
+        d.lastProcessedMinute = cur;
+        if (d.progressDays >= d.durationDays) { this._completePlatform(); return; }
         bus.emit('os:platform-progress', {
             statId: d.statId,
             percent: d.durationDays > 0 ? Math.min(1, d.progressDays / d.durationDays) : 0,
@@ -702,15 +688,14 @@ export class OSSystem {
         const data = this.state.data;
         const d = data.os.platform.developing;
         if (!d) return;
-        data.os.platform.levels[d.statId] = Math.min(BALANCE.rnd.os.maxLevel, Math.max(data.os.platform.levels[d.statId] || 0, d.targetLevel));
+        data.os.platform.levels[d.statId] = Math.max(data.os.platform.levels[d.statId] || 0, d.targetLevel);
         data.os.platform.totalUpgrades = (data.os.platform.totalUpgrades || 0) + 1;
         data.os.platform.developing = null;
 
         // Pemicu pasar: OS yang membaik menaikkan gaung & reputasi.
         const bz = BALANCE.rnd.buzz;
-        // [FIX] Gaung ditambah langsung ke state — tidak bergantung pada window.__game.
-        const buzz = addBuzzToState(data, bz.osPlatformBase + d.targetLevel * bz.osPlatformPerLevel);
-        bus.emit('research:buzz', { buzz, reason: 'os-platform' });
+        const rs = (typeof window !== 'undefined' && window.__game) ? window.__game.research : null;
+        if (rs && typeof rs.addBuzz === 'function') rs.addBuzz(bz.osPlatformBase + d.targetLevel * bz.osPlatformPerLevel, 'os-platform');
         if (typeof this.state.addReputation === 'function') this.state.addReputation(bz.reputationPerLevel * Math.max(1, d.targetLevel / 4));
 
         ToastService.success('R&D OS selesai: ' + d.name);

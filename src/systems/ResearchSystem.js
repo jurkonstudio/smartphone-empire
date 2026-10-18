@@ -12,13 +12,7 @@ import {
     validateResearchData,
     RND_TRACKS,
     getTechBenchmark,
-    computeTechEdge,
-    sanitizeMastery,
-    sanitizeBuzz,
-    sanitizeRefiningList,
-    sanitizeActiveResearch,
-    sanitizeCompleted,
-    addBuzzToState
+    computeTechEdge
 } from '../data/research.data.js';
 import { WalletService } from './WalletService.js';
 
@@ -66,9 +60,13 @@ export class ResearchSystem {
         const data = this.state.data;
         const current = data.time.elapsedGameMinutes;
 
-        // Pastikan setiap entri aktif valid (save lama / data rusak): durasi hilang
-        // dipulihkan dari data node, progres NaN direset, entri rusak dibuang.
-        this._sanitizeAll(current);
+        // Pastikan setiap entri aktif punya nilai default (save lama)
+        data.research.active.forEach(e => {
+            if (typeof e.progressDays !== 'number')       e.progressDays = 0;
+            if (typeof e.durationDays !== 'number')       e.durationDays = 0;
+            if (typeof e.lastProcessedMinute !== 'number') e.lastProcessedMinute = current;
+            if (typeof e.startedAtGameMinute !== 'number') e.startedAtGameMinute = current;
+        });
         this._refreshMaxSlots();
         this._ensureRnd();
     }
@@ -95,30 +93,13 @@ export class ResearchSystem {
         const per = BALANCE.research.perEngineerSpeed;
         const cap = BALANCE.research.maxSpeedMultiplier;
         const raw = base + eng * per;
-        const v = Math.min(raw, cap);
-        return (Number.isFinite(v) && v > 0) ? v : 1;
+        return Math.min(raw, cap);
     }
 
     // ---------- PROGRESS (dipicu hari berubah) ----------
     _onDayChanged(_snapshot) {
         const data = this.state.data;
-
-        // [FIX 1] R&D lanjutan diisolasi: error/data rusak di sini TIDAK boleh
-        // menghentikan riset dasar di bawah.
-        try {
-            this._tickRefining();
-        } catch (err) {
-            console.error('[ResearchSystem] R&D lanjutan error, dipulihkan:', err);
-            try { this._sanitizeAll(data.time.elapsedGameMinutes); } catch (e2) { data.research.refining = []; }
-        }
-
-        // [FIX 2] Perbaiki entri riset dasar rusak sebelum dihitung.
-        try {
-            data.research.active = sanitizeActiveResearch(data.research.active, data.research.completed, data.time.elapsedGameMinutes);
-        } catch (err) {
-            console.error('[ResearchSystem] sanitasi antrian riset gagal:', err);
-            if (!Array.isArray(data.research.active)) data.research.active = [];
-        }
+        this._tickRefining();
         if (!data.research.active.length) return;
 
         const currentMinute = data.time.elapsedGameMinutes;
@@ -131,22 +112,21 @@ export class ResearchSystem {
                 : entry.startedAtGameMinute;
 
             const deltaMinutes = currentMinute - last;
-            if (deltaMinutes > 0) {
-                // Hitung dalam satuan hari, kalikan speed.
-                const deltaDays = deltaMinutes / MINUTES_PER_DAY;
-                entry.progressDays += deltaDays * speed;
-                entry.lastProcessedMinute = currentMinute;
-            }
+            if (deltaMinutes <= 0) continue;
+
+            // Hitung dalam satuan hari, kalikan speed.
+            const deltaDays = deltaMinutes / MINUTES_PER_DAY;
+            entry.progressDays += deltaDays * speed;
+            entry.lastProcessedMinute = currentMinute;
 
             if (entry.progressDays >= entry.durationDays) {
                 completedEntries.push(entry);
             }
         }
 
-        // Proses yang selesai (tiap entri diisolasi agar satu error tidak menahan yang lain)
+        // Proses yang selesai
         for (const entry of completedEntries) {
-            try { this._completeResearch(entry); }
-            catch (err) { console.error('[ResearchSystem] gagal menyelesaikan ' + entry.nodeId + ':', err); }
+            this._completeResearch(entry);
         }
 
         // Emit progress untuk yang masih berjalan
@@ -256,10 +236,7 @@ export class ResearchSystem {
             return { ok: false, reason: st.reason || 'Belum bisa dimulai.' };
         }
 
-        if (!paidWithSilicon) {
-            const paid = WalletService.pay(node.cost, 'research');
-            if (!paid || !paid.ok) return { ok: false, reason: (paid && paid.reason) || 'Pembayaran gagal.' };
-        }
+        if (!paidWithSilicon) WalletService.pay(node.cost, 'research');
 
         // Daftarkan sebagai aktif
         const entry = {
@@ -322,7 +299,7 @@ export class ResearchSystem {
         const data = this.state.data;
         const entry = data.research.active.find(e => e.nodeId === nodeId);
         if (!entry) return { ok: false, reason: 'Riset tidak aktif.' };
-        const add = (days === Infinity) ? (entry.durationDays - entry.progressDays) : (Number.isFinite(days) ? Math.max(0, days) : 0);
+        const add = (days === Infinity) ? (entry.durationDays - entry.progressDays) : Math.max(0, days || 0);
         entry.progressDays = Math.min(entry.durationDays, entry.progressDays + add);
         if (entry.progressDays >= entry.durationDays) {
             this._completeResearch(entry);
@@ -465,40 +442,16 @@ export class ResearchSystem {
     // ============================================================
     _ensureRnd() {
         const r = this.state.data.research;
-        const maxLv = BALANCE.rnd.maxLevel;
         if (!r.mastery || typeof r.mastery !== 'object') r.mastery = {};
-        RESEARCH_CATEGORIES.forEach(c => {
-            const v = r.mastery[c.id];
-            // level harus integer terbatas 0..maxLevel (cegah 999 / NaN / teks)
-            if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > maxLv || v !== Math.floor(v)) {
-                r.mastery[c.id] = sanitizeMastery(r.mastery)[c.id];
-            }
-        });
+        RESEARCH_CATEGORIES.forEach(c => { if (typeof r.mastery[c.id] !== 'number') r.mastery[c.id] = 0; });
         if (!Array.isArray(r.refining)) r.refining = [];
-        if (typeof r.buzz !== 'number' || !Number.isFinite(r.buzz) || r.buzz < 0 || r.buzz > BALANCE.rnd.buzz.max) r.buzz = sanitizeBuzz(r.buzz);
-        if (typeof r.totalRefined !== 'number' || !Number.isFinite(r.totalRefined)) r.totalRefined = 0;
-        // Entri rusak (null / tanpa kategori / durasi hilang) dibersihkan sebelum dipakai.
-        let dirty = false;
-        for (const e of r.refining) {
-            if (!e || typeof e !== 'object' || typeof e.categoryId !== 'string' ||
-                !Number.isFinite(e.durationDays) || !(e.durationDays > 0) ||
-                !Number.isFinite(e.progressDays) || !Number.isFinite(e.lastProcessedMinute) ||
-                !Number.isFinite(e.targetLevel)) { dirty = true; break; }
-        }
-        if (dirty) {
-            r.refining = sanitizeRefiningList(r.refining, r.mastery, this.state.data.time.elapsedGameMinutes);
-        }
-    }
-
-    // Bersihkan seluruh data R&D (dipanggil saat boot/hydrate & saat pemulihan error).
-    _sanitizeAll(nowMinute) {
-        const r = this.state.data.research;
-        const now = Number.isFinite(nowMinute) ? nowMinute : this.state.data.time.elapsedGameMinutes;
-        r.completed = sanitizeCompleted(r.completed);
-        r.active = sanitizeActiveResearch(r.active, r.completed, now);
-        r.mastery = sanitizeMastery(r.mastery);
-        r.refining = sanitizeRefiningList(r.refining, r.mastery, now);
-        r.buzz = sanitizeBuzz(r.buzz);
+        if (typeof r.buzz !== 'number') r.buzz = 0;
+        if (typeof r.totalRefined !== 'number') r.totalRefined = 0;
+        const cur = this.state.data.time.elapsedGameMinutes;
+        r.refining.forEach(e => {
+            if (typeof e.progressDays !== 'number') e.progressDays = 0;
+            if (typeof e.lastProcessedMinute !== 'number') e.lastProcessedMinute = cur;
+        });
     }
 
     getRefineSlots() {
@@ -582,8 +535,7 @@ export class ResearchSystem {
         const info = this.getRefineInfo(catId);
         if (info.status !== 'available') return { ok: false, reason: info.reason || 'Belum bisa dimulai.' };
 
-        const paid = WalletService.pay(info.cost, 'research');
-        if (!paid || !paid.ok) return { ok: false, reason: (paid && paid.reason) || 'Pembayaran gagal.' };
+        WalletService.pay(info.cost, 'research');
         const entry = {
             categoryId: catId,
             name: info.name + ' Lv ' + (info.level + 1),
@@ -620,7 +572,7 @@ export class ResearchSystem {
         const data = this.state.data;
         const e = data.research.refining.find(x => x.categoryId === catId);
         if (!e) return { ok: false, reason: 'R&D tidak aktif.' };
-        const add = (days === Infinity) ? (e.durationDays - e.progressDays) : (Number.isFinite(days) ? Math.max(0, days) : 0);
+        const add = (days === Infinity) ? (e.durationDays - e.progressDays) : Math.max(0, days || 0);
         e.progressDays = Math.min(e.durationDays, e.progressDays + add);
         if (e.progressDays >= e.durationDays) { this._completeRefine(e); return { ok: true, completed: true }; }
         bus.emit('state:changed', data);
@@ -630,8 +582,6 @@ export class ResearchSystem {
     _tickRefining() {
         const data = this.state.data;
         this._ensureRnd();
-        // Selalu bersihkan dulu: entri rusak dibuang, durasi hilang dipulihkan.
-        data.research.refining = sanitizeRefiningList(data.research.refining, data.research.mastery, data.time.elapsedGameMinutes);
         const list = data.research.refining;
         if (!list.length) return;
         const cur = data.time.elapsedGameMinutes;
@@ -639,16 +589,12 @@ export class ResearchSystem {
         const done = [];
         list.forEach(e => {
             const delta = cur - e.lastProcessedMinute;
-            if (delta > 0) {
-                e.progressDays += (delta / MINUTES_PER_DAY) * speed;
-                e.lastProcessedMinute = cur;
-            }
+            if (delta <= 0) return;
+            e.progressDays += (delta / MINUTES_PER_DAY) * speed;
+            e.lastProcessedMinute = cur;
             if (e.progressDays >= e.durationDays) done.push(e);
         });
-        done.forEach(e => {
-            try { this._completeRefine(e); }
-            catch (err) { console.error('[ResearchSystem] gagal menyelesaikan R&D ' + e.categoryId + ':', err); }
-        });
+        done.forEach(e => this._completeRefine(e));
         if (data.research.refining.length) {
             bus.emit('research:refine-progress', {
                 active: data.research.refining.map(e => ({
@@ -664,7 +610,7 @@ export class ResearchSystem {
         const data = this.state.data;
         const idx = data.research.refining.findIndex(e => e.categoryId === entry.categoryId);
         if (idx >= 0) data.research.refining.splice(idx, 1);
-        data.research.mastery[entry.categoryId] = Math.min(BALANCE.rnd.maxLevel, Math.max(data.research.mastery[entry.categoryId] || 0, entry.targetLevel));
+        data.research.mastery[entry.categoryId] = Math.max(data.research.mastery[entry.categoryId] || 0, entry.targetLevel);
         data.research.totalRefined = (data.research.totalRefined || 0) + 1;
 
         const bz = BALANCE.rnd.buzz;
@@ -684,10 +630,11 @@ export class ResearchSystem {
     addBuzz(points, _reason) {
         const data = this.state.data;
         this._ensureRnd();
-        addBuzzToState(data, points);
+        const bz = BALANCE.rnd.buzz;
+        data.research.buzz = Math.min(bz.max, (data.research.buzz || 0) + Math.max(0, points || 0));
         bus.emit('research:buzz', { buzz: data.research.buzz, reason: _reason || null });
     }
-    getBuzz() { return sanitizeBuzz(this.state.data.research.buzz); }
+    getBuzz() { return this.state.data.research.buzz || 0; }
     getBuzzFactor() {
         const bz = BALANCE.rnd.buzz;
         return 1 + Math.min(bz.maxDemandBonus, this.getBuzz() * bz.demandPerPoint);
@@ -696,7 +643,7 @@ export class ResearchSystem {
         const data = this.state.data;
         this._ensureRnd();
         if ((data.research.buzz || 0) <= 0) return;
-        data.research.buzz = sanitizeBuzz(data.research.buzz) * BALANCE.rnd.buzz.decayPerMonth;
+        data.research.buzz *= BALANCE.rnd.buzz.decayPerMonth;
         if (data.research.buzz < 0.5) data.research.buzz = 0;
         bus.emit('research:buzz', { buzz: data.research.buzz, reason: 'decay' });
     }
@@ -736,4 +683,4 @@ export class ResearchSystem {
         bus.emit('state:changed', data);
         return { ok: true };
     }
-}
+          }

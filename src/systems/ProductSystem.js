@@ -12,8 +12,8 @@ import {
     getComponentById, getComponentsByCategory, getBodyColorById
 } from '../data/components.data.js';
 import { getCampaignById, MARKETING_CAMPAIGNS } from '../data/marketing.data.js';
-import { getLicenseById, getLicenseStatsAtYear, getCurrentOwnVersion, getEffectiveOwnStats } from '../data/os.data.js';
-import { computeTechEdge, getMasteryStatBonus, RND_TRACKS, sanitizeBuzz } from '../data/research.data.js';
+import { getLicenseById, getLicenseStatsAtYear } from '../data/os.data.js';
+import { computeTechEdge, getMasteryStatBonus, RND_TRACKS } from '../data/research.data.js';
 import { getMacro, reviewBaseScore } from '../core/MacroModel.js';
 import { WalletService } from './WalletService.js';
 
@@ -185,8 +185,10 @@ export class ProductSystem {
             if (osOptionId.indexOf('own:') === 0) {
                 var versionId = osOptionId.slice(4);
                 var v = (data.os.versions || []).find(function (x) { return x.id === versionId; });
-                // [FIX] Murni dari data state (tidak bergantung window.__game).
-                if (v && v.stats) stats = getEffectiveOwnStats(data, v);
+                if (v && v.stats) {
+                    var osSys = window.__game && window.__game.os ? window.__game.os : null;
+                    stats = (osSys && osSys.getEffectiveStats) ? osSys.getEffectiveStats(v) : v.stats;
+                }
             } else if (osOptionId.indexOf('license:') === 0) {
                 var licenseId = osOptionId.slice(8);
                 var lic = getLicenseById(licenseId);
@@ -195,8 +197,9 @@ export class ProductSystem {
         }
 
         if (!stats) {
-            var curV = getCurrentOwnVersion(data);
-            stats = curV ? getEffectiveOwnStats(data, curV) : null;
+            var os = window.__game && window.__game.os ? window.__game.os : null;
+            if (!os) return 0.7;
+            stats = os.getCurrentStats();
             if (!stats) return 0.7;
         }
 
@@ -217,7 +220,7 @@ export class ProductSystem {
             edgeF = computeTechEdge(p.techSnapshot.levels, year).factor;
         }
         var bz = BALANCE.rnd.buzz;
-        var buzzF = 1 + Math.min(bz.maxDemandBonus, sanitizeBuzz(data.research && data.research.buzz) * bz.demandPerPoint);
+        var buzzF = 1 + Math.min(bz.maxDemandBonus, ((data.research && data.research.buzz) || 0) * bz.demandPerPoint);
         return edgeF * buzzF;
     }
 
@@ -886,8 +889,8 @@ export class ProductSystem {
             networkId:    pick('network')     || 'net_gsm',
             bodyId:       pick('body')        || 'body_plastic',
             bodyColorId:  'color_black',
-            osOptionId:   getCurrentOwnVersion(this.state.data)
-                            ? 'own:' + getCurrentOwnVersion(this.state.data).id
+            osOptionId:   (window.__game && window.__game.os && window.__game.os.getCurrentVersionObject())
+                            ? 'own:' + window.__game.os.getCurrentVersionObject().id
                             : null,
             price: 200,
             productionQty: 10000
