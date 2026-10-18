@@ -28,7 +28,6 @@ function _tf(key, fallback, vars) {
 }
 function _money(n) { return '$' + Math.round(n || 0).toLocaleString('en-US'); }
 
-// STATE UI
 let _filterCategory = 'all';
 export function getFilterCategory() { return _filterCategory; }
 export function setFilterCategory(cat) { _filterCategory = cat; }
@@ -76,9 +75,6 @@ export function renderResearchPanel(params) {
     return subtabBar + body;
 }
 
-// ============================================================
-// TECH SECTION (STICKY HEADER)
-// ============================================================
 function renderTechSection(params) {
     var researchSystem = params.researchSystem;
     _ctx.researchSystem = researchSystem;
@@ -107,7 +103,6 @@ function renderTechSection(params) {
         _renderHero(researchSystem, data) +
         _renderRndSection(researchSystem) +
         
-        // --- STICKY HEADER WRAPPER ---
         '<div class="sticky-header-area">' +
             _renderSlotBar(active, maxSlots, emptyMessage) +
             _renderCategoryBar(researchSystem) +
@@ -118,19 +113,26 @@ function renderTechSection(params) {
         '</div>';
 }
 
-// --- R&D CAROUSEL ---
 function _renderRndSection(sys) {
     if (typeof sys.getRndOverview !== 'function') return '';
     var ov = sys.getRndOverview();
     var bench = sys.getBenchmark();
-    
-    // PERBAIKAN: Berikan title: '' agar tidak muncul dobel dengan judul <summary>
     var overviewHtml = renderRndOverview(ov, { title: '' });
     
+    var slotCost = typeof sys.getSlotCost === 'function' ? sys.getSlotCost() : -1;
+    var canAffordSlot = slotCost !== -1 ? WalletService.canAfford(slotCost) : false;
+
     var rows = RESEARCH_CATEGORIES.map(function (c) {
         var info = sys.getRefineInfo(c.id);
         var bonusLabel = statLabel((RND_TRACKS[c.id] || {}).productStat || c.id);
-        return renderRndRow(info, { actionAttr: 'data-rnd-action', bonusLabel: bonusLabel, benchmark: bench });
+        
+        return renderRndRow(info, { 
+            actionAttr: 'data-rnd-action', 
+            bonusLabel: bonusLabel, 
+            benchmark: bench,
+            slotCost: slotCost,
+            canAffordSlot: canAffordSlot
+        });
     }).join('');
 
     return '<details class="section-collapsible rnd-card" open>' +
@@ -140,7 +142,6 @@ function _renderRndSection(sys) {
         '</details>';
 }
 
-// --- HERO (Tetap) ---
 function _renderHero(sys, data) {
     var sum = sys.getSummary();
     var sp = sys.getSpeedInfo();
@@ -167,7 +168,6 @@ function _renderHero(sys, data) {
     '</div>';
 }
 
-// --- SLOT STRIP (Tetap) ---
 function _renderSlotBar(active, maxSlots, emptyMessage) {
     emptyMessage = emptyMessage || t('research.slot.hint');
     var emptyCount = Math.max(0, maxSlots - active.length);
@@ -200,7 +200,6 @@ function _speed() { try { return window.__game.research._getSpeedMultiplier() ||
 function _pctOf(e) { var dur = e.durationDays || 0, prog = e.progressDays || 0; return dur > 0 ? Math.round(Math.min(1, prog / dur) * 100) : 0; }
 function _etaOf(e) { var dur = e.durationDays || 0, prog = e.progressDays || 0; return t('research.slot.eta', { n: Math.ceil(Math.max(0, dur - prog) / _speed()) }); }
 
-// --- FILTER KATEGORI (Tetap) ---
 function _renderCategoryBar(sys) {
     var sum = sys.getSummary();
     var chips = RESEARCH_CATEGORIES.map(function (c) {
@@ -212,7 +211,6 @@ function _renderCategoryBar(sys) {
     return '<div class="chip-bar"><button class="chip ' + (_filterCategory === 'all' ? 'active' : '') + '" data-filter-cat="all">' + t('timeline.filter.all') + ' <span class="rs-chip-count">' + sum.completed + '/' + sum.total + '</span></button>' + chips + '</div>';
 }
 
-// --- TOOLBAR (Tetap) ---
 var SORTS = [
     { id: 'tier', key: 'rs.sort.tier', fb: 'Tier' }, { id: 'year', key: 'rs.sort.year', fb: 'Tahun' },
     { id: 'cost', key: 'rs.sort.cost', fb: 'Termurah' }, { id: 'time', key: 'rs.sort.time', fb: 'Tercepat' }
@@ -231,7 +229,6 @@ function _renderToolbar() {
     '</div>';
 }
 
-// --- BODY (Pencarian/Filter, Tetap) ---
 function _norm(s) { return String(s || '').toLowerCase(); }
 function _searchText(node, cat) {
     var eff = node.effects || {};
@@ -351,11 +348,29 @@ function _ensureHandlers() {
     document.addEventListener('click', function (e) {
         var tg = e.target; if (!tg || !tg.closest) return;
         var rndBtn = tg.closest('[data-rnd-action]');
+        
         if (rndBtn && _ctx.researchSystem) {
-            e.preventDefault(); var act = rndBtn.getAttribute('data-rnd-action'); var cid = rndBtn.getAttribute('data-rnd-id');
+            e.preventDefault(); 
+            var act = rndBtn.getAttribute('data-rnd-action'); 
+            var cid = rndBtn.getAttribute('data-rnd-id');
+            
+            if (act === 'buy-slot') {
+                if (typeof _ctx.researchSystem.buySlot === 'function') {
+                    var resSlot = _ctx.researchSystem.buySlot();
+                    if (!resSlot.ok) {
+                        ToastService.error(resSlot.reason);
+                    } else {
+                        ToastService.success('Slot R&D baru berhasil dibuka!');
+                        if (window.__game && window.__game.renderSoft) window.__game.renderSoft();
+                    }
+                }
+                return;
+            }
+            
             var res = act === 'cancel' ? _ctx.researchSystem.cancelRefine(cid) : _ctx.researchSystem.startRefine(cid);
             if (!res.ok) ToastService.error(res.reason); else ToastService.success(act === 'cancel' ? t('rs.rnd.cancelled') : t('rs.rnd.started', { lv: res.targetLevel }));
-            if (window.__game && window.__game.renderSoft) window.__game.renderSoft(); return;
+            if (window.__game && window.__game.renderSoft) window.__game.renderSoft(); 
+            return;
         }
         var sortBtn = tg.closest('[data-rs-sort]'); if (sortBtn) { e.preventDefault(); _ui.sort = sortBtn.dataset.rsSort; _refreshBody(); return; }
         var clear = tg.closest('[data-rs-clear]'); if (clear) { e.preventDefault(); _ui.query = ''; var inp = document.querySelector('[data-rs-search]'); if (inp) { inp.value = ''; inp.focus(); } _refreshBody(); }
