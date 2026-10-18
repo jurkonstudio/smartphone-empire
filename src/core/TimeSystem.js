@@ -31,10 +31,12 @@ export function formatDate(year, month, day, opts) {
 // ============================================================
 // TimeSystem
 // ============================================================
+const RUN_INTERVAL_MS = 100;
+
 export class TimeSystem {
     constructor(gameState) {
         this.state = gameState;
-        this._rafId = null;
+        this._timerId = null;           // PERF: setTimeout, bukan rAF 60Hz
         this._lastTs = null;
         this._lastTickEmit = 0;
         this._running = false;
@@ -42,19 +44,39 @@ export class TimeSystem {
         this._boundVis = this._handleVisibility.bind(this);
     }
 
+    // PERF: loop lama memakai requestAnimationFrame (60-120 Hz) tanpa henti, bahkan saat game di-pause.
+    // Waktu game hanya butuh ~10 Hz (UI jam di-emit tiap 250 ms). Saat pause → polling 1 Hz,
+    // dan dibangunkan langsung oleh togglePause/boost/speed. Tab tersembunyi → loop berhenti total.
     start() {
         if (this._running) return;
         this._running = true;
         this._sanitizeBoost();
         document.addEventListener('visibilitychange', this._boundVis);
-        this._rafId = requestAnimationFrame(this._boundLoop);
+        this._lastTs = null;
+        this._schedule(0);
     }
 
     stop() {
         this._running = false;
-        if (this._rafId !== null) cancelAnimationFrame(this._rafId);
-        this._rafId = null;
+        this._clearTimer();
         document.removeEventListener('visibilitychange', this._boundVis);
+    }
+
+    _clearTimer() {
+        if (this._timerId !== null) { clearTimeout(this._timerId); this._timerId = null; }
+    }
+
+    _schedule(ms) {
+        this._clearTimer();
+        if (!this._running || document.visibilityState === 'hidden') return;
+        this._timerId = setTimeout(this._boundLoop, ms);
+    }
+
+    // Bangunkan loop segera (dipanggil saat pause/resume/boost berubah).
+    _kick() {
+        if (!this._running) return;
+        this._lastTs = null;
+        this._schedule(0);
     }
 
     // Kecepatan > 1x hanya sah bila ada boost berbayar yang masih aktif.
@@ -85,6 +107,7 @@ export class TimeSystem {
         d.gameSpeed = speed;
         d.isPaused = false;
         bus.emit('time:speed-changed', this.snapshot());
+        this._kick();
     }
 
     clearBoost(reason) {
@@ -96,11 +119,14 @@ export class TimeSystem {
     }
 
     _handleVisibility() {
-        if (document.visibilityState === 'visible') this._lastTs = null;
+        if (document.visibilityState === 'visible') this._kick();
+        else this._clearTimer();
     }
 
-    _loop(ts) {
+    _loop() {
+        this._timerId = null;
         if (!this._running) return;
+        const ts = performance.now();
         if (this._lastTs === null) this._lastTs = ts;
 
         let dt = (ts - this._lastTs) / 1000;
@@ -131,7 +157,8 @@ export class TimeSystem {
             bus.emit('time:tick', this.snapshot());
         }
 
-        this._rafId = requestAnimationFrame(this._boundLoop);
+        // Pause → cek 1x/detik; berjalan → ~10 Hz.
+        this._schedule(this.state.data.isPaused ? 1000 : RUN_INTERVAL_MS);
     }
 
     _advance(gameMinutes) {
@@ -190,6 +217,7 @@ export class TimeSystem {
     togglePause() {
         this.state.data.isPaused = !this.state.data.isPaused;
         bus.emit('time:speed-changed', this.snapshot());
+        this._kick();
     }
 
     // Kecepatan > 1x TIDAK bisa diset langsung: harus lewat SiliconService.buySpeed().
@@ -198,6 +226,7 @@ export class TimeSystem {
         if (speed !== 1) return;
         this.clearBoost('manual');
         this.state.data.isPaused = false;
+        this._kick();
     }
 
     // Tombol ⏩ / tombol F: buka panel percepatan (didengarkan oleh SilSpeedBar.js).

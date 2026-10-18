@@ -124,7 +124,12 @@ export const SaveService = {
             if (document.visibilityState !== 'visible') return;
             var s = getState();
             if (!s || !s.data || s.data.gameOver) return;
-            self.save(s);
+            // PERF: serialisasi + tanda tangan + JSON.stringify besar → jalankan saat browser idle (tidak patah-patah).
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(function () { self.save(getState() || s); }, { timeout: 4000 });
+            } else {
+                self.save(s);
+            }
         }, AUTOSAVE_INTERVAL_MS);
     },
 
