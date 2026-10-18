@@ -1,5 +1,8 @@
 // FILE: src/services/cloud/CloudSync.js
 // v2028.30 — [AUTO-SYNC] Menambahkan sinkronisasi saldo otomatis saat tab game kembali dibuka.
+// v2028.31 — [FIX SIL] Saldo tidak "terisi lagi" setelah dipakai: pembelanjaan SIL yang gagal/terlewat
+//            dikirim ke server disimpan di antrean persisten (localStorage) dan diulang, dan sinkronisasi
+//            menghitung saldo = saldo server - belanja yang masih tertunda (bukan menimpa mentah-mentah).
 import { bus } from '../../core/EventBus.js';
 import { SaveService } from '../../core/SaveService.js';
 import { SCHEMA_VERSION } from '../../core/GameState.js';
@@ -13,6 +16,7 @@ const LAST_SYNC_KEY = 'smartphone-empire:cloud-last-sync';
 const SILICON_SYNC_KEY = 'smartphone-empire:silicon-synced';
 const SYNCED_PREFIX = 'smartphone-empire:cloud-synced:';
 const AUTOAPPLY_KEY = 'smartphone-empire:cloud-autoapply-at';
+const SIL_PENDING_KEY = 'smartphone-empire:silicon-pending';
 
 let _state = null;
 let _inited = false;
@@ -24,6 +28,8 @@ let _lastUploadAt = 0;
 let _lastUploadMinutes = -1;
 let _unsubRealtime = null;
 let _siliconSyncing = false;
+let _silVersion = 0;       // naik setiap antrean belanja berubah (deteksi balapan saat fetch saldo)
+let _flushPromise = null;  // satu flush pada satu waktu
 let _remotePending = false;
 let _reloadOnVisible = false;
 let _laterChosen = false;
@@ -165,27 +171,106 @@ function _markSiliconSynced() {
     try { localStorage.setItem(SILICON_SYNC_KEY, '1'); } catch (e) {}
 }
 
+// ------------------------------------------------------------
+// Antrean belanja SIL yang belum terkonfirmasi server (per akun).
+// ------------------------------------------------------------
+function _pendingAll() {
+    try {
+        var a = JSON.parse(localStorage.getItem(SIL_PENDING_KEY) || '[]');
+        return Array.isArray(a) ? a.filter(function (x) { return x && x.amount > 0 && x.uid; }) : [];
+    } catch (e) { return []; }
+}
+
+function _writePending(list) {
+    try {
+        if (!list.length) localStorage.removeItem(SIL_PENDING_KEY);
+        else localStorage.setItem(SIL_PENDING_KEY, JSON.stringify(list.slice(-200)));
+    } catch (e) {}
+}
+
+function _pendingTotal() {
+    var uid = CloudService.getUserId();
+    return _pendingAll().reduce(function (sum, x) { return x.uid === uid ? sum + x.amount : sum; }, 0);
+}
+
+function _enqueueSpend(amount) {
+    var uid = CloudService.getUserId();
+    if (!uid || !(amount > 0)) return;
+    var list = _pendingAll();
+    list.push({ id: 'sp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), uid: uid, amount: Math.floor(amount), at: Date.now() });
+    _writePending(list);
+    _silVersion++;
+}
+
+function _removePending(id) {
+    _writePending(_pendingAll().filter(function (x) { return x.id !== id; }));
+    _silVersion++;
+}
+
+// Kirim antrean ke server satu per satu. Mengembalikan saldo server terakhir (atau null).
+function _flushPending() {
+    if (_flushPromise) return _flushPromise;
+    var p = (async function () {
+        await Promise.resolve(); // pastikan _flushPromise sudah terisi sebelum 'finally' jalan
+        var lastBal = null;
+        try {
+            while (_isConnected()) {
+                var uid = CloudService.getUserId();
+                var item = _pendingAll().find(function (x) { return x.uid === uid; });
+                if (!item) break;
+                var res = await CloudService.spendSiliconServer(item.amount);
+                if (res && res.ok) {
+                    _removePending(item.id);
+                    lastBal = res.balance;
+                    continue;
+                }
+                var msg = String((res && res.reason) || '') + ' ' + String((res && res.code) || '');
+                if (/insufficient|invalid_amount/i.test(msg)) {
+                    // Server menolak permanen (saldo kurang / jumlah tak valid): jangan diulang selamanya.
+                    console.warn('[CloudSync] belanja SIL ditolak server, dibuang dari antrean:', msg.trim());
+                    _removePending(item.id);
+                    continue;
+                }
+                console.warn('[CloudSync] belanja SIL tertunda, akan dicoba lagi:', msg.trim());
+                break;
+            }
+        } catch (e) {
+            console.warn('[CloudSync] flush SIL error:', e);
+        } finally {
+            _flushPromise = null;
+        }
+        return lastBal;
+    })();
+    _flushPromise = p;
+    return p;
+}
+
 async function syncSiliconOnLogin() {
     if (!_state || !_isConnected()) return;
     if (_siliconSyncing) return;
     _siliconSyncing = true;
     try {
-        var res = await CloudService.getSiliconBalance();
-        if (!res.ok) return;
+        // Maksimal 3 percobaan bila ada belanja baru selama proses (hindari balapan).
+        for (var attempt = 0; attempt < 3; attempt++) {
+            await _flushPending();
+            var v0 = _silVersion;
+            var res = await CloudService.getSiliconBalance();
+            if (!res.ok) return;
+            if (v0 !== _silVersion || _flushPromise) continue;
 
-        var serverBal = Math.floor(res.balance || 0);
-        var localBal = SiliconService.getBalance();
-        var hasSynced = _hasSyncedSilicon();
+            var serverBal = Math.floor(res.balance || 0);
+            // [FIX] Saldo efektif = server dikurangi belanja yang belum sempat terkonfirmasi.
+            var effective = Math.max(0, serverBal - _pendingTotal());
+            var localBal = SiliconService.getBalance();
 
-        // [TRANSPARANSI MUTLAK] Selalu ikuti server
-        if (serverBal !== localBal) {
-            console.info('[CloudSync] Menimpa Silicon lokal (', localBal, ') dengan Server (', serverBal, ')');
-            SiliconService.applyServerBalance(serverBal);
-            ToastService.info('Saldo Silicon disinkronkan (' + serverBal + ' SIL).');
+            if (effective !== localBal) {
+                console.info('[CloudSync] Silicon lokal (', localBal, ') -> (', effective, ') | server', serverBal, '| tertunda', serverBal - effective);
+                SiliconService.applyServerBalance(effective);
+                ToastService.info('Saldo Silicon disinkronkan (' + effective + ' SIL).');
+            }
+            if (!_hasSyncedSilicon()) _markSiliconSynced();
+            break;
         }
-        
-        if (!hasSynced) _markSiliconSynced();
-
     } catch (e) {
         console.warn('[CloudSync] syncSiliconOnLogin error:', e);
     } finally {
@@ -194,21 +279,16 @@ async function syncSiliconOnLogin() {
 }
 
 function _pushSiliconDelta(delta) {
-    if (!_state || !_isConnected()) return;
-    if (!delta || delta === 0) return;
-    if (_siliconSyncing) return;
-
-    try {
-        if (delta > 0) {
-            return; // Hanya server yang boleh menambah saldo
-        } else {
-            CloudService.spendSiliconServer(Math.abs(delta)).then(function (res) {
-                if (!res.ok) console.warn('[CloudSync] push -SIL gagal:', res.code);
-            }).catch(function () {});
-        }
-    } catch (e) {
-        console.warn('[CloudSync] _pushSiliconDelta error:', e);
-    }
+    if (!delta || delta >= 0) return;               // hanya server yang boleh menambah saldo
+    if (!_state || !CloudService.getUserId()) return; // belum login: saldo lokal murni
+    // [FIX] Selalu masuk antrean persisten (dulu: dibuang bila offline / sedang sync / RPC gagal).
+    _enqueueSpend(Math.abs(delta));
+    if (!_isConnected()) return;
+    _flushPending().then(function (bal) {
+        if (bal == null || _siliconSyncing || _pendingTotal() > 0) return;
+        var eff = Math.max(0, Math.floor(bal));
+        if (eff !== SiliconService.getBalance()) SiliconService.applyServerBalance(eff);
+    }).catch(function () {});
 }
 
 async function uploadNow(opts) {
@@ -347,6 +427,7 @@ export const CloudSync = {
         bus.on('save:imported', _clearAllSynced);
         
         document.addEventListener('visibilitychange', _onVisibilityChange);
+        window.addEventListener('online', function () { syncSiliconOnLogin(); });
         
         bus.on('cloud:status-changed', function (e) {
             if (e && e.status === 'connected') {
@@ -419,9 +500,10 @@ export const CloudSync = {
                 _state.hydrate(cloudRes.payload.data);
             }
 
+            await _flushPending();
             var silRes = await CloudService.getSiliconBalance();
             if (silRes.ok) {
-                SiliconService.applyServerBalance(silRes.balance);
+                SiliconService.applyServerBalance(Math.max(0, Math.floor(silRes.balance || 0) - _pendingTotal()));
             }
 
             try { SaveService.save(_state, { silent: true }); } catch (e) {}
