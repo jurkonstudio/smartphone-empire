@@ -1,6 +1,8 @@
 // FILE: src/ui/panels/ChipDesignerPanel.js
 // v2027.4a — Tambah tombol CTA "Buka Riset Chip" saat arsitektur kosong.
 // v2027.13c — i18n.
+// v2027.13d — i18n penuh (Fase 2): label preview, tier/yield/biaya, kategori fitur & budget via key,
+//             ikon kategori dirender sebagai ikon, wizard render ulang saat 'lang:changed'.
 // ============================================================
 // ChipDesignerPanel — Wizard desain chip. 4 langkah:
 //   1. Nama + Arsitektur
@@ -12,6 +14,7 @@
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
 import { state } from '../../core/GameState.js';
+import { bus } from '../../core/EventBus.js';
 import {
     CHIP_ARCHITECTURES, getArchitectureById, getAvailableArchitectures
 } from '../../data/chip-architecture.data.js';
@@ -23,9 +26,24 @@ import {
 } from '../../data/chip-features.data.js';
 import { renderChipMockup } from '../phone/ChipMockup.js';
 import { renderChipRadarChart } from '../charts/ChipRadarChart.js';
-import { t } from '../../core/LanguageService.js';
+import { renderIcon } from '../icons/FeatureIcons.js';
+import { t, LanguageService } from '../../core/LanguageService.js';
 
 let _wiz = null;
+
+// _tf(key, fallbackId, fallbackEn, vars): pakai kamus jika key ada,
+// kalau belum (sebelum Fase 3) pakai fallback sesuai bahasa aktif.
+function _tf(key, fbId, fbEn, vars) {
+    var v = t(key, vars);
+    if (v && v !== key) return v;
+    var en = false;
+    try { en = LanguageService.getLang() === 'en'; } catch (e) {}
+    var s = (en && fbEn !== undefined) ? fbEn : fbId;
+    if (vars) {
+        s = String(s).replace(/\{(\w+)\}/g, function (m, k) { return vars[k] !== undefined ? vars[k] : m; });
+    }
+    return s;
+}
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -51,6 +69,40 @@ function chipSystem() {
     return window.__game && window.__game.chips ? window.__game.chips : null;
 }
 
+// ------------------------------------------------------------
+// Terjemahan data (kategori fitur & budget tier).
+// Jika key belum ada, pakai teks dari data (bahasa Indonesia).
+// ------------------------------------------------------------
+var CAT_FALLBACK_EN = {
+    graphics: 'Graphics', memory: 'Memory', power: 'Power', security: 'Security',
+    ai: 'Intelligence', connectivity: 'Connectivity', special: 'Special'
+};
+var BUDGET_FALLBACK_EN = {
+    low:    { label: 'Low Budget',    desc: 'Cheap but low yield' },
+    normal: { label: 'Normal Budget', desc: 'Balanced' },
+    high:   { label: 'High Budget',   desc: 'High yield' },
+    ultra:  { label: 'Ultra Budget',  desc: 'Max yield, expensive' }
+};
+
+function _catName(cat) {
+    return _tf('chip.cat.' + cat.id, cat.name, CAT_FALLBACK_EN[cat.id] || cat.name);
+}
+function _catIcon(cat) {
+    try {
+        var svg = renderIcon(cat.icon, 14);
+        if (typeof svg === 'string' && svg) return svg;
+    } catch (e) {}
+    return '';
+}
+function _budgetLabel(b) {
+    var fb = BUDGET_FALLBACK_EN[b.id];
+    return _tf('chip.budget.' + b.id + '.label', b.label, fb ? fb.label : b.label);
+}
+function _budgetDesc(b) {
+    var fb = BUDGET_FALLBACK_EN[b.id];
+    return _tf('chip.budget.' + b.id + '.desc', b.description, fb ? fb.desc : b.description);
+}
+
 // ============================================================
 // OPEN
 // ============================================================
@@ -71,430 +123,12 @@ export function openChipDesigner() {
     _render();
 }
 
-// ============================================================
-// RENDER
-// ============================================================
-function _render() {
-    const s = _wiz;
-    if (!s) return;
-
-    let body = '';
-    if (s.step === 1)      body = _step1(s);
-    else if (s.step === 2) body = _step2(s);
-    else if (s.step === 3) body = _step3(s);
-    else                   body = _step4(s);
-
-    const html = `
-        <div class="chip-wiz-header">
-            <div class="chip-wiz-icon">🧩</div>
-            <div>
-                <div class="chip-wiz-title">${t('chip.wiz.title')}</div>
-                <div class="chip-wiz-sub">${t('chip.wiz.sub')}</div>
-            </div>
-        </div>
-
-        <div class="wiz-step-indicator">
-            ${[1,2,3,4].map(i => `<span class="wiz-dot ${i === s.step ? 'active' : ''} ${i < s.step ? 'done' : ''}"></span>`).join('')}
-        </div>
-        <div class="modal-sub" style="margin-bottom:12px;">${t('wiz.step_of', { n: s.step, title: _stepTitle(s.step) })}</div>
-
-        ${body}
-    `;
-
-    if (Modal.isOpen && Modal.isOpen('chip-designer')) {
-        const root = document.querySelector('[data-modal-id="chip-designer"]');
-        if (root) {
-            root.querySelector('.modal-card').innerHTML = html;
-            _bindStep();
-        }
-    } else {
-        Modal.open('chip-designer', html, { dismissible: false });
-        _bindStep();
-    }
-}
-
-function _stepTitle(step) {
-    return {
-        1: t('chip.wiz.step1'),
-        2: t('chip.wiz.step2'),
-        3: t('chip.wiz.step3'),
-        4: t('chip.wiz.step4')
-    }[step] || '';
-}
-
-// ============================================================
-// BIND
-// ============================================================
-function _bindStep() {
-    const root = document.querySelector('[data-modal-id="chip-designer"]');
-    if (!root) return;
-
-    const nameInput = root.querySelector('[data-chip-name]');
-    if (nameInput) {
-        nameInput.value = _wiz.name;
-        nameInput.addEventListener('input', function (e) { _wiz.name = e.target.value; });
-    }
-
-    root.querySelectorAll('[data-chip-pick]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            const parts = btn.dataset.chipPick.split(':');
-            const key = parts[0];
-            const value = parts.slice(1).join(':');
-            if (key === 'features') {
-                const arr = _wiz.features || [];
-                const idx = arr.indexOf(value);
-                if (idx >= 0) arr.splice(idx, 1);
-                else arr.push(value);
-                _wiz.features = arr;
-            } else if (key === 'cores' || key === 'clockGHz' || key === 'cacheKB') {
-                _wiz[key] = parseFloat(value);
-            } else {
-                _wiz[key] = value;
-            }
-            _render();
-        });
-    });
-
-    const nextBtn = root.querySelector('[data-chip-next]');
-    if (nextBtn) nextBtn.addEventListener('click', function () { _next(); });
-    const backBtn = root.querySelector('[data-chip-back]');
-    if (backBtn) backBtn.addEventListener('click', function () { _back(); });
-    const cancelBtn = root.querySelector('[data-chip-cancel]');
-    if (cancelBtn) cancelBtn.addEventListener('click', function () { _wiz = null; Modal.close('chip-designer', true); });
-    const confirmBtn = root.querySelector('[data-chip-confirm]');
-    if (confirmBtn) confirmBtn.addEventListener('click', function () { _confirm(); });
-
-    const gotoResearchBtn = root.querySelector('[data-chip-goto-research]');
-    if (gotoResearchBtn) {
-        gotoResearchBtn.addEventListener('click', function () {
-            _wiz = null;
-            Modal.close('chip-designer', true);
-            const game = window.__game;
-            if (game && game.navigate) {
-                game.navigate('research');
-                setTimeout(function () {
-                    const chipTab = document.querySelector('[data-subtab="chip"]');
-                    if (chipTab) chipTab.click();
-                }, 60);
-            }
-        });
-    }
-
-    if (_wiz.step === 4) {
-        setTimeout(_refreshPreview, 40);
-    }
-}
-
-// ============================================================
-// NAVIGATION
-// ============================================================
-function _next() {
-    const s = _wiz;
-    if (s.step === 1) {
-        if (!s.name.trim()) { ToastService.warning(t('chip.wiz.err_name')); return; }
-        if (s.name.length > 24) { ToastService.warning(t('chip.wiz.err_name_long')); return; }
-        if (!s.architectureId) { ToastService.warning(t('chip.wiz.err_arch')); return; }
-    }
-    if (s.step === 2) {
-        if (!s.nodeId) { ToastService.warning(t('chip.wiz.err_node')); return; }
-    }
-    if (s.step >= 4) return;
-    s.step += 1;
+// Ganti bahasa: render ulang langkah aktif (state wizard & nama yang diketik dipertahankan).
+// Satu listener global — tidak bocor karena hanya terdaftar sekali saat modul dimuat.
+bus.on('lang:changed', function () {
+    if (!_wiz) return;
+    if (!(Modal.isOpen && Modal.isOpen('chip-designer'))) return;
     _render();
-}
+});
 
-function _back() {
-    if (_wiz && _wiz.step > 1) {
-        _wiz.step -= 1;
-        _render();
-    }
-}
-
-function _confirm() {
-    const s = _wiz;
-    const cs = chipSystem();
-    if (!cs) { ToastService.error(t('chip.fab.system_not_ready')); return; }
-
-    const res = cs.startDesign({
-        name: s.name.trim(),
-        architectureId: s.architectureId,
-        nodeId: s.nodeId,
-        cores: s.cores,
-        clockGHz: s.clockGHz,
-        cacheKB: s.cacheKB,
-        features: s.features.slice(),
-        budgetId: s.budgetId
-    });
-    if (!res.ok) {
-        ToastService.error(res.reason || t('wiz.err.confirm_fail'));
-        return;
-    }
-    _wiz = null;
-    Modal.close('chip-designer', true);
-    if (window.__game.render) window.__game.render();
-}
-
-// ============================================================
-// STEP 1
-// ============================================================
-function _step1(s) {
-    const archs = chipSystem() ? chipSystem().getAvailableArchitectures() : [];
-    if (!archs.length) {
-        return `<div class="empty-hint" style="margin:20px 0;">${t('chip.wiz.no_arch')}</div>
-            <div class="wiz-nav">
-                <button class="btn-secondary" data-chip-cancel style="flex:1;">${t('chip.wiz.btn_cancel')}</button>
-                <button class="btn-primary" data-chip-goto-research style="flex:2;">${t('chip.wiz.goto_research')}</button>
-            </div>`;
-    }
-
-    return `
-        <label class="field-label">${t('chip.wiz.name_label')}</label>
-        <input class="field-input" data-chip-name maxlength="24" placeholder="${t('chip.wiz.name_ph')}" autocomplete="off" />
-
-        <label class="field-label" style="margin-top:12px;">${t('chip.wiz.arch_label')}</label>
-        <div class="wiz-options">
-            ${archs.map(function (a) {
-                return '<button class="wiz-option ' + (s.architectureId === a.id ? 'selected' : '') + '" data-chip-pick="architectureId:' + a.id + '">' +
-                    '<div class="wiz-opt-name">' + escapeHtml(a.name) + '</div>' +
-                    '<div class="wiz-opt-meta">' + t('chip.wiz.tier', { t: a.tier, max: a.coresMax, year: a.minYear }) + '</div>' +
-                    '<div style="font-size:10.5px;color:var(--text-mute);margin-top:4px;line-height:1.4;">' + escapeHtml(a.description) + '</div>' +
-                    '</button>';
-            }).join('')}
-        </div>
-
-        <div class="wiz-nav">
-            <button class="btn-secondary" data-chip-cancel style="flex:1;">${t('chip.wiz.btn_cancel')}</button>
-            <button class="btn-primary" data-chip-next style="flex:2;">${t('chip.wiz.btn_next')}</button>
-        </div>
-    `;
-}
-
-// ============================================================
-// STEP 2
-// ============================================================
-function _step2(s) {
-    const nodes = chipSystem() ? chipSystem().getAvailableNodes() : [];
-    const arch = getArchitectureById(s.architectureId);
-    const coresMax = arch ? arch.coresMax : 8;
-
-    const coreOptions = [1, 2, 4, 6, 8, 12, 16].filter(function (c) { return c <= coresMax; });
-    const clockOptions = [0.2, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0];
-    const cacheOptions = [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384];
-
-    return `
-        <div style="max-height:50vh;overflow-y:auto;padding-right:4px;">
-
-            <div class="wiz-cat">
-                <div class="wiz-cat-title">⚙️ ${t('chip.wiz.node')} <span style="color:var(--text-mute);font-weight:500;">(${nodes.length})</span></div>
-                <div class="wiz-options-row">
-                    ${nodes.length ? nodes.map(function (n) {
-                        return '<button class="wiz-option ' + (s.nodeId === n.id ? 'selected' : '') + '" data-chip-pick="nodeId:' + n.id + '">' +
-                            '<div class="wiz-opt-name">' + escapeHtml(n.name) + '</div>' +
-                            '<div class="wiz-opt-meta">Tier ' + n.tier + ' • ' + n.minYear + '</div>' +
-                            '<div style="font-size:10px;color:var(--text-mute);margin-top:3px;">' +
-                                t('chip.node.perf', { n: n.perfBonus.toFixed(2), y: Math.round(n.yieldBase * 100) }) +
-                            '</div>' +
-                            '</button>';
-                    }).join('') : '<div class="wiz-empty">-</div>'}
-                </div>
-            </div>
-
-            <div class="wiz-cat">
-                <div class="wiz-cat-title">🔲 ${t('chip.wiz.cores')} <span style="color:var(--text-mute);font-weight:500;">${t('chip.wiz.cores_max', { n: coresMax })}</span></div>
-                <div class="wiz-options-row">
-                    ${coreOptions.map(function (c) {
-                        return '<button class="wiz-option ' + (s.cores === c ? 'selected' : '') + '" data-chip-pick="cores:' + c + '" style="min-width:60px;">' +
-                            '<div class="wiz-opt-name" style="text-align:center;">' + c + 'x</div>' +
-                            '</button>';
-                    }).join('')}
-                </div>
-            </div>
-
-            <div class="wiz-cat">
-                <div class="wiz-cat-title">⚡ ${t('chip.wiz.clock')}</div>
-                <div class="wiz-options-row">
-                    ${clockOptions.map(function (c) {
-                        return '<button class="wiz-option ' + (s.clockGHz === c ? 'selected' : '') + '" data-chip-pick="clockGHz:' + c + '" style="min-width:58px;">' +
-                            '<div class="wiz-opt-name" style="text-align:center;">' + c + '</div>' +
-                            '</button>';
-                    }).join('')}
-                </div>
-            </div>
-
-            <div class="wiz-cat">
-                <div class="wiz-cat-title">💾 ${t('chip.wiz.cache')}</div>
-                <div class="wiz-options-row">
-                    ${cacheOptions.map(function (c) {
-                        var label = c >= 1024 ? (c / 1024) + ' MB' : c + ' KB';
-                        return '<button class="wiz-option ' + (s.cacheKB === c ? 'selected' : '') + '" data-chip-pick="cacheKB:' + c + '" style="min-width:70px;">' +
-                            '<div class="wiz-opt-name" style="text-align:center;">' + label + '</div>' +
-                            '</button>';
-                    }).join('')}
-                </div>
-            </div>
-
-        </div>
-        <div class="wiz-nav">
-            <button class="btn-secondary" data-chip-back style="flex:1;">${t('chip.wiz.btn_back')}</button>
-            <button class="btn-primary" data-chip-next style="flex:2;">${t('chip.wiz.btn_next')}</button>
-        </div>
-    `;
-}
-
-// ============================================================
-// STEP 3
-// ============================================================
-function _step3(s) {
-    const feats = chipSystem() ? chipSystem().getAvailableFeatures() : [];
-    const budgets = chipSystem() ? chipSystem().getBudgetTiers() : [];
-
-    const byCat = {};
-    feats.forEach(function (f) {
-        if (!byCat[f.category]) byCat[f.category] = [];
-        byCat[f.category].push(f);
-    });
-
-    const featureSections = FEATURE_CATEGORIES.map(function (cat) {
-        const list = byCat[cat.id] || [];
-        if (!list.length) return '';
-        return '<div class="wiz-cat">' +
-            '<div class="wiz-cat-title">' + cat.icon + ' ' + cat.name + '</div>' +
-            '<div class="wiz-options-row">' +
-                list.map(function (f) {
-                    const selected = (s.features || []).indexOf(f.id) !== -1;
-                    return '<button class="wiz-option ' + (selected ? 'selected' : '') + '" data-chip-pick="features:' + f.id + '" style="min-width:140px;">' +
-                        '<div class="wiz-opt-name">' + escapeHtml(f.name) + '</div>' +
-                        '<div class="wiz-opt-meta">+$' + f.costPerUnit + '/unit</div>' +
-                        '</button>';
-                }).join('') +
-            '</div>' +
-            '</div>';
-    }).join('');
-
-    const selectedCount = (s.features || []).length;
-
-    return `
-        <div style="max-height:50vh;overflow-y:auto;padding-right:4px;">
-
-            <div class="wiz-cat">
-                <div class="wiz-cat-title">💰 ${t('chip.wiz.budget')}</div>
-                <div class="wiz-options">
-                    ${budgets.map(function (b) {
-                        return '<button class="wiz-option ' + (s.budgetId === b.id ? 'selected' : '') + '" data-chip-pick="budgetId:' + b.id + '">' +
-                            '<div class="wiz-opt-name">' + escapeHtml(b.label) + ' <span style="color:var(--accent);">×' + b.multiplier + '</span></div>' +
-                            '<div class="wiz-opt-meta">' + escapeHtml(b.description) + ' • Yield ' + (b.yieldMod >= 0 ? '+' : '') + Math.round(b.yieldMod * 100) + '%</div>' +
-                            '</button>';
-                    }).join('')}
-                </div>
-            </div>
-
-            <div class="wiz-cat">
-                <div class="wiz-cat-title">🧩 ${t('chip.wiz.features')} <span style="color:var(--text-mute);font-weight:500;">${t('chip.wiz.features_count', { n: selectedCount })}</span></div>
-                ${featureSections || '<div class="wiz-empty">-</div>'}
-            </div>
-
-        </div>
-        <div class="wiz-nav">
-            <button class="btn-secondary" data-chip-back style="flex:1;">${t('chip.wiz.btn_back')}</button>
-            <button class="btn-primary" data-chip-next style="flex:2;">${t('chip.wiz.btn_next')}</button>
-        </div>
-    `;
-}
-
-// ============================================================
-// STEP 4
-// ============================================================
-function _step4(s) {
-    return `
-        <div class="chip-preview-layout">
-            <div class="chip-preview-left">
-                <div class="chip-preview-device" data-chip-mockup-container></div>
-                <div class="chip-preview-radar" data-chip-radar-container></div>
-            </div>
-            <div class="chip-preview-right">
-                <div class="card-title">${t('chip.wiz.preview')}</div>
-                <div data-chip-preview>${_previewHtml(s)}</div>
-            </div>
-        </div>
-
-        <div class="wiz-nav">
-            <button class="btn-secondary" data-chip-back style="flex:1;">${t('chip.wiz.btn_back')}</button>
-            <button class="btn-primary" data-chip-confirm style="flex:2;">${t('chip.wiz.btn_confirm')}</button>
-        </div>
-    `;
-}
-
-// ============================================================
-// LIVE PREVIEW
-// ============================================================
-function _refreshPreview() {
-    const root = document.querySelector('[data-modal-id="chip-designer"]');
-    if (!root) return;
-
-    const mc = root.querySelector('[data-chip-mockup-container]');
-    if (mc) {
-        try { mc.innerHTML = renderChipMockup(_wiz, { size: 190 }); }
-        catch (e) { console.error('[ChipDesigner] Mockup error:', e); mc.innerHTML = ''; }
-    }
-
-    const rc = root.querySelector('[data-chip-radar-container]');
-    if (rc) {
-        try {
-            const stats = _computeStats(_wiz);
-            rc.innerHTML = renderChipRadarChart(stats, { size: 160 });
-        } catch (e) { console.error('[ChipDesigner] Radar error:', e); rc.innerHTML = ''; }
-    }
-
-    const pe = root.querySelector('[data-chip-preview]');
-    if (pe) pe.innerHTML = _previewHtml(_wiz);
-}
-
-// ============================================================
-// COMPUTE
-// ============================================================
-function _computeStats(s) {
-    const cs = chipSystem();
-    if (cs && cs.computeChipStats) {
-        try {
-            const stats = cs.computeChipStats(s);
-            if (stats) {
-                const yieldRate = cs.computeYieldRate(s);
-                return Object.assign({}, stats, { yieldRate: yieldRate });
-            }
-        } catch (e) {}
-    }
-    return { performance: 0, efficiency: 0, costPerUnit: 0, yieldRate: 0.7 };
-}
-
-function _previewHtml(s) {
-    const cs = chipSystem();
-    if (!cs) return '<div style="font-size:12px;color:var(--text-mute);">' + t('chip.fab.system_not_ready') + '</div>';
-    try {
-        const stats = _computeStats(s);
-        const designCost = cs.computeDesignCost ? cs.computeDesignCost(s) : 0;
-        const durationDays = cs.computeDesignDuration ? cs.computeDesignDuration(s) : 90;
-        const yieldRate = cs.computeYieldRate ? cs.computeYieldRate(s) : 0.7;
-
-        const arch = getArchitectureById(s.architectureId);
-        const node = getChipNodeById(s.nodeId);
-        const featuresCount = (s.features || []).length;
-
-        return `
-            <div class="preview-row"><span>${t('chip.wiz.arch_label')}</span><b>${escapeHtml(arch ? arch.name : '-')}</b></div>
-            <div class="preview-row"><span>${t('chip.wiz.node')}</span><b>${escapeHtml(node ? node.name : '-')}</b></div>
-            <div class="preview-row"><span>${t('chip.wiz.cores')} × ${t('chip.wiz.clock')}</span><b>${s.cores}x @ ${s.clockGHz} GHz</b></div>
-            <div class="preview-row"><span>${t('chip.wiz.cache')}</span><b>${s.cacheKB >= 1024 ? (s.cacheKB / 1024) + ' MB' : s.cacheKB + ' KB'}</b></div>
-            <div class="preview-row"><span>${t('chip.wiz.features')}</span><b>${featuresCount}</b></div>
-            <div class="preview-row"><span>Performance</span><b style="color:var(--success);">${stats.performance}</b></div>
-            <div class="preview-row"><span>Efficiency</span><b style="color:var(--info);">${stats.efficiency}</b></div>
-            <div class="preview-row"><span>${t('chip.catalog.eff') === 'Eff' ? 'Cost per unit' : 'Cost per unit'}</span><b>$${stats.costPerUnit}</b></div>
-            <div class="preview-row"><span>Yield Rate</span><b style="color:${yieldRate >= 0.75 ? 'var(--success)' : yieldRate >= 0.5 ? 'var(--warn)' : 'var(--danger)'};">${Math.round(yieldRate * 100)}%</b></div>
-            <div class="preview-row total" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
-                <span>${t('chip.wiz.btn_confirm') === 'Start Design ✓' ? 'Design Cost' : 'Biaya Desain'}</span><b style="color:var(--accent);">$${designCost.toLocaleString('en-US')}</b>
-            </div>
-            <div class="preview-row"><span>${t('chip.wiz.btn_confirm') === 'Start Design ✓' ? 'Design Duration' : 'Durasi Desain'}</span><b>${durationDays}</b></div>
-        `;
-    } catch (e) {
-        return '<div style="font-size:12px;color:var(--danger);">Preview error: ' + escapeHtml(e.message) + '</div>';
-    }
-}
+// ===========================
