@@ -1,7 +1,7 @@
 // FILE: src/ui/components/TechNodeCard.js  (REPLACE)
 // ============================================================
 // Komponen baris node riset — dipakai ResearchPanel & ChipResearchPanel.
-// v2028.37 — R&D UI Overhaul (Compact & Clean Layout)
+// v2028.39 — Fixed CSS duplication & Swipe event bubbling (Carousel).
 // ============================================================
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
@@ -65,7 +65,7 @@ function _formatCost(c) {
 }
 
 // ============================================================
-// KOMPONEN NODE UTAMA (TIDAK DIUBAH)
+// KOMPONEN NODE UTAMA (TECH TREE)
 // ============================================================
 export function renderTechNodeRow(opts) {
     var node = opts.node;
@@ -149,10 +149,20 @@ var _rndStylesInjected = false;
 export function ensureRndStyles() {
     if (_rndStylesInjected || typeof document === 'undefined') return;
     _rndStylesInjected = true;
+    
+    // 1. Inject CSS
     var el = document.createElement('style');
     el.id = 'rnd-styles';
     el.textContent = RND_CSS;
     document.head.appendChild(el);
+
+    // 2. Fix Swipe Issue (Cegah Tab Utama Ikut Geser)
+    document.addEventListener('touchstart', function(e) {
+        // Jika yang disentuh adalah area carousel, hentikan event agar tidak sampai ke tab utama
+        if (e.target.closest && e.target.closest('.rnd-carousel-container')) {
+            e.stopPropagation();
+        }
+    }, { passive: true });
 }
 
 export function renderRndOverview(ov, opts) {
@@ -249,7 +259,7 @@ export function renderRndRow(info, opts) {
     '</div>';
 }
 
-var RND_CSS = `
+const RND_CSS = `
 .rnd-card { margin: 0 0 12px; }
 .rnd-ov { background: linear-gradient(135deg, var(--bg-2), var(--bg-3)); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 12px; margin-bottom: 12px; }
 .rnd-ov-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
@@ -277,6 +287,8 @@ var RND_CSS = `
     padding-right: 12px;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    overscroll-behavior-x: contain; /* Mencegah scroll bocor ke parent */
+    touch-action: pan-x; /* Hanya izinkan pan horizontal */
 }
 .rnd-carousel-container::-webkit-scrollbar { display: none; }
 
@@ -284,7 +296,10 @@ var RND_CSS = `
 .rnd-row { 
     flex: 0 0 84%; 
     scroll-snap-align: start;
-    background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 12px; 
+    background: var(--bg-2); 
+    border: 1px solid var(--border); 
+    border-radius: var(--r-lg); 
+    padding: 12px; 
     transition: border-color 0.2s;
 }
 .rnd-row:hover { border-color: var(--border-strong); }
