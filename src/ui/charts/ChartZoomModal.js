@@ -1,9 +1,11 @@
 // FILE: src/ui/charts/ChartZoomModal.js
+// v2027.1c — i18n penuh (Fase 2): judul/subjudul/label via _tx, modal render ulang saat 'lang:changed'.
 // v2027.1b — modal zoom chart kurva: pinch-zoom, pan, preset, legend toggle.
 // Fix: urut kronologis, pinch relatif ke canvas, pan tidak loncat setelah pinch,
 // tooltip memakai area plot, area-fill menutup di titik terakhir, label X tidak tumpang tindih.
 // Murni viewer — tidak mengubah state/ save/ sistem.
 import { Modal } from '../modal.js';
+import { bus } from '../../core/EventBus.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
 
 // Terjemahan dengan fallback (aman walau file i18n belum diganti).
@@ -37,9 +39,11 @@ function _axisDecimals(step) {
 const COLORS = ['#4CAF50', '#6b8e23', '#c97f3c', '#8a5ec9', '#0a8aef', '#eb0028'];
 
 let _cfg = null;
+let _rebuild = null;   // fungsi pembuat ulang cfg (teks mengikuti bahasa aktif)
 let _view = null;
 let _gesture = null;
 let _hidden = {};
+let _preset = 'all';
 
 // ============================================================
 // Global button binder (self-execute sekali)
@@ -61,9 +65,10 @@ _bindGlobal();
 // ============================================================
 // MARKET SHARE — adapter
 // ============================================================
-function _openShareZoom() {
+// Membangun cfg dari state saat ini. Dipanggil saat buka dan saat bahasa berganti.
+function _buildShareCfg() {
     const game = window.__game;
-    if (!game || !game.state) return;
+    if (!game || !game.state) return null;
     const state = game.state.get();
     const seen = {};
     const sorted = (state.market.shareHistory || [])
@@ -72,7 +77,7 @@ function _openShareZoom() {
         .filter(o => (seen[o.k] ? false : (seen[o.k] = true)))
         .sort((a, b) => a.k - b.k)
         .map(o => o.h);
-    if (sorted.length < 2) return;
+    if (sorted.length < 2) return null;
 
     const latest = sorted[sorted.length - 1];
     const topComp = (latest.competitors || []).slice()
@@ -109,19 +114,24 @@ function _openShareZoom() {
         return mShort + ' ' + String(h.year || '').slice(-2);
     });
 
-    _open({
-        title: t('market.share.chart_title') || 'Pangsa Pasar',
-        subtitle: t('market.share.title') || 'Your Market Share',
+    return {
+        title: _tx('market.share.chart_title', 'Grafik Pangsa (24 Bulan)', 'Share Chart (24 Months)'),
+        subtitle: _tx('market.share.title', 'Pangsa Pasar Anda', 'Your Market Share'),
         series: series,
         labels: labels,
         yFmt: function (v, step) { return (Math.max(0, v) * 100).toFixed(_axisDecimals(step)) + '%'; },
         valueFmt: _fmtPctAuto
-    });
+    };
+}
+
+function _openShareZoom() {
+    const cfg = _buildShareCfg();
+    if (!cfg) return;
+    _open(cfg, _buildShareCfg);
 }
 
 function _youLabel() {
-    const v = t('market.share.you');
-    return (v && v !== 'market.share.you') ? v : 'Anda';
+    return _tx('market.share.you', 'Anda', 'You');
 }
 
 function _fmtPctAuto(v) {
@@ -139,25 +149,27 @@ function _fmtPctAuto(v) {
 // ============================================================
 // MODAL CORE
 // ============================================================
-function _open(cfg) {
+function _open(cfg, rebuild) {
     _cfg = cfg;
+    _rebuild = rebuild || null;
     _hidden = {};
+    _preset = 'all';
     const total = cfg.labels.length;
     _view = { start: 0, end: total };
     _gesture = null;
 
+    let unsubLang = null;
     const html = _html(cfg);
 
-    Modal.open('chart-zoom', html, {
+    const root = Modal.open('chart-zoom', html, {
         dismissible: true,
         onClose: function () {
-            _cfg = null; _view = null; _gesture = null;
+            _cfg = null; _rebuild = null; _view = null; _gesture = null;
+            if (unsubLang) { unsubLang(); unsubLang = null; }
             const r = document.querySelector('[data-modal-id="chart-zoom"]');
             if (r && r._czResize) window.removeEventListener('resize', r._czResize);
         }
     });
-
-    const root = document.querySelector('[data-modal-id="chart-zoom"]');
     if (!root) return;
 
     _attachGestures(root);
@@ -165,18 +177,64 @@ function _open(cfg) {
     _attachLegend(root);
 
     requestAnimationFrame(() => _draw(root));
-    const onResize = () => { if (_cfg) _draw(root); };
+    const onResize = () => {
+        // Modal bisa tertutup lewat single-modal policy (tanpa onClose): lepas listener sendiri.
+        if (!root.isConnected || !_cfg) { window.removeEventListener('resize', onResize); return; }
+        _draw(root);
+    };
     window.addEventListener('resize', onResize);
     root._czResize = onResize;
+
+    // Ganti bahasa: bangun ulang teks (judul, label bulan, nama seri, tombol), pertahankan zoom/pan/legend.
+    unsubLang = bus.on('lang:changed', function () {
+        if (!root.isConnected || !_cfg || !Modal.isOpen('chart-zoom')) {
+            if (unsubLang) { unsubLang(); unsubLang = null; }
+            return;
+        }
+        _rerender(root);
+    });
+}
+
+function _rerender(root) {
+    if (!_rebuild) return;
+    const fresh = _rebuild();
+    if (!fresh) return;
+    // Pertahankan rentang tampilan; jepit jika jumlah data berubah.
+    const total = fresh.labels.length;
+    let start = Math.max(0, Math.min(_view.start, total - 2));
+    let end = Math.max(start + 2, Math.min(_view.end, total));
+    _cfg = fresh;
+    _view = { start: start, end: Math.min(end, total) };
+
+    const card = root.querySelector('.modal-card');
+    if (!card) return;
+    card.innerHTML = _html(_cfg);
+    const closeBtn = card.querySelector('[data-modal-close]');
+    if (closeBtn) closeBtn.addEventListener('click', function () { Modal.close('chart-zoom'); });
+
+    _attachGestures(root);
+    _attachPresets(root);
+    _attachLegend(root);
+    _draw(root);
+}
+
+function _isFocused(cfg) {
+    return cfg.series.every(function (x) { return x.id === 'you' || _hidden[x.id]; });
 }
 
 function _html(cfg) {
     const legendItems = cfg.series.map(s =>
-        '<button class="cz-legend-item" data-cz-toggle="' + _esc(s.id) + '" type="button">' +
+        '<button class="cz-legend-item' + (_hidden[s.id] ? ' off' : '') + '" data-cz-toggle="' + _esc(s.id) + '" type="button">' +
             '<i style="background:' + s.color + ';"></i>' +
             '<span>' + _esc(s.name) + '</span>' +
         '</button>'
     ).join('');
+
+    const monthsShort = _tx('chart.months_short', 'bln', 'mo');
+    const hasYou = cfg.series.some(function (x) { return x.id === 'you'; });
+    const focusLabel = (hasYou && cfg.series.length > 1 && _isFocused(cfg))
+        ? _tx('chart.show_all', 'Tampilkan semua', 'Show all')
+        : _tx('chart.focus_you', 'Fokus Anda', 'Focus: You');
 
     return '' +
         '<style>' +
@@ -204,19 +262,19 @@ function _html(cfg) {
             '<button class="btn-secondary cz-close" data-modal-close type="button">✕</button>' +
         '</div>' +
         '<div class="cz-presets" data-cz-presets>' +
-            _presetBtn('all', _tx('chart.preset_all', 'Semua', 'All'), true) +
-            _presetBtn('24', '24 ' + _tx('chart.months_short', 'bln', 'mo'), false) +
-            _presetBtn('12', '12 ' + _tx('chart.months_short', 'bln', 'mo'), false) +
-            _presetBtn('6', '6 ' + _tx('chart.months_short', 'bln', 'mo'), false) +
+            _presetBtn('all', _tx('chart.preset_all', 'Semua', 'All'), _preset === 'all') +
+            _presetBtn('24', '24 ' + monthsShort, _preset === '24') +
+            _presetBtn('12', '12 ' + monthsShort, _preset === '12') +
+            _presetBtn('6', '6 ' + monthsShort, _preset === '6') +
         '</div>' +
         '<div class="cz-canvas-wrap" data-cz-wrap>' +
             '<canvas class="cz-canvas" data-cz-canvas></canvas>' +
             '<div class="cz-tip" data-cz-tip></div>' +
         '</div>' +
         '<div class="cz-legend" data-cz-legend>' + legendItems +
-            (cfg.series.length > 1 && cfg.series.some(function (x) { return x.id === 'you'; })
+            (cfg.series.length > 1 && hasYou
                 ? '<button class="cz-legend-item" data-cz-focus type="button" style="margin-left:auto;border-color:var(--accent);color:var(--accent);">' +
-                  _esc(_tx('chart.focus_you', 'Fokus Anda', 'Focus: You')) + '</button>'
+                  _esc(focusLabel) + '</button>'
                 : '') +
         '</div>' +
         '<div class="cz-hint">' + _esc(_tx('chart.hint', 'Cubit untuk zoom · Geser untuk pan · Ketuk titik untuk nilai', 'Pinch to zoom · Drag to pan · Tap for values')) + '</div>';
@@ -228,6 +286,7 @@ function _presetBtn(id, label, active) {
 }
 
 function _clearPreset(root) {
+    _preset = null;
     root.querySelectorAll('[data-cz-preset]').forEach(b => b.classList.remove('active'));
 }
 
@@ -239,6 +298,7 @@ function _attachPresets(root) {
         const btn = e.target.closest('[data-cz-preset]');
         if (!btn) return;
         const id = btn.dataset.czPreset;
+        _preset = id;
         const total = _cfg.labels.length;
         let end = total;
         let start = 0;

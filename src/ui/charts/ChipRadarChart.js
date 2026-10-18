@@ -2,14 +2,30 @@
 // ============================================================
 // ChipRadarChart — 4 axis SVG untuk statistik chip.
 // Axis: Performance, Efficiency, Value (cost inverted), Yield.
+// v2027.13d — i18n (Fase 2): label sumbu lewat key chip.radar.* (fallback sesuai bahasa aktif).
+// Render murni fungsi: label diambil saat render, jadi ikut berganti saat UI di-render ulang.
 // ============================================================
+import { t, LanguageService } from '../../core/LanguageService.js';
 
+// fb = [Indonesia, Inggris] — dipakai bila key belum ada di kamus (sebelum Fase 3).
 const AXES = [
-    { key: 'performance', label: 'Performa' },
-    { key: 'efficiency',  label: 'Efisiensi' },
-    { key: 'value',       label: 'Nilai' },
-    { key: 'yield',       label: 'Yield' }
+    { key: 'performance', i18n: 'chip.radar.performance', fb: ['Performa', 'Performance'] },
+    { key: 'efficiency',  i18n: 'chip.radar.efficiency',  fb: ['Efisiensi', 'Efficiency'] },
+    { key: 'value',       i18n: 'chip.radar.value',       fb: ['Nilai', 'Value'] },
+    { key: 'yield',       i18n: 'chip.radar.yield',       fb: ['Yield', 'Yield'] }
 ];
+
+function _axisLabel(a) {
+    var v = t(a.i18n);
+    if (v && v !== a.i18n) return v;
+    var en = false;
+    try { en = LanguageService.getLang() === 'en'; } catch (e) {}
+    return en ? a.fb[1] : a.fb[0];
+}
+
+function _esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
 // Cost → Value: makin murah makin bagus.
 // costPerUnit 5 = value 100, costPerUnit 500 = value 0.
@@ -84,7 +100,7 @@ export function renderChipRadarChart(stats, opts) {
         const anchor = Math.abs(lx - cx) < 2 ? 'middle' : (lx < cx ? 'end' : 'start');
         const value = valueMap[a.key] || 0;
         return `
-            <text x="${lx.toFixed(2)}" y="${ly.toFixed(2)}" text-anchor="${anchor}" font-size="3" font-weight="600" fill="${valueColor}" font-family="sans-serif">${a.label}</text>
+            <text x="${lx.toFixed(2)}" y="${ly.toFixed(2)}" text-anchor="${anchor}" font-size="3" font-weight="600" fill="${valueColor}" font-family="sans-serif">${_esc(_axisLabel(a))}</text>
             <text x="${lx.toFixed(2)}" y="${(ly + 3.2).toFixed(2)}" text-anchor="${anchor}" font-size="2.8" font-weight="700" fill="${accent}" font-family="sans-serif">${value}</text>
         `;
     }).join('') : '';
@@ -111,5 +127,8 @@ export function renderChipRadarChart(stats, opts) {
     return `<div class="radar-chart-wrap chip-radar" style="width:${size}px;height:${size}px;">${svg}</div>`;
 }
 
-export function getChipRadarAxes() { return AXES; }
+// Mengembalikan sumbu dengan label yang sudah diterjemahkan (bentuk {key,label} tetap sama).
+export function getChipRadarAxes() {
+    return AXES.map(function (a) { return { key: a.key, label: _axisLabel(a) }; });
+}
 export { costToValue };
