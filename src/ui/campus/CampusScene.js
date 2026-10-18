@@ -46,8 +46,9 @@ function prefersReducedMotion() {
 }
 
 export function createCampusScene(THREE, container, gameState) {
+    var PERF = window.__PERF || {};
     var renderer = new THREE.WebGLRenderer({
-        antialias: true,
+        antialias: PERF.antialias !== false,
         alpha: true,
         powerPreference: 'low-power'
     });
@@ -84,7 +85,7 @@ export function createCampusScene(THREE, container, gameState) {
     // Animasi ambient (mobil, awan, asap, drone, dll). Dimatikan bila pengguna memilih reduced-motion.
     var life = prefersReducedMotion() ? null : createCampusLife(THREE, A, scene, trees);
     var ambient = !!life;
-    var loopRaf = 0, lastFrame = 0, inView = true;
+    var loopRaf = 0, loopTimer = 0, lastFrame = 0, inView = true;
 
     var dyn = {};                 // key -> { group, level, era }
     var eraIdx = -1;              // era desain yang sedang dipakai
@@ -108,17 +109,27 @@ export function createCampusScene(THREE, container, gameState) {
     }
 
     function startLoop() {
-        if (!ambient || loopRaf || disposed || document.hidden || !inView) return;
+        if (!ambient || loopRaf || loopTimer || disposed || document.hidden || !inView) return;
         loopRaf = requestAnimationFrame(frame);
     }
 
-    // Loop tunggal ~30fps; berhenti total saat tab tersembunyi / peta di luar layar.
+    // PERF: antar frame tidur dengan setTimeout (tidak bangun di tiap vsync). Berhenti total
+    // saat tab tersembunyi / peta di luar layar.
+    function frameGap() { return Math.max(FRAME_MS, PERF.frameMs || 0); }
+    function scheduleNext() {
+        var wait = frameGap() - (performance.now() - lastFrame) - 5;
+        if (wait > 4) {
+            loopTimer = setTimeout(function () { loopTimer = 0; loopRaf = requestAnimationFrame(frame); }, wait);
+        } else {
+            loopRaf = requestAnimationFrame(frame);
+        }
+    }
     function frame(now) {
         loopRaf = 0;
         if (disposed || document.hidden || !inView) return;
-        loopRaf = requestAnimationFrame(frame);
-        if (now - lastFrame < FRAME_MS) return;
+        if (now - lastFrame < frameGap() - 2) { scheduleNext(); return; }
         lastFrame = now;
+        scheduleNext();
         if (animList.length) stepGrow(now);
         fx.update(now);
         life.update(now / 1000);
@@ -411,6 +422,7 @@ export function createCampusScene(THREE, container, gameState) {
             disposed = true;
             if (raf) cancelAnimationFrame(raf);
             if (loopRaf) cancelAnimationFrame(loopRaf);
+            if (loopTimer) { clearTimeout(loopTimer); loopTimer = 0; }
             if (io) io.disconnect();
             if (life) life.dispose();
             if (animRaf) cancelAnimationFrame(animRaf);
