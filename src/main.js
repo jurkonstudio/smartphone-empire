@@ -138,18 +138,22 @@ function splash(pct) { if (window.__splash) window.__splash.set(pct); }
 
 function renderHeaderOnly() {
     if (!els.header) return;
-    els.header.innerHTML = renderHeader({ state: state.get(), timeSnapshot: getTime(), warning: _burnWarn });
+    els.header.innerHTML = renderHeader({ state: state.get(), timeSnapshot: getTime(), warning: (_burnWarn == null ? null : tr('main.burn_short', { n: _burnWarn })) });
 }
 
 // ============================================================
 // NAV RENDER
 // ============================================================
+var _navLang = null;
 function renderNavOnly() {
     if (!els.nav) return;
 
+    var curLang = LanguageService.getLang();
     var hasRendered = !!els.nav.querySelector('.nav-btn');
+    var langChanged = hasRendered && _navLang !== curLang;
 
-    if (!hasRendered) {
+    if (!hasRendered || langChanged) {
+        _navLang = curLang;
         els.nav.innerHTML = renderMobileNav({ active: activeView });
         requestAnimationFrame(function () {
             requestAnimationFrame(function () { updateNavSlider(false); });
@@ -233,7 +237,7 @@ function renderView(opts) {
         else if (activeView === 'market') html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion });
         else if (activeView === 'settings') html = renderSettingsPanel();
         else if (activeView === 'guide') html = renderGuidePanel();
-        else html = renderEmptyState({ icon: '?', title: 'Tidak ditemukan' });
+        else html = renderEmptyState({ icon: '?', title: tr('main.not_found') });
     } catch (err) {
         console.error('[renderView] Error:', err);
         html = '<div class="card" style="border-color:var(--danger);margin-top:20px;"><div class="card-title" style="color:var(--danger);">Error Render</div><div style="font-size:13px;line-height:1.6;word-break:break-word;"><b>View:</b> ' + activeView + '<br><b>Error:</b> ' + (err && err.message ? err.message : 'Unknown') + '</div></div>';
@@ -360,7 +364,10 @@ function navigate(id) {
 
 function updateTitle() {
     var meta = VIEW_TITLES[activeView];
-    document.title = APP_CONFIG.name + ' - ' + (meta ? meta.title : 'Dashboard');
+    var navKey = 'nav.' + activeView;
+    var label = tr(navKey);
+    if (!label || label === navKey) label = meta ? meta.title : 'Dashboard';
+    document.title = APP_CONFIG.name + ' - ' + label;
 }
 
 // Getar pengiring notifikasi: ikut mati bila jenis notifikasinya dimatikan.
@@ -468,7 +475,7 @@ function bindGlobalClicks() {
             var a = chipAction.dataset.chipAction;
             if (a === 'new') { openChipDesigner(); return; }
             if (a === 'fab') { openFabPanel(); return; }
-            if (a === 'cancel-design') { var r = chipSystem.cancelDesign(); if (r.ok) { ToastService.info('Dibatalkan.'); renderAll(); } else ToastService.error(r.reason); return; }
+            if (a === 'cancel-design') { var r = chipSystem.cancelDesign(); if (r.ok) { ToastService.info(tr('main.toast.cancelled')); renderAll(); } else ToastService.error(r.reason); return; }
         }
 
         var fabAction = e.target.closest('[data-fab-action]');
@@ -485,7 +492,7 @@ function bindGlobalClicks() {
                 var qty = parseInt(root.querySelector('[data-prod-qty]').value, 10) || 0;
                 var res = fabSystem.orderProduction(fabAction.dataset.chipId, qty);
                 if (!res.ok) ToastService.error(res.reason);
-                else { ToastService.success('Produksi dimulai!'); Modal.close('fab-prod-qty', true); renderAll(); }
+                else { ToastService.success(tr('main.toast.prod_started')); Modal.close('fab-prod-qty', true); renderAll(); }
                 return;
             }
         }
@@ -523,7 +530,7 @@ function bindGlobalClicks() {
                 ? SiliconService.unlockResearch(silKind, silNode, silMode === 'instant')
                 : SiliconService.boostResearch(silKind, silNode, silMode);
             if (!silR.ok) {
-                ToastService.error(silR.reason || 'Gagal.');
+                ToastService.error(silR.reason || tr('main.toast.failed'));
                 if (silR.need) openSiliconStoreModal();
                 return;
             }
@@ -600,7 +607,7 @@ function bindGlobalClicks() {
             if (!window.__game || !window.__game.stocks) return;
             var cRes = window.__game.stocks.buyStock(buyConfirm.dataset.buyConfirm, cQty);
             if (!cRes.ok) { ToastService.error(cRes.reason); return; }
-            ToastService.success('Beli ' + cRes.shares.toLocaleString('en-US') + ' lembar.');
+            ToastService.success(tr('main.toast.stock_buy', { n: cRes.shares.toLocaleString('en-US') }));
             vibrate(15);
             Modal.close('buy-modal', true);
             renderView();
@@ -615,7 +622,7 @@ function bindGlobalClicks() {
             if (!window.__game || !window.__game.stocks) return;
             var csRes = window.__game.stocks.sellStock(sellConfirm.dataset.sellConfirm, csQty);
             if (!csRes.ok) { ToastService.error(csRes.reason); return; }
-            ToastService.success('Jual ' + csRes.shares.toLocaleString('en-US') + ' lembar.');
+            ToastService.success(tr('main.toast.stock_sell', { n: csRes.shares.toLocaleString('en-US') }));
             vibrate(15);
             Modal.close('sell-modal', true);
             renderView();
@@ -649,7 +656,7 @@ function bindGlobalClicks() {
                 else { Modal.close('candidate-detail', true); renderAll(); }
                 return;
             }
-            if (ta === 'refresh-pool') { teamSystem.refreshCandidates(); ToastService.success('Pool diperbarui.'); renderAll(); return; }
+            if (ta === 'refresh-pool') { teamSystem.refreshCandidates(); ToastService.success(tr('main.toast.pool_refreshed')); renderAll(); return; }
             if (ta === 'goto-recruit') { setTeamMode('recruit'); renderView(); return; }
             if (ta === 'open-candidate') { openCandidateDetailModal({ candidateId: teamAction.dataset.candidateId }); return; }
         }
@@ -679,8 +686,8 @@ function bindGlobalClicks() {
         if (chipRAction) {
             e.preventDefault();
             var cra = chipRAction.dataset.chipResearchAction; var cnodeId = chipRAction.dataset.nodeId;
-            if (cra === 'start') { var res = chipResearch.startResearch(cnodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.success('Riset chip dimulai!'); Modal.close('chip-node-detail', true); renderAll(); } }
-            else if (cra === 'cancel') { var res = chipResearch.cancelResearch(cnodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.info('Dibatalkan.'); Modal.close('chip-node-detail', true); renderAll(); } }
+            if (cra === 'start') { var res = chipResearch.startResearch(cnodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.success(tr('main.toast.chip_research_started')); Modal.close('chip-node-detail', true); renderAll(); } }
+            else if (cra === 'cancel') { var res = chipResearch.cancelResearch(cnodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.info(tr('main.toast.cancelled')); Modal.close('chip-node-detail', true); renderAll(); } }
             return;
         }
 
@@ -690,8 +697,8 @@ function bindGlobalClicks() {
         if (rAction) {
             e.preventDefault();
             var ra = rAction.dataset.researchAction; var rnodeId = rAction.dataset.nodeId;
-            if (ra === 'start') { var res = research.startResearch(rnodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.success('Riset dimulai!'); Modal.close('node-detail', true); renderAll(); } }
-            else if (ra === 'cancel') { var res = research.cancelResearch(rnodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.info('Dibatalkan.'); Modal.close('node-detail', true); renderAll(); } }
+            if (ra === 'start') { var res = research.startResearch(rnodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.success(tr('main.toast.research_started')); Modal.close('node-detail', true); renderAll(); } }
+            else if (ra === 'cancel') { var res = research.cancelResearch(rnodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.info(tr('main.toast.cancelled')); Modal.close('node-detail', true); renderAll(); } }
             return;
         }
 
@@ -701,11 +708,11 @@ function bindGlobalClicks() {
             var oa = osAction.dataset.osAction;
             if (oa === 'create') { openCreateOsModal({ osSystem: os }); return; }
             if (oa === 'wizard') { openOsWizardModal({ osSystem: os }); return; }
-            if (oa === 'cancel-deving') { var res = os.cancelVersion(); if (res.ok) { ToastService.info('Dibatalkan.'); renderAll(); } else ToastService.error(res.reason); return; }
-            if (oa === 'patch-bug') { var r = os.patchBug(osAction.dataset.bugId); if (r.ok) { ToastService.success('Patch dimulai.'); renderAll(); } else ToastService.error(r.reason); return; }
-            if (oa === 'ignore-bug') { var r = os.ignoreBug(osAction.dataset.bugId); if (r.ok) { ToastService.warning('Diabaikan.'); renderAll(); } else ToastService.error(r.reason); return; }
-            if (oa === 'start-app') { var r = os.startApp(osAction.dataset.appId); if (r.ok) { ToastService.success('App dirilis.'); renderAll(); } else ToastService.error(r.reason); return; }
-            if (oa === 'invite-devs') { var r = os.inviteDevelopers(); if (r.ok) { ToastService.success('+' + r.bonus + ' dev.'); renderAll(); } else ToastService.error(r.reason); return; }
+            if (oa === 'cancel-deving') { var res = os.cancelVersion(); if (res.ok) { ToastService.info(tr('main.toast.cancelled')); renderAll(); } else ToastService.error(res.reason); return; }
+            if (oa === 'patch-bug') { var r = os.patchBug(osAction.dataset.bugId); if (r.ok) { ToastService.success(tr('main.toast.patch_started')); renderAll(); } else ToastService.error(r.reason); return; }
+            if (oa === 'ignore-bug') { var r = os.ignoreBug(osAction.dataset.bugId); if (r.ok) { ToastService.warning(tr('main.toast.ignored')); renderAll(); } else ToastService.error(r.reason); return; }
+            if (oa === 'start-app') { var r = os.startApp(osAction.dataset.appId); if (r.ok) { ToastService.success(tr('main.toast.app_released')); renderAll(); } else ToastService.error(r.reason); return; }
+            if (oa === 'invite-devs') { var r = os.inviteDevelopers(); if (r.ok) { ToastService.success(tr('main.toast.devs_invited', { n: r.bonus })); renderAll(); } else ToastService.error(r.reason); return; }
             if (oa === 'feature-detail') { openFeatureDetailModal({ osSystem: os, featureId: osAction.dataset.featureId }); return; }
         }
 
@@ -716,10 +723,10 @@ function bindGlobalClicks() {
             e.preventDefault();
             var pa = prodAction.dataset.prodAction; var pid = prodAction.dataset.prodId;
             if (pa === 'open-wizard') { openDesignWizard({ researchSystem: research, osSystem: os, productSystem: products }); return; }
-            if (pa === 'cancel-dev') { var r = products.cancelDevelopment(); if (r.ok) { ToastService.info('Dibatalkan.'); renderAll(); } else ToastService.error(r.reason); return; }
+            if (pa === 'cancel-dev') { var r = products.cancelDevelopment(); if (r.ok) { ToastService.info(tr('main.toast.cancelled')); renderAll(); } else ToastService.error(r.reason); return; }
             if (pa === 'order-prod') { openOrderProductionModal({ productId: pid }); return; }
             if (pa === 'campaign') { openCampaignModal({ productId: pid }); return; }
-            if (pa === 'discontinue') { var r = products.discontinueProduct(pid); if (r.ok) { ToastService.info('Produk dihentikan.'); Modal.close('product-detail', true); renderAll(); } else ToastService.error(r.reason); return; }
+            if (pa === 'discontinue') { var r = products.discontinueProduct(pid); if (r.ok) { ToastService.info(tr('main.toast.product_discontinued')); Modal.close('product-detail', true); renderAll(); } else ToastService.error(r.reason); return; }
         }
         var prodCard = e.target.closest('[data-prod-detail]');
         if (prodCard && !e.target.closest('[data-prod-action]') && !e.target.closest('[data-auto-toggle]') && !e.target.closest('[data-auto-threshold]')) {
@@ -730,7 +737,7 @@ function bindGlobalClicks() {
             e.preventDefault();
             var res = products.startCampaign(campPick.dataset.prodId, campPick.dataset.campaignPick);
             if (!res.ok) ToastService.error(res.reason);
-            else { ToastService.success('Kampanye dimulai!'); Modal.close('campaign-pick', true); renderAll(); }
+            else { ToastService.success(tr('main.toast.campaign_started')); Modal.close('campaign-pick', true); renderAll(); }
             return;
         }
         var orderConfirm = e.target.closest('[data-order-confirm]');
@@ -740,7 +747,7 @@ function bindGlobalClicks() {
             var oQty = parseInt(oRoot.querySelector('[data-order-qty]').value, 10) || 0;
             var res = products.orderProduction(orderConfirm.dataset.prodId, oQty);
             if (!res.ok) ToastService.error(res.reason);
-            else { ToastService.success('Order dibuat.'); Modal.close('order-prod', true); renderAll(); }
+            else { ToastService.success(tr('main.toast.order_created')); Modal.close('order-prod', true); renderAll(); }
             return;
         }
 
@@ -761,7 +768,7 @@ function bindGlobalClicks() {
             e.preventDefault();
             var res = opinion.respondToViral(viralPick.dataset.viralId, viralPick.dataset.viralResponsePick);
             if (!res.ok) ToastService.error(res.reason);
-            else { ToastService.success('Respons dikirim.'); Modal.close('viral-response', true); renderAll(); }
+            else { ToastService.success(tr('main.toast.response_sent')); Modal.close('viral-response', true); renderAll(); }
             return;
         }
     });
@@ -825,7 +832,7 @@ function bindProgressEvents() {
             var pct = Math.round(r.percent * 100);
             var bar = els.view.querySelector('[data-research-bar="' + r.nodeId + '"]'); if (bar) bar.style.width = pct + '%';
             var pctEl = els.view.querySelector('[data-research-pct="' + r.nodeId + '"]'); if (pctEl) pctEl.textContent = pct + '%';
-            var etaEl = els.view.querySelector('[data-research-eta="' + r.nodeId + '"]'); if (etaEl) etaEl.textContent = 'Sisa ~' + Math.ceil(r.remainingDays) + ' hari';
+            var etaEl = els.view.querySelector('[data-research-eta="' + r.nodeId + '"]'); if (etaEl) etaEl.textContent = tr('main.eta_left', { n: Math.ceil(r.remainingDays) });
             _refreshFinishCost('tech', r.nodeId);
         });
     });
@@ -834,7 +841,7 @@ function bindProgressEvents() {
         var pct = Math.round(data.percent * 100);
         var bar = els.view.querySelector('[data-os-dev-bar]'); if (bar) bar.style.width = pct + '%';
         var pctEl = els.view.querySelector('[data-os-dev-pct]'); if (pctEl) pctEl.textContent = pct + '%';
-        var eta = els.view.querySelector('[data-os-dev-eta]'); if (eta) eta.textContent = 'Sisa ~' + Math.ceil(data.remainingDays) + ' hari';
+        var eta = els.view.querySelector('[data-os-dev-eta]'); if (eta) eta.textContent = tr('main.eta_left', { n: Math.ceil(data.remainingDays) });
     });
     bus.on('product:development-progress', function (data) {
         if (activeView !== 'products' || activeProdSubtab !== 'design') return;
@@ -842,7 +849,7 @@ function bindProgressEvents() {
         var phaseEl = els.view.querySelector('[data-prod-dev-phase]'); if (phaseEl) phaseEl.textContent = phaseMap[data.phase] || data.phase;
         var pctEl = els.view.querySelector('[data-prod-dev-pct]'); if (pctEl) pctEl.textContent = data.percentOverall + '%';
         var barEl = els.view.querySelector('[data-prod-dev-bar]'); if (barEl) barEl.style.width = data.percentOverall + '%';
-        var etaEl = els.view.querySelector('[data-prod-dev-eta]'); if (etaEl) etaEl.textContent = 'Sisa ~' + data.remainingDays + ' hari';
+        var etaEl = els.view.querySelector('[data-prod-dev-eta]'); if (etaEl) etaEl.textContent = tr('main.eta_left', { n: data.remainingDays });
     });
 
     bus.on('chip-research:progress', function (data) {
@@ -853,7 +860,7 @@ function bindProgressEvents() {
             var pct = Math.round(r.percent * 100);
             var bar = els.view.querySelector('[data-chip-research-bar="' + r.nodeId + '"]'); if (bar) bar.style.width = pct + '%';
             var pctEl = els.view.querySelector('[data-chip-research-pct="' + r.nodeId + '"]'); if (pctEl) pctEl.textContent = pct + '%';
-            var etaEl = els.view.querySelector('[data-chip-research-eta="' + r.nodeId + '"]'); if (etaEl) etaEl.textContent = 'Sisa ~' + Math.ceil(r.remainingDays) + ' hari';
+            var etaEl = els.view.querySelector('[data-chip-research-eta="' + r.nodeId + '"]'); if (etaEl) etaEl.textContent = tr('main.eta_left', { n: Math.ceil(r.remainingDays) });
             _refreshFinishCost('chip', r.nodeId);
         });
     });
@@ -894,18 +901,18 @@ function bindStateEvents() {
     bus.on('state:cash-changed', function (data) { animateCash(data.prev, data.next); });
     bus.on('state:log-changed', function () { if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true }); });
     bus.on('state:milestone-added', function () { if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true }); });
-    bus.on('quest:completed', function (data) { ToastService.success('Quest selesai: ' + data.title); notifVibrate(20, 'success'); });
+    bus.on('quest:completed', function (data) { ToastService.success(tr('main.toast.quest_done', { title: data.title })); notifVibrate(20, 'success'); });
     bus.on('quest:activated', function () { if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true }); });
     bus.on('economy:warn-burnrate', function (data) {
-        _burnWarn = 'Sisa ' + data.monthsLeft + ' bln';
+        _burnWarn = data.monthsLeft;
         renderHeaderOnly();
-        ToastService.warning('Sisa uang ~' + data.monthsLeft + ' bulan biaya!');
+        ToastService.warning(tr('main.toast.burn_warn', { n: data.monthsLeft }));
         notifVibrate(30, 'warning');
     });
     bus.on('settings:take-loan', function (data) {
         var res = economy.takeLoan(data.loanId);
         if (!res.ok) ToastService.error(res.error);
-        else { ToastService.success('Pinjaman diterima.'); renderView(); }
+        else { ToastService.success(tr('main.toast.loan_received')); renderView(); }
     });
     bus.on('settings:changed', function (settings) {
         if (settings && typeof settings.sound === 'boolean') {
@@ -933,29 +940,25 @@ function bindStateEvents() {
         if (activeView === 'market' && activeMarketSubtab === 'promo') renderView({ soft: true });
     });
 
-    bus.on('lang:changed', function () { renderAll(); });
+    bus.on('lang:changed', function () { renderAll(); updateTitle(); });
     bus.on('silicon:changed', function () { renderHeaderOnly(); });
 
     // Dompet Universal: beri tahu pemain saat SIL/uang dipakai lintas mata uang.
     (function () {
-        function _id() { try { return LanguageService.getLang() === 'id'; } catch (e) { return true; } }
+        function _cash(n) { return Number(n).toLocaleString('en-US'); }
         bus.on('wallet:paid-with-sil', function (p) {
             if (!p || !p.sil) return;
-            ToastService.info(_id()
-                ? 'Dibayar dengan ' + p.sil + ' SIL' + (p.cash ? ' + $' + Number(p.cash).toLocaleString('en-US') : '') + '.'
-                : 'Paid with ' + p.sil + ' SIL' + (p.cash ? ' + $' + Number(p.cash).toLocaleString('en-US') : '') + '.');
+            ToastService.info(p.cash
+                ? tr('main.wallet.paid_sil_cash', { sil: p.sil, cash: _cash(p.cash) })
+                : tr('main.wallet.paid_sil', { sil: p.sil }));
         });
         bus.on('wallet:paid-with-cash', function (p) {
             if (!p || !p.cash) return;
-            ToastService.info(_id()
-                ? 'Biaya SIL dibayar dengan uang $' + Number(p.cash).toLocaleString('en-US') + '.'
-                : 'SIL cost paid with $' + Number(p.cash).toLocaleString('en-US') + ' cash.');
+            ToastService.info(tr('main.wallet.paid_cash', { cash: _cash(p.cash) }));
         });
         bus.on('wallet:rescue', function (p) {
             if (!p) return;
-            ToastService.warning(_id()
-                ? 'Dana darurat: ' + p.sil + ' SIL dipakai menutup kas minus.'
-                : 'Emergency fund: ' + p.sil + ' SIL used to cover negative cash.');
+            ToastService.warning(tr('main.wallet.rescue', { sil: p.sil }));
         });
     })();
 
@@ -1048,7 +1051,7 @@ async function boot() {
         try {
             var dl = SiliconService.claimDailyLogin();
             if (dl && dl.ok) {
-                ToastService.success('Daily login: +' + dl.amount + ' SIL (streak ' + dl.streak + ' hari)');
+                ToastService.success(tr('main.toast.daily_login', { amount: dl.amount, streak: dl.streak }));
                 console.info('[Silicon] Daily login +' + dl.amount + ' SIL, streak ' + dl.streak);
             } else if (dl && dl.reason === 'already_claimed') {
                 console.info('[Silicon] Daily login sudah diklaim hari ini.');
