@@ -1,8 +1,21 @@
 // FILE: src/ui/panels/NewsArticleModal.js
-// v2027.13c — i18n.
+// v2027.13d — i18n penuh (Fase 2).
 // Sesi 1: kotak "Reaksi Bursa" untuk berita rilis kompetitor.
+// Perubahan: label Reaksi Bursa + regime pasar lewat t()/_tf(), tanpa ternary bahasa.
+// Modal dirender ulang saat bus 'lang:changed' (listener dilepas saat modal tertutup).
 import { Modal } from '../modal.js';
-import { t, LanguageService } from '../../core/LanguageService.js';
+import { bus } from '../../core/EventBus.js';
+import { LanguageService, t } from '../../core/LanguageService.js';
+
+// _tf(key, fallbackId, fallbackEn): pakai terjemahan jika key ada di kamus,
+// kalau belum (sebelum Fase 3) pakai fallback sesuai bahasa aktif.
+function _tf(key, fbId, fbEn) {
+    var v = t(key);
+    if (v && v !== key) return v;
+    var lang = 'id';
+    try { lang = LanguageService.getLang(); } catch (e) {}
+    return (lang === 'en' && fbEn !== undefined) ? fbEn : fbId;
+}
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -30,46 +43,43 @@ function _sentimentLabel(sentiment) {
     return t('news.sentiment.mixed');
 }
 
-var REGIME_LABELS = {
-    id: { euphoria: 'Euforia', bull: 'Pasar naik', neutral: 'Netral', bear: 'Pasar turun', crash: 'Krisis' },
-    en: { euphoria: 'Euphoria', bull: 'Bull market', neutral: 'Neutral', bear: 'Bear market', crash: 'Crash' }
+// Label regime pasar: key news_article.regime.<regime>
+var REGIME_FALLBACK = {
+    euphoria: ['Euforia', 'Euphoria'],
+    bull:     ['Pasar naik', 'Bull market'],
+    neutral:  ['Netral', 'Neutral'],
+    bear:     ['Pasar turun', 'Bear market'],
+    crash:    ['Krisis', 'Crash']
 };
+
+function _regimeLabel(regime) {
+    var fb = REGIME_FALLBACK[regime];
+    if (!fb) return String(regime || '');
+    return _tf('news_article.regime.' + regime, fb[0], fb[1]);
+}
 
 function _marketReactionHtml(article) {
     var mi = article && article.marketImpact;
     if (!mi || typeof mi.pct !== 'number') return '';
-    var en = false;
-    try { en = LanguageService.getLang() === 'en'; } catch (e) {}
-    var labels = REGIME_LABELS[en ? 'en' : 'id'];
     var pct = mi.pct * 100;
     var color = pct > 0 ? 'var(--success)' : (pct < 0 ? 'var(--danger)' : 'var(--warn)');
     var sign = pct > 0 ? '+' : '';
     var idx12 = (mi.indexReturn12m || 0) * 100;
     var idxSign = idx12 > 0 ? '+' : '';
     return '<div class="news-score-bar" style="margin-top:10px;display:block;">' +
-        '<div class="news-score-label">' + (en ? 'Market reaction' : 'Reaksi bursa') + '</div>' +
+        '<div class="news-score-label">' + escapeHtml(_tf('news_article.market_reaction', 'Reaksi bursa', 'Market reaction')) + '</div>' +
         '<div class="news-score-value" style="color:' + color + ';">' +
         escapeHtml(mi.ticker || '') + ' ' + sign + pct.toFixed(2) + '%' +
         '</div>' +
         '<div class="news-footer-meta" style="margin-top:4px;">' +
-        (en ? 'Market: ' : 'Pasar: ') + escapeHtml(labels[mi.regime] || mi.regime) +
-        ' (' + (en ? 'index 12m ' : 'indeks 12 bln ') + idxSign + idx12.toFixed(0) + '%)' +
-        ' \u00b7 beta ' + (mi.beta != null ? Number(mi.beta).toFixed(2) : '1.00') +
+        escapeHtml(_tf('news_article.market_label', 'Pasar: ', 'Market: ')) + escapeHtml(_regimeLabel(mi.regime)) +
+        ' (' + escapeHtml(_tf('news_article.index_12m', 'indeks 12 bln ', 'index 12m ')) + idxSign + idx12.toFixed(0) + '%)' +
+        ' \u00b7 ' + escapeHtml(_tf('news_article.beta', 'beta', 'beta')) + ' ' + (mi.beta != null ? Number(mi.beta).toFixed(2) : '1.00') +
         '</div>' +
         '</div>';
 }
 
-export function openNewsArticleModal(article) {
-    if (!article) return;
-
-    // Mark as read
-    try {
-        var game = window.__game;
-        if (game && game.news && game.news.markRead) {
-            game.news.markRead(article.id);
-        }
-    } catch (e) {}
-
+function _buildHtml(article) {
     var paragraphsHtml = '';
     if (Array.isArray(article.paragraphs)) {
         for (var i = 0; i < article.paragraphs.length; i++) {
@@ -88,8 +98,7 @@ export function openNewsArticleModal(article) {
         bodyContent = _insertPullQuote(paragraphsHtml, pullQuoteHtml);
     }
 
-    var html =
-        '<div class="news-article">' +
+    return '<div class="news-article">' +
 
         '<div class="news-masthead">' +
         '<div class="news-source">' + escapeHtml(article.source || t('news_article.redaksi')) + '</div>' +
@@ -131,8 +140,35 @@ export function openNewsArticleModal(article) {
         '</div>' +
 
         '</div>';
+}
 
-    Modal.open('news-article', html);
+export function openNewsArticleModal(article) {
+    if (!article) return;
+
+    // Mark as read
+    try {
+        var game = window.__game;
+        if (game && game.news && game.news.markRead) {
+            game.news.markRead(article.id);
+        }
+    } catch (e) {}
+
+    var unsub = null;
+    function cleanup() {
+        if (unsub) { try { unsub(); } catch (e) {} unsub = null; }
+    }
+
+    var node = Modal.open('news-article', _buildHtml(article), { onClose: cleanup });
+
+    unsub = bus.on('lang:changed', function () {
+        // Modal.close(id, true) (silent) tidak memanggil onClose, jadi cek sendiri.
+        if (!node || !node.isConnected || !Modal.isOpen('news-article')) { cleanup(); return; }
+        var card = node.querySelector('.modal-card');
+        if (!card) return;
+        card.innerHTML = _buildHtml(article);
+        var closeBtn = card.querySelector('[data-modal-close]');
+        if (closeBtn) closeBtn.addEventListener('click', function () { Modal.close('news-article'); });
+    });
 }
 
 function _insertPullQuote(bodyHtml, quoteHtml) {
