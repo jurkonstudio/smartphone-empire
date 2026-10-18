@@ -124,7 +124,8 @@ function _renderRndSection(sys) {
     var ov = sys.getRndOverview();
     var bench = sys.getBenchmark();
     
-    var overviewHtml = renderRndOverview(ov, { title: t('rs.rnd.title') });
+    // PERBAIKAN: Berikan title: '' agar tidak muncul dobel dengan judul <summary>
+    var overviewHtml = renderRndOverview(ov, { title: '' });
     
     var rows = RESEARCH_CATEGORIES.map(function (c) {
         var info = sys.getRefineInfo(c.id);
@@ -133,7 +134,7 @@ function _renderRndSection(sys) {
     }).join('');
 
     return '<details class="section-collapsible rnd-card" open>' +
-        '<summary class="section-summary"><span class="section-summary-text">' + escapeHtml(t('rs.rnd.title')) + '</span><span class="section-summary-line"></span></summary>' +
+        '<summary class="section-summary"><span class="section-summary-text">' + escapeHtml(t('rs.rnd.title') || 'R&D Lanjutan') + '</span><span class="section-summary-line"></span></summary>' +
         overviewHtml + 
         '<div class="rnd-carousel-container">' + rows + '</div>' +
         '</details>';
@@ -430,16 +431,7 @@ const RS_CSS = `
 .rs-stat em { font-style: normal; font-size: 9px; color: var(--warn); margin-left: 2px; }
 .rs-slot-empty { margin-top: 8px; padding: 7px 10px; border: 1px dashed var(--border-strong); border-radius: var(--r); font-size: 11px; color: var(--text-tertiary); text-align: center; }
 .rs-chip-count { font-size: 10px; opacity: .75; font-variant-numeric: tabular-nums; margin-left: 2px; }
-
-/* STICKY HEADER AREA */
-.sticky-header-area {
-    position: sticky;
-    top: 0; /* Akan menempel di bawah app-header karena app-header punya z-index lebih tinggi */
-    z-index: 10;
-    background: var(--bg-0); 
-    padding-top: 4px; padding-bottom: 8px; margin-bottom: 8px;
-}
-
+.sticky-header-area { position: sticky; top: 0; z-index: 10; background: var(--bg-0); padding-top: 4px; padding-bottom: 8px; margin-bottom: 8px; box-shadow: 0 4px 12px -6px rgba(0,0,0,0.3); }
 .rs-toolbar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
 .rs-search { position: relative; display: flex; align-items: center; }
 .rs-search-ico { position: absolute; left: 11px; color: var(--text-tertiary); display: flex; pointer-events: none; }
