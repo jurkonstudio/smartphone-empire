@@ -1,8 +1,10 @@
 // FILE: src/ui/panels/MarketPanel.js
-// v2027.15a — fix _pct() presisi adaptif + info revenue bulan ini di share card.
+// v2027.15b — audit grafik pangsa: urut kronologis, label sumbu X, sumbu Y sejajar grid,
+// warna legend konsisten, tombol zoom, redraw saat resize, pct adaptif untuk kompetitor.
 import { renderPublicOpinionPanel } from './PublicOpinionPanel.js';
 import { t } from '../../core/LanguageService.js';
 import { renderPromotionPanel } from './PromotionPanel.js';
+import '../charts/ChartZoomModal.js'; // side-effect: pasang listener [data-chart-zoom]
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -104,7 +106,7 @@ function _renderShare(marketSystem) {
 
     const infoHtml =
         '<div style="font-size:11.5px;color:var(--text-mute);margin-top:6px;line-height:1.5;">' +
-            'Pendapatan bulan ini: <b style="color:var(--text-secondary);">$' + lastRev.toLocaleString('en-US') + '</b>' +
+            'Pendapatan bulan lalu: <b style="color:var(--text-secondary);">$' + lastRev.toLocaleString('en-US') + '</b>' +
             (lastUnits > 0 ? ' · ' + lastUnits.toLocaleString('en-US') + ' unit terjual' : '') +
             (lastEq > 0 ? '<br>Setara skala pasar: $' + lastEq.toLocaleString('en-US') : '') +
         '</div>';
@@ -129,35 +131,66 @@ function _renderShare(marketSystem) {
             ${competitors.slice().sort(function (a, b) { return b.share - a.share; }).map(function (c) {
                 return '<div class="sum-row"><span>' + escapeHtml(c.name) + '</span><b>' + (c.share * 100).toFixed(1) + '%</b></div>';
             }).join('')}
-            <div class="sum-row" style="color:var(--text-mute);"><span>${t('market.share.others')}</span><b>${((1 - share - competitors.reduce(function (s, c) { return s + c.share; }, 0)) * 100).toFixed(1)}%</b></div>
+            <div class="sum-row" style="color:var(--text-mute);"><span>${t('market.share.others')}</span><b>${_pct(Math.max(0, 1 - share - competitors.reduce(function (s, c) { return s + (c.share || 0); }, 0)))}</b></div>
         </div>
     `;
     return html;
 }
 
 const _COMP_COLORS = ['#6b8e23', '#c97f3c', '#8a5ec9'];
+const _PLAYER_COLOR = '#4CAF50';
+const _PLAYER_COLOR_DOWN = '#ef5350';
+
+// Urutkan kronologis (lama -> baru) berdasarkan year/month, buang duplikat bulan.
+// Tidak lagi bergantung pada asumsi "unshift = terbaru di index 0".
+function _chrono(raw) {
+    const seen = {};
+    const out = [];
+    (raw || []).forEach(function (h) {
+        if (!h || typeof h.playerShare !== 'number' || !isFinite(h.playerShare)) return;
+        const key = (h.year || 0) * 12 + (h.month || 0);
+        if (seen[key]) return;
+        seen[key] = true;
+        out.push({ k: key, h: h });
+    });
+    out.sort(function (a, b) { return a.k - b.k; });
+    return out.map(function (o) { return o.h; });
+}
+
+function _monthLabel(h) {
+    const key = 'date.month.' + (h.month || 1);
+    let m = t(key);
+    if (m === key) m = String(h.month || 1);
+    return m + ' ' + String(h.year || '').slice(-2);
+}
 
 function _renderShareChart(history) {
-    if (!history.length) {
+    const valid = _chrono(history);
+    if (!valid.length) {
+        return '<div class="card"><div class="card-title">' + t('market.share.chart_title') + '</div><div class="log-empty">' + t('market.share.chart_empty') + '</div></div>';
+    }
+    if (valid.length < 2) {
         return '<div class="card"><div class="card-title">' + t('market.share.chart_title') + '</div><div class="log-empty">' + t('market.share.chart_empty') + '</div></div>';
     }
     const id = 'share-chart-' + Math.random().toString(36).slice(2, 8);
 
-    // Legend: player + top 3 kompetitor dari snapshot terbaru.
     const state = window.__game && window.__game.state ? window.__game.state.get() : null;
     const compMeta = {};
     if (state && state.market && Array.isArray(state.market.competitors)) {
         state.market.competitors.forEach(function (c) { compMeta[c.id] = c; });
     }
-    const latest = history[0]; // unshift → index 0 = terbaru
+    const latest = valid[valid.length - 1];
     const topComp = (latest && latest.competitors ? latest.competitors : [])
         .slice()
         .sort(function (a, b) { return b.share - a.share; })
         .slice(0, 3);
 
+    const lastV = latest.playerShare, firstV = valid[0].playerShare;
+    const pColor = lastV < firstV ? _PLAYER_COLOR_DOWN : _PLAYER_COLOR;
+
     const itemStyle = 'display:inline-flex;align-items:center;gap:4px;';
     const dotStyle = 'width:10px;height:3px;border-radius:2px;';
-    const legendPlayer = '<span style="' + itemStyle + '"><span style="' + dotStyle + 'background:#4CAF50;"></span>' + t('market.share.you') + '</span>';
+    const legendPlayer = '<span style="' + itemStyle + '"><span style="' + dotStyle + 'background:' + pColor + ';"></span>' + t('market.share.you') + '</span>';
     const legendComp = topComp.map(function (c, i) {
         const meta = compMeta[c.id] || { name: c.id };
         const color = _COMP_COLORS[i % _COMP_COLORS.length];
@@ -167,13 +200,39 @@ function _renderShareChart(history) {
 
     return `
         <div class="card">
-            <div class="card-title">${t('market.share.chart_title')}</div>
-            <div class="chart-wrap" id="${id}" style="height:140px;">
-                <canvas class="chart-canvas" data-share-chart="${id}" style="height:140px;"></canvas>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                <div class="card-title" style="margin:0;">${t('market.share.chart_title')}</div>
+                <button class="btn-secondary" type="button" data-chart-zoom="share" style="padding:4px 10px;min-height:28px;font-size:11px;">⤢ Zoom</button>
+            </div>
+            <div class="chart-wrap" id="${id}" style="height:150px;margin-top:8px;">
+                <canvas class="chart-canvas" data-share-chart="${id}" style="height:150px;"></canvas>
             </div>
             ${legendHtml}
         </div>
     `;
+}
+
+function _fmtAxis(v) {
+    const pct = v * 100;
+    if (pct >= 10) return pct.toFixed(0) + '%';
+    if (pct >= 1)  return pct.toFixed(1) + '%';
+    if (pct >= 0.1) return pct.toFixed(2) + '%';
+    if (pct > 0)   return pct.toFixed(3) + '%';
+    return '0%';
+}
+
+let _resizeBound = false;
+function _bindResizeRedraw() {
+    if (_resizeBound) return;
+    _resizeBound = true;
+    let timer = null;
+    window.addEventListener('resize', function () {
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+            const wrap = document.querySelector('.chart-wrap[id^="share-chart-"]');
+            if (wrap && wrap.offsetParent !== null) drawShareChart(wrap);
+        }, 150);
+    });
 }
 
 export function drawShareChart(container) {
@@ -181,103 +240,103 @@ export function drawShareChart(container) {
     const canvas = container.querySelector('canvas');
     if (!canvas) return;
     const game = window.__game;
-    if (!game) return;
-    const rawHistory = game.state.get().market.shareHistory || [];
-    if (rawHistory.length < 2) return;
-    // Balik supaya index 0 = paling lama.
-    const history = [].concat(rawHistory).reverse();
+    if (!game || !game.state) return;
+    const history = _chrono(game.state.get().market.shareHistory);
+    if (history.length < 2) return;
+    _bindResizeRedraw();
 
     const cssW = container.clientWidth || 320;
-    const cssH = 140;
+    const cssH = container.clientHeight || 150;
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = cssW * dpr;
-    canvas.height = cssH * dpr;
+    canvas.width = Math.floor(cssW * dpr);
+    canvas.height = Math.floor(cssH * dpr);
     canvas.style.width = cssW + 'px';
     canvas.style.height = cssH + 'px';
     const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cssW, cssH);
 
-    const padL = 42, padR = 8, padT = 10, padB = 18;
+    const padL = 44, padR = 8, padT = 10, padB = 20;
     const plotW = cssW - padL - padR;
     const plotH = cssH - padT - padB;
+    const n = history.length;
 
-    // Kumpulkan data. compSeries[id] = array sepanjang history, null kalau belum ada.
+    // Data kompetitor per bulan (null = belum/tidak ada).
     let maxV = 0;
     const compSeries = {};
     history.forEach(function (h, i) {
         if (h.playerShare > maxV) maxV = h.playerShare;
         (h.competitors || []).forEach(function (c) {
-            if (!compSeries[c.id]) compSeries[c.id] = new Array(history.length).fill(null);
+            if (typeof c.share !== 'number' || !isFinite(c.share)) return;
+            if (!compSeries[c.id]) compSeries[c.id] = new Array(n).fill(null);
             compSeries[c.id][i] = c.share;
-            if (c.share > maxV) maxV = c.share;
         });
     });
-    // Padding 15% di atas + clamp minimum.
-    maxV = maxV * 1.15;
-    if (maxV < 0.005) maxV = 0.005;
-    const range = maxV;
 
-    const xOf = function (i) { return padL + (plotW * i) / (history.length - 1); };
-    const yOf = function (v) { return padT + plotH - (v / range) * plotH; };
-
-    // Grid.
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-    ctx.lineWidth = 1;
-    for (let i = 1; i <= 3; i++) {
-        const y = padT + (plotH * i) / 4;
-        ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(cssW - padR, y); ctx.stroke();
-    }
-
-    // Format label Y (adaptif desimal).
-    const fmtPct = function (v) {
-        const pct = v * 100;
-        if (pct >= 10) return pct.toFixed(0) + '%';
-        if (pct >= 1)  return pct.toFixed(1) + '%';
-        if (pct >= 0.1) return pct.toFixed(2) + '%';
-        return pct.toFixed(3) + '%';
-    };
-    ctx.fillStyle = '#6a6a6a';
-    ctx.font = '10px sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(fmtPct(maxV), padL - 4, padT + 10);
-    ctx.fillText(fmtPct(maxV / 2), padL - 4, padT + plotH / 2 + 3);
-    ctx.fillText('0%', padL - 4, padT + plotH - 2);
-
-    // Top 3 kompetitor dari snapshot terbaru.
-    const latest = history[history.length - 1];
+    const latest = history[n - 1];
     const topComp = (latest.competitors || []).slice()
         .sort(function (a, b) { return b.share - a.share; })
         .slice(0, 3);
+    // [fix] skala Y hanya dihitung dari series yang benar-benar digambar
+    // (sebelumnya ikut semua kompetitor -> garis pemain gepeng bila ada kompetitor di luar top-3 besar).
+    topComp.forEach(function (c) {
+        (compSeries[c.id] || []).forEach(function (v) { if (v != null && v > maxV) maxV = v; });
+    });
+    maxV = Math.max(maxV * 1.15, 0.005);
 
-    // Gambar garis kompetitor dulu (supaya garis player tampil di atas).
+    const xOf = function (i) { return padL + (plotW * i) / (n - 1); };
+    const yOf = function (v) { return padT + plotH - (Math.max(0, v) / maxV) * plotH; };
+
+    // Grid + label Y: 5 garis (0..4), label sejajar tiap garis.
+    ctx.font = '10px sans-serif';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i <= 4; i++) {
+        const y = padT + (plotH * i) / 4;
+        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(cssW - padR, y); ctx.stroke();
+        ctx.fillStyle = '#6a6a6a';
+        ctx.textAlign = 'right';
+        ctx.fillText(_fmtAxis(maxV * (1 - i / 4)), padL - 4, y);
+    }
+
+    // Label X: awal, tengah, akhir (tanpa tumpang tindih).
+    ctx.fillStyle = '#6a6a6a';
+    ctx.textBaseline = 'top';
+    const xIdx = n >= 5 ? [0, Math.round((n - 1) / 2), n - 1] : [0, n - 1];
+    xIdx.forEach(function (i, k) {
+        ctx.textAlign = k === 0 ? 'left' : (i === n - 1 ? 'right' : 'center');
+        const x = k === 0 ? padL : (i === n - 1 ? cssW - padR : xOf(i));
+        ctx.fillText(_monthLabel(history[i]), x, padT + plotH + 6);
+    });
+
+    // Kompetitor dulu supaya garis pemain di atas.
     topComp.forEach(function (c, idx) {
         const series = compSeries[c.id];
         if (!series) return;
-        const nonNull = series.filter(function (v) { return v != null; });
-        if (nonNull.length < 2) return;
-
+        if (series.filter(function (v) { return v != null; }).length < 2) return;
         ctx.strokeStyle = _COMP_COLORS[idx % _COMP_COLORS.length];
         ctx.lineWidth = 1.5;
-        ctx.globalAlpha = 0.6;
+        ctx.globalAlpha = 0.65;
+        ctx.lineJoin = 'round';
         ctx.beginPath();
         let started = false;
         series.forEach(function (v, i) {
             if (v == null) { started = false; return; }
             const x = xOf(i), y = yOf(v);
-            if (!started) { ctx.moveTo(x, y); started = true; }
-            else ctx.lineTo(x, y);
+            if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
         });
         ctx.stroke();
     });
     ctx.globalAlpha = 1;
 
-    // Garis player (tebal, warna adaptif tren).
+    // Garis pemain.
     const firstVal = history[0].playerShare;
-    const lastVal  = history[history.length - 1].playerShare;
-    const playerColor = lastVal < firstVal ? '#ef5350' : '#4CAF50';
+    const lastVal = latest.playerShare;
+    const playerColor = lastVal < firstVal ? _PLAYER_COLOR_DOWN : _PLAYER_COLOR;
     ctx.strokeStyle = playerColor;
     ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
     ctx.beginPath();
     history.forEach(function (h, i) {
         const x = xOf(i), y = yOf(h.playerShare);
@@ -285,12 +344,9 @@ export function drawShareChart(container) {
     });
     ctx.stroke();
 
-    // Titik di ujung garis player.
-    const lastX = xOf(history.length - 1);
-    const lastY = yOf(lastVal);
     ctx.fillStyle = playerColor;
     ctx.beginPath();
-    ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+    ctx.arc(xOf(n - 1), yOf(lastVal), 3.5, 0, Math.PI * 2);
     ctx.fill();
 }
 
