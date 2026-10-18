@@ -1,4 +1,4 @@
-// FILE: src/ui/office/OfficeMap.js  (REPLACE — v2027.51a)
+// FILE: src/ui/office/OfficeMap.js  (REPLACE — v2027.52a)
 // Mount/unmount Office 3D Map (tab HQ → Kantor). Three.js dimuat lazy dari CDN (versi dipin,
 // sama dengan peta kampus, jadi modul di-cache browser & tidak diunduh dua kali).
 import { createOfficeScene } from './OfficeScene.js';
@@ -72,6 +72,14 @@ export async function mountOfficeMap(containerEl, gameState) {
             bus.on('economy:month-processed', queue),
             bus.on('bank:changed', queue),
             bus.on('stocks:updated', queue),
+            // tahap 3: progres konstruksi Fab & aksi dari peta harus langsung tampak di kartu / adegan
+            bus.on('fab:progress', queue),
+            bus.on('fab:build-started', queue),
+            bus.on('fab:upgrade-started', queue),
+            bus.on('fab:built', queue),
+            bus.on('fab:upgraded', queue),
+            bus.on('fab:production-progress', queue),
+            bus.on('time:day-changed', queue),
             function () { if (queued) { cancelAnimationFrame(queued); queued = 0; } }
         ];
         _active = { scene: scene, unsubs: unsubs };
