@@ -49,7 +49,7 @@ function _formatEffects(node) {
     if (node.unlock && node.unlock.type) {
         var ty = node.unlock.type;
         var id = (node.unlock.id || '').replace(/_/g, ' ');
-        var label = UNLOCK_TYPE_FALLBACK[ty] || ty;
+        var label = _tf('tnc.unlock.' + ty, UNLOCK_TYPE_FALLBACK[ty] || ty);
         return '<span class="node-eff-tag">' + escapeHtml(label) + '</span> ' + escapeHtml(id);
     }
     // Tech node (punya .effects)
@@ -189,24 +189,24 @@ export function renderRndOverview(ov, opts) {
     var pct = Math.round((ov.factor - 1) * 100);
     var tone = pct > 0 ? 'up' : (pct < 0 ? 'down' : 'flat');
     var verdict = pct > 0
-        ? 'Teknologimu di atas standar pasar: permintaan produk baru +' + pct + '%.'
+        ? t('tnc.ov.verdict_up', { pct: pct })
         : (pct < 0
-            ? 'Teknologimu tertinggal dari standar pasar: permintaan ' + pct + '%. Teruskan R&D!'
-            : 'Teknologimu setara standar pasar.');
+            ? t('tnc.ov.verdict_down', { pct: pct })
+            : t('tnc.ov.verdict_flat'));
     var buzzPct = Math.round((ov.buzzFactor - 1) * 100);
     var buzzW = Math.max(0, Math.min(100, Math.round(ov.buzz / 60 * 100)));
     return '<div class="rnd-ov" data-rnd-root>' +
         '<div class="rnd-ov-head">' +
-            '<div class="rnd-ov-title">' + escapeHtml(opts.title || 'R&D Lanjutan') + '</div>' +
-            (ov.slots ? '<div class="rnd-ov-slots">Slot ' + ov.used + '/' + ov.slots + '</div>' : '') +
+            '<div class="rnd-ov-title">' + escapeHtml(opts.title || t('rs.rnd.title')) + '</div>' +
+            (ov.slots ? '<div class="rnd-ov-slots">' + escapeHtml(t('tnc.ov.slots', { used: ov.used, slots: ov.slots })) + '</div>' : '') +
         '</div>' +
         '<div class="rnd-ov-grid">' +
-            '<div class="rnd-chip"><span>Level rata-rata</span><b>' + ov.avg.toFixed(1) + '</b></div>' +
-            '<div class="rnd-chip"><span>Standar pasar</span><b>' + ov.benchmark.toFixed(1) + '</b></div>' +
-            '<div class="rnd-chip rnd-' + tone + '"><span>Efek permintaan</span><b>' + (pct > 0 ? '+' : '') + pct + '%</b></div>' +
+            '<div class="rnd-chip"><span>' + escapeHtml(t('tnc.ov.avg')) + '</span><b>' + ov.avg.toFixed(1) + '</b></div>' +
+            '<div class="rnd-chip"><span>' + escapeHtml(t('tnc.ov.benchmark')) + '</span><b>' + ov.benchmark.toFixed(1) + '</b></div>' +
+            '<div class="rnd-chip rnd-' + tone + '"><span>' + escapeHtml(t('tnc.ov.demand')) + '</span><b>' + (pct > 0 ? '+' : '') + pct + '%</b></div>' +
         '</div>' +
         '<div class="rnd-verdict rnd-' + tone + '">' + escapeHtml(verdict) + '</div>' +
-        '<div class="rnd-buzz"><span>Gaung pasar</span>' +
+        '<div class="rnd-buzz"><span>' + escapeHtml(t('tnc.ov.buzz')) + '</span>' +
             '<div class="rnd-buzz-bar"><i style="width:' + buzzW + '%"></i></div>' +
             '<b>' + (buzzPct > 0 ? '+' + buzzPct + '%' : '0%') + '</b></div>' +
         '</div>';
@@ -229,15 +229,15 @@ export function renderRndRow(info, opts) {
         var run = info.running;
         var pct = run.durationDays > 0 ? Math.min(100, Math.round(run.progressDays / run.durationDays * 100)) : 0;
         action = '<div class="rnd-run">' +
-            '<div class="rnd-run-top"><span>Menuju Lv ' + run.targetLevel + '</span><b data-rnd-pct="' + escapeHtml(info.id) + '">' + pct + '%</b></div>' +
+            '<div class="rnd-run-top"><span>' + escapeHtml(t('tnc.row.to_lv', { lv: run.targetLevel })) + '</span><b data-rnd-pct="' + escapeHtml(info.id) + '">' + pct + '%</b></div>' +
             '<div class="progress"><div class="progress-bar" data-rnd-bar="' + escapeHtml(info.id) + '" style="width:' + pct + '%"></div></div>' +
-            '<button class="rnd-cancel" ' + attr + '="cancel" data-rnd-id="' + escapeHtml(info.id) + '">Batalkan (refund 50%)</button>' +
+            '<button class="rnd-cancel" ' + attr + '="cancel" data-rnd-id="' + escapeHtml(info.id) + '">' + escapeHtml(t('tnc.row.cancel_refund')) + '</button>' +
             '</div>';
     } else if (info.status === 'available' || (info.status === 'locked' && info.blocker === 'cash')) {
         var can = info.status === 'available';
         action = '<button class="rnd-btn' + (can ? '' : ' rnd-btn-off') + '" ' + (can ? attr + '="start" data-rnd-id="' + escapeHtml(info.id) + '"' : 'disabled') + '>' +
-            '<span>Tingkatkan ke Lv ' + (info.level + 1) + '</span>' +
-            '<small>' + _rndMoney(info.cost) + ' · ~' + info.etaDays + ' hari · +' + (((info.nextStatBonus !== undefined ? info.nextStatBonus : info.nextBonus) - (info.statBonus !== undefined ? info.statBonus : info.bonus))).toFixed(1).replace(/\.0$/, '') + ' ' + escapeHtml(opts.bonusLabel || '') + '</small>' +
+            '<span>' + escapeHtml(t('tnc.row.upgrade', { lv: info.level + 1 })) + '</span>' +
+            '<small>' + _rndMoney(info.cost) + ' · ~' + escapeHtml(t('rs.row.days', { n: info.etaDays })) + ' · +' + (((info.nextStatBonus !== undefined ? info.nextStatBonus : info.nextBonus) - (info.statBonus !== undefined ? info.statBonus : info.bonus))).toFixed(1).replace(/\.0$/, '') + ' ' + escapeHtml(opts.bonusLabel || '') + '</small>' +
             '</button>' +
             (can ? '' : '<div class="rnd-note">' + escapeHtml(info.reason || '') + '</div>');
     } else {
@@ -253,7 +253,7 @@ export function renderRndRow(info, opts) {
         '<div class="rnd-meter">' +
             '<i class="rnd-meter-cap" style="width:' + capPct + '%"></i>' +
             '<i class="rnd-meter-fill" style="width:' + lvPct + '%"></i>' +
-            (benchPct !== null ? '<u class="rnd-meter-bench" style="left:' + benchPct + '%" title="Standar pasar"></u>' : '') +
+            (benchPct !== null ? '<u class="rnd-meter-bench" style="left:' + benchPct + '%" title="' + escapeHtml(t('tnc.ov.benchmark')) + '"></u>' : '') +
         '</div>' +
         action +
     '</div>';

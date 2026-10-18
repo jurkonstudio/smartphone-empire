@@ -1,4 +1,4 @@
-// FILE: src/ui/components/SilSpeedBar.js  (BARU)
+// FILE: src/ui/components/SilSpeedBar.js  (REPLACE — i18n)
 // ============================================================
 // SilSpeedBar — tombol Silicon langsung di halaman yang sedang berjalan
 // (riset / pengembangan produk / build-upgrade fab / produksi fab).
@@ -6,6 +6,7 @@
 //   • "Selesaikan sekarang"     → bayar SIL, menyelesaikan proses aktif
 // Modul ini mengurus event klik & update live (countdown) sendiri,
 // jadi main.js TIDAK perlu diubah.
+// i18n: semua teks via _tf(); label/modal ikut berganti saat 'lang:changed'.
 // ============================================================
 import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 ensureIconStyles();
@@ -30,7 +31,13 @@ function _fmtClock(sec) {
 }
 function _fmtMin(sec) {
     var m = sec / 60;
-    return (Math.round(m * 10) / 10) + 'm';
+    return _tf('sil.speed.min_short', '{n}m', { n: Math.round(m * 10) / 10 });
+}
+// Alasan gagal dari SiliconService (teks dari service masih hardcode) →
+// bila kasusnya saldo kurang (res.need), pakai teks terjemahan.
+function _reasonText(res, fallbackKey, fallbackText) {
+    if (res && res.need) return _tf('silicon.short', 'Silicon tidak cukup.');
+    return (res && res.reason) || _tf(fallbackKey, fallbackText);
 }
 
 // ---------- RENDER ----------
@@ -57,7 +64,7 @@ export function renderSilSpeedBar(opts) {
                 '<small>💎 ' + pack.cost + ' · ' + _fmtMin(pack.seconds) + '</small>' +
             '</button>';
         }).join('') + '</div>';
-        html += '<div class="sil-inline-note">' + _tf('sil.speed.note', 'Waktu boost hanya berkurang saat game berjalan.') + '</div>';
+        html += '<div class="sil-inline-note">' + _tf('sil.speed.note', 'Waktu boost hanya berkurang saat game berjalan (tidak saat pause).') + '</div>';
     }
 
     if (opts.finish) {
@@ -114,9 +121,9 @@ function _onSpeedClick(btn) {
     var res = SiliconService.buySpeed(sp);
     if (!res.ok) {
         if (res.reason === 'limit') {
-            ToastService.warning(_tf('sil.speed.msg.max', 'Batas waktu boost maksimal ({time}).', { time: _fmtMin(res.maxSeconds) }));
+            ToastService.warning(_tf('sil.speed.msg.max', 'Batas waktu boost maksimal tercapai ({time}).', { time: _fmtMin(res.maxSeconds) }));
         } else {
-            ToastService.warning(res.reason || _tf('silicon.short', 'Silicon tidak cukup.'));
+            ToastService.warning(_reasonText(res, 'silicon.short', 'Silicon tidak cukup.'));
             if (res.need) openSiliconStoreModal();
         }
         return;
@@ -136,7 +143,7 @@ function _onFinishClick(btn) {
         return;
     }
     var res = SiliconService.runAction(id);
-    if (!res.ok) { ToastService.error(res.reason || 'Gagal.'); return; }
+    if (!res.ok) { ToastService.error(_reasonText(res, 'sil.finish.failed', 'Gagal.')); return; }
     // Modal Fab tidak punya live-render → buka ulang agar kartu progres hilang.
     if (id === 'fabBuild' || id === 'fabProd') {
         if (Modal.isOpen('fab-panel')) {
@@ -204,6 +211,11 @@ function _init() {
     bus.on('time:speed-changed', _refreshLive);
     bus.on('silicon:changed', _refreshLive);
     bus.on('sil:open-speed', openSpeedModal);
+    // Ganti bahasa: segarkan label live & render ulang modal cepat bila sedang terbuka.
+    bus.on('lang:changed', function () {
+        _refreshLive();
+        if (Modal.isOpen && Modal.isOpen('speed-quick')) openSpeedModal();
+    });
     bus.on('time:boost-expired', function () {
         ToastService.info(_tf('sil.speed.msg.expired', 'Boost habis. Kembali ke 1x.'));
         _refreshLive();
