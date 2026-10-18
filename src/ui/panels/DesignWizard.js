@@ -1,6 +1,11 @@
-// FILE: src/ui/panels/DesignWizard.js
+// FILE: src/ui/panels/DesignWizard.js  (REPLACE — i18n)
 // v2028.30 — [SMART NAMING] Auto-fill sekarang men-generate nama brand sesuai perusahaan & era.
+// i18n: teks UI lewat t()/_tf(); label kategori, era & warna bodi (data berbahasa Indonesia)
+// diterjemahkan lewat key wiz.cat.* / wiz.era.* / wiz.color.*. Saat 'lang:changed' wizard
+// (atau modal detail) dirender ulang tanpa kehilangan isian.
+// CATATAN: nama & deskripsi komponen (components.data.js) masih dari data (belum diterjemahkan).
 import { Modal } from '../modal.js';
+import { bus } from '../../core/EventBus.js';
 import { ToastService } from '../../core/ToastService.js';
 import { state } from '../../core/GameState.js';
 import { DesignEraService } from '../../core/DesignEraService.js';
@@ -25,10 +30,32 @@ function _isEn() {
     try { return LanguageService.getLang() === 'en'; } catch (e) { return false; }
 }
 
+// t() dengan fallback bila key belum ada di kamus.
+function _tf(key, fallback, vars) {
+    const v = t(key, vars);
+    if (v && v !== key) return v;
+    return String(fallback).replace(/\{(\w+)\}/g, function (m, k) {
+        return (vars && vars[k] !== undefined) ? vars[k] : m;
+    });
+}
+function _pick(id, en) { return _isEn() ? en : id; }
+
+// Label data (Indonesia) → terjemahan.
+function _catName(cat) { return cat ? _tf('wiz.cat.' + cat.id, cat.name) : ''; }
+function _eraLabel(era) { return _tf('wiz.era.' + era.id + '.label', era.label); }
+function _eraDesc(era) { return _tf('wiz.era.' + era.id + '.desc', era.description); }
+function _colorName(c) { return _tf('wiz.color.' + c.id, c.name); }
+function _perUnit(n) { return _tf('wiz.cost_per_unit', '${n}/unit', { n: n }); }
+
 const STAT_LABELS = {
     id: { display: 'Layar', camera: 'Kamera', battery: 'Baterai', performance: 'Performa', connectivity: 'Jaringan', quality: 'Mutu', design: 'Desain', usability: 'Kegunaan' },
     en: { display: 'Display', camera: 'Camera', battery: 'Battery', performance: 'Performance', connectivity: 'Network', quality: 'Quality', design: 'Design', usability: 'Usability' }
 };
+
+function _statLabel(k, L) {
+    if (k === 'quality') return _tf('wiz.stat.quality', L.quality);
+    return _tf('rs.stat.' + k, L[k] || k);
+}
 
 function _statTag(c) {
     if (!c || !c.stats) return '';
@@ -39,7 +66,7 @@ function _statTag(c) {
         if (c.stats[k] > val) { key = k; val = c.stats[k]; }
     }
     if (!key && c.stats.quality) { key = 'quality'; val = c.stats.quality; }
-    return key ? (L[key] || key) + ' +' + val : '';
+    return key ? _statLabel(key, L) + ' +' + val : '';
 }
 
 // ============================================================
@@ -338,7 +365,8 @@ function _handleAutoFill() {
 
     const missing = _validateComplete(s);
     if (missing.length) {
-        ToastService.warning(t('wiz.warn.autofill_missing', { list: missing.join(', ') }));
+        const names = missing.map(function (code) { return _tf('wiz.missing.' + String(code).toLowerCase(), code); });
+        ToastService.warning(t('wiz.warn.autofill_missing', { list: names.join(', ') }));
         _render();
         return;
     }
@@ -361,10 +389,22 @@ export function openDesignWizard(params) {
     if (colors.length) s.bodyColorId = colors[colors.length - 1].id;
 
     _injectStyles();
+    _bindLangOnce();
     _phoneShown = false;
     _wizardState = s;
     _wizardView = 'front';
     _render();
+}
+
+let _langBound = false;
+function _bindLangOnce() {
+    if (_langBound) return;
+    _langBound = true;
+    bus.on('lang:changed', function () {
+        if (!_wizardState) return;
+        if (Modal.isOpen && Modal.isOpen('design-wizard')) _render();
+        else if (Modal.isOpen && Modal.isOpen('design-wizard-detail')) _openDetailModal();
+    });
 }
 
 function _render() {
@@ -379,9 +419,8 @@ function _render() {
     else if (s.step === 3) stepBody = _step3(s);
     else                   stepBody = _step4(s);
 
-    const en = _isEn();
-    const lblFront = t('wiz.view.front') === 'wiz.view.front' ? (en ? 'Front' : 'Depan') : t('wiz.view.front');
-    const lblBack  = t('wiz.view.back')  === 'wiz.view.back'  ? (en ? 'Back' : 'Belakang') : t('wiz.view.back');
+    const lblFront = _tf('wiz.view.front', _pick('Depan', 'Front'));
+    const lblBack  = _tf('wiz.view.back', _pick('Belakang', 'Back'));
 
     const stepper = [1, 2, 3, 4].map(function (i) {
         const cls = i === s.step ? 'active' : (i < s.step ? 'done' : '');
@@ -395,7 +434,7 @@ function _render() {
             <div class="wz-stage-body">
                 <div class="wz-phone" data-wiz-mockup-container></div>
                 <div class="wz-live">
-                    <div class="wz-era"><b>${year}</b> · ${escapeHtml(era.label)}</div>
+                    <div class="wz-era"><b>${year}</b> · ${escapeHtml(_eraLabel(era))}</div>
                     <div data-wiz-spec-strip></div>
                     <div class="wz-tools">
                         <div class="wiz-view-toggle">
@@ -408,7 +447,7 @@ function _render() {
             </div>
         </div>
 
-        ${s.step === 1 ? '<div class="wz-era-desc">' + escapeHtml(era.description) + '</div>' : ''}
+        ${s.step === 1 ? '<div class="wz-era-desc">' + escapeHtml(_eraDesc(era)) + '</div>' : ''}
         ${stepBody}
     `;
 
@@ -551,9 +590,9 @@ function _updateConfirmButtonState() {
     
     let priceError = null;
     if (s.price < limits.min) {
-        priceError = `Harga terlalu murah! Minimal $${limits.min} (Biaya produksi).`;
+        priceError = _tf('wiz.price.too_low', 'Harga terlalu murah! Minimal ${min} (Biaya produksi).', { min: limits.min });
     } else if (s.price > limits.max) {
-        priceError = `Harga terlalu mahal! Pasar tidak akan membeli di atas $${limits.max}.`;
+        priceError = _tf('wiz.price.too_high', 'Harga terlalu mahal! Pasar tidak akan membeli di atas ${max}.', { max: limits.max });
     }
 
     const canRelease = !priceError && afford.ok;
@@ -576,7 +615,7 @@ function _updateConfirmButtonState() {
         btn.disabled = true;
         btn.style.opacity = '0.5';
         btn.style.cursor = 'not-allowed';
-        btn.textContent = priceError ? "Harga Tidak Valid" : (!afford.ok ? (_isEn() ? 'Not enough cash' : 'Dana tidak cukup') : t('wiz.step4.release'));
+        btn.textContent = priceError ? _tf('wiz.price.invalid', 'Harga Tidak Valid') : (!afford.ok ? _tf('wiz.cash.short_btn', _pick('Dana tidak cukup', 'Not enough cash')) : t('wiz.step4.release'));
     }
 }
 
@@ -586,7 +625,7 @@ function _next() {
         if (!s.name.trim()) { ToastService.warning(t('wiz.err.need_name')); return; }
         if (!s.formFactorId) { ToastService.warning(t('wiz.err.need_ff')); return; }
         if (_isNameDuplicate(s.name)) {
-            ToastService.error(t('wiz.err.duplicate_name') || 'Product name is already used.');
+            ToastService.error(_tf('wiz.err.duplicate_name', 'Nama produk sudah dipakai.'));
             return;
         }
     }
@@ -624,7 +663,7 @@ function _confirm() {
 
     const limits = _getPriceLimits(s);
     if (s.price < limits.min || s.price > limits.max) {
-        ToastService.error("Harga di luar batas wajar pasar.");
+        ToastService.error(_tf('wiz.price.out_of_range', 'Harga di luar batas wajar pasar.'));
         return;
     }
 
@@ -704,12 +743,12 @@ function _step2(s) {
         let options = list.map(function (c) {
             return '<button class="wiz-option ' + (selected === c.id ? 'selected' : '') + '" data-wiz-pick="' + stateKey + ':' + c.id + '">' +
                 '<div class="wiz-opt-name">' + escapeHtml(c.name) + '</div>' +
-                '<div class="wiz-opt-meta">$' + c.costPerUnit + '/unit' + (_statTag(c) ? ' · <span class="wiz-opt-tag">' + escapeHtml(_statTag(c)) + '</span>' : '') + '</div>' +
+                '<div class="wiz-opt-meta">' + _perUnit(c.costPerUnit) + (_statTag(c) ? ' · <span class="wiz-opt-tag">' + escapeHtml(_statTag(c)) + '</span>' : '') + '</div>' +
                 '</button>';
         }).join('');
 
         if (isOptional) {
-            const noneLabel = catId === 'camera' ? t('wiz.step2.no_camera') : t('wiz.step2.no_item', { name: cat.name });
+            const noneLabel = catId === 'camera' ? t('wiz.step2.no_camera') : t('wiz.step2.no_item', { name: _catName(cat) });
             const noneMeta = catId === 'camera' ? t('wiz.step2.no_camera_hint') : t('wiz.step2.optional');
             const isNoneSelected = (!selected || selected === 'none');
             options = '<button class="wiz-option ' + (isNoneSelected ? 'selected' : '') + '" data-wiz-pick="' + stateKey + ':none">' +
@@ -734,7 +773,7 @@ function _step2(s) {
             : '';
 
         return '<div class="wiz-cat">' +
-            '<div class="wiz-cat-title" style="text-transform:none;">' + iconHtml + escapeHtml(cat.name) + ' <span style="color:var(--text-mute);font-weight:500;">' + countLabel + '</span></div>' +
+            '<div class="wiz-cat-title" style="text-transform:none;">' + iconHtml + escapeHtml(_catName(cat)) + ' <span style="color:var(--text-mute);font-weight:500;">' + countLabel + '</span></div>' +
             '<div class="wiz-options-row">' + options + '</div>' +
             capHtml +
             '</div>';
@@ -766,7 +805,7 @@ function _step3(s) {
                 <div class="wiz-cat-title" style="text-transform:none;">${renderIcon('disc', 14, 'style="vertical-align:middle;margin-right:5px;"')}${t('wiz.step3.os_label')}</div>
                 <div class="wiz-options-row">
                     ${osOptions.length ? osOptions.map(function (o) {
-                        var meta = o.source === 'license' ? '$' + o.costPerUnit + '/unit' : t('wiz.step3.os_free');
+                        var meta = o.source === 'license' ? _perUnit(o.costPerUnit) : t('wiz.step3.os_free');
                         return '<button class="wiz-option ' + (s.osOptionId === o.id ? 'selected' : '') + '" data-wiz-pick="osOptionId:' + o.id + '">' +
                             '<div class="wiz-opt-name">' + escapeHtml(o.label) + '</div>' +
                             '<div class="wiz-opt-meta">' + meta + '</div>' +
@@ -781,7 +820,7 @@ function _step3(s) {
                     ${bodies.length ? bodies.map(function (b) {
                         return '<button class="wiz-option ' + (s.bodyId === b.id ? 'selected' : '') + '" data-wiz-pick="bodyId:' + b.id + '">' +
                             '<div class="wiz-opt-name">' + escapeHtml(b.name) + '</div>' +
-                            '<div class="wiz-opt-meta">$' + b.costPerUnit + '/unit' + (_statTag(b) ? ' · <span class="wiz-opt-tag">' + escapeHtml(_statTag(b)) + '</span>' : '') + '</div>' +
+                            '<div class="wiz-opt-meta">' + _perUnit(b.costPerUnit) + (_statTag(b) ? ' · <span class="wiz-opt-tag">' + escapeHtml(_statTag(b)) + '</span>' : '') + '</div>' +
                             '</button>';
                     }).join('') : '<div class="wiz-empty">' + t('wiz.step3.body_empty') + '</div>'}
                 </div>
@@ -793,8 +832,8 @@ function _step3(s) {
                     return '<button class="wiz-color ' + (s.bodyColorId === c.id ? 'selected' : '') + '"' +
                         ' data-wiz-pick="bodyColorId:' + c.id + '"' +
                         ' style="background:' + c.hex + ';"' +
-                        ' title="' + escapeHtml(c.name) + '"' +
-                        ' aria-label="' + escapeHtml(c.name) + '"></button>';
+                        ' title="' + escapeHtml(_colorName(c)) + '"' +
+                        ' aria-label="' + escapeHtml(_colorName(c)) + '"></button>';
                 }).join('') + '</div>' : '<div class="wiz-empty">' + t('wiz.step3.color_empty') + '</div>'}
             </div>
         </div>
@@ -818,7 +857,7 @@ function _step4(s) {
             <div>
                 <label class="field-label">${t('wiz.step4.price_label')}</label>
                 <input class="field-input" data-wiz-price type="number" min="${limits.min}" max="${limits.max}" value="${s.price}" />
-                <div style="font-size:10px; color:var(--text-tertiary); margin-top:4px;">Batas pasar: $${limits.min} - $${limits.max}</div>
+                <div style="font-size:10px; color:var(--text-tertiary); margin-top:4px;">${_tf('wiz.price.range_hint', 'Batas pasar: ${min} - ${max}', { min: limits.min, max: limits.max })}</div>
                 <div class="wz-price-warning" data-wz-price-warning></div>
             </div>
             <div>
@@ -830,15 +869,15 @@ function _step4(s) {
         <div style="display:flex; gap:8px; margin-top:8px; margin-bottom:16px;">
             <button class="wz-suggest-btn" data-wiz-suggest="budget">
                 <b>$${prices.budget}</b>
-                <span>Ekonomis</span>
+                <span>${_tf('wiz.price.budget', 'Ekonomis')}</span>
             </button>
             <button class="wz-suggest-btn ${!s.priceManuallyEdited || s.price === prices.balanced ? 'active' : ''}" data-wiz-suggest="balanced">
                 <b>$${prices.balanced}</b>
-                <span>Pasar</span>
+                <span>${_tf('wiz.price.market', 'Pasar')}</span>
             </button>
             <button class="wz-suggest-btn" data-wiz-suggest="premium">
                 <b>$${prices.premium}</b>
-                <span>Premium</span>
+                <span>${_tf('wiz.price.premium', 'Premium')}</span>
             </button>
         </div>
 
@@ -947,7 +986,7 @@ function _specStripHtml(s) {
     if (stats.performance > 60 && stats.battery < 40) warnings.push(t('wiz.preview.warn_chip_bat'));
     if (stats.camera > 60 && stats.display < 40) warnings.push(t('wiz.preview.warn_cam_disp'));
     if (margin < 0) warnings.push(t('wiz.preview.warn_margin'));
-    if (s.step === 4 && !_affordInfo(s).ok) warnings.push(_isEn() ? 'Not enough cash for this batch' : 'Dana tidak cukup untuk batch ini');
+    if (s.step === 4 && !_affordInfo(s).ok) warnings.push(_tf('wiz.cash.short_batch', _pick('Dana tidak cukup untuk batch ini', 'Not enough cash for this batch')));
 
     return `
         <div class="wz-head">
@@ -984,9 +1023,10 @@ function _previewHtml(s) {
         if (margin < 0) warnings.push(t('wiz.preview.warn_margin'));
         const afford = _affordInfo(s);
         if (!afford.ok) {
-            warnings.push(_isEn()
-                ? 'Not enough cash: need ' + _fmtUsd(afford.cost) + ', you have ' + _fmtUsd(afford.cash) + '. Lower the production quantity.'
-                : 'Dana tidak cukup: butuh ' + _fmtUsd(afford.cost) + ', tersedia ' + _fmtUsd(afford.cash) + '. Kurangi jumlah produksi.');
+            warnings.push(_tf('wiz.cash.short_detail',
+                _pick('Dana tidak cukup: butuh {need}, tersedia {have}. Kurangi jumlah produksi.',
+                      'Not enough cash: need {need}, you have {have}. Lower the production quantity.'),
+                { need: _fmtUsd(afford.cost), have: _fmtUsd(afford.cash) }));
         }
 
         return `
@@ -999,7 +1039,7 @@ function _previewHtml(s) {
             ${warnings.length ? '<div style="margin-top:8px;font-size:11px;color:var(--warn);line-height:1.5;">⚠ ' + warnings.join('<br>⚠ ') + '</div>' : ''}
         `;
     } catch (e) {
-        return '<div style="font-size:12px;color:var(--danger);">Preview error: ' + escapeHtml(e.message) + '</div>';
+        return '<div style="font-size:12px;color:var(--danger);">' + escapeHtml(_tf('wiz.preview.error', 'Pratinjau error: {msg}', { msg: e.message })) + '</div>';
     }
 }
 
@@ -1014,7 +1054,7 @@ function _openDetailModal() {
 
     let mockupHtml = '';
     try { mockupHtml = '<div style="display:flex;gap:10px;justify-content:center;align-items:flex-end;">' + renderPhoneMockup(s, { size: 200, view: 'front', isStatic: true }) + renderPhoneMockup(s, { size: 200, view: 'back', isStatic: true, showBrand: false }) + '</div>'; }
-    catch (e) { mockupHtml = '<div style="color:var(--danger);font-size:12px;">Mockup error</div>'; }
+    catch (e) { mockupHtml = '<div style="color:var(--danger);font-size:12px;">' + escapeHtml(_tf('wiz.mockup_error', 'Mockup gagal dimuat')) + '</div>'; }
 
     const compInfo = [
         { labelKey: 'wiz.detail.spec_ff', id: s.formFactorId },
@@ -1034,7 +1074,7 @@ function _openDetailModal() {
 
     var colorComp = s.bodyColorId ? getBodyColorById(s.bodyColorId) : null;
     var colorRow = colorComp
-        ? '<div class="sum-row"><span>' + t('wiz.detail.spec_color') + '</span><b><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + colorComp.hex + ';vertical-align:middle;margin-right:6px;border:1px solid var(--border);"></span>' + escapeHtml(colorComp.name) + '</b></div>'
+        ? '<div class="sum-row"><span>' + t('wiz.detail.spec_color') + '</span><b><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + colorComp.hex + ';vertical-align:middle;margin-right:6px;border:1px solid var(--border);"></span>' + escapeHtml(_colorName(colorComp)) + '</b></div>'
         : '';
 
     const html = `
@@ -1045,7 +1085,7 @@ function _openDetailModal() {
             ${mockupHtml}
         </div>
 
-        <div class="sum-row"><span>${t('wiz.detail.era')}</span><b>${escapeHtml(era.label)}</b></div>
+        <div class="sum-row"><span>${t('wiz.detail.era')}</span><b>${escapeHtml(_eraLabel(era))}</b></div>
         <div class="sum-row"><span>${t('wiz.detail.milestone')}</span><b>${escapeHtml(spec.label || spec.id)}</b></div>
         <div class="card-title" style="margin-top:14px;">${t('wiz.detail.section_comp')}</div>
         ${compRows}
