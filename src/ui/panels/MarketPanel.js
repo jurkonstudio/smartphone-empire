@@ -2,7 +2,7 @@
 // v2027.15b — audit grafik pangsa: urut kronologis, label sumbu X, sumbu Y sejajar grid,
 // warna legend konsisten, tombol zoom, redraw saat resize, pct adaptif untuk kompetitor.
 import { renderPublicOpinionPanel } from './PublicOpinionPanel.js';
-import { t } from '../../core/LanguageService.js';
+import { t, LanguageService } from '../../core/LanguageService.js';
 import { renderPromotionPanel } from './PromotionPanel.js';
 import '../charts/ChartZoomModal.js'; // side-effect: pasang listener [data-chart-zoom]
 
@@ -137,6 +137,63 @@ function _renderShare(marketSystem) {
     return html;
 }
 
+
+// Terjemahan dengan fallback (aman walau file i18n belum diganti).
+function _tx(key, idText, enText) {
+    const v = t(key);
+    if (v && v !== key) return v;
+    let lang = 'id';
+    try { lang = LanguageService.getLang(); } catch (e) {}
+    return lang === 'id' ? idText : enText;
+}
+
+// Tick "cantik": 4 interval, langkah 1/2/2.5/5 x 10^k, menutup rentang [lo, hi].
+function _niceAxis(lo, hi) {
+    const raw = Math.max(1e-9, (hi - lo) / 4);
+    const base = Math.pow(10, Math.floor(Math.log10(raw)));
+    const mult = [1, 2, 2.5, 5, 10, 20, 50];
+    for (let i = 0; i < mult.length; i++) {
+        const step = base * mult[i];
+        const nlo = Math.max(0, Math.floor(lo / step + 1e-9) * step);
+        if (nlo + 4 * step >= hi - 1e-12) return { lo: nlo, hi: nlo + 4 * step, step: step };
+    }
+    return { lo: 0, hi: hi, step: hi / 4 };
+}
+
+// Desimal (dalam %) agar semua label sumbu punya presisi seragam.
+function _axisDecimals(step) {
+    const sp = step * 100;
+    let d = 0;
+    while (d < 5 && Math.abs(sp * Math.pow(10, d) - Math.round(sp * Math.pow(10, d))) > 1e-6) d++;
+    return d;
+}
+
+let _shareFocus = false; // false = skala semua pemain, true = fokus ke garis Anda
+
+let _scaleBound = false;
+function _bindScaleToggle() {
+    if (_scaleBound) return;
+    _scaleBound = true;
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-share-scale]');
+        if (!btn) return;
+        _shareFocus = btn.dataset.shareScale === 'you';
+        const card = btn.closest('.card');
+        if (!card) return;
+        card.querySelectorAll('[data-share-scale]').forEach(function (b) {
+            const on = b === btn;
+            b.style.background = on ? 'var(--accent)' : 'transparent';
+            b.style.color = on ? '#fff' : 'var(--text-dim)';
+        });
+        card.querySelectorAll('.share-leg-comp').forEach(function (el) {
+            el.style.opacity = _shareFocus ? '0.25' : '0.85';
+        });
+        const wrap = card.querySelector('.chart-wrap');
+        if (wrap) drawShareChart(wrap);
+    });
+}
+_bindScaleToggle();
+
 const _COMP_COLORS = ['#6b8e23', '#c97f3c', '#8a5ec9'];
 const _PLAYER_COLOR = '#4CAF50';
 const _PLAYER_COLOR_DOWN = '#ef5350';
@@ -194,15 +251,21 @@ function _renderShareChart(history) {
     const legendComp = topComp.map(function (c, i) {
         const meta = compMeta[c.id] || { name: c.id };
         const color = _COMP_COLORS[i % _COMP_COLORS.length];
-        return '<span style="' + itemStyle + 'opacity:0.85;"><span style="' + dotStyle + 'background:' + color + ';"></span>' + escapeHtml(meta.name || c.id) + '</span>';
+        return '<span class="share-leg-comp" style="' + itemStyle + 'opacity:' + (_shareFocus ? '0.25' : '0.85') + ';"><span style="' + dotStyle + 'background:' + color + ';"></span>' + escapeHtml(meta.name || c.id) + '</span>';
     }).join('');
     const legendHtml = '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:10.5px;color:var(--text-mute);">' + legendPlayer + legendComp + '</div>';
 
     return `
         <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
                 <div class="card-title" style="margin:0;">${t('market.share.chart_title')}</div>
-                <button class="btn-secondary" type="button" data-chart-zoom="share" style="padding:4px 10px;min-height:28px;font-size:11px;">⤢ Zoom</button>
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <div style="display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+                        <button type="button" data-share-scale="all" style="padding:4px 9px;min-height:28px;font-size:11px;border:0;border-radius:0;background:${_shareFocus ? 'transparent' : 'var(--accent)'};color:${_shareFocus ? 'var(--text-dim)' : '#fff'};">${_tx('market.share.scale_all', 'Semua', 'All')}</button>
+                        <button type="button" data-share-scale="you" style="padding:4px 9px;min-height:28px;font-size:11px;border:0;border-radius:0;background:${_shareFocus ? 'var(--accent)' : 'transparent'};color:${_shareFocus ? '#fff' : 'var(--text-dim)'};">${_tx('market.share.scale_you', 'Fokus Anda', 'Focus: You')}</button>
+                    </div>
+                    <button class="btn-secondary" type="button" data-chart-zoom="share" style="padding:4px 10px;min-height:28px;font-size:11px;">⤢ ${_tx('market.share.zoom', 'Zoom', 'Zoom')}</button>
+                </div>
             </div>
             <div class="chart-wrap" id="${id}" style="height:150px;margin-top:8px;">
                 <canvas class="chart-canvas" data-share-chart="${id}" style="height:150px;"></canvas>
@@ -210,15 +273,6 @@ function _renderShareChart(history) {
             ${legendHtml}
         </div>
     `;
-}
-
-function _fmtAxis(v) {
-    const pct = v * 100;
-    if (pct >= 10) return pct.toFixed(0) + '%';
-    if (pct >= 1)  return pct.toFixed(1) + '%';
-    if (pct >= 0.1) return pct.toFixed(2) + '%';
-    if (pct > 0)   return pct.toFixed(3) + '%';
-    return '0%';
 }
 
 let _resizeBound = false;
@@ -282,22 +336,34 @@ export function drawShareChart(container) {
     topComp.forEach(function (c) {
         (compSeries[c.id] || []).forEach(function (v) { if (v != null && v > maxV) maxV = v; });
     });
-    maxV = Math.max(maxV * 1.15, 0.005);
+    // Skala Y. "Semua": 0..max semua garis. "Fokus Anda": rentang garis Anda saja.
+    let axis;
+    if (_shareFocus) {
+        let pLo = Infinity, pHi = -Infinity;
+        history.forEach(function (h) { if (h.playerShare < pLo) pLo = h.playerShare; if (h.playerShare > pHi) pHi = h.playerShare; });
+        const span = Math.max(pHi - pLo, pHi * 0.2, 0.0001);
+        axis = _niceAxis(Math.max(0, pLo - span * 0.1), pHi + span * 0.1);
+    } else {
+        axis = _niceAxis(0, Math.max(maxV * 1.08, 0.005));
+    }
+    const yLo = axis.lo, yHi = axis.hi;
+    const dec = _axisDecimals(axis.step);
 
     const xOf = function (i) { return padL + (plotW * i) / (n - 1); };
-    const yOf = function (v) { return padT + plotH - (Math.max(0, v) / maxV) * plotH; };
+    const yOf = function (v) { return padT + plotH - ((Math.max(yLo, Math.min(yHi, v)) - yLo) / (yHi - yLo)) * plotH; };
 
-    // Grid + label Y: 5 garis (0..4), label sejajar tiap garis.
+    // Grid + label Y: 5 garis, presisi seragam.
     ctx.font = '10px sans-serif';
     ctx.textBaseline = 'middle';
     for (let i = 0; i <= 4; i++) {
         const y = padT + (plotH * i) / 4;
+        const val = Math.max(0, yHi - axis.step * i);
         ctx.strokeStyle = 'rgba(255,255,255,0.06)';
         ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(cssW - padR, y); ctx.stroke();
         ctx.fillStyle = '#6a6a6a';
         ctx.textAlign = 'right';
-        ctx.fillText(_fmtAxis(maxV * (1 - i / 4)), padL - 4, y);
+        ctx.fillText((val * 100).toFixed(dec) + '%', padL - 4, y);
     }
 
     // Label X: awal, tengah, akhir (tanpa tumpang tindih).
@@ -306,12 +372,13 @@ export function drawShareChart(container) {
     const xIdx = n >= 5 ? [0, Math.round((n - 1) / 2), n - 1] : [0, n - 1];
     xIdx.forEach(function (i, k) {
         ctx.textAlign = k === 0 ? 'left' : (i === n - 1 ? 'right' : 'center');
-        const x = k === 0 ? padL : (i === n - 1 ? cssW - padR : xOf(i));
+        const x = k === 0 ? padL : (i === n - 1 ? cssW - 2 : xOf(i));
         ctx.fillText(_monthLabel(history[i]), x, padT + plotH + 6);
     });
 
     // Kompetitor dulu supaya garis pemain di atas.
     topComp.forEach(function (c, idx) {
+        if (_shareFocus) return;
         const series = compSeries[c.id];
         if (!series) return;
         if (series.filter(function (v) { return v != null; }).length < 2) return;
