@@ -24,7 +24,10 @@ import {
     openChipNodeModal
 } from './ChipResearchPanel.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
-import { renderTechNodeRow, statLabel } from '../components/TechNodeCard.js';
+import { renderTechNodeRow, statLabel, renderRndOverview, renderRndRow, ensureRndStyles } from '../components/TechNodeCard.js';
+import { RND_TRACKS } from '../../data/research.data.js';
+import { ToastService } from '../../core/ToastService.js';
+import { bus } from '../../core/EventBus.js';
 import { t } from '../../core/LanguageService.js';
 import { renderSilResearchBlock, renderSilSlotBoost } from '../components/SilResearchBlock.js';
 import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
@@ -109,6 +112,7 @@ function renderTechSection(params) {
     var researchSystem = params.researchSystem;
     _ctx.researchSystem = researchSystem;
     _ensureStyles();
+    ensureRndStyles();
     _ensureHandlers();
 
     const data = window.__game.state.get();
@@ -131,11 +135,29 @@ function renderTechSection(params) {
 
     return '<div class="rs-root">' +
         _renderHero(researchSystem, data) +
+        _renderRndSection(researchSystem) +
         _renderSlotBar(active, maxSlots, emptyMessage) +
         _renderCategoryBar(researchSystem) +
         _renderToolbar() +
         '<div class="rs-body" data-rs-body>' + _renderBody(researchSystem) + '</div>' +
         '</div>';
+}
+
+// ---------- R&D LANJUTAN (v2028.36) ----------
+// Level teknologi naik terus-menerus; standar pasar juga naik tiap tahun.
+function _renderRndSection(sys) {
+    if (typeof sys.getRndOverview !== 'function') return '';
+    var ov = sys.getRndOverview();
+    var bench = sys.getBenchmark();
+    var rows = RESEARCH_CATEGORIES.map(function (c) {
+        var info = sys.getRefineInfo(c.id);
+        var bonusLabel = statLabel((RND_TRACKS[c.id] || {}).productStat || c.id);
+        return renderRndRow(info, { actionAttr: 'data-rnd-action', bonusLabel: bonusLabel, benchmark: bench });
+    }).join('');
+    return '<details class="section-collapsible rnd-card" open>' +
+        '<summary class="section-summary"><span class="section-summary-text">R&amp;D Lanjutan</span><span class="section-summary-line"></span></summary>' +
+        renderRndOverview(ov, { title: 'Level Teknologi' }) + rows +
+        '</details>';
 }
 
 // ---------- HERO ----------
@@ -478,6 +500,17 @@ function _ensureHandlers() {
     document.addEventListener('click', function (e) {
         var tg = e.target;
         if (!tg || !tg.closest) return;
+        var rndBtn = tg.closest('[data-rnd-action]');
+        if (rndBtn && _ctx.researchSystem) {
+            e.preventDefault();
+            var act = rndBtn.getAttribute('data-rnd-action');
+            var cid = rndBtn.getAttribute('data-rnd-id');
+            var res = act === 'cancel' ? _ctx.researchSystem.cancelRefine(cid) : _ctx.researchSystem.startRefine(cid);
+            if (!res.ok) ToastService.error(res.reason);
+            else ToastService.success(act === 'cancel' ? 'R&D dibatalkan.' : 'R&D dimulai: Lv ' + res.targetLevel);
+            if (window.__game && window.__game.renderSoft) window.__game.renderSoft();
+            return;
+        }
         var sortBtn = tg.closest('[data-rs-sort]');
         if (sortBtn) { e.preventDefault(); _ui.sort = sortBtn.dataset.rsSort; _refreshBody(); return; }
         var clear = tg.closest('[data-rs-clear]');
@@ -488,6 +521,18 @@ function _ensureHandlers() {
             if (inp) { inp.value = ''; inp.focus(); }
             _refreshBody();
         }
+    });
+
+    // Update progres R&D lanjutan tanpa render ulang; selesai -> render lembut.
+    bus.on('research:refine-progress', function (d) {
+        (d.active || []).forEach(function (r) {
+            var pct = Math.round(r.percent * 100);
+            var bar = document.querySelector('[data-rnd-bar="' + r.categoryId + '"]'); if (bar) bar.style.width = pct + '%';
+            var pe = document.querySelector('[data-rnd-pct="' + r.categoryId + '"]'); if (pe) pe.textContent = pct + '%';
+        });
+    });
+    bus.on('research:refined', function () {
+        if (document.querySelector('.rnd-card') && window.__game && window.__game.renderSoft) window.__game.renderSoft();
     });
 
     // 'toggle' tidak bubble → pakai capture.

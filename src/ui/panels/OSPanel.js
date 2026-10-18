@@ -2,7 +2,10 @@
 // Sub-tab OS dalam tab Riset.
 // v2028.2 — Menambahkan Silicon Boost pada OS yang sedang dikembangkan.
 import { renderOsStatBar } from './OsStatBar.js';
-import { OS_FEATURES, OS_LICENSES, BUILTIN_APPS, OS_ERAS, getOsFeatureById } from '../../data/os.data.js';
+import { OS_FEATURES, OS_LICENSES, BUILTIN_APPS, OS_ERAS, OS_PLATFORM_TRACKS, getOsFeatureById, getLicenseStatsAtYear } from '../../data/os.data.js';
+import { renderRndOverview, renderRndRow, ensureRndStyles } from '../components/TechNodeCard.js';
+import { ToastService } from '../../core/ToastService.js';
+import { bus } from '../../core/EventBus.js';
 import { renderOsScreenMockup } from '../phone/OsScreenMockup.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
@@ -39,8 +42,11 @@ export function renderOSPanel(params) {
     const currentVersion = osSystem.getCurrentVersionObject();
     const developing = os.developing;
 
+    ensureRndStyles();
+    _ensureOsPlatformHandlers(osSystem);
     const hero = _renderHero(os, currentVersion, osSystem);
     const devStrip = developing ? _renderDevStrip(developing) : '';
+    const platformHtml = _renderPlatformSection(osSystem, data);
     const history = _renderVersionHistory(os, currentVersion);
 
     const bugsHtml = _renderBugsSection(os.bugs);
@@ -48,7 +54,90 @@ export function renderOSPanel(params) {
     const appsHtml = _renderAppsSection(osSystem, os);
     const licensesHtml = _renderLicensesSection(data);
 
-    return hero + devStrip + history + bugsHtml + featuresHtml + appsHtml + licensesHtml;
+    return hero + devStrip + platformHtml + history + bugsHtml + featuresHtml + appsHtml + licensesHtml;
+}
+
+// ============================================================
+// R&D PLATFORM OS (v2028.36) — level naik terus-menerus
+// ============================================================
+function _renderPlatformSection(osSystem, data) {
+    if (typeof osSystem.getPlatformInfo !== 'function') return '';
+    var STAT_LABEL = { stability: 'Stabilitas', speed: 'Kecepatan', features: 'Fitur', security: 'Keamanan', design: 'Desain' };
+
+    if (!data.os.versions || !data.os.versions.length) {
+        return '<div class="rnd-ov" data-osp-root><div class="rnd-ov-title">R&amp;D Platform OS</div>' +
+            '<div class="rnd-verdict">Rilis versi OS pertama untuk membuka R&amp;D platform: tiap level menambah stat OS ke semua ponsel ber-OS sendiri.</div></div>';
+    }
+
+    var levels = osSystem.getPlatformLevels();
+    var sum = 0, n = 0;
+    OS_PLATFORM_TRACKS.forEach(function (t) { sum += levels[t.id] || 0; n++; });
+    var avg = n ? sum / n : 0;
+    var bench = Math.max(0, data.time.currentYear - 2000) * 0.5;
+    // Bandingkan OS sendiri dengan lisensi OS terbaik yang tersedia tahun ini.
+    var bestLic = 0;
+    OS_LICENSES.forEach(function (l) {
+        if (data.time.currentYear < l.availableFromYear) return;
+        var ls = getLicenseStatsAtYear(l, data.time.currentYear);
+        var a = (ls.stability + ls.speed + ls.features + ls.security + ls.design) / 5;
+        if (a > bestLic) bestLic = a;
+    });
+    var cs = osSystem.getCurrentStats();
+    var own = cs ? (cs.stability + cs.speed + cs.features + cs.security + cs.design) / 5 : 0;
+    var diff = Math.round(own - bestLic);
+    var tone = diff > 0 ? 'up' : (diff < 0 ? 'down' : 'flat');
+    var verdict = diff >= 0
+        ? 'OS-mu unggul ' + diff + ' poin dari lisensi OS terbaik tahun ini — ponselmu lebih menarik.'
+        : 'OS-mu tertinggal ' + Math.abs(diff) + ' poin dari lisensi OS terbaik tahun ini (lisensi pihak ketiga terus diperbarui).';
+
+    var overview = '<div class="rnd-ov" data-osp-root>' +
+        '<div class="rnd-ov-head"><div class="rnd-ov-title">R&amp;D Platform OS</div>' +
+        '<div class="rnd-ov-slots">' + (data.os.platform && data.os.platform.developing ? '1/1' : '0/1') + '</div></div>' +
+        '<div class="rnd-ov-grid">' +
+            '<div class="rnd-chip"><span>Level rata-rata</span><b>' + avg.toFixed(1) + '</b></div>' +
+            '<div class="rnd-chip"><span>Skor OS</span><b>' + Math.round(own) + '</b></div>' +
+            '<div class="rnd-chip rnd-' + tone + '"><span>vs lisensi</span><b>' + (diff > 0 ? '+' : '') + diff + '</b></div>' +
+        '</div>' +
+        '<div class="rnd-verdict rnd-' + tone + '">' + escapeHtml(verdict) + '</div></div>';
+
+    var rows = OS_PLATFORM_TRACKS.map(function (t) {
+        var info = osSystem.getPlatformInfo(t.id);
+        if (info.running) {
+            info.running = Object.assign({}, info.running);   // butuh durationDays/progressDays/targetLevel
+        }
+        return renderRndRow(info, { actionAttr: 'data-osp-action', bonusLabel: STAT_LABEL[t.id], benchmark: bench });
+    }).join('');
+
+    return '<details class="section-collapsible rnd-card" open>' +
+        '<summary class="section-summary"><span class="section-summary-text">R&amp;D Platform</span><span class="section-summary-line"></span></summary>' +
+        overview + rows + '</details>';
+}
+
+var _osPlatformBound = false;
+var _osPlatformSys = null;
+function _ensureOsPlatformHandlers(osSystem) {
+    _osPlatformSys = osSystem;
+    if (_osPlatformBound || typeof document === 'undefined') return;
+    _osPlatformBound = true;
+    document.addEventListener('click', function (e) {
+        var b = e.target && e.target.closest && e.target.closest('[data-osp-action]');
+        if (!b || !_osPlatformSys) return;
+        e.preventDefault();
+        var act = b.getAttribute('data-osp-action');
+        var sid = b.getAttribute('data-rnd-id');
+        var res = act === 'cancel' ? _osPlatformSys.cancelPlatformUpgrade() : _osPlatformSys.startPlatformUpgrade(sid);
+        if (!res.ok) ToastService.error(res.reason);
+        else ToastService.success(act === 'cancel' ? 'R&D dibatalkan.' : 'R&D platform dimulai.');
+        if (window.__game && window.__game.renderSoft) window.__game.renderSoft();
+    });
+    bus.on('os:platform-progress', function (d) {
+        var pct = Math.round(d.percent * 100);
+        var bar = document.querySelector('[data-rnd-bar="' + d.statId + '"]'); if (bar) bar.style.width = pct + '%';
+        var pe = document.querySelector('[data-rnd-pct="' + d.statId + '"]'); if (pe) pe.textContent = pct + '%';
+    });
+    bus.on('os:platform-done', function () {
+        if (document.querySelector('[data-osp-root]') && window.__game && window.__game.renderSoft) window.__game.renderSoft();
+    });
 }
 
 // ============================================================
@@ -82,7 +171,7 @@ function _renderHero(os, currentVersion, osSystem) {
         : t('os.hero.no_version');
 
     const statHtml = currentVersion
-        ? renderOsStatBar(currentVersion.stats)
+        ? renderOsStatBar(osSystem.getCurrentStats() || currentVersion.stats)
         : '<div class="os-hero-empty-stat">' + t('os.hero.dev_empty') + '</div>';
 
     return '<div class="card os-hero">' +
@@ -378,8 +467,9 @@ function _renderAppsSection(osSystem, os) {
 function _renderLicensesSection(data) {
     var rows = OS_LICENSES.map(function (l) {
         var available = data.time.currentYear >= l.availableFromYear;
+        var ls = getLicenseStatsAtYear(l, data.time.currentYear) || l.stats;
         var avgStat = Math.round(
-            (l.stats.stability + l.stats.speed + l.stats.features + l.stats.security + l.stats.design) / 5
+            (ls.stability + ls.speed + ls.features + ls.security + ls.design) / 5
         );
         var availLabel = available ? t('os.licenses.available') : t('os.licenses.available_from', { year: l.availableFromYear });
         return '<div class="os-row os-lic-row' + (available ? '' : ' os-lic-locked') + '">' +
