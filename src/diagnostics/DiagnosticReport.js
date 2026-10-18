@@ -384,7 +384,7 @@ export function buildReport(state, game, opts) {
         events:   _safe(function () { return _events(state, opts); }, {}),
         settings: _safe(function () { return _settings(state); }, {}),
         systems:  _safe(function () { return _systems(game); }, {}),
-        sanity:   _safe(function () { return _sanity(state, game); }, { alerts: [] })
+        sanity:   _safe(function () { return { alerts: _sanity(state, game) }; }, { alerts: [] })
     };
     if (opts.raw) {
         report.raw = _safe(function () { return JSON.parse(JSON.stringify(state)); }, null);
