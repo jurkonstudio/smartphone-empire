@@ -3517,11 +3517,13 @@ body.is-home.home-dock-collapsed .advisor-fab {
 .guide-sys-icon {
     flex-shrink: 0;
     width: 30px; height: 30px;
-    border-radius: 8px;
-    background: var(--bg-3);
+    border-radius: 10px;
+    background: var(--accent-soft);
+    color: var(--accent);
     display: inline-flex; align-items: center; justify-content: center;
-    font-size: 15px;
 }
+.guide-sys-icon svg { display: block; flex-shrink: 0; }
+[data-theme="light"] .guide-sys-icon { background: rgba(37, 99, 235, 0.10); }
 .guide-sys-body { flex: 1; min-width: 0; }
 .guide-sys-title {
     font-size: 13px; font-weight: 700;
