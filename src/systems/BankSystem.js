@@ -23,6 +23,7 @@ import {
     RATINGS, AGE_SCORE_CAPS, BANK_RULES, BANKS, DEPOSIT_CONFIG,
     getBankById, getProductById, getRatingById, ratingRank, ratingFromScore
 } from '../data/bank.data.js';
+import { WalletService } from './WalletService.js';
 
 var MINUTES_PER_MONTH = 30 * 24 * 60;
 
@@ -399,7 +400,7 @@ export class BankSystem {
         return {
             loan: l, amount: amount, penalty: penalty, total: total,
             full: amount >= l.remaining,
-            affordable: this.state.data.cash >= total
+            affordable: WalletService.canAfford(total)
         };
     }
 
@@ -409,7 +410,7 @@ export class BankSystem {
         if (!pq) return { ok: false, error: t('bank.err.loan_missing') };
         if (!pq.affordable) return { ok: false, error: t('bank.err.no_cash') };
         var l = pq.loan;
-        this.state.addCash(-pq.total);
+        WalletService.pay(pq.total, 'loan-prepay');
         if (pq.full) {
             d.finance.loans = d.finance.loans.filter(function (x) { return x !== l; });
             this.state.addLog(t('bank.log.paid_off', { bank: l.label }), LOG_TYPES.success);
@@ -456,8 +457,8 @@ export class BankSystem {
         if (drawn <= 0) return { ok: false, error: t('bank.err.nothing') };
         amount = Math.min(drawn, Math.round(amount || 0));
         if (amount <= 0) return { ok: false, error: t('bank.err.amount') };
-        if (d.cash < amount) return { ok: false, error: t('bank.err.no_cash') };
-        this.state.addCash(-amount);
+        if (!WalletService.canAfford(amount)) return { ok: false, error: t('bank.err.no_cash') };
+        WalletService.pay(amount, 'credit-line-repay');
         this.bank.line.drawn -= amount;
         this._log('repay', amount, 'bank.log.repay');
         this.state.addLog(t('bank.log.repay_main', { amount: '$' + amount.toLocaleString('en-US') }), LOG_TYPES.success);
@@ -600,7 +601,7 @@ export class BankSystem {
         var amount = Math.floor(req.amount || 0);
         var min = this.getDepositMin();
         if (amount < min) return { ok: false, error: t('dep.err.min', { n: '$' + min.toLocaleString('en-US') }) };
-        if (amount > this.state.data.cash) return { ok: false, error: t('bank.err.no_cash') };
+        if (!WalletService.canAfford(amount)) return { ok: false, error: t('bank.err.no_cash') };
 
         var annual = this.getDepositAnnualPct(bank.id, kind, term);
         var r = annual / 100 / 12;
@@ -622,7 +623,7 @@ export class BankSystem {
         var q = this.quoteDeposit(req);
         if (!q.ok) return q;
         var b = this.bank;
-        this.state.addCash(-q.amount);
+        WalletService.pay(q.amount, 'deposit');
         var kindLabel = q.kind === 'flex' ? t('dep.kind.flex') : t('dep.kind.term', { n: q.term });
         var bankName = t('bank.name.' + q.bank.id);
         var acc = null;

@@ -25,6 +25,7 @@ import {
     computeNewsImpact, findStocksForCompetitor, getOverlay,
     pruneImpulses, getMarketRegime, getStockBeta
 } from './MarketIndexAdjuster.js';
+import { WalletService } from './WalletService.js';
 
 var MAX_HISTORY = 60;
 var MAX_TRANSACTIONS = 20;
@@ -366,8 +367,8 @@ export class StockSystem {
     getMaxAffordableShares(stockId) {
         var priceUSD = this.getPriceUSD(stockId);
         if (priceUSD <= 0) return 0;
-        var cash = this.state.data.cash || 0;
-        return Math.floor(cash / priceUSD);
+        // Dompet Universal: uang + SIL (sesuai mode bayar).
+        return Math.floor(WalletService.getBuyingPower() / priceUSD);
     }
 
     buyStock(stockId, shares) {
@@ -386,11 +387,11 @@ export class StockSystem {
         // [v2027.2b] Bulatkan supaya cash tetap integer.
         var totalUSD = Math.round(priceUSD * shares);
 
-        if (totalUSD > d.cash) {
+        if (!WalletService.canAfford(totalUSD)) {
             return { ok: false, reason: 'Uang tidak cukup. Butuh $' + totalUSD.toLocaleString('en-US') + '.' };
         }
 
-        this.state.addCash(-totalUSD);
+        WalletService.pay(totalUSD, 'stock-buy');
 
         var existing = null;
         for (var i = 0; i < d.stocks.portfolio.length; i++) {

@@ -25,6 +25,7 @@ import {
 import {
     PROMO_PACKAGES, getPackageById, getPackagesByScope, getCoverage, MAX_ACTIVE_PER_PRODUCT
 } from '../data/promotion.data.js';
+import { WalletService } from './WalletService.js';
 
 var MINUTES_PER_DAY = 24 * 60;
 var BRAND_BONUS_MAX = 0.4;        // brand 100 = +40% jangkauan di wilayah itu
@@ -277,9 +278,9 @@ export class PromotionSystem {
             return { ok: false, reason: t('promo.err.max_active', { n: MAX_ACTIVE_PER_PRODUCT }) };
         }
         var cost = this.getPackageCost(pkg);
-        if (d.cash < cost) return { ok: false, reason: t('promo.err.no_cash') };
+        if (!WalletService.canAfford(cost)) return { ok: false, reason: t('promo.err.no_cash') };
 
-        this.state.setCash(d.cash - cost);
+        WalletService.pay(cost, 'promotion');
         var now = d.time.elapsedGameMinutes;
         p.campaigns.push({
             id: 'pc_' + Date.now() + '_' + Math.floor(Math.random() * 1000),

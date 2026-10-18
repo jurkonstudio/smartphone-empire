@@ -13,6 +13,7 @@ import { LOG_TYPES } from '../config/constants.js';
 import { t } from '../core/LanguageService.js';
 import { SILICON_COSTS } from '../data/silicon.data.js';
 import { DEV_BUILD } from '../config/dev.config.js';
+import { WALLET, getCashPerSil } from '../data/silicon.data.js';
 
 // [HARDENING] Kredit SIL hanya sah dari sumber ini (produksi). 'cheat' & lainnya ditolak.
 var ALLOWED_CREDIT = /^(topup:|daily-login$|quest:|refund:|server-sync$)/;
@@ -65,8 +66,46 @@ export var SiliconService = {
         return state.data.silicon || 0;
     },
 
-    canAfford(cost) {
-        return (state.data.silicon || 0) >= cost;
+    // ---------- Dompet Universal: biaya berupa SIL boleh ditutup uang ($) ----------
+    _payMode() {
+        var m = state.data.settings && state.data.settings.payMode;
+        return WALLET.modes.indexOf(m) >= 0 ? m : WALLET.defaultMode;
+    },
+    cashPerSil() { return getCashPerSil(state.data.time && state.data.time.currentYear); },
+
+    // Rencana bayar untuk biaya `cost` SIL: { ok, sil, units, cash } (units = SIL yang dibayar dengan uang).
+    quote(cost) {
+        cost = Math.floor(cost);
+        var plan = { ok: false, cost: cost, sil: 0, units: 0, cash: 0 };
+        if (!(cost > 0)) return plan;
+        var bal = state.data.silicon || 0, mode = this._payMode(), rate = this.cashPerSil();
+        var cashUnits = Math.floor(Math.max(0, state.data.cash || 0) / rate);
+        if (mode === 'strict') {
+            if (bal >= cost) { plan.ok = true; plan.sil = cost; }
+            return plan;
+        }
+        if (mode === 'cash_first') {
+            plan.units = Math.min(cost, cashUnits);
+            plan.sil = cost - plan.units;
+        } else { // auto & sil_first: SIL dulu
+            plan.sil = Math.min(cost, bal);
+            plan.units = cost - plan.sil;
+        }
+        plan.cash = plan.units * rate;
+        plan.ok = plan.sil <= bal && plan.units <= cashUnits;
+        return plan;
+    },
+
+    canAffordRaw(cost) { return (state.data.silicon || 0) >= cost; },
+
+    // Mampu bayar `cost` SIL, termasuk lewat uang ($) sesuai mode dompet.
+    canAfford(cost) { return this.quote(cost).ok; },
+
+    // Daya beli total dalam satuan SIL (SIL + uang / kurs).
+    getPurchasingPowerSil() {
+        var bal = state.data.silicon || 0;
+        if (this._payMode() === 'strict') return bal;
+        return bal + Math.floor(Math.max(0, state.data.cash || 0) / this.cashPerSil());
     },
 
     add(amount, reason) {
@@ -80,15 +119,35 @@ export var SiliconService = {
         return { ok: true, balance: state.data.silicon };
     },
 
-    spend(amount, reason) {
+    // Potong SIL murni (tanpa uang). Dipakai Dompet Universal & penukaran SIL->uang.
+    spendRaw(amount, reason) {
         amount = Math.floor(amount);
         if (!amount || amount <= 0) return { ok: false, reason: 'Jumlah tidak valid.' };
-        if (!this.canAfford(amount)) return { ok: false, reason: 'Silicon tidak cukup.' };
+        if (!this.canAffordRaw(amount)) return { ok: false, reason: 'Silicon tidak cukup.' };
         state.data.silicon = (state.data.silicon || 0) - amount;
         _pushHistory('spend', -amount, reason || 'spend');
         bus.emit('silicon:changed', { balance: state.data.silicon, delta: -amount });
         bus.emit('state:changed', state.data);
         return { ok: true, balance: state.data.silicon };
+    },
+
+    // Bayar biaya `amount` SIL. Sesuai mode dompet, sebagian/semua boleh dibayar dengan uang ($).
+    // Hasil: { ok, balance, silSpent, cashSpent }.
+    spend(amount, reason) {
+        amount = Math.floor(amount);
+        if (!amount || amount <= 0) return { ok: false, reason: 'Jumlah tidak valid.' };
+        var plan = this.quote(amount);
+        if (!plan.ok) return { ok: false, reason: 'Silicon & uang tidak cukup.' };
+        if (plan.sil > 0) {
+            var r = this.spendRaw(plan.sil, reason);
+            if (!r.ok) return r;
+        }
+        if (plan.cash > 0) {
+            state.addCash(-plan.cash);
+            if (plan.sil === 0) _pushHistory('cashpay', 0, (reason || 'spend') + ' [$' + plan.cash + ']');
+            bus.emit('wallet:paid-with-cash', { sil: amount, cash: plan.cash, reason: reason });
+        }
+        return { ok: true, balance: state.data.silicon || 0, silSpent: plan.sil, cashSpent: plan.cash };
     },
 
     // [v2027.5a] Set saldo dari server (dipakai CloudSync pull).
@@ -173,7 +232,7 @@ export var SiliconService = {
         if (!sp.ok) return sp;
 
         var res = sys.startResearch(nodeId, { paidWithSilicon: true });
-        if (!res.ok) { this._refund(cost, 'unlock:' + nodeId); return res; }
+        if (!res.ok) { this._refundPay(sp, 'unlock:' + nodeId); return res; }
         if (instant) sys.boostResearch(nodeId, Infinity);
         bus.emit('silicon:action-done', { id: 'unlock', cost: cost });
         return { ok: true, spent: cost, instant: !!instant };
@@ -198,7 +257,7 @@ export var SiliconService = {
             if (!sp.ok) return sp;
             
             var res = g.os.boostResearch(nodeId, finish ? Infinity : SILICON_COSTS.research.boostDays);
-            if (!res.ok) { this._refund(cost, 'boost-os:' + nodeId); return res; }
+            if (!res.ok) { this._refundPay(sp, 'boost-os:' + nodeId); return res; }
             
             bus.emit('silicon:action-done', { id: 'boost', cost: cost });
             return { ok: true, spent: cost, completed: !!res.completed };
@@ -218,9 +277,16 @@ export var SiliconService = {
         if (!spTech.ok) return spTech;
 
         var resTech = sys.boostResearch(nodeId, finishTech ? Infinity : opt.boostDays);
-        if (!resTech.ok) { this._refund(costTech, 'boost:' + nodeId); return resTech; }
+        if (!resTech.ok) { this._refundPay(spTech, 'boost:' + nodeId); return resTech; }
         bus.emit('silicon:action-done', { id: 'boost', cost: costTech });
         return { ok: true, spent: costTech, completed: !!resTech.completed };
+    },
+
+    // Kembalikan pembayaran gabungan (SIL + uang) dari hasil spend().
+    _refundPay(sp, reason) {
+        if (!sp) return;
+        if (sp.cashSpent) state.addCash(sp.cashSpent);
+        if (sp.silSpent) this._refund(sp.silSpent, reason);
     },
 
     _refund(amount, reason) {
@@ -304,7 +370,7 @@ export var SiliconService = {
         var def = SILICON_ACTIONS.find(function (a) { return a.id === actionId; });
         if (!def) return { ok: false, reason: 'Aksi tidak dikenal.' };
         if (!def.ready) return { ok: false, reason: 'Aksi belum tersedia.' };
-        if (!this.canAfford(def.cost)) return { ok: false, reason: 'Silicon tidak cukup (' + def.cost + ' SIL).' };
+        if (!this.canAfford(def.cost)) return { ok: false, reason: 'Silicon & uang tidak cukup (' + def.cost + ' SIL).' };
 
         var game = window.__game;
         if (!game) return { ok: false, reason: 'Game belum siap.' };
@@ -403,11 +469,8 @@ export var SiliconService = {
             }
         } catch (err) {
             console.error('[SiliconService] Aksi gagal:', actionId, err);
-            state.data.silicon = (state.data.silicon || 0) + def.cost;
-            _pushHistory('earn', def.cost, 'refund:' + actionId);
-            bus.emit('silicon:changed', { balance: state.data.silicon, delta: def.cost });
-            bus.emit('state:changed', state.data);
-            return { ok: false, reason: 'Aksi gagal, Silicon dikembalikan.' };
+            this._refundPay(spendRes, actionId);
+            return { ok: false, reason: 'Aksi gagal, pembayaran dikembalikan.' };
         }
 
         bus.emit('silicon:action-done', { id: actionId, cost: def.cost });

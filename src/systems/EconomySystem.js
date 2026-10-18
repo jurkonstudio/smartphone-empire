@@ -5,6 +5,7 @@ import { bus } from '../core/EventBus.js';
 import { BALANCE } from '../data/balance.data.js';
 import { LOG_TYPES } from '../config/constants.js';
 import { getMacro } from '../core/MacroModel.js';
+import { WalletService } from './WalletService.js';
 
 // EconomySystem — memproses siklus bulanan:
 //   1. Potong gaji + sewa + utilitas + bunga pinjaman.
@@ -107,6 +108,8 @@ export class EconomySystem {
         let cashAfter = cashBefore - expense - tax - loanPrincipal;
         // Dana darurat: tabungan fleksibel menutup kekurangan kas (bila fitur aktif).
         if (this.bank && cashAfter < 0) cashAfter += this.bank.coverShortfall(-cashAfter);
+        // Dana darurat SIL (opsional di Setelan): SIL menutup sisa defisit supaya tidak bangkrut.
+        if (cashAfter < 0) cashAfter += WalletService.rescueDeficit(-cashAfter);
         this.state.setCash(cashAfter);
 
         // ---- Riwayat ----
@@ -209,8 +212,8 @@ export class EconomySystem {
         const idx = data.finance.loans.findIndex(l => l.id === loanId);
         if (idx < 0) return { ok: false, error: 'Pinjaman tidak ada.' };
         const loan = data.finance.loans[idx];
-        if (data.cash < loan.remaining) return { ok: false, error: 'Uang tidak cukup.' };
-        this.state.addCash(-loan.remaining);
+        if (!WalletService.canAfford(loan.remaining)) return { ok: false, error: 'Uang tidak cukup.' };
+        WalletService.pay(loan.remaining, 'loan-repay');
         data.finance.loans.splice(idx, 1);
         this.state.addLog(`Pinjaman ${loan.label} dilunasi.`, LOG_TYPES.success);
         bus.emit('economy:loan-repaid', { loanId });

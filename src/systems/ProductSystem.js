@@ -14,6 +14,7 @@ import {
 import { getCampaignById, MARKETING_CAMPAIGNS } from '../data/marketing.data.js';
 import { getLicenseById } from '../data/os.data.js';
 import { getMacro, reviewBaseScore } from '../core/MacroModel.js';
+import { WalletService } from './WalletService.js';
 
 var MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -258,14 +259,14 @@ export class ProductSystem {
         var setupCost = BALANCE.products.productionSetupCost;
         var totalCost = unitCost * config.productionQty + setupCost;
 
-        if (data.cash < totalCost) return { ok: false, reason: 'Uang tidak cukup. Butuh $' + totalCost.toLocaleString('en-US') + '.' };
+        if (!WalletService.canAfford(totalCost)) return { ok: false, reason: 'Uang tidak cukup. Butuh $' + totalCost.toLocaleString('en-US') + '.' };
 
         var stats = this.computeStats(config);
         var baseDays = 40 + Math.floor(config.productionQty / 5000);
         var speedup = this._getDevSpeedMultiplier();
         var totalDays = Math.max(7, Math.round(baseDays / speedup));
 
-        this.state.setCash(data.cash - totalCost);
+        WalletService.pay(totalCost, 'product-dev');
 
         var productId = 'p_' + Date.now() + '_' + data.products.nextProductId;
         data.products.nextProductId += 1;
@@ -642,9 +643,9 @@ export class ProductSystem {
         var product = data.products.catalog.find(function (p) { return p.id === productId; });
         if (!product) return { ok: false, reason: 'Produk tidak ditemukan.' };
         if (product.status !== 'selling') return { ok: false, reason: 'Produk sudah tidak dijual.' };
-        if (data.cash < campaign.cost) return { ok: false, reason: 'Uang tidak cukup.' };
+        if (!WalletService.canAfford(campaign.cost)) return { ok: false, reason: 'Uang tidak cukup.' };
 
-        this.state.setCash(data.cash - campaign.cost);
+        WalletService.pay(campaign.cost, 'campaign');
 
         var marketers = data.team.marketers || 0;
         var bonus = 1 + marketers * BALANCE.marketing.perMarketerBonus;
@@ -688,9 +689,9 @@ export class ProductSystem {
         if (!p) return { ok: false, reason: 'Produk tidak ditemukan.' };
         if (qty < 100) return { ok: false, reason: 'Minimal 100 unit.' };
         var totalCost = p.unitCost * qty + BALANCE.products.productionSetupCost;
-        if (data.cash < totalCost) return { ok: false, reason: 'Uang tidak cukup.' };
+        if (!WalletService.canAfford(totalCost)) return { ok: false, reason: 'Uang tidak cukup.' };
 
-        this.state.setCash(data.cash - totalCost);
+        WalletService.pay(totalCost, 'restock');
         p.stock += qty;
         p.totalProduced += qty;
 

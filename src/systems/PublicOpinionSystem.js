@@ -15,6 +15,7 @@ import {
     CUSTOMER_SUGGESTIONS,
     VIRAL_RESPONSES
 } from '../data/feedback.data.js';
+import { WalletService } from './WalletService.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -424,8 +425,8 @@ export class PublicOpinionSystem {
         if (viral.type !== 'negative') return { ok: false, reason: 'Hanya untuk viral negatif.' };
         const resp = VIRAL_RESPONSES.find(r => r.id === responseId);
         if (!resp) return { ok: false, reason: 'Respons tidak valid.' };
-        if (data.cash < resp.cost) return { ok: false, reason: 'Uang tidak cukup.' };
-        if (resp.cost > 0) this.state.setCash(data.cash - resp.cost);
+        if (!WalletService.canAfford(resp.cost)) return { ok: false, reason: 'Uang tidak cukup.' };
+        if (resp.cost > 0) WalletService.pay(resp.cost, 'viral-response');
         if (resp.effect.reputation) this.state.addReputation(resp.effect.reputation);
         this._recomputeSentiment();
         if (responseId !== 'ignore') fb.activeViral = fb.activeViral.filter(v => v.id !== viralId);

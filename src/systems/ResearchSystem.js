@@ -11,6 +11,7 @@ import {
     getNodeById,
     validateResearchData
 } from '../data/research.data.js';
+import { WalletService } from './WalletService.js';
 
 // 1 hari game = 24 jam × 60 menit = 1440 menit (dari time.config.js)
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
@@ -205,7 +206,7 @@ export class ResearchSystem {
         if (data.research.active.length >= data.research.maxSlots) {
             return { status: 'locked', reason: 'Slot riset penuh (' + data.research.active.length + '/' + data.research.maxSlots + ')', blocker: 'slots' };
         }
-        if (!ignoreCash && data.cash < node.cost) {
+        if (!ignoreCash && !WalletService.canAfford(node.cost)) {
             return { status: 'locked', reason: 'Uang tidak cukup ($' + node.cost.toLocaleString('en-US') + ')', blocker: 'cash' };
         }
         return { status: 'available', reason: null, blocker: null };
@@ -223,7 +224,7 @@ export class ResearchSystem {
             return { ok: false, reason: st.reason || 'Belum bisa dimulai.' };
         }
 
-        if (!paidWithSilicon) this.state.setCash(data.cash - node.cost);
+        if (!paidWithSilicon) WalletService.pay(node.cost, 'research');
 
         // Daftarkan sebagai aktif
         const entry = {

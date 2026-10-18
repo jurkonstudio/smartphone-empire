@@ -21,6 +21,7 @@ import {
 import {
     CHIP_FEATURES, getChipFeatureById
 } from '../data/chip-features.data.js';
+import { WalletService } from './WalletService.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -280,11 +281,11 @@ export class ChipSystem {
         }
 
         const designCost = this.computeDesignCost(config);
-        if (data.cash < designCost) {
+        if (!WalletService.canAfford(designCost)) {
             return { ok: false, reason: 'Uang tidak cukup. Butuh $' + designCost.toLocaleString('en-US') + '.' };
         }
 
-        this.state.setCash(data.cash - designCost);
+        WalletService.pay(designCost, 'chip-design');
 
         const stats = this.computeChipStats(config);
         const durationDays = this.computeDesignDuration(config);

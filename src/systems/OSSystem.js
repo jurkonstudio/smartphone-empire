@@ -15,6 +15,7 @@ import {
     getOsFeatureById,
     getBuiltinAppById
 } from '../data/os.data.js';
+import { WalletService } from './WalletService.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -339,10 +340,10 @@ export class OSSystem {
             totalCost += f.devCost;
             totalDays += f.devDays;
         }
-        if (data.cash < totalCost) {
+        if (!WalletService.canAfford(totalCost)) {
             return { ok: false, reason: 'Uang tidak cukup. Butuh $' + totalCost.toLocaleString('en-US') + '.' };
         }
-        this.state.setCash(data.cash - totalCost);
+        WalletService.pay(totalCost, 'os-dev');
 
         const versionString = this._nextVersionString();
         data.os.developing = {
@@ -452,9 +453,9 @@ export class OSSystem {
         const bug = data.os.bugs.find(b => b.id === bugId);
         if (!bug) return { ok: false, reason: 'Bug tidak ditemukan.' };
         if (bug.status !== 'active') return { ok: false, reason: 'Bug tidak aktif.' };
-        if (data.cash < bug.patchCost) return { ok: false, reason: 'Uang tidak cukup.' };
+        if (!WalletService.canAfford(bug.patchCost)) return { ok: false, reason: 'Uang tidak cukup.' };
 
-        this.state.setCash(data.cash - bug.patchCost);
+        WalletService.pay(bug.patchCost, 'os-patch');
         bug.status = 'patching';
         bug.patchCompleteAtMinute = data.time.elapsedGameMinutes + bug.patchDays * MINUTES_PER_DAY;
 
@@ -485,9 +486,9 @@ export class OSSystem {
         if (app.requiresFeature && !this.hasFeature(app.requiresFeature)) {
             return { ok: false, reason: 'Butuh fitur OS: ' + app.requiresFeature };
         }
-        if (data.cash < app.devCost) return { ok: false, reason: 'Uang tidak cukup.' };
+        if (!WalletService.canAfford(app.devCost)) return { ok: false, reason: 'Uang tidak cukup.' };
 
-        this.state.setCash(data.cash - app.devCost);
+        WalletService.pay(app.devCost, 'os-app');
         data.os.apps.builtin.push(appId);
         this.state.addLog('Aplikasi dirilis: ' + app.name + '.', LOG_TYPES.success);
         bus.emit('os:app-released', { appId, name: app.name, appealBonus: app.appealBonus });

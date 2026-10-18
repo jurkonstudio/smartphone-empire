@@ -13,6 +13,7 @@ import { state } from '../core/GameState.js';
 import { TIME_CONFIG } from '../config/time.config.js';
 import { ToastService } from '../core/ToastService.js';
 import { LOG_TYPES } from '../config/constants.js';
+import { WalletService } from './WalletService.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -78,11 +79,11 @@ export class FabSystem {
         const tier = FAB_LEVELS.find(f => f.level === (targetLevel || 1));
         if (!tier) return { ok: false, reason: 'Level fab tidak valid.' };
 
-        if (data.cash < tier.cost) {
+        if (!WalletService.canAfford(tier.cost)) {
             return { ok: false, reason: 'Uang tidak cukup. Butuh $' + tier.cost.toLocaleString('en-US') + '.' };
         }
 
-        this.state.setCash(data.cash - tier.cost);
+        WalletService.pay(tier.cost, 'fab-build');
 
         // Setup upgrade state (dipakai sebagai build state)
         data.fab.upgrade = {
@@ -113,11 +114,11 @@ export class FabSystem {
         const next = this.getNextFabLevel();
         if (!next) return { ok: false, reason: 'Fab sudah di level maksimal.' };
 
-        if (data.cash < next.cost) {
+        if (!WalletService.canAfford(next.cost)) {
             return { ok: false, reason: 'Uang tidak cukup. Butuh $' + next.cost.toLocaleString('en-US') + '.' };
         }
 
-        this.state.setCash(data.cash - next.cost);
+        WalletService.pay(next.cost, 'fab-upgrade');
 
         data.fab.upgrade = {
             targetLevel: next.level,
@@ -165,11 +166,11 @@ export class FabSystem {
         const unitCost = chip.stats.costPerUnit;
         const totalCost = Math.round(unitCost * effectiveQty);
 
-        if (data.cash < totalCost) {
+        if (!WalletService.canAfford(totalCost)) {
             return { ok: false, reason: 'Uang tidak cukup. Butuh $' + totalCost.toLocaleString('en-US') + '.' };
         }
 
-        this.state.setCash(data.cash - totalCost);
+        WalletService.pay(totalCost, 'fab-produce');
 
         // Setup production
         data.fab.producing = {

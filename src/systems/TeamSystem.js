@@ -23,6 +23,7 @@ import {
     rollAge,
     rollTraits
 } from '../data/staff.data.js';
+import { WalletService } from './WalletService.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -250,11 +251,11 @@ export class TeamSystem {
             ? cand.totalCost
             : (roleRecruitCost + signingBonus);
 
-        if (data.cash < totalCost) {
+        if (!WalletService.canAfford(totalCost)) {
             return { ok: false, reason: 'Uang tidak cukup. Butuh $' + totalCost.toLocaleString('en-US') + '.' };
         }
 
-        this.state.setCash(data.cash - totalCost);
+        WalletService.pay(totalCost, 'hire');
 
         const newStaff = {
             id: 'staff_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
@@ -311,7 +312,9 @@ export class TeamSystem {
             if (s.id !== staffId) s.morale = Math.max(0, (s.morale || 75) - 5);
         });
 
-        this.state.setCash(data.cash - severance);
+        // Pesangon wajib: pakai Dompet Universal bila bisa; jika tidak, kas boleh minus seperti semula.
+        if (WalletService.canAfford(severance)) WalletService.pay(severance, 'severance');
+        else this.state.setCash(data.cash - severance);
         data.staff.splice(idx, 1);
         this.state.syncTeamCounters();
 
@@ -331,11 +334,11 @@ export class TeamSystem {
         if (s.skill >= 5) return { ok: false, reason: 'Sudah tier tertinggi.' };
 
         const cost = s.salary * 2;
-        if (data.cash < cost) {
+        if (!WalletService.canAfford(cost)) {
             return { ok: false, reason: 'Uang tidak cukup. Butuh $' + cost.toLocaleString('en-US') + '.' };
         }
 
-        this.state.setCash(data.cash - cost);
+        WalletService.pay(cost, 'train');
         s.skillProgress = (s.skillProgress || 0) + 30;
         while (s.skillProgress >= 100 && s.skill < 5) {
             s.skillProgress -= 100;
