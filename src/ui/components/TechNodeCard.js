@@ -1,8 +1,4 @@
 // FILE: src/ui/components/TechNodeCard.js  (REPLACE)
-// ============================================================
-// Komponen baris node riset — dipakai ResearchPanel & ChipResearchPanel.
-// v2028.42 — Replaced emojis with clean inline SVGs for buttons.
-// ============================================================
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
 
@@ -64,9 +60,6 @@ function _formatCost(c) {
     return '$' + c.toLocaleString('en-US');
 }
 
-// ============================================================
-// KOMPONEN NODE UTAMA (TECH TREE)
-// ============================================================
 export function renderTechNodeRow(opts) {
     var node = opts.node;
     if (!node) return '';
@@ -140,9 +133,6 @@ export function renderTechNodeRow(opts) {
         '</div>';
 }
 
-// ============================================================
-// R&D BERKELANJUTAN (UI BARU - COMPACT CAROUSEL CARD)
-// ============================================================
 function _rndMoney(n) { return '$' + Math.round(n || 0).toLocaleString('en-US'); }
 
 var _rndStylesInjected = false;
@@ -214,10 +204,10 @@ export function renderRndRow(info, opts) {
     var currentBonus = (info.statBonus !== undefined ? info.statBonus : info.bonus) || 0;
     var bonusTxt = '+' + currentBonus.toFixed(1).replace(/\.0$/, '') + ' ' + (opts.bonusLabel || '');
 
-    // SVG Icons
     var iconUp = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
     var iconLock = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
     var iconWait = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+    var iconPlus = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 
     var actionHtml = '';
     if (info.status === 'running' && info.running) {
@@ -247,7 +237,25 @@ export function renderRndRow(info, opts) {
 
         actionHtml = '<button class="' + btnCls + '" ' + btnAttr + '>' + btnText + '</button>';
     } else if (info.status === 'locked' && info.blocker === 'slots') {
-        actionHtml = '<button class="rnd-btn-disabled" disabled>' + iconWait + ' Slot R&D Penuh</button>';
+        var slotCost = info.slotCost !== undefined ? info.slotCost : -1;
+        var canAfford = info.canAffordSlot !== false;
+        
+        if (slotCost === -1) {
+            actionHtml = '<button class="rnd-btn-disabled" disabled>' + iconWait + ' Slot Maksimal</button>';
+        } else {
+            var bg = canAfford ? 'var(--success-soft)' : 'var(--bg-3)';
+            var clr = canAfford ? 'var(--success)' : 'var(--text-tertiary)';
+            var brd = canAfford ? '1px solid var(--success)' : '1px solid var(--border)';
+            
+            actionHtml = '<div style="display:flex; flex-direction:column; gap:6px; margin-top:4px;">' +
+                '<div style="font-size:10px; color:var(--warn); text-align:center; font-weight:600;">Slot R&D Penuh</div>' +
+                '<button class="rnd-btn-start" style="background:' + bg + '; color:' + clr + '; border:' + brd + ';" ' +
+                    (canAfford ? attr + '="buy-slot"' : 'disabled') + '>' +
+                    '<span>' + iconPlus + ' Beli Slot Baru</span>' +
+                    '<small>' + _rndMoney(slotCost) + '</small>' +
+                '</button>' +
+            '</div>';
+        }
     } else {
         actionHtml = '<div class="rnd-note">' + iconLock + ' ' + escapeHtml(info.reason || 'Terkunci') + '</div>';
     }
@@ -287,31 +295,10 @@ const RND_CSS = `
 .rnd-buzz-bar i { display: block; height: 100%; background: linear-gradient(90deg, #f59e0b, #ef4444); border-radius: 99px; transition: width .3s; }
 .rnd-buzz b { color: var(--text-primary); font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; }
 
-/* CAROUSEL CONTAINER */
-.rnd-carousel-container {
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    gap: 12px;
-    padding-bottom: 12px;
-    padding-right: 12px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    overscroll-behavior-x: contain;
-    touch-action: pan-x;
-}
+.rnd-carousel-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; padding-bottom: 12px; padding-right: 12px; -webkit-overflow-scrolling: touch; scrollbar-width: none; overscroll-behavior-x: contain; touch-action: pan-x; }
 .rnd-carousel-container::-webkit-scrollbar { display: none; }
 
-/* Kartu Baris R&D (Compact) */
-.rnd-row { 
-    flex: 0 0 84%; 
-    scroll-snap-align: start;
-    background: var(--bg-2); 
-    border: 1px solid var(--border); 
-    border-radius: var(--r-lg); 
-    padding: 12px; 
-    transition: border-color 0.2s;
-}
+.rnd-row { flex: 0 0 84%; scroll-snap-align: start; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 12px; transition: border-color 0.2s; }
 .rnd-row:hover { border-color: var(--border-strong); }
 .rnd-row-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
 .rnd-row-title { font-weight: var(--fw-bold); color: var(--text-primary); font-size: var(--fs-base); letter-spacing: -0.01em; }
@@ -320,14 +307,12 @@ const RND_CSS = `
 .rnd-row-sub { display: flex; justify-content: space-between; align-items: baseline; font-size: var(--fs-xs); color: var(--text-tertiary); margin-bottom: 8px; }
 .rnd-bonus { color: #10b981; font-weight: var(--fw-bold); white-space: nowrap; }
 
-/* Bar Meter */
 .rnd-meter { position: relative; height: 6px; background: var(--bg-4); border-radius: 99px; margin-bottom: 10px; overflow: visible; }
 .rnd-meter i { position: absolute; left: 0; top: 0; height: 100%; border-radius: 99px; }
 .rnd-meter-cap { background: var(--border-strong); opacity: .5; }
 .rnd-meter-fill { background: var(--accent); transition: width 0.3s ease; }
 .rnd-meter-bench { position: absolute; top: -3px; width: 2px; height: 12px; background: var(--warn); border-radius: 2px; text-decoration: none; box-shadow: 0 0 4px var(--warn); }
 
-/* Tombol Aksi */
 .rnd-btn-start { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border: 0; border-radius: var(--r); background: var(--accent-soft); color: var(--accent); font-weight: var(--fw-bold); font-size: var(--fs-sm); cursor: pointer; transition: background 0.2s, color 0.2s; }
 .rnd-btn-start:hover { background: var(--accent); color: #fff; }
 .rnd-btn-start span { display: flex; align-items: center; gap: 6px; }
@@ -335,7 +320,6 @@ const RND_CSS = `
 
 .rnd-btn-disabled { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg-3); color: var(--text-tertiary); font-weight: var(--fw-bold); font-size: var(--fs-sm); cursor: not-allowed; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
-/* State Sedang Riset */
 .rnd-action-box { background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
 .rnd-progress-head { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--text-secondary); font-weight: var(--fw-semibold); }
 .rnd-progress-head b { color: var(--accent); font-variant-numeric: tabular-nums; }
