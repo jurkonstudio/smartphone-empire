@@ -150,7 +150,7 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
         tutorial: { completed: false, skipped: false, currentStep: 0 },
         seenTips: [],
 
-        settings: { vibrate: true, sound: false },
+        settings: { vibrate: true, sound: false, payMode: 'auto', silRescue: false },
 
         // [v2027.3a] Premium currency.
         silicon: 10,

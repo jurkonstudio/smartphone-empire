@@ -17,6 +17,7 @@ import {
     getChipResearchById,
     validateChipResearch
 } from '../data/chip-research.data.js';
+import { WalletService } from '../systems/WalletService.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -222,7 +223,7 @@ export class ChipResearchSystem {
         if (data.chipResearch.active.length >= data.chipResearch.maxSlots) {
             return { status: 'locked', reason: 'Slot chip penuh (' + data.chipResearch.active.length + '/' + data.chipResearch.maxSlots + ')' };
         }
-        if (!ignoreCash && data.cash < node.cost) {
+        if (!ignoreCash && !WalletService.canAfford(node.cost)) {
             return { status: 'locked', reason: 'Uang tidak cukup ($' + node.cost.toLocaleString('en-US') + ')' };
         }
         return { status: 'available', reason: null };
@@ -239,7 +240,7 @@ export class ChipResearchSystem {
             return { ok: false, reason: st.reason || 'Belum bisa dimulai.' };
         }
 
-        if (!paidWithSilicon) this.state.setCash(data.cash - node.cost);
+        if (!paidWithSilicon) WalletService.pay(node.cost, 'chip-research');
 
         const entry = {
             nodeId: node.id,
