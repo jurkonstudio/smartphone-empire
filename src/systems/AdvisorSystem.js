@@ -13,7 +13,11 @@
 //  - Prakiraan kas (dasar & pesimis) + simulasi "bagaimana jika" (rekrut / pinjam).
 //  - Kompatibel penuh dengan AdvisorPanel & main.js (API publik tidak berubah).
 //
-// Tidak mengubah state game selain data.advisor (snooze/jeda toast/snapshot).
+// Tidak mengubah state game selain data.advisor (snooze/jeda toast/snapshot/patch).
+//
+// v2028.42 — Pemberitahuan patch & perbaikan bug: membaca ./patches.json lewat PatchService,
+// menampilkan kartu saran (pembaruan tersedia / patch baru / perbaikan bug), toast sekali per
+// versi, dan tombol "Simpan & muat ulang". Cara merilis: lihat patches.json.
 import { bus } from '../core/EventBus.js';
 import { LanguageService } from '../core/LanguageService.js';
 import { ToastService } from '../core/ToastService.js';
@@ -23,6 +27,7 @@ import { AdvisorBrain } from './AdvisorBrain.js';
 import { ADVISOR_CONFIG } from '../config/advisor.config.js';
 import { createAdvisorProvider } from '../services/AdvisorAI.js';
 import { buildReport, formatReportText } from '../diagnostics/DiagnosticReport.js';
+import { PatchService, cmpVersion } from '../services/PatchService.js';
 
 const DAY = 1440;                 // menit game per hari
 const SNOOZE_DAYS = 30;
@@ -54,6 +59,15 @@ const DICT = {
         'ui.open_report': 'Lihat detail',
         'ui.report_copied': 'Laporan disalin. Kirim ke pengembang.',
         'ui.report_failed': 'Gagal menyalin. Buka detail lalu salin manual.',
+        'ui.patch_reload': 'Simpan & muat ulang',
+        'ui.patch_ack': 'Tandai dibaca',
+        'ui.patch_saved': 'Game disimpan. Memuat versi terbaru…',
+        'patch_update.t': 'Pembaruan v{v} tersedia',
+        'patch_update.d': '{sum} Kamu memakai v{cur}. Simpan lalu muat ulang untuk memakai v{v}.',
+        'patch_fix.t': 'Perbaikan bug v{v} sudah aktif',
+        'patch_fix.d': '{sum}',
+        'patch_new.t': 'Patch baru v{v} sudah aktif',
+        'patch_new.d': '{sum}',
         'app_issue.t': 'Masalah teknis terdeteksi',
         'app_issue.d': '{n} anomali data atau error terdeteksi. Salin laporan dan kirim ke pengembang agar cepat diperbaiki.',
         'ui.briefing': 'Sejak terakhir kamu cek',
@@ -150,6 +164,15 @@ const DICT = {
         'ui.open_report': 'View details',
         'ui.report_copied': 'Report copied. Send it to the developer.',
         'ui.report_failed': 'Copy failed. Open details and copy manually.',
+        'ui.patch_reload': 'Save & reload',
+        'ui.patch_ack': 'Mark as read',
+        'ui.patch_saved': 'Game saved. Loading the latest version…',
+        'patch_update.t': 'Update v{v} is available',
+        'patch_update.d': '{sum} You are on v{cur}. Save, then reload to get v{v}.',
+        'patch_fix.t': 'Bug fixes in v{v} are live',
+        'patch_fix.d': '{sum}',
+        'patch_new.t': 'New patch v{v} is live',
+        'patch_new.d': '{sum}',
         'app_issue.t': 'Technical problem detected',
         'app_issue.d': '{n} data anomalies or errors detected. Copy the report and send it to the developer so it can be fixed.',
         'ui.briefing': 'Since you last checked',
@@ -257,11 +280,41 @@ function arr(a) { return Array.isArray(a) ? a : []; }
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 function sumBy(list, fn) { return arr(list).reduce(function (a, x) { return a + (fn(x) || 0); }, 0); }
 
+// Ringkasan catatan patch (maks 3 butir, perbaikan bug didahulukan).
+function patchSummary(releases, isId) {
+    var fixes = [], other = [];
+    arr(releases).forEach(function (r) {
+        arr(r.items).forEach(function (it) {
+            var t = String((it.text && it.text[isId ? 'id' : 'en']) || '').replace(/[.!\s]+$/, '');
+            if (!t) return;
+            (it.type === 'fix' ? fixes : other).push(t);
+        });
+    });
+    var total = fixes.length + other.length, left = 3, parts = [];
+    var f = fixes.slice(0, left); left -= f.length;
+    var o = other.slice(0, Math.max(0, left));
+    if (f.length) parts.push((isId ? 'Perbaikan bug: ' : 'Bug fixes: ') + f.join('; ') + '.');
+    if (o.length) parts.push((isId ? 'Perubahan: ' : 'Changes: ') + o.join('; ') + '.');
+    var more = total - f.length - o.length;
+    if (more > 0) parts.push(isId ? '(+' + more + ' lainnya)' : '(+' + more + ' more)');
+    return { sum: parts.join(' '), fixes: fixes.length, total: total };
+}
+
 // ------------------------------------------------------------
 // ATURAN. Masing-masing: function (c, push). Dibungkus try/catch.
 // push(id, severity, icon, vars, action, priority)
 // ------------------------------------------------------------
 const RULES = [
+    function patch(c, push) {
+        var p = c.patch;
+        if (!p || !p.kind) return;
+        var tut = c.d.tutorial || {};
+        if (!tut.completed && !tut.skipped) return;          // jangan ganggu tutorial
+        var vars = { v: p.ver, cur: p.cur, n: p.total, fixes: p.fixes, sum: p.sum };
+        var icon = p.fixes ? 'bug' : 'spark';
+        if (p.kind === 'update') push('patch_update', 'warn', icon, vars, { patch: 'reload' }, 1);
+        else push(p.kind === 'fix' ? 'patch_fix' : 'patch_new', 'warn', icon, vars, { patch: 'ack', ver: p.ver }, 2);
+    },
     function cash(c, push) {
         if (c.burn <= 0) return;
         if (c.cash < c.burn) {
@@ -519,6 +572,9 @@ export class AdvisorSystem {
         });
         this._unsubs.push(bus.on('time:day-changed', function () { self._snapshot(); self._maybeToast(); }));
         this._captureErrors();
+        this._unsubs.push(bus.on('state:hydrated', function () { self._patchFreshAck(); }));
+        this._patchFreshAck();
+        PatchService.start(function () { self._onPatchInfo(); });
         if (!this._provider && ADVISOR_CONFIG && ADVISOR_CONFIG.aiEnabled && ADVISOR_CONFIG.endpoint) {
             this.setProvider(createAdvisorProvider(ADVISOR_CONFIG));
         }
@@ -528,6 +584,7 @@ export class AdvisorSystem {
     stop() {
         this._unsubs.forEach(function (u) { try { u(); } catch (e) {} });
         this._unsubs = [];
+        try { PatchService.stop(); } catch (e) {}
         if (this._timer) { clearTimeout(this._timer); this._timer = null; }
     }
 
@@ -642,6 +699,7 @@ export class AdvisorSystem {
             selling: catalog.filter(function (p) { return p.status === 'selling'; }),
             trends: this._trends(),
             diag: this.getDiagnostics(),
+            patch: this.getPatchStatus(),
             recruitCost: function (role) { return self.recruitCostOf(role); },
             bestResearch: function () { return self._bestResearch(c); }
         };
@@ -909,6 +967,9 @@ export class AdvisorSystem {
         try {
             if (g) L.push(formatReportText(buildReport(g.state.get(), g, { detailed: true })));
         } catch (e) { L.push('(laporan dasar gagal dibuat: ' + (e && e.message) + ')'); }
+        var pinfo = PatchService.getInfo();
+        L.push('');
+        L.push('App version: v' + PatchService.current() + (pinfo ? ' (latest on server: v' + pinfo.latest + ')' : ' (patch check: n/a)'));
         var dg = this.getDiagnostics();
         L.push('');
         L.push('--- RUNTIME ERRORS (' + dg.errors.length + ') ---');
@@ -981,6 +1042,90 @@ export class AdvisorSystem {
         this._scheduleRefresh();
     }
 
+    // ---------- patch & perbaikan bug ----------
+    _patchStore() {
+        var st = this._store();
+        if (!st.patch || typeof st.patch !== 'object') st.patch = {};
+        return st.patch;
+    }
+
+    // { checked, cur, latest, kind: 'update'|'fix'|'new'|null, ver, sum, fixes, total, lastVer, lastSum }
+    //  - update : server punya versi lebih baru dari yang sedang berjalan
+    //  - fix/new: versi yang berjalan punya catatan yang belum ditandai dibaca
+    getPatchStatus() {
+        var isId = curLang() === 'id';
+        var info = PatchService.getInfo();
+        var cur = PatchService.current();
+        var out = { checked: !!info, cur: cur, latest: info ? info.latest : null,
+                    kind: null, ver: null, sum: '', fixes: 0, total: 0, lastVer: null, lastSum: '' };
+        if (!info) return out;
+        var past = PatchService.releasesAfter('0.0.0', cur);
+        if (past.length) { out.lastVer = past[0].version; out.lastSum = patchSummary([past[0]], isId).sum; }
+        var rel;
+        if (cmpVersion(info.latest, cur) > 0) {
+            rel = PatchService.releasesAfter(cur);
+            out.kind = 'update';
+            out.ver = info.latest;
+        } else {
+            var ack = this._patchStore().ack || '0.0.0';
+            rel = PatchService.releasesAfter(ack, cur);
+            if (!rel.length) return out;
+            out.ver = rel[0].version;
+        }
+        var s = patchSummary(rel, isId);
+        out.sum = s.sum; out.fixes = s.fixes; out.total = s.total;
+        if (!out.kind) out.kind = s.fixes ? 'fix' : 'new';
+        return out;
+    }
+
+    // Game yang baru dimulai tidak perlu diberi tahu soal patch yang sudah ikut dari awal.
+    _patchFreshAck() {
+        var d = this.state.data;
+        if (!d || !d.time) return;
+        var st = this._patchStore();
+        if (!st.ack && (d.time.elapsedGameMinutes || 0) < 3 * DAY) st.ack = PatchService.current();
+    }
+
+    _onPatchInfo() {
+        this._patchFreshAck();
+        this._lastSig = '';                    // paksa badge & panel diperbarui
+        this._scheduleRefresh();
+        this._patchNotify();
+    }
+
+    // Toast sekali per (jenis, versi). Tertunda otomatis selama tutorial.
+    _patchNotify() {
+        var d = this.state.data;
+        if (!d || !d.time) return;
+        var tut = d.tutorial || {};
+        if (!tut.completed && !tut.skipped) return;
+        var p = this.getPatchStatus();
+        if (!p.kind) return;
+        var st = this._patchStore();
+        var key = p.kind + ':' + p.ver;
+        if (st.notified === key) return;
+        st.notified = key;
+        var base = p.kind === 'update' ? 'patch_update' : (p.kind === 'fix' ? 'patch_fix' : 'patch_new');
+        try { ToastService.warning(tx(base + '.t', { v: p.ver, cur: p.cur }), 6000); } catch (e) {}
+    }
+
+    // Tandai catatan patch sudah dibaca (ver = versi tertinggi yang diakui).
+    ackPatch(ver) {
+        var st = this._patchStore();
+        var v = String(ver || PatchService.current());
+        if (!st.ack || cmpVersion(v, st.ack) > 0) st.ack = v;
+        this._lastSig = '';
+        this._scheduleRefresh();
+    }
+
+    // Simpan permainan lalu muat ulang halaman agar versi terbaru terpakai.
+    applyUpdate() {
+        var g = this._gameRef();
+        try { if (g && g.SaveService) g.SaveService.save(g.state); } catch (e) {}
+        try { ToastService.success(tx('ui.patch_saved')); } catch (e) {}
+        setTimeout(function () { try { window.location.reload(); } catch (e) {} }, 700);
+    }
+
     // ---------- refresh & toast ----------
     _scheduleRefresh() {
         var self = this;
@@ -988,7 +1133,8 @@ export class AdvisorSystem {
         this._timer = setTimeout(function () {
             self._timer = null;
             var b = self.getBadge();
-            var sig = b.count + ':' + b.critical + ':' + b.total + ':' + curLang();
+            var pi = PatchService.getInfo();
+            var sig = b.count + ':' + b.critical + ':' + b.total + ':' + curLang() + ':' + (pi ? pi.latest : '') + ':' + ((self._patchStore().ack) || '');
             if (sig !== self._lastSig) {
                 self._lastSig = sig;
                 bus.emit('advisor:updated', b);
@@ -999,6 +1145,7 @@ export class AdvisorSystem {
     _maybeToast() {
         var d = this.state.data;
         if (!d || !d.time) return;
+        this._patchNotify();                                    // patch tertunda (mis. saat tutorial)
         var tut = d.tutorial || {};
         if (!tut.completed && !tut.skipped) return;            // jangan ganggu tutorial
         var day = Math.floor((d.time.elapsedGameMinutes || 0) / DAY);
@@ -1011,6 +1158,7 @@ export class AdvisorSystem {
         for (var i = 0; i < list.length; i++) {
             var a = list[i];
             if (a.sev !== 'critical' && a.sev !== 'warn') continue;
+            if (a.id.indexOf('patch_') === 0) continue;         // sudah ditangani _patchNotify
             var last = store.toasted[a.id];
             if (typeof last === 'number' && now - last < TOAST_COOLDOWN_DAYS * DAY) continue;
             store.toasted[a.id] = now;

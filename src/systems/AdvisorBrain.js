@@ -128,6 +128,7 @@ var INTENT_LABEL = {
 
 INTENT_LABEL.briefing = ['perubahan terbaru', 'recent changes'];
 INTENT_LABEL.bug = ['masalah aplikasi', 'app problem'];
+INTENT_LABEL.patch = ['patch & pembaruan', 'patches & updates'];
 
 // Penjelasan awam untuk kode anomali dari DiagnosticReport.
 var ALERT_TEXT = {
@@ -339,6 +340,12 @@ export class AdvisorBrain {
             return this._run('briefing', { detail: false, text: text, product: null, toks: tokens(text) }, 0.9);
         }
 
+        // "ada patch baru?" / "sudah ada perbaikan bug?" -> catatan patch (bukan soal OS dalam game)
+        if (!/\bos\b|sistem operasi|operating system/.test(nqb) &&
+            (/\b(patch|hotfix|changelog|release notes?)\b|catatan (rilis|patch|perubahan)|bug ?fix(es)?|perbaikan bug|bug (sudah )?(diperbaiki|difix|fixed)|(update|pembaruan|versi) (game|aplikasi|app|baru|terbaru)|(game|app|aplikasi) (update|versi)|new version|latest version|(ada|any|cek|check|is there|apakah).*(update|pembaruan)/.test(nqb))) {
+            return this._run('patch', { detail: false, text: text, product: null, toks: tokens(text) }, 0.9);
+        }
+
         // Laporan masalah aplikasi (bukan bug OS dalam game)
         if (/(aplikasi|app|game|permainan).*(bug|error|eror|rusak|macet|hang|crash|lag|freeze)|(bug|error|eror|rusak|macet|hang|crash|freeze).*(aplikasi|app|game|permainan)|lapor(kan)? (bug|error|masalah)|bug report|ada (error|eror)|force close|layar (putih|hitam)|(tidak|ga|gak|nggak) (bisa|jalan|respon|muncul)|something (broke|is broken|went wrong)|not working|does not work|doesn t work|keluar sendiri/.test(nqb)) {
             return this._run('bug', { detail: false, text: text, product: null, toks: tokens(text) }, 0.9);
@@ -468,6 +475,31 @@ export class AdvisorBrain {
                  intent: 'ref', confidence: 1 };
     }
 
+    _h_patch() {
+        var L = this.L.bind(this), p = this.sys.getPatchStatus();
+        var lines = [], acts = [];
+        if (!p.checked) {
+            lines.push(L('Aku belum bisa memeriksa patch sekarang (mungkin kamu sedang offline). Kamu memakai **v' + p.cur + '**. Coba tanya lagi sebentar lagi.',
+                         'I can\'t check for patches right now (you may be offline). You are on **v' + p.cur + '**. Ask again in a moment.'));
+        } else if (p.kind === 'update') {
+            lines.push(L('Ada **pembaruan v' + p.ver + '** (kamu di v' + p.cur + ').', 'There is an **update v' + p.ver + '** (you are on v' + p.cur + ').'));
+            if (p.sum) lines.push(p.sum);
+            lines.push(L('Simpan lalu muat ulang agar versi terbaru terpakai.', 'Save, then reload to get the latest version.'));
+            acts.push({ label: L('Simpan & muat ulang', 'Save & reload'), patch: 'reload' });
+        } else if (p.kind) {
+            lines.push(p.kind === 'fix'
+                ? L('Versi **v' + p.ver + '** membawa perbaikan bug:', '**v' + p.ver + '** brought bug fixes:')
+                : L('Versi **v' + p.ver + '** membawa perubahan baru:', '**v' + p.ver + '** brought new changes:'));
+            if (p.sum) lines.push(p.sum);
+            acts.push({ label: L('Tandai dibaca', 'Mark as read'), patch: 'ack', ver: p.ver });
+        } else {
+            lines.push(L('Kamu sudah memakai versi terbaru (**v' + p.cur + '**).', 'You are on the latest version (**v' + p.cur + '**).'));
+            if (p.lastSum) lines.push(L('Catatan terakhir (v' + p.lastVer + '): ', 'Latest notes (v' + p.lastVer + '): ') + p.lastSum);
+        }
+        return { text: lines.join('\n'), actions: acts,
+                 chips: [L('Kondisi bisnis', 'Business status'), L('Apa prioritas sekarang?', 'What should I do now?')] };
+    }
+
     _h_bug() {
         var L = this.L.bind(this), d = this.sys.getDiagnostics(), lang = this.lang() === 'id' ? 0 : 1;
         var lines = [];
@@ -550,6 +582,8 @@ export class AdvisorBrain {
 
     _actionFor(a) {
         if (a.action && a.action.report) return { label: this.L('Salin laporan bug', 'Copy bug report'), report: 'copy' };
+        if (a.action && a.action.patch === 'reload') return { label: this.L('Simpan & muat ulang', 'Save & reload'), patch: 'reload' };
+        if (a.action && a.action.patch) return { label: this.L('Tandai dibaca', 'Mark as read'), patch: 'ack', ver: a.action.ver };
         var nav = a.action.nav, sub = a.action.subtab || null;
         var tg = NAV_TARGETS.filter(function (t) { return t.nav === nav && t.subtab === sub; })[0] ||
                  NAV_TARGETS.filter(function (t) { return t.nav === nav; })[0];
