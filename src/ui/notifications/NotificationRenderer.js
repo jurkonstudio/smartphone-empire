@@ -2,6 +2,7 @@
 // v3.2 — [DEEP GLASSMORPHISM] Menyesuaikan warna, blur, dan border agar persis seperti iCloud.
 import { t } from '../../core/LanguageService.js';
 import { bus } from '../../core/EventBus.js';
+import { NotificationPrefs } from '../../core/NotificationPrefs.js';
 
 var MAX_ACTIVE = 3;
 var MIN_MS = 2800;
@@ -413,7 +414,7 @@ function renderPanelList() {
     clr.disabled = _history.length === 0;
     sub.textContent = _history.length ? t('notif.panel.count', { n: _history.length }) : '';
     if (!_history.length) {
-        list.innerHTML = '<div class="np-empty">' + BELL_ICON + '<div>' + escapeHtml(t('notif.panel.empty')) + '</div></div>';
+        list.innerHTML = '<div class="np-empty">' + BELL_ICON + '<div>' + escapeHtml(t(NotificationPrefs.isEnabled() ? 'notif.panel.empty' : 'notif.panel.off')) + '</div></div>';
         return;
     }
     var html = '';
