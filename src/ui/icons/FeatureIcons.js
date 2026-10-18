@@ -121,6 +121,8 @@ export var FEATURE_ICONS = {
     film:           '<rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/>',
 
     // ==================== V0.5 — NEW OUTLINE ICONS ====================
+    users:          '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    'trending-up':  '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
     coin:           '<circle cx="12" cy="12" r="9"/><path d="M12 6.5v11M15 9.5a3 3 0 0 0-6 0c0 3 6 3 6 6a3 3 0 0 1-6 0"/>',
     check:          '<polyline points="20 6 9 17 4 12"/>',
     hourglass:      '<path d="M5 3h14M5 21h14M7 3v3l5 5 5-5V3M7 21v-3l5-5 5 5v3"/>',
