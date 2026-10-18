@@ -140,6 +140,49 @@ export const BALANCE = {
         majorVersionStart: 1
     },
 
+    // ============================================================
+    // R&D BERKELANJUTAN (v2028.36)
+    // Riset dasar membuka teknologi; R&D lanjutan menaikkan LEVEL teknologi
+    // tanpa batas akhir semu. Pasar punya "standar teknologi" yang naik tiap
+    // tahun, jadi produk yang memakai riset lama perlahan terasa usang.
+    // ============================================================
+    rnd: {
+        maxLevel: 20,
+        benchmarkPerYear: 0.5,          // standar level teknologi pasar naik 0.5/tahun
+        capPerCompletedNode: 2,         // batas level = 2 + 2 x riset dasar selesai di kategori
+        capBase: 2,
+        capYearBase: 3,                 // batas level juga dibatasi zaman: 3 + 0.9 x (tahun-2000)
+        capYearPerYear: 0.9,
+        baseCost: { display: 15000, camera: 15000, battery: 12000, chip: 20000, network: 14000 },
+        costGrowth: 1.32,
+        yearCostInflation: 0.03,
+        baseDays: 12,
+        daysGrowth: 1.10,
+        maxDays: 120,
+        slotsBase: 1,                   // slot R&D lanjutan (terpisah dari slot riset dasar)
+        engineersPerExtraSlot: 5,
+        maxSlots: 3,
+        statPerLevel: 0.6,              // bonus stat produk per level
+        statCap: 10,
+        edge: { perLevel: 0.025, min: 0.88, max: 1.30 },
+        buzz: {
+            perNode: 6, perTier: 3,     // riset dasar selesai
+            perRefineBase: 5, perRefineLevel: 0.6,
+            osPlatformBase: 5, osPlatformPerLevel: 0.5,
+            max: 60, decayPerMonth: 0.80,
+            demandPerPoint: 0.0035, maxDemandBonus: 0.20,
+            reputationPerLevel: 0.15, reputationPerNode: 0.3
+        },
+        os: {
+            maxLevel: 20,
+            baseCost: 20000, costGrowth: 1.30, yearCostInflation: 0.03,
+            baseDays: 14, daysGrowth: 1.10, maxDays: 120,
+            statPerLevel: 1.0,
+            capBase: 3, capPerFeature: 1,
+            licenseGrowthPerYear: 1.0, licenseGrowthCap: 20
+        }
+    },
+
     products: {
         baseMarketDemand: {
             feature_phone:     5000,
