@@ -94,7 +94,11 @@ function renderItems(advisor, all) {
     var list = advisor.getAdvice();
     var shown = all ? list : list.slice(0, 2);
     return shown.map(function (a) {
-        var go = (a.action && a.action.report)
+        var go = (a.action && a.action.patch)
+            ? (a.action.patch === 'reload'
+                ? '<button class="btn-primary advisor-btn" type="button" data-adv-patch="reload">' + esc(tx('ui.patch_reload')) + '</button>'
+                : '<button class="btn-primary advisor-btn" type="button" data-adv-patch="ack" data-adv-ver="' + esc(a.action.ver || '') + '">' + esc(tx('ui.patch_ack')) + '</button>')
+            : (a.action && a.action.report)
             ? '<button class="btn-primary advisor-btn" type="button" data-adv-report="copy">' + esc(tx('ui.copy_report')) + '</button>' +
               '<button class="btn-secondary advisor-btn" type="button" data-adv-report="open">' + esc(tx('ui.open_report')) + '</button>'
             : a.action
@@ -147,6 +151,7 @@ function renderMsg(m) {
     if (m.role === 'bot' && m.actions && m.actions.length) {
         acts = '<div class="adv-acts">' + m.actions.map(function (a) {
             if (a.report) return '<button class="btn-primary advisor-btn" type="button" data-adv-report="' + esc(a.report) + '">' + esc(a.label) + '</button>';
+            if (a.patch) return '<button class="btn-primary advisor-btn" type="button" data-adv-patch="' + esc(a.patch) + '" data-adv-ver="' + esc(a.ver || '') + '">' + esc(a.label) + '</button>';
             return '<button class="btn-primary advisor-btn" type="button" data-adv-go="1" data-adv-nav="' + esc(a.nav) +
                 '" data-adv-subtab="' + esc(a.subtab || '') + '">' + esc(a.label) + gIcon('arrow-right', 14) + '</button>';
         }).join('') + '</div>';
@@ -264,6 +269,14 @@ export function openAdvisor(advisor) {
         var goBtn = e.target.closest('[data-adv-go]');
         if (goBtn) {
             bus.emit('advisor:go', { nav: goBtn.dataset.advNav, subtab: goBtn.dataset.advSubtab || null });
+            return;
+        }
+        var pt = e.target.closest('[data-adv-patch]');
+        if (pt) {
+            if (pt.dataset.advPatch === 'reload') { advisor.applyUpdate(); pt.disabled = true; return; }
+            advisor.ackPatch(pt.dataset.advVer);
+            pt.disabled = true;
+            node.querySelector('[data-adv-list]').innerHTML = renderItems(advisor, showAll);
             return;
         }
         var rep = e.target.closest('[data-adv-report]');
