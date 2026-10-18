@@ -25,6 +25,8 @@ function _esc(s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
+// [i18n] Teks ter-escape dari kamus (kunci silstore.*), dipakai di template HTML.
+function _e(k, vars) { return _esc(t('silstore.' + k, vars)); }
 function _tf(key, fb, vars) {
     var v = t(key, vars);
     return (v && v !== key) ? v : fb;
@@ -46,10 +48,10 @@ function _getExchangePackages() {
     var multiplier = getCashPerSil(state.get().time.currentYear || 2000) / 2500;
     
     return [
-        { sil: 10,  cash: Math.round(25000 * multiplier),  label: 'Kantong Kecil' },
-        { sil: 50,  cash: Math.round(150000 * multiplier), label: 'Kantong Besar' },
-        { sil: 100, cash: Math.round(400000 * multiplier), label: 'Koper Uang' },
-        { sil: 500, cash: Math.round(2500000 * multiplier), label: 'Truk Brinks' }
+        { sil: 10,  cash: Math.round(25000 * multiplier),  label: t('silstore.exch.pkg.small') },
+        { sil: 50,  cash: Math.round(150000 * multiplier), label: t('silstore.exch.pkg.big') },
+        { sil: 100, cash: Math.round(400000 * multiplier), label: t('silstore.exch.pkg.suitcase') },
+        { sil: 500, cash: Math.round(2500000 * multiplier), label: t('silstore.exch.pkg.truck') }
     ];
 }
 
@@ -68,11 +70,11 @@ function _renderExchangeTab() {
                     <div style="color:var(--accent); font-weight:bold;">${p.sil} SIL</div>
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="font-size:12px; color:var(--text-tertiary);">Mendapatkan Uang:</div>
+                    <div style="font-size:12px; color:var(--text-tertiary);">${_e('exch.you_get')}</div>
                     <div style="color:var(--success); font-weight:bold; font-size:16px;">$${p.cash.toLocaleString('en-US')}</div>
                 </div>
                 <button class="btn-exchange" data-sil="${p.sil}" data-cash="${p.cash}" style="width:100%; padding:8px; border-radius:8px; border:none; font-weight:bold; font-size:13px; ${btnStyle}" ${canAfford ? '' : 'disabled'}>
-                    ${canAfford ? 'Tukar Sekarang' : 'Silicon Kurang'}
+                    ${canAfford ? _e('exch.btn') : _e('exch.short')}
                 </button>
             </div>
         `;
@@ -80,7 +82,7 @@ function _renderExchangeTab() {
 
     return `
         <div style="font-size:12px; color:var(--text-secondary); margin-bottom:16px; text-align:center;">
-            Tukarkan Silicon premiummu dengan Uang Tunai untuk mempercepat pertumbuhan perusahaan.
+            ${_e('exch.intro')}
         </div>
         ${cards}
     `;
@@ -88,14 +90,14 @@ function _renderExchangeTab() {
 
 function _handleExchange(silCost, cashReward) {
     if (SiliconService.getBalance() < silCost) {
-        ToastService.error('Saldo Silicon tidak mencukupi.');
+        ToastService.error(t('silstore.exch.low_balance'));
         return;
     }
 
     // 1. Potong Silicon (Aman, tersinkron dengan Supabase jika login)
     var res = SiliconService.spendRaw(silCost, 'exchange-cash');
     if (!res.ok) {
-        ToastService.error(res.reason || 'Gagal memotong Silicon.');
+        ToastService.error(res.reason || t('silstore.exch.spend_fail'));
         return;
     }
 
@@ -103,7 +105,7 @@ function _handleExchange(silCost, cashReward) {
     state.addCash(cashReward);
     
     // 3. Notifikasi & Render Ulang
-    ToastService.success(`Berhasil menukar ${silCost} SIL menjadi $${cashReward.toLocaleString('en-US')}!`);
+    ToastService.success(t('silstore.exch.done', { sil: silCost, cash: cashReward.toLocaleString('en-US') }));
     
     // Mainkan suara sukses
     if (window.__game && window.__game.AudioService) {
@@ -210,8 +212,8 @@ function _build() {
         
         // Tab Switcher
         '<div style="display:flex; gap:8px; margin-bottom:16px;">' +
-            '<button id="tab-buy" style="flex:1; padding:10px; border-radius:8px; border:none; font-weight:bold; font-size:13px; cursor:pointer; ' + btnBuyStyle + '">Beli Silicon</button>' +
-            '<button id="tab-exchange" style="flex:1; padding:10px; border-radius:8px; border:none; font-weight:bold; font-size:13px; cursor:pointer; ' + btnExStyle + '">Tukar ke Uang</button>' +
+            '<button id="tab-buy" style="flex:1; padding:10px; border-radius:8px; border:none; font-weight:bold; font-size:13px; cursor:pointer; ' + btnBuyStyle + '">' + _e('tab.buy') + '</button>' +
+            '<button id="tab-exchange" style="flex:1; padding:10px; border-radius:8px; border:none; font-weight:bold; font-size:13px; cursor:pointer; ' + btnExStyle + '">' + _e('tab.exchange') + '</button>' +
         '</div>' +
 
         (isBuy ? _renderBuyTab() : _renderExchangeTab()) +
@@ -232,7 +234,7 @@ function _onClick(e) {
     if (exBtn && !exBtn.disabled) {
         var sil = parseInt(exBtn.dataset.sil, 10);
         var cash = parseInt(exBtn.dataset.cash, 10);
-        if (confirm(`Tukar ${sil} SIL menjadi $${cash.toLocaleString('en-US')}?`)) {
+        if (confirm(t('silstore.exch.confirm', { sil: sil, cash: cash.toLocaleString('en-US') }))) {
             _handleExchange(sil, cash);
         }
         return;
@@ -287,19 +289,19 @@ function _showPaymentModal(order) {
     var mockBtnHtml = DEV_BUILD ? `
         <div style="margin-top:24px; padding-top:16px; border-top:1px dashed var(--border); text-align:center;">
             <button type="button" data-qr-mock style="background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger); padding:8px; border-radius:8px; font-size:11px; width:100%; cursor:pointer;">
-                [DEV ONLY] Simulasi Sukses
+                ${_e('qr.mock')}
             </button>
         </div>
     ` : '';
 
     var html = `
-        <div class="modal-title" style="text-align:center; font-size:18px;">Selesaikan Pembayaran</div>
+        <div class="modal-title" style="text-align:center; font-size:18px;">${_e('qr.title')}</div>
         <div class="modal-sub" style="text-align:center; margin-bottom:16px;">
-            Sisa waktu: <b id="qr-timer" style="color:var(--danger); font-family:monospace; font-size:14px;">15:00</b>
+            ${_e('qr.time_left')} <b id="qr-timer" style="color:var(--danger); font-family:monospace; font-size:14px;">15:00</b>
         </div>
         
         <div style="text-align:center; margin-bottom:12px;">
-            <div style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">Total Tagihan:</div>
+            <div style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">${_e('qr.total')}</div>
             <div style="font-size:24px; font-weight:bold; color:var(--accent);">${_price(pkg)}</div>
         </div>
 
@@ -308,13 +310,13 @@ function _showPaymentModal(order) {
         </div>
 
         <div style="font-size:13px; color:var(--text-secondary); text-align:center; margin-bottom:16px; line-height:1.5;">
-            Scan QRIS di atas menggunakan aplikasi GoPay, OVO, Dana, atau M-Banking.<br>
-            <b>PENTING:</b> Cantumkan Order ID <b>${_esc(order.id)}</b> pada berita transfer (jika ada).
+            ${_e('qr.scan')}<br>
+            <b>${_e('qr.important')}</b> ${_e('qr.note_pre')} <b>${_esc(order.id)}</b> ${_e('qr.note_post')}
         </div>
 
         <div style="display:flex; flex-direction:column; gap:8px;">
-            <button type="button" class="btn-primary" data-qr-check style="width:100%;">Saya Sudah Transfer (Cek Status)</button>
-            <button type="button" class="btn-secondary" data-qr-cancel style="width:100%;">Batalkan Pesanan</button>
+            <button type="button" class="btn-primary" data-qr-check style="width:100%;">${_e('qr.check')}</button>
+            <button type="button" class="btn-secondary" data-qr-cancel style="width:100%;">${_e('qr.cancel')}</button>
         </div>
         
         ${mockBtnHtml}
@@ -332,7 +334,7 @@ function _showPaymentModal(order) {
         if (approvedId === order.id) {
             cleanupTimers();
             Modal.close('payment-qr', true);
-            ToastService.success('Pembayaran disetujui Admin!');
+            ToastService.success(t('silstore.toast.approved'));
             setTimeout(() => window.__game.forcePull(), 300);
         }
     });
@@ -341,7 +343,7 @@ function _showPaymentModal(order) {
         if (payload && payload.delta > 0) {
             cleanupTimers();
             Modal.close('payment-qr', true);
-            ToastService.success('Pembayaran Berhasil! Saldo telah disinkronkan.');
+            ToastService.success(t('silstore.toast.paid_synced'));
             _render();
         }
     }
@@ -375,25 +377,25 @@ function _showPaymentModal(order) {
         
         if (timeLeft <= 0) {
             cleanupTimers();
-            ToastService.error('Waktu pembayaran habis.');
+            ToastService.error(t('silstore.toast.expired'));
             Modal.close('payment-qr', true);
         }
     }, 1000);
 
     function checkStatus(isManual) {
-        if (isManual) btnCheck.textContent = 'Mengecek...';
+        if (isManual) btnCheck.textContent = t('silstore.qr.checking');
         PaymentService.refresh(order.id).then(function(r) {
             var isPaid = r.ok && (r.sil || (r.order && r.order.status === 'paid'));
             
             if (isPaid) {
                 cleanupTimers();
                 Modal.close('payment-qr', true);
-                ToastService.success('Pembayaran Berhasil!');
+                ToastService.success(t('silstore.toast.paid'));
                 _render();
             } else {
                 if (isManual) {
-                    btnCheck.textContent = 'Saya Sudah Transfer (Cek Status)';
-                    ToastService.warning('Pembayaran belum dikonfirmasi Admin.');
+                    btnCheck.textContent = t('silstore.qr.check');
+                    ToastService.warning(t('silstore.toast.not_confirmed'));
                 }
             }
         });
@@ -417,7 +419,7 @@ function _showPaymentModal(order) {
             PaymentService._fulfill(order); 
             cleanupTimers();
             Modal.close('payment-qr', true);
-            ToastService.success('(MOCK) Pembayaran Berhasil!');
+            ToastService.success(t('silstore.toast.mock_paid'));
             _render();
         });
     }
@@ -441,3 +443,4 @@ export function openSiliconStoreModal() {
 }
 
 bus.on('silicon:changed', function () { _render(); });
+bus.on('lang:changed', function () { _render(); });
