@@ -1,8 +1,11 @@
 // FILE: src/ui/panels/CompetitorDetailModal.js
 // v2027.14b — biografi transparan: factuality badge, milestones
 // dengan penanda verified, trivia, sumber.
+// v2027.50 — i18n tuntas: render dipisah (_buildHtml) + listener
+//           lang:changed supaya modal yang terbuka ganti bahasa langsung.
 import { Modal } from '../modal.js';
 import { t } from '../../core/LanguageService.js';
+import { bus } from '../../core/EventBus.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -57,10 +60,7 @@ function _factualityBadge(factuality) {
         _tf('market.comp_detail.fact_fictional', 'Fiksi untuk gameplay') + '</div>';
 }
 
-export function openCompetitorDetailModal(params) {
-    var competitorData = params.competitorData;
-    if (!competitorData) return;
-    const c = competitorData;
+function _buildHtml(c) {
 
     // ==== Badge factuality ====
     const badgeHtml = _factualityBadge(c.factuality);
@@ -204,5 +204,33 @@ export function openCompetitorDetailModal(params) {
 
         <button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">${t('market.comp_detail.close')}</button>
     `;
-    Modal.open('competitor-detail', html);
+    return html;
+}
+
+// ============================================================
+// OPEN + LANG CHANGE
+// ============================================================
+var _current = null;   // data kompetitor yang sedang tampil di modal
+var _langBound = false;
+
+function _show(c) {
+    Modal.open('competitor-detail', _buildHtml(c), {
+        onClose: function () { _current = null; }
+    });
+}
+
+function _bindLang() {
+    if (_langBound) return;
+    _langBound = true;
+    bus.on('lang:changed', function () {
+        if (_current && Modal.isOpen('competitor-detail')) _show(_current);
+    });
+}
+_bindLang();
+
+export function openCompetitorDetailModal(params) {
+    var competitorData = params && params.competitorData;
+    if (!competitorData) return;
+    _current = competitorData;
+    _show(competitorData);
 }
