@@ -4510,3 +4510,57 @@ html[data-perf="lite"] .mobile-nav { background: rgba(250,250,252,0.98) !importa
 html[data-perf="lite"][data-theme="dark"] .mobile-nav { background: rgba(28,28,30,0.98) !important; }
 /* layar OLED/LCD hemat: tidak ada lagi gradien fixed yang di-repaint saat scroll */
 html[data-perf="lite"] body { background-attachment: scroll !important; }
+/* ============================================================================
+   UX POLISH: STICKY HEADER & OS SUB-TABS
+   ============================================================================ */
+
+/* Sticky Search & Filter (Hanya menempel di dalam area pandang) */
+.sticky-header-area {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg-0);
+    padding-top: 4px;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    /* Efek bayangan tipis saat menempel */
+    box-shadow: 0 4px 12px -6px rgba(0,0,0,0.3); 
+}
+
+/* Navigasi Tab di dalam Panel OS */
+.os-subtabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    background: var(--bg-2);
+    padding: 4px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.os-subtabs::-webkit-scrollbar { display: none; }
+.os-subtab-btn {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
+    background: transparent;
+    color: var(--text-secondary);
+    border: none;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+}
+.os-subtab-btn.active {
+    background: var(--bg-4);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Utilitas Animasi Halus */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
