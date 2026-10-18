@@ -1,9 +1,11 @@
-// FILE: src/ui/campus/CampusInfo.js
+// FILE: src/ui/campus/CampusInfo.js  (REPLACE — i18n)
 // v2027.44 (Tahap 4) — Data kartu info bangunan: nama, level, progres ke level berikutnya,
 // petunjuk, dan tujuan navigasi. Murni logika (tanpa THREE / DOM) supaya gampang dites.
-// Dua bahasa (id / en) ditaruh di file ini agar tidak perlu menyentuh file i18n besar.
+// i18n: semua teks dicari lewat t() (key campus.info.*); tabel [id, en] di file ini
+// tetap dipakai sebagai FALLBACK bila key belum ada di kamus. Ganti bahasa ditangani
+// CampusMap (bus 'lang:changed' → scene.refreshLang() → getUiStrings()/getBuildingInfo()).
 import { RULES } from './CampusBuildings.js';
-import { LanguageService } from '../../core/LanguageService.js';
+import { t, LanguageService } from '../../core/LanguageService.js';
 
 var ICONS = {
     hq: '🏢', lab: '🔬', factory: '🏭', store: '🏬', os: '🖥️', monument: '🏆',
@@ -84,19 +86,29 @@ function fmt(n) {
 }
 function clamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
 
+// t() dengan fallback dari tabel [id, en] bila key belum ada di kamus.
+function _tf(key, pair, vars) {
+    var v = t(key, vars);
+    if (v && v !== key) return v;
+    return pair ? fill(pair[langIdx()], vars) : key;
+}
+function _ui(k, vars) { return _tf('campus.info.ui.' + k, [UI[0][k], UI[1][k]], vars); }
+function _name(id) { return _tf('campus.info.name.' + id, NAMES[id]); }
+function _desc(id) { return _tf('campus.info.desc.' + id, DESC[id]); }
+function _unit(id) { return _tf('campus.info.unit.' + id, UNITS[id]); }
+function _view(v) { return _tf('campus.info.view.' + v, VIEW_LABEL[v]); }
+
 export function getUiStrings() {
-    var s = UI[langIdx()];
     return {
-        close: s.close, reset: s.reset, zin: s.zin, zout: s.zout, bannerSub: s.bannerSub,
-        built: function (name) { return fill(s.built, { name: name }); },
-        up: function (name, lv) { return fill(s.up, { name: name, lv: lv }); },
-        multi: function (n) { return fill(s.multi, { n: n }); }
+        close: _ui('close'), reset: _ui('reset'), zin: _ui('zin'), zout: _ui('zout'), bannerSub: _ui('bannerSub'),
+        built: function (name) { return _ui('built', { name: name }); },
+        up: function (name, lv) { return _ui('up', { name: name, lv: lv }); },
+        multi: function (n) { return _ui('multi', { n: n }); }
     };
 }
 
 export function getBuildingName(id) {
-    var n = NAMES[id];
-    return n ? n[langIdx()] : String(id);
+    return NAMES[id] ? _name(id) : String(id);
 }
 
 export function hasCelebration(id) { return !!RULES[id]; }
@@ -104,15 +116,15 @@ export function hasCelebration(id) { return !!RULES[id]; }
 // Mengembalikan struktur siap-render untuk kartu info, atau null bila id tidak dikenal.
 export function getBuildingInfo(id, plan, data) {
     if (!plan || !NAMES[id]) return null;
-    var L = langIdx(), s = UI[L];
+    var L = langIdx();
     var info = {
-        id: id, icon: ICONS[id] || '🏗️', name: NAMES[id][L], desc: DESC[id][L],
+        id: id, icon: ICONS[id] || '🏗️', name: _name(id), desc: _desc(id),
         level: 0, max: 0, hasLevels: false, pct: 0, maxed: false, hint: '', levelText: '', nav: null
     };
     var r = RULES[id];
     if (!r) {
-        info.levelText = s.decor;
-        info.hint = id === 'sprawl' ? fill(s.blocks, { n: plan.sprawl || 0 }) : '';
+        info.levelText = _ui('decor');
+        info.hint = id === 'sprawl' ? _ui('blocks', { n: plan.sprawl || 0 }) : '';
     } else {
         var lv = plan.levels[id] || 0;
         var m = r.metric(data || {});
@@ -120,23 +132,23 @@ export function getBuildingInfo(id, plan, data) {
         info.hasLevels = true;
         info.level = lv;
         info.max = r.max;
-        info.levelText = fill(s.levelOf, { lv: lv, max: r.max });
+        info.levelText = _ui('levelOf', { lv: lv, max: r.max });
         if (lv >= r.max) {
             info.maxed = true;
             info.pct = 1;
-            info.hint = s.maxed;
+            info.hint = _ui('maxed');
         } else {
             var idx = lv - r.base;                      // langkah berikutnya
             var need = r.steps[idx];
             var prev = idx > 0 ? r.steps[idx - 1] : 0;
             info.pct = clamp01((m - prev) / Math.max(1e-9, need - prev));
             var left = id === 'monument' ? Math.max(0, Math.round((need - m) * 10) / 10) : Math.max(0, Math.ceil(need - m));
-            info.hint = fill(lv === 0 ? s.build : s.next, {
-                n: lv + 1, need: fmt(need), unit: UNITS[id][L], now: fmt(shown), left: fmt(left)
+            info.hint = _ui(lv === 0 ? 'build' : 'next', {
+                n: lv + 1, need: fmt(need), unit: _unit(id), now: fmt(shown), left: fmt(left)
             });
         }
         var view = NAV[id];
-        if (view) info.nav = { view: view, label: fill(s.open, { view: VIEW_LABEL[view][L] }) };
+        if (view) info.nav = { view: view, label: _ui('open', { view: _view(view) }) };
     }
     info.sig = [id, L, info.level, Math.round(info.pct * 100), info.hint].join('|');
     return info;

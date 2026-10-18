@@ -1,4 +1,6 @@
 // FILE: src/ui/campus/CampusBuildings.js
+// v2027.50 — i18n: teks tooltip describeBuilding() memakai t()/_tf; nama bangunan
+// memakai ulang key campus.info.name.*. Geometri & logika level TIDAK diubah.
 // v2027.38 — PETA DIPERLUAS: pulau 20x20 -> 30x30. Tambahan: Akademi Inovasi,
 // Arena Peluncuran, Pelabuhan Logistik (teluk + dermaga + kapal), Ladang Angin
 // (era Premium+), Monorail layang (era Smartphone Matang+), gerbang jalan,
@@ -11,6 +13,7 @@
 // (di bawah). Ubah di sana kalau ingin lebih cepat / lebih lambat.
 import { DESIGN_ERAS, getDesignEraForYear } from '../../data/era-design.data.js';
 import { BALANCE } from '../../data/balance.data.js';
+import { t } from '../../core/LanguageService.js';
 
 // true  = bangunan tidak pernah turun level (puncak disimpan di state.campusPeak)
 // false = level selalu mengikuti kondisi terkini (bisa turun kalau staf dipecat, dll)
@@ -95,6 +98,23 @@ export var SPRAWL_SPOTS = [
     [13.0, 1.6], [-7.9, 7.3], [11.1, -0.3], [5.4, 13.0], [-6.0, 9.2], [13.0, -2.2],
     [-4.1, 11.1], [-11.7, 5.4], [-7.9, 11.1], [-6.0, 13.0], [-11.7, 9.2], [-9.8, 13.0]
 ];
+
+// ============================================================
+// i18n helper — t() dengan fallback (Indonesia) bila key belum ada.
+// RULES[x].name / .unit dipertahankan sebagai fallback & kompatibilitas.
+// ============================================================
+function _fill(str, vars) {
+    return String(str).replace(/\{(\w+)\}/g, function (m, k) {
+        return (vars && Object.prototype.hasOwnProperty.call(vars, k)) ? String(vars[k]) : m;
+    });
+}
+function _tf(key, fb, vars) {
+    var v = t(key, vars);
+    return (v && v !== key) ? v : _fill(fb, vars);
+}
+// Nama bangunan: pakai ulang key campus.info.name.<id> (sama dengan CampusInfo).
+function _bName(id, fb) { return _tf('campus.info.name.' + id, fb); }
+function _bUnit(id, fb) { return _tf('campus.info.unit.' + id, fb); }
 
 // ============================================================
 // ATURAN LEVEL — level = base + jumlah "steps" yang sudah terlewati.
@@ -197,25 +217,46 @@ export function rememberPeak(data, plan) {
 }
 
 // Teks untuk tooltip saat bangunan di-tap.
+// Dipanggil saat tap (bukan di-cache), jadi selalu mengikuti bahasa aktif.
 export function describeBuilding(id, plan, data) {
     if (!plan) return null;
     if (id === 'sprawl') {
-        return { title: 'Kawasan Kota', sub: 'Tumbuh seiring era: ' + (plan.era.shortLabel || plan.era.label) };
+        return {
+            title: _bName('sprawl', 'Kawasan Kota'),
+            sub: _tf('campus.tip.sprawl_sub', 'Tumbuh seiring era: {era}', { era: plan.era.shortLabel || plan.era.label })
+        };
     }
-    if (id === 'wind') return { title: 'Ladang Angin', sub: 'Energi hijau kampus — sejak era Premium' };
-    if (id === 'rail') return { title: 'Monorail Kota', sub: 'Menghubungkan kawasan — sejak era Smartphone Matang' };
+    if (id === 'wind') {
+        return {
+            title: _bName('wind', 'Ladang Angin'),
+            sub: _tf('campus.tip.wind_sub', 'Energi hijau kampus — sejak era Premium')
+        };
+    }
+    if (id === 'rail') {
+        return {
+            title: _bName('rail', 'Monorail Kota'),
+            sub: _tf('campus.tip.rail_sub', 'Menghubungkan kawasan — sejak era Smartphone Matang')
+        };
+    }
     var r = RULES[id];
     if (!r) return null;
     var lv = plan.levels[id] || 0;
     var m = r.metric(data || {});
     var mShown = (id === 'monument') ? (Math.round(m * 10) / 10) : m;
     var sub;
-    if (lv >= r.max) sub = 'Level maksimum';
+    if (lv >= r.max) sub = _tf('campus.tip.max_level', 'Level maksimum');
     else {
         var need = r.steps[lv - r.base];
-        sub = 'Naik di ' + need + ' ' + r.unit + ' (kini ' + mShown + ')';
+        sub = _tf('campus.tip.next', 'Naik di {need} {unit} (kini {now})', {
+            need: need, unit: _bUnit(id, r.unit), now: mShown
+        });
     }
-    return { title: r.name + ' · Lv ' + lv + '/' + r.max, sub: sub };
+    return {
+        title: _tf('campus.tip.title', '{name} · Lv {lv}/{max}', {
+            name: _bName(id, r.name), lv: lv, max: r.max
+        }),
+        sub: sub
+    };
 }
 
 // ============================================================
