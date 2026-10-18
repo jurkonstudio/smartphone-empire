@@ -12,7 +12,8 @@ import {
     getComponentById, getComponentsByCategory, getBodyColorById
 } from '../data/components.data.js';
 import { getCampaignById, MARKETING_CAMPAIGNS } from '../data/marketing.data.js';
-import { getLicenseById } from '../data/os.data.js';
+import { getLicenseById, getLicenseStatsAtYear, getCurrentOwnVersion, getEffectiveOwnStats } from '../data/os.data.js';
+import { computeTechEdge, getMasteryStatBonus, RND_TRACKS, sanitizeBuzz } from '../data/research.data.js';
 import { getMacro, reviewBaseScore } from '../core/MacroModel.js';
 import { WalletService } from './WalletService.js';
 
@@ -107,6 +108,13 @@ export class ProductSystem {
         var color = getBodyColorById(config.bodyColorId);
         if (color) stats.design += (color.designBonus || 0);
 
+        // [R&D berkelanjutan] Level penyempurnaan teknologi menambah stat produk baru.
+        var mastery = (this.state.data.research && this.state.data.research.mastery) || {};
+        Object.keys(RND_TRACKS).forEach(function (cat) {
+            var ps = RND_TRACKS[cat].productStat;
+            if (stats[ps] !== undefined) stats[ps] += getMasteryStatBonus(mastery[cat] || 0);
+        });
+
         ['display','camera','battery','performance','connectivity','quality','design','usability'].forEach(function (k) {
             stats[k] = Math.max(0, Math.min(100, Math.round(stats[k])));
         });
@@ -155,8 +163,9 @@ export class ProductSystem {
         var trendF = this._getTrendFactor(stats);
         var competitorF = 0.8;
         var lifecycleF = 1.0;
+        var techF = this._getTechFactor(null);
 
-        var demand = baseDemand * baseMult * qualityF * priceF * repF * marketingF * osFactor * trendF * competitorF * lifecycleF;
+        var demand = baseDemand * baseMult * qualityF * priceF * repF * marketingF * osFactor * trendF * competitorF * lifecycleF * techF;
         return Math.max(0, Math.round(demand));
     }
 
@@ -176,23 +185,40 @@ export class ProductSystem {
             if (osOptionId.indexOf('own:') === 0) {
                 var versionId = osOptionId.slice(4);
                 var v = (data.os.versions || []).find(function (x) { return x.id === versionId; });
-                if (v && v.stats) stats = v.stats;
+                // [FIX] Murni dari data state (tidak bergantung window.__game).
+                if (v && v.stats) stats = getEffectiveOwnStats(data, v);
             } else if (osOptionId.indexOf('license:') === 0) {
                 var licenseId = osOptionId.slice(8);
                 var lic = getLicenseById(licenseId);
-                if (lic && lic.stats) stats = lic.stats;
+                if (lic && lic.stats) stats = getLicenseStatsAtYear(lic, data.time.currentYear);
             }
         }
 
         if (!stats) {
-            var os = window.__game && window.__game.os ? window.__game.os : null;
-            if (!os) return 0.7;
-            stats = os.getCurrentStats();
+            var curV = getCurrentOwnVersion(data);
+            stats = curV ? getEffectiveOwnStats(data, curV) : null;
             if (!stats) return 0.7;
         }
 
         var avg = (stats.stability + stats.speed + stats.features + stats.security + stats.design) / 5;
         return Math.pow(Math.max(0.2, avg / BALANCE.products.refs.os), BALANCE.products.weights.os);
+    }
+
+    // Faktor teknologi: (1) keunggulan level R&D saat produk dirancang vs standar
+    // pasar HARI INI — produk lama makin usang seiring standar naik; (2) gaung pasar
+    // dari terobosan terbaru. Produk lama tanpa snapshot dianggap netral (save lama aman).
+    _getTechFactor(p) {
+        var data = this.state.data;
+        var year = data.time.currentYear;
+        var edgeF = 1.0;
+        if (p === null) {
+            edgeF = computeTechEdge((data.research && data.research.mastery) || {}, year).factor;
+        } else if (p && p.techSnapshot && p.techSnapshot.levels) {
+            edgeF = computeTechEdge(p.techSnapshot.levels, year).factor;
+        }
+        var bz = BALANCE.rnd.buzz;
+        var buzzF = 1 + Math.min(bz.maxDemandBonus, sanitizeBuzz(data.research && data.research.buzz) * bz.demandPerPoint);
+        return edgeF * buzzF;
     }
 
     _getTrendFactor(stats) {
@@ -284,6 +310,7 @@ export class ProductSystem {
             phaseProgressDays: 0,
             phaseDurationDays: Math.max(3, Math.round(totalDays * 0.3)),
             totalDurationDays: totalDays,
+            techSnapshot: { levels: Object.assign({}, (data.research && data.research.mastery) || {}), year: data.time.currentYear },
             startedAtGameMinute: data.time.elapsedGameMinutes,
             lastProcessedMinute: data.time.elapsedGameMinutes,
             startedAt: { year: data.time.currentYear, month: data.time.currentMonth, day: data.time.currentDay }
@@ -378,6 +405,7 @@ export class ProductSystem {
             name: d.name,
             config: Object.assign({}, cfg),
             stats: Object.assign({}, d.stats),
+            techSnapshot: d.techSnapshot ? { levels: Object.assign({}, d.techSnapshot.levels), year: d.techSnapshot.year } : null,
             price: cfg.price,
             unitCost: d.unitCost,
             stock: cfg.productionQty,
@@ -516,6 +544,7 @@ export class ProductSystem {
         var trendF = this._getTrendFactor(p.stats);
         var competitorF = Math.max(0.4, 1 / (1 + (p.competitorPressure || 0)));
         var lifecycleF = this._getLifecycleFactor(p);
+        var techF = this._getTechFactor(p);
 
         // Noise harian dihaluskan (AR1) supaya penjualan tidak naik-turun liar.
         var sm = BALANCE.macro.demandNoiseSmoothing;
@@ -525,7 +554,7 @@ export class ProductSystem {
 
         var demand = baseDemand * baseMult * qualityF * priceF * repF
                      * marketingF * osFactor * trendF * competitorF
-                     * lifecycleF * noise;
+                     * lifecycleF * techF * noise;
 
         return Math.max(0, Math.round(demand));
     }
@@ -857,8 +886,8 @@ export class ProductSystem {
             networkId:    pick('network')     || 'net_gsm',
             bodyId:       pick('body')        || 'body_plastic',
             bodyColorId:  'color_black',
-            osOptionId:   (window.__game && window.__game.os && window.__game.os.getCurrentVersionObject())
-                            ? 'own:' + window.__game.os.getCurrentVersionObject().id
+            osOptionId:   getCurrentOwnVersion(this.state.data)
+                            ? 'own:' + getCurrentOwnVersion(this.state.data).id
                             : null,
             price: 200,
             productionQty: 10000

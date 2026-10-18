@@ -9,7 +9,16 @@ import {
     RESEARCH_NODES,
     RESEARCH_CATEGORIES,
     getNodeById,
-    validateResearchData
+    validateResearchData,
+    RND_TRACKS,
+    getTechBenchmark,
+    computeTechEdge,
+    sanitizeMastery,
+    sanitizeBuzz,
+    sanitizeRefiningList,
+    sanitizeActiveResearch,
+    sanitizeCompleted,
+    addBuzzToState
 } from '../data/research.data.js';
 import { WalletService } from './WalletService.js';
 
@@ -41,6 +50,8 @@ export class ResearchSystem {
         this._unsubs.push(bus.on('time:day-changed', (snap) => this._onDayChanged(snap)));
         this._unsubs.push(bus.on('team:changed',   ()     => this._refreshMaxSlots()));
         this._unsubs.push(bus.on('state:hydrated', ()     => this._onHydrated()));
+        this._unsubs.push(bus.on('time:month-changed', () => this._onMonthChangedRnd()));
+        this._ensureRnd();
 
         console.info('[ResearchSystem] siap. Slot aktif: ' + this.state.data.research.maxSlots);
     }
@@ -55,14 +66,11 @@ export class ResearchSystem {
         const data = this.state.data;
         const current = data.time.elapsedGameMinutes;
 
-        // Pastikan setiap entri aktif punya nilai default (save lama)
-        data.research.active.forEach(e => {
-            if (typeof e.progressDays !== 'number')       e.progressDays = 0;
-            if (typeof e.durationDays !== 'number')       e.durationDays = 0;
-            if (typeof e.lastProcessedMinute !== 'number') e.lastProcessedMinute = current;
-            if (typeof e.startedAtGameMinute !== 'number') e.startedAtGameMinute = current;
-        });
+        // Pastikan setiap entri aktif valid (save lama / data rusak): durasi hilang
+        // dipulihkan dari data node, progres NaN direset, entri rusak dibuang.
+        this._sanitizeAll(current);
         this._refreshMaxSlots();
+        this._ensureRnd();
     }
 
     _refreshMaxSlots() {
@@ -87,12 +95,30 @@ export class ResearchSystem {
         const per = BALANCE.research.perEngineerSpeed;
         const cap = BALANCE.research.maxSpeedMultiplier;
         const raw = base + eng * per;
-        return Math.min(raw, cap);
+        const v = Math.min(raw, cap);
+        return (Number.isFinite(v) && v > 0) ? v : 1;
     }
 
     // ---------- PROGRESS (dipicu hari berubah) ----------
     _onDayChanged(_snapshot) {
         const data = this.state.data;
+
+        // [FIX 1] R&D lanjutan diisolasi: error/data rusak di sini TIDAK boleh
+        // menghentikan riset dasar di bawah.
+        try {
+            this._tickRefining();
+        } catch (err) {
+            console.error('[ResearchSystem] R&D lanjutan error, dipulihkan:', err);
+            try { this._sanitizeAll(data.time.elapsedGameMinutes); } catch (e2) { data.research.refining = []; }
+        }
+
+        // [FIX 2] Perbaiki entri riset dasar rusak sebelum dihitung.
+        try {
+            data.research.active = sanitizeActiveResearch(data.research.active, data.research.completed, data.time.elapsedGameMinutes);
+        } catch (err) {
+            console.error('[ResearchSystem] sanitasi antrian riset gagal:', err);
+            if (!Array.isArray(data.research.active)) data.research.active = [];
+        }
         if (!data.research.active.length) return;
 
         const currentMinute = data.time.elapsedGameMinutes;
@@ -105,21 +131,22 @@ export class ResearchSystem {
                 : entry.startedAtGameMinute;
 
             const deltaMinutes = currentMinute - last;
-            if (deltaMinutes <= 0) continue;
-
-            // Hitung dalam satuan hari, kalikan speed.
-            const deltaDays = deltaMinutes / MINUTES_PER_DAY;
-            entry.progressDays += deltaDays * speed;
-            entry.lastProcessedMinute = currentMinute;
+            if (deltaMinutes > 0) {
+                // Hitung dalam satuan hari, kalikan speed.
+                const deltaDays = deltaMinutes / MINUTES_PER_DAY;
+                entry.progressDays += deltaDays * speed;
+                entry.lastProcessedMinute = currentMinute;
+            }
 
             if (entry.progressDays >= entry.durationDays) {
                 completedEntries.push(entry);
             }
         }
 
-        // Proses yang selesai
+        // Proses yang selesai (tiap entri diisolasi agar satu error tidak menahan yang lain)
         for (const entry of completedEntries) {
-            this._completeResearch(entry);
+            try { this._completeResearch(entry); }
+            catch (err) { console.error('[ResearchSystem] gagal menyelesaikan ' + entry.nodeId + ':', err); }
         }
 
         // Emit progress untuk yang masih berjalan
@@ -163,6 +190,11 @@ export class ResearchSystem {
         if (data.research.completed.length === 1) {
             this.state.addMilestone('first_research', 'Riset pertama: ' + node.name);
         }
+
+        // Terobosan teknologi baru memicu antusiasme pasar (gaung) + reputasi.
+        const bz = BALANCE.rnd.buzz;
+        this.addBuzz(bz.perNode + (node.tier || 1) * bz.perTier, 'research');
+        if (typeof this.state.addReputation === 'function') this.state.addReputation(bz.reputationPerNode);
 
         // Emit untuk sistem lain (mis. Batch B akan membaca untuk komponen)
         bus.emit('research:completed', {
@@ -224,7 +256,10 @@ export class ResearchSystem {
             return { ok: false, reason: st.reason || 'Belum bisa dimulai.' };
         }
 
-        if (!paidWithSilicon) WalletService.pay(node.cost, 'research');
+        if (!paidWithSilicon) {
+            const paid = WalletService.pay(node.cost, 'research');
+            if (!paid || !paid.ok) return { ok: false, reason: (paid && paid.reason) || 'Pembayaran gagal.' };
+        }
 
         // Daftarkan sebagai aktif
         const entry = {
@@ -287,7 +322,7 @@ export class ResearchSystem {
         const data = this.state.data;
         const entry = data.research.active.find(e => e.nodeId === nodeId);
         if (!entry) return { ok: false, reason: 'Riset tidak aktif.' };
-        const add = (days === Infinity) ? (entry.durationDays - entry.progressDays) : Math.max(0, days || 0);
+        const add = (days === Infinity) ? (entry.durationDays - entry.progressDays) : (Number.isFinite(days) ? Math.max(0, days) : 0);
         entry.progressDays = Math.min(entry.durationDays, entry.progressDays + add);
         if (entry.progressDays >= entry.durationDays) {
             this._completeResearch(entry);
@@ -424,6 +459,248 @@ export class ResearchSystem {
         return candidates[0];
     }
 
+
+    // ============================================================
+    // R&D LANJUTAN (v2028.36) — level teknologi yang naik terus-menerus
+    // ============================================================
+    _ensureRnd() {
+        const r = this.state.data.research;
+        const maxLv = BALANCE.rnd.maxLevel;
+        if (!r.mastery || typeof r.mastery !== 'object') r.mastery = {};
+        RESEARCH_CATEGORIES.forEach(c => {
+            const v = r.mastery[c.id];
+            // level harus integer terbatas 0..maxLevel (cegah 999 / NaN / teks)
+            if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > maxLv || v !== Math.floor(v)) {
+                r.mastery[c.id] = sanitizeMastery(r.mastery)[c.id];
+            }
+        });
+        if (!Array.isArray(r.refining)) r.refining = [];
+        if (typeof r.buzz !== 'number' || !Number.isFinite(r.buzz) || r.buzz < 0 || r.buzz > BALANCE.rnd.buzz.max) r.buzz = sanitizeBuzz(r.buzz);
+        if (typeof r.totalRefined !== 'number' || !Number.isFinite(r.totalRefined)) r.totalRefined = 0;
+        // Entri rusak (null / tanpa kategori / durasi hilang) dibersihkan sebelum dipakai.
+        let dirty = false;
+        for (const e of r.refining) {
+            if (!e || typeof e !== 'object' || typeof e.categoryId !== 'string' ||
+                !Number.isFinite(e.durationDays) || !(e.durationDays > 0) ||
+                !Number.isFinite(e.progressDays) || !Number.isFinite(e.lastProcessedMinute) ||
+                !Number.isFinite(e.targetLevel)) { dirty = true; break; }
+        }
+        if (dirty) {
+            r.refining = sanitizeRefiningList(r.refining, r.mastery, this.state.data.time.elapsedGameMinutes);
+        }
+    }
+
+    // Bersihkan seluruh data R&D (dipanggil saat boot/hydrate & saat pemulihan error).
+    _sanitizeAll(nowMinute) {
+        const r = this.state.data.research;
+        const now = Number.isFinite(nowMinute) ? nowMinute : this.state.data.time.elapsedGameMinutes;
+        r.completed = sanitizeCompleted(r.completed);
+        r.active = sanitizeActiveResearch(r.active, r.completed, now);
+        r.mastery = sanitizeMastery(r.mastery);
+        r.refining = sanitizeRefiningList(r.refining, r.mastery, now);
+        r.buzz = sanitizeBuzz(r.buzz);
+    }
+
+    getRefineSlots() {
+        const cfg = BALANCE.rnd;
+        const eng = this.state.data.team.engineers || 0;
+        return Math.min(cfg.maxSlots, cfg.slotsBase + Math.floor(eng / cfg.engineersPerExtraSlot));
+    }
+
+    getMastery() {
+        this._ensureRnd();
+        return Object.assign({}, this.state.data.research.mastery);
+    }
+
+    getBenchmark() { return getTechBenchmark(this.state.data.time.currentYear); }
+
+    getTechEdge(levels) {
+        return computeTechEdge(levels || this.state.data.research.mastery, this.state.data.time.currentYear);
+    }
+
+    // Snapshot level teknologi — disimpan di produk saat proyek dimulai.
+    getTechSnapshot() {
+        this._ensureRnd();
+        return { levels: Object.assign({}, this.state.data.research.mastery), year: this.state.data.time.currentYear };
+    }
+
+    // Info lengkap satu jalur untuk UI.
+    getRefineInfo(catId) {
+        this._ensureRnd();
+        const data = this.state.data;
+        const cfg = BALANCE.rnd;
+        const track = RND_TRACKS[catId];
+        const level = data.research.mastery[catId] || 0;
+        const year = data.time.currentYear;
+
+        const doneInCat = RESEARCH_NODES.filter(n => n.category === catId && data.research.completed.includes(n.id)).length;
+        const capNodes = cfg.capBase + cfg.capPerCompletedNode * doneInCat;
+        const capYear = Math.floor(Math.max(0, year - 2000) * cfg.capYearPerYear) + cfg.capYearBase;
+        const cap = Math.min(cfg.maxLevel, capNodes, capYear);
+
+        const baseCost = (cfg.baseCost[catId] || 15000);
+        const cost = Math.round(baseCost * Math.pow(cfg.costGrowth, level) * (1 + cfg.yearCostInflation * Math.max(0, year - 2000)) / 100) * 100;
+        const days = Math.min(cfg.maxDays, Math.round(cfg.baseDays * Math.pow(cfg.daysGrowth, level)));
+
+        const running = data.research.refining.find(e => e.categoryId === catId) || null;
+        let status = 'available', reason = null, blocker = null;
+        if (running) { status = 'running'; }
+        else if (doneInCat < 1) { status = 'locked'; blocker = 'node'; reason = 'Selesaikan riset dasar kategori ini dulu'; }
+        else if (level >= cfg.maxLevel) { status = 'maxed'; reason = 'Level maksimum'; }
+        else if (level >= cap) {
+            status = 'capped';
+            if (level >= capNodes && capNodes <= capYear) { blocker = 'node'; reason = 'Selesaikan riset dasar baru untuk membuka level lebih tinggi'; }
+            else { blocker = 'year'; reason = 'Tunggu kemajuan zaman untuk level berikutnya'; }
+        }
+        else if (data.research.refining.length >= this.getRefineSlots()) { status = 'locked'; blocker = 'slots'; reason = 'Slot R&D penuh (' + data.research.refining.length + '/' + this.getRefineSlots() + ')'; }
+        else if (!WalletService.canAfford(cost)) { status = 'locked'; blocker = 'cash'; reason = 'Uang tidak cukup ($' + cost.toLocaleString('en-US') + ')'; }
+
+        return {
+            id: catId, name: track ? track.name : catId, hint: track ? track.hint : '',
+            level, cap, maxLevel: cfg.maxLevel, cost, days, etaDays: Math.ceil(days / Math.max(0.01, this._getSpeedMultiplier())),
+            statBonus: Math.min(cfg.statCap, level * cfg.statPerLevel),
+            nextStatBonus: Math.min(cfg.statCap, (level + 1) * cfg.statPerLevel),
+            benchmark: this.getBenchmark(),
+            status, reason, blocker, running
+        };
+    }
+
+    getRndOverview() {
+        const edge = this.getTechEdge();
+        return {
+            avg: edge.avg, benchmark: edge.benchmark, delta: edge.delta, factor: edge.factor,
+            buzz: this.getBuzz(), buzzFactor: this.getBuzzFactor(),
+            slots: this.getRefineSlots(), used: this.state.data.research.refining.length,
+            totalRefined: this.state.data.research.totalRefined || 0
+        };
+    }
+
+    startRefine(catId) {
+        this._ensureRnd();
+        const data = this.state.data;
+        if (!RND_TRACKS[catId]) return { ok: false, reason: 'Jalur R&D tidak ditemukan.' };
+        const info = this.getRefineInfo(catId);
+        if (info.status !== 'available') return { ok: false, reason: info.reason || 'Belum bisa dimulai.' };
+
+        const paid = WalletService.pay(info.cost, 'research');
+        if (!paid || !paid.ok) return { ok: false, reason: (paid && paid.reason) || 'Pembayaran gagal.' };
+        const entry = {
+            categoryId: catId,
+            name: info.name + ' Lv ' + (info.level + 1),
+            targetLevel: info.level + 1,
+            cost: info.cost,
+            durationDays: info.days,
+            progressDays: 0,
+            startedAtGameMinute: data.time.elapsedGameMinutes,
+            lastProcessedMinute: data.time.elapsedGameMinutes
+        };
+        data.research.refining.push(entry);
+        this.state.addLog('Mulai R&D lanjutan: ' + entry.name + ' ($' + info.cost.toLocaleString('en-US') + ').', LOG_TYPES.info);
+        bus.emit('research:refine-started', { categoryId: catId, targetLevel: entry.targetLevel });
+        bus.emit('state:changed', data);
+        return { ok: true, targetLevel: entry.targetLevel, cost: info.cost, days: info.days };
+    }
+
+    cancelRefine(catId) {
+        const data = this.state.data;
+        const idx = data.research.refining.findIndex(e => e.categoryId === catId);
+        if (idx < 0) return { ok: false, reason: 'R&D tidak aktif.' };
+        const e = data.research.refining[idx];
+        data.research.refining.splice(idx, 1);
+        const refund = Math.floor((e.cost || 0) * (BALANCE.research.refundPercent || 0));
+        if (refund > 0) this.state.addCash(refund);
+        this.state.addLog('R&D dibatalkan: ' + e.name + ' (refund $' + refund.toLocaleString('en-US') + ').', LOG_TYPES.warning);
+        bus.emit('research:refine-cancelled', { categoryId: catId, refund });
+        bus.emit('state:changed', data);
+        return { ok: true, refund };
+    }
+
+    // Dipakai Silicon boost / cheat: majukan progress R&D lanjutan.
+    boostRefine(catId, days) {
+        const data = this.state.data;
+        const e = data.research.refining.find(x => x.categoryId === catId);
+        if (!e) return { ok: false, reason: 'R&D tidak aktif.' };
+        const add = (days === Infinity) ? (e.durationDays - e.progressDays) : (Number.isFinite(days) ? Math.max(0, days) : 0);
+        e.progressDays = Math.min(e.durationDays, e.progressDays + add);
+        if (e.progressDays >= e.durationDays) { this._completeRefine(e); return { ok: true, completed: true }; }
+        bus.emit('state:changed', data);
+        return { ok: true, completed: false };
+    }
+
+    _tickRefining() {
+        const data = this.state.data;
+        this._ensureRnd();
+        // Selalu bersihkan dulu: entri rusak dibuang, durasi hilang dipulihkan.
+        data.research.refining = sanitizeRefiningList(data.research.refining, data.research.mastery, data.time.elapsedGameMinutes);
+        const list = data.research.refining;
+        if (!list.length) return;
+        const cur = data.time.elapsedGameMinutes;
+        const speed = this._getSpeedMultiplier();
+        const done = [];
+        list.forEach(e => {
+            const delta = cur - e.lastProcessedMinute;
+            if (delta > 0) {
+                e.progressDays += (delta / MINUTES_PER_DAY) * speed;
+                e.lastProcessedMinute = cur;
+            }
+            if (e.progressDays >= e.durationDays) done.push(e);
+        });
+        done.forEach(e => {
+            try { this._completeRefine(e); }
+            catch (err) { console.error('[ResearchSystem] gagal menyelesaikan R&D ' + e.categoryId + ':', err); }
+        });
+        if (data.research.refining.length) {
+            bus.emit('research:refine-progress', {
+                active: data.research.refining.map(e => ({
+                    categoryId: e.categoryId, name: e.name,
+                    percent: e.durationDays > 0 ? Math.min(1, e.progressDays / e.durationDays) : 0,
+                    remainingDays: Math.max(0, (e.durationDays - e.progressDays) / speed)
+                }))
+            });
+        }
+    }
+
+    _completeRefine(entry) {
+        const data = this.state.data;
+        const idx = data.research.refining.findIndex(e => e.categoryId === entry.categoryId);
+        if (idx >= 0) data.research.refining.splice(idx, 1);
+        data.research.mastery[entry.categoryId] = Math.min(BALANCE.rnd.maxLevel, Math.max(data.research.mastery[entry.categoryId] || 0, entry.targetLevel));
+        data.research.totalRefined = (data.research.totalRefined || 0) + 1;
+
+        const bz = BALANCE.rnd.buzz;
+        this.addBuzz(bz.perRefineBase + entry.targetLevel * bz.perRefineLevel, 'refine');
+        if (typeof this.state.addReputation === 'function') this.state.addReputation(bz.reputationPerLevel * Math.max(1, entry.targetLevel / 4));
+
+        ToastService.success('R&D selesai: ' + entry.name);
+        if (data.settings.vibrate) { try { if (navigator.vibrate) navigator.vibrate([20, 30, 20]); } catch (e) {} }
+        const edge = this.getTechEdge();
+        const standing = edge.delta >= 0 ? 'di atas standar pasar' : 'masih di bawah standar pasar';
+        this.state.addLog('R&D selesai: ' + entry.name + ' — teknologi ' + standing + '. Produk baru memakai level ini.', LOG_TYPES.success);
+        bus.emit('research:refined', { categoryId: entry.categoryId, level: entry.targetLevel });
+        bus.emit('state:changed', data);
+    }
+
+    // ---------- GAUNG PASAR (buzz) ----------
+    addBuzz(points, _reason) {
+        const data = this.state.data;
+        this._ensureRnd();
+        addBuzzToState(data, points);
+        bus.emit('research:buzz', { buzz: data.research.buzz, reason: _reason || null });
+    }
+    getBuzz() { return sanitizeBuzz(this.state.data.research.buzz); }
+    getBuzzFactor() {
+        const bz = BALANCE.rnd.buzz;
+        return 1 + Math.min(bz.maxDemandBonus, this.getBuzz() * bz.demandPerPoint);
+    }
+    _onMonthChangedRnd() {
+        const data = this.state.data;
+        this._ensureRnd();
+        if ((data.research.buzz || 0) <= 0) return;
+        data.research.buzz = sanitizeBuzz(data.research.buzz) * BALANCE.rnd.buzz.decayPerMonth;
+        if (data.research.buzz < 0.5) data.research.buzz = 0;
+        bus.emit('research:buzz', { buzz: data.research.buzz, reason: 'decay' });
+    }
+
     // ============================================================
     // CHEAT (untuk testing console)
     // ============================================================
@@ -459,4 +736,4 @@ export class ResearchSystem {
         bus.emit('state:changed', data);
         return { ok: true };
     }
-          }
+}

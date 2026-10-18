@@ -5,13 +5,18 @@ import { BALANCE } from '../data/balance.data.js';
 import { TIME_CONFIG } from '../config/time.config.js';
 import { ToastService } from '../core/ToastService.js';
 import { LOG_TYPES } from '../config/constants.js';
-import { getNodeById } from '../data/research.data.js';
+import { getNodeById, addBuzzToState } from '../data/research.data.js';
 import {
     OS_FEATURES,
     OS_LICENSES,
     BUILTIN_APPS,
     DEV_TEMPLATES,
     BUG_TEMPLATES,
+    OS_PLATFORM_TRACKS,
+    getLicenseStatsAtYear,
+    sanitizePlatform,
+    computePlatformBonus,
+    applyPlatformBonus,
     getOsFeatureById,
     getBuiltinAppById
 } from '../data/os.data.js';
@@ -56,6 +61,7 @@ export class OSSystem {
         if (typeof data.os.apps.thirdParty !== 'number') data.os.apps.thirdParty = 0;
         if (typeof data.os.appsAccumulator !== 'number') data.os.appsAccumulator = 0;
         if (typeof data.os.licenseChoice === 'undefined') data.os.licenseChoice = null;
+        this._ensurePlatform();
         if (data.os.developing) {
             const d = data.os.developing;
             if (typeof d.progressDays !== 'number')        d.progressDays = 0;
@@ -101,6 +107,12 @@ export class OSSystem {
     _onDayChanged(_snap) {
         const data = this.state.data;
         if (data.os.developing) this._tickDeveloping();
+        // [FIX] R&D platform diisolasi: data rusak tidak boleh menghentikan bug/OS lain.
+        try { this._tickPlatform(); }
+        catch (err) {
+            console.error('[OSSystem] R&D platform error, dipulihkan:', err);
+            data.os.platform = sanitizePlatform(null, data.time.elapsedGameMinutes);
+        }
         if (data.os.versions.length > 0) this._rollForBug();
         if (data.os.bugs.length) this._tickBugs();
     }
@@ -391,12 +403,12 @@ export class OSSystem {
 
     getCurrentStats() {
         const v = this.getCurrentVersionObject();
-        return v ? { ...v.stats } : null;
+        return v ? this.getEffectiveStats(v) : null;
     }
 
     previewStats(featureIds) {
         const ids = Array.isArray(featureIds) ? featureIds.slice() : [];
-        return this._calculateStats(ids);
+        return this._applyPlatformBonus(this._calculateStats(ids));
     }
 
     getAvailableFeatures() {
@@ -511,11 +523,11 @@ export class OSSystem {
         const data = this.state.data;
         const options = [];
         data.os.versions.forEach(v => {
-            options.push({ id: 'own:' + v.id, source: 'own', label: (data.os.name || 'OS') + ' ' + v.versionString, stats: { ...v.stats }, costPerUnit: 0, versionId: v.id });
+            options.push({ id: 'own:' + v.id, source: 'own', label: (data.os.name || 'OS') + ' ' + v.versionString, stats: this.getEffectiveStats(v), costPerUnit: 0, versionId: v.id });
         });
         OS_LICENSES.forEach(lic => {
             if (data.time.currentYear < lic.availableFromYear) return;
-            options.push({ id: 'license:' + lic.id, source: 'license', label: lic.name, stats: { ...lic.stats }, costPerUnit: lic.costPerUnit, licenseId: lic.id });
+            options.push({ id: 'license:' + lic.id, source: 'license', label: lic.name, stats: getLicenseStatsAtYear(lic, data.time.currentYear), costPerUnit: lic.costPerUnit, licenseId: lic.id });
         });
         return options;
     }
@@ -526,6 +538,185 @@ export class OSSystem {
         if (!v) return { ok: false, reason: 'Versi tidak ditemukan.' };
         bus.emit('os:updated', { versionId, versionString: v.versionString });
         return { ok: true };
+    }
+
+
+    // ============================================================
+    // R&D PLATFORM OS (v2028.36) — level yang naik terus-menerus
+    // Bonus platform bersifat DINAMIS: berlaku ke semua versi OS buatan
+    // sendiri (seperti update OTA), tanpa harus merilis versi baru.
+    // ============================================================
+    _ensurePlatform() {
+        const data = this.state.data;
+        const os = data.os;
+        const p = os.platform;
+        const maxLv = BALANCE.rnd.os.maxLevel;
+        // Jalur cepat: struktur sudah valid -> tidak perlu membangun ulang.
+        let ok = p && typeof p === 'object' && p.levels && typeof p.levels === 'object' &&
+                 Number.isFinite(p.totalUpgrades) && typeof p.developing !== 'undefined';
+        if (ok) {
+            for (const t of OS_PLATFORM_TRACKS) {
+                const v = p.levels[t.id];
+                if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > maxLv || v !== Math.floor(v)) { ok = false; break; }
+            }
+        }
+        if (ok && p.developing) {
+            const d = p.developing;
+            if (typeof d !== 'object' || !Number.isFinite(d.durationDays) || !(d.durationDays > 0) ||
+                !Number.isFinite(d.progressDays) || !Number.isFinite(d.lastProcessedMinute) ||
+                !Number.isFinite(d.targetLevel) || !OS_PLATFORM_TRACKS.some(t => t.id === d.statId)) ok = false;
+        }
+        if (!ok) os.platform = sanitizePlatform(p, data.time.elapsedGameMinutes);
+    }
+
+    getPlatformLevels() { this._ensurePlatform(); return Object.assign({}, this.state.data.os.platform.levels); }
+
+    getPlatformBonus() {
+        this._ensurePlatform();
+        return computePlatformBonus(this.state.data.os.platform.levels);
+    }
+
+    _applyPlatformBonus(stats) {
+        this._ensurePlatform();
+        return applyPlatformBonus(stats, this.state.data.os.platform.levels);
+    }
+
+    // Stat efektif sebuah versi = stat rilis + bonus R&D platform saat ini.
+    getEffectiveStats(version) {
+        if (!version || !version.stats) return null;
+        return this._applyPlatformBonus(version.stats);
+    }
+
+    getPlatformInfo(statId) {
+        this._ensurePlatform();
+        const data = this.state.data;
+        const cfg = BALANCE.rnd.os;
+        const track = OS_PLATFORM_TRACKS.find(t => t.id === statId);
+        const level = data.os.platform.levels[statId] || 0;
+        const year = data.time.currentYear;
+        const v = this.getCurrentVersionObject();
+
+        let featureCount = 0;
+        if (v) {
+            const set = new Set(_getStarterFeatureIds());
+            (v.features || []).forEach(f => set.add(f));
+            featureCount = set.size;
+        }
+        const capFeat = cfg.capBase + cfg.capPerFeature * featureCount;
+        const capYear = Math.floor(Math.max(0, year - 2000) * BALANCE.rnd.capYearPerYear) + BALANCE.rnd.capYearBase;
+        const cap = Math.min(cfg.maxLevel, capFeat, capYear);
+
+        const cost = Math.round(cfg.baseCost * Math.pow(cfg.costGrowth, level) * (1 + cfg.yearCostInflation * Math.max(0, year - 2000)) / 100) * 100;
+        const days = Math.min(cfg.maxDays, Math.round(cfg.baseDays * Math.pow(cfg.daysGrowth, level)));
+
+        const dev = data.os.platform.developing;
+        const running = dev && dev.statId === statId ? dev : null;
+        let status = 'available', reason = null, blocker = null;
+        if (!v) { status = 'locked'; blocker = 'version'; reason = 'Rilis versi OS pertama dulu'; }
+        else if (running) status = 'running';
+        else if (dev) { status = 'locked'; blocker = 'slots'; reason = 'R&D platform lain sedang berjalan'; }
+        else if (level >= cfg.maxLevel) { status = 'maxed'; reason = 'Level maksimum'; }
+        else if (level >= cap) {
+            status = 'capped';
+            if (level >= capFeat && capFeat <= capYear) { blocker = 'feature'; reason = 'Kembangkan lebih banyak fitur OS untuk level lebih tinggi'; }
+            else { blocker = 'year'; reason = 'Tunggu kemajuan zaman untuk level berikutnya'; }
+        }
+        else if (!WalletService.canAfford(cost)) { status = 'locked'; blocker = 'cash'; reason = 'Uang tidak cukup ($' + cost.toLocaleString('en-US') + ')'; }
+
+        const speed = this._getSpeedMultiplier();
+        return {
+            id: statId, name: track ? track.name : statId, hint: track ? track.hint : '',
+            level, cap, maxLevel: cfg.maxLevel, cost, days, etaDays: Math.ceil(days / Math.max(0.01, speed)),
+            bonus: level * cfg.statPerLevel, nextBonus: (level + 1) * cfg.statPerLevel,
+            status, reason, blocker, running
+        };
+    }
+
+    startPlatformUpgrade(statId) {
+        this._ensurePlatform();
+        const data = this.state.data;
+        if (!OS_PLATFORM_TRACKS.some(t => t.id === statId)) return { ok: false, reason: 'Jalur tidak ditemukan.' };
+        const info = this.getPlatformInfo(statId);
+        if (info.status !== 'available') return { ok: false, reason: info.reason || 'Belum bisa dimulai.' };
+
+        const paid = WalletService.pay(info.cost, 'os-dev');
+        if (!paid || !paid.ok) return { ok: false, reason: (paid && paid.reason) || 'Pembayaran gagal.' };
+        data.os.platform.developing = {
+            statId, name: info.name + ' Lv ' + (info.level + 1), targetLevel: info.level + 1,
+            cost: info.cost, durationDays: info.days, progressDays: 0,
+            startedAtGameMinute: data.time.elapsedGameMinutes, lastProcessedMinute: data.time.elapsedGameMinutes
+        };
+        this.state.addLog('Mulai R&D platform OS: ' + data.os.platform.developing.name + ' ($' + info.cost.toLocaleString('en-US') + ').', LOG_TYPES.info);
+        bus.emit('os:platform-started', { statId, targetLevel: info.level + 1 });
+        bus.emit('state:changed', data);
+        return { ok: true, cost: info.cost, days: info.days };
+    }
+
+    cancelPlatformUpgrade() {
+        this._ensurePlatform();
+        const data = this.state.data;
+        const d = data.os.platform.developing;
+        if (!d) return { ok: false, reason: 'Tidak ada R&D platform berjalan.' };
+        const refund = Math.floor((d.cost || 0) * (BALANCE.os.refundPercent || 0));
+        if (refund > 0) this.state.addCash(refund);
+        data.os.platform.developing = null;
+        this.state.addLog('R&D platform dibatalkan (refund $' + refund.toLocaleString('en-US') + ').', LOG_TYPES.warning);
+        bus.emit('os:platform-cancelled', { refund });
+        bus.emit('state:changed', data);
+        return { ok: true, refund };
+    }
+
+    boostPlatform(days) {
+        this._ensurePlatform();
+        const d = this.state.data.os.platform.developing;
+        if (!d) return { ok: false, reason: 'Tidak ada R&D platform berjalan.' };
+        const add = (days === Infinity) ? (d.durationDays - d.progressDays) : (Number.isFinite(days) ? Math.max(0, days) : 0);
+        d.progressDays = Math.min(d.durationDays, d.progressDays + add);
+        if (d.progressDays >= d.durationDays) { this._completePlatform(); return { ok: true, completed: true }; }
+        bus.emit('state:changed', this.state.data);
+        return { ok: true, completed: false };
+    }
+
+    _tickPlatform() {
+        const data = this.state.data;
+        this._ensurePlatform();
+        const d = data.os.platform.developing;
+        if (!d) return;
+        const cur = data.time.elapsedGameMinutes;
+        const delta = cur - d.lastProcessedMinute;
+        const speed = this._getSpeedMultiplier();
+        if (delta > 0) {
+            d.progressDays += (delta / MINUTES_PER_DAY) * speed;
+            d.lastProcessedMinute = cur;
+        }
+        if (d.progressDays >= d.durationDays) { this._completePlatform(); return; }
+        if (delta <= 0) return;
+        bus.emit('os:platform-progress', {
+            statId: d.statId,
+            percent: d.durationDays > 0 ? Math.min(1, d.progressDays / d.durationDays) : 0,
+            remainingDays: Math.max(0, (d.durationDays - d.progressDays) / speed)
+        });
+    }
+
+    _completePlatform() {
+        const data = this.state.data;
+        const d = data.os.platform.developing;
+        if (!d) return;
+        data.os.platform.levels[d.statId] = Math.min(BALANCE.rnd.os.maxLevel, Math.max(data.os.platform.levels[d.statId] || 0, d.targetLevel));
+        data.os.platform.totalUpgrades = (data.os.platform.totalUpgrades || 0) + 1;
+        data.os.platform.developing = null;
+
+        // Pemicu pasar: OS yang membaik menaikkan gaung & reputasi.
+        const bz = BALANCE.rnd.buzz;
+        // [FIX] Gaung ditambah langsung ke state — tidak bergantung pada window.__game.
+        const buzz = addBuzzToState(data, bz.osPlatformBase + d.targetLevel * bz.osPlatformPerLevel);
+        bus.emit('research:buzz', { buzz, reason: 'os-platform' });
+        if (typeof this.state.addReputation === 'function') this.state.addReputation(bz.reputationPerLevel * Math.max(1, d.targetLevel / 4));
+
+        ToastService.success('R&D OS selesai: ' + d.name);
+        this.state.addLog('R&D platform OS selesai: ' + d.name + '. Semua ponsel ber-OS ' + (data.os.name || 'sendiri') + ' ikut membaik lewat update.', LOG_TYPES.success);
+        bus.emit('os:platform-done', { statId: d.statId, level: d.targetLevel });
+        bus.emit('state:changed', data);
     }
 
     escapeHtml(s) { return escapeHtml(s); }
