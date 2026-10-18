@@ -204,11 +204,23 @@ function updateNavSlider(animated) {
 }
 
 // ============ RENDER VIEW ============
+// Kunci halaman+subtab terakhir yang dirender. Bila render ulang terjadi pada
+// halaman yang SAMA (mis. toggle/aksi di dalam panel), posisi scroll dipertahankan;
+// hanya pindah halaman/subtab yang membawa layar kembali ke atas.
+var _lastViewKey = null;
+function _viewKey() {
+    return [activeView, activeSubtab, activeProdSubtab, activeMarketSubtab, activeHqSubtab].join('|');
+}
+
 function renderView(opts) {
     if (!els.view) return;
     var soft = !!(opts && opts.soft);
     if (soft && activeView === 'team' && activeHqSubtab === 'office' && isOfficeMounted()) return;
     var prevScroll = els.view.scrollTop;
+    var viewKey = _viewKey();
+    var sameView = (viewKey === _lastViewKey);
+    _lastViewKey = viewKey;
+    var keepScroll = soft || sameView;
     if (soft) els.view.classList.add('soft-update');
 
     var html = '';
@@ -232,7 +244,7 @@ function renderView(opts) {
     document.body.classList.toggle('is-home', activeView === 'dashboard');
     els.view.innerHTML = html;
 
-    if (!soft) {
+    if (!keepScroll) {
         els.view.classList.add('view-fresh');
         if (window.__viewFreshTimer) clearTimeout(window.__viewFreshTimer);
         window.__viewFreshTimer = setTimeout(function () {
@@ -240,7 +252,7 @@ function renderView(opts) {
         }, 600);
     }
 
-    if (soft) {
+    if (keepScroll) {
         els.view.scrollTop = prevScroll;
         requestAnimationFrame(function () { if (els.view) { els.view.scrollTop = prevScroll; els.view.classList.remove('soft-update'); } });
     } else {
@@ -280,6 +292,9 @@ function _bindCarouselPerf(wrapperEl) {
 }
 
 function renderAll() { renderHeaderOnly(); renderNavOnly(); renderView(); }
+
+// Render ulang tanpa melompat ke atas: posisi scroll dipertahankan (dipakai toggle/pilihan di Settings).
+function renderSoft() { renderHeaderOnly(); renderView({ soft: true }); }
 
 function updateDashboardLive() {
     var t = state.get().time;
@@ -1096,7 +1111,7 @@ async function boot() {
             chips: chipSystem, fab: fabSystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
             silicon: SiliconService, promotion: promotion, bank: bank, payment: PaymentService,
             openSiliconStore: openSiliconStoreModal, LanguageService: LanguageService,
-            SaveService: SaveService, ToastService: ToastService, Modal: Modal, navigate: navigate, render: renderAll,
+            SaveService: SaveService, ToastService: ToastService, Modal: Modal, navigate: navigate, render: renderAll, renderSoft: renderSoft,
             modules: { marketing: marketingModule, feedbackData: feedbackModule },
             cheat: {
                 addCash: function (n) { state.addCash(n); },
