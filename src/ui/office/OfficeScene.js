@@ -52,6 +52,7 @@ import { ROLES, SKILL_TIERS, TRAITS } from '../../data/staff.data.js';
 import { bus } from '../../core/EventBus.js';
 import { t } from '../../core/LanguageService.js';
 import { ToastService } from '../../core/ToastService.js';
+import { WalletService } from '../../systems/WalletService.js';
 import { FAB_LEVELS } from '../../systems/FabSystem.js';
 
 var BASE_VIEW = 17;
@@ -397,12 +398,7 @@ function fabTier(level) {
     return null;
 }
 function canPay(cost) {
-    // WalletService tidak ada di proyek -> baca kas langsung dari state game (sama dengan FabPanel: data.cash >= cost)
-    try {
-        var g = window.__game;
-        var cash = (g && g.state && g.state.get().cash) || 0;
-        return cash >= (cost || 0);
-    } catch (e) { return false; }
+    try { return !!WalletService.canAfford(cost); } catch (e) { return false; }
 }
 // -> null bila tidak ada konstruksi; selain itu { pct 0..1, daysLeft, target, isBuild }
 export function fabProgress(d) {
@@ -611,8 +607,9 @@ export function createOfficeScene(THREE, container, gameState) {
         var m = mesh(p, G.circle, 'shade', r, r, 1, x, 0.03, z);
         m.rotation.x = -Math.PI / 2;
         return m;
-                    }
-// ---------- tekstur motif lantai (putih transparan; warna diatur lewat material) ----------
+    }
+
+    // ---------- tekstur motif lantai (putih transparan; warna diatur lewat material) ----------
     var ownTex = [];
     function makePatternTexture(type, w, d) {
         var c = document.createElement('canvas');
@@ -893,8 +890,9 @@ export function createOfficeScene(THREE, container, gameState) {
             pt = pointAt(inf, inf.total - tt * SPEED);
             return { x: pt.x, z: pt.z, lift: Math.min(1, (inf.tW - tt) / 0.3), moving: true, dx: -pt.dx, dz: -pt.dz, phase: 'back', dest: inf.dest };
         };
-                    }
-// gelembung emoji di atas kepala (tekstur dibagi antar staf)
+    }
+
+    // gelembung emoji di atas kepala (tekstur dibagi antar staf)
     function bubbleTexture(emoji) {
         if (bubbleTex[emoji]) return bubbleTex[emoji];
         var c = document.createElement('canvas');
@@ -1327,7 +1325,8 @@ export function createOfficeScene(THREE, container, gameState) {
         });
         if (!holo) plant(f, 1.4, 1.8, 0.8);
     };
-// lokasi konstruksi Fab: fondasi, bangunan yang tumbuh sesuai progres, perancah, derek berputar, bar progres
+
+    // lokasi konstruksi Fab: fondasi, bangunan yang tumbuh sesuai progres, perancah, derek berputar, bar progres
     function constructionSite(f, x, z, w, dp, fp, tk) {
         var pct = fp.pct, hgt = 0.1 + pct * 0.9, px = w / 2 + 0.02, pz = dp / 2 + 0.02, top = 1.25;
         shadowBox(f, w + 0.3, dp + 0.3, x, z);
@@ -1671,7 +1670,7 @@ export function createOfficeScene(THREE, container, gameState) {
         });
     }
 
-// ---------- kamera ----------
+    // ---------- kamera ----------
     function applyCamera() {
         var v = controls.view;
         var h = BASE_VIEW / v.zoom, w = h * aspect;
@@ -1937,7 +1936,8 @@ export function createOfficeScene(THREE, container, gameState) {
         if (!g) return;
         bus.emit('advisor:go', { nav: g.nav, subtab: g.subtab });
     }
-// ---- aksi langsung dari peta (bangun/upgrade Fab, latih staf) — memakai sistem game yang sama dengan panel
+
+    // ---- aksi langsung dari peta (bangun/upgrade Fab, latih staf) — memakai sistem game yang sama dengan panel
     function runAction(a) {
         if (!a || busy) return;
         if (a.disabled) { try { if (a.note) ToastService.info(a.note); } catch (e) {} return; }
@@ -2148,7 +2148,7 @@ export function createOfficeScene(THREE, container, gameState) {
         });
     }
 
-// ---------- sinkron dengan state game ----------
+    // ---------- sinkron dengan state game ----------
     function update(data) {
         if (disposed || !data) return;
         var plan = computePlan(data);
