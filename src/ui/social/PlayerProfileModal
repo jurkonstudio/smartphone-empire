@@ -1,0 +1,138 @@
+// FILE: src/ui/social/PlayerProfileModal.js
+// v2.3 — i18n penuh: waktu relatif, umur akun, label baris; modal ikut ganti bahasa
+//        (listener lang:changed, dilepas saat modal ditutup).
+// v2.2 — Menampilkan Umur Akun Real-Life & Terakhir Aktif.
+import { Modal } from '../modal.js';
+import { bus } from '../../core/EventBus.js';
+import { LanguageService, t } from '../../core/LanguageService.js';
+import { avatarHtml, resolveAvatarUrls, esc } from './AvatarView.js';
+
+var MODAL_ID = 'player-profile';
+
+var MONTHS = {
+    id: ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'],
+    en: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+};
+
+function _lang() { var l = 'en'; try { l = LanguageService.getLang(); } catch (e) {} return MONTHS[l] ? l : 'en'; }
+
+// t(key); jika key belum ada di kamus, pakai fallback sesuai bahasa aktif. Vars: {n}, {y}, {m}.
+function _tf(key, fbId, fbEn, vars) {
+    var v = t(key, vars);
+    if (v && v !== key) return v;
+    var s = (_lang() === 'en') ? fbEn : fbId;
+    if (vars) {
+        for (var k in vars) {
+            if (Object.prototype.hasOwnProperty.call(vars, k)) s = s.split('{' + k + '}').join(String(vars[k]));
+        }
+    }
+    return s;
+}
+
+function _fmtFounded(year, month) {
+    if (!year) return '—';
+    var m = (month >= 1 && month <= 12) ? MONTHS[_lang()][month - 1] + ' ' : '';
+    return m + year;
+}
+
+function _fmtDate(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    try { return d.toLocaleDateString(_lang() === 'id' ? 'id-ID' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }); }
+    catch (e) { return '—'; }
+}
+
+function _timeAgo(iso) {
+    if (!iso) return '—';
+    var date = new Date(iso);
+    var diffMs = Date.now() - date.getTime();
+    var diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 1) return _tf('pp.time.just_now', 'Baru saja', 'Just now');
+    if (diffMins < 60) return _tf('pp.time.min_ago', '{n} mnt lalu', '{n} min ago', { n: diffMins });
+    var diffHrs = Math.floor(diffMins / 60);
+    if (diffHrs < 24) return _tf('pp.time.hour_ago', '{n} jam lalu', '{n} hr ago', { n: diffHrs });
+    var diffDays = Math.floor(diffHrs / 24);
+    if (diffDays < 30) return _tf('pp.time.day_ago', '{n} hari lalu', '{n} days ago', { n: diffDays });
+    return _fmtDate(iso);
+}
+
+// Menghitung umur akun dalam hitungan hari/bulan real-life
+function _accountAge(iso) {
+    if (!iso) return '—';
+    var date = new Date(iso);
+    var diffMs = Date.now() - date.getTime();
+    var days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (days === 0) return _tf('pp.time.today', 'Hari ini', 'Today');
+    if (days < 30) return _tf('pp.time.age_days', '{n} Hari', '{n} days', { n: days });
+    var months = Math.floor(days / 30);
+    if (months < 12) return _tf('pp.time.age_months', '{n} Bulan', '{n} months', { n: months });
+    var years = Math.floor(months / 12);
+    return _tf('pp.time.age_years', '{y} Tahun {m} Bln', '{y} yr {m} mo', { y: years, m: months % 12 });
+}
+
+export function compactNumber(n) {
+    n = Number(n) || 0;
+    if (n >= 1e12) return (n / 1e12).toFixed(1).replace(/\.0$/, '') + 'T';
+    if (n >= 1e9)  return (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
+    if (n >= 1e6)  return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (n >= 1e3)  return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+    return String(Math.round(n));
+}
+
+function _stat(label, value) {
+    return '<div class="pf-mini"><div class="pf-mini-label">' + esc(label) + '</div><div class="pf-mini-value">' + esc(value) + '</div></div>';
+}
+
+// Isi kartu modal (dipakai saat buka dan saat render ulang karena ganti bahasa).
+function _buildHtml(profile, urls) {
+    var company = profile.company_name || t('pp.lb.no_name');
+    var player = profile.display_name || '';
+
+    var age = _accountAge(profile.created_at);
+    var lastSeen = _timeAgo(profile.updated_at);
+
+    return '<div class="modal-title">' + esc(t('pp.view.title')) + '</div>' +
+        '<div class="pf-view-hero">' +
+            avatarHtml({ src: urls[profile.id], name: company, size: 84, cls: 'pp-avatar-lg' }) +
+            '<div class="pf-view-company">' + esc(company) + '</div>' +
+            (player ? '<div class="pf-view-player">' + esc(player) + '</div>' : '') +
+        '</div>' +
+        '<div class="pf-mini-grid">' +
+            _stat(t('pp.stats.revenue'), '$' + compactNumber(profile.stat_revenue)) +
+            _stat(t('pp.stats.sold'), compactNumber(profile.stat_sold)) +
+            _stat(t('pp.stats.reputation'), Number(profile.stat_reputation || 0).toFixed(1)) +
+            _stat(t('pp.stats.share'), Number(profile.stat_share || 0).toFixed(1) + '%') +
+        '</div>' +
+        '<div class="sum-row"><span>⏳ ' + esc(_tf('pp.view.play_time', 'Lama Bermain', 'Time Played')) + '</span><b style="color:var(--accent);">' + esc(age) + '</b></div>' +
+        '<div class="sum-row"><span>🟢 ' + esc(_tf('pp.view.last_active', 'Terakhir Aktif', 'Last Active')) + '</span><b>' + esc(lastSeen) + '</b></div>' +
+        '<div class="sum-row"><span>' + esc(t('pp.view.joined')) + '</span><b>' + esc(_fmtDate(profile.created_at)) + '</b></div>' +
+        '<div class="sum-row"><span>' + esc(t('pp.view.founded')) + '</span><b>' + esc(_fmtFounded(profile.founded_year, profile.founded_month)) + '</b></div>' +
+        '<button type="button" class="btn-secondary" data-modal-close style="width:100%;margin-top:16px;padding:10px;">' + esc(t('pp.view.close')) + '</button>';
+}
+
+export async function openPlayerProfileModal(profile) {
+    if (!profile) return;
+
+    var urls = {};
+    try { urls = await resolveAvatarUrls([profile]); } catch (e) {}
+
+    var unsub = null;
+    function cleanup() {
+        if (unsub) { try { unsub(); } catch (e) {} unsub = null; }
+    }
+
+    var node = Modal.open(MODAL_ID, _buildHtml(profile, urls), { onClose: cleanup });
+
+    unsub = bus.on('lang:changed', function () {
+        // Modal.close(id, true) (silent) tidak memanggil onClose, jadi cek sendiri.
+        if (!node || !node.isConnected || !Modal.isOpen(MODAL_ID)) { cleanup(); return; }
+        var card = node.querySelector('.modal-card');
+        if (!card) return;
+        card.innerHTML = _buildHtml(profile, urls);
+        var closeBtn = card.querySelector('[data-modal-close]');
+        if (closeBtn) closeBtn.addEventListener('click', function () { Modal.close(MODAL_ID); });
+    });
+}
