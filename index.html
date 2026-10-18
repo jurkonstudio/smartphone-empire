@@ -21,6 +21,54 @@
 <title>Smartphone Empire</title>
 
 <!-- ============================================================
+     PERF TIER — deteksi HP lemah / hemat baterai SEBELUM render pertama.
+     Tidak menurunkan resolusi. Hanya mematikan efek dekoratif mahal (blur kaca, animasi tanpa henti)
+     dan menurunkan frekuensi animasi ambient 3D dari 30 ke 24 fps pada mode hemat.
+     Paksa manual: localStorage['smartphone-empire:perf'] = 'lite' | 'full' | 'auto'  (atau ?perf=lite di URL)
+     ============================================================ -->
+<script>
+(function () {
+    var KEY = 'smartphone-empire:perf';
+    var root = document.documentElement;
+    var P = window.__PERF = { lite: false, reason: 'full', frameMs: 33, antialias: true };
+    function pref() {
+        try {
+            var q = /[?&]perf=(lite|full|auto)/.exec(location.search);
+            if (q) { localStorage.setItem(KEY, q[1]); return q[1]; }
+            return localStorage.getItem(KEY) || 'auto';
+        } catch (e) { return 'auto'; }
+    }
+    var forced = pref();
+    var base = null;        // alasan permanen (perangkat)
+    var lowBattery = false; // alasan dinamis (baterai)
+    try {
+        var nav = navigator, c = nav.connection || {};
+        if (nav.deviceMemory && nav.deviceMemory <= 3) base = 'ram<=3GB';
+        else if (nav.hardwareConcurrency && nav.hardwareConcurrency <= 4) base = 'cpu<=4core';
+        else if (c.saveData) base = 'save-data';
+    } catch (e) {}
+    function apply() {
+        var lite = forced === 'lite' || (forced === 'auto' && (!!base || lowBattery));
+        if (forced === 'full') lite = false;
+        P.lite = lite;
+        P.reason = lite ? (forced === 'lite' ? 'manual' : (base || 'battery<=20%')) : 'full';
+        P.frameMs = lite ? 42 : 33;           // 24 fps vs 30 fps
+        P.antialias = !(lite && base);        // AA dimatikan hanya di HP lemah (DPR tetap sama)
+        if (lite) root.setAttribute('data-perf', 'lite'); else root.removeAttribute('data-perf');
+    }
+    apply();
+    try {
+        if (navigator.getBattery) navigator.getBattery().then(function (b) {
+            function upd() { lowBattery = !b.charging && b.level <= 0.2; apply(); }
+            upd();
+            b.addEventListener('levelchange', upd);
+            b.addEventListener('chargingchange', upd);
+        }).catch(function () {});
+    } catch (e) {}
+})();
+</script>
+
+<!-- ============================================================
      ERUDA SECRET TAP (DINAMIS + KEAMANAN EMAIL)
      ============================================================ -->
 <script>

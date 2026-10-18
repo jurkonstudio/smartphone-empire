@@ -2869,8 +2869,7 @@ body {
     background-size: 200% 200%;
     background-repeat: no-repeat;
     background-attachment: fixed;
-    animation: bgDrift 80s ease-in-out infinite;
-    will-change: background-position;
+    /* PERF: animasi bgDrift dihapus — menggambar ulang satu layar penuh tiap frame selama 80 dtk, boros baterai. */
 }
 [data-accent="emerald"] body {
     background:
@@ -4472,3 +4471,42 @@ body {
     .mobile-nav .nav-slider, .mobile-nav .nav-slider::before, .mobile-nav .nav-btn { transition: none !important; }
 }
 @media (min-width: 768px) { .mobile-nav { display: none !important; } }
+
+
+/* ============================================================================
+   PERFORMANCE LAYER (hemat baterai / HP kelas bawah) — resolusi & fitur tidak dikurangi
+   Prinsip: animasi tanpa henti hanya boleh memakai transform/opacity (jalur GPU compositor).
+   Animasi box-shadow / filter / background-position memaksa repaint terus-menerus.
+   ============================================================================ */
+/* Redefinisi keyframes: yang terakhir menang. Tampilan hampir sama, biaya jauh lebih kecil. */
+@keyframes kpiGlowStrong { 0%, 100% { opacity: 0.65; } 50% { opacity: 1; } }
+.kpi::before { box-shadow: 0 0 8px 1px var(--accent-glow); }
+@keyframes questBreath   { 0%, 100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.25); } }
+.quest-dot { box-shadow: 0 0 0 3px var(--warn-soft), 0 0 8px var(--warn); }
+@keyframes newsPulse     { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.25); } }
+@keyframes tlPulse       { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+/* filter drop-shadow animasi tanpa henti pada container toast: dibuang */
+.toast-container:not(:empty) { animation: none; }
+/* shimmer progress bar menganimasikan background-position (repaint) -> statis */
+.progress-bar:not([style*="width:0%"]) { animation: none; }
+/* efek denyut halus pada SVG (opacity 0.92 / 0.85) nyaris tak terlihat tapi memaksa repaint SVG */
+.phone-mockup-wrap svg rect[fill^="url"], .radar-chart-wrap polygon[fill] { animation: none; }
+/* elemen yang tidak terlihat tidak perlu dianimasikan */
+[hidden], .is-hidden { animation: none !important; }
+
+/* Mode hemat (HP lemah / baterai rendah / Data Saver) — diatur oleh skrip di index.html */
+html[data-perf="lite"] *, html[data-perf="lite"] *::before, html[data-perf="lite"] *::after {
+    animation-iteration-count: 1 !important;
+}
+html[data-perf="lite"] .app-header,
+html[data-perf="lite"] .mobile-nav,
+html[data-perf="lite"] .modal-backdrop,
+html[data-perf="lite"] [class*="backdrop"] {
+    -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+}
+html[data-perf="lite"] .app-header { background: rgba(255,255,255,0.97) !important; }
+html[data-perf="lite"][data-theme="dark"] .app-header { background: rgba(18,18,20,0.97) !important; }
+html[data-perf="lite"] .mobile-nav { background: rgba(250,250,252,0.98) !important; }
+html[data-perf="lite"][data-theme="dark"] .mobile-nav { background: rgba(28,28,30,0.98) !important; }
+/* layar OLED/LCD hemat: tidak ada lagi gradien fixed yang di-repaint saat scroll */
+html[data-perf="lite"] body { background-attachment: scroll !important; }
