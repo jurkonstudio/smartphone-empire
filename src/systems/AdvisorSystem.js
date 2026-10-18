@@ -20,6 +20,9 @@ import { ToastService } from '../core/ToastService.js';
 import { BALANCE } from '../data/balance.data.js';
 import { getMacro } from '../core/MacroModel.js';
 import { AdvisorBrain } from './AdvisorBrain.js';
+import { ADVISOR_CONFIG } from '../config/advisor.config.js';
+import { createAdvisorProvider } from '../services/AdvisorAI.js';
+import { buildReport, formatReportText } from '../diagnostics/DiagnosticReport.js';
 
 const DAY = 1440;                 // menit game per hari
 const SNOOZE_DAYS = 30;
@@ -46,6 +49,24 @@ const DICT = {
         'ui.clear': 'Mulai ulang',
         'ui.ask_send': 'Kirim',
         'ui.thinking': 'Berpikir…',
+        'ui.chat': 'Tanya asisten',
+        'ui.copy_report': 'Salin laporan bug',
+        'ui.open_report': 'Lihat detail',
+        'ui.report_copied': 'Laporan disalin. Kirim ke pengembang.',
+        'ui.report_failed': 'Gagal menyalin. Buka detail lalu salin manual.',
+        'app_issue.t': 'Masalah teknis terdeteksi',
+        'app_issue.d': '{n} anomali data atau error terdeteksi. Salin laporan dan kirim ke pengembang agar cepat diperbaiki.',
+        'ui.briefing': 'Sejak terakhir kamu cek',
+        'ui.health': 'Kesehatan bisnis',
+        'ui.ai': 'AI',
+        'ui.cash_lbl': 'Uang',
+        'ui.sold_lbl': 'Terjual',
+        'ui.health_lbl': 'Skor',
+        'ui.resolved_lbl': '{n} masalah sudah beres',
+        'ui.days_lbl': '{n} hari',
+        'ui.weakest_lbl': 'Area terlemah: {name}',
+        'stock_soon.t': 'Stok {name} segera habis',
+        'stock_soon.d': 'Dengan laju jual ±{pace} unit/hari, stok {stock} unit habis sekitar {days} hari lagi. Produksi ulang sekarang atau aktifkan auto-restock.',
         'ui.ask_fail': 'Asisten AI sedang tidak tersedia.',
         'ui.summary': 'Uang cukup sekitar {months} bulan biaya operasional.',
         'ui.summary_na': 'Belum ada biaya bulanan berarti.',
@@ -124,6 +145,24 @@ const DICT = {
         'ui.clear': 'Restart',
         'ui.ask_send': 'Send',
         'ui.thinking': 'Thinking…',
+        'ui.chat': 'Ask the advisor',
+        'ui.copy_report': 'Copy bug report',
+        'ui.open_report': 'View details',
+        'ui.report_copied': 'Report copied. Send it to the developer.',
+        'ui.report_failed': 'Copy failed. Open details and copy manually.',
+        'app_issue.t': 'Technical problem detected',
+        'app_issue.d': '{n} data anomalies or errors detected. Copy the report and send it to the developer so it can be fixed.',
+        'ui.briefing': 'Since you last checked',
+        'ui.health': 'Business health',
+        'ui.ai': 'AI',
+        'ui.cash_lbl': 'Cash',
+        'ui.sold_lbl': 'Sold',
+        'ui.health_lbl': 'Score',
+        'ui.resolved_lbl': '{n} issue(s) resolved',
+        'ui.days_lbl': '{n} day(s)',
+        'ui.weakest_lbl': 'Weakest area: {name}',
+        'stock_soon.t': '{name} will run out soon',
+        'stock_soon.d': 'At ~{pace} units/day, {stock} units of stock last about {days} more days. Restock now or enable auto-restock.',
         'ui.ask_fail': 'The AI advisor is unavailable right now.',
         'ui.summary': 'Cash covers about {months} months of operating costs.',
         'ui.summary_na': 'No significant monthly costs yet.',
@@ -266,6 +305,32 @@ const RULES = [
                 push('stock_out:' + p.id, 'critical', 'package', { name: p.name }, { nav: 'products', subtab: 'sales' }, 1);
             } else if (cap > 0 && p.stock < cap * 0.2 && !(p.autoRestock && p.autoRestock.enabled)) {
                 push('stock_low:' + p.id, 'warn', 'package', { name: p.name, stock: money(p.stock) }, { nav: 'products', subtab: 'sales' }, 10);
+            }
+        });
+    },
+    function appIssue(c, push) {
+        var dg = c.diag;
+        if (!dg) return;
+        var errs = dg.alerts.filter(function (a) { return a.level === 'error'; }).length;
+        var n = dg.alerts.length + dg.errors.length;
+        if (errs > 0) push('app_issue', 'critical', 'bug', { n: n }, { report: true }, 4);
+        else if (dg.errors.length >= 3 || dg.alerts.length >= 2) push('app_issue', 'warn', 'bug', { n: n }, { report: true }, 16);
+    },
+    function stockForecast(c, push) {
+        // Prakiraan stok berdasar laju jual per produk (lebih awal daripada ambang 20%).
+        var pp = (c.trends && c.trends.perProduct) || {};
+        c.selling.forEach(function (p) {
+            var pace = pp[p.id];
+            var stock = p.stock || 0;
+            if (!(pace > 0.5) || stock <= 0) return;
+            if (p.autoRestock && p.autoRestock.enabled) return;
+            var cap = p.baseCapacity || p.totalProduced || 0;
+            if (cap > 0 && stock < cap * 0.2) return;           // sudah ditangani aturan stock_low
+            var days = stock / pace;
+            if (days <= 14) {
+                push('stock_soon:' + p.id, days <= 7 ? 'warn' : 'tip', 'package',
+                    { name: p.name, pace: pace.toFixed(1), stock: money(stock), days: Math.max(1, Math.round(days)) },
+                    { nav: 'products', subtab: 'sales' }, 9);
             }
         });
     },
@@ -439,6 +504,8 @@ export class AdvisorSystem {
         this._lastCheckDay = -1;
         this.brain = new AdvisorBrain(this);
         this._chat = [];                 // riwayat percakapan (sesi berjalan)
+        this._errors = [];               // error runtime terakhir (hanya di memori)
+        this._diagCache = null;
     }
 
     _lang() { return curLang(); }
@@ -451,6 +518,10 @@ export class AdvisorSystem {
             self._unsubs.push(bus.on(ev, refresh));
         });
         this._unsubs.push(bus.on('time:day-changed', function () { self._snapshot(); self._maybeToast(); }));
+        this._captureErrors();
+        if (!this._provider && ADVISOR_CONFIG && ADVISOR_CONFIG.aiEnabled && ADVISOR_CONFIG.endpoint) {
+            this.setProvider(createAdvisorProvider(ADVISOR_CONFIG));
+        }
         this._scheduleRefresh();
     }
 
@@ -479,23 +550,35 @@ export class AdvisorSystem {
         var last = store.hist[store.hist.length - 1];
         if (last && day - last.day < SNAPSHOT_EVERY_DAYS) return;
         var cat = arr((d.products || {}).catalog);
+        var ps = {};
+        cat.forEach(function (p) { if (p && p.id != null) ps[p.id] = p.totalSold || 0; });
+        var hs = null;
+        try { hs = this.getHealth().score; } catch (e) {}
         store.hist.push({
             day: day,
             cash: d.cash || 0,
             sold: sumBy(cat, function (p) { return p.totalSold; }),
-            rev: sumBy(cat, function (p) { return p.totalRevenue; })
+            rev: sumBy(cat, function (p) { return p.totalRevenue; }),
+            ps: ps,
+            hs: hs
         });
         if (store.hist.length > MAX_SNAPSHOTS) store.hist.splice(0, store.hist.length - MAX_SNAPSHOTS);
     }
 
     _trends() {
         var h = this._store().hist;
-        var out = { salesRecent: null, salesPrev: null, salesDrop: null, cashPerDay: null, points: h.length };
+        var out = { salesRecent: null, salesPrev: null, salesDrop: null, cashPerDay: null, points: h.length, perProduct: {}, healthDelta: null };
         if (h.length >= 2) {
             var a = h[h.length - 2], b = h[h.length - 1];
             var dd = Math.max(1, b.day - a.day);
             out.salesRecent = (b.sold - a.sold) / dd;
             out.cashPerDay = (b.cash - a.cash) / dd;
+            if (a.ps && b.ps) {
+                Object.keys(b.ps).forEach(function (id) {
+                    if (typeof a.ps[id] === 'number') out.perProduct[id] = Math.max(0, (b.ps[id] - a.ps[id]) / dd);
+                });
+            }
+            if (typeof a.hs === 'number' && typeof b.hs === 'number') out.healthDelta = b.hs - a.hs;
         }
         if (h.length >= 3) {
             var p0 = h[h.length - 3], p1 = h[h.length - 2];
@@ -558,6 +641,7 @@ export class AdvisorSystem {
             catalog: catalog,
             selling: catalog.filter(function (p) { return p.status === 'selling'; }),
             trends: this._trends(),
+            diag: this.getDiagnostics(),
             recruitCost: function (role) { return self.recruitCostOf(role); },
             bestResearch: function () { return self._bestResearch(c); }
         };
@@ -776,6 +860,117 @@ export class AdvisorSystem {
         };
     }
 
+    // ---------- diagnosa masalah aplikasi ----------
+    _captureErrors() {
+        var self = this;
+        if (typeof window === 'undefined' || typeof window.addEventListener !== 'function' || this._errHandlers) return;
+        var push = function (msg, src) {
+            msg = String(msg || '').slice(0, 200);
+            if (!msg || /^Script error\.?$/i.test(msg) || /ResizeObserver loop/i.test(msg)) return;
+            self._errors.push({ t: Date.now(), msg: msg, src: src || '' });
+            if (self._errors.length > 10) self._errors.shift();
+            self._diagCache = null;
+            self._scheduleRefresh();
+        };
+        var onErr = function (e) { push(e && e.message, e && e.filename ? String(e.filename).split('/').pop() + ':' + (e.lineno || 0) : ''); };
+        var onRej = function (e) { var r = e && e.reason; push(r && r.message ? r.message : r, 'promise'); };
+        window.addEventListener('error', onErr);
+        window.addEventListener('unhandledrejection', onRej);
+        this._errHandlers = [onErr, onRej];
+        this._unsubs.push(function () {
+            window.removeEventListener('error', onErr);
+            window.removeEventListener('unhandledrejection', onRej);
+            self._errHandlers = null;
+        });
+    }
+
+    _gameRef() {
+        var g = (typeof window !== 'undefined') ? window.__game : null;
+        return (g && g.state && typeof g.state.get === 'function') ? g : null;
+    }
+
+    // { alerts:[{level,code,msg}], errors:[{msg,src,t}] } — alert di-cache 30 dtk agar murah.
+    getDiagnostics() {
+        var now = Date.now();
+        if (!this._diagCache || now - this._diagCache.t > 30000) {
+            var alerts = [];
+            var g = this._gameRef();
+            if (g) {
+                try { alerts = (buildReport(g.state.get(), g, {}).sanity || {}).alerts || []; } catch (e) {}
+            }
+            this._diagCache = { t: now, alerts: alerts };
+        }
+        return { alerts: this._diagCache.alerts, errors: this._errors.slice() };
+    }
+
+    // Teks laporan lengkap untuk dikirim ke pengembang.
+    buildBugReportText() {
+        var g = this._gameRef(), L = [];
+        try {
+            if (g) L.push(formatReportText(buildReport(g.state.get(), g, { detailed: true })));
+        } catch (e) { L.push('(laporan dasar gagal dibuat: ' + (e && e.message) + ')'); }
+        var dg = this.getDiagnostics();
+        L.push('');
+        L.push('--- RUNTIME ERRORS (' + dg.errors.length + ') ---');
+        dg.errors.forEach(function (x) { L.push(new Date(x.t).toISOString() + ' ' + x.msg + (x.src ? ' @ ' + x.src : '')); });
+        if (!dg.errors.length) L.push('(tidak ada)');
+        try {
+            var h = this.getHealth();
+            L.push('');
+            L.push('--- ADVISOR ---');
+            L.push('Health: ' + h.score + '/100 (' + h.label + ')');
+            L.push('Advice: ' + this.getAdvice().map(function (a) { return a.id; }).join(', '));
+        } catch (e) {}
+        return L.join('\n');
+    }
+
+    // ---------- ringkasan perubahan sejak terakhir dilihat ----------
+    // Kembalikan null bila belum ada pembanding / belum ada perubahan berarti.
+    getBriefing() {
+        var d = this.state.data;
+        if (!d || !d.time) return null;
+        var store = this._store();
+        var seen = store.seen;
+        if (!seen) return null;
+        var c = this._ctx();
+        var days = Math.floor((c.now - seen.now) / DAY);
+        if (days < 1) return null;
+        var list = this.getAdvice().filter(function (a) { return a.id !== 'all_good'; });
+        var prev = arr(seen.ids);
+        var fresh = list.filter(function (a) { return prev.indexOf(a.id) < 0 && (a.sev === 'critical' || a.sev === 'warn'); });
+        var nowIds = list.map(function (a) { return a.id; });
+        var resolved = prev.filter(function (id) { return nowIds.indexOf(id) < 0; }).length;
+        var sold = sumBy(c.catalog, function (p) { return p.totalSold; });
+        var health = this.getHealth().score;
+        var out = {
+            days: days,
+            cashDelta: Math.round(c.cash - seen.cash),
+            soldDelta: Math.max(0, sold - (seen.sold || 0)),
+            healthDelta: typeof seen.hs === 'number' ? health - seen.hs : null,
+            fresh: fresh.slice(0, 3).map(function (a) { return { id: a.id, sev: a.sev, title: a.title }; }),
+            resolved: resolved
+        };
+        var notable = out.fresh.length || out.resolved || Math.abs(out.cashDelta) >= Math.max(500, c.cash * 0.05) ||
+                      out.soldDelta > 0 || (out.healthDelta !== null && Math.abs(out.healthDelta) >= 3);
+        return notable ? out : null;
+    }
+
+    // Tandai kondisi sekarang sebagai "sudah dilihat" (dipanggil panel setelah render).
+    markSeen() {
+        var d = this.state.data;
+        if (!d || !d.time) return;
+        var c = this._ctx();
+        var store = this._store();
+        var ids = this.getAdvice().filter(function (a) { return a.id !== 'all_good'; }).map(function (a) { return a.id; });
+        store.seen = {
+            now: c.now,
+            cash: Math.round(c.cash),
+            sold: sumBy(c.catalog, function (p) { return p.totalSold; }),
+            hs: this.getHealth().score,
+            ids: ids
+        };
+    }
+
     snooze(id, days) {
         var c = this._ctx();
         var store = this._store();
@@ -863,7 +1058,9 @@ export class AdvisorSystem {
             os: { versions: arr((d.os || {}).versions).length, bugs: arr((d.os || {}).bugs).filter(function (b) { return b && b.status === 'active'; }).length },
             fab: { built: !!(d.fab && d.fab.built), level: d.fab && d.fab.level },
             market: { share: (d.market || {}).share, reputation: (d.market || {}).reputation },
-            activeCampaigns: arr((d.marketing || {}).activeCampaigns).length
+            activeCampaigns: arr((d.marketing || {}).activeCampaigns).length,
+            healthParts: h.parts.map(function (p) { return { id: p.id, score: p.score }; }),
+            salesPaceByProduct: c.trends.perProduct
         };
     }
 
@@ -882,9 +1079,10 @@ export class AdvisorSystem {
         var res;
         try { res = this.brain.reply(q); }
         catch (e) { console.warn('[Advisor] brain gagal:', e); res = { text: tx('ui.ask_fail'), actions: [], chips: [] }; }
-        if (res.intent === 'unknown' && this._provider) {
+        // AI dipakai hanya bila otak lokal tidak yakin; kegagalan AI = tetap jawaban lokal.
+        if (this._provider && (res.intent === 'unknown' || (res.confidence !== undefined && res.confidence < 0.35 && res.intent !== 'clarify'))) {
             var ai = await this.ask(q);
-            if (ai.ok && ai.text) res = { text: ai.text, actions: res.actions || [], chips: res.chips || [], intent: 'ai' };
+            if (ai.ok && ai.text) res = { text: ai.text, actions: res.actions || [], chips: res.chips || [], intent: 'ai', source: 'ai', confidence: 1 };
         }
         var msg = Object.assign({ role: 'bot' }, res);
         this._chat.push(msg);
@@ -896,10 +1094,14 @@ export class AdvisorSystem {
         if (!this._provider) return { ok: false, reason: 'no_provider' };
         try {
             var advice = this.getAdvice().map(function (a) { return { id: a.id, severity: a.sev, title: a.title }; });
+            var history = this._chat.slice(-7, -1).map(function (m) {
+                return { role: m.role === 'user' ? 'user' : 'assistant', text: String(m.text || '').slice(0, 280) };
+            });
             var text = await this._provider({
                 question: String(question || ''),
                 context: this.buildContext(),
                 advice: advice,
+                history: history,
                 lang: curLang()
             });
             return { ok: true, text: String(text || '') };

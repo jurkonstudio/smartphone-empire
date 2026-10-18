@@ -14,6 +14,10 @@
 //    "kalau pinjam 50 ribu").
 //  - Perintah navigasi ("buka riset", "ke tim", "go to sales").
 //  - Selalu mengembalikan tombol aksi + saran pertanyaan lanjutan.
+//  v2028.41:
+//  - Ringkasan perubahan ("ada apa baru?"), prakiraan stok habis per produk.
+//  - Rujukan ke daftar saran ("yang kedua", "buka no 2", "tunda yang pertama").
+//  - Pertanyaan gabungan ("uang dan stok gimana?") dijawab sekaligus, bukan ditanya balik.
 //
 // Kontrak: reply(text) -> { text, actions:[{label,nav,subtab}], chips:[string],
 //                           intent, confidence, navigate? }
@@ -106,6 +110,7 @@ var INTENTS = {
     silicon:   { w: 1.6, kw: ['silicon', 'sil', 'topup', 'top', 'up', 'premium', 'percepat', 'speed', 'boost', 'gem'] },
     glossary:  { w: 1.2, kw: ['itu', 'artinya', 'maksud', 'definisi', 'arti', 'what', 'means', 'meaning', 'define', 'istilah'] },
     why:       { w: 1.0, kw: ['kenapa', 'mengapa', 'why', 'alasan', 'sebab', 'reason', 'bagaimana'] },
+    bug:       { w: 1.2, kw: ['error', 'eror', 'rusak', 'macet', 'hang', 'crash', 'glitch', 'freeze', 'broken', 'diagnosa', 'diagnostic', 'lag'] },
     more:      { w: 0.5, kw: ['lanjut', 'detail', 'lagi', 'terus', 'jelasin', 'jelaskan', 'lengkap', 'more', 'continue', 'elaborate', 'next', 'oke', 'ok', 'ya', 'yes', 'iya', 'boleh'] }
 };
 
@@ -119,6 +124,25 @@ var INTENT_LABEL = {
     os: ['OS', 'OS'], chip: ['chip & fab', 'chips & fab'], morale: ['moral tim', 'team morale'],
     reputation: ['reputasi', 'reputation'], competitor: ['pesaing & pasar', 'rivals & market'],
     whatif: ['simulasi', 'simulation']
+};
+
+INTENT_LABEL.briefing = ['perubahan terbaru', 'recent changes'];
+INTENT_LABEL.bug = ['masalah aplikasi', 'app problem'];
+
+// Penjelasan awam untuk kode anomali dari DiagnosticReport.
+var ALERT_TEXT = {
+    CASH_NAN: ['Nilai uang rusak (bukan angka). Data save kemungkinan korup.', 'Cash value is broken (not a number). Save data may be corrupted.'],
+    CASH_NON_INTEGER: ['Uang berisi pecahan desimal; biasanya tidak berbahaya.', 'Cash has a decimal part; usually harmless.'],
+    CASH_NEGATIVE: ['Uang negatif tetapi game belum berakhir.', 'Cash is negative but the game has not ended.'],
+    TIME_INVALID: ['Waktu game tidak valid; game bisa macet.', 'Game time is invalid; the game may stall.'],
+    PRODUCT_BAD_STOCK: ['Ada produk dengan stok tidak valid.', 'A product has an invalid stock value.'],
+    PRODUCT_NO_ID: ['Ada produk tanpa ID.', 'A product has no ID.'],
+    STAFF_NO_ID: ['Ada staf tanpa ID.', 'A staff member has no ID.'],
+    STAFF_BAD_ROLE: ['Ada staf dengan peran tidak valid.', 'A staff member has an invalid role.'],
+    RESEARCH_DUPLICATE: ['Ada riset yang tercatat ganda.', 'A research item is recorded twice.'],
+    FINANCE_HISTORY_OVERFLOW: ['Riwayat keuangan terlalu panjang.', 'Finance history is too long.'],
+    PORTFOLIO_MISMATCH: ['Nilai portofolio saham tidak cocok.', 'Stock portfolio value does not match.'],
+    MARKET_COMPETITORS_NOT_ARRAY: ['Data pesaing rusak.', 'Competitor data is broken.']
 };
 
 var NAV_STRONG = ['buka', 'open', 'pergi', 'tampilkan', 'show', 'lihat', 'menuju', 'bawa', 'antar', 'navigate', 'arahkan', 'masuk'];
@@ -189,7 +213,7 @@ export class AdvisorBrain {
         this.resetMemory();
     }
 
-    resetMemory() { this.mem = { last: null, lastProduct: null, depth: 0, turns: 0, asked: {}, pending: null }; }
+    resetMemory() { this.mem = { last: null, lastProduct: null, depth: 0, turns: 0, asked: {}, pending: null, list: [], refIdx: 0 }; }
 
     lang() { return this.sys._lang(); }
     L(id, en) { return this.lang() === 'id' ? id : en; }
@@ -305,6 +329,21 @@ export class AdvisorBrain {
             }
         }
 
+        // Rujukan ke saran yang baru ditampilkan: "yang kedua", "buka no 2", "tunda yang pertama"
+        var ref = this._detectRef(text);
+        if (ref) { m.last = 'ref'; return this._runRef(ref); }
+
+        // "ada apa baru?" -> ringkasan perubahan
+        var nqb = norm(text);
+        if (/ada apa (baru|aja)|apa (yang )?(baru|berubah)|perubahan|what s new|what is new|what changed|any news|sejak (terakhir|tadi)|since (last|i left)/.test(nqb)) {
+            return this._run('briefing', { detail: false, text: text, product: null, toks: tokens(text) }, 0.9);
+        }
+
+        // Laporan masalah aplikasi (bukan bug OS dalam game)
+        if (/(aplikasi|app|game|permainan).*(bug|error|eror|rusak|macet|hang|crash|lag|freeze)|(bug|error|eror|rusak|macet|hang|crash|freeze).*(aplikasi|app|game|permainan)|lapor(kan)? (bug|error|masalah)|bug report|ada (error|eror)|force close|layar (putih|hitam)|(tidak|ga|gak|nggak) (bisa|jalan|respon|muncul)|something (broke|is broken|went wrong)|not working|does not work|doesn t work|keluar sendiri/.test(nqb)) {
+            return this._run('bug', { detail: false, text: text, product: null, toks: tokens(text) }, 0.9);
+        }
+
         var nav = this._detectNav(text);
         if (nav) {
             m.last = 'navigate';
@@ -334,7 +373,7 @@ export class AdvisorBrain {
 
         var intent = d.intent;
         var detail = false;
-        if (d.follow) { intent = m.last; detail = true; m.depth++; }
+        if (d.follow) { intent = this['_h_' + m.last] ? m.last : 'next'; detail = true; m.depth++; }
         else if (prod && (!intent || ['stock', 'marketing', 'price'].indexOf(intent) < 0 || d.score < 2.5)) { intent = 'product'; }
         else m.depth = 0;
 
@@ -346,6 +385,11 @@ export class AdvisorBrain {
         // Dua maksud sama kuat → tanya balik, jangan menebak.
         if (!d.follow && !prod && d.secondIntent && INTENT_LABEL[d.intent] && INTENT_LABEL[d.secondIntent] &&
             d.second >= d.score * 0.8 && d.score < 4 && d.toks.length >= 3) {
+            // Ada kata sambung ("dan", "and", "sekaligus", koma) = memang bertanya dua hal -> jawab keduanya.
+            if (/(\bdan\b|\band\b|\bsama\b|\bserta\b|\bsekaligus\b|&|,| plus )/.test(String(text).toLowerCase()) &&
+                ['whatif', 'plan', 'status'].indexOf(d.intent) < 0 && ['whatif', 'plan', 'status'].indexOf(d.secondIntent) < 0) {
+                return this._combo(d.intent, d.secondIntent, text, d.toks);
+            }
             return this._clarify(d.intent, d.secondIntent);
         }
         return this._run(intent, { detail: detail, text: text, product: prod, toks: d.toks }, d.confidence);
@@ -364,6 +408,105 @@ export class AdvisorBrain {
         return res;
     }
 
+    // Dua pertanyaan dalam satu kalimat -> dua jawaban ringkas digabung.
+    _combo(a, b, text, toks) {
+        var self = this, m = this.mem;
+        var parts = [a, b].map(function (k) {
+            m.asked[k] = (m.asked[k] || 0) + 1;
+            return self._handle(k, { detail: false, text: text, product: null, toks: toks });
+        });
+        var acts = [], seen = {};
+        parts.forEach(function (r) {
+            (r.actions || []).forEach(function (x) {
+                var key = x.nav + '|' + (x.subtab || '');
+                if (!seen[key] && acts.length < 2) { seen[key] = 1; acts.push(x); }
+            });
+        });
+        m.last = b;
+        return { text: parts[0].text + '\n\n' + parts[1].text, actions: acts, chips: this._followChips(b), intent: 'combo', confidence: 0.8 };
+    }
+
+    // Simpan daftar saran terakhir yang ditampilkan agar bisa dirujuk ("yang kedua").
+    _setList(list) {
+        this.mem.list = (list || []).filter(function (a) { return a && a.id && a.id !== 'all_good'; }).slice(0, 5);
+    }
+
+    _detectRef(text) {
+        var list = this.mem.list;
+        if (!list || !list.length) return null;
+        var n = norm(text), toks = tokens(text);
+        if (toks.length > 8) return null;
+        var idx = -1;
+        var words = { pertama: 0, satu: 0, first: 0, kedua: 1, dua: 1, second: 1, ketiga: 2, tiga: 2, third: 2, keempat: 3, empat: 3, fourth: 3 };
+        for (var i = 0; i < toks.length; i++) {
+            if (Object.prototype.hasOwnProperty.call(words, toks[i])) { idx = words[toks[i]]; break; }
+            if (/^\d$/.test(toks[i]) && (toks[i - 1] === 'no' || toks[i - 1] === 'nomor' || toks[i - 1] === 'number' || toks[i - 1] === 'yang' || toks.length <= 2)) {
+                idx = parseInt(toks[i], 10) - 1; break;
+            }
+        }
+        var snooze = /(tunda|snooze|abaikan|ignore|nanti dulu|skip)/.test(n);
+        var itRef = /(buka|open|antar|jelas|explain|detail|tunda|snooze|abaikan|ignore).*\b(itu|ini|that|this|it)\b|\b(itu|that|it)\b.*(buka|open)/.test(n) && idx < 0;
+        if (idx < 0 && !itRef) return null;
+        if (idx < 0) idx = Math.min(this.mem.refIdx || 0, list.length - 1);
+        if (idx >= list.length) return null;
+        var hasCue = snooze || /\b(yang|no|nomor|number|buka|open|jelas|explain|detail|itu|ini|that|this|it)\b/.test(n) || toks.length <= 2;
+        return hasCue ? { item: list[idx], idx: idx, snooze: snooze } : null;
+    }
+
+    _runRef(r) {
+        var L = this.L.bind(this), a = r.item;
+        this.mem.refIdx = r.idx;
+        if (r.snooze) {
+            this.sys.snooze(a.id);
+            return { text: L('Oke, saran **' + a.title + '** kutunda 30 hari. Kalau kondisinya memburuk, aku akan kabari lagi.',
+                             'Okay, I snoozed **' + a.title + '** for 30 days. If it gets worse I\'ll flag it again.'),
+                     actions: [], chips: this.chips(), intent: 'ref', confidence: 1 };
+        }
+        var acts = a.action ? [this._actionFor(a)] : [];
+        return { text: L('Saran #' + (r.idx + 1) + ': **' + a.title + '**\n' + a.detail, 'Suggestion #' + (r.idx + 1) + ': **' + a.title + '**\n' + a.detail),
+                 actions: acts, chips: [L('Tunda saran ini', 'Snooze this'), L('Apa prioritas sekarang?', 'What should I do now?')],
+                 intent: 'ref', confidence: 1 };
+    }
+
+    _h_bug() {
+        var L = this.L.bind(this), d = this.sys.getDiagnostics(), lang = this.lang() === 'id' ? 0 : 1;
+        var lines = [];
+        if (!d.alerts.length && !d.errors.length) {
+            lines.push(L('Aku sudah memeriksa data game: **tidak ada anomali** dan tidak ada error baru.', 'I checked the game data: **no anomalies** and no new errors.'));
+            lines.push(L('Kalau masalahnya spesifik (mis. tombol tidak merespons), salin laporan lalu kirim ke pengembang bersama deskripsi singkat: apa yang kamu tekan dan apa yang terjadi.',
+                         'If the problem is specific (e.g. a button does nothing), copy the report and send it to the developer with a short note: what you tapped and what happened.'));
+        } else {
+            lines.push(L('Hasil pemeriksaan: **' + d.alerts.length + ' anomali data**, **' + d.errors.length + ' error** baru.', 'Check result: **' + d.alerts.length + ' data anomalies**, **' + d.errors.length + ' new error(s)**.'));
+            d.alerts.slice(0, 4).forEach(function (a) {
+                lines.push('• ' + (ALERT_TEXT[a.code] ? ALERT_TEXT[a.code][lang] : a.msg));
+            });
+            if (d.errors.length) lines.push(L('• Error terakhir: ', '• Latest error: ') + d.errors[d.errors.length - 1].msg);
+            lines.push(L('\nSimpan permainanmu dulu, lalu salin laporan dan kirim ke pengembang agar bisa diperbaiki.', '\nSave your game first, then copy the report and send it to the developer so it can be fixed.'));
+        }
+        return { text: lines.join('\n'), actions: [{ label: L('Salin laporan bug', 'Copy bug report'), report: 'copy' }, { label: L('Lihat detail', 'View details'), report: 'open' }], chips: [L('Kondisi bisnis', 'Business status'), L('Apa prioritas sekarang?', 'What should I do now?')] };
+    }
+
+    _h_briefing() {
+        var L = this.L.bind(this), b = this.sys.getBriefing();
+        if (!b) {
+            return { text: L('Belum ada perubahan berarti sejak terakhir kamu cek. Aman, lanjutkan strategimu.', 'Nothing significant has changed since you last checked. All steady, carry on.'),
+                     chips: [L('Apa prioritas sekarang?', 'What should I do now?'), L('Skor kesehatan', 'Health score')] };
+        }
+        var sgn = function (v) { return (v >= 0 ? '+' : '−') + '$' + money(Math.abs(v)); };
+        var lines = [L('Sejak ' + b.days + ' hari lalu:', 'Over the last ' + b.days + ' day(s):')];
+        lines.push(L('• Uang ' + sgn(b.cashDelta), '• Cash ' + sgn(b.cashDelta)));
+        if (b.soldDelta > 0) lines.push(L('• Terjual ' + money(b.soldDelta) + ' unit', '• ' + money(b.soldDelta) + ' units sold'));
+        if (b.healthDelta !== null && b.healthDelta !== 0) lines.push(L('• Skor kesehatan ' + (b.healthDelta > 0 ? 'naik ' : 'turun ') + Math.abs(b.healthDelta) + ' poin', '• Health score ' + (b.healthDelta > 0 ? 'up ' : 'down ') + Math.abs(b.healthDelta) + ' pts'));
+        if (b.resolved) lines.push(L('• ' + b.resolved + ' masalah sudah beres', '• ' + b.resolved + ' issue(s) resolved'));
+        if (b.fresh.length) {
+            lines.push(L('\nMasalah baru:', '\nNew issues:'));
+            b.fresh.forEach(function (a) { lines.push('• ' + a.title); });
+        }
+        var adv = this.sys.getAdvice().filter(function (a) { return b.fresh.some(function (f) { return f.id === a.id; }); });
+        this._setList(adv);
+        return { text: lines.join('\n'), actions: adv.filter(function (a) { return a.action; }).slice(0, 2).map(this._actionFor, this) };
+    }
+
     _clarify(a, b) {
         var la = INTENT_LABEL[a], lb = INTENT_LABEL[b];
         this.mem.pending = [a, b];
@@ -380,6 +523,7 @@ export class AdvisorBrain {
         var h = this.health();
         var adv = this.sys.getAdvice();
         var top = adv[0];
+        this._setList(adv);
         var txt;
         var weak = h.weakest ? h.weakest.label : '';
         if (top && top.id !== 'all_good') {
@@ -405,6 +549,7 @@ export class AdvisorBrain {
     }
 
     _actionFor(a) {
+        if (a.action && a.action.report) return { label: this.L('Salin laporan bug', 'Copy bug report'), report: 'copy' };
         var nav = a.action.nav, sub = a.action.subtab || null;
         var tg = NAV_TARGETS.filter(function (t) { return t.nav === nav && t.subtab === sub; })[0] ||
                  NAV_TARGETS.filter(function (t) { return t.nav === nav; })[0];
@@ -507,6 +652,7 @@ export class AdvisorBrain {
         lines.push(L('• Produk: ' + c.catalog.length + ' (' + c.selling.length + ' dijual)', '• Products: ' + c.catalog.length + ' (' + c.selling.length + ' on sale)'));
         if (c.loans.length) lines.push(L('• Pinjaman aktif: ' + c.loans.length + ' · cicilan $' + money(c.debtService) + '/bulan', '• Active loans: ' + c.loans.length + ' · installments $' + money(c.debtService) + '/mo'));
         var top = adv.filter(function (a) { return a.id !== 'all_good'; }).slice(0, 2);
+        this._setList(top);
         if (top.length) {
             lines.push(L('\nPerlu perhatian:', '\nNeeds attention:'));
             top.forEach(function (a) { lines.push('• ' + a.title); });
@@ -550,6 +696,7 @@ export class AdvisorBrain {
                      chips: [L('Rencana awal', 'Starter plan'), L('Analisis produk', 'Analyze products')] };
         }
         var top = adv[0];
+        this._setList(adv);
         var lines = [L('Prioritas #1: **' + top.title + '**', 'Priority #1: **' + top.title + '**'), top.detail];
         if (o.detail && adv[1]) lines.push(L('\nSetelah itu: **' + adv[1].title + '** — ' + adv[1].detail, '\nThen: **' + adv[1].title + '** — ' + adv[1].detail));
         if (o.detail && adv[2]) lines.push(L('Lalu: **' + adv[2].title + '** — ' + adv[2].detail, 'Then: **' + adv[2].title + '** — ' + adv[2].detail));
@@ -563,7 +710,7 @@ export class AdvisorBrain {
 
     _h_why(o) {
         var last = this.mem.last;
-        if (last && ['why', 'navigate', 'greet', 'thanks', 'help', 'unknown', 'more', 'clarify'].indexOf(last) < 0) {
+        if (last && ['why', 'navigate', 'greet', 'thanks', 'help', 'unknown', 'more', 'clarify', 'ref', 'combo'].indexOf(last) < 0) {
             var r = this._handle(last, { detail: true, text: o.text, product: o.product });
             r.text = this.L('Alasannya:\n', 'The reasoning:\n') + r.text;
             return r;
@@ -880,18 +1027,24 @@ export class AdvisorBrain {
     _h_stock() {
         var c = this.sys._ctx(), L = this.L.bind(this);
         if (!c.selling.length) return { text: L('Belum ada produk yang dijual, jadi belum ada stok untuk dipantau.', 'No products on sale yet, so no stock to monitor.') };
-        var out = [], low = [], ok = 0;
+        var out = [], low = [], ok = 0, soon = [];
+        var pp = (c.trends && c.trends.perProduct) || {};
         c.selling.forEach(function (p) {
             var cap = p.baseCapacity || p.totalProduced || 0;
             if ((p.stock || 0) <= 0) out.push(p.name);
             else if (cap && p.stock < cap * 0.2) low.push(p.name + ' (' + money(p.stock) + ')');
-            else ok++;
+            else {
+                var pace = pp[p.id];
+                if (pace > 0.5 && p.stock / pace <= 14) soon.push(p.name + ' (~' + Math.max(1, Math.round(p.stock / pace)) + L(' hari', ' days') + ')');
+                else ok++;
+            }
         });
         var lines = [];
         if (out.length) lines.push(L('**Habis:** ', '**Out:** ') + out.join(', ') + L(' — penjualan berhenti, produksi ulang sekarang!', ' — sales stopped, re-produce now!'));
         if (low.length) lines.push(L('**Menipis:** ', '**Low:** ') + low.join(', '));
+        if (soon.length) lines.push(L('**Prakiraan habis:** ', '**Projected to run out:** ') + soon.join(', '));
         if (ok) lines.push(L(ok + ' produk stoknya aman.', ok + ' product(s) well stocked.'));
-        if (out.length || low.length) lines.push(L('Aktifkan auto-restock agar tidak kehilangan penjualan.', 'Enable auto-restock to avoid lost sales.'));
+        if (out.length || low.length || soon.length) lines.push(L('Aktifkan auto-restock agar tidak kehilangan penjualan.', 'Enable auto-restock to avoid lost sales.'));
         return { text: lines.join('\n'), actions: [this._act('sales')] };
     }
 
