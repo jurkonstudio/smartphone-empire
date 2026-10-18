@@ -1,6 +1,9 @@
-// FILE: src/ui/panels/SettingsPanel.js
+// FILE: src/ui/panels/SettingsPanel.js  (REPLACE — i18n)
 // v2027.42 — hero baru (foto pemain), tab Umum tersusun (Akun & Profil / Permainan / Komunitas / Bantuan),
 //            ganti nama perusahaan lewat ProfileEditModals (gratis 2x, lalu 150 SIL).
+// i18n: semua teks lewat t()/_tf() (key settings.*). Nama bulan memakai date.month.N,
+//       label aksen memakai settings.accent.*, Dompet Universal memakai settings.wallet.*.
+//       Modal (katalog dompet / export / import / load / reset) dibuka ulang saat 'lang:changed'.
 import { state } from '../../core/GameState.js';
 import { SaveService } from '../../core/SaveService.js';
 import { ToastService } from '../../core/ToastService.js';
@@ -31,7 +34,30 @@ let _activeTab = 'umum';
 let _boundRoot = null;
 let _cashListenerBound = false;
 
-const MONTH_SHORT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const MONTH_SHORT_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const MONTH_SHORT_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// t() dengan fallback bila key belum ada di kamus.
+function _tf(key, fallback, vars) {
+    const v = t(key, vars);
+    if (v && v !== key) return v;
+    return String(fallback).replace(/\{(\w+)\}/g, function (m, k) {
+        return (vars && vars[k] !== undefined) ? vars[k] : m;
+    });
+}
+function _isId() {
+    try { return LanguageService.getLang() === 'id'; } catch (e) { return true; }
+}
+function _pick(idText, enText) { return _isId() ? idText : enText; }
+
+function _monthShort(m) {
+    const i = (((m || 1) - 1) % 12 + 12) % 12;
+    const key = 'date.month.' + (i + 1);
+    const v = t(key);
+    if (v && v !== key) return v;
+    return (_isId() ? MONTH_SHORT_ID : MONTH_SHORT_EN)[i];
+}
+function _accentLabel(a) { return _tf('settings.accent.' + a.id, a.label); }
 
 const TABS = [
     { id: 'umum',     key: 'settings.tab.general',    icon: 'settings' },
@@ -154,7 +180,7 @@ function _tabUmum(s) {
 
 function _formatFounded(s) {
     const time = s.time || {};
-    const monthShort = MONTH_SHORT[(time.currentMonth || 1) - 1] || '';
+    const monthShort = _monthShort(time.currentMonth);
     return time.currentDay + ' ' + monthShort + ' ' + time.currentYear;
 }
 
@@ -164,10 +190,10 @@ function _tabTampilan() {
 
     const themeSegment = '<div class="settings-segment">' +
         '<button class="settings-seg-btn' + (currentTheme === 'dark' ? ' active' : '') + '" data-theme-pick="dark" type="button">' +
-            renderIcon('moon', 14) + '<span>' + escapeHtml(t('settings.row.theme_dark') || 'Dark') + '</span>' +
+            renderIcon('moon', 14) + '<span>' + escapeHtml(_tf('settings.row.theme_dark', _pick('Gelap', 'Dark'))) + '</span>' +
         '</button>' +
         '<button class="settings-seg-btn' + (currentTheme === 'light' ? ' active' : '') + '" data-theme-pick="light" type="button">' +
-            renderIcon('sun', 14) + '<span>' + escapeHtml(t('settings.row.theme_light') || 'Light') + '</span>' +
+            renderIcon('sun', 14) + '<span>' + escapeHtml(_tf('settings.row.theme_light', _pick('Terang', 'Light'))) + '</span>' +
         '</button>' +
         '</div>';
 
@@ -176,8 +202,8 @@ function _tabTampilan() {
             var cls = 'accent-dot' + (currentAccent === a.id ? ' active' : '');
             return '<button class="' + cls + '" data-accent-pick="' + a.id + '" type="button" ' +
                 'style="background:' + a.hex + ';" ' +
-                'aria-label="' + escapeHtml(a.label) + '" ' +
-                'title="' + escapeHtml(a.label) + '"></button>';
+                'aria-label="' + escapeHtml(_accentLabel(a)) + '" ' +
+                'title="' + escapeHtml(_accentLabel(a)) + '"></button>';
         }).join('') +
         '</div>';
 
@@ -297,30 +323,40 @@ function _tabKeuangan(s) {
 
 // ---------- Dompet Universal: uang ($) & SIL bisa dipakai untuk apa saja ----------
 function _walletSection() {
-    const id = LanguageService.getLang() === 'id';
-    const L = function (a, b) { return id ? a : b; };
     const mode = WalletService.getMode();
     const rate = WalletService.getRate();
     const modes = [
-        { id: 'auto',       label: L('Otomatis', 'Automatic'),            hint: L('Pakai mata uang aslinya dulu; kekurangan ditutup mata uang lain.', 'Use the item\'s own currency first; the other covers any shortfall.') },
-        { id: 'cash_first', label: L('Uang dulu', 'Cash first'),           hint: L('Selalu pakai uang ($) dulu, SIL menutup kekurangan.', 'Always spend cash ($) first; SIL covers any shortfall.') },
-        { id: 'sil_first',  label: L('SIL dulu', 'SIL first'),             hint: L('Selalu pakai SIL dulu, uang ($) menutup kekurangan.', 'Always spend SIL first; cash ($) covers any shortfall.') },
-        { id: 'strict',     label: L('Terpisah (klasik)', 'Separate (classic)'), hint: L('Uang hanya untuk biaya uang, SIL hanya untuk biaya SIL.', 'Cash only for cash costs, SIL only for SIL costs.') }
+        { id: 'auto',
+          label: _tf('settings.wallet.mode.auto', _pick('Otomatis', 'Automatic')),
+          hint: _tf('settings.wallet.mode.auto_hint', _pick('Pakai mata uang aslinya dulu; kekurangan ditutup mata uang lain.', 'Use the item\'s own currency first; the other covers any shortfall.')) },
+        { id: 'cash_first',
+          label: _tf('settings.wallet.mode.cash_first', _pick('Uang dulu', 'Cash first')),
+          hint: _tf('settings.wallet.mode.cash_first_hint', _pick('Selalu pakai uang ($) dulu, SIL menutup kekurangan.', 'Always spend cash ($) first; SIL covers any shortfall.')) },
+        { id: 'sil_first',
+          label: _tf('settings.wallet.mode.sil_first', _pick('SIL dulu', 'SIL first')),
+          hint: _tf('settings.wallet.mode.sil_first_hint', _pick('Selalu pakai SIL dulu, uang ($) menutup kekurangan.', 'Always spend SIL first; cash ($) covers any shortfall.')) },
+        { id: 'strict',
+          label: _tf('settings.wallet.mode.strict', _pick('Terpisah (klasik)', 'Separate (classic)')),
+          hint: _tf('settings.wallet.mode.strict_hint', _pick('Uang hanya untuk biaya uang, SIL hanya untuk biaya SIL.', 'Cash only for cash costs, SIL only for SIL costs.')) }
     ];
     const rows = modes.map(function (m) {
         const on = m.id === mode;
         return _row({ label: m.label + (on ? ' ✓' : ''), hint: m.hint, action: true, attrs: 'data-wallet-mode="' + m.id + '"', chevron: !on });
     }).join('');
     const info =
-        _row({ label: L('Kurs hari ini', 'Today\'s rate'), value: '1 SIL = ' + escapeHtml(formatCurrency(rate)) }) +
-        _row({ label: L('Daya beli total', 'Total buying power'), value: escapeHtml(formatCurrency(Math.floor(WalletService.getBuyingPower()))) });
+        _row({ label: _tf('settings.wallet.rate_today', _pick('Kurs hari ini', 'Today\'s rate')), value: '1 SIL = ' + escapeHtml(formatCurrency(rate)) }) +
+        _row({ label: _tf('settings.wallet.buying_power', _pick('Daya beli total', 'Total buying power')), value: escapeHtml(formatCurrency(Math.floor(WalletService.getBuyingPower()))) });
     const rescue = _row({
-        label: L('Dana darurat SIL', 'SIL emergency fund'),
-        hint: L('Saat tutup bulan, SIL otomatis menutup kas yang akan minus supaya tidak bangkrut.', 'At month close, SIL automatically covers a cash deficit so you do not go bankrupt.'),
+        label: _tf('settings.wallet.rescue', _pick('Dana darurat SIL', 'SIL emergency fund')),
+        hint: _tf('settings.wallet.rescue_hint', _pick('Saat tutup bulan, SIL otomatis menutup kas yang akan minus supaya tidak bangkrut.', 'At month close, SIL automatically covers a cash deficit so you do not go bankrupt.')),
         switchOn: WalletService.isRescueOn(), attrs: 'data-wallet-rescue'
     });
-    const catalogRow = _row({ label: L('Apa yang bisa dibayar?', 'What can I pay for?'), hint: L('Daftar lengkap pembayaran uang & SIL.', 'Full list of cash & SIL payments.'), action: true, attrs: 'data-wallet-catalog', chevron: true });
-    return _section('coin', L('Dompet Universal', 'Universal Wallet'), info + catalogRow + rows + rescue);
+    const catalogRow = _row({
+        label: _tf('settings.wallet.catalog', _pick('Apa yang bisa dibayar?', 'What can I pay for?')),
+        hint: _tf('settings.wallet.catalog_hint', _pick('Daftar lengkap pembayaran uang & SIL.', 'Full list of cash & SIL payments.')),
+        action: true, attrs: 'data-wallet-catalog', chevron: true
+    });
+    return _section('coin', _tf('settings.wallet.title', _pick('Dompet Universal', 'Universal Wallet')), info + catalogRow + rows + rescue);
 }
 
 
@@ -393,7 +429,7 @@ function _row(opts) {
     var rightHtml = '<div class="settings-row-right">';
 
     if (opts.switchOn != null) {
-        rightHtml += '<button class="toggle-switch' + (opts.switchOn ? ' on' : '') + '" ' + attrs + ' type="button" aria-label="Toggle"><span class="toggle-thumb"></span></button>';
+        rightHtml += '<button class="toggle-switch' + (opts.switchOn ? ' on' : '') + '" ' + attrs + ' type="button" aria-label="' + escapeHtml(_tf('settings.aria.toggle', _pick('Saklar', 'Toggle'))) + '"><span class="toggle-thumb"></span></button>';
     } else if (opts.value != null && opts.value !== '') {
         rightHtml += '<span class="settings-row-value">' + opts.value + '</span>';
     }
@@ -428,6 +464,8 @@ export function bindSettingsActions(root) {
             if (!el) return;
             el.textContent = '💎 ' + (data && data.balance != null ? data.balance : state.get().silicon || 0);
         });
+        // Ganti bahasa: buka ulang modal Pengaturan yang sedang terbuka agar teksnya ikut berganti.
+        bus.on('lang:changed', _reopenSettingsModals);
     }
 
     root.addEventListener('click', function (e) {
@@ -458,7 +496,11 @@ export function bindSettingsActions(root) {
         if (themeBtn) {
             e.preventDefault();
             ThemeService.setTheme(themeBtn.dataset.themePick);
-            ToastService.info(t('toast.theme_changed', { value: themeBtn.dataset.themePick }));
+            ToastService.info(t('toast.theme_changed', {
+                value: themeBtn.dataset.themePick === 'light'
+                    ? _tf('settings.row.theme_light', _pick('Terang', 'Light'))
+                    : _tf('settings.row.theme_dark', _pick('Gelap', 'Dark'))
+            }));
             _refresh();
             return;
         }
@@ -504,6 +546,22 @@ export function bindSettingsActions(root) {
     });
 }
 
+// Buka ulang modal Pengaturan yang sedang terbuka (teks berganti bahasa, isian dipertahankan).
+function _reopenSettingsModals() {
+    if (Modal.isOpen('wallet-catalog')) { _openWalletCatalog(); return; }
+    if (Modal.isOpen('export')) { _openExport(); return; }
+    if (Modal.isOpen('import')) {
+        var oldInp = document.querySelector('[data-modal-id="import"] [data-import-text]');
+        var typed = oldInp ? oldInp.value : '';
+        _openImport();
+        var newInp = document.querySelector('[data-modal-id="import"] [data-import-text]');
+        if (newInp) newInp.value = typed;
+        return;
+    }
+    if (Modal.isOpen('confirm-load')) { _confirmLoad(); return; }
+    if (Modal.isOpen('confirm-reset')) { _confirmReset(); return; }
+}
+
 function _handleSet(action) {
     switch (action) {
         case 'save':
@@ -538,14 +596,17 @@ function _handleToggle(key) {
     const s = state.get();
     s.settings[key] = !s.settings[key];
     state.patch({ settings: s.settings });
-    ToastService.info(key + ': ' + (s.settings[key] ? 'ON' : 'OFF'));
+    const toggleName = key === 'sound' ? t('settings.row.sound') : (key === 'vibrate' ? t('settings.row.vibrate') : key);
+    ToastService.info(_tf('settings.toast.toggle', '{name}: {state}', {
+        name: toggleName,
+        state: s.settings[key] ? _tf('settings.state.on', _pick('Aktif', 'On')) : _tf('settings.state.off', _pick('Mati', 'Off'))
+    }));
     bus.emit('settings:changed', s.settings);
     _refresh();
 }
 
 function _openWalletCatalog() {
-    const id = LanguageService.getLang() === 'id';
-    const L = function (a, b) { return id ? a : b; };
+    const id = _isId();   // WALLET_CATALOG menyimpan teks id_/en_ langsung di data
     const rate = WalletService.getRate();
     const rows = WALLET_CATALOG.map(function (it) {
         const tag = it.native === 'sil' ? '💎 SIL → $' : '$ → 💎 SIL';
@@ -553,27 +614,27 @@ function _openWalletCatalog() {
             escapeHtml(id ? it.id_d : it.en_d) + '</small></span><b style="white-space:nowrap;font-size:11px;">' + tag + '</b></div>';
     }).join('');
     const only = WALLET_CASH_ONLY.map(function (it) { return '• ' + escapeHtml(id ? it.id_ : it.en_); }).join('<br>');
-    const html = '<div class="modal-title">' + escapeHtml(L('Apa yang bisa dibayar?', 'What can I pay for?')) + '</div>' +
-        '<div class="modal-sub">' + escapeHtml(L('Uang ($) dan SIL saling menutup. Kurs hari ini: 1 SIL = ', 'Cash ($) and SIL cover each other. Today\'s rate: 1 SIL = ')) + escapeHtml(formatCurrency(rate)) + '</div>' +
+    const html = '<div class="modal-title">' + escapeHtml(_tf('settings.wallet.catalog', _pick('Apa yang bisa dibayar?', 'What can I pay for?'))) + '</div>' +
+        '<div class="modal-sub">' + escapeHtml(_tf('settings.wallet.cat_sub', _pick('Uang ($) dan SIL saling menutup. Kurs hari ini: 1 SIL = {rate}', 'Cash ($) and SIL cover each other. Today\'s rate: 1 SIL = {rate}'), { rate: formatCurrency(rate) })) + '</div>' +
         rows +
-        '<div class="modal-sub" style="margin-top:12px;"><b>' + escapeHtml(L('Hanya uang (tidak memakai SIL otomatis):', 'Cash only (never auto-spends SIL):')) + '</b><br>' + only + '</div>' +
+        '<div class="modal-sub" style="margin-top:12px;"><b>' + escapeHtml(_tf('settings.wallet.cash_only', _pick('Hanya uang (tidak memakai SIL otomatis):', 'Cash only (never auto-spends SIL):'))) + '</b><br>' + only + '</div>' +
         '<button class="btn-secondary" data-modal-close style="margin-top:12px;width:100%;">' + escapeHtml(t('common.tutup')) + '</button>';
     Modal.open('wallet-catalog', html);
 }
 
 function _openExport() {
     const json = SaveService.export(state);
-    if (!json) { ToastService.error('Export failed.'); return; }
-    const html = '<div class="modal-title">Export Save</div>' +
-        '<div class="modal-sub">Copy this text for backup.</div>' +
+    if (!json) { ToastService.error(_tf('settings.export.fail', _pick('Ekspor gagal.', 'Export failed.'))); return; }
+    const html = '<div class="modal-title">' + escapeHtml(_tf('settings.export.title', _pick('Ekspor Save', 'Export Save'))) + '</div>' +
+        '<div class="modal-sub">' + escapeHtml(_tf('settings.export.sub', _pick('Salin teks ini sebagai cadangan.', 'Copy this text for backup.'))) + '</div>' +
         '<textarea class="field-textarea" readonly rows="10">' + escapeHtml(json) + '</textarea>' +
         '<button class="btn-secondary" data-modal-close style="margin-top:12px;width:100%;">' + escapeHtml(t('common.tutup')) + '</button>';
     Modal.open('export', html);
 }
 
 function _openImport() {
-    const html = '<div class="modal-title">Import Save</div>' +
-        '<div class="modal-sub">Paste JSON backup below. This overwrites current save.</div>' +
+    const html = '<div class="modal-title">' + escapeHtml(_tf('settings.import.title', _pick('Impor Save', 'Import Save'))) + '</div>' +
+        '<div class="modal-sub">' + escapeHtml(_tf('settings.import.sub', _pick('Tempel cadangan JSON di bawah. Ini akan menimpa save saat ini.', 'Paste JSON backup below. This overwrites current save.'))) + '</div>' +
         '<textarea class="field-textarea" data-import-text rows="10" placeholder=\'{"version":3,"data":{...}}\'></textarea>' +
         '<div style="display:flex;gap:8px;margin-top:12px;">' +
         '<button class="btn-secondary" data-modal-close style="flex:1;">' + escapeHtml(t('common.cancel')) + '</button>' +
@@ -585,18 +646,18 @@ function _openImport() {
     root.querySelector('[data-import-confirm]').addEventListener('click', function () {
         const text = root.querySelector('[data-import-text]').value;
         const data = SaveService.parseImport(text);
-        if (!data) { ToastService.error('Invalid JSON.'); return; }
+        if (!data) { ToastService.error(_tf('settings.import.invalid', _pick('JSON tidak valid.', 'Invalid JSON.'))); return; }
         state.hydrate(data);
         SaveService.save(state);
-        ToastService.success('Save imported. Reloading...');
+        ToastService.success(_tf('settings.import.done', _pick('Save diimpor. Memuat ulang...', 'Save imported. Reloading...')));
         setTimeout(function () { window.location.reload(); }, 800);
     });
 }
 
 function _confirmLoad() {
     if (!SaveService.hasSave()) { ToastService.warning(t('toast.no_save')); return; }
-    const html = '<div class="modal-title">Load Save?</div>' +
-        '<div class="modal-sub">Current progress will be replaced.</div>' +
+    const html = '<div class="modal-title">' + escapeHtml(_tf('settings.load.title', _pick('Muat Save?', 'Load Save?'))) + '</div>' +
+        '<div class="modal-sub">' + escapeHtml(_tf('settings.load.sub', _pick('Progres saat ini akan diganti.', 'Current progress will be replaced.'))) + '</div>' +
         '<div style="display:flex;gap:8px;">' +
         '<button class="btn-secondary" data-modal-close style="flex:1;">' + escapeHtml(t('common.cancel')) + '</button>' +
         '<button class="btn-primary" data-load-confirm style="flex:1;">' + escapeHtml(t('common.load')) + '</button>' +
@@ -604,15 +665,15 @@ function _confirmLoad() {
     Modal.open('confirm-load', html);
     document.querySelector('[data-load-confirm]').addEventListener('click', function () {
         const data = SaveService.load();
-        if (!data) { ToastService.error('Load failed.'); return; }
+        if (!data) { ToastService.error(_tf('settings.load.fail', _pick('Gagal memuat save.', 'Load failed.'))); return; }
         state.hydrate(data);
-        ToastService.success('Save loaded.');
+        ToastService.success(_tf('settings.load.done', _pick('Save dimuat.', 'Save loaded.')));
         Modal.close('confirm-load', true);
     });
 }
 
 function _confirmReset() {
-    const html = '<div class="modal-title">Reset Game?</div>' +
+    const html = '<div class="modal-title">' + escapeHtml(_tf('settings.reset.title', _pick('Reset Game?', 'Reset Game?'))) + '</div>' +
         '<div class="modal-sub">' + escapeHtml(t('toast.reset_confirm')) + '</div>' +
         '<div style="display:flex;gap:8px;">' +
         '<button class="btn-secondary" data-modal-close style="flex:1;">' + escapeHtml(t('common.cancel')) + '</button>' +

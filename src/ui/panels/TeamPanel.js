@@ -1,10 +1,14 @@
 // FILE: src/ui/panels/TeamPanel.js
 // v2027.10a — i18n: pakai t() untuk semua string UI.
+// v2027.10b — i18n penuh (Fase 2): label role/tier/trait via key (fallback ke data),
+//             KPI memakai team.kpi.*, modal kandidat render ulang saat 'lang:changed',
+//             variabel `t` yang tertimpa di callback trait diganti `trait`.
 import { ROLES, getRoleById, getSkillTier, getTraitById } from '../../data/staff.data.js';
 import { BALANCE } from '../../data/balance.data.js';
 import { generateAvatar } from '../avatars/AvatarGenerator.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { Modal } from '../modal.js';
+import { bus } from '../../core/EventBus.js';
 import { t } from '../../core/LanguageService.js';
 
 let _recruitFilter = 'all';
@@ -15,6 +19,29 @@ const TEAM_MODES = [
     { id: 'recruit', key: 'team.mode.recruit', icon: 'plus' },
     { id: 'info',    key: 'team.mode.info',    icon: 'settings' }
 ];
+
+// _tf(key, fallback): pakai terjemahan jika key ada di kamus, kalau belum pakai fallback
+// (teks asli dari data) — aman sebelum Fase 3.
+function _tf(key, fallback) {
+    var v = t(key);
+    return (v && v !== key) ? v : fallback;
+}
+
+// Label data staff (role / tier / trait) lewat key, fallback ke teks data.
+function _roleLabel(role) {
+    if (!role) return '?';
+    return _tf('team.kpi.' + role.id, role.label || role.id || '?');
+}
+function _tierLabel(tier, skill) {
+    if (tier && tier.tier) return _tf('team.tier.' + tier.tier, tier.label || ('T' + skill));
+    return (tier && tier.label) || ('T' + skill);
+}
+function _traitLabel(trait) {
+    return _tf('team.trait.' + trait.id + '.label', trait.label);
+}
+function _traitDesc(trait) {
+    return _tf('team.trait.' + trait.id + '.desc', trait.description);
+}
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -99,15 +126,15 @@ function _renderActive(data, teamSystem) {
     const summary = `
         <div class="kpi-grid">
             <div class="kpi">
-                <div class="kpi-label">Engineer</div>
+                <div class="kpi-label">${escapeHtml(t('team.kpi.engineer'))}</div>
                 <div class="kpi-value" style="color:#60a5fa;">${counts.engineers || 0}</div>
             </div>
             <div class="kpi blue">
-                <div class="kpi-label">Designer</div>
+                <div class="kpi-label">${escapeHtml(t('team.kpi.designer'))}</div>
                 <div class="kpi-value" style="color:#a78bfa;">${counts.designers || 0}</div>
             </div>
             <div class="kpi warn">
-                <div class="kpi-label">Marketer</div>
+                <div class="kpi-label">${escapeHtml(t('team.kpi.marketer'))}</div>
                 <div class="kpi-value" style="color:#34d399;">${counts.marketers || 0}</div>
             </div>
             <div class="kpi">
@@ -145,7 +172,7 @@ function _renderActive(data, teamSystem) {
         return `
             <div class="card">
                 <div class="card-title" style="color:${role.color || 'var(--text)'};display:flex;align-items:center;gap:6px;">
-                    ${renderIcon(role.icon, 12)} ${(role.label || role.id || '').toUpperCase()} (${list.length})
+                    ${renderIcon(role.icon, 12)} ${escapeHtml(_roleLabel(role).toUpperCase())} (${list.length})
                 </div>
                 <div class="staff-list">${rows}</div>
             </div>
@@ -166,9 +193,9 @@ function _renderStaffRow(s) {
 
     const traitList = Array.isArray(s.traits) ? s.traits : [];
     const traitIcons = traitList.map(function(tid) {
-        const t = getTraitById(tid);
-        if (!t) return '';
-        return '<span class="trait-dot" title="' + escapeHtml(t.label) + '" style="background:' + t.color + ';"></span>';
+        const trait = getTraitById(tid);
+        if (!trait) return '';
+        return '<span class="trait-dot" title="' + escapeHtml(_traitLabel(trait)) + '" style="background:' + trait.color + ';"></span>';
     }).join('');
 
     let avatar = '';
@@ -185,7 +212,7 @@ function _renderStaffRow(s) {
                 <div class="staff-name-row">
                     <span class="staff-name">${escapeHtml(nameLabel)}</span>
                     ${country}
-                    <span class="staff-tier" style="color:${tier.color || '#999'};">${escapeHtml(tier.label || ('T' + s.skill))}</span>
+                    <span class="staff-tier" style="color:${tier.color || '#999'};">${escapeHtml(_tierLabel(tier, s.skill))}</span>
                     <span class="staff-traits">${traitIcons}</span>
                 </div>
                 <div class="staff-meta-row">
@@ -232,7 +259,7 @@ function _renderRecruit(data, teamSystem) {
             ${ROLES.map(function(r) {
                 var count = allCandidates.filter(c => c.role === r.id).length;
                 return '<button class="chip ' + (_recruitFilter === r.id ? 'active' : '') + '" data-recruit-filter="' + r.id + '">' +
-                    renderIcon(r.icon, 12) + ' ' + escapeHtml(r.label) + ' (' + count + ')' +
+                    renderIcon(r.icon, 12) + ' ' + escapeHtml(_roleLabel(r)) + ' (' + count + ')' +
                     '</button>';
             }).join('')}
         </div>
@@ -254,7 +281,7 @@ function _renderRecruit(data, teamSystem) {
 
 function _renderCandidateRow(c) {
     if (!c || !c.id) return '';
-    const role = getRoleById(c.role) || { label: c.role || '?', icon: 'cpu', color: '#666' };
+    const role = getRoleById(c.role) || { id: c.role, label: c.role || '?', icon: 'cpu', color: '#666' };
     const tier = getSkillTier(c.skill || 1) || { label: '' };
     const salary = (typeof c.salary === 'number') ? c.salary : 0;
     const totalCost = (typeof c.totalCost === 'number') ? c.totalCost : salary * 3;
@@ -263,9 +290,9 @@ function _renderCandidateRow(c) {
 
     const traitList = Array.isArray(c.traits) ? c.traits : [];
     const traitDots = traitList.map(function(tid) {
-        const t = getTraitById(tid);
-        if (!t) return '';
-        return '<span class="trait-dot" title="' + escapeHtml(t.label) + '" style="background:' + t.color + ';"></span>';
+        const trait = getTraitById(tid);
+        if (!trait) return '';
+        return '<span class="trait-dot" title="' + escapeHtml(_traitLabel(trait)) + '" style="background:' + trait.color + ';"></span>';
     }).join('');
 
     let avatar = '';
@@ -273,6 +300,9 @@ function _renderCandidateRow(c) {
     catch (e) { avatar = '<div class="staff-avatar" style="background:' + (role.color || '#666') + ';"></div>'; }
 
     const nameLabel = c.name || t('team.roster.unnamed');
+    const tierText = tier.tier
+        ? _tierLabel(tier, c.skill)
+        : (tier.label || t('staff.detail.tier_label', { n: c.skill }));
 
     return `
         <div class="cand-row" data-team-action="open-candidate" data-candidate-id="${c.id}">
@@ -284,9 +314,9 @@ function _renderCandidateRow(c) {
                     <span class="trait-dots">${traitDots}</span>
                 </div>
                 <div class="cand-row-meta">
-                    <span style="color:${role.color || 'inherit'};font-weight:600;">${escapeHtml(role.label)}</span>
+                    <span style="color:${role.color || 'inherit'};font-weight:600;">${escapeHtml(_roleLabel(role))}</span>
                     <span class="cand-row-dot">·</span>
-                    <span>${escapeHtml(tier.label || ('Tier ' + c.skill))}</span>
+                    <span>${escapeHtml(tierText)}</span>
                     ${specialty ? '<span class="cand-row-dot">·</span><span>' + escapeHtml(specialty) + '</span>' : ''}
                 </div>
                 <div class="cand-row-foot">
@@ -307,12 +337,12 @@ function _renderCandidateRow(c) {
 // ============================================================
 // MODAL DETAIL KANDIDAT
 // ============================================================
-export function openCandidateDetailModal({ candidateId }) {
+function _candidateModalHtml(candidateId) {
     const data = window.__game.state.get();
     const c = (data.candidates || []).find(x => x.id === candidateId);
-    if (!c) return;
+    if (!c) return '';
 
-    const role = getRoleById(c.role) || { label: '?', color: '#666', icon: 'cpu' };
+    const role = getRoleById(c.role) || { id: c.role, label: '?', color: '#666', icon: 'cpu' };
     const tier = getSkillTier(c.skill || 1) || { label: '', color: '#999' };
     const salary = c.salary || 0;
     const signing = c.signingBonus != null ? c.signingBonus : Math.round(salary * 1.8);
@@ -324,13 +354,13 @@ export function openCandidateDetailModal({ candidateId }) {
     const traitList = Array.isArray(c.traits) ? c.traits : [];
     const traitHtml = traitList.length
         ? traitList.map(function(tid) {
-            const t = getTraitById(tid);
-            if (!t) return '';
+            const trait = getTraitById(tid);
+            if (!trait) return '';
             return '<div class="cand-modal-trait">' +
-                '<div class="cand-modal-trait-icon" style="color:' + t.color + ';">' + renderIcon(t.icon || 'sparkles', 14) + '</div>' +
+                '<div class="cand-modal-trait-icon" style="color:' + trait.color + ';">' + renderIcon(trait.icon || 'sparkles', 14) + '</div>' +
                 '<div class="cand-modal-trait-body">' +
-                    '<div class="cand-modal-trait-name" style="color:' + t.color + ';">' + escapeHtml(t.label) + '</div>' +
-                    '<div class="cand-modal-trait-desc">' + escapeHtml(t.description) + '</div>' +
+                    '<div class="cand-modal-trait-name" style="color:' + trait.color + ';">' + escapeHtml(_traitLabel(trait)) + '</div>' +
+                    '<div class="cand-modal-trait-desc">' + escapeHtml(_traitDesc(trait)) + '</div>' +
                 '</div>' +
                 '</div>';
         }).join('')
@@ -373,9 +403,9 @@ export function openCandidateDetailModal({ candidateId }) {
         : '';
 
     const nameLabel = c.name || t('team.roster.unnamed');
+    const tierText = tier.tier ? _tierLabel(tier, c.skill) : (tier.label || '');
 
-    const html =
-        '<div class="cand-modal">' +
+    return '<div class="cand-modal">' +
             '<div class="cand-modal-header">' +
                 '<div class="cand-modal-avatar">' + avatar + '</div>' +
                 '<div class="cand-modal-identity">' +
@@ -383,9 +413,9 @@ export function openCandidateDetailModal({ candidateId }) {
                     countryHtml +
                     '<div class="cand-modal-role" style="color:' + role.color + ';">' +
                         renderIcon(role.icon || 'cpu', 12) +
-                        '<span>' + escapeHtml(role.label) + '</span>' +
+                        '<span>' + escapeHtml(_roleLabel(role)) + '</span>' +
                         '<span class="cand-modal-sep">·</span>' +
-                        '<span style="color:' + tier.color + ';">' + escapeHtml(tier.label) + '</span>' +
+                        '<span style="color:' + tier.color + ';">' + escapeHtml(tierText) + '</span>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
@@ -412,8 +442,31 @@ export function openCandidateDetailModal({ candidateId }) {
                 '<button class="btn-primary" data-team-action="hire" data-candidate-id="' + c.id + '" style="flex:2;">' + escapeHtml(t('team.modal.btn_hire')) + '</button>' +
             '</div>' +
         '</div>';
+}
 
-    Modal.open('candidate-detail', html);
+export function openCandidateDetailModal({ candidateId }) {
+    const html = _candidateModalHtml(candidateId);
+    if (!html) return;
+
+    let unsub = null;
+    const node = Modal.open('candidate-detail', html, {
+        onClose: function () { if (unsub) { unsub(); unsub = null; } }
+    });
+
+    // Ganti bahasa saat modal terbuka: render ulang isi kartu. Listener melepas dirinya sendiri
+    // bila modal sudah tertutup (Modal.close silent tidak memanggil onClose).
+    unsub = bus.on('lang:changed', function () {
+        if (!node || !node.isConnected || !Modal.isOpen('candidate-detail')) {
+            if (unsub) { unsub(); unsub = null; }
+            return;
+        }
+        const fresh = _candidateModalHtml(candidateId);
+        const card = node.querySelector('.modal-card');
+        if (!fresh || !card) return;
+        card.innerHTML = fresh;
+        const closeBtn = card.querySelector('[data-modal-close]');
+        if (closeBtn) closeBtn.addEventListener('click', function () { Modal.close('candidate-detail'); });
+    });
 }
 
 // ============================================================
@@ -449,7 +502,7 @@ function _renderInfo(data, teamSystem) {
     function section(title, iconId, color, rows) {
         return '<div class="card">' +
             '<div class="card-title" style="color:' + color + ';display:flex;align-items:center;gap:6px;">' +
-                renderIcon(iconId, 12) + title.toUpperCase() +
+                renderIcon(iconId, 12) + escapeHtml(title.toUpperCase()) +
             '</div>' +
             rows.map(function(r) {
                 return '<div class="sum-row"><span>' + escapeHtml(r.label) + '</span><b style="color:' + (r.valueColor || 'var(--text)') + ';">' + escapeHtml(String(r.value)) + '</b></div>';
@@ -497,4 +550,4 @@ function _renderInfo(data, teamSystem) {
         '</div>';
 
     return engSec + desSec + mktSec + extraSec + tips;
-         }
+}

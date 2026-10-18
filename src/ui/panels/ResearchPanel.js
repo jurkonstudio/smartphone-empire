@@ -155,8 +155,8 @@ function _renderRndSection(sys) {
         return renderRndRow(info, { actionAttr: 'data-rnd-action', bonusLabel: bonusLabel, benchmark: bench });
     }).join('');
     return '<details class="section-collapsible rnd-card" open>' +
-        '<summary class="section-summary"><span class="section-summary-text">R&amp;D Lanjutan</span><span class="section-summary-line"></span></summary>' +
-        renderRndOverview(ov, { title: 'Level Teknologi' }) + rows +
+        '<summary class="section-summary"><span class="section-summary-text">' + escapeHtml(t('rs.rnd.title')) + '</span><span class="section-summary-line"></span></summary>' +
+        renderRndOverview(ov, { title: t('rs.rnd.level_title') }) + rows +
         '</details>';
 }
 
@@ -507,7 +507,7 @@ function _ensureHandlers() {
             var cid = rndBtn.getAttribute('data-rnd-id');
             var res = act === 'cancel' ? _ctx.researchSystem.cancelRefine(cid) : _ctx.researchSystem.startRefine(cid);
             if (!res.ok) ToastService.error(res.reason);
-            else ToastService.success(act === 'cancel' ? 'R&D dibatalkan.' : 'R&D dimulai: Lv ' + res.targetLevel);
+            else ToastService.success(act === 'cancel' ? t('rs.rnd.cancelled') : t('rs.rnd.started', { lv: res.targetLevel }));
             if (window.__game && window.__game.renderSoft) window.__game.renderSoft();
             return;
         }

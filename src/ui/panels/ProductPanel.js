@@ -1,6 +1,9 @@
 // FILE: src/ui/panels/ProductPanel.js
 // Versi LENGKAP — V6c-2 gate chip berbasis chipResearch + grandfather rule.
 // v2027.13c — i18n.
+// v2027.50 — i18n tuntas: fallback error, label lifecycle chip, nama tier fab,
+//           nama kampanye, meta kampanye, aria-label; + listener lang:changed
+//           untuk modal detail/kampanye/order yang sedang terbuka.
 import { renderSalesChart } from './SalesChart.js';
 import { getComponentById } from '../../data/components.data.js';
 import { state } from '../../core/GameState.js';
@@ -9,6 +12,7 @@ import { openChipDesigner } from './ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './FabPanel.js';
 import { renderChipMockup } from '../phone/ChipMockup.js';
 import { t } from '../../core/LanguageService.js';
+import { bus } from '../../core/EventBus.js';
 import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
 
 function escapeHtml(s) {
@@ -21,7 +25,7 @@ function safe(fn, fallback) {
     try { return fn(); }
     catch (err) {
         console.error('[ProductPanel] section error:', err);
-        return fallback || '<div class="card" style="border-color:var(--danger);"><div class="card-title" style="color:var(--danger);">Error</div><div style="font-size:12px;color:var(--text-dim);">' + escapeHtml(err.message || 'unknown') + '</div></div>';
+        return fallback || '<div class="card" style="border-color:var(--danger);"><div class="card-title" style="color:var(--danger);">' + tx('prod.error', 'Error') + '</div><div style="font-size:12px;color:var(--text-dim);">' + escapeHtml(err.message || tx('prod.error_unknown', 'tidak diketahui')) + '</div></div>';
     }
 }
 
@@ -94,13 +98,13 @@ export function renderProductPanel(params) {
 
     var body = '';
     if (subtab === 'catalog') {
-        body = safe(function () { return _renderCatalog(); }, '<div class="empty"><div class="empty-title">Error</div></div>');
+        body = safe(function () { return _renderCatalog(); }, '<div class="empty"><div class="empty-title">' + tx('prod.error', 'Error') + '</div></div>');
     } else if (subtab === 'sales') {
-        body = safe(function () { return _renderSales(); }, '<div class="empty"><div class="empty-title">Error</div></div>');
+        body = safe(function () { return _renderSales(); }, '<div class="empty"><div class="empty-title">' + tx('prod.error', 'Error') + '</div></div>');
     } else if (subtab === 'chip') {
-        body = safe(function () { return _renderChipTab(); }, '<div class="empty"><div class="empty-title">Error</div></div>');
+        body = safe(function () { return _renderChipTab(); }, '<div class="empty"><div class="empty-title">' + tx('prod.error', 'Error') + '</div></div>');
     } else {
-        body = safe(function () { return _renderDesignTab(productSystem); }, '<div class="empty"><div class="empty-title">Error</div></div>');
+        body = safe(function () { return _renderDesignTab(productSystem); }, '<div class="empty"><div class="empty-title">' + tx('prod.error', 'Error') + '</div></div>');
     }
 
     return subtabBar + body;
@@ -149,7 +153,10 @@ function _renderDesignTab(productSystem) {
 // Fallback teks bila kunci i18n belum ada (t() mengembalikan key apa adanya).
 function tx(key, fallback, vars) {
     var v = t(key, vars);
-    return (v === key) ? fallback : v;
+    if (v !== key) return v;
+    return String(fallback).replace(/\{(\w+)\}/g, function (m, k) {
+        return (vars && Object.prototype.hasOwnProperty.call(vars, k)) ? String(vars[k]) : m;
+    });
 }
 
 var _catalogFilter = 'all';     // all | selling | disc
@@ -226,7 +233,7 @@ function _renderCatalog() {
             : (pct < 20 ? '<span class="cat-warn">' + tx('prod.catalog.low', 'Stok menipis') + '</span>' : ''));
         var toggle = isSelling
             ? '<div class="cat-auto"><span>' + tx('prod.catalog.auto_short', 'Auto-restock') + '</span>' +
-              '<button class="toggle-switch ' + (autoActive ? 'on' : '') + '" data-auto-toggle data-prod-id="' + p.id + '" aria-pressed="' + autoActive + '" aria-label="Auto-restock"><span class="toggle-thumb"></span></button></div>'
+              '<button class="toggle-switch ' + (autoActive ? 'on' : '') + '" data-auto-toggle data-prod-id="' + p.id + '" aria-pressed="' + autoActive + '" aria-label="' + tx('prod.catalog.auto_short', 'Auto-restock') + '"><span class="toggle-thumb"></span></button></div>'
             : '';
 
         cards += '<div class="card prod-card ' + (isSelling ? '' : 'is-disc') + '" data-prod-detail="' + p.id + '">' +
@@ -342,8 +349,8 @@ function _renderChipTab() {
                 '<div class="chip-row-mockup">' + mockup + '</div>' +
                 '<div class="chip-row-info">' +
                 '<div class="chip-row-name">' + escapeHtml(c.name) + '</div>' +
-                '<div class="chip-row-meta">' + t('chip.catalog.perf') + ' <b>' + c.stats.performance + '</b> - ' + t('chip.catalog.eff') + ' <b>' + c.stats.efficiency + '</b> - $' + c.stats.costPerUnit + '/unit</div>' +
-                (lifecycle ? '<div class="chip-lifecycle" style="color:' + lifecycle.color + ';">' + lifecycle.label + ' (x' + lifecycle.multiplier.toFixed(2) + ')</div>' : '') +
+                '<div class="chip-row-meta">' + t('chip.catalog.perf') + ' <b>' + c.stats.performance + '</b> - ' + t('chip.catalog.eff') + ' <b>' + c.stats.efficiency + '</b> - ' + tx('chip.cost_per_unit', '${n}/unit', { n: c.stats.costPerUnit }) + '</div>' +
+                (lifecycle ? '<div class="chip-lifecycle" style="color:' + lifecycle.color + ';">' + tx('chip.lifecycle.' + lifecycle.phase, lifecycle.label) + ' (x' + lifecycle.multiplier.toFixed(2) + ')</div>' : '') +
                 '</div>' +
                 '</div>';
         }
@@ -359,7 +366,7 @@ function _renderChipTab() {
         var capacity = levelInfo ? levelInfo.capacityMonthly : 0;
         fabHtml = '<div class="card">' +
             '<div class="card-title">' + t('chip.fab.title') + '</div>' +
-            '<div class="sum-row"><span>' + t('chip.fab.level') + '</span><b>' + fab.level + ' - ' + (levelInfo ? escapeHtml(levelInfo.name) : 'Fab') + '</b></div>' +
+            '<div class="sum-row"><span>' + t('chip.fab.level') + '</span><b>' + fab.level + ' - ' + (levelInfo ? escapeHtml(tx('fab.tier.' + levelInfo.id + '.name', levelInfo.name)) : tx('fab.default_name', 'Fab')) + '</b></div>' +
             '<div class="sum-row"><span>' + t('chip.fab.capacity') + '</span><b>' + capacity.toLocaleString('en-US') + t('chip.fab.per_month') + '</b></div>' +
             '<div class="sum-row"><span>' + t('chip.fab.stock') + '</span><b style="color:var(--accent);">' + (fab.inventory || 0).toLocaleString('en-US') + ' ' + t('chip.fab.unit') + '</b></div>' +
             '<button class="btn-secondary" data-chip-action="fab" style="width:100%;margin-top:10px;">' + t('chip.fab.manage') + '</button>' +
@@ -368,7 +375,7 @@ function _renderChipTab() {
         fabHtml = '<div class="card">' +
             '<div class="card-title">' + t('chip.fab.title') + '</div>' +
             '<div style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:10px;">' + (fabUnlocked ? t('chip.fab.build_desc') : t('chip.fab.need_research')) + '</div>' +
-            '<button class="btn-primary" data-chip-action="fab" style="width:100%;"' + (!fabUnlocked ? ' disabled style="opacity:0.5;width:100%;"' : '') + '>' + (fabUnlocked ? t('chip.fab.build') : t('chip.fab.need_research_btn')) + '</button>' +
+            '<button class="btn-primary" data-chip-action="fab" style="width:100%;' + (!fabUnlocked ? 'opacity:0.5;" disabled' : '"') + '>' + (fabUnlocked ? t('chip.fab.build') : t('chip.fab.need_research_btn')) + '</button>' +
             '</div>';
     }
 
@@ -388,6 +395,35 @@ function _thresholdChips(prodId, current) {
 // ============================================================
 // MODAL: DETAIL PRODUK
 // ============================================================
+var _detailProdId = null;
+var _campaignProdId = null;
+var _orderProdId = null;
+var _langBound = false;
+
+function _gameModal() {
+    return (window.__game && window.__game.Modal) ? window.__game.Modal : null;
+}
+
+// Render ulang modal produk yang sedang terbuka saat bahasa berganti.
+function _bindLang() {
+    if (_langBound) return;
+    _langBound = true;
+    bus.on('lang:changed', function () {
+        var M = _gameModal();
+        if (!M) return;
+        if (_detailProdId && M.isOpen('product-detail')) {
+            openProductDetailModal({ productId: _detailProdId });
+        } else if (_campaignProdId && M.isOpen('campaign-pick')) {
+            openCampaignModal({ productId: _campaignProdId });
+        } else if (_orderProdId && M.isOpen('order-prod')) {
+            var root = document.querySelector('[data-modal-id="order-prod"]');
+            var inp = root ? root.querySelector('[data-order-qty]') : null;
+            openOrderProductionModal({ productId: _orderProdId, qty: inp ? inp.value : null });
+        }
+    });
+}
+_bindLang();
+
 export function openProductDetailModal(params) {
     try {
         var productId = params && params.productId;
@@ -421,7 +457,7 @@ export function openProductDetailModal(params) {
               '<div style="font-size:13px;font-weight:600;">' + t('prod.detail.auto_label') + '</div>' +
               '<div style="font-size:11px;color:var(--text-mute);margin-top:2px;">' + (autoRestock.enabled ? t('prod.detail.auto_on') : t('prod.detail.auto_off')) + '</div>' +
               '</div>' +
-              '<button class="toggle-switch ' + (autoRestock.enabled ? 'on' : '') + '" data-auto-toggle data-prod-id="' + p.id + '" aria-pressed="' + !!autoRestock.enabled + '" aria-label="Auto-restock"><span class="toggle-thumb"></span></button>' +
+              '<button class="toggle-switch ' + (autoRestock.enabled ? 'on' : '') + '" data-auto-toggle data-prod-id="' + p.id + '" aria-pressed="' + !!autoRestock.enabled + '" aria-label="' + tx('prod.catalog.auto_short', 'Auto-restock') + '"><span class="toggle-thumb"></span></button>' +
               '</div>' +
               (autoRestock.enabled ? _thresholdChips(p.id, autoRestock.thresholdPercent) : '')
             : '';
@@ -446,7 +482,8 @@ export function openProductDetailModal(params) {
             actionsHtml +
             '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">' + t('prod.detail.close') + '</button>';
 
-        window.__game.Modal.open('product-detail', html);
+        _detailProdId = productId;
+        window.__game.Modal.open('product-detail', html, { onClose: function () { _detailProdId = null; } });
     } catch (err) {
         console.error('[openProductDetailModal] error:', err);
     }
@@ -465,8 +502,8 @@ export function openCampaignModal(params) {
         for (var i = 0; i < campaigns.length; i++) {
             var c = campaigns[i];
             buttonsHtml += '<button class="wiz-option" data-campaign-pick="' + c.id + '" data-prod-id="' + productId + '" style="width:100%;margin-bottom:6px;text-align:left;">' +
-                '<div class="wiz-opt-name">' + escapeHtml(c.name) + '</div>' +
-                '<div class="wiz-opt-meta">$' + c.cost.toLocaleString('en-US') + ' - ' + c.durationDays + ' - reach +' + Math.round(c.reachBase * 100) + '%</div>' +
+                '<div class="wiz-opt-name">' + escapeHtml(tx('marketing.campaign.' + c.id, c.name)) + '</div>' +
+                '<div class="wiz-opt-meta">' + tx('prod.campaign.meta', '${cost} - {days} hari - jangkauan +{reach}%', { cost: c.cost.toLocaleString('en-US'), days: c.durationDays, reach: Math.round(c.reachBase * 100) }) + '</div>' +
                 '</button>';
         }
 
@@ -475,7 +512,8 @@ export function openCampaignModal(params) {
             buttonsHtml +
             '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:8px;">' + t('prod.campaign.cancel') + '</button>';
 
-        window.__game.Modal.open('campaign-pick', html);
+        _campaignProdId = productId;
+        window.__game.Modal.open('campaign-pick', html, { onClose: function () { _campaignProdId = null; } });
     } catch (err) {
         console.error('[openCampaignModal] error:', err);
     }
@@ -494,14 +532,15 @@ export function openOrderProductionModal(params) {
         var html = '<div class="modal-title">' + t('prod.order.title') + '</div>' +
             '<div class="modal-sub">' + escapeHtml(p.name) + '</div>' +
             '<label class="field-label">' + t('prod.order.qty_label') + '</label>' +
-            '<input class="field-input" data-order-qty type="number" min="100" step="100" value="1000" />' +
+            '<input class="field-input" data-order-qty type="number" min="100" step="100" value="' + (params && params.qty != null && params.qty !== '' ? escapeHtml(String(params.qty)) : '1000') + '" />' +
             '<div class="sum-row" style="margin-top:8px;"><span>' + t('prod.order.cost_unit') + '</span><b>$' + p.unitCost + '</b></div>' +
             '<div class="sum-row"><span>' + t('prod.order.setup') + '</span><b>$2,000</b></div>' +
             '<div class="sum-row"><span>' + t('prod.order.total') + '</span><b data-order-total>$0</b></div>' +
             '<button class="btn-primary" data-order-confirm data-prod-id="' + productId + '" style="width:100%;margin-top:12px;">' + t('prod.order.submit') + '</button>' +
             '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:6px;">' + t('prod.order.cancel') + '</button>';
 
-        window.__game.Modal.open('order-prod', html);
+        _orderProdId = productId;
+        window.__game.Modal.open('order-prod', html, { onClose: function () { _orderProdId = null; } });
 
         var root = document.querySelector('[data-modal-id="order-prod"]');
         if (!root) return;
