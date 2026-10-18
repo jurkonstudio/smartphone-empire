@@ -24,6 +24,8 @@ import { CloudService } from '../../services/CloudService.js';
 import { PlayerProfileService } from '../../systems/PlayerProfileService.js';
 import { WalletService } from '../../systems/WalletService.js';
 import { WALLET_CATALOG, WALLET_CASH_ONLY } from '../../data/silicon.data.js';
+import { NotificationPrefs, NOTIF_TYPES } from '../../core/NotificationPrefs.js';
+import { clearNotifications, clearHistory } from '../notifications/NotificationRenderer.js';
 
 let _activeTab = 'umum';
 let _boundRoot = null;
@@ -35,6 +37,7 @@ const TABS = [
     { id: 'umum',     key: 'settings.tab.general',    icon: 'settings' },
     { id: 'tampilan', key: 'settings.tab.appearance', icon: 'palette' },
     { id: 'audio',    key: 'settings.tab.audio',      icon: 'bell' },
+    { id: 'notif',    key: 'settings.tab.notif',      icon: 'bell' },
     { id: 'keuangan', key: 'settings.tab.finance',    icon: 'coin' },
     { id: 'bahasa',   key: 'settings.tab.language',   icon: 'globe' },
     { id: 'data',     key: 'settings.tab.data',       icon: 'database' },
@@ -103,6 +106,7 @@ function _tabContent(s) {
     switch (_activeTab) {
         case 'tampilan': return _tabTampilan(s);
         case 'audio':    return _tabAudio(s);
+        case 'notif':    return _tabNotif(s);
         case 'keuangan': return _tabKeuangan(s);
         case 'bahasa':   return _tabBahasa(s);
         case 'data':     return _tabData(s);
@@ -189,6 +193,76 @@ function _tabAudio(s) {
         _row({ label: t('settings.row.sound'),   hint: snd ? t('settings.sound_on') : t('settings.sound_off'),   switchOn: snd, attrs: 'data-toggle="sound"' }) +
         _row({ label: t('settings.row.vibrate'), hint: vib ? t('settings.vibrate_on') : t('settings.vibrate_off'), switchOn: vib, attrs: 'data-toggle="vibrate"' })
     );
+}
+
+function _tabNotif() {
+    const on = NotificationPrefs.isEnabled();
+
+    const main = _section('bell', t('settings.notif.section_main'),
+        _row({
+            label: t('settings.notif.master'),
+            hint: on ? t('settings.notif.master_on') : t('settings.notif.master_off'),
+            switchOn: on,
+            attrs: 'data-notifpref="master"'
+        })
+    );
+
+    // Saklar per jenis: dikunci (redup & tidak bisa diklik) selama saklar utama mati.
+    const typeRows = NOTIF_TYPES.map(function (type) {
+        return _row({
+            label: t('settings.notif.type.' + type),
+            hint: t('settings.notif.type.' + type + '_hint'),
+            switchOn: NotificationPrefs.getTypeFlag(type),
+            attrs: 'data-notifpref="' + type + '"',
+            disabled: !on
+        });
+    }).join('');
+    const lockStyle = on ? '' : ' style="opacity:.45;pointer-events:none;" aria-disabled="true"';
+    const types = '<div class="settings-section">' +
+        '<div class="settings-section-head">' + renderIcon('settings', 12) + escapeHtml(t('settings.notif.section_types')) + '</div>' +
+        '<div class="settings-list"' + lockStyle + '>' + typeRows + '</div>' +
+        '<div class="settings-lang-hint">' + escapeHtml(t('settings.notif.types_hint')) + '</div>' +
+        '</div>';
+
+    const tools = _section('settings', t('settings.notif.section_tools'),
+        '<div' + (on ? '' : ' style="opacity:.45;pointer-events:none;" aria-disabled="true"') + '>' +
+        _row({ label: t('settings.notif.test'), hint: t('settings.notif.test_hint'), action: true, attrs: 'data-notif-action="test"', chevron: true, disabled: !on }) +
+        '</div>' +
+        _row({ label: t('settings.notif.clear'), hint: t('settings.notif.clear_hint'), action: true, attrs: 'data-notif-action="clear"', chevron: true })
+    );
+
+    return main + types + tools;
+}
+
+function _handleNotifToggle(key) {
+    if (key === 'master') {
+        const next = !NotificationPrefs.isEnabled();
+        NotificationPrefs.setEnabled(next);
+        if (!next) {
+            // Dimatikan: bersihkan notifikasi yang sedang tampil + riwayatnya.
+            try { clearNotifications(); clearHistory(); } catch (e) { console.warn('[Settings] bersihkan notifikasi gagal:', e); }
+        } else {
+            ToastService.success(t('settings.notif.enabled_msg'));
+        }
+    } else if (NOTIF_TYPES.indexOf(key) !== -1) {
+        if (!NotificationPrefs.isEnabled()) return; // terkunci saat saklar utama mati
+        NotificationPrefs.setType(key, !NotificationPrefs.getTypeFlag(key));
+    } else {
+        return;
+    }
+    window.__game.render();
+}
+
+function _handleNotifAction(action) {
+    if (action === 'test') {
+        if (!NotificationPrefs.isEnabled()) return;
+        // Coba lewat jenis 'info'; bila jenis itu dimatikan, pakai jenis pertama yang aktif.
+        const type = ['info', 'success', 'warning', 'error', 'news'].filter(function (x) { return NotificationPrefs.isTypeEnabled(x); })[0];
+        if (!type) return;
+        ToastService.show(t('settings.notif.test_msg') + ' ' + new Date().toLocaleTimeString(), type);
+    } else if (action === 'clear') {
+        try { clearNotifications(); clearHistory(); } catch (e) { console.warn('[Settings] hapus riwayat gagal:', e); }
+    }
 }
 
 function _tabKeuangan(s) {
@@ -403,6 +477,11 @@ export function bindSettingsActions(root) {
             window.__game.render();
             return;
         }
+
+        var notifTog = e.target.closest('[data-notifpref]');
+        if (notifTog) { e.preventDefault(); _handleNotifToggle(notifTog.dataset.notifpref); return; }
+        var notifAct = e.target.closest('[data-notif-action]');
+        if (notifAct) { e.preventDefault(); _handleNotifAction(notifAct.dataset.notifAction); return; }
 
         var setBtn = e.target.closest('[data-set]');
         if (setBtn) { e.preventDefault(); _handleSet(setBtn.dataset.set); return; }
