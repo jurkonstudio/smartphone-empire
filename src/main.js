@@ -8,6 +8,7 @@ import { TimeSystem } from './core/TimeSystem.js';
 import { SaveService } from './core/SaveService.js';
 import { DEV_BUILD } from './config/dev.config.js';
 import { ToastService } from './core/ToastService.js';
+import { NotificationPrefs } from './core/NotificationPrefs.js';
 import { ThemeService } from './core/ThemeService.js';
 import { LanguageService } from './core/LanguageService.js';
 import { ChipResearchSystem } from './core/ChipResearchSystem.js';
@@ -345,6 +346,12 @@ function navigate(id) {
 function updateTitle() {
     var meta = VIEW_TITLES[activeView];
     document.title = APP_CONFIG.name + ' - ' + (meta ? meta.title : 'Dashboard');
+}
+
+// Getar pengiring notifikasi: ikut mati bila jenis notifikasinya dimatikan.
+function notifVibrate(ms, type) {
+    if (!NotificationPrefs.isTypeEnabled(type)) return;
+    vibrate(ms);
 }
 
 function vibrate(ms) {
@@ -872,13 +879,13 @@ function bindStateEvents() {
     bus.on('state:cash-changed', function (data) { animateCash(data.prev, data.next); });
     bus.on('state:log-changed', function () { if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true }); });
     bus.on('state:milestone-added', function () { if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true }); });
-    bus.on('quest:completed', function (data) { ToastService.success('Quest selesai: ' + data.title); vibrate(20); });
+    bus.on('quest:completed', function (data) { ToastService.success('Quest selesai: ' + data.title); notifVibrate(20, 'success'); });
     bus.on('quest:activated', function () { if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true }); });
     bus.on('economy:warn-burnrate', function (data) {
         _burnWarn = 'Sisa ' + data.monthsLeft + ' bln';
         renderHeaderOnly();
         ToastService.warning('Sisa uang ~' + data.monthsLeft + ' bulan biaya!');
-        vibrate(30);
+        notifVibrate(30, 'warning');
     });
     bus.on('settings:take-loan', function (data) {
         var res = economy.takeLoan(data.loanId);
@@ -963,7 +970,7 @@ function bindStateEvents() {
             });
             if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true });
             if (activeView === 'dashboard') refreshHomeSlides();
-            vibrate(15);
+            notifVibrate(15, 'news');
         } catch (err) {
             console.error('[main] news:published handler error:', err);
         }
