@@ -3,6 +3,7 @@
 // ToastService — dengan proteksi anti-double + dukungan action button.
 // ============================================================
 import { bus } from './EventBus.js';
+import { NotificationPrefs } from './NotificationPrefs.js';
 
 var DEDUPE_MS = 800;
 var _nextId = 1;
@@ -27,6 +28,8 @@ export var ToastService = {
      */
     show: function (message, type, durationMs, options) {
         if (!message) return 0;
+        // Pengaturan notifikasi: default MATI. Gerbang tunggal untuk semua toast.
+        if (!NotificationPrefs.isTypeEnabled(type || 'info')) return 0;
         if (_isDuplicate(message, type || 'info')) return 0;
         var id = _nextId++;
         var payload = {
