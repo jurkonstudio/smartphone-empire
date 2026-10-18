@@ -29,6 +29,7 @@ import { t } from '../../core/LanguageService.js';
 import { renderSilResearchBlock, renderSilSlotBoost } from '../components/SilResearchBlock.js';
 import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
 import { SiliconService } from '../../systems/SiliconService.js';
+import { WalletService } from '../../systems/WalletService.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -438,7 +439,7 @@ function _renderRow(it, ctx) {
         progressEta: eta,
         reason: it.reason,
         blocker: it.blocker,
-        affordable: ctx.cash >= n.cost,
+        affordable: WalletService.canAfford(n.cost),
         recommended: ctx.recId === n.id && (it.status === 'available' || it.blocker === 'slots' || it.blocker === 'cash'),
         description: (it.status === 'done' || it.status === 'running') ? '' : n.description,
         durationLabel: durLabel
@@ -522,7 +523,7 @@ export function openNodeDetailModal(params) {
         escapeHtml(_tf('rs.status.' + pillKey, pillKey)) + '</span>';
 
     // --- kv grid ---
-    const poor = data.cash < node.cost;
+    const poor = !WalletService.canAfford(node.cost);
     const kv = '<div class="rs-kv">' +
         _kv(t('research.node.cost'), '<span class="' + (poor && st.status !== 'done' && st.status !== 'running' ? 'rs-neg' : '') + '">' + _money(node.cost) + '</span>') +
         _kv(t('research.node.duration'), t('research.node.duration_days', { n: node.durationDays })) +

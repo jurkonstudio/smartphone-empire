@@ -13,6 +13,7 @@ import { getDesignEraForYear } from '../../data/era-design.data.js';
 import { resolveSpec } from '../../data/phone-specs.data.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
+import { WalletService } from '../../systems/WalletService.js';
 
 let _wizardState = null;
 let _wizardView = 'front';
@@ -98,7 +99,9 @@ function _affordInfo(s) {
     const cost = unitCost * (s.productionQty || 0) + 2000;
     let cash = 0;
     try { cash = state.get().cash || 0; } catch (e) {}
-    return { cost: cost, cash: cash, ok: cost <= cash };
+    let power = cash;
+    try { power = WalletService.getBuyingPower(); } catch (e) {}
+    return { cost: cost, cash: Math.floor(power), ok: WalletService.canAfford(cost) };
 }
 
 function _fmtUsd(n) { return '$' + Math.round(n).toLocaleString('en-US'); }

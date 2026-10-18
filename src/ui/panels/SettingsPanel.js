@@ -22,6 +22,8 @@ import { setProfileTab } from './CompanyProfilePanel.js';
 import { openCloudPanel } from '../../services/cloud/CloudUI.js';
 import { CloudService } from '../../services/CloudService.js';
 import { PlayerProfileService } from '../../systems/PlayerProfileService.js';
+import { WalletService } from '../../systems/WalletService.js';
+import { WALLET_CATALOG, WALLET_CASH_ONLY } from '../../data/silicon.data.js';
 
 let _activeTab = 'umum';
 let _boundRoot = null;
@@ -209,8 +211,37 @@ function _tabKeuangan(s) {
     } else {
         summaryHtml = '<div class="settings-empty">' + escapeHtml(t('settings.empty.loans')) + '</div>';
     }
-    return _section('coin', t('settings.bank.title'), summaryHtml);
+    return _walletSection() + _section('coin', t('settings.bank.title'), summaryHtml);
 }
+
+// ---------- Dompet Universal: uang ($) & SIL bisa dipakai untuk apa saja ----------
+function _walletSection() {
+    const id = LanguageService.getLang() === 'id';
+    const L = function (a, b) { return id ? a : b; };
+    const mode = WalletService.getMode();
+    const rate = WalletService.getRate();
+    const modes = [
+        { id: 'auto',       label: L('Otomatis', 'Automatic'),            hint: L('Pakai mata uang aslinya dulu; kekurangan ditutup mata uang lain.', 'Use the item\'s own currency first; the other covers any shortfall.') },
+        { id: 'cash_first', label: L('Uang dulu', 'Cash first'),           hint: L('Selalu pakai uang ($) dulu, SIL menutup kekurangan.', 'Always spend cash ($) first; SIL covers any shortfall.') },
+        { id: 'sil_first',  label: L('SIL dulu', 'SIL first'),             hint: L('Selalu pakai SIL dulu, uang ($) menutup kekurangan.', 'Always spend SIL first; cash ($) covers any shortfall.') },
+        { id: 'strict',     label: L('Terpisah (klasik)', 'Separate (classic)'), hint: L('Uang hanya untuk biaya uang, SIL hanya untuk biaya SIL.', 'Cash only for cash costs, SIL only for SIL costs.') }
+    ];
+    const rows = modes.map(function (m) {
+        const on = m.id === mode;
+        return _row({ label: m.label + (on ? ' ✓' : ''), hint: m.hint, action: true, attrs: 'data-wallet-mode="' + m.id + '"', chevron: !on });
+    }).join('');
+    const info =
+        _row({ label: L('Kurs hari ini', 'Today\'s rate'), value: '1 SIL = ' + escapeHtml(formatCurrency(rate)) }) +
+        _row({ label: L('Daya beli total', 'Total buying power'), value: escapeHtml(formatCurrency(Math.floor(WalletService.getBuyingPower()))) });
+    const rescue = _row({
+        label: L('Dana darurat SIL', 'SIL emergency fund'),
+        hint: L('Saat tutup bulan, SIL otomatis menutup kas yang akan minus supaya tidak bangkrut.', 'At month close, SIL automatically covers a cash deficit so you do not go bankrupt.'),
+        switchOn: WalletService.isRescueOn(), attrs: 'data-wallet-rescue'
+    });
+    const catalogRow = _row({ label: L('Apa yang bisa dibayar?', 'What can I pay for?'), hint: L('Daftar lengkap pembayaran uang & SIL.', 'Full list of cash & SIL payments.'), action: true, attrs: 'data-wallet-catalog', chevron: true });
+    return _section('coin', L('Dompet Universal', 'Universal Wallet'), info + catalogRow + rows + rescue);
+}
+
 
 function _tabBahasa() {
     const current = LanguageService.getLang();
@@ -357,6 +388,22 @@ export function bindSettingsActions(root) {
             return;
         }
 
+        var wMode = e.target.closest('[data-wallet-mode]');
+        if (wMode) {
+            e.preventDefault();
+            WalletService.setMode(wMode.dataset.walletMode);
+            window.__game.render();
+            return;
+        }
+        if (e.target.closest('[data-wallet-catalog]')) { e.preventDefault(); _openWalletCatalog(); return; }
+        var wResc = e.target.closest('[data-wallet-rescue]');
+        if (wResc) {
+            e.preventDefault();
+            WalletService.setRescue(!WalletService.isRescueOn());
+            window.__game.render();
+            return;
+        }
+
         var setBtn = e.target.closest('[data-set]');
         if (setBtn) { e.preventDefault(); _handleSet(setBtn.dataset.set); return; }
 
@@ -405,6 +452,24 @@ function _handleToggle(key) {
     ToastService.info(key + ': ' + (s.settings[key] ? 'ON' : 'OFF'));
     bus.emit('settings:changed', s.settings);
     window.__game.render();
+}
+
+function _openWalletCatalog() {
+    const id = LanguageService.getLang() === 'id';
+    const L = function (a, b) { return id ? a : b; };
+    const rate = WalletService.getRate();
+    const rows = WALLET_CATALOG.map(function (it) {
+        const tag = it.native === 'sil' ? '💎 SIL → $' : '$ → 💎 SIL';
+        return '<div class="sum-row" style="align-items:flex-start;gap:10px;"><span><b>' + escapeHtml(id ? it.id_ : it.en_) + '</b><br><small style="color:var(--text-tertiary);">' +
+            escapeHtml(id ? it.id_d : it.en_d) + '</small></span><b style="white-space:nowrap;font-size:11px;">' + tag + '</b></div>';
+    }).join('');
+    const only = WALLET_CASH_ONLY.map(function (it) { return '• ' + escapeHtml(id ? it.id_ : it.en_); }).join('<br>');
+    const html = '<div class="modal-title">' + escapeHtml(L('Apa yang bisa dibayar?', 'What can I pay for?')) + '</div>' +
+        '<div class="modal-sub">' + escapeHtml(L('Uang ($) dan SIL saling menutup. Kurs hari ini: 1 SIL = ', 'Cash ($) and SIL cover each other. Today\'s rate: 1 SIL = ')) + escapeHtml(formatCurrency(rate)) + '</div>' +
+        rows +
+        '<div class="modal-sub" style="margin-top:12px;"><b>' + escapeHtml(L('Hanya uang (tidak memakai SIL otomatis):', 'Cash only (never auto-spends SIL):')) + '</b><br>' + only + '</div>' +
+        '<button class="btn-secondary" data-modal-close style="margin-top:12px;width:100%;">' + escapeHtml(t('common.tutup')) + '</button>';
+    Modal.open('wallet-catalog', html);
 }
 
 function _openExport() {

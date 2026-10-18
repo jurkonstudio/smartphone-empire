@@ -16,6 +16,7 @@ import {
     STOCKS, MARKET_INDICES, STOCK_CATEGORIES, CURRENCIES,
     getStockById, getStocksForYear
 } from '../../data/stocks.data.js';
+import { WalletService } from '../../systems/WalletService.js';
 
 // ============================================================
 // STATE MODUL (bertahan walau panel di-render ulang)
@@ -1014,7 +1015,7 @@ export function openBuyModal(stockId) {
     var stockSystem = g.stocks;
     var localPrice = stockSystem.getPrice(stockId);
     var priceUSD = stockSystem.getPriceUSD(stockId);
-    var cash = stockSystem.state.data.cash || 0;
+    var cash = Math.floor(WalletService.getBuyingPower()); // uang + SIL setara
     var maxShares = stockSystem.getMaxAffordableShares(stockId);
     var change = stockSystem.getChangePercent(stockId);
 

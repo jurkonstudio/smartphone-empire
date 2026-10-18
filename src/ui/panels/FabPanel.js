@@ -9,6 +9,7 @@ import { ToastService } from '../../core/ToastService.js';
 import { state } from '../../core/GameState.js';
 import { t } from '../../core/LanguageService.js';
 import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
+import { WalletService } from '../../systems/WalletService.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -76,7 +77,7 @@ function _renderBuildCTA(summary, data) {
 
         <div class="fab-tier-list">
             ${levels.map(function (lv) {
-                const canAfford = data.cash >= lv.cost;
+                const canAfford = WalletService.canAfford(lv.cost);
                 const disabled = !hasResearch || !canAfford;
                 return '<div class="fab-tier-card ' + (disabled ? 'disabled' : '') + '">' +
                     '<div class="fab-tier-head">' +
@@ -211,8 +212,8 @@ function _renderBuiltFab(summary, data) {
             '<div class="sum-row"><span>' + t('fab.upgrade_cost') + '</span><b>$' + nextLevelInfo.cost.toLocaleString('en-US') + '</b></div>' +
             '<div class="sum-row"><span>' + t('fab.upgrade_duration') + '</span><b>' + nextLevelInfo.durationDays + '</b></div>' +
             '<button class="btn-primary" data-fab-action="upgrade" style="width:100%;margin-top:10px;"' +
-                (data.cash < nextLevelInfo.cost ? ' disabled style="opacity:0.5;width:100%;margin-top:10px;"' : '') + '>' +
-                (data.cash < nextLevelInfo.cost ? t('fab.upgrade_disabled') : t('fab.upgrade_btn')) +
+                (!WalletService.canAfford(nextLevelInfo.cost) ? ' disabled style="opacity:0.5;width:100%;margin-top:10px;"' : '') + '>' +
+                (!WalletService.canAfford(nextLevelInfo.cost) ? t('fab.upgrade_disabled') : t('fab.upgrade_btn')) +
             '</button>' +
             '</div>'
         : '<div class="card">' +

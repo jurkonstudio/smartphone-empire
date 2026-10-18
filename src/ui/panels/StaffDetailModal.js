@@ -6,6 +6,7 @@ import { getRoleById, getSkillTier, getTraitById } from '../../data/staff.data.j
 import { BALANCE } from '../../data/balance.data.js';
 import { generateAvatar } from '../avatars/AvatarGenerator.js';
 import { t } from '../../core/LanguageService.js';
+import { WalletService } from '../../systems/WalletService.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
@@ -54,7 +55,7 @@ export function openStaffDetailModal(params) {
     const moraleColor = s.morale >= 70 ? 'var(--success)' : s.morale >= 40 ? 'var(--warn)' : 'var(--danger)';
     const severance = s.salary * ((BALANCE.team && BALANCE.team.severanceMonths) || 2);
     const trainingCost = s.salary * 2;
-    const canTrain = s.skill < 5 && data.cash >= trainingCost;
+    const canTrain = s.skill < 5 && WalletService.canAfford(trainingCost);
 
     const joinedDate = s.hireDate.day + '/' + s.hireDate.month + '/' + s.hireDate.year;
 

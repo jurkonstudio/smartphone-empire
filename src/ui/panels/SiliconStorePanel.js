@@ -5,7 +5,7 @@ import { Modal } from '../modal.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
 import { SiliconService } from '../../systems/SiliconService.js';
 import { PaymentService } from '../../systems/PaymentService.js';
-import { PAYMENT_GROUPS } from '../../data/silicon.data.js';
+import { PAYMENT_GROUPS, getCashPerSil } from '../../data/silicon.data.js';
 import { ToastService } from '../../core/ToastService.js';
 import { bus } from '../../core/EventBus.js';
 import { DEV_BUILD } from '../../config/dev.config.js';
@@ -42,9 +42,8 @@ function _price(o) {
 // LOGIKA TUKAR SILICON KE UANG (EXCHANGE)
 // ============================================================
 function _getExchangePackages() {
-    var year = state.get().time.currentYear || 2000;
-    // Nilai uang naik seiring inflasi tahun
-    var multiplier = 1 + ((year - 2000) * 0.15); 
+    // Kurs searah dengan Dompet Universal: 10 SIL = 10 x kurs dasar tahun berjalan.
+    var multiplier = getCashPerSil(state.get().time.currentYear || 2000) / 2500;
     
     return [
         { sil: 10,  cash: Math.round(25000 * multiplier),  label: 'Kantong Kecil' },
@@ -94,7 +93,7 @@ function _handleExchange(silCost, cashReward) {
     }
 
     // 1. Potong Silicon (Aman, tersinkron dengan Supabase jika login)
-    var res = SiliconService.spend(silCost, 'exchange-cash');
+    var res = SiliconService.spendRaw(silCost, 'exchange-cash');
     if (!res.ok) {
         ToastService.error(res.reason || 'Gagal memotong Silicon.');
         return;
