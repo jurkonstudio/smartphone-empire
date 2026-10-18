@@ -1,7 +1,7 @@
 // FILE: src/ui/components/TechNodeCard.js  (REPLACE)
 // ============================================================
 // Komponen baris node riset — dipakai ResearchPanel & ChipResearchPanel.
-// v2028.40 — Ultimate Fix for Swipe Bleed & CSS Cleanup.
+// v2028.41 — Fixed Double Title Bug.
 // ============================================================
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
@@ -157,20 +157,17 @@ export function ensureRndStyles() {
     document.head.appendChild(el);
 
     // 2. FIX BUG SWIPE: Cegah Tab Utama Ikut Geser
-    // Kita gunakan Capture Phase ({ capture: true }) agar event ditangkap 
-    // SEBELUM sampai ke main.js
     if (!window._rndSwipeFixed) {
         window._rndSwipeFixed = true;
         
         const stopSwipeBleed = (e) => {
-            // Jika yang disentuh berada di dalam container carousel R&D
             if (e.target && e.target.closest && e.target.closest('.rnd-carousel-container')) {
-                e.stopPropagation(); // Hentikan event agar tidak naik ke document/app-view
+                e.stopPropagation();
             }
         };
 
         document.addEventListener('touchstart', stopSwipeBleed, { capture: true, passive: true });
-        document.addEventListener('touchmove', stopSwipeBleed, { capture: true, passive: false }); // passive false agar bisa stopProp
+        document.addEventListener('touchmove', stopSwipeBleed, { capture: true, passive: false });
         document.addEventListener('touchend', stopSwipeBleed, { capture: true, passive: true });
     }
 }
@@ -183,14 +180,15 @@ export function renderRndOverview(ov, opts) {
     var buzzPct = Math.round((ov.buzzFactor - 1) * 100);
     var buzzW = Math.max(0, Math.min(100, Math.round(ov.buzz / 60 * 100)));
     
-    var txtTitle = opts.title || t('rs.rnd.title') || 'R&D Lanjutan';
+    // PERBAIKAN BUG DOUBLE TEXT: Cek apakah opts.title di-set secara eksplisit (termasuk string kosong '')
+    var txtTitle = (opts.title !== undefined) ? opts.title : (t('rs.rnd.title') || 'R&D Lanjutan');
     var txtSlots = t('tnc.ov.slots', { used: ov.used, slots: ov.slots }) || ('Slot ' + ov.used + '/' + ov.slots);
     var txtAvg = t('tnc.ov.avg') || 'LEVEL RATA-RATA';
     var txtBench = t('tnc.ov.benchmark') || 'STANDAR PASAR';
     var txtDemand = t('tnc.ov.demand') || 'EFEK PERMINTAAN';
     var txtBuzz = t('tnc.ov.buzz') || 'Gaung pasar';
 
-    // Hide title if opts.title is explicitly empty string (to prevent double title)
+    // Jika txtTitle kosong, jangan render tag div-nya
     var titleHtml = txtTitle ? '<div class="rnd-ov-title">' + escapeHtml(txtTitle) + '</div>' : '';
 
     return '<div class="rnd-ov" data-rnd-root>' +
@@ -300,8 +298,8 @@ const RND_CSS = `
     padding-right: 12px;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    overscroll-behavior-x: contain; /* Cegah scroll bocor ke parent */
-    touch-action: pan-x; /* Hanya izinkan pan horizontal */
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
 }
 .rnd-carousel-container::-webkit-scrollbar { display: none; }
 
