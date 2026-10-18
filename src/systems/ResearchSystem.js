@@ -21,11 +21,6 @@ const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
 // ============================================================
 // ResearchSystem
-// Tanggung jawab:
-//  - Menjalankan antrian riset paralel (slot dari engineer).
-//  - Menghitung progress per time:day-changed (bukan tick).
-//  - Menyelesaikan riset, memotong uang saat mulai, refund saat batal.
-//  - Emit research:started / research:progress / research:completed / research:cancelled.
 // ============================================================
 export class ResearchSystem {
     constructor(gameState) {
@@ -34,13 +29,9 @@ export class ResearchSystem {
     }
 
     start() {
-        // Validasi data sekali saat boot (hanya warn ke console)
         validateResearchData();
-
-        // Hitung slot berdasarkan tim saat ini
         this._refreshMaxSlots();
 
-        // Event bus
         this._unsubs.push(bus.on('time:day-changed', (snap) => this._onDayChanged(snap)));
         this._unsubs.push(bus.on('team:changed',   ()     => this._refreshMaxSlots()));
         this._unsubs.push(bus.on('state:hydrated', ()     => this._onHydrated()));
@@ -60,7 +51,11 @@ export class ResearchSystem {
         const data = this.state.data;
         const current = data.time.elapsedGameMinutes;
 
-        // Pastikan setiap entri aktif punya nilai default (save lama)
+        // Pastikan properti baru ada untuk save lama (Anti-Crash)
+        if (typeof data.research.purchasedSlots !== 'number') {
+            data.research.purchasedSlots = 0;
+        }
+
         data.research.active.forEach(e => {
             if (typeof e.progressDays !== 'number')       e.progressDays = 0;
             if (typeof e.durationDays !== 'number')       e.durationDays = 0;
@@ -77,7 +72,11 @@ export class ResearchSystem {
         const perEng = BALANCE.research.perEngineerSlots;
         const cap = BALANCE.research.maxSlots;
         const eng = data.team.engineers || 0;
-        const slots = Math.min(cap, base + Math.floor(eng * perEng));
+        
+        // --- PERBAIKAN: Tambahkan slot yang dibeli ---
+        const purchased = data.research.purchasedSlots || 0;
+        const calculatedFromEngineers = Math.min(cap, base + Math.floor(eng * perEng));
+        const slots = calculatedFromEngineers + purchased;
 
         if (data.research.maxSlots !== slots) {
             data.research.maxSlots = slots;
@@ -86,7 +85,38 @@ export class ResearchSystem {
         }
     }
 
-    // Kecepatan efektif = base + (engineers × bonus), di-cap oleh maxSpeedMultiplier.
+    // --- FITUR BELI SLOT ---
+    getSlotCost() {
+        const data = this.state.data;
+        const currentPurchased = data.research.purchasedSlots || 0;
+        
+        // Batasi maksimal beli 3 slot tambahan
+        if (currentPurchased >= 3) return -1;
+
+        // Harga: $50k, $110k, $242k
+        const basePrice = 50000;
+        const multiplier = Math.pow(2.2, currentPurchased); 
+        return Math.round(basePrice * multiplier);
+    }
+
+    buySlot() {
+        const data = this.state.data;
+        const cost = this.getSlotCost();
+        
+        if (cost === -1) return { ok: false, reason: 'Batas maksimal beli slot (3) tercapai.' };
+        if (!WalletService.canAfford(cost)) return { ok: false, reason: 'Kas tidak mencukupi untuk membeli slot.' };
+
+        WalletService.pay(cost, 'research-slot');
+        data.research.purchasedSlots = (data.research.purchasedSlots || 0) + 1;
+        
+        this._refreshMaxSlots();
+        this.state.addLog('Membeli 1 Slot R&D baru ($' + cost.toLocaleString('en-US') + ').', LOG_TYPES.info);
+        bus.emit('state:changed', data);
+        
+        return { ok: true, newMax: data.research.maxSlots };
+    }
+    // -----------------------
+
     _getSpeedMultiplier() {
         const eng = this.state.data.team.engineers || 0;
         const base = BALANCE.research.baseSpeed;
@@ -96,7 +126,6 @@ export class ResearchSystem {
         return Math.min(raw, cap);
     }
 
-    // ---------- PROGRESS (dipicu hari berubah) ----------
     _onDayChanged(_snapshot) {
         const data = this.state.data;
         this._tickRefining();
@@ -114,7 +143,6 @@ export class ResearchSystem {
             const deltaMinutes = currentMinute - last;
             if (deltaMinutes <= 0) continue;
 
-            // Hitung dalam satuan hari, kalikan speed.
             const deltaDays = deltaMinutes / MINUTES_PER_DAY;
             entry.progressDays += deltaDays * speed;
             entry.lastProcessedMinute = currentMinute;
@@ -124,12 +152,10 @@ export class ResearchSystem {
             }
         }
 
-        // Proses yang selesai
         for (const entry of completedEntries) {
             this._completeResearch(entry);
         }
 
-        // Emit progress untuk yang masih berjalan
         if (data.research.active.length > 0) {
             bus.emit('research:progress', {
                 active: data.research.active.map(e => ({
@@ -159,24 +185,20 @@ export class ResearchSystem {
         const node = getNodeById(entry.nodeId);
         if (!node) return;
 
-        // Notifikasi
         ToastService.success('Riset selesai: ' + node.name);
         if (data.settings.vibrate) {
             try { if (navigator.vibrate) navigator.vibrate([20, 30, 20]); } catch (e) {}
         }
         this.state.addLog('Riset selesai: ' + node.name + ' (' + node.category + ').', LOG_TYPES.success);
 
-        // Milestone riset pertama
         if (data.research.completed.length === 1) {
             this.state.addMilestone('first_research', 'Riset pertama: ' + node.name);
         }
 
-        // Terobosan teknologi baru memicu antusiasme pasar (gaung) + reputasi.
         const bz = BALANCE.rnd.buzz;
         this.addBuzz(bz.perNode + (node.tier || 1) * bz.perTier, 'research');
         if (typeof this.state.addReputation === 'function') this.state.addReputation(bz.reputationPerNode);
 
-        // Emit untuk sistem lain (mis. Batch B akan membaca untuk komponen)
         bus.emit('research:completed', {
             nodeId: node.id,
             name: node.name,
@@ -190,9 +212,6 @@ export class ResearchSystem {
     // ============================================================
     // API PUBLIK
     // ============================================================
-
-    // Kembalikan { status, reason }.
-    // status: 'done' | 'running' | 'available' | 'locked'
     getNodeStatus(nodeId, opts) {
         const ignoreCash = !!(opts && opts.ignoreCash);
         const data = this.state.data;
@@ -205,8 +224,6 @@ export class ResearchSystem {
         if (data.research.active.some(e => e.nodeId === nodeId)) {
             return { status: 'running', reason: null, blocker: null };
         }
-        // `blocker` (baru): 'year' | 'prereq' | 'slots' | 'cash' — dipakai UI untuk
-        // membedakan node yang "belum waktunya" dari node yang siap tapi tertahan.
         if (data.time.currentYear < node.minYear) {
             return { status: 'locked', reason: 'Tersedia tahun ' + node.minYear, blocker: 'year' };
         }
@@ -224,7 +241,6 @@ export class ResearchSystem {
         return { status: 'available', reason: null, blocker: null };
     }
 
-    // Kembalikan { ok: boolean, reason?: string }.
     startResearch(nodeId, opts) {
         const paidWithSilicon = !!(opts && opts.paidWithSilicon);
         const data = this.state.data;
@@ -238,7 +254,6 @@ export class ResearchSystem {
 
         if (!paidWithSilicon) WalletService.pay(node.cost, 'research');
 
-        // Daftarkan sebagai aktif
         const entry = {
             nodeId: node.id,
             category: node.category,
@@ -262,14 +277,12 @@ export class ResearchSystem {
             cost: node.cost,
             durationDays: node.durationDays
         });
-        // Untuk tutorial (jika ada langkah "mulai riset")
         bus.emit('tutorial:action', { id: 'action:research-started' });
         bus.emit('state:changed', data);
 
         return { ok: true };
     }
 
-    // Batalkan riset, refund sebagian (lihat balance.research.refundPercent).
     cancelResearch(nodeId) {
         const data = this.state.data;
         const idx = data.research.active.findIndex(e => e.nodeId === nodeId);
@@ -278,23 +291,15 @@ export class ResearchSystem {
         const node = getNodeById(nodeId);
         data.research.active.splice(idx, 1);
 
-        const refund = node
-            ? Math.floor(node.cost * (BALANCE.research.refundPercent || 0))
-            : 0;
+        const refund = node ? Math.floor(node.cost * (BALANCE.research.refundPercent || 0)) : 0;
         if (refund > 0) this.state.addCash(refund);
 
-        this.state.addLog(
-            'Riset dibatalkan: ' + (node ? node.name : nodeId) + ' (refund $' + refund.toLocaleString('en-US') + ').',
-            LOG_TYPES.warning
-        );
+        this.state.addLog('Riset dibatalkan: ' + (node ? node.name : nodeId) + ' (refund $' + refund.toLocaleString('en-US') + ').', LOG_TYPES.warning);
         bus.emit('research:cancelled', { nodeId, refund });
         bus.emit('state:changed', data);
         return { ok: true, refund };
     }
 
-    // [SIL] Majukan progress riset aktif sebanyak `days` hari-progress
-    // (Infinity = selesaikan sekarang). Selesai lewat jalur normal sehingga
-    // toast, log, milestone & event tetap jalan.
     boostResearch(nodeId, days) {
         const data = this.state.data;
         const entry = data.research.active.find(e => e.nodeId === nodeId);
@@ -309,30 +314,19 @@ export class ResearchSystem {
         return { ok: true, completed: false };
     }
 
-    // Ringkasan untuk UI ProgressPanel (Dashboard).
     getProgress() {
         const data = this.state.data;
         const speed = this._getSpeedMultiplier();
         return data.research.active.map(e => {
-            const percent = e.durationDays > 0
-                ? Math.min(1, e.progressDays / e.durationDays)
-                : 0;
-            const remainingDays = e.durationDays > 0
-                ? Math.max(0, Math.ceil((e.durationDays - e.progressDays) / speed))
-                : 0;
+            const percent = e.durationDays > 0 ? Math.min(1, e.progressDays / e.durationDays) : 0;
+            const remainingDays = e.durationDays > 0 ? Math.max(0, Math.ceil((e.durationDays - e.progressDays) / speed)) : 0;
             return {
-                nodeId: e.nodeId,
-                name: e.name,
-                category: e.category,
-                percent,
-                progressDays: e.progressDays,
-                durationDays: e.durationDays,
-                remainingDays
+                nodeId: e.nodeId, name: e.name, category: e.category,
+                percent, progressDays: e.progressDays, durationDays: e.durationDays, remainingDays
             };
         });
     }
 
-    // Cek apakah sebuah komponen (untuk Batch B) sudah terbuka.
     isUnlocked(componentId) {
         const data = this.state.data;
         for (const nodeId of data.research.completed) {
@@ -344,10 +338,7 @@ export class ResearchSystem {
         return false;
     }
 
-    // Apakah fitur OS (untuk OSSystem) sudah terbuka via riset.
     isOsFeatureUnlocked(featureId) {
-        // Cek node riset yang meng-unlock fitur OS ini.
-        // Dilakukan oleh OSSystem juga, tapi helper ini berguna.
         const data = this.state.data;
         for (const nodeId of data.research.completed) {
             const node = getNodeById(nodeId);
@@ -355,44 +346,33 @@ export class ResearchSystem {
                 if (node.effects.unlocksOsFeatures.includes(featureId)) return true;
             }
         }
-        // Fitur OS tanpa requiresResearch otomatis terbuka
         return false;
     }
 
-    // Daftar node berdasarkan kategori (untuk UI).
     getNodesByCategory(categoryId) {
         return RESEARCH_NODES.filter(n => n.category === categoryId);
     }
 
-    // Kategori untuk filter chip di UI.
     getCategories() {
         return RESEARCH_CATEGORIES;
     }
 
-    // ============================================================
-    // API TAMBAHAN UNTUK HALAMAN RISET (v2028)
-    // ============================================================
-
-    // Versi publik dari _getSpeedMultiplier + info cap.
     getSpeedInfo() {
         const speed = this._getSpeedMultiplier();
         const cap = BALANCE.research.maxSpeedMultiplier;
         return { speed, cap, atCap: speed >= cap - 1e-9 };
     }
 
-    // Estimasi hari nyata-game untuk menyelesaikan node pada kecepatan sekarang.
     getEtaDays(nodeOrId) {
         const node = typeof nodeOrId === 'string' ? getNodeById(nodeOrId) : nodeOrId;
         if (!node) return 0;
         return Math.ceil(node.durationDays / Math.max(0.01, this._getSpeedMultiplier()));
     }
 
-    // Node yang menjadikan `nodeId` sebagai prasyarat (apa yang dibuka riset ini).
     getDependents(nodeId) {
         return RESEARCH_NODES.filter(n => (n.prerequisites || []).includes(nodeId));
     }
 
-    // Ringkasan global + per kategori.
     getSummary() {
         const data = this.state.data;
         const done = new Set(data.research.completed);
@@ -418,9 +398,6 @@ export class ResearchSystem {
         };
     }
 
-    // Rekomendasi riset berikutnya: dari node yang bisa langsung dimulai, pilih
-    // yang paling "membuka jalan" (jumlah dependen terbanyak), lalu termurah.
-    // Kembalikan { node, dependents } atau null.
     getRecommended() {
         const candidates = [];
         RESEARCH_NODES.forEach(n => {
@@ -438,7 +415,7 @@ export class ResearchSystem {
 
 
     // ============================================================
-    // R&D LANJUTAN (v2028.36) — level teknologi yang naik terus-menerus
+    // R&D LANJUTAN
     // ============================================================
     _ensureRnd() {
         const r = this.state.data.research;
@@ -471,13 +448,11 @@ export class ResearchSystem {
         return computeTechEdge(levels || this.state.data.research.mastery, this.state.data.time.currentYear);
     }
 
-    // Snapshot level teknologi — disimpan di produk saat proyek dimulai.
     getTechSnapshot() {
         this._ensureRnd();
         return { levels: Object.assign({}, this.state.data.research.mastery), year: this.state.data.time.currentYear };
     }
 
-    // Info lengkap satu jalur untuk UI.
     getRefineInfo(catId) {
         this._ensureRnd();
         const data = this.state.data;
@@ -567,7 +542,6 @@ export class ResearchSystem {
         return { ok: true, refund };
     }
 
-    // Dipakai Silicon boost / cheat: majukan progress R&D lanjutan.
     boostRefine(catId, days) {
         const data = this.state.data;
         const e = data.research.refining.find(x => x.categoryId === catId);
@@ -626,7 +600,6 @@ export class ResearchSystem {
         bus.emit('state:changed', data);
     }
 
-    // ---------- GAUNG PASAR (buzz) ----------
     addBuzz(points, _reason) {
         const data = this.state.data;
         this._ensureRnd();
@@ -648,9 +621,6 @@ export class ResearchSystem {
         bus.emit('research:buzz', { buzz: data.research.buzz, reason: 'decay' });
     }
 
-    // ============================================================
-    // CHEAT (untuk testing console)
-    // ============================================================
     completeAllResearch() {
         const data = this.state.data;
         RESEARCH_NODES.forEach(n => {
@@ -671,7 +641,6 @@ export class ResearchSystem {
         if (!node) return { ok: false, reason: 'Node tidak ditemukan.' };
         if (data.research.completed.includes(nodeId)) return { ok: false, reason: 'Sudah selesai.' };
 
-        // Jika sedang aktif, hapus dari daftar aktif
         const idx = data.research.active.findIndex(e => e.nodeId === nodeId);
         if (idx >= 0) data.research.active.splice(idx, 1);
 
@@ -683,4 +652,4 @@ export class ResearchSystem {
         bus.emit('state:changed', data);
         return { ok: true };
     }
-          }
+            }
