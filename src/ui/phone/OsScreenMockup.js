@@ -8,12 +8,16 @@
 import { state } from '../../core/GameState.js';
 import { getDesignEraForYear } from '../../data/era-design.data.js';
 import { resolveSpec } from '../../data/phone-specs.data.js';
+import { t as _tr } from '../../core/LanguageService.js';
 
 function escapeHtml(s) {
     if (typeof s !== 'string') return '';
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
+
+// [i18n] Teks SVG diterjemahkan saat render (bukan saat import) dan di-escape untuk SVG/HTML.
+function T(key) { return escapeHtml(_tr(key)); }
 
 function safeGetState() {
     try { return state.get(); }
@@ -57,7 +61,7 @@ function buildMenuData(featureIds, osState) {
     const has = function (id) { return featureIds.indexOf(id) >= 0; };
     const isDark = has('fw_dark_mode');
     const netGen = has('net_5g') ? '5G' : has('net_4g') ? 'LTE' : has('net_3g') ? '3G' : has('net_gsm') ? 'GSM' : '—';
-    const secValue = has('fw_biometric') ? 'Face ID' : has('fw_fingerprint') ? 'Sidik Jari' : has('fw_privacy') ? 'PIN' : '—';
+    const secValue = has('fw_biometric') ? 'Face ID' : has('fw_fingerprint') ? T('osm.fingerprint') : has('fw_privacy') ? 'PIN' : '—';
     const storageValue = has('fw_cloud_sync') ? '128 GB' : '64 GB';
     const ver = getCurrentVersionString(osState) || '—';
 
@@ -69,37 +73,37 @@ function buildMenuData(featureIds, osState) {
         storageValue: storageValue,
         ver: ver,
         groups: [
-            { title: 'KONEKSI', items: [
-                { icon: 'wifi',   label: 'Wi-Fi',           value: has('fw_browser_mobile') || has('fw_wap_browser') ? 'Aktif' : '—', detail: null },
-                { icon: 'signal', label: 'Jaringan Seluler', value: netGen, detail: null },
-                { icon: 'cloud',  label: 'Bluetooth',        value: has('fw_ecosystem') ? 'Aktif' : 'Mati', detail: null },
-                { icon: 'globe',  label: 'Data Seluler',     value: has('net_gprs') ? 'Aktif' : '—', detail: null }
+            { title: T('osm.sec.connections'), items: [
+                { icon: 'wifi',   label: 'Wi-Fi',           value: has('fw_browser_mobile') || has('fw_wap_browser') ? T('osm.active') : '—', detail: null },
+                { icon: 'signal', label: T('osm.cellular_network'), value: netGen, detail: null },
+                { icon: 'cloud',  label: 'Bluetooth',        value: has('fw_ecosystem') ? T('osm.active') : T('osm.inactive'), detail: null },
+                { icon: 'globe',  label: T('osm.cellular_data'),     value: has('net_gprs') ? T('osm.active') : '—', detail: null }
             ]},
-            { title: 'TAMPILAN & SUARA', items: [
-                { icon: 'display', label: 'Tampilan',        value: isDark ? 'Gelap' : 'Terang', detail: null },
-                { icon: 'sun',     label: 'Kecerahan',       value: '72%', detail: null },
-                { icon: 'volume',  label: 'Suara & Getar',   value: 'Standar', detail: null },
-                { icon: 'music',   label: 'Nada Dering',     value: 'Default', detail: null }
+            { title: T('osm.sec.display_sound'), items: [
+                { icon: 'display', label: T('osm.display'),        value: isDark ? T('osm.dark') : T('osm.light'), detail: null },
+                { icon: 'sun',     label: T('osm.brightness'),       value: '72%', detail: null },
+                { icon: 'volume',  label: T('osm.sound_vibrate'),   value: T('osm.standard'), detail: null },
+                { icon: 'music',   label: T('osm.ringtone'),     value: 'Default', detail: null }
             ]},
-            { title: 'NOTIFIKASI & FOKUS', items: [
-                { icon: 'bell',    label: 'Notifikasi',      value: null, toggle: has('fw_smart_notif') || has('fw_notifications') },
-                { icon: 'moon',    label: 'Jangan Ganggu',   value: null, toggle: has('fw_focus_mode') },
-                { icon: 'target',  label: 'Mode Fokus',      value: has('fw_focus_mode') ? 'Aktif' : '—', detail: null }
+            { title: T('osm.sec.notif_focus'), items: [
+                { icon: 'bell',    label: T('osm.notifications'),      value: null, toggle: has('fw_smart_notif') || has('fw_notifications') },
+                { icon: 'moon',    label: T('osm.dnd'),   value: null, toggle: has('fw_focus_mode') },
+                { icon: 'target',  label: T('osm.focus_mode'),      value: has('fw_focus_mode') ? T('osm.active') : '—', detail: null }
             ]},
-            { title: 'KEAMANAN & PRIVASI', items: [
-                { icon: 'lock',    label: 'Kunci Layar',     value: secValue, detail: null },
-                { icon: 'shield',  label: 'Privasi',         value: has('fw_privacy') ? 'Terlindungi' : 'Standar', detail: null },
-                { icon: 'fingerprint', label: 'Biometrik',   value: has('fw_biometric') || has('fw_fingerprint') ? 'Terdaftar' : '—', detail: null },
-                { icon: 'key',     label: 'Sandi & Akun',    value: has('fw_sign_in') ? 'Tersinkron' : 'Lokal', detail: null }
+            { title: T('osm.sec.security'), items: [
+                { icon: 'lock',    label: T('osm.screen_lock'),     value: secValue, detail: null },
+                { icon: 'shield',  label: T('osm.privacy'),         value: has('fw_privacy') ? T('osm.protected') : T('osm.standard'), detail: null },
+                { icon: 'fingerprint', label: T('osm.biometrics'),   value: has('fw_biometric') || has('fw_fingerprint') ? T('osm.enrolled') : '—', detail: null },
+                { icon: 'key',     label: T('osm.passwords_accounts'),    value: has('fw_sign_in') ? T('osm.synced') : T('osm.local'), detail: null }
             ]},
-            { title: 'BATERAI & PENYIMPANAN', items: [
-                { icon: 'battery', label: 'Baterai',         value: '87%', detail: 'Hemat Daya ' + (has('fw_low_power') ? 'On' : 'Off') },
-                { icon: 'database',label: 'Penyimpanan',     value: storageValue, detail: 'Terpakai ' + (has('fw_cloud_sync') ? '82 GB' : '41 GB') }
+            { title: T('osm.sec.battery_storage'), items: [
+                { icon: 'battery', label: T('osm.battery'),         value: '87%', detail: T('osm.power_saver') + ' ' + (has('fw_low_power') ? T('osm.on') : T('osm.off')) },
+                { icon: 'database',label: T('osm.storage'),     value: storageValue, detail: T('osm.used') + ' ' + (has('fw_cloud_sync') ? '82 GB' : '41 GB') }
             ]},
-            { title: 'SISTEM & PEMBARUAN', items: [
-                { icon: 'download',label: 'Pembaruan OS',    value: ver, detail: null },
-                { icon: 'sparkles',label: 'Asisten & AI',    value: has('fw_siri') || has('fw_ai_on_device') ? 'Aktif' : 'Mati', detail: null },
-                { icon: 'info',    label: 'Tentang Perangkat', value: null, detail: null }
+            { title: T('osm.sec.system_updates'), items: [
+                { icon: 'download',label: T('osm.os_update'),    value: ver, detail: null },
+                { icon: 'sparkles',label: T('osm.assistant_ai'),    value: has('fw_siri') || has('fw_ai_on_device') ? T('osm.active') : T('osm.inactive'), detail: null },
+                { icon: 'info',    label: T('osm.about_device'), value: null, detail: null }
             ]}
         ]
     };
@@ -200,19 +204,19 @@ function renderMono(featureIds, osState, w, h, size) {
 
     // Title
     svg += '<rect x="0" y="14" width="' + w + '" height="11" fill="' + mid + '"/>';
-    svg += '<text x="4" y="22" font-size="7" font-family="monospace" font-weight="700" fill="' + light + '">PENGATURAN</text>';
+    svg += '<text x="4" y="22" font-size="7" font-family="monospace" font-weight="700" fill="' + light + '">' + T('osm.sec.settings') + '</text>';
 
     // Menu list — real items
     const items = [
-        'Profil',
-        'Nada &amp; Suara',
-        'Tampilan',
-        'Tanggal &amp; Waktu',
-        'Konektivitas',
-        'Panggilan',
-        'Fitur Ponsel',
-        'Keamanan',
-        'Pemulihan'
+        T('osm.profile'),
+        T('osm.tones_sounds'),
+        T('osm.display'),
+        T('osm.date_time'),
+        T('osm.connectivity'),
+        T('osm.calls'),
+        T('osm.feature_phone'),
+        T('osm.security'),
+        T('osm.recovery')
     ];
     const sel = 4;
     const startY = 28;
@@ -232,11 +236,11 @@ function renderMono(featureIds, osState, w, h, size) {
 
     // Soft keys
     svg += '<rect x="0" y="' + (h - 22) + '" width="' + w + '" height="22" fill="' + mid + '"/>';
-    svg += '<text x="6" y="' + (h - 12) + '" font-size="5.5" font-family="monospace" fill="' + light + '">Kembali</text>';
+    svg += '<text x="6" y="' + (h - 12) + '" font-size="5.5" font-family="monospace" fill="' + light + '">' + T('osm.back') + '</text>';
     svg += '<line x1="' + (w/2) + '" y1="' + (h - 22) + '" x2="' + (w/2) + '" y2="' + h + '" stroke="' + dark + '" stroke-width="0.6"/>';
-    svg += '<text x="' + (w - 6) + '" y="' + (h - 12) + '" text-anchor="end" font-size="5.5" font-family="monospace" fill="' + light + '">Pilih</text>';
+    svg += '<text x="' + (w - 6) + '" y="' + (h - 12) + '" text-anchor="end" font-size="5.5" font-family="monospace" fill="' + light + '">' + T('osm.select') + '</text>';
     // Navigation hints
-    svg += '<text x="' + (w/2 - 2) + '" y="' + (h - 6) + '" text-anchor="middle" font-size="4.5" font-family="monospace" fill="' + light + '" opacity="0.75">▲▼ Navigasi</text>';
+    svg += '<text x="' + (w/2 - 2) + '" y="' + (h - 6) + '" text-anchor="middle" font-size="4.5" font-family="monospace" fill="' + light + '" opacity="0.75">▲▼ ' + T('osm.navigate') + '</text>';
 
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' ' + h + '" width="' + size + '" height="' + Math.round(size * 2) + '" preserveAspectRatio="xMidYMid meet">' + svg + '</svg>';
 }
@@ -254,14 +258,14 @@ function renderSymbianGrid(featureIds, osState, w, h, size) {
     const select = '#ffd040';
 
     const items = [
-        { icon: 'signal', label: 'Jaringan',  color: '#88c8ff' },
-        { icon: 'message', label: 'Pesan',    color: '#88d868' },
-        { icon: 'contacts',label: 'Kontak',   color: '#f0a850' },
-        { icon: 'clock',   label: 'Kalender', color: '#d078c0' },
-        { icon: 'camera',  label: 'Kamera',   color: '#70b8e0' },
-        { icon: 'music',   label: 'Musik',    color: '#a898d8' },
+        { icon: 'signal', label: T('osm.network'),  color: '#88c8ff' },
+        { icon: 'message', label: T('osm.messages'),    color: '#88d868' },
+        { icon: 'contacts',label: T('osm.contacts'),   color: '#f0a850' },
+        { icon: 'clock',   label: T('osm.calendar'), color: '#d078c0' },
+        { icon: 'camera',  label: T('osm.camera'),   color: '#70b8e0' },
+        { icon: 'music',   label: T('osm.music'),    color: '#a898d8' },
         { icon: 'folder',  label: 'File',     color: '#e0c050' },
-        { icon: 'display', label: 'Setelan',  color: '#78d0a8' },
+        { icon: 'display', label: T('osm.settings'),  color: '#78d0a8' },
         { icon: 'info',    label: 'Info',     color: '#c8c8c8' }
     ];
 
@@ -275,8 +279,8 @@ function renderSymbianGrid(featureIds, osState, w, h, size) {
 
     // Header
     svg += '<rect x="0" y="11" width="' + w + '" height="13" fill="' + header + '"/>';
-    svg += '<text x="6" y="20" font-size="7" font-family="sans-serif" font-weight="700" fill="' + text + '">Setelan</text>';
-    svg += '<text x="' + (w - 6) + '" y="20" text-anchor="end" font-size="5" font-family="sans-serif" fill="' + dim + '">Keluar</text>';
+    svg += '<text x="6" y="20" font-size="7" font-family="sans-serif" font-weight="700" fill="' + text + '">' + T('osm.settings') + '</text>';
+    svg += '<text x="' + (w - 6) + '" y="20" text-anchor="end" font-size="5" font-family="sans-serif" fill="' + dim + '">' + T('osm.exit') + '</text>';
 
     // Grid 3x3
     const gridTop = 30;
@@ -304,8 +308,8 @@ function renderSymbianGrid(featureIds, osState, w, h, size) {
 
     // Soft keys
     svg += '<rect x="0" y="' + (h - 16) + '" width="' + w + '" height="16" fill="' + header + '"/>';
-    svg += '<text x="6" y="' + (h - 6) + '" font-size="5.5" font-family="sans-serif" font-weight="700" fill="' + text + '">Pilih</text>';
-    svg += '<text x="' + (w - 6) + '" y="' + (h - 6) + '" text-anchor="end" font-size="5.5" font-family="sans-serif" font-weight="700" fill="' + text + '">Kembali</text>';
+    svg += '<text x="6" y="' + (h - 6) + '" font-size="5.5" font-family="sans-serif" font-weight="700" fill="' + text + '">' + T('osm.select') + '</text>';
+    svg += '<text x="' + (w - 6) + '" y="' + (h - 6) + '" text-anchor="end" font-size="5.5" font-family="sans-serif" font-weight="700" fill="' + text + '">' + T('osm.back') + '</text>';
 
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' ' + h + '" width="' + size + '" height="' + Math.round(size * 2) + '" preserveAspectRatio="xMidYMid meet">' + svg + '</svg>';
 }
@@ -328,31 +332,31 @@ function renderWindowsMobile(featureIds, osState, w, h, size) {
     svg += '<rect x="0" y="0" width="' + w + '" height="10" fill="#e8e8e8"/>';
     svg += '<text x="4" y="7" font-size="5" font-family="Tahoma, sans-serif" font-weight="700" fill="' + text + '">' + (has('net_gsm') ? 'GSM' : '—') + '</text>';
     svg += '<text x="' + (w/2) + '" y="7" text-anchor="middle" font-size="5" font-family="Tahoma, sans-serif" fill="' + text + '">08:15</text>';
-    svg += '<text x="' + (w - 4) + '" y="7" text-anchor="end" font-size="4.5" font-family="Tahoma, sans-serif" fill="' + text + '">Baterai 87%</text>';
+    svg += '<text x="' + (w - 4) + '" y="7" text-anchor="end" font-size="4.5" font-family="Tahoma, sans-serif" fill="' + text + '">' + T('osm.battery') + ' 87%</text>';
 
     // Title bar (blue)
     svg += '<rect x="0" y="10" width="' + w + '" height="12" fill="' + bar + '"/>';
-    svg += '<text x="4" y="18" font-size="6.5" font-family="Tahoma, sans-serif" font-weight="700" fill="#ffffff">Pengaturan</text>';
+    svg += '<text x="4" y="18" font-size="6.5" font-family="Tahoma, sans-serif" font-weight="700" fill="#ffffff">' + T('osm.settings_title') + '</text>';
     svg += '<text x="' + (w - 4) + '" y="18" text-anchor="end" font-size="5.5" font-family="Tahoma, sans-serif" fill="#ffffff">ok</text>';
 
     // Left softkey menu / right clock
     svg += '<rect x="0" y="22" width="' + w + '" height="8" fill="#f0f0f0"/>';
-    svg += '<text x="4" y="28" font-size="5" font-family="Tahoma, sans-serif" font-weight="700" fill="' + bar + '">Mulai</text>';
+    svg += '<text x="4" y="28" font-size="5" font-family="Tahoma, sans-serif" font-weight="700" fill="' + bar + '">' + T('osm.start') + '</text>';
     svg += '<text x="' + (w - 4) + '" y="28" text-anchor="end" font-size="5" font-family="Tahoma, sans-serif" fill="' + sub + '">Menu</text>';
 
     // List items (Windows Mobile list)
     const items = [
-        { label: 'Telepon',            value: '—' },
-        { label: 'Bluetooth',          value: has('fw_ecosystem') ? 'Aktif' : 'Mati' },
-        { label: 'Sambungan',          value: has('net_gprs') ? 'GPRS' : '—' },
-        { label: 'Pesan',              value: has('fw_sms') ? 'Aktif' : '—' },
-        { label: 'Kamera',             value: has('cam_vga') ? 'VGA' : '—' },
-        { label: 'Jam & Alarm',        value: 'Aktif' },
-        { label: 'Papan Ketik',        value: 'Default' },
-        { label: 'Suara',              value: 'Standar' },
-        { label: 'Tampilan',           value: 'Klasik' },
-        { label: 'Memori',             value: '41 MB bebas' },
-        { label: 'Setelan Sistem',     value: '—' }
+        { label: T('osm.phone'),            value: '—' },
+        { label: 'Bluetooth',          value: has('fw_ecosystem') ? T('osm.active') : T('osm.inactive') },
+        { label: T('osm.connection'),          value: has('net_gprs') ? 'GPRS' : '—' },
+        { label: T('osm.messages'),              value: has('fw_sms') ? T('osm.active') : '—' },
+        { label: T('osm.camera'),             value: has('cam_vga') ? 'VGA' : '—' },
+        { label: T('osm.clock_alarm'),        value: T('osm.active') },
+        { label: T('osm.keyboard'),        value: 'Default' },
+        { label: T('osm.sound'),              value: T('osm.standard') },
+        { label: T('osm.display'),           value: T('osm.classic') },
+        { label: T('osm.memory'),             value: T('osm.free_mb') },
+        { label: T('osm.system_settings'),     value: '—' }
     ];
 
     const startY = 34;
@@ -372,7 +376,7 @@ function renderWindowsMobile(featureIds, osState, w, h, size) {
     svg += '<rect x="13" y="' + (h - 14) + '" width="6" height="6" fill="#7fba00"/>';
     svg += '<rect x="6" y="' + (h - 7) + '" width="6" height="6" fill="#00a4ef"/>';
     svg += '<rect x="13" y="' + (h - 7) + '" width="6" height="6" fill="#ffb900"/>';
-    svg += '<text x="24" y="' + (h - 5) + '" font-size="5.5" font-family="Tahoma, sans-serif" fill="#ffffff">Start</text>';
+    svg += '<text x="24" y="' + (h - 5) + '" font-size="5.5" font-family="Tahoma, sans-serif" fill="#ffffff">' + T('osm.start') + '</text>';
     svg += '<text x="' + (w - 6) + '" y="' + (h - 5) + '" text-anchor="end" font-size="5" font-family="Tahoma, sans-serif" fill="#ffffff">08:15</text>';
 
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' ' + h + '" width="' + size + '" height="' + Math.round(size * 2) + '" preserveAspectRatio="xMidYMid meet">' + svg + '</svg>';
@@ -402,20 +406,20 @@ function renderEarlyIos(featureIds, osState, w, h, size) {
     svg += '<rect x="0" y="11" width="' + w + '" height="16" fill="url(#ios_nav)"/>';
     // Highlight atas
     svg += '<rect x="0" y="11" width="' + w + '" height="0.8" fill="#ffffff" opacity="0.6"/>';
-    svg += '<text x="6" y="22" font-size="7" font-family="-apple-system, sans-serif" font-weight="700" fill="#ffffff" style="text-shadow:0 1px 0 rgba(0,0,0,0.5);">‹ Setelan</text>';
-    svg += '<text x="' + (w/2) + '" y="22" text-anchor="middle" font-size="7" font-family="-apple-system, sans-serif" font-weight="700" fill="#ffffff" style="text-shadow:0 1px 0 rgba(0,0,0,0.5);">Umum</text>';
+    svg += '<text x="6" y="22" font-size="7" font-family="-apple-system, sans-serif" font-weight="700" fill="#ffffff" style="text-shadow:0 1px 0 rgba(0,0,0,0.5);">‹ ' + T('osm.settings') + '</text>';
+    svg += '<text x="' + (w/2) + '" y="22" text-anchor="middle" font-size="7" font-family="-apple-system, sans-serif" font-weight="700" fill="#ffffff" style="text-shadow:0 1px 0 rgba(0,0,0,0.5);">' + T('osm.general') + '</text>';
 
     // Grouped list (dark gray with glossy)
     const startY = 34;
     const rowH = 22;
     const items = [
         { label: 'Info',             value: '>' },
-        { label: 'Tentang',          value: 'v' + (getCurrentVersionString(osState) || '—') },
-        { label: 'Pembaruan',        value: '>' },
-        { label: 'Penggunaan',       value: has('fw_cloud_sync') ? '128 GB' : '64 GB' },
-        { label: 'Tanggal &amp; Waktu', value: '>' },
-        { label: 'Papan Ketik',      value: '>' },
-        { label: 'Bahasa',           value: 'Indonesia' }
+        { label: T('osm.about'),          value: 'v' + (getCurrentVersionString(osState) || '—') },
+        { label: T('osm.updates'),        value: '>' },
+        { label: T('osm.usage'),       value: has('fw_cloud_sync') ? '128 GB' : '64 GB' },
+        { label: T('osm.date_time'), value: '>' },
+        { label: T('osm.keyboard'),      value: '>' },
+        { label: T('osm.language'),           value: T('osm.language_value') }
     ];
 
     svg += '<rect x="6" y="' + startY + '" width="' + (w - 12) + '" height="' + (items.length * rowH + 2) + '" rx="8" fill="#2a2a2a" stroke="#3a3a3a" stroke-width="0.4"/>';
@@ -447,7 +451,7 @@ function renderEarlyIos(featureIds, osState, w, h, size) {
     const tabY = h - 22;
     svg += '<rect x="0" y="' + tabY + '" width="' + w + '" height="22" fill="#1a1a1a"/>';
     svg += '<rect x="0" y="' + tabY + '" width="' + w + '" height="0.6" fill="#ffffff" opacity="0.2"/>';
-    const tabs = ['Favorit', 'Terbaru', 'Kontak', 'Umum'];
+    const tabs = [T('osm.favorites'), T('osm.recents'), T('osm.contacts'), T('osm.general')];
     tabs.forEach(function (t, i) {
         const tx = (w / tabs.length) * (i + 0.5);
         const isActive = i === 3;
@@ -487,23 +491,23 @@ function renderSkeuomorphic(featureIds, osState, w, h, size) {
     svg += '<rect x="0" y="10" width="' + w + '" height="16" fill="url(#sk_nav)"/>';
     svg += '<rect x="0" y="10" width="' + w + '" height="1" fill="#ffffff" opacity="0.5"/>';
     svg += '<rect x="0" y="25" width="' + w + '" height="1" fill="#000000" opacity="0.3"/>';
-    svg += '<text x="6" y="21" font-size="7" font-family="-apple-system, sans-serif" font-weight="700" fill="#ffffff" style="text-shadow:0 -1px 0 rgba(0,0,0,0.5);">‹ Umum</text>';
-    svg += '<text x="' + (w/2) + '" y="21" text-anchor="middle" font-size="7" font-family="-apple-system, sans-serif" font-weight="700" fill="#ffffff" style="text-shadow:0 -1px 0 rgba(0,0,0,0.5);">Pengaturan</text>';
+    svg += '<text x="6" y="21" font-size="7" font-family="-apple-system, sans-serif" font-weight="700" fill="#ffffff" style="text-shadow:0 -1px 0 rgba(0,0,0,0.5);">‹ ' + T('osm.general') + '</text>';
+    svg += '<text x="' + (w/2) + '" y="21" text-anchor="middle" font-size="7" font-family="-apple-system, sans-serif" font-weight="700" fill="#ffffff" style="text-shadow:0 -1px 0 rgba(0,0,0,0.5);">' + T('osm.settings_title') + '</text>';
 
     // Group 1 — Koneksi (leather button style)
     const startY = 32;
     const rowH = 24;
     const groups = [
-        { title: 'KONEKSI', rows: [
-            { label: 'Wi-Fi', value: has('fw_browser_mobile') ? 'Home-Net' : 'Mati' },
-            { label: 'Bluetooth', value: has('fw_ecosystem') ? 'Aktif' : 'Mati' },
-            { label: 'Data Seluler', value: has('net_3g') ? '3G Aktif' : has('net_gprs') ? 'GPRS' : 'Mati' }
+        { title: T('osm.sec.connections'), rows: [
+            { label: 'Wi-Fi', value: has('fw_browser_mobile') ? 'Home-Net' : T('osm.inactive') },
+            { label: 'Bluetooth', value: has('fw_ecosystem') ? T('osm.active') : T('osm.inactive') },
+            { label: T('osm.cellular_data'), value: has('net_3g') ? T('osm.net_3g_on') : has('net_gprs') ? 'GPRS' : T('osm.inactive') }
         ]},
-        { title: 'SISTEM', rows: [
-            { label: 'Umum', value: '›' },
-            { label: 'Tampilan & Kecerahan', value: '›' },
-            { label: 'Suara', value: '›' },
-            { label: 'Safari', value: has('fw_browser_mobile') ? 'Aktif' : '—' }
+        { title: T('osm.sec.system'), rows: [
+            { label: T('osm.general'), value: '›' },
+            { label: T('osm.display_brightness'), value: '›' },
+            { label: T('osm.sound'), value: '›' },
+            { label: 'Safari', value: has('fw_browser_mobile') ? T('osm.active') : '—' }
         ]}
     ];
 
@@ -533,10 +537,10 @@ function renderSkeuomorphic(featureIds, osState, w, h, size) {
     });
 
     // Toggle style (older iOS)
-    svg += '<text x="8" y="' + (curY + 8) + '" font-size="5" font-family="-apple-system, sans-serif" font-weight="700" fill="#3a3a3a">NOTIFIKASI</text>';
+    svg += '<text x="8" y="' + (curY + 8) + '" font-size="5" font-family="-apple-system, sans-serif" font-weight="700" fill="#3a3a3a">' + T('osm.sec.notifications') + '</text>';
     curY += 10;
     svg += '<rect x="0" y="' + curY + '" width="' + w + '" height="' + rowH + '" fill="url(#sk_cell)"/>';
-    svg += '<text x="8" y="' + (curY + 14) + '" font-size="6.5" font-family="-apple-system, sans-serif" font-weight="600" fill="#1a1a1a" style="text-shadow:0 1px 0 rgba(255,255,255,0.5);">Pusat Notifikasi</text>';
+    svg += '<text x="8" y="' + (curY + 14) + '" font-size="6.5" font-family="-apple-system, sans-serif" font-weight="600" fill="#1a1a1a" style="text-shadow:0 1px 0 rgba(255,255,255,0.5);">' + T('osm.notif_center') + '</text>';
     // Toggle iOS 4-6 style
     const toggleOn = has('fw_smart_notif') || has('fw_notifications');
     svg += '<rect x="' + (w - 32) + '" y="' + (curY + 6) + '" width="24" height="13" rx="6.5" fill="' + (toggleOn ? '#4a9a4a' : '#8a8a8a') + '" stroke="#5a5a5a" stroke-width="0.4"/>';
@@ -546,7 +550,7 @@ function renderSkeuomorphic(featureIds, osState, w, h, size) {
     const tabY = h - 26;
     svg += '<rect x="0" y="' + tabY + '" width="' + w + '" height="26" fill="#2a2a2a"/>';
     svg += '<rect x="0" y="' + tabY + '" width="' + w + '" height="0.8" fill="#5a5a5a"/>';
-    const tabs = ['Favorit', 'Terbaru', 'Kontak', 'Umum'];
+    const tabs = [T('osm.favorites'), T('osm.recents'), T('osm.contacts'), T('osm.general')];
     tabs.forEach(function (t, i) {
         const tx = (w / tabs.length) * (i + 0.5);
         const isActive = i === 3;
@@ -577,24 +581,24 @@ function renderFlatMaterial(featureIds, osState, w, h, size) {
     svg += '<text x="' + (w - 6) + '" y="8" text-anchor="end" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + text + '">▮▮▮ ▬▬ 87%</text>';
 
     // Nav bar (transparent with title)
-    svg += '<text x="6" y="22" font-size="7" font-family="-apple-system, sans-serif" font-weight="400" fill="' + accent + '">‹ Umum</text>';
-    svg += '<text x="' + (w/2) + '" y="22" text-anchor="middle" font-size="7.5" font-family="-apple-system, sans-serif" font-weight="600" fill="' + text + '">Pengaturan</text>';
+    svg += '<text x="6" y="22" font-size="7" font-family="-apple-system, sans-serif" font-weight="400" fill="' + accent + '">‹ ' + T('osm.general') + '</text>';
+    svg += '<text x="' + (w/2) + '" y="22" text-anchor="middle" font-size="7.5" font-family="-apple-system, sans-serif" font-weight="600" fill="' + text + '">' + T('osm.settings_title') + '</text>';
 
     // Search bar (iOS 7)
     svg += '<rect x="8" y="28" width="' + (w - 16) + '" height="12" rx="6" fill="#e0e0e5"/>';
     svg += '<circle cx="16" cy="34" r="2.2" fill="none" stroke="' + sub + '" stroke-width="0.7"/>';
     svg += '<line x1="17.5" y1="35.5" x2="19" y2="37" stroke="' + sub + '" stroke-width="0.7" stroke-linecap="round"/>';
-    svg += '<text x="22" y="36" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + sub + '">Cari</text>';
+    svg += '<text x="22" y="36" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + sub + '">' + T('osm.search') + '</text>';
 
     // Section 1
     let curY = 46;
-    svg += '<text x="14" y="' + curY + '" font-size="4.5" font-family="-apple-system, sans-serif" font-weight="600" fill="' + sub + '" letter-spacing="0.4">KONEKSI</text>';
+    svg += '<text x="14" y="' + curY + '" font-size="4.5" font-family="-apple-system, sans-serif" font-weight="600" fill="' + sub + '" letter-spacing="0.4">' + T('osm.sec.connections') + '</text>';
     curY += 3;
 
     const group1 = [
-        { icon: 'wifi',   label: 'Wi-Fi',           value: has('fw_browser_mobile') ? 'Home-Net' : 'Mati' },
-        { icon: 'signal', label: 'Data Seluler',    value: has('net_3g') ? '3G Aktif' : 'Mati' },
-        { icon: 'cloud',  label: 'Bluetooth',       value: has('fw_ecosystem') ? 'Aktif' : 'Mati' }
+        { icon: 'wifi',   label: 'Wi-Fi',           value: has('fw_browser_mobile') ? 'Home-Net' : T('osm.inactive') },
+        { icon: 'signal', label: T('osm.cellular_data'),    value: has('net_3g') ? T('osm.net_3g_on') : T('osm.inactive') },
+        { icon: 'cloud',  label: 'Bluetooth',       value: has('fw_ecosystem') ? T('osm.active') : T('osm.inactive') }
     ];
 
     svg += '<rect x="8" y="' + curY + '" width="' + (w - 16) + '" height="' + (group1.length * 18 + 2) + '" rx="4" fill="' + surface + '"/>';
@@ -611,14 +615,14 @@ function renderFlatMaterial(featureIds, osState, w, h, size) {
     curY += group1.length * 18 + 8;
 
     // Section 2
-    svg += '<text x="14" y="' + curY + '" font-size="4.5" font-family="-apple-system, sans-serif" font-weight="600" fill="' + sub + '" letter-spacing="0.4">SISTEM</text>';
+    svg += '<text x="14" y="' + curY + '" font-size="4.5" font-family="-apple-system, sans-serif" font-weight="600" fill="' + sub + '" letter-spacing="0.4">' + T('osm.sec.system') + '</text>';
     curY += 3;
 
     const group2 = [
-        { icon: 'display', label: 'Tampilan & Kecerahan', value: null },
-        { icon: 'volume',  label: 'Suara',                 value: null },
-        { icon: 'bell',    label: 'Notifikasi',            value: null, toggle: has('fw_smart_notif') || has('fw_notifications') },
-        { icon: 'lock',    label: 'Umum',                  value: null }
+        { icon: 'display', label: T('osm.display_brightness'), value: null },
+        { icon: 'volume',  label: T('osm.sound'),                 value: null },
+        { icon: 'bell',    label: T('osm.notifications'),            value: null, toggle: has('fw_smart_notif') || has('fw_notifications') },
+        { icon: 'lock',    label: T('osm.general'),                  value: null }
     ];
 
     svg += '<rect x="8" y="' + curY + '" width="' + (w - 16) + '" height="' + (group2.length * 18 + 2) + '" rx="4" fill="' + surface + '"/>';
@@ -641,10 +645,10 @@ function renderFlatMaterial(featureIds, osState, w, h, size) {
     curY += group2.length * 18 + 8;
 
     // Section 3 — Tentang
-    svg += '<text x="14" y="' + curY + '" font-size="4.5" font-family="-apple-system, sans-serif" font-weight="600" fill="' + sub + '" letter-spacing="0.4">TENTANG</text>';
+    svg += '<text x="14" y="' + curY + '" font-size="4.5" font-family="-apple-system, sans-serif" font-weight="600" fill="' + sub + '" letter-spacing="0.4">' + T('osm.sec.about') + '</text>';
     curY += 3;
     svg += '<rect x="8" y="' + curY + '" width="' + (w - 16) + '" height="20" rx="4" fill="' + surface + '"/>';
-    svg += '<text x="29" y="' + (curY + 12) + '" font-size="6.5" font-family="-apple-system, sans-serif" font-weight="500" fill="' + text + '">Tentang</text>';
+    svg += '<text x="29" y="' + (curY + 12) + '" font-size="6.5" font-family="-apple-system, sans-serif" font-weight="500" fill="' + text + '">' + T('osm.about') + '</text>';
     svg += '<text x="' + (w - 14) + '" y="' + (curY + 12) + '" text-anchor="end" font-size="6" font-family="-apple-system, sans-serif" fill="' + sub + '">' + (getCurrentVersionString(osState) || '—') + '</text>';
     svg += '<path d="M ' + (w - 12) + ' ' + (curY + 7) + ' L ' + (w - 9.5) + ' ' + (curY + 10) + ' L ' + (w - 12) + ' ' + (curY + 13) + '" fill="none" stroke="' + sub + '" stroke-width="0.7"/>';
 
@@ -670,7 +674,7 @@ function renderGroupedModern(featureIds, osState, w, h, size) {
     svg += '<text x="' + (w - 6) + '" y="8" text-anchor="end" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + text + '">▮▮▮ ▬▬ 87%</text>';
 
     // Big header
-    svg += '<text x="14" y="24" font-size="11" font-family="-apple-system, sans-serif" font-weight="700" fill="' + text + '">Pengaturan</text>';
+    svg += '<text x="14" y="24" font-size="11" font-family="-apple-system, sans-serif" font-weight="700" fill="' + text + '">' + T('osm.settings_title') + '</text>';
 
     // Profile row
     const profY = 30;
@@ -679,7 +683,7 @@ function renderGroupedModern(featureIds, osState, w, h, size) {
     svg += '<circle cx="22" cy="' + (profY + 14) + '" r="8" fill="' + accent + '"/>';
     svg += '<text x="22" y="' + (profY + 17) + '" text-anchor="middle" font-size="9" font-family="-apple-system, sans-serif" font-weight="700" fill="#ffffff">' + escapeHtml(initial) + '</text>';
     svg += '<text x="36" y="' + (profY + 12) + '" font-size="7" font-family="-apple-system, sans-serif" font-weight="600" fill="' + text + '">' + escapeHtml((osState && osState.name) || 'MyOS') + '</text>';
-    svg += '<text x="36" y="' + (profY + 21) + '" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + sub + '">ID Apple, iCloud, dll.</text>';
+    svg += '<text x="36" y="' + (profY + 21) + '" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + sub + '">' + T('osm.apple_id_etc') + '</text>';
     svg += '<path d="M ' + (w - 18) + ' ' + (profY + 11) + ' L ' + (w - 15) + ' ' + (profY + 14) + ' L ' + (w - 18) + ' ' + (profY + 17) + '" fill="none" stroke="' + sub + '" stroke-width="0.8"/>';
 
     // Section groups
@@ -688,22 +692,22 @@ function renderGroupedModern(featureIds, osState, w, h, size) {
 
     const sections = [
         { items: [
-            { icon: 'wifi',   label: 'Wi-Fi',           value: has('fw_browser_mobile') ? 'Home-Net' : 'Mati',    bg: '#007aff' },
-            { icon: 'cloud',  label: 'Bluetooth',       value: has('fw_ecosystem') ? 'Aktif' : 'Mati',            bg: '#007aff' },
-            { icon: 'signal', label: 'Data Seluler',    value: has('net_4g') ? '4G' : has('net_3g') ? '3G' : 'Mati', bg: '#34c759' },
-            { icon: 'globe',  label: 'Hotspot Pribadi', value: 'Mati',                                             bg: '#34c759' }
+            { icon: 'wifi',   label: 'Wi-Fi',           value: has('fw_browser_mobile') ? 'Home-Net' : T('osm.inactive'),    bg: '#007aff' },
+            { icon: 'cloud',  label: 'Bluetooth',       value: has('fw_ecosystem') ? T('osm.active') : T('osm.inactive'),            bg: '#007aff' },
+            { icon: 'signal', label: T('osm.cellular_data'),    value: has('net_4g') ? '4G' : has('net_3g') ? '3G' : T('osm.inactive'), bg: '#34c759' },
+            { icon: 'globe',  label: T('osm.hotspot'), value: T('osm.inactive'),                                             bg: '#34c759' }
         ]},
         { items: [
-            { icon: 'bell',    label: 'Notifikasi',            value: null, toggle: has('fw_smart_notif') || has('fw_notifications'), bg: '#ff3b30' },
-            { icon: 'volume',  label: 'Suara & Getaran',       value: null, bg: '#ff3b30' },
-            { icon: 'moon',    label: 'Jangan Ganggu',         value: null, toggle: has('fw_focus_mode'), bg: '#5856d6' },
-            { icon: 'display', label: 'Waktu Layar',           value: has('fw_digital_wellbeing') ? 'Aktif' : '—', bg: '#5856d6' }
+            { icon: 'bell',    label: T('osm.notifications'),            value: null, toggle: has('fw_smart_notif') || has('fw_notifications'), bg: '#ff3b30' },
+            { icon: 'volume',  label: T('osm.sound_haptics'),       value: null, bg: '#ff3b30' },
+            { icon: 'moon',    label: T('osm.dnd'),         value: null, toggle: has('fw_focus_mode'), bg: '#5856d6' },
+            { icon: 'display', label: T('osm.screen_time'),           value: has('fw_digital_wellbeing') ? T('osm.active') : '—', bg: '#5856d6' }
         ]},
         { items: [
-            { icon: 'lock',   label: 'Face ID & Kode Sandi', value: has('fw_biometric') ? 'Aktif' : '—', bg: '#34c759' },
-            { icon: 'shield', label: 'Privasi',              value: null, toggle: has('fw_privacy'), bg: '#007aff' },
-            { icon: 'battery',label: 'Baterai',              value: '87%', bg: '#34c759' },
-            { icon: 'info',   label: 'Umum',                 value: getCurrentVersionString(osState) || '—', bg: '#8e8e93' }
+            { icon: 'lock',   label: T('osm.faceid_passcode'), value: has('fw_biometric') ? T('osm.active') : '—', bg: '#34c759' },
+            { icon: 'shield', label: T('osm.privacy'),              value: null, toggle: has('fw_privacy'), bg: '#007aff' },
+            { icon: 'battery',label: T('osm.battery'),              value: '87%', bg: '#34c759' },
+            { icon: 'info',   label: T('osm.general'),                 value: getCurrentVersionString(osState) || '—', bg: '#8e8e93' }
         ]}
     ];
 
@@ -756,13 +760,13 @@ function renderMaterialYou(featureIds, osState, w, h, size) {
     svg += '<text x="' + (w - 6) + '" y="8" text-anchor="end" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + pal.text + '">5G ▮▮ 87%</text>';
 
     // Big header
-    svg += '<text x="14" y="24" font-size="12" font-family="-apple-system, sans-serif" font-weight="700" fill="' + pal.text + '">Pengaturan</text>';
+    svg += '<text x="14" y="24" font-size="12" font-family="-apple-system, sans-serif" font-weight="700" fill="' + pal.text + '">' + T('osm.settings_title') + '</text>';
 
     // Search bar
     svg += '<rect x="14" y="30" width="' + (w - 28) + '" height="12" rx="6" fill="' + (isDark ? '#1c1c1e' : '#e5e5ea') + '"/>';
     svg += '<circle cx="22" cy="36" r="2.2" fill="none" stroke="' + pal.sub + '" stroke-width="0.7"/>';
     svg += '<line x1="23.5" y1="37.5" x2="25" y2="39" stroke="' + pal.sub + '" stroke-width="0.7" stroke-linecap="round"/>';
-    svg += '<text x="29" y="38" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + pal.sub + '">Cari</text>';
+    svg += '<text x="29" y="38" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + pal.sub + '">' + T('osm.search') + '</text>';
 
     // Profile row
     const profY = 48;
@@ -771,7 +775,7 @@ function renderMaterialYou(featureIds, osState, w, h, size) {
     svg += '<circle cx="24" cy="' + (profY + 17) + '" r="11" fill="' + pal.accent + '"/>';
     svg += '<text x="24" y="' + (profY + 20.5) + '" text-anchor="middle" font-size="11" font-family="-apple-system, sans-serif" font-weight="700" fill="#ffffff">' + escapeHtml(initial) + '</text>';
     svg += '<text x="42" y="' + (profY + 14) + '" font-size="7.5" font-family="-apple-system, sans-serif" font-weight="700" fill="' + pal.text + '">' + escapeHtml((osState && osState.name) || 'MyOS') + '</text>';
-    svg += '<text x="42" y="' + (profY + 24) + '" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + pal.sub + '">Akun &amp; Ekosistem</text>';
+    svg += '<text x="42" y="' + (profY + 24) + '" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + pal.sub + '">' + T('osm.account_eco') + '</text>';
     svg += '<path d="M ' + (w - 18) + ' ' + (profY + 14) + ' L ' + (w - 15) + ' ' + (profY + 17) + ' L ' + (w - 18) + ' ' + (profY + 20) + '" fill="none" stroke="' + pal.sub + '" stroke-width="0.8"/>';
 
     // Groups
@@ -780,20 +784,20 @@ function renderMaterialYou(featureIds, osState, w, h, size) {
 
     const sections = [
         [
-            { icon: 'wifi',   label: 'Wi-Fi',              value: has('fw_browser_mobile') ? 'Home-Net' : 'Mati',   bg: '#007aff' },
-            { icon: 'cloud',  label: 'Bluetooth',          value: has('fw_ecosystem') ? 'Aktif' : 'Mati',           bg: '#007aff' },
-            { icon: 'signal', label: 'Jaringan Seluler',   value: has('net_5g') ? '5G' : has('net_4g') ? 'LTE' : '—', bg: '#34c759' }
+            { icon: 'wifi',   label: 'Wi-Fi',              value: has('fw_browser_mobile') ? 'Home-Net' : T('osm.inactive'),   bg: '#007aff' },
+            { icon: 'cloud',  label: 'Bluetooth',          value: has('fw_ecosystem') ? T('osm.active') : T('osm.inactive'),           bg: '#007aff' },
+            { icon: 'signal', label: T('osm.cellular_network'),   value: has('net_5g') ? '5G' : has('net_4g') ? 'LTE' : '—', bg: '#34c759' }
         ],
         [
-            { icon: 'bell',    label: 'Notifikasi',         value: null, toggle: has('fw_smart_notif') || has('fw_notifications'), bg: '#ff3b30' },
-            { icon: 'moon',    label: 'Mode Fokus',         value: null, toggle: has('fw_focus_mode'), bg: '#5856d6' },
-            { icon: 'display', label: 'Tampilan & Kecerahan', value: isDark ? 'Gelap' : 'Terang', bg: '#5856d6' }
+            { icon: 'bell',    label: T('osm.notifications'),         value: null, toggle: has('fw_smart_notif') || has('fw_notifications'), bg: '#ff3b30' },
+            { icon: 'moon',    label: T('osm.focus_mode'),         value: null, toggle: has('fw_focus_mode'), bg: '#5856d6' },
+            { icon: 'display', label: T('osm.display_brightness'), value: isDark ? T('osm.dark') : T('osm.light'), bg: '#5856d6' }
         ],
         [
-            { icon: 'lock',    label: 'Face ID & Kode Sandi', value: has('fw_biometric') ? 'Aktif' : '—', bg: '#34c759' },
-            { icon: 'shield',  label: 'Privasi & Keamanan', value: has('fw_privacy') ? 'Terlindungi' : 'Standar', bg: '#007aff' },
-            { icon: 'battery', label: 'Baterai',             value: '87%', bg: '#34c759' },
-            { icon: 'info',    label: 'Umum',                value: getCurrentVersionString(osState) || '—', bg: '#8e8e93' }
+            { icon: 'lock',    label: T('osm.faceid_passcode'), value: has('fw_biometric') ? T('osm.active') : '—', bg: '#34c759' },
+            { icon: 'shield',  label: T('osm.privacy_security'), value: has('fw_privacy') ? T('osm.protected') : T('osm.standard'), bg: '#007aff' },
+            { icon: 'battery', label: T('osm.battery'),             value: '87%', bg: '#34c759' },
+            { icon: 'info',    label: T('osm.general'),                value: getCurrentVersionString(osState) || '—', bg: '#8e8e93' }
         ]
     ];
 
@@ -856,8 +860,8 @@ function renderAiModern(featureIds, osState, w, h, size) {
     svg += '<text x="' + (w - 6) + '" y="8" text-anchor="end" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + pal.text + '">6G ▮▮ 87%</text>';
 
     // Big header
-    svg += '<text x="14" y="24" font-size="12" font-family="-apple-system, sans-serif" font-weight="800" fill="' + pal.text + '">Pengaturan</text>';
-    svg += '<text x="14" y="32" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + pal.sub + '">Didukung AI On-Device</text>';
+    svg += '<text x="14" y="24" font-size="12" font-family="-apple-system, sans-serif" font-weight="800" fill="' + pal.text + '">' + T('osm.settings_title') + '</text>';
+    svg += '<text x="14" y="32" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + pal.sub + '">' + T('osm.ai_powered') + '</text>';
 
     // AI Card — sorotan
     if (hasAI) {
@@ -865,8 +869,8 @@ function renderAiModern(featureIds, osState, w, h, size) {
         svg += '<rect x="8" y="' + aiY + '" width="' + (w - 16) + '" height="34" rx="12" fill="' + pal.surface + '" stroke="' + pal.accent + '" stroke-width="0.5"/>';
         svg += '<circle cx="22" cy="' + (aiY + 17) + '" r="9" fill="' + pal.accent + '" opacity="0.9"/>';
         svg += '<g transform="translate(' + 17 + ',' + (aiY + 12) + ')">' + glyph('sparkles', '#ffffff', 1.1) + '</g>';
-        svg += '<text x="38" y="' + (aiY + 14) + '" font-size="7.5" font-family="-apple-system, sans-serif" font-weight="700" fill="' + pal.text + '">Asisten AI</text>';
-        svg += '<text x="38" y="' + (aiY + 24) + '" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + pal.accent + '">Aktif · Pemrosesan lokal</text>';
+        svg += '<text x="38" y="' + (aiY + 14) + '" font-size="7.5" font-family="-apple-system, sans-serif" font-weight="700" fill="' + pal.text + '">' + T('osm.ai_assistant') + '</text>';
+        svg += '<text x="38" y="' + (aiY + 24) + '" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + pal.accent + '">' + T('osm.ai_active_local') + '</text>';
         svg += '<path d="M ' + (w - 18) + ' ' + (aiY + 14) + ' L ' + (w - 15) + ' ' + (aiY + 17) + ' L ' + (w - 18) + ' ' + (aiY + 20) + '" fill="none" stroke="' + pal.sub + '" stroke-width="0.8"/>';
     }
 
@@ -876,21 +880,21 @@ function renderAiModern(featureIds, osState, w, h, size) {
 
     const sections = [
         [
-            { icon: 'signal', label: 'Jaringan 6G',        value: has('net_5g') ? 'Aktif' : 'LTE', bg: pal.accent2 },
+            { icon: 'signal', label: T('osm.net_6g'),        value: has('net_5g') ? T('osm.active') : 'LTE', bg: pal.accent2 },
             { icon: 'wifi',   label: 'Wi-Fi 7',            value: 'Home-Mesh',                     bg: pal.accent2 },
-            { icon: 'cloud',  label: 'Nearby Share',       value: 'Aktif',                          bg: pal.accent2 }
+            { icon: 'cloud',  label: 'Nearby Share',       value: T('osm.active'),                          bg: pal.accent2 }
         ],
         [
-            { icon: 'bell',    label: 'Notifikasi Cerdas', value: null, toggle: has('fw_smart_notif') || has('fw_notifications'), bg: '#ff3b30' },
-            { icon: 'moon',    label: 'Mode Fokus AI',     value: null, toggle: has('fw_focus_mode'), bg: pal.accent },
-            { icon: 'display', label: 'Tampilan',          value: isDark ? 'Gelap' : 'Terang', bg: pal.accent }
+            { icon: 'bell',    label: T('osm.smart_notif'), value: null, toggle: has('fw_smart_notif') || has('fw_notifications'), bg: '#ff3b30' },
+            { icon: 'moon',    label: T('osm.ai_focus'),     value: null, toggle: has('fw_focus_mode'), bg: pal.accent },
+            { icon: 'display', label: T('osm.display'),          value: isDark ? T('osm.dark') : T('osm.light'), bg: pal.accent }
         ],
         [
-            { icon: 'lock',    label: 'Biometrik',         value: has('fw_biometric') ? 'Aktif' : '—', bg: '#34c759' },
-            { icon: 'shield',  label: 'Privasi Lokal',     value: has('fw_privacy') ? 'Terlindungi' : 'Standar', bg: '#34c759' },
-            { icon: 'battery', label: 'Baterai Adaptif',   value: '87%', bg: '#34c759' },
-            { icon: 'sparkles',label: 'AI On-Device',      value: has('fw_ai_on_device') ? 'Aktif' : '—', bg: pal.accent },
-            { icon: 'info',    label: 'Umum',              value: getCurrentVersionString(osState) || '—', bg: '#8e8e93' }
+            { icon: 'lock',    label: T('osm.biometrics'),         value: has('fw_biometric') ? T('osm.active') : '—', bg: '#34c759' },
+            { icon: 'shield',  label: T('osm.local_privacy'),     value: has('fw_privacy') ? T('osm.protected') : T('osm.standard'), bg: '#34c759' },
+            { icon: 'battery', label: T('osm.adaptive_battery'),   value: '87%', bg: '#34c759' },
+            { icon: 'sparkles',label: 'AI On-Device',      value: has('fw_ai_on_device') ? T('osm.active') : '—', bg: pal.accent },
+            { icon: 'info',    label: T('osm.general'),              value: getCurrentVersionString(osState) || '—', bg: '#8e8e93' }
         ]
     ];
 

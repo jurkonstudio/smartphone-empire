@@ -10,11 +10,32 @@
 // API publik tetap: renderPhoneMockup, renderPhoneThumbnail,
 // getMockupEra, getMockupSpec. Opsi baru: view ('front'|'back'),
 // isStatic, label.
+// v2027.13d — i18n (Fase 2): teks dekoratif di layar ponsel (Menu, Nama, tanggal,
+// "Baru") lewat _tf(). Render murni fungsi — ikut berganti bahasa saat UI di-render ulang
+// oleh handler 'lang:changed' di main.js.
 // ============================================================
 import { getComponentById, getBodyColorById } from '../../data/components.data.js';
 import { getDesignEraForYear } from '../../data/era-design.data.js';
 import { state } from '../../core/GameState.js';
 import { resolveSpec } from '../../data/phone-specs.data.js';
+import { t, LanguageService } from '../../core/LanguageService.js';
+
+// _tf(key, fallbackId, fallbackEn): terjemahan jika key ada, kalau belum pakai fallback sesuai bahasa aktif.
+function _tf(key, fbId, fbEn) {
+    var v = t(key);
+    if (v && v !== key) return v;
+    var en = false;
+    try { en = LanguageService.getLang() === 'en'; } catch (e) {}
+    return (en && fbEn !== undefined) ? fbEn : fbId;
+}
+
+// Teks dekoratif layar (di-escape karena disisipkan ke SVG sebagai markup).
+function _scr(key, fbId, fbEn) {
+    return _esc(_tf(key, fbId, fbEn));
+}
+function _esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
 function safeGetState() {
     try { return state.get(); }
@@ -176,8 +197,8 @@ function screenMono(r, uid, brand) {
         <text x="${cx}" y="${cy + fs * 0.15}" text-anchor="middle" font-size="${fs}" font-family="monospace" font-weight="700" fill="${ink}">12:30</text>
         <text x="${cx}" y="${cy + fs * 0.15 + 3.6}" text-anchor="middle" font-size="2.3" font-family="monospace" font-weight="700" fill="${ink}" letter-spacing="0.3">${brand}</text>
         <rect x="${x0}" y="${y0 + h - 4.4}" width="${w}" height="4.4" fill="${ink}" opacity="0.88"/>
-        <text x="${x0 + 1.6}" y="${y0 + h - 1.3}" font-size="2.2" font-family="monospace" font-weight="700" fill="#b9cf92">Menu</text>
-        <text x="${x0 + w - 1.6}" y="${y0 + h - 1.3}" text-anchor="end" font-size="2.2" font-family="monospace" font-weight="700" fill="#b9cf92">Nama</text>
+        <text x="${x0 + 1.6}" y="${y0 + h - 1.3}" font-size="2.2" font-family="monospace" font-weight="700" fill="#b9cf92">${_scr('phone.mock.menu', 'Menu', 'Menu')}</text>
+        <text x="${x0 + w - 1.6}" y="${y0 + h - 1.3}" text-anchor="end" font-size="2.2" font-family="monospace" font-weight="700" fill="#b9cf92">${_scr('phone.mock.names', 'Nama', 'Names')}</text>
         <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="url(#px_${uid})"/>
     `;
 }
@@ -209,8 +230,8 @@ function screenTft(r, uid, brand) {
         <text x="${cx}" y="${y0 + h * 0.34 + 3.2}" text-anchor="middle" font-size="2" font-family="sans-serif" fill="#bcd8ff">${brand}</text>
         ${icons}
         <rect x="${x0}" y="${y0 + h - 4.4}" width="${w}" height="4.4" fill="#06132a"/>
-        <text x="${x0 + 1.6}" y="${y0 + h - 1.3}" font-size="2.1" font-family="sans-serif" font-weight="700" fill="#9ec5ff">Menu</text>
-        <text x="${x0 + w - 1.6}" y="${y0 + h - 1.3}" text-anchor="end" font-size="2.1" font-family="sans-serif" font-weight="700" fill="#9ec5ff">Nama</text>
+        <text x="${x0 + 1.6}" y="${y0 + h - 1.3}" font-size="2.1" font-family="sans-serif" font-weight="700" fill="#9ec5ff">${_scr('phone.mock.menu', 'Menu', 'Menu')}</text>
+        <text x="${x0 + w - 1.6}" y="${y0 + h - 1.3}" text-anchor="end" font-size="2.1" font-family="sans-serif" font-weight="700" fill="#9ec5ff">${_scr('phone.mock.names', 'Nama', 'Names')}</text>
     `;
 }
 
@@ -271,7 +292,7 @@ function screenFlat(r, uid, brand) {
         ${sigBars(x0 + w - 8.4, y0 + 0.4, '#fff')}
         ${batt(x0 + w - 1.2, y0 + 0.9, '#fff')}
         <text x="${cx}" y="${y0 + h * 0.2}" text-anchor="middle" font-size="${Math.min(w * 0.26, 10)}" font-family="sans-serif" font-weight="200" fill="#fff">10:09</text>
-        <text x="${cx}" y="${y0 + h * 0.2 + 3.4}" text-anchor="middle" font-size="1.9" font-family="sans-serif" fill="#fff" opacity="0.85">Senin, 12 Oktober  24°C</text>
+        <text x="${cx}" y="${y0 + h * 0.2 + 3.4}" text-anchor="middle" font-size="1.9" font-family="sans-serif" fill="#fff" opacity="0.85">${_scr('phone.mock.date_weather', 'Senin, 12 Oktober', 'Monday, October 12')}  24°C</text>
         ${grid}
         ${dock}
         <circle cx="${cx - 1.6}" cy="${y0 + h - 10.6}" r="0.5" fill="#fff"/>
@@ -297,13 +318,13 @@ function screenModern(screenStyle, rect) {
             <text x="${x0 + w - 2}" y="${y0 + 3.2}" text-anchor="end" font-size="1.5" font-family="sans-serif" fill="#c9a961">4G ▮▮</text>
 
             <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#f0ede8" font-weight="200" letter-spacing="-0.5">11:11</text>
-            <text x="${cx}" y="${cy + 1}" text-anchor="middle" font-size="1.8" font-family="sans-serif" fill="#c9a961" letter-spacing="0.4">Senin, 12 Oktober</text>
+            <text x="${cx}" y="${cy + 1}" text-anchor="middle" font-size="1.8" font-family="sans-serif" fill="#c9a961" letter-spacing="0.4">${_scr('phone.mock.date_full', 'Senin, 12 Oktober', 'Monday, October 12')}</text>
 
             <rect x="${x0 + 5}" y="${widgetY}" width="${widgetW}" height="5" rx="1.2" fill="#1a1a1a" stroke="#c9a961" stroke-width="0.1" opacity="0.7"/>
             <text x="${x0 + 5 + widgetW/2}" y="${widgetY + 3.2}" text-anchor="middle" font-size="1.5" font-family="sans-serif" fill="#c9a961" opacity="0.9">24°</text>
 
             <rect x="${x0 + 5 + widgetW + 2.5}" y="${widgetY}" width="${widgetW}" height="5" rx="1.2" fill="#1a1a1a" stroke="#c9a961" stroke-width="0.1" opacity="0.7"/>
-            <text x="${x0 + 5 + widgetW + 2.5 + widgetW/2}" y="${widgetY + 3.2}" text-anchor="middle" font-size="1.5" font-family="sans-serif" fill="#c9a961" opacity="0.9">3 Baru</text>
+            <text x="${x0 + 5 + widgetW + 2.5 + widgetW/2}" y="${widgetY + 3.2}" text-anchor="middle" font-size="1.5" font-family="sans-serif" fill="#c9a961" opacity="0.9">${_scr('phone.mock.new_count', '3 Baru', '3 New')}</text>
 
             <rect x="${x0 + 5 + (widgetW + 2.5)*2}" y="${widgetY}" width="${widgetW}" height="5" rx="1.2" fill="#1a1a1a" stroke="#c9a961" stroke-width="0.1" opacity="0.7"/>
             <text x="${x0 + 5 + (widgetW + 2.5)*2 + widgetW/2}" y="${widgetY + 3.2}" text-anchor="middle" font-size="1.5" font-family="sans-serif" fill="#c9a961" opacity="0.9">78%</text>
@@ -336,7 +357,7 @@ function screenModern(screenStyle, rect) {
             <text x="${x0 + w - 2}" y="${y0 + 3.2}" text-anchor="end" font-size="1.5" font-family="sans-serif" fill="#00d4ff">5G ▮▮</text>
 
             <text x="${cx}" y="${cy - 5}" text-anchor="middle" font-size="10" font-family="sans-serif" fill="#ffffff" font-weight="200" letter-spacing="-0.5">12:30</text>
-            <text x="${cx}" y="${cy - 0.5}" text-anchor="middle" font-size="1.7" font-family="sans-serif" fill="#00d4ff" opacity="0.9" letter-spacing="0.3">Sen, 12 Okt 2021</text>
+            <text x="${cx}" y="${cy - 0.5}" text-anchor="middle" font-size="1.7" font-family="sans-serif" fill="#00d4ff" opacity="0.9" letter-spacing="0.3">${_scr('phone.mock.date_short', 'Sen, 12 Okt 2021', 'Mon, Oct 12, 2021')}</text>
 
             <rect x="${x0 + 4}" y="${notifY + 3}" width="${w - 8}" height="4.5" rx="1.8" fill="#0f1420" stroke="#00d4ff" stroke-width="0.1" opacity="0.85"/>
             <circle cx="${x0 + 6.5}" cy="${notifY + 5.25}" r="1" fill="#00d4ff" opacity="0.9"/>
@@ -395,7 +416,7 @@ function screenModern(screenStyle, rect) {
             <text x="${x0 + w - 2}" y="${y0 + 3.2}" text-anchor="end" font-size="1.5" font-family="sans-serif" fill="#a855f7">6G ▮▮</text>
 
             <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#ffffff" font-weight="200" letter-spacing="-0.5">12:30</text>
-            <text x="${cx}" y="${cy - 1}" text-anchor="middle" font-size="1.7" font-family="sans-serif" fill="#ffffff" opacity="0.75" letter-spacing="0.4">12 Oktober</text>
+            <text x="${cx}" y="${cy - 1}" text-anchor="middle" font-size="1.7" font-family="sans-serif" fill="#ffffff" opacity="0.75" letter-spacing="0.4">${_scr('phone.mock.date_day', '12 Oktober', 'October 12')}</text>
 
             <g opacity="0.95">
                 ${Array.from({length: cols * rows}, (_, i) => {
