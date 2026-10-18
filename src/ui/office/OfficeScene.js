@@ -523,7 +523,8 @@ export function describeStaff(s) {
 // SCENE
 // ============================================================
 export function createOfficeScene(THREE, container, gameState) {
-    var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
+    var PERF = window.__PERF || {};
+    var renderer = new THREE.WebGLRenderer({ antialias: PERF.antialias !== false, alpha: true, powerPreference: 'low-power' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
     renderer.setClearColor(0x000000, 0);
     var canvas = renderer.domElement;
@@ -690,7 +691,7 @@ export function createOfficeScene(THREE, container, gameState) {
     var aspect = 1, lastW = 0, lastH = 0, resizeScheduled = false, fitted = false;
     var raycaster = new THREE.Raycaster();
     var ndc = new THREE.Vector2();
-    var raf = 0, loopRaf = 0, lastFrame = 0, inView = true, focusRaf = 0;
+    var raf = 0, loopRaf = 0, loopTimer = 0, lastFrame = 0, inView = true, focusRaf = 0;
     var ambient = !prefersReducedMotion();
     var selRing = mesh(scene, G.ring, 'selRing', 0.5, 0.5, 1, 0, 0.05, 0);
     selRing.rotation.x = -Math.PI / 2;
@@ -1747,12 +1748,22 @@ export function createOfficeScene(THREE, container, gameState) {
             if (lastW && lastH) renderer.setSize(lastW, lastH, false);
         }
     }
+    // PERF: antar frame, tidur dengan setTimeout lalu minta rAF sekali — tidak bangun di tiap vsync (60-120 Hz).
+    function scheduleNext() {
+        var fm = Math.max(quality.frameMs, PERF.frameMs || 0);
+        var wait = fm - (performance.now() - lastFrame) - 5;
+        if (wait > 4) {
+            loopTimer = setTimeout(function () { loopTimer = 0; loopRaf = requestAnimationFrame(frame); }, wait);
+        } else {
+            loopRaf = requestAnimationFrame(frame);
+        }
+    }
     function frame(now) {
         loopRaf = 0;
         if (disposed || document.hidden || !inView) { lastRendered = 0; return; }
-        loopRaf = requestAnimationFrame(frame);
-        if (now - lastFrame < quality.frameMs) return;
+        if (now - lastFrame < Math.max(quality.frameMs, PERF.frameMs || 0) - 2) { scheduleNext(); return; }
         lastFrame = now;
+        scheduleNext();
         if (ctxLost) return;
         var sec = now / 1000;
         for (var i = 0; i < animRooms.length; i++) animRooms[i].tick(sec);
@@ -1761,12 +1772,12 @@ export function createOfficeScene(THREE, container, gameState) {
         watchQuality(now);
     }
     function startLoop() {
-        if (!ambient || loopRaf || disposed || document.hidden || !inView) return;
+        if (!ambient || loopRaf || loopTimer || disposed || document.hidden || !inView) return;
         lastRendered = 0;
         loopRaf = requestAnimationFrame(frame);
     }
     function requestRender() {
-        if (ambient) { startLoop(); if (loopRaf) return; }
+        if (ambient) { startLoop(); if (loopRaf || loopTimer) return; }
         if (raf || disposed) return;
         raf = requestAnimationFrame(function () {
             raf = 0;
@@ -2224,6 +2235,7 @@ export function createOfficeScene(THREE, container, gameState) {
             disposed = true;
             if (raf) cancelAnimationFrame(raf);
             if (loopRaf) cancelAnimationFrame(loopRaf);
+            if (loopTimer) { clearTimeout(loopTimer); loopTimer = 0; }
             if (focusRaf) cancelAnimationFrame(focusRaf);
             if (io) io.disconnect();
             if (ro) ro.disconnect(); else window.removeEventListener('resize', resize);
