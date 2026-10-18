@@ -46,7 +46,7 @@ Angka di bawah dihitung langsung dari file data di repo ini.
 ### 🏢 Kantor, Kampus, dan Tim
 
 - **Peta Kampus 3D** di Home: gedung tumbuh dan naik level otomatis seiring progres (HQ, Lab R&D, Pabrik Chip, Toko Flagship, Pusat OS, Billboard, Monumen), gaya bangunan ikut era, ada siang/malam mengikuti tema, dan animasi kota.
-- **Office 3D Map** di HQ → Kantor: interior kantor isometrik dengan 9 ruangan yang terhubung ke data game. Staf duduk di meja (warna = peran, bola kecil = moral), lab menampilkan riset aktif, rak server menampilkan versi OS dan bug, showroom menampilkan produk yang dijual, dan seterusnya. Ruangan yang belum memenuhi syarat tampil terkunci. Ketuk ruangan untuk kartu info dan tombol ke panel terkait.
+- **Office 3D Map** di HQ → Kantor: interior kantor isometrik dengan 9 ruangan yang terhubung ke data game. Staf duduk di meja (warna = peran, bola kecil = moral), lab menampilkan riset aktif, rak server menampilkan versi OS dan bug, showroom menampilkan produk yang dijual, dan seterusnya. Ruangan yang belum memenuhi syarat tampil terkunci. Ketuk ruangan untuk kartu info dan tombol ke panel terkait. Dari kartu itu kamu juga bisa langsung membangun/upgrade Fab (dengan konstruksi 3D yang tumbuh sesuai progres) dan melatih staf tanpa pindah panel.
 - **Tim**: 3 peran (Engineer, Designer, Marketer), 5 tingkat skill (Junior sampai Principal), 8 trait, kandidat internasional dari 7 region, dan maksimal 20 orang per peran. Skill naik seiring waktu, moral dan gaji ikut berubah.
 
 ### 🔬 Riset dan OS
@@ -58,7 +58,7 @@ Angka di bawah dihitung langsung dari file data di repo ini.
 ### 📱 Produk dan Penjualan
 
 - **Wizard desain ponsel** dengan preview real-time. Ada **87 komponen** dalam 7 kategori (layar, kamera, baterai, chip, jaringan, bodi, form factor) dan 8 warna bodi. Pilihan ikut tahun, jadi nggak ada layar OLED di 2001.
-- **Pengembangan 4 fase**: Desain → Prototipe → Produksi → Rilis.
+- **Pengembangan 4 fase**: Desain → Prototipe  Produksi → Rilis.
 - **Rumus permintaan transparan**: kualitas × harga × reputasi × pemasaran × OS × tren × kompetitor × lifecycle × kondisi makro.
 - **Lifecycle produk**: naik → puncak → turun → mati. Ada stok gudang, restock otomatis, dan maksimal 5 produk aktif.
 - **Pemasaran**: 5 jenis kampanye (Iklan Online, Sponsor Event, Peluncuran Produk, Billboard Kota, Kampanye Influencer).
@@ -160,7 +160,7 @@ Data dipisah dari logika: menambah komponen, saham, kompetitor, atau headline cu
 
 Proyek ini masih jalan. Catatan roadmap saya:
 
-- ⏳ **Office 3D Map tahap lanjut**: upgrade fasilitas langsung dari peta, aktivitas staf yang lebih hidup, dan tampilan lebih rapi di HP
+- ✅ **Office 3D Map tahap 3** (v2027.52a): bangun/upgrade Fab dan latih staf langsung dari peta, konstruksi Fab 3D, aktivitas staf lebih hidup (rute antar ruangan, gelembung emoji), dan tampilan lebih rapi di HP
 - ⏳ **Event acak dengan pilihan**, era transition screen, dan polish UI
 - ⏳ **Patch UI Evolution**: tampilan notifikasi berubah per era (monokrom → glossy → flat → Dynamic Island)
 - ⏳ **Berita bilingual**: headline versi English sudah ada, sebagian template ulasan masih Indonesia
@@ -173,3 +173,4 @@ Proyek ini masih jalan. Catatan roadmap saya:
 Bug atau saran? Buka [issue](https://github.com/jurkonstudio/smartphone-empire/issues). Kalau menemukan celah keamanan, baca dulu `SECURITY.md`.
 
 Nama dan merek perusahaan dalam game dipakai untuk tujuan edukasi dan hiburan, dan hak ciptanya milik pemiliknya masing-masing. Data historis disederhanakan untuk kebutuhan gameplay.
+y.
