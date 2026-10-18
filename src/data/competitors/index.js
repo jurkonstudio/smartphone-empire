@@ -34,12 +34,13 @@ import { meizu } from './meizu.js';
 import { lenovo } from './lenovo.js';
 import { tecno } from './tecno.js';
 import { zte } from './zte.js';
+import { xiaomi } from './xiaomi.js';
 
 export const COMPETITORS = [
     nokia, motorola, sony_ericsson, siemens, palm,
     blackberry, samsung, lg, htc, apple, google_android, huawei,
     oppo, vivo, microsoft_nokia, honor, oneplus, nothing,
-    asus, sony_mobile, realme, meizu, lenovo, tecno, zte
+    asus, sony_mobile, realme, meizu, lenovo, tecno, zte, xiaomi
 ];
 
 export { FICTIONAL_NAMES, getFictionalName };
