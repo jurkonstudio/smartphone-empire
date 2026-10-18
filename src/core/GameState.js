@@ -6,6 +6,8 @@ import { getMacro } from './MacroModel.js';
 import { DIFFICULTY, LOG_TYPES } from '../config/constants.js';
 import { bus } from './EventBus.js';
 import { generateRandomName, rollTraits } from '../data/staff.data.js';
+import { sanitizeMastery, sanitizeBuzz, sanitizeRefiningList, sanitizeActiveResearch, sanitizeCompleted } from '../data/research.data.js';
+import { sanitizePlatform } from '../data/os.data.js';
 
 export const SCHEMA_VERSION = 4;
 
@@ -46,7 +48,12 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             active: [],
             completed: (BALANCE.starterResearch || []).slice(),
             maxSlots: 1,
-            totalCompleted: (BALANCE.starterResearch || []).length
+            totalCompleted: (BALANCE.starterResearch || []).length,
+            // R&D berkelanjutan (v2028.36)
+            mastery: { display: 0, camera: 0, battery: 0, chip: 0, network: 0 },
+            refining: [],
+            buzz: 0,
+            totalRefined: 0
         },
 
         chipResearch: {
@@ -65,7 +72,9 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             bugs: [],
             apps: { builtin: [], thirdParty: 0 },
             appsAccumulator: 0,
-            licenseChoice: null
+            licenseChoice: null,
+            // R&D Platform OS (v2028.36)
+            platform: { levels: { stability: 0, speed: 0, features: 0, security: 0, design: 0 }, developing: null, totalUpgrades: 0 }
         },
 
         products: {
@@ -364,7 +373,10 @@ class GameState {
         this.data.market.reputation = rounded;
         bus.emit('state:changed', this.data);
     }
-    addReputation(delta) { this.setReputation((this.data.market.reputation || 0) + delta); }
+    addReputation(delta) {
+        if (!Number.isFinite(delta)) return;
+        this.setReputation((this.data.market.reputation || 0) + delta);
+    }
 
     setSentiment(value) {
         const clamped = Math.max(0, Math.min(100, Math.round(value)));
@@ -375,6 +387,23 @@ class GameState {
     addSentiment(delta) { this.setSentiment((this.data.feedback.sentiment || 50) + delta); }
 
     serialize() { return JSON.parse(JSON.stringify(this.data)); }
+
+    // Membersihkan seluruh data R&D (riset dasar, R&D lanjutan, platform OS).
+    // Aman dipanggil berulang; tidak mengubah data yang sudah valid.
+    _sanitizeRnd() {
+        const d = this.data;
+        const now = (d.time && Number.isFinite(d.time.elapsedGameMinutes)) ? d.time.elapsedGameMinutes : 0;
+        const r = d.research;
+        r.completed = sanitizeCompleted(r.completed);
+        r.active = sanitizeActiveResearch(r.active, r.completed, now);
+        r.mastery = sanitizeMastery(r.mastery);
+        r.refining = sanitizeRefiningList(r.refining, r.mastery, now);
+        r.buzz = sanitizeBuzz(r.buzz);
+        r.totalRefined = Math.max(0, Math.floor(Number.isFinite(r.totalRefined) ? r.totalRefined : 0));
+        if (!Number.isFinite(r.totalCompleted)) r.totalCompleted = r.completed.length;
+        if (!d.os || typeof d.os !== 'object') d.os = {};
+        d.os.platform = sanitizePlatform(d.os.platform, now);
+    }
 
     hydrate(data) {
         if (!data || typeof data !== 'object') return false;
@@ -401,7 +430,11 @@ class GameState {
             staff:    Array.isArray(incoming.staff) ? incoming.staff : [],
             candidates: Array.isArray(incoming.candidates) ? incoming.candidates : [],
             candidatePool: { ...base.candidatePool, ...(incoming.candidatePool || {}) },
-            research: { ...base.research, ...(incoming.research || {}) },
+            research: {
+                ...base.research, ...(incoming.research || {}),
+                mastery: { ...base.research.mastery, ...((incoming.research && incoming.research.mastery) || {}) },
+                refining: Array.isArray(incoming.research && incoming.research.refining) ? incoming.research.refining : []
+            },
 
             chipResearch: {
                 ...base.chipResearch,
@@ -412,7 +445,11 @@ class GameState {
 
             os: {
                 ...base.os, ...(incoming.os || {}),
-                apps: { ...base.os.apps, ...((incoming.os && incoming.os.apps) || {}) }
+                apps: { ...base.os.apps, ...((incoming.os && incoming.os.apps) || {}) },
+                platform: {
+                    ...base.os.platform, ...((incoming.os && incoming.os.platform) || {}),
+                    levels: { ...base.os.platform.levels, ...((incoming.os && incoming.os.platform && incoming.os.platform.levels) || {}) }
+                }
             },
             products: {
                 ...base.products, ...(incoming.products || {}),
@@ -476,6 +513,10 @@ class GameState {
         if (!this.data.dailyLogin || typeof this.data.dailyLogin !== 'object') {
             this.data.dailyLogin = { lastClaimDate: null, streak: 0 };
         }
+
+        // [R&D fix] Bersihkan data R&D / platform OS saat load (save rusak, cloud sync,
+        // edit manual): level dibatasi, entri rusak dibuang, durasi hilang dipulihkan.
+        this._sanitizeRnd();
 
         _ensureStarterResearch(this.data);
 
