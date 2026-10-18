@@ -164,3 +164,135 @@ export function renderTechNodeRow(opts) {
             '<div class="node-row-actions">' + actionBtn + '</div>' +
         '</div>';
 }
+
+// ============================================================
+// R&D BERKELANJUTAN — komponen bersama (dipakai ResearchPanel & OSPanel)
+// v2028.36. Atribut aksi ditentukan pemanggil lewat opts.actionAttr
+//   (mis. 'data-rnd-action' / 'data-osp-action') + data-rnd-id.
+// ============================================================
+function _rndMoney(n) { return '$' + Math.round(n || 0).toLocaleString('en-US'); }
+
+var _rndStylesInjected = false;
+export function ensureRndStyles() {
+    if (_rndStylesInjected || typeof document === 'undefined') return;
+    _rndStylesInjected = true;
+    var el = document.createElement('style');
+    el.id = 'rnd-styles';
+    el.textContent = RND_CSS;
+    document.head.appendChild(el);
+}
+
+// Ringkasan: level rata-rata vs standar pasar + gaung pasar.
+// ov = { avg, benchmark, delta, factor, buzz, buzzFactor, slots, used }
+export function renderRndOverview(ov, opts) {
+    opts = opts || {};
+    var pct = Math.round((ov.factor - 1) * 100);
+    var tone = pct > 0 ? 'up' : (pct < 0 ? 'down' : 'flat');
+    var verdict = pct > 0
+        ? 'Teknologimu di atas standar pasar: permintaan produk baru +' + pct + '%.'
+        : (pct < 0
+            ? 'Teknologimu tertinggal dari standar pasar: permintaan ' + pct + '%. Teruskan R&D!'
+            : 'Teknologimu setara standar pasar.');
+    var buzzPct = Math.round((ov.buzzFactor - 1) * 100);
+    var buzzW = Math.max(0, Math.min(100, Math.round(ov.buzz / 60 * 100)));
+    return '<div class="rnd-ov" data-rnd-root>' +
+        '<div class="rnd-ov-head">' +
+            '<div class="rnd-ov-title">' + escapeHtml(opts.title || 'R&D Lanjutan') + '</div>' +
+            (ov.slots ? '<div class="rnd-ov-slots">Slot ' + ov.used + '/' + ov.slots + '</div>' : '') +
+        '</div>' +
+        '<div class="rnd-ov-grid">' +
+            '<div class="rnd-chip"><span>Level rata-rata</span><b>' + ov.avg.toFixed(1) + '</b></div>' +
+            '<div class="rnd-chip"><span>Standar pasar</span><b>' + ov.benchmark.toFixed(1) + '</b></div>' +
+            '<div class="rnd-chip rnd-' + tone + '"><span>Efek permintaan</span><b>' + (pct > 0 ? '+' : '') + pct + '%</b></div>' +
+        '</div>' +
+        '<div class="rnd-verdict rnd-' + tone + '">' + escapeHtml(verdict) + '</div>' +
+        '<div class="rnd-buzz"><span>Gaung pasar</span>' +
+            '<div class="rnd-buzz-bar"><i style="width:' + buzzW + '%"></i></div>' +
+            '<b>' + (buzzPct > 0 ? '+' + buzzPct + '%' : '0%') + '</b></div>' +
+        '</div>';
+}
+
+// Satu baris jalur R&D. info = hasil getRefineInfo / getPlatformInfo.
+// opts = { actionAttr, bonusLabel (mis. 'Layar'), benchmark }
+export function renderRndRow(info, opts) {
+    opts = opts || {};
+    var attr = opts.actionAttr || 'data-rnd-action';
+    var lvPct = Math.round(info.level / info.maxLevel * 100);
+    var capPct = Math.round(info.cap / info.maxLevel * 100);
+    var benchPct = (typeof opts.benchmark === 'number')
+        ? Math.max(0, Math.min(100, Math.round(opts.benchmark / info.maxLevel * 100))) : null;
+
+    var bonusTxt = '+' + (info.statBonus !== undefined ? info.statBonus : info.bonus).toFixed(1).replace(/\.0$/, '') + ' ' + (opts.bonusLabel || '');
+
+    var action = '';
+    if (info.status === 'running' && info.running) {
+        var run = info.running;
+        var pct = run.durationDays > 0 ? Math.min(100, Math.round(run.progressDays / run.durationDays * 100)) : 0;
+        action = '<div class="rnd-run">' +
+            '<div class="rnd-run-top"><span>Menuju Lv ' + run.targetLevel + '</span><b data-rnd-pct="' + escapeHtml(info.id) + '">' + pct + '%</b></div>' +
+            '<div class="progress"><div class="progress-bar" data-rnd-bar="' + escapeHtml(info.id) + '" style="width:' + pct + '%"></div></div>' +
+            '<button class="rnd-cancel" ' + attr + '="cancel" data-rnd-id="' + escapeHtml(info.id) + '">Batalkan (refund 50%)</button>' +
+            '</div>';
+    } else if (info.status === 'available' || (info.status === 'locked' && info.blocker === 'cash')) {
+        var can = info.status === 'available';
+        action = '<button class="rnd-btn' + (can ? '' : ' rnd-btn-off') + '" ' + (can ? attr + '="start" data-rnd-id="' + escapeHtml(info.id) + '"' : 'disabled') + '>' +
+            '<span>Tingkatkan ke Lv ' + (info.level + 1) + '</span>' +
+            '<small>' + _rndMoney(info.cost) + ' · ~' + info.etaDays + ' hari · +' + (((info.nextStatBonus !== undefined ? info.nextStatBonus : info.nextBonus) - (info.statBonus !== undefined ? info.statBonus : info.bonus))).toFixed(1).replace(/\.0$/, '') + ' ' + escapeHtml(opts.bonusLabel || '') + '</small>' +
+            '</button>' +
+            (can ? '' : '<div class="rnd-note">' + escapeHtml(info.reason || '') + '</div>');
+    } else {
+        action = '<div class="rnd-note">' + escapeHtml(info.reason || '') + '</div>';
+    }
+
+    return '<div class="rnd-row">' +
+        '<div class="rnd-row-top">' +
+            '<div class="rnd-row-name">' + escapeHtml(info.name) + '</div>' +
+            '<div class="rnd-row-lv">Lv <b>' + info.level + '</b><em>/' + info.cap + '</em></div>' +
+        '</div>' +
+        '<div class="rnd-row-hint">' + escapeHtml(info.hint) + ' · <span class="rnd-bonus">' + escapeHtml(bonusTxt) + '</span></div>' +
+        '<div class="rnd-meter">' +
+            '<i class="rnd-meter-cap" style="width:' + capPct + '%"></i>' +
+            '<i class="rnd-meter-fill" style="width:' + lvPct + '%"></i>' +
+            (benchPct !== null ? '<u class="rnd-meter-bench" style="left:' + benchPct + '%" title="Standar pasar"></u>' : '') +
+        '</div>' +
+        action +
+    '</div>';
+}
+
+var RND_CSS = `
+.rnd-card { margin: 0 0 12px; }
+.rnd-ov { background: linear-gradient(135deg, var(--bg-2), var(--bg-3)); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 12px; margin-bottom: 8px; }
+.rnd-ov-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.rnd-ov-title { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--text-primary); }
+.rnd-ov-slots { font-size: var(--fs-xs); color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+.rnd-ov-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.rnd-chip { background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r); padding: 6px 8px; min-width: 0; }
+.rnd-chip span { display: block; font-size: 9.5px; text-transform: uppercase; letter-spacing: .6px; color: var(--text-tertiary); font-weight: var(--fw-bold); }
+.rnd-chip b { display: block; font-size: var(--fs-sm); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.rnd-chip.rnd-up b { color: #2e9f6b; } .rnd-chip.rnd-down b { color: #e5484d; }
+.rnd-verdict { font-size: var(--fs-xs); margin: 8px 0 6px; color: var(--text-secondary); }
+.rnd-verdict.rnd-up { color: #2e9f6b; } .rnd-verdict.rnd-down { color: #e5484d; }
+.rnd-buzz { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--text-tertiary); }
+.rnd-buzz-bar { flex: 1; height: 6px; background: var(--bg-4); border-radius: 99px; overflow: hidden; }
+.rnd-buzz-bar i { display: block; height: 100%; background: linear-gradient(90deg, #f59e0b, #ef4444); border-radius: 99px; transition: width .3s; }
+.rnd-buzz b { color: var(--text-primary); font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; }
+.rnd-row { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 10px 12px; margin-bottom: 8px; }
+.rnd-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.rnd-row-name { font-weight: var(--fw-bold); color: var(--text-primary); font-size: var(--fs-sm); }
+.rnd-row-lv { font-size: var(--fs-sm); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.rnd-row-lv b { color: var(--accent); font-size: var(--fs-md); }
+.rnd-row-lv em { font-style: normal; color: var(--text-tertiary); font-size: var(--fs-xs); }
+.rnd-row-hint { font-size: var(--fs-xs); color: var(--text-tertiary); margin: 2px 0 8px; }
+.rnd-bonus { color: #2e9f6b; font-weight: var(--fw-bold); }
+.rnd-meter { position: relative; height: 8px; background: var(--bg-4); border-radius: 99px; margin-bottom: 8px; overflow: visible; }
+.rnd-meter i { position: absolute; left: 0; top: 0; height: 100%; border-radius: 99px; }
+.rnd-meter-cap { background: var(--border); opacity: .8; }
+.rnd-meter-fill { background: var(--accent); }
+.rnd-meter-bench { position: absolute; top: -3px; width: 2px; height: 14px; background: #f59e0b; border-radius: 2px; text-decoration: none; }
+.rnd-btn { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 8px 10px; border: 0; border-radius: var(--r); background: var(--accent); color: #fff; font-weight: var(--fw-bold); font-size: var(--fs-sm); cursor: pointer; }
+.rnd-btn small { font-weight: 500; opacity: .9; font-size: 10.5px; }
+.rnd-btn-off { background: var(--bg-4); color: var(--text-tertiary); cursor: not-allowed; }
+.rnd-note { font-size: var(--fs-xs); color: var(--text-tertiary); margin-top: 6px; text-align: center; }
+.rnd-run-top { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--text-secondary); margin-bottom: 4px; }
+.rnd-cancel { margin-top: 6px; width: 100%; background: transparent; border: 1px solid var(--border); color: var(--text-tertiary); border-radius: var(--r); padding: 5px; font-size: var(--fs-xs); cursor: pointer; }
+`;
