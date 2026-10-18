@@ -4,6 +4,8 @@
 // Semua angka balancing di sini (bukan di logic/UI).
 // ============================================================
 
+import { BALANCE } from './balance.data.js';
+
 export const RESEARCH_CATEGORIES = [
     { id: 'display',   name: 'Layar',    icon: 'monitor' },
     { id: 'camera',    name: 'Kamera',   icon: 'camera' },
@@ -277,3 +279,160 @@ export function getNodeById(id) {
 export function getNodesByCategory(catId) {
     return RESEARCH_NODES.filter(n => n.category === catId);
      }
+
+// ============================================================
+// R&D BERKELANJUTAN — definisi jalur + fungsi murni (tanpa state)
+// Dipakai ResearchSystem, ProductSystem, dan UI.
+// ============================================================
+export const RND_TRACKS = {
+    display: { name: 'Penyempurnaan Layar',   hint: 'Kecerahan, akurasi warna, efisiensi panel',   productStat: 'display' },
+    camera:  { name: 'Penyempurnaan Kamera',  hint: 'Sensor, optik, dan pemrosesan gambar',         productStat: 'camera' },
+    battery: { name: 'Penyempurnaan Baterai', hint: 'Kepadatan sel, pengisian cepat, manajemen daya', productStat: 'battery' },
+    chip:    { name: 'Penyempurnaan Chip',    hint: 'Efisiensi, performa, dan termal',               productStat: 'performance' },
+    network: { name: 'Penyempurnaan Jaringan', hint: 'Antena, modem, dan kestabilan sinyal',         productStat: 'connectivity' }
+};
+
+// Standar level teknologi yang dianggap "normal" oleh pasar pada tahun tertentu.
+export function getTechBenchmark(year) {
+    var cfg = BALANCE.rnd;
+    var b = Math.max(0, (year || 2000) - 2000) * cfg.benchmarkPerYear;
+    return Math.min(b, cfg.maxLevel * 0.9);
+}
+
+// Bonus stat produk dari level penyempurnaan satu kategori.
+export function getMasteryStatBonus(level) {
+    var cfg = BALANCE.rnd;
+    return Math.min(cfg.statCap, Math.max(0, level || 0) * cfg.statPerLevel);
+}
+
+// Rata-rata level semua kategori vs standar pasar -> faktor permintaan.
+export function computeTechEdge(levels, year) {
+    var cfg = BALANCE.rnd;
+    var sum = 0;
+    RESEARCH_CATEGORIES.forEach(function (c) { sum += clampLevel(levels && levels[c.id], cfg.maxLevel); });
+    var avg = sum / RESEARCH_CATEGORIES.length;
+    var bench = getTechBenchmark(year);
+    var delta = avg - bench;
+    var factor = Math.max(cfg.edge.min, Math.min(cfg.edge.max, 1 + cfg.edge.perLevel * delta));
+    return { avg: avg, benchmark: bench, delta: delta, factor: factor };
+}
+
+// ============================================================
+// SANITASI & HELPER MURNI R&D (v2028.36-fix)
+// Dipakai saat load save, cloud sync, dan tiap tick supaya data rusak
+// (null, NaN, level 999, durasi hilang) tidak bisa mengunci sistem.
+// ============================================================
+function _num(v, fallback) {
+    var n = (typeof v === 'number') ? v : Number(v);
+    return isFinite(n) ? n : fallback;
+}
+
+export function clampLevel(v, max) {
+    var m = (typeof max === 'number' && isFinite(max)) ? max : BALANCE.rnd.maxLevel;
+    return Math.max(0, Math.min(m, Math.floor(_num(v, 0))));
+}
+
+// Hanya kategori yang dikenal; level dipaksa integer 0..maxLevel.
+export function sanitizeMastery(m) {
+    var out = {};
+    var src = (m && typeof m === 'object') ? m : {};
+    RESEARCH_CATEGORIES.forEach(function (c) { out[c.id] = clampLevel(src[c.id], BALANCE.rnd.maxLevel); });
+    return out;
+}
+
+export function sanitizeBuzz(b) {
+    return Math.max(0, Math.min(BALANCE.rnd.buzz.max, _num(b, 0)));
+}
+
+// Gaung pasar ditambah langsung ke data (tanpa window.__game).
+export function addBuzzToState(data, points) {
+    if (!data || !data.research) return 0;
+    var add = Math.max(0, _num(points, 0));
+    data.research.buzz = sanitizeBuzz((data.research.buzz || 0) + add);
+    return data.research.buzz;
+}
+
+// Hitung durasi/biaya standar satu level R&D lanjutan (fallback entri rusak).
+export function defaultRefineDays(targetLevel) {
+    var cfg = BALANCE.rnd;
+    return Math.max(1, Math.min(cfg.maxDays, Math.round(cfg.baseDays * Math.pow(cfg.daysGrowth, Math.max(0, targetLevel - 1)))));
+}
+
+// Bersihkan daftar R&D lanjutan: buang entri rusak/duplikat, perbaiki field.
+export function sanitizeRefiningList(list, mastery, nowMinute) {
+    var cfg = BALANCE.rnd;
+    var out = [];
+    var seen = {};
+    if (!Array.isArray(list)) return out;
+    var now = _num(nowMinute, 0);
+    list.forEach(function (e) {
+        if (!e || typeof e !== 'object') return;
+        var cat = e.categoryId;
+        if (typeof cat !== 'string' || !RND_TRACKS[cat] || seen[cat]) return;
+        seen[cat] = true;
+        var lvl = (mastery && mastery[cat]) || 0;
+        var target = Math.floor(_num(e.targetLevel, lvl + 1));
+        if (target < 1 || target > cfg.maxLevel) target = Math.min(cfg.maxLevel, lvl + 1);
+        if (target <= lvl) return; // level ini sudah dimiliki -> entri basi
+        var dur = _num(e.durationDays, 0);
+        if (!(dur > 0)) dur = defaultRefineDays(target);
+        dur = Math.min(dur, cfg.maxDays);
+        var prog = Math.max(0, Math.min(dur, _num(e.progressDays, 0)));
+        var last = _num(e.lastProcessedMinute, now);
+        if (last > now) last = now;
+        var started = _num(e.startedAtGameMinute, now);
+        out.push({
+            categoryId: cat,
+            name: (typeof e.name === 'string' && e.name) ? e.name : (RND_TRACKS[cat].name + ' Lv ' + target),
+            targetLevel: target,
+            cost: Math.max(0, _num(e.cost, 0)),
+            durationDays: dur,
+            progressDays: prog,
+            startedAtGameMinute: started,
+            lastProcessedMinute: last
+        });
+    });
+    return out;
+}
+
+// Bersihkan antrian riset dasar (research.active).
+export function sanitizeActiveResearch(list, completed, nowMinute) {
+    var out = [];
+    var seen = {};
+    if (!Array.isArray(list)) return out;
+    var now = _num(nowMinute, 0);
+    var done = Array.isArray(completed) ? completed : [];
+    list.forEach(function (e) {
+        if (!e || typeof e !== 'object') return;
+        var id = e.nodeId;
+        if (typeof id !== 'string' || seen[id] || done.indexOf(id) >= 0) return;
+        var node = getNodeById(id);
+        if (!node) return; // node tidak dikenal -> buang
+        seen[id] = true;
+        var dur = _num(e.durationDays, 0);
+        if (!(dur > 0)) dur = node.durationDays;
+        var prog = Math.max(0, Math.min(dur, _num(e.progressDays, 0)));
+        var last = _num(e.lastProcessedMinute, _num(e.startedAtGameMinute, now));
+        if (last > now) last = now;
+        e.category = node.category;
+        e.name = (typeof e.name === 'string' && e.name) ? e.name : node.name;
+        e.durationDays = dur;
+        e.progressDays = prog;
+        e.lastProcessedMinute = last;
+        e.startedAtGameMinute = _num(e.startedAtGameMinute, now);
+        out.push(e);
+    });
+    return out;
+}
+
+// Daftar riset selesai: hanya id string unik.
+export function sanitizeCompleted(list) {
+    if (!Array.isArray(list)) return [];
+    var seen = {};
+    return list.filter(function (id) {
+        if (typeof id !== 'string' || seen[id]) return false;
+        seen[id] = true;
+        return true;
+    });
+}
+

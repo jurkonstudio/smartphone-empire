@@ -11,6 +11,8 @@
 //   ResearchPanel   -> getOsFeatureById
 // ============================================================
 
+import { BALANCE } from './balance.data.js';
+
 export const OS_ERAS = [
     { id: 'firmware', name: 'Firmware Dasar',    fromYear: 2000, toYear: 2006 },
     { id: 'touch',    name: 'Era Layar Sentuh',  fromYear: 2007, toYear: 2012 },
@@ -100,6 +102,27 @@ export const OS_LICENSES = [
     { id: 'lic_android',   name: 'Android (Open)',    availableFromYear: 2008, costPerUnit: 3,  stats: { stability: 55, speed: 55, features: 65, security: 50, design: 55 } },
     { id: 'lic_android_p', name: 'Android Premium',   availableFromYear: 2014, costPerUnit: 8,  stats: { stability: 70, speed: 68, features: 78, security: 68, design: 72 } },
     { id: 'lic_android_ai',name: 'Android AI Suite',  availableFromYear: 2023, costPerUnit: 14, stats: { stability: 80, speed: 78, features: 90, security: 80, design: 82 } }
+];
+
+// Lisensi OS pihak ketiga ikut berevolusi tiap tahun (update besar tahunan),
+// sehingga OS buatan sendiri harus terus diriset agar tidak tertinggal.
+export function getLicenseStatsAtYear(lic, year) {
+    if (!lic) return null;
+    var cfg = BALANCE.rnd.os;
+    var yrs = Math.max(0, (year || lic.availableFromYear) - lic.availableFromYear);
+    var bonus = Math.min(cfg.licenseGrowthCap, yrs * cfg.licenseGrowthPerYear);
+    var out = {};
+    Object.keys(lic.stats).forEach(function (k) { out[k] = Math.min(100, Math.round(lic.stats[k] + bonus)); });
+    return out;
+}
+
+// Jalur R&D Platform OS (naik level terus-menerus, tiap level menambah stat OS).
+export const OS_PLATFORM_TRACKS = [
+    { id: 'stability', name: 'Kernel & Stabilitas',   hint: 'Lebih sedikit crash dan bug' },
+    { id: 'speed',     name: 'Optimasi Runtime',      hint: 'Aplikasi terbuka lebih cepat' },
+    { id: 'features',  name: 'Framework & API',       hint: 'Lebih banyak kemampuan platform' },
+    { id: 'security',  name: 'Sandbox & Enkripsi',    hint: 'Data pengguna lebih aman' },
+    { id: 'design',    name: 'Sistem Desain UI',      hint: 'Antarmuka lebih halus dan konsisten' }
 ];
 
 // Aplikasi bawaan (dibuat pemain; butuh fitur App Store).
@@ -206,3 +229,93 @@ export const BUG_TEMPLATES = [
     { id: 'bug_ai_agent_fail', name: 'AI Agent Gagal Eksekusi', severity: 4, satisfactionHit: 12, reputationHit: 8, patchCost: 50000, patchDays: 30, minYear: 2026, maxYear: 9999, requiresFeature: 'fw_ai_agent' },
     { id: 'bug_zero_day', name: 'Celah Keamanan Kritis (Zero-Day)', severity: 4, satisfactionHit: 15, reputationHit: 10, patchCost: 60000, patchDays: 10, minYear: 2010, maxYear: 9999, requiresFeature: 'fw_privacy' } // Security bug dari era modern
 ];
+
+// ============================================================
+// HELPER MURNI PLATFORM OS (v2028.36-fix)
+// Tidak bergantung pada window.__game: cukup data state.
+// ============================================================
+function _n(v, fb) {
+    var n = (typeof v === 'number') ? v : Number(v);
+    return isFinite(n) ? n : fb;
+}
+
+export function sanitizePlatformLevels(levels) {
+    var out = {};
+    var src = (levels && typeof levels === 'object') ? levels : {};
+    var max = BALANCE.rnd.os.maxLevel;
+    OS_PLATFORM_TRACKS.forEach(function (t) {
+        out[t.id] = Math.max(0, Math.min(max, Math.floor(_n(src[t.id], 0))));
+    });
+    return out;
+}
+
+// Bersihkan seluruh blok os.platform (levels, totalUpgrades, developing).
+export function sanitizePlatform(platform, nowMinute) {
+    var cfg = BALANCE.rnd.os;
+    var src = (platform && typeof platform === 'object') ? platform : {};
+    var now = _n(nowMinute, 0);
+    var levels = sanitizePlatformLevels(src.levels);
+    var dev = null;
+    var d = src.developing;
+    if (d && typeof d === 'object' && OS_PLATFORM_TRACKS.some(function (t) { return t.id === d.statId; })) {
+        var lvl = levels[d.statId] || 0;
+        var target = Math.floor(_n(d.targetLevel, lvl + 1));
+        if (target < 1 || target > cfg.maxLevel) target = Math.min(cfg.maxLevel, lvl + 1);
+        if (target > lvl) {
+            var dur = _n(d.durationDays, 0);
+            if (!(dur > 0)) dur = Math.max(1, Math.min(cfg.maxDays, Math.round(cfg.baseDays * Math.pow(cfg.daysGrowth, Math.max(0, target - 1)))));
+            dur = Math.min(dur, cfg.maxDays);
+            var last = _n(d.lastProcessedMinute, now);
+            if (last > now) last = now;
+            var track = OS_PLATFORM_TRACKS.find(function (t) { return t.id === d.statId; });
+            dev = {
+                statId: d.statId,
+                name: (typeof d.name === 'string' && d.name) ? d.name : (track.name + ' Lv ' + target),
+                targetLevel: target,
+                cost: Math.max(0, _n(d.cost, 0)),
+                durationDays: dur,
+                progressDays: Math.max(0, Math.min(dur, _n(d.progressDays, 0))),
+                startedAtGameMinute: _n(d.startedAtGameMinute, now),
+                lastProcessedMinute: last
+            };
+        }
+    }
+    return {
+        levels: levels,
+        developing: dev,
+        totalUpgrades: Math.max(0, Math.floor(_n(src.totalUpgrades, 0)))
+    };
+}
+
+export function computePlatformBonus(levels) {
+    var per = BALANCE.rnd.os.statPerLevel;
+    var lv = sanitizePlatformLevels(levels);
+    var out = {};
+    OS_PLATFORM_TRACKS.forEach(function (t) { out[t.id] = lv[t.id] * per; });
+    return out;
+}
+
+export function applyPlatformBonus(stats, levels) {
+    if (!stats) return null;
+    var bonus = computePlatformBonus(levels);
+    var out = {};
+    Object.keys(stats).forEach(function (k) {
+        out[k] = Math.max(0, Math.min(100, Math.round(_n(stats[k], 0) + (bonus[k] || 0))));
+    });
+    return out;
+}
+
+// Versi OS buatan sendiri yang aktif, dibaca langsung dari data.
+export function getCurrentOwnVersion(data) {
+    var os = data && data.os;
+    if (!os || !Array.isArray(os.versions) || !os.versions.length) return null;
+    var id = os.currentVersionId || os.versions[os.versions.length - 1].id;
+    return os.versions.find(function (x) { return x && x.id === id; }) || null;
+}
+
+// Stat efektif versi OS sendiri (stat rilis + bonus platform) dari data murni.
+export function getEffectiveOwnStats(data, version) {
+    if (!version || !version.stats) return null;
+    return applyPlatformBonus(version.stats, data && data.os && data.os.platform && data.os.platform.levels);
+}
+
