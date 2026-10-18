@@ -1,4 +1,4 @@
-// FILE: src/ui/panels/ExchangePanel.js
+// FILE: src/ui/panels/ExchangePanel.js  (REPLACE — i18n)
 // v2027.4a — Exchange "Rich & Alive":
 //   • Market Pulse (sentimen, breadth, indeks + sparkline, top gainers/losers)
 //   • Daftar emiten: cari, urut, filter (milik saya / watchlist), sparkline per baris
@@ -8,6 +8,10 @@
 // Drop-in: hanya file ini yang diganti. API ekspor lama tetap sama
 // (renderExchangePanel, setExchangeCategory, setExchangeStock,
 //  drawExchangeChart, openBuyModal, openSellModal).
+// i18n: semua teks lewat S(key, fallbackID, fallbackEN) → t() dulu, fallback sesuai
+// bahasa aktif. Nama negara & kategori (data bahasa Indonesia) ikut diterjemahkan.
+// Saat 'lang:changed': panel dirender ulang & modal beli/jual dibuka ulang
+// (jumlah lembar yang sudah diketik dipertahankan).
 import { t, LanguageService } from '../../core/LanguageService.js';
 import { bus } from '../../core/EventBus.js';
 import { Modal } from '../modal.js';
@@ -72,18 +76,21 @@ function _isEn() {
     try { return LanguageService.getLang() === 'en'; } catch (e) { return false; }
 }
 
-// Teks: pakai i18n bila ada, jika tidak pakai fallback (ID/EN sesuai bahasa aktif).
-// Hanya kunci yang sudah ada di kamus yang dipanggil lewat t() (hindari log "missing key").
-var _I18N_KEYS = {'exchange.buy':1,'exchange.sell':1,'exchange.max':1,'exchange.all':1,'exchange.buy_modal.title':1,'exchange.sell_modal.title':1,'exchange.price_per_share':1,'exchange.cash_available':1,'exchange.shares_label':1,'exchange.total':1,'exchange.proceeds':1,'exchange.owned_shares':1,'exchange.avg_buy':1,'exchange.not_owned':1,'exchange.portfolio.title':1,'exchange.portfolio.cash':1,'exchange.portfolio.stocks':1,'exchange.portfolio.net_worth':1,'exchange.portfolio.empty':1,'exchange.tx.title':1,'exchange.tx.buy':1,'exchange.tx.sell':1,'common.cancel':1};
+// Teks: pakai i18n (t) bila key ada di kamus, jika tidak pakai fallback
+// (ID/EN sesuai bahasa aktif). Fallback tetap menjaga UI utuh bila kamus belum lengkap.
 function S(key, id, en) {
-    if (_I18N_KEYS[key]) {
-        var v = t(key);
-        if (v && v !== key) return v;
-    }
+    var v = t(key);
+    if (v && v !== key) return v;
     return (_isEn() && en) ? en : id;
 }
 
-function _monthName(m) { return (_isEn() ? MONTHS_EN : MONTHS_ID)[(m - 1) % 12]; }
+function _monthName(m) {
+    var i = ((m - 1) % 12 + 12) % 12;
+    var key = 'date.month.' + (i + 1);
+    var v = t(key);
+    if (v && v !== key) return v;
+    return (_isEn() ? MONTHS_EN : MONTHS_ID)[i];
+}
 function _fmtDate(p) { return _monthName(p.month) + ' ' + p.year; }
 
 function _fmtCurrency(value, currency) {
@@ -124,11 +131,38 @@ function _dirColor(pct) {
     return d === 'up' ? 'var(--success)' : (d === 'down' ? 'var(--danger)' : 'var(--text-tertiary)');
 }
 
+var CAT_EN = {
+    phone: 'Phones', chip: 'Chips', software: 'Software', social: 'Social Media',
+    streaming: 'Streaming', ecommerce: 'E-commerce', other: 'Other', player: 'Your Company'
+};
 function _categoryLabel(id) {
     for (var i = 0; i < STOCK_CATEGORIES.length; i++) {
-        if (STOCK_CATEGORIES[i].id === id) return STOCK_CATEGORIES[i].label;
+        if (STOCK_CATEGORIES[i].id === id) {
+            return S('exchange.cat.' + id, STOCK_CATEGORIES[i].label, CAT_EN[id]);
+        }
     }
     return id;
+}
+
+// Data saham menyimpan nama negara dalam bahasa Indonesia → terjemahkan di sini.
+var COUNTRY_I18N = {
+    'Amerika Serikat': { k: 'us', en: 'United States' },
+    'Finlandia':       { k: 'fi', en: 'Finland' },
+    'Kanada':          { k: 'ca', en: 'Canada' },
+    'Korea Selatan':   { k: 'kr', en: 'South Korea' },
+    'Taiwan':          { k: 'tw', en: 'Taiwan' },
+    'Tiongkok':        { k: 'cn', en: 'China' },
+    'Jepang':          { k: 'jp', en: 'Japan' },
+    'Indonesia':       { k: 'id', en: 'Indonesia' },
+    'Belanda':         { k: 'nl', en: 'Netherlands' },
+    'Inggris':         { k: 'gb', en: 'United Kingdom' },
+    'Swedia':          { k: 'se', en: 'Sweden' }
+};
+function _countryLabel(country) {
+    if (!country) return '—';
+    var c = COUNTRY_I18N[country];
+    if (!c) return country;
+    return S('exchange.country.' + c.k, country, c.en);
 }
 
 function _flag(country) { return FLAGS[country] || '🌐'; }
@@ -360,7 +394,7 @@ function _ensureStyles() {
 export function renderExchangePanel(opts) {
     var stockSystem = opts && opts.stockSystem;
     if (!stockSystem) {
-        return '<div class="card"><div class="card-title">Exchange</div>' +
+        return '<div class="card"><div class="card-title">' + S('exchange.title', 'Bursa Saham', 'Exchange') + '</div>' +
             '<div class="ex-empty">' + S('exchange.not_ready', 'Sistem saham belum siap.', 'Stock system is not ready.') + '</div></div>';
     }
     _sys = stockSystem;
@@ -518,7 +552,7 @@ function _renderBrowse(stockSystem, active, listOnly) {
         var n = c.id === 'all' ? active.length : (counts[c.id] || 0);
         if (c.id !== 'all' && !n) return '';
         return '<button class="chip-small' + (_selectedCategory === c.id ? ' active' : '') + '" data-ex2-cat="' + c.id + '">' +
-            escapeHtml(c.label) + '<span class="ex-cnt">' + n + '</span></button>';
+            escapeHtml(c.id === 'all' ? c.label : _categoryLabel(c.id)) + '<span class="ex-cnt">' + n + '</span></button>';
     }).join('');
 
     var heldN = (stockSystem.state.data.stocks.portfolio || []).length;
@@ -539,7 +573,7 @@ function _renderBrowse(stockSystem, active, listOnly) {
                 '<div class="ex-search"><span class="ex-s-ico">🔍</span>' +
                     '<input type="search" data-ex2-search placeholder="' + escapeHtml(S('exchange.search', 'Cari emiten, ticker, negara…', 'Search stock, ticker, country…')) +
                     '" value="' + escapeHtml(_search) + '" autocomplete="off" />' +
-                    (_search ? '<button class="ex-s-clr" data-ex2-clear aria-label="clear">✕</button>' : '') +
+                    (_search ? '<button class="ex-s-clr" data-ex2-clear aria-label="' + escapeHtml(S('exchange.aria.clear', 'Hapus pencarian', 'Clear search')) + '">✕</button>' : '') +
                 '</div>' +
                 '<div class="ex-chips" data-ex-chips-cat>' + catChips + '</div>' +
                 '<div class="ex-chips">' + filters + '</div>' +
@@ -558,7 +592,7 @@ function _filteredStocks(stockSystem, active) {
         if (_filterMode === 'held' && !_holdingOf(stockSystem, s.id)) return false;
         if (_filterMode === 'watch' && watch.indexOf(s.id) === -1) return false;
         if (q) {
-            var hay = (s.name + ' ' + s.ticker + ' ' + (s.realTicker || '') + ' ' + (s.country || '') + ' ' + _categoryLabel(s.category)).toLowerCase();
+            var hay = (s.name + ' ' + s.ticker + ' ' + (s.realTicker || '') + ' ' + (s.country || '') + ' ' + _countryLabel(s.country) + ' ' + _categoryLabel(s.category)).toLowerCase();
             if (hay.indexOf(q) === -1) return false;
         }
         return true;
@@ -608,7 +642,7 @@ function _renderStockList(stockSystem, active) {
                 '<div><span class="ex-px' + flash + '">' + _fmtCurrency(price, s.currency) + '</span></div>' +
                 '<div class="ex-chg" style="color:' + color + ';">' + _arrow(change) + ' ' + _fmtChange(change) + '</div>' +
             '</div>' +
-            '<button class="ex-star' + (watched ? ' on' : '') + '" data-ex2-star="' + s.id + '" aria-label="watchlist">' + (watched ? '★' : '☆') + '</button>' +
+            '<button class="ex-star' + (watched ? ' on' : '') + '" data-ex2-star="' + s.id + '" aria-label="' + escapeHtml(S('exchange.aria.watchlist', 'Watchlist', 'Watchlist')) + '">' + (watched ? '★' : '☆') + '</button>' +
         '</div>';
     }).join('');
 
@@ -737,7 +771,7 @@ function _renderDetail(stockSystem) {
         '<div class="ex-stats">' + stats + '</div>' +
         pos +
         '<div class="ex-meta">' +
-            '<span class="ex-tag">' + _flag(stock.country) + ' ' + escapeHtml(stock.country || '—') + '</span>' +
+            '<span class="ex-tag">' + _flag(stock.country) + ' ' + escapeHtml(_countryLabel(stock.country)) + '</span>' +
             '<span class="ex-tag">' + escapeHtml(_categoryLabel(stock.category)) + '</span>' +
             '<span class="ex-tag">' + escapeHtml(stock.currency) + '</span>' +
             '<span class="ex-tag">' + S('exchange.detail.listing', 'Listing', 'Listed') + ' ' + listing + '</span>' +
@@ -747,7 +781,7 @@ function _renderDetail(stockSystem) {
         '<div class="ex-trade">' +
             '<button class="btn-primary" data-ex-buy="' + stock.id + '">' + S('exchange.buy', 'Beli', 'Buy') + '</button>' +
             (holding ? '<button class="btn-secondary" data-ex-sell="' + stock.id + '">' + S('exchange.sell', 'Jual', 'Sell') + '</button>' : '') +
-            '<button class="btn-secondary" data-ex2-star="' + stock.id + '" style="flex:0 0 52px;font-size:18px;color:' + (watched ? '#facc15' : 'var(--text-secondary)') + ';">' + (watched ? '★' : '☆') + '</button>' +
+            '<button class="btn-secondary" data-ex2-star="' + stock.id + '" aria-label="' + escapeHtml(S('exchange.aria.watchlist', 'Watchlist', 'Watchlist')) + '" style="flex:0 0 52px;font-size:18px;color:' + (watched ? '#facc15' : 'var(--text-secondary)') + ';">' + (watched ? '★' : '☆') + '</button>' +
         '</div>' +
         '<div class="ex-note">' + S('exchange.detail.hint', 'Geser/ketuk grafik untuk melihat harga di bulan tertentu.', 'Drag or tap the chart to inspect a month.') + '</div>' +
     '</div>';
@@ -995,11 +1029,44 @@ function _bindOnce() {
         }
     });
 
+    // ganti bahasa → render ulang panel + buka ulang modal beli/jual yang sedang terbuka
+    bus.on('lang:changed', function () {
+        if (_root() && _sys) _refreshAll();
+        _reopenTradeModals();
+    });
+
     // hidupkan otomatis saat harga/bulan berganti
     var raf = 0;
     bus.on('stocks:updated', function () {
         if (!_root() || raf) return;
         raf = requestAnimationFrame(function () { raf = 0; _refreshAll(); });
+    });
+}
+
+// Buka ulang modal beli/jual (teks berganti bahasa) tanpa kehilangan jumlah lembar.
+function _reopenTradeModals() {
+    [
+        { id: 'buy-modal',  attr: 'data-buy-confirm',  open: function (sid) { openBuyModal(sid); } },
+        { id: 'sell-modal', attr: 'data-sell-confirm', open: function (sid) { openSellModal(sid); } }
+    ].forEach(function (m) {
+        if (!Modal.isOpen(m.id)) return;
+        var nodes = document.querySelectorAll('[data-modal-id="' + m.id + '"]');
+        var node = nodes[nodes.length - 1];
+        if (!node) return;
+        var conf = node.querySelector('[' + m.attr + ']');
+        var sid = conf ? conf.getAttribute(m.attr) : null;
+        if (!sid) return;
+        var inp = node.querySelector('[data-qty-input]');
+        var qty = inp ? inp.value : null;
+        m.open(sid);
+        if (qty == null) return;
+        var fresh = document.querySelectorAll('[data-modal-id="' + m.id + '"]');
+        var nn = fresh[fresh.length - 1];
+        var ni = nn && nn.querySelector('[data-qty-input]');
+        if (ni) {
+            ni.value = qty;
+            ni.dispatchEvent(new Event('input', { bubbles: true }));   // hitung ulang total
+        }
     });
 }
 

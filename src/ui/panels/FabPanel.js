@@ -3,11 +3,15 @@
 // FabPanel — panel Fab (pabrik chip) dalam bentuk modal.
 // Menampilkan: status fab, build CTA, upgrade, produksi, history.
 // v2027.13c — i18n.
+// v2027.50 — i18n tuntas: nama/deskripsi tier, satuan hari, pesan error,
+//           + listener lang:changed untuk modal yang sedang terbuka.
 // ============================================================
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
 import { state } from '../../core/GameState.js';
 import { t } from '../../core/LanguageService.js';
+import { bus } from '../../core/EventBus.js';
+import { FAB_LEVELS } from '../../systems/FabSystem.js';
 import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
 import { WalletService } from '../../systems/WalletService.js';
 
@@ -15,6 +19,24 @@ function escapeHtml(s) {
     if (typeof s !== 'string') return '';
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+// t() dengan fallback bila key belum ada di dictionary.
+function _tf(key, fb, vars) {
+    var v = t(key, vars);
+    return (v && v !== key) ? v : fb;
+}
+
+function _tierName(lv) {
+    return _tf('fab.tier.' + lv.id + '.name', lv.name);
+}
+
+function _tierDesc(lv) {
+    return _tf('fab.tier.' + lv.id + '.desc', lv.description || '');
+}
+
+function _daysText(n) {
+    return n + ' ' + _tf('fab.days_unit', 'hari');
 }
 
 function fabSystem() {
@@ -60,12 +82,7 @@ function _render() {
 // BUILD CTA
 // ============================================================
 function _renderBuildCTA(summary, data) {
-    const levels = [
-        { level: 1, id: 'small',  name: 'Small Fab',   cost: 5000000,   durationDays: 90,  capacityMonthly: 5000,   description: 'Fab kecil untuk chip awal' },
-        { level: 2, id: 'medium', name: 'Medium Fab',  cost: 25000000,  durationDays: 150, capacityMonthly: 50000,  description: 'Fab skala menengah' },
-        { level: 3, id: 'large',  name: 'Large Fab',   cost: 120000000, durationDays: 240, capacityMonthly: 500000, description: 'Fab skala besar' },
-        { level: 4, id: 'mega',   name: 'Mega Fab',    cost: 600000000, durationDays: 360, capacityMonthly: 5000000, description: 'Fab kelas industri' }
-    ];
+    const levels = FAB_LEVELS;
 
     const hasResearch = (data.research.completed || []).indexOf('fab_construction') !== -1;
 
@@ -82,10 +99,10 @@ function _renderBuildCTA(summary, data) {
                 return '<div class="fab-tier-card ' + (disabled ? 'disabled' : '') + '">' +
                     '<div class="fab-tier-head">' +
                         '<div>' +
-                            '<div class="fab-tier-name">' + escapeHtml(lv.name) + '</div>' +
-                            '<div class="fab-tier-desc">' + escapeHtml(lv.description) + '</div>' +
+                            '<div class="fab-tier-name">' + escapeHtml(_tierName(lv)) + '</div>' +
+                            '<div class="fab-tier-desc">' + escapeHtml(_tierDesc(lv)) + '</div>' +
                         '</div>' +
-                        '<div class="fab-tier-badge">Lv ' + lv.level + '</div>' +
+                        '<div class="fab-tier-badge">' + _tf('fab.lv_short', 'Lv') + ' ' + lv.level + '</div>' +
                     '</div>' +
                     '<div class="fab-tier-stats">' +
                         '<div class="fab-stat">' +
@@ -94,7 +111,7 @@ function _renderBuildCTA(summary, data) {
                         '</div>' +
                         '<div class="fab-stat">' +
                             '<div class="fab-stat-label">' + t('fab.stat_duration') + '</div>' +
-                            '<div class="fab-stat-value">' + lv.durationDays + '</div>' +
+                            '<div class="fab-stat-value">' + _daysText(lv.durationDays) + '</div>' +
                         '</div>' +
                         '<div class="fab-stat">' +
                             '<div class="fab-stat-label">' + t('fab.stat_capacity') + '</div>' +
@@ -102,7 +119,7 @@ function _renderBuildCTA(summary, data) {
                         '</div>' +
                     '</div>' +
                     (!disabled
-                        ? '<button class="btn-primary" data-fab-action="build" data-fab-level="' + lv.level + '" style="width:100%;margin-top:8px;">' + t('fab.build_btn', { name: escapeHtml(lv.name) }) + '</button>'
+                        ? '<button class="btn-primary" data-fab-action="build" data-fab-level="' + lv.level + '" style="width:100%;margin-top:8px;">' + t('fab.build_btn', { name: escapeHtml(_tierName(lv)) }) + '</button>'
                         : '<button class="btn-secondary" disabled style="width:100%;margin-top:8px;opacity:0.5;">' + (!hasResearch ? t('fab.need_research_btn') : t('fab.no_money')) + '</button>'
                     ) +
                     '</div>';
@@ -159,7 +176,7 @@ function _renderBuiltFab(summary, data) {
     // Fab info
     const levelInfo = summary.levelInfo;
     const capacity = levelInfo ? levelInfo.capacityMonthly : 0;
-    const levelName = levelInfo ? levelInfo.name : 'Fab';
+    const levelName = levelInfo ? _tierName(levelInfo) : _tf('fab.default_name', 'Fab');
 
     const infoCard = '<div class="card">' +
         '<div class="card-title">🏭 ' + escapeHtml(levelName) + '</div>' +
@@ -196,23 +213,18 @@ function _renderBuiltFab(summary, data) {
 
     // Upgrade button
     const nextLevel = summary.level < 4 ? summary.level + 1 : null;
-    const nextLevelInfo = nextLevel ? (function () {
-        const levels = [
-            { level: 2, name: 'Medium Fab', cost: 25000000, durationDays: 150 },
-            { level: 3, name: 'Large Fab',  cost: 120000000, durationDays: 240 },
-            { level: 4, name: 'Mega Fab',   cost: 600000000, durationDays: 360 }
-        ];
-        return levels.find(function (l) { return l.level === nextLevel; });
-    })() : null;
+    const nextLevelInfo = nextLevel
+        ? FAB_LEVELS.find(function (l) { return l.level === nextLevel; })
+        : null;
 
     const upgradeSection = nextLevelInfo
         ? '<div class="card">' +
             '<div class="card-title">' + t('fab.upgrade_title') + '</div>' +
-            '<div class="sum-row"><span>' + t('fab.upgrade_target_lbl') + '</span><b>' + escapeHtml(nextLevelInfo.name) + '</b></div>' +
+            '<div class="sum-row"><span>' + t('fab.upgrade_target_lbl') + '</span><b>' + escapeHtml(_tierName(nextLevelInfo)) + '</b></div>' +
             '<div class="sum-row"><span>' + t('fab.upgrade_cost') + '</span><b>$' + nextLevelInfo.cost.toLocaleString('en-US') + '</b></div>' +
-            '<div class="sum-row"><span>' + t('fab.upgrade_duration') + '</span><b>' + nextLevelInfo.durationDays + '</b></div>' +
-            '<button class="btn-primary" data-fab-action="upgrade" style="width:100%;margin-top:10px;"' +
-                (!WalletService.canAfford(nextLevelInfo.cost) ? ' disabled style="opacity:0.5;width:100%;margin-top:10px;"' : '') + '>' +
+            '<div class="sum-row"><span>' + t('fab.upgrade_duration') + '</span><b>' + _daysText(nextLevelInfo.durationDays) + '</b></div>' +
+            '<button class="btn-primary" data-fab-action="upgrade" style="width:100%;margin-top:10px;' +
+                (!WalletService.canAfford(nextLevelInfo.cost) ? 'opacity:0.5;" disabled' : '"') + '>' +
                 (!WalletService.canAfford(nextLevelInfo.cost) ? t('fab.upgrade_disabled') : t('fab.upgrade_btn')) +
             '</button>' +
             '</div>'
@@ -254,19 +266,43 @@ function _bind() {
 }
 
 // ============================================================
+// LANG CHANGE — render ulang modal yang sedang terbuka
+// ============================================================
+var _qtyChipId = null;
+var _langBound = false;
+
+function _bindLang() {
+    if (_langBound) return;
+    _langBound = true;
+    bus.on('lang:changed', function () {
+        if (Modal.isOpen('fab-panel')) {
+            _render();
+        } else if (Modal.isOpen('fab-prod-qty') && _qtyChipId) {
+            var root = document.querySelector('[data-modal-id="fab-prod-qty"]');
+            var inp = root ? root.querySelector('[data-prod-qty]') : null;
+            openProductionQtyModal(_qtyChipId, inp ? inp.value : null);
+        }
+    });
+}
+_bindLang();
+
+// ============================================================
 // PRODUCTION QTY MODAL
 // ============================================================
-export function openProductionQtyModal(chipId) {
+export function openProductionQtyModal(chipId, presetQty) {
     const cs = chipSystem();
     const fs = fabSystem();
     if (!cs || !fs) return;
 
     const chip = cs.getChipById(chipId);
-    if (!chip) { ToastService.error('Chip not found.'); return; }
+    if (!chip) { ToastService.error(_tf('fab.chip_not_found', 'Chip tidak ditemukan.')); return; }
 
     const summary = fs.getFabSummary();
     const capacity = summary.levelInfo ? summary.levelInfo.capacityMonthly : 5000;
-    const defaultQty = Math.min(capacity, 5000);
+    const defaultQty = (presetQty !== undefined && presetQty !== null && presetQty !== '')
+        ? presetQty
+        : Math.min(capacity, 5000);
+    _qtyChipId = chipId;
 
     const html = `
         <div class="modal-title">${t('fab.prod_qty_title', { name: escapeHtml(chip.name) })}</div>
@@ -282,7 +318,7 @@ export function openProductionQtyModal(chipId) {
             <button class="btn-primary" data-fab-action="confirm-prod" data-chip-id="${chipId}" style="flex:1;">${t('fab.prod_qty_confirm')}</button>
         </div>
     `;
-    Modal.open('fab-prod-qty', html);
+    Modal.open('fab-prod-qty', html, { onClose: function () { _qtyChipId = null; } });
 
     const root = document.querySelector('[data-modal-id="fab-prod-qty"]');
     const input = root.querySelector('[data-prod-qty]');
