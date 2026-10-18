@@ -1,5 +1,7 @@
 // FILE: src/ui/charts/ChartZoomModal.js
-// v2027.1 — modal zoom chart kurva: pinch-zoom, pan, preset, legend toggle.
+// v2027.1b — modal zoom chart kurva: pinch-zoom, pan, preset, legend toggle.
+// Fix: urut kronologis, pinch relatif ke canvas, pan tidak loncat setelah pinch,
+// tooltip memakai area plot, area-fill menutup di titik terakhir, label X tidak tumpang tindih.
 // Murni viewer — tidak mengubah state/ save/ sistem.
 import { Modal } from '../modal.js';
 import { t } from '../../core/LanguageService.js';
@@ -35,10 +37,14 @@ function _openShareZoom() {
     const game = window.__game;
     if (!game || !game.state) return;
     const state = game.state.get();
-    const hist = state.market.shareHistory || [];
-    if (hist.length < 2) return;
-
-    const sorted = [].concat(hist).reverse();
+    const seen = {};
+    const sorted = (state.market.shareHistory || [])
+        .filter(h => h && typeof h.playerShare === 'number' && isFinite(h.playerShare))
+        .map(h => ({ k: (h.year || 0) * 12 + (h.month || 0), h: h }))
+        .filter(o => (seen[o.k] ? false : (seen[o.k] = true)))
+        .sort((a, b) => a.k - b.k)
+        .map(o => o.h);
+    if (sorted.length < 2) return;
 
     const latest = sorted[sorted.length - 1];
     const topComp = (latest.competitors || []).slice()
@@ -116,7 +122,11 @@ function _open(cfg) {
 
     Modal.open('chart-zoom', html, {
         dismissible: true,
-        onClose: function () { _cfg = null; _view = null; _gesture = null; }
+        onClose: function () {
+            _cfg = null; _view = null; _gesture = null;
+            const r = document.querySelector('[data-modal-id="chart-zoom"]');
+            if (r && r._czResize) window.removeEventListener('resize', r._czResize);
+        }
     });
 
     const root = document.querySelector('[data-modal-id="chart-zoom"]');
@@ -127,6 +137,9 @@ function _open(cfg) {
     _attachLegend(root);
 
     requestAnimationFrame(() => _draw(root));
+    const onResize = () => { if (_cfg) _draw(root); };
+    window.addEventListener('resize', onResize);
+    root._czResize = onResize;
 }
 
 function _html(cfg) {
@@ -181,6 +194,10 @@ function _presetBtn(id, label, active) {
         'data-cz-preset="' + id + '" type="button">' + _esc(label) + '</button>';
 }
 
+function _clearPreset(root) {
+    root.querySelectorAll('[data-cz-preset]').forEach(b => b.classList.remove('active'));
+}
+
 // ============================================================
 // PRESET RANGE
 // ============================================================
@@ -229,6 +246,8 @@ function _attachGestures(root) {
     let lastCenter = 0;
     let lastDist = 0;
     let panStartIdx = 0;
+    let panStartX = 0;
+    let moved = false;
 
     function _centerOf(t) {
         return (t[0].clientX + t[1].clientX) / 2;
@@ -241,11 +260,13 @@ function _attachGestures(root) {
 
     wrap.addEventListener('touchstart', function (e) {
         touches = Array.from(e.touches);
+        moved = false;
         if (touches.length === 2) {
             lastCenter = _centerOf(touches);
             lastDist = _distOf(touches);
         } else if (touches.length === 1) {
             panStartIdx = _view.start;
+            panStartX = touches[0].clientX;
         }
     }, { passive: true });
 
@@ -260,7 +281,9 @@ function _attachGestures(root) {
                 const ratio = dist / lastDist;
                 const span = _view.end - _view.start;
                 const newSpan = Math.max(3, Math.min(_cfg.labels.length, Math.round(span / ratio)));
-                const mid = (lastCenter / wrap.clientWidth) * span + _view.start;
+                const rect = wrap.getBoundingClientRect();
+                const relX = Math.max(0, Math.min(1, (lastCenter - rect.left) / (rect.width || 1)));
+                const mid = relX * span + _view.start;
                 let newStart = Math.round(mid - (mid - _view.start) / ratio);
                 let newEnd = newStart + newSpan;
                 if (newStart < 0) { newEnd -= newStart; newStart = 0; }
@@ -270,10 +293,13 @@ function _attachGestures(root) {
                 _view.end = newEnd;
                 lastCenter = center;
                 lastDist = dist;
+                moved = true;
+                _clearPreset(root);
                 _draw(root);
             }
         } else if (t.length === 1 && touches.length === 1) {
-            const dx = t[0].clientX - touches[0].clientX;
+            const dx = t[0].clientX - panStartX;
+            if (Math.abs(dx) > 4) moved = true;
             const span = _view.end - _view.start;
             const shift = Math.round((dx / wrap.clientWidth) * span);
             let newStart = panStartIdx - shift;
@@ -282,6 +308,7 @@ function _attachGestures(root) {
             if (newEnd > _cfg.labels.length) { newEnd = _cfg.labels.length; newStart = newEnd - span; }
             _view.start = newStart;
             _view.end = newEnd;
+            if (moved) _clearPreset(root);
             _draw(root);
         }
     }, { passive: false });
@@ -289,10 +316,16 @@ function _attachGestures(root) {
     wrap.addEventListener('touchend', function (e) {
         touches = Array.from(e.touches);
         if (touches.length < 2) lastDist = 0;
+        // [fix] satu jari tersisa setelah pinch: reset basis pan supaya tidak loncat.
+        if (touches.length === 1) {
+            panStartIdx = _view.start;
+            panStartX = touches[0].clientX;
+        }
     });
 
-    // Tap → tooltip
+    // Tap → tooltip (diabaikan bila baru saja drag/pinch)
     wrap.addEventListener('click', function (e) {
+        if (moved) { moved = false; return; }
         const rect = wrap.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
@@ -309,8 +342,9 @@ function _showTooltip(root, x, y) {
     if (!tip || !wrap) return;
     const W = wrap.clientWidth;
     const span = _view.end - _view.start;
-    const rel = Math.max(0, Math.min(1, x / W));
-    const idx = Math.round(_view.start + rel * (span - 1));
+    const plotL = 48, plotR = 10; // harus sama dengan padL/padR di _draw
+    const rel = Math.max(0, Math.min(1, (x - plotL) / Math.max(1, W - plotL - plotR)));
+    const idx = Math.max(_view.start, Math.min(_view.end - 1, Math.round(_view.start + rel * (span - 1))));
     if (idx < 0 || idx >= _cfg.labels.length) return;
 
     const label = _cfg.labels[idx];
@@ -323,7 +357,9 @@ function _showTooltip(root, x, y) {
     });
 
     tip.textContent = lines.join(' · ');
-    tip.style.left = x + 'px';
+    tip.style.whiteSpace = 'normal';
+    tip.style.maxWidth = '90%';
+    tip.style.left = Math.max(60, Math.min(W - 60, x)) + 'px';
     tip.style.top = Math.max(20, y - 6) + 'px';
     tip.style.display = 'block';
     clearTimeout(_showTooltip._t);
@@ -401,10 +437,13 @@ function _draw(root) {
     ctx.font = '10px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
+    let lastLabelIdx = -Infinity;
     for (let i = start; i < end; i += step) {
         ctx.fillText(_cfg.labels[i], xOf(i), padT + plotH + 6);
+        lastLabelIdx = i;
     }
-    if ((end - 1 - start) % step !== 0) {
+    // Label terakhir hanya bila tidak menabrak label sebelumnya.
+    if (lastLabelIdx !== end - 1 && (end - 1 - lastLabelIdx) >= step * 0.6) {
         ctx.fillText(_cfg.labels[end - 1], xOf(end - 1), padT + plotH + 6);
     }
 
@@ -418,16 +457,17 @@ function _draw(root) {
         grad.addColorStop(1, _hexA(s.color, 0));
         ctx.fillStyle = grad;
         ctx.beginPath();
-        let firstX = null;
+        let firstX = null, lastX = null;
         for (let i = start; i < end; i++) {
             const v = s.values[i];
-            if (v == null) continue;
+            if (v == null || !isFinite(v)) continue;
             const x = xOf(i), y = yOf(v);
             if (firstX == null) { ctx.moveTo(x, padT + plotH); firstX = x; }
             ctx.lineTo(x, y);
+            lastX = x;
         }
         if (firstX == null) return;
-        ctx.lineTo(xOf(end - 1), padT + plotH);
+        ctx.lineTo(lastX, padT + plotH);
         ctx.closePath();
         ctx.fill();
 
@@ -478,4 +518,4 @@ function _hexA(hex, alpha) {
     const g = parseInt(h.substring(2, 4), 16);
     const b = parseInt(h.substring(4, 6), 16);
     return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
-  }
+}
