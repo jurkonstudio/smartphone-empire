@@ -87,6 +87,8 @@ export class MarketSystem {
             month: snap.currentMonth,
             playerShare,
             playerRevenue,
+            // [fix] sebelumnya tidak disimpan -> info "Setara skala pasar" di panel selalu kosong.
+            playerRevenueEq: playerRevenueEq,
             totalRevenue: total,
             competitors: data.market.competitors.map(c => ({ id: c.id, share: c.share }))
         });
@@ -96,7 +98,7 @@ export class MarketSystem {
             year: snap.currentYear,
             month: snap.currentMonth,
             playerRevenue,
-            playerRevenueEq: this._lastPlayerRevenueEq || 0,
+            playerRevenueEq: playerRevenueEq,
             totalRevenue: total
         });
         if (data.market.revenueHistory.length > 24) data.market.revenueHistory.length = 24;
