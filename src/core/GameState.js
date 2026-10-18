@@ -6,8 +6,6 @@ import { getMacro } from './MacroModel.js';
 import { DIFFICULTY, LOG_TYPES } from '../config/constants.js';
 import { bus } from './EventBus.js';
 import { generateRandomName, rollTraits } from '../data/staff.data.js';
-import { sanitizeMastery, sanitizeBuzz, sanitizeRefiningList, sanitizeActiveResearch, sanitizeCompleted } from '../data/research.data.js';
-import { sanitizePlatform } from '../data/os.data.js';
 
 export const SCHEMA_VERSION = 4;
 
@@ -373,10 +371,7 @@ class GameState {
         this.data.market.reputation = rounded;
         bus.emit('state:changed', this.data);
     }
-    addReputation(delta) {
-        if (!Number.isFinite(delta)) return;
-        this.setReputation((this.data.market.reputation || 0) + delta);
-    }
+    addReputation(delta) { this.setReputation((this.data.market.reputation || 0) + delta); }
 
     setSentiment(value) {
         const clamped = Math.max(0, Math.min(100, Math.round(value)));
@@ -387,23 +382,6 @@ class GameState {
     addSentiment(delta) { this.setSentiment((this.data.feedback.sentiment || 50) + delta); }
 
     serialize() { return JSON.parse(JSON.stringify(this.data)); }
-
-    // Membersihkan seluruh data R&D (riset dasar, R&D lanjutan, platform OS).
-    // Aman dipanggil berulang; tidak mengubah data yang sudah valid.
-    _sanitizeRnd() {
-        const d = this.data;
-        const now = (d.time && Number.isFinite(d.time.elapsedGameMinutes)) ? d.time.elapsedGameMinutes : 0;
-        const r = d.research;
-        r.completed = sanitizeCompleted(r.completed);
-        r.active = sanitizeActiveResearch(r.active, r.completed, now);
-        r.mastery = sanitizeMastery(r.mastery);
-        r.refining = sanitizeRefiningList(r.refining, r.mastery, now);
-        r.buzz = sanitizeBuzz(r.buzz);
-        r.totalRefined = Math.max(0, Math.floor(Number.isFinite(r.totalRefined) ? r.totalRefined : 0));
-        if (!Number.isFinite(r.totalCompleted)) r.totalCompleted = r.completed.length;
-        if (!d.os || typeof d.os !== 'object') d.os = {};
-        d.os.platform = sanitizePlatform(d.os.platform, now);
-    }
 
     hydrate(data) {
         if (!data || typeof data !== 'object') return false;
@@ -513,10 +491,6 @@ class GameState {
         if (!this.data.dailyLogin || typeof this.data.dailyLogin !== 'object') {
             this.data.dailyLogin = { lastClaimDate: null, streak: 0 };
         }
-
-        // [R&D fix] Bersihkan data R&D / platform OS saat load (save rusak, cloud sync,
-        // edit manual): level dibatasi, entri rusak dibuang, durasi hilang dipulihkan.
-        this._sanitizeRnd();
 
         _ensureStarterResearch(this.data);
 
