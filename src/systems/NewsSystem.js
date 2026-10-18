@@ -21,6 +21,8 @@ import { LanguageService, t } from '../core/LanguageService.js';
 import { getCompetitorReleasesForMonth, getReleaseDay } from '../data/news-competitor-releases.data.js';
 // [Sesi 1] Berita rilis kompetitor 2000-2008 (mendaftar sendiri ke daftar utama).
 import '../data/news-competitor-releases.s1.data.js';
+// [Sesi 2] Berita rilis kompetitor 2009-2017.
+import '../data/news-competitor-releases.s2.data.js';
 // [Sesi 1] Estimasi reaksi bursa, disesuaikan ke rezim indeks pasar.
 import { estimateNewsMarketReaction } from './MarketIndexAdjuster.js';
 import { getActiveCompetitors, getCompetitorById } from '../data/competitors.data.js';
