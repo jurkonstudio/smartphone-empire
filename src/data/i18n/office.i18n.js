@@ -1,4 +1,4 @@
-// FILE: src/data/i18n/office.i18n.js  (REPLACE — v2027.52a)
+// FILE: src/data/i18n/office.i18n.js  (REPLACE — v2027.51a)
 // Kamus Office 3D Map (ID / EN). Digabung di src/data/i18n/index.js.
 export const OFFICE_I18N = {
     id: {
@@ -94,45 +94,7 @@ export const OFFICE_I18N = {
         'office.legend.morale.low': 'Moral rendah (<40%)',
         'office.legend.tier': 'Plat meja = tier skill',
         'office.legend.alert': 'Gelembung ! = perlu perhatian',
-        'office.legend.locked': 'Ruangan terkunci',
-        'office.legend.bubble': 'Gelembung emoji = aktivitas staf',
-
-        'office.card.collapse': 'Ciutkan kartu',
-        'office.card.expand': 'Bentangkan kartu',
-
-        'office.chip.building': 'Konstruksi {name}: {pct}%',
-        'office.chip.upgrading': 'Upgrade ke {name}: {pct}%',
-        'office.chip.eta': 'Sisa ± {n} hari',
-        'office.act.fab.build': 'Bangun {name} · {v}',
-        'office.act.fab.upgrade': 'Upgrade ke {name} · {v}',
-        'office.act.fab.days': 'Butuh {n} hari',
-        'office.act.fab.noresearch': 'Butuh riset: Konstruksi Fab',
-        'office.act.fab.poor': 'Uang tidak cukup',
-        'office.act.fab.max': 'Fab sudah level maksimal',
-        'office.act.train': 'Latih · {v}',
-        'office.act.train.note': '+30% progres skill',
-
-        'office.staff.activity': 'Aktivitas: {a}',
-        'office.staff.skillprog': 'Progres skill: {n}% menuju tier berikut',
-        'office.staff.maxtier': 'Skill sudah tier tertinggi',
-
-        'office.act.working': 'Bekerja di meja',
-        'office.act.tired': 'Lesu, butuh istirahat',
-        'office.act.coffee': 'Minum kopi',
-        'office.act.idea': 'Mendapat ide',
-        'office.act.back': 'Kembali ke meja',
-        'office.act.go.lab': 'Menuju Lab R&D',
-        'office.act.go.design': 'Menuju Studio Desain',
-        'office.act.go.ceo': 'Menuju Ruang CEO',
-        'office.act.go.marketing': 'Menuju Ruang Marketing',
-        'office.act.go.showroom': 'Menuju Showroom',
-        'office.act.go.water': 'Mengambil air minum',
-        'office.act.at.lab': 'Cek hasil riset di Lab',
-        'office.act.at.design': 'Diskusi di Studio Desain',
-        'office.act.at.ceo': 'Lapor ke Ruang CEO',
-        'office.act.at.marketing': 'Koordinasi kampanye',
-        'office.act.at.showroom': 'Mengecek produk di Showroom',
-        'office.act.at.water': 'Minum air'
+        'office.legend.locked': 'Ruangan terkunci'
     },
     en: {
         'office.aria': '3D office interior map. Drag to explore, pinch to zoom, tap a room for details.',
@@ -227,44 +189,6 @@ export const OFFICE_I18N = {
         'office.legend.morale.low': 'Low morale (<40%)',
         'office.legend.tier': 'Desk plate = skill tier',
         'office.legend.alert': '! bubble = needs attention',
-        'office.legend.locked': 'Locked room',
-        'office.legend.bubble': 'Emoji bubble = staff activity',
-
-        'office.card.collapse': 'Collapse card',
-        'office.card.expand': 'Expand card',
-
-        'office.chip.building': 'Building {name}: {pct}%',
-        'office.chip.upgrading': 'Upgrading to {name}: {pct}%',
-        'office.chip.eta': '~{n} days left',
-        'office.act.fab.build': 'Build {name} · {v}',
-        'office.act.fab.upgrade': 'Upgrade to {name} · {v}',
-        'office.act.fab.days': 'Takes {n} days',
-        'office.act.fab.noresearch': 'Research needed: Fab Construction',
-        'office.act.fab.poor': 'Not enough cash',
-        'office.act.fab.max': 'Fab is at max level',
-        'office.act.train': 'Train · {v}',
-        'office.act.train.note': '+30% skill progress',
-
-        'office.staff.activity': 'Activity: {a}',
-        'office.staff.skillprog': 'Skill progress: {n}% to next tier',
-        'office.staff.maxtier': 'Skill is at the top tier',
-
-        'office.act.working': 'Working at desk',
-        'office.act.tired': 'Tired, needs a break',
-        'office.act.coffee': 'Having coffee',
-        'office.act.idea': 'Got an idea',
-        'office.act.back': 'Heading back to desk',
-        'office.act.go.lab': 'Heading to R&D Lab',
-        'office.act.go.design': 'Heading to Design Studio',
-        'office.act.go.ceo': 'Heading to CEO Office',
-        'office.act.go.marketing': 'Heading to Marketing Room',
-        'office.act.go.showroom': 'Heading to Showroom',
-        'office.act.go.water': 'Getting some water',
-        'office.act.at.lab': 'Checking research results',
-        'office.act.at.design': 'Discussing in Design Studio',
-        'office.act.at.ceo': 'Reporting to the CEO',
-        'office.act.at.marketing': 'Coordinating a campaign',
-        'office.act.at.showroom': 'Checking products in Showroom',
-        'office.act.at.water': 'Drinking water'
+        'office.legend.locked': 'Locked room'
     }
 };
