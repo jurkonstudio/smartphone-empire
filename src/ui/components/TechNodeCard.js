@@ -1,7 +1,7 @@
 // FILE: src/ui/components/TechNodeCard.js  (REPLACE)
 // ============================================================
 // Komponen baris node riset — dipakai ResearchPanel & ChipResearchPanel.
-// v2028.41 — Fixed Double Title Bug.
+// v2028.42 — Replaced emojis with clean inline SVGs for buttons.
 // ============================================================
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
@@ -150,22 +150,18 @@ export function ensureRndStyles() {
     if (_rndStylesInjected || typeof document === 'undefined') return;
     _rndStylesInjected = true;
     
-    // 1. Inject CSS
     var el = document.createElement('style');
     el.id = 'rnd-styles';
     el.textContent = RND_CSS;
     document.head.appendChild(el);
 
-    // 2. FIX BUG SWIPE: Cegah Tab Utama Ikut Geser
     if (!window._rndSwipeFixed) {
         window._rndSwipeFixed = true;
-        
         const stopSwipeBleed = (e) => {
             if (e.target && e.target.closest && e.target.closest('.rnd-carousel-container')) {
                 e.stopPropagation();
             }
         };
-
         document.addEventListener('touchstart', stopSwipeBleed, { capture: true, passive: true });
         document.addEventListener('touchmove', stopSwipeBleed, { capture: true, passive: false });
         document.addEventListener('touchend', stopSwipeBleed, { capture: true, passive: true });
@@ -180,7 +176,6 @@ export function renderRndOverview(ov, opts) {
     var buzzPct = Math.round((ov.buzzFactor - 1) * 100);
     var buzzW = Math.max(0, Math.min(100, Math.round(ov.buzz / 60 * 100)));
     
-    // PERBAIKAN BUG DOUBLE TEXT: Cek apakah opts.title di-set secara eksplisit (termasuk string kosong '')
     var txtTitle = (opts.title !== undefined) ? opts.title : (t('rs.rnd.title') || 'R&D Lanjutan');
     var txtSlots = t('tnc.ov.slots', { used: ov.used, slots: ov.slots }) || ('Slot ' + ov.used + '/' + ov.slots);
     var txtAvg = t('tnc.ov.avg') || 'LEVEL RATA-RATA';
@@ -188,7 +183,6 @@ export function renderRndOverview(ov, opts) {
     var txtDemand = t('tnc.ov.demand') || 'EFEK PERMINTAAN';
     var txtBuzz = t('tnc.ov.buzz') || 'Gaung pasar';
 
-    // Jika txtTitle kosong, jangan render tag div-nya
     var titleHtml = txtTitle ? '<div class="rnd-ov-title">' + escapeHtml(txtTitle) + '</div>' : '';
 
     return '<div class="rnd-ov" data-rnd-root>' +
@@ -220,6 +214,11 @@ export function renderRndRow(info, opts) {
     var currentBonus = (info.statBonus !== undefined ? info.statBonus : info.bonus) || 0;
     var bonusTxt = '+' + currentBonus.toFixed(1).replace(/\.0$/, '') + ' ' + (opts.bonusLabel || '');
 
+    // SVG Icons
+    var iconUp = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+    var iconLock = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+    var iconWait = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+
     var actionHtml = '';
     if (info.status === 'running' && info.running) {
         var run = info.running;
@@ -232,7 +231,7 @@ export function renderRndRow(info, opts) {
             '<div class="rnd-bar-bg">' +
                 '<div class="rnd-bar-fill active" data-rnd-bar="' + escapeHtml(info.id) + '" style="width:' + pct + '%"></div>' +
             '</div>' +
-            '<button class="rnd-btn-cancel" ' + attr + '="cancel" data-rnd-id="' + escapeHtml(info.id) + '">Batal (50%)</button>' +
+            '<button class="rnd-btn-cancel" ' + attr + '="cancel" data-rnd-id="' + escapeHtml(info.id) + '">Batalkan (Kembali 50%)</button>' +
         '</div>';
     } else if (info.status === 'available' || (info.status === 'locked' && info.blocker === 'cash')) {
         var can = info.status === 'available';
@@ -243,14 +242,14 @@ export function renderRndRow(info, opts) {
         var etaStr = (info.etaDays || '?') + 'h';
         
         var btnText = can 
-            ? '<span>⬆️ Upgrade ke Lv ' + (info.level + 1) + '</span><small>' + costStr + ' · ~' + etaStr + '</small>' 
-            : '🔒 ' + (info.reason || 'Kas Kurang');
+            ? '<span>' + iconUp + ' Upgrade Lv ' + (info.level + 1) + '</span><small>' + costStr + ' · ~' + etaStr + '</small>' 
+            : iconLock + ' ' + (info.reason || 'Kas Kurang');
 
         actionHtml = '<button class="' + btnCls + '" ' + btnAttr + '>' + btnText + '</button>';
     } else if (info.status === 'locked' && info.blocker === 'slots') {
-        actionHtml = '<button class="rnd-btn-disabled" disabled>⏳ Slot R&D Penuh</button>';
+        actionHtml = '<button class="rnd-btn-disabled" disabled>' + iconWait + ' Slot R&D Penuh</button>';
     } else {
-        actionHtml = '<div class="rnd-note">🔒 ' + escapeHtml(info.reason || 'Terkunci') + '</div>';
+        actionHtml = '<div class="rnd-note">' + iconLock + ' ' + escapeHtml(info.reason || 'Terkunci') + '</div>';
     }
 
     return '<div class="rnd-row">' +
@@ -331,9 +330,10 @@ const RND_CSS = `
 /* Tombol Aksi */
 .rnd-btn-start { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border: 0; border-radius: var(--r); background: var(--accent-soft); color: var(--accent); font-weight: var(--fw-bold); font-size: var(--fs-sm); cursor: pointer; transition: background 0.2s, color 0.2s; }
 .rnd-btn-start:hover { background: var(--accent); color: #fff; }
+.rnd-btn-start span { display: flex; align-items: center; gap: 6px; }
 .rnd-btn-start small { font-weight: var(--fw-semibold); opacity: 0.8; font-size: var(--fs-xs); }
 
-.rnd-btn-disabled { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg-3); color: var(--text-tertiary); font-weight: var(--fw-bold); font-size: var(--fs-sm); cursor: not-allowed; text-align: center; }
+.rnd-btn-disabled { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg-3); color: var(--text-tertiary); font-weight: var(--fw-bold); font-size: var(--fs-sm); cursor: not-allowed; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
 /* State Sedang Riset */
 .rnd-action-box { background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
@@ -344,5 +344,5 @@ const RND_CSS = `
 .rnd-bar-fill.active { background-image: linear-gradient(90deg, var(--accent) 0%, #60a5fa 50%, var(--accent) 100%); background-size: 200% 100%; animation: progressShimmer 2s infinite linear; }
 .rnd-btn-cancel { align-self: flex-end; background: transparent; border: none; color: var(--text-tertiary); font-size: 11px; font-weight: var(--fw-bold); cursor: pointer; padding: 0; text-decoration: underline; margin-top: 4px; }
 .rnd-btn-cancel:hover { color: var(--danger); }
-.rnd-note { font-size: var(--fs-xs); color: var(--text-tertiary); margin-top: 6px; text-align: center; }
+.rnd-note { font-size: var(--fs-xs); color: var(--text-tertiary); margin-top: 6px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; }
 `;
