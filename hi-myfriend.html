@@ -78,6 +78,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:
 .btn-primary:hover{transform:scale(1.04);box-shadow:0 10px 24px rgba(0,0,0,.45)}
 .btn-primary:active{transform:scale(.97)}
 
+.btn-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:20px}
+.btn-row .btn-primary{margin-top:0}
+.btn-apk{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:rgba(255,255,255,.14);color:#fff;padding:13px 24px;border-radius:999px;font-size:1rem;font-weight:800;text-decoration:none;letter-spacing:-.01em;border:1.5px solid rgba(255,255,255,.55);box-shadow:0 6px 18px rgba(0,0,0,.25);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:transform .25s cubic-bezier(.34,1.56,.64,1),background .2s}
+.btn-apk:hover{transform:scale(1.04);background:rgba(255,255,255,.24)}
+.btn-apk:active{transform:scale(.97)}
+
 /* CONTACT */
 .contact-section{margin-top:36px;padding-top:24px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
 .contact-links{display:flex;flex-wrap:wrap;gap:10px}
@@ -162,7 +168,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:
                         kompleksitas riset <i>hardware</i>, pengembangan <i>software</i>, hingga perang harga dengan AI kompetitor. 
                         Dilengkapi dengan sistem <i>Cloud Save</i> dan sinkronisasi <i>real-time</i>.
                     </p>
-                    <a href="/" class="btn-primary">Enter the Simulation &rarr;</a></div>
+                    <div class="btn-row">
+                        <a href="/" class="btn-primary">Enter the Simulation &rarr;</a>
+                        <a href="https://github.com/jurkonstudio/smartphone-empire/releases/download/Simulation/Smartphone.Empire.apk" class="btn-apk" rel="noopener" download>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>
+                            Download APK
+                        </a>
+                    </div></div>
                     <ul class="specs-list">
                         <li><b>Dynamic Market:</b> Harga, tren, dan feedback konsumen bereaksi secara logis.</li>
                         <li><b>Deep Tech Tree:</b> Integrasi antara riset OS dan komponen Hardware.</li>
