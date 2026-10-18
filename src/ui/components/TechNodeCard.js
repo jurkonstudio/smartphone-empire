@@ -1,7 +1,19 @@
 // FILE: src/ui/components/TechNodeCard.js  (REPLACE)
 // ============================================================
 // Komponen baris node riset — dipakai ResearchPanel & ChipResearchPanel.
-// v2028.37 — R&D UI Overhaul (Compact & Clean Layout)
+// v2028 — backward compatible: semua opsi baru bersifat opsional.
+//
+// Struktur DOM (tidak berubah, main.js bergantung pada atribut ini):
+//   .node-row-wrap
+//     .node-row-content [data-node-detail]   ← klik → buka modal
+//     .node-row-actions                       ← klik tombol → start/cancel
+//
+// Opsi baru (opsional):
+//   description   : string  — satu baris deskripsi
+//   blocker       : 'slots' | 'cash' | 'year' | 'prereq' | null
+//   affordable    : boolean — false → biaya berwarna merah
+//   recommended   : boolean — lencana "Disarankan"
+//   durationLabel : string  — override teks durasi
 // ============================================================
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
@@ -67,9 +79,6 @@ function _formatCost(c) {
     return '$' + c.toLocaleString('en-US');
 }
 
-// ============================================================
-// KOMPONEN NODE UTAMA (TIDAK DIUBAH)
-// ============================================================
 export function renderTechNodeRow(opts) {
     var node = opts.node;
     if (!node) return '';
@@ -92,6 +101,8 @@ export function renderTechNodeRow(opts) {
         actionBtn = '<button class="node-row-cta" ' + actionAttr + '="start" data-node-id="' +
             escapeHtml(node.id) + '" aria-label="' + escapeHtml(_tf('rs.row.start', 'Mulai riset')) + '">+</button>';
     } else if (held) {
+        // Siap secara prasyarat, tapi slot penuh / kas kurang: tombol tetap bisa diklik
+        // (main.js menampilkan toast alasan), hanya dibuat redup.
         actionBtn = '<button class="node-row-cta node-row-cta-held" ' + actionAttr + '="start" data-node-id="' +
             escapeHtml(node.id) + '" aria-label="' + escapeHtml(opts.reason || '') + '">+</button>';
     } else if (status === 'running') {
@@ -155,7 +166,9 @@ export function renderTechNodeRow(opts) {
 }
 
 // ============================================================
-// R&D BERKELANJUTAN (UI BARU - COMPACT CARD)
+// R&D BERKELANJUTAN — komponen bersama (dipakai ResearchPanel & OSPanel)
+// v2028.36. Atribut aksi ditentukan pemanggil lewat opts.actionAttr
+//   (mis. 'data-rnd-action' / 'data-osp-action') + data-rnd-id.
 // ============================================================
 function _rndMoney(n) { return '$' + Math.round(n || 0).toLocaleString('en-US'); }
 
@@ -169,6 +182,8 @@ export function ensureRndStyles() {
     document.head.appendChild(el);
 }
 
+// Ringkasan: level rata-rata vs standar pasar + gaung pasar.
+// ov = { avg, benchmark, delta, factor, buzz, buzzFactor, slots, used }
 export function renderRndOverview(ov, opts) {
     opts = opts || {};
     var pct = Math.round((ov.factor - 1) * 100);
@@ -180,110 +195,73 @@ export function renderRndOverview(ov, opts) {
             : t('tnc.ov.verdict_flat'));
     var buzzPct = Math.round((ov.buzzFactor - 1) * 100);
     var buzzW = Math.max(0, Math.min(100, Math.round(ov.buzz / 60 * 100)));
-    
-    // Fallback text jika key translation belum ada
-    var txtTitle = opts.title || t('rs.rnd.title') || 'R&D Lanjutan';
-    var txtSlots = t('tnc.ov.slots', { used: ov.used, slots: ov.slots }) || ('Slot ' + ov.used + '/' + ov.slots);
-    var txtAvg = t('tnc.ov.avg') || 'LEVEL RATA-RATA';
-    var txtBench = t('tnc.ov.benchmark') || 'STANDAR PASAR';
-    var txtDemand = t('tnc.ov.demand') || 'EFEK PERMINTAAN';
-    var txtBuzz = t('tnc.ov.buzz') || 'Gaung pasar';
-
     return '<div class="rnd-ov" data-rnd-root>' +
         '<div class="rnd-ov-head">' +
-            '<div class="rnd-ov-title">' + escapeHtml(txtTitle) + '</div>' +
-            (ov.slots ? '<div class="rnd-ov-slots">' + escapeHtml(txtSlots) + '</div>' : '') +
+            '<div class="rnd-ov-title">' + escapeHtml(opts.title || t('rs.rnd.title')) + '</div>' +
+            (ov.slots ? '<div class="rnd-ov-slots">' + escapeHtml(t('tnc.ov.slots', { used: ov.used, slots: ov.slots })) + '</div>' : '') +
         '</div>' +
         '<div class="rnd-ov-grid">' +
-            '<div class="rnd-chip"><span>' + escapeHtml(txtAvg) + '</span><b>' + ov.avg.toFixed(1) + '</b></div>' +
-            '<div class="rnd-chip"><span>' + escapeHtml(txtBench) + '</span><b>' + ov.benchmark.toFixed(1) + '</b></div>' +
-            '<div class="rnd-chip rnd-' + tone + '"><span>' + escapeHtml(txtDemand) + '</span><b>' + (pct > 0 ? '+' : '') + pct + '%</b></div>' +
+            '<div class="rnd-chip"><span>' + escapeHtml(t('tnc.ov.avg')) + '</span><b>' + ov.avg.toFixed(1) + '</b></div>' +
+            '<div class="rnd-chip"><span>' + escapeHtml(t('tnc.ov.benchmark')) + '</span><b>' + ov.benchmark.toFixed(1) + '</b></div>' +
+            '<div class="rnd-chip rnd-' + tone + '"><span>' + escapeHtml(t('tnc.ov.demand')) + '</span><b>' + (pct > 0 ? '+' : '') + pct + '%</b></div>' +
         '</div>' +
         '<div class="rnd-verdict rnd-' + tone + '">' + escapeHtml(verdict) + '</div>' +
-        '<div class="rnd-buzz"><span>' + escapeHtml(txtBuzz) + '</span>' +
+        '<div class="rnd-buzz"><span>' + escapeHtml(t('tnc.ov.buzz')) + '</span>' +
             '<div class="rnd-buzz-bar"><i style="width:' + buzzW + '%"></i></div>' +
             '<b>' + (buzzPct > 0 ? '+' + buzzPct + '%' : '0%') + '</b></div>' +
         '</div>';
 }
 
-// UI Baru: Compact Card
+// Satu baris jalur R&D. info = hasil getRefineInfo / getPlatformInfo.
+// opts = { actionAttr, bonusLabel (mis. 'Layar'), benchmark }
 export function renderRndRow(info, opts) {
     opts = opts || {};
     var attr = opts.actionAttr || 'data-rnd-action';
-    
-    // Kalkulasi meter
-    var maxLv = info.maxLevel || 10;
-    var lvPct = Math.round((info.level || 0) / maxLv * 100);
-    var capPct = Math.round((info.cap || maxLv) / maxLv * 100);
+    var lvPct = Math.round(info.level / info.maxLevel * 100);
+    var capPct = Math.round(info.cap / info.maxLevel * 100);
     var benchPct = (typeof opts.benchmark === 'number')
-        ? Math.max(0, Math.min(100, Math.round(opts.benchmark / maxLv * 100))) : null;
+        ? Math.max(0, Math.min(100, Math.round(opts.benchmark / info.maxLevel * 100))) : null;
 
-    // Kalkulasi bonus
-    var currentBonus = (info.statBonus !== undefined ? info.statBonus : info.bonus) || 0;
-    var bonusTxt = '+' + currentBonus.toFixed(1).replace(/\.0$/, '') + ' ' + (opts.bonusLabel || '');
+    var bonusTxt = '+' + (info.statBonus !== undefined ? info.statBonus : info.bonus).toFixed(1).replace(/\.0$/, '') + ' ' + (opts.bonusLabel || '');
 
-    var actionHtml = '';
-    
-    // STATE 1: Sedang Riset
+    var action = '';
     if (info.status === 'running' && info.running) {
         var run = info.running;
         var pct = run.durationDays > 0 ? Math.min(100, Math.round(run.progressDays / run.durationDays * 100)) : 0;
-        actionHtml = '<div class="rnd-action-box">' +
-            '<div class="rnd-progress-head">' +
-                '<span>Menuju Lv ' + run.targetLevel + '</span>' +
-                '<b data-rnd-pct="' + escapeHtml(info.id) + '">' + pct + '%</b>' +
-            '</div>' +
-            '<div class="rnd-bar-bg">' +
-                '<div class="rnd-bar-fill active" data-rnd-bar="' + escapeHtml(info.id) + '" style="width:' + pct + '%"></div>' +
-            '</div>' +
-            '<button class="rnd-btn-cancel" ' + attr + '="cancel" data-rnd-id="' + escapeHtml(info.id) + '">Batalkan & Kembalikan 50% Kas</button>' +
-        '</div>';
-    } 
-    // STATE 2: Siap Upgrade (Ada uang & slot)
-    else if (info.status === 'available' || (info.status === 'locked' && info.blocker === 'cash')) {
+        action = '<div class="rnd-run">' +
+            '<div class="rnd-run-top"><span>' + escapeHtml(t('tnc.row.to_lv', { lv: run.targetLevel })) + '</span><b data-rnd-pct="' + escapeHtml(info.id) + '">' + pct + '%</b></div>' +
+            '<div class="progress"><div class="progress-bar" data-rnd-bar="' + escapeHtml(info.id) + '" style="width:' + pct + '%"></div></div>' +
+            '<button class="rnd-cancel" ' + attr + '="cancel" data-rnd-id="' + escapeHtml(info.id) + '">' + escapeHtml(t('tnc.row.cancel_refund')) + '</button>' +
+            '</div>';
+    } else if (info.status === 'available' || (info.status === 'locked' && info.blocker === 'cash')) {
         var can = info.status === 'available';
-        var btnCls = can ? 'rnd-btn-start' : 'rnd-btn-disabled';
-        var btnAttr = can ? attr + '="start" data-rnd-id="' + escapeHtml(info.id) + '"' : 'disabled';
-        
-        var costStr = _rndMoney(info.cost);
-        var etaStr = (info.etaDays || '?') + 'h';
-        
-        var btnText = can 
-            ? '<span>⬆️ Upgrade ke Lv ' + (info.level + 1) + '</span><small>' + costStr + ' · ~' + etaStr + '</small>' 
-            : '🔒 ' + (info.reason || 'Kas tidak cukup');
-
-        actionHtml = '<button class="' + btnCls + '" ' + btnAttr + '>' + btnText + '</button>';
-    } 
-    // STATE 3: Terkunci karena Slot Penuh
-    else if (info.status === 'locked' && info.blocker === 'slots') {
-        actionHtml = '<button class="rnd-btn-disabled" disabled>⏳ Slot R&D Penuh</button>';
-    } 
-    // STATE 4: Terkunci (Tahun belum cukup, dll)
-    else {
-        actionHtml = '<div class="rnd-note">🔒 ' + escapeHtml(info.reason || 'Terkunci') + '</div>';
+        action = '<button class="rnd-btn' + (can ? '' : ' rnd-btn-off') + '" ' + (can ? attr + '="start" data-rnd-id="' + escapeHtml(info.id) + '"' : 'disabled') + '>' +
+            '<span>' + escapeHtml(t('tnc.row.upgrade', { lv: info.level + 1 })) + '</span>' +
+            '<small>' + _rndMoney(info.cost) + ' · ~' + escapeHtml(t('rs.row.days', { n: info.etaDays })) + ' · +' + (((info.nextStatBonus !== undefined ? info.nextStatBonus : info.nextBonus) - (info.statBonus !== undefined ? info.statBonus : info.bonus))).toFixed(1).replace(/\.0$/, '') + ' ' + escapeHtml(opts.bonusLabel || '') + '</small>' +
+            '</button>' +
+            (can ? '' : '<div class="rnd-note">' + escapeHtml(info.reason || '') + '</div>');
+    } else {
+        action = '<div class="rnd-note">' + escapeHtml(info.reason || '') + '</div>';
     }
 
     return '<div class="rnd-row">' +
-        '<div class="rnd-row-head">' +
-            '<div class="rnd-row-title">' + escapeHtml(info.name) + '</div>' +
-            '<div class="rnd-row-lv">Lv <b>' + (info.level || 0) + '</b>/' + info.cap + '</div>' +
+        '<div class="rnd-row-top">' +
+            '<div class="rnd-row-name">' + escapeHtml(info.name) + '</div>' +
+            '<div class="rnd-row-lv">Lv <b>' + info.level + '</b><em>/' + info.cap + '</em></div>' +
         '</div>' +
-        '<div class="rnd-row-sub">' +
-            '<span class="rnd-row-hint">' + escapeHtml(info.hint || '') + '</span>' +
-            '<span class="rnd-bonus">' + escapeHtml(bonusTxt) + '</span>' +
-        '</div>' +
+        '<div class="rnd-row-hint">' + escapeHtml(info.hint) + ' · <span class="rnd-bonus">' + escapeHtml(bonusTxt) + '</span></div>' +
         '<div class="rnd-meter">' +
             '<i class="rnd-meter-cap" style="width:' + capPct + '%"></i>' +
             '<i class="rnd-meter-fill" style="width:' + lvPct + '%"></i>' +
-            (benchPct !== null ? '<u class="rnd-meter-bench" style="left:' + benchPct + '%" title="Standar Pasar"></u>' : '') +
+            (benchPct !== null ? '<u class="rnd-meter-bench" style="left:' + benchPct + '%" title="' + escapeHtml(t('tnc.ov.benchmark')) + '"></u>' : '') +
         '</div>' +
-        actionHtml +
+        action +
     '</div>';
 }
 
 var RND_CSS = `
 .rnd-card { margin: 0 0 12px; }
-.rnd-ov { background: linear-gradient(135deg, var(--bg-2), var(--bg-3)); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 12px; margin-bottom: 12px; }
+.rnd-ov { background: linear-gradient(135deg, var(--bg-2), var(--bg-3)); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 12px; margin-bottom: 8px; }
 .rnd-ov-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .rnd-ov-title { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--text-primary); }
 .rnd-ov-slots { font-size: var(--fs-xs); color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
@@ -291,46 +269,30 @@ var RND_CSS = `
 .rnd-chip { background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r); padding: 6px 8px; min-width: 0; }
 .rnd-chip span { display: block; font-size: 9.5px; text-transform: uppercase; letter-spacing: .6px; color: var(--text-tertiary); font-weight: var(--fw-bold); }
 .rnd-chip b { display: block; font-size: var(--fs-sm); color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.rnd-chip.rnd-up b { color: #10b981; } .rnd-chip.rnd-down b { color: #ef4444; }
-.rnd-verdict { font-size: 11px; margin: 8px 0 6px; color: var(--text-secondary); line-height: 1.4; }
-.rnd-verdict.rnd-up { color: #10b981; } .rnd-verdict.rnd-down { color: #ef4444; }
-.rnd-buzz { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--text-tertiary); margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.rnd-chip.rnd-up b { color: #2e9f6b; } .rnd-chip.rnd-down b { color: #e5484d; }
+.rnd-verdict { font-size: var(--fs-xs); margin: 8px 0 6px; color: var(--text-secondary); }
+.rnd-verdict.rnd-up { color: #2e9f6b; } .rnd-verdict.rnd-down { color: #e5484d; }
+.rnd-buzz { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--text-tertiary); }
 .rnd-buzz-bar { flex: 1; height: 6px; background: var(--bg-4); border-radius: 99px; overflow: hidden; }
 .rnd-buzz-bar i { display: block; height: 100%; background: linear-gradient(90deg, #f59e0b, #ef4444); border-radius: 99px; transition: width .3s; }
 .rnd-buzz b { color: var(--text-primary); font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; }
-
-/* Kartu Baris R&D (Compact) */
-.rnd-row { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 12px; margin-bottom: 8px; transition: border-color 0.2s; }
-.rnd-row:hover { border-color: var(--border-strong); }
-.rnd-row-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-.rnd-row-title { font-weight: var(--fw-bold); color: var(--text-primary); font-size: var(--fs-base); letter-spacing: -0.01em; }
-.rnd-row-lv { font-size: var(--fs-xs); color: var(--text-secondary); font-variant-numeric: tabular-nums; background: var(--bg-3); padding: 2px 8px; border-radius: var(--r-pill); }
-.rnd-row-lv b { color: var(--accent); font-size: var(--fs-sm); }
-.rnd-row-sub { display: flex; justify-content: space-between; align-items: baseline; font-size: var(--fs-xs); color: var(--text-tertiary); margin-bottom: 8px; }
-.rnd-bonus { color: #10b981; font-weight: var(--fw-bold); white-space: nowrap; }
-
-/* Bar Meter */
-.rnd-meter { position: relative; height: 6px; background: var(--bg-4); border-radius: 99px; margin-bottom: 10px; overflow: visible; }
+.rnd-row { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 10px 12px; margin-bottom: 8px; }
+.rnd-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.rnd-row-name { font-weight: var(--fw-bold); color: var(--text-primary); font-size: var(--fs-sm); }
+.rnd-row-lv { font-size: var(--fs-sm); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.rnd-row-lv b { color: var(--accent); font-size: var(--fs-md); }
+.rnd-row-lv em { font-style: normal; color: var(--text-tertiary); font-size: var(--fs-xs); }
+.rnd-row-hint { font-size: var(--fs-xs); color: var(--text-tertiary); margin: 2px 0 8px; }
+.rnd-bonus { color: #2e9f6b; font-weight: var(--fw-bold); }
+.rnd-meter { position: relative; height: 8px; background: var(--bg-4); border-radius: 99px; margin-bottom: 8px; overflow: visible; }
 .rnd-meter i { position: absolute; left: 0; top: 0; height: 100%; border-radius: 99px; }
-.rnd-meter-cap { background: var(--border-strong); opacity: .5; }
-.rnd-meter-fill { background: var(--accent); transition: width 0.3s ease; }
-.rnd-meter-bench { position: absolute; top: -3px; width: 2px; height: 12px; background: var(--warn); border-radius: 2px; text-decoration: none; box-shadow: 0 0 4px var(--warn); }
-
-/* Tombol Aksi */
-.rnd-btn-start { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border: 0; border-radius: var(--r); background: var(--accent-soft); color: var(--accent); font-weight: var(--fw-bold); font-size: var(--fs-sm); cursor: pointer; transition: background 0.2s, color 0.2s; }
-.rnd-btn-start:hover { background: var(--accent); color: #fff; }
-.rnd-btn-start small { font-weight: var(--fw-semibold); opacity: 0.8; font-size: var(--fs-xs); }
-
-.rnd-btn-disabled { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg-3); color: var(--text-tertiary); font-weight: var(--fw-bold); font-size: var(--fs-sm); cursor: not-allowed; text-align: center; }
-
-/* State Sedang Riset */
-.rnd-action-box { background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
-.rnd-progress-head { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--text-secondary); font-weight: var(--fw-semibold); }
-.rnd-progress-head b { color: var(--accent); font-variant-numeric: tabular-nums; }
-.rnd-bar-bg { height: 4px; background: var(--bg-4); border-radius: 4px; overflow: hidden; }
-.rnd-bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s; }
-.rnd-bar-fill.active { background-image: linear-gradient(90deg, var(--accent) 0%, #60a5fa 50%, var(--accent) 100%); background-size: 200% 100%; animation: progressShimmer 2s infinite linear; }
-.rnd-btn-cancel { align-self: flex-end; background: transparent; border: none; color: var(--text-tertiary); font-size: 11px; font-weight: var(--fw-bold); cursor: pointer; padding: 0; text-decoration: underline; }
-.rnd-btn-cancel:hover { color: var(--danger); }
+.rnd-meter-cap { background: var(--border); opacity: .8; }
+.rnd-meter-fill { background: var(--accent); }
+.rnd-meter-bench { position: absolute; top: -3px; width: 2px; height: 14px; background: #f59e0b; border-radius: 2px; text-decoration: none; }
+.rnd-btn { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 8px 10px; border: 0; border-radius: var(--r); background: var(--accent); color: #fff; font-weight: var(--fw-bold); font-size: var(--fs-sm); cursor: pointer; }
+.rnd-btn small { font-weight: 500; opacity: .9; font-size: 10.5px; }
+.rnd-btn-off { background: var(--bg-4); color: var(--text-tertiary); cursor: not-allowed; }
 .rnd-note { font-size: var(--fs-xs); color: var(--text-tertiary); margin-top: 6px; text-align: center; }
+.rnd-run-top { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--text-secondary); margin-bottom: 4px; }
+.rnd-cancel { margin-top: 6px; width: 100%; background: transparent; border: 1px solid var(--border); color: var(--text-tertiary); border-radius: var(--r); padding: 5px; font-size: var(--fs-xs); cursor: pointer; }
 `;
