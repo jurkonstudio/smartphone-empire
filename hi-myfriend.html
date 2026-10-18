@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
-    <title>KLVF — Independent Studio</title>
+    <title>KLVF — Independent Studio · Smartphone Empire</title>
+    <meta name="description" content="KLVF dan Jurkon Studio: game simulasi independen. Mainkan atau download APK Smartphone Empire untuk Android.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="KLVF — Jurkon Studio">
+    <meta property="og:description" content="Game simulasi independen. Download APK Smartphone Empire untuk Android.">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230a84ff'/%3E%3Ctext x='50' y='68' font-size='52' font-weight='800' text-anchor='middle' fill='white' font-family='sans-serif'%3EK%3C/text%3E%3C/svg%3E">
     <style>
 :root{
   --bg:#000; --surface:#1c1c1e; --surface-2:#2c2c2e;
@@ -97,6 +102,27 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:
 .c-em{background:#0a84ff}
 @media(max-width:480px){.contact-item{flex:1 1 100%;justify-content:center}.studio-title{font-size:2rem}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* REFINEMENTS */
+body{min-height:100vh;min-height:100dvh;padding-bottom:max(56px,env(safe-area-inset-bottom))}
+.wrapper{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
+.brand-title::first-letter{color:inherit}
+.section-label{text-transform:none;letter-spacing:0;font-size:.82rem;font-weight:600}
+.badge{text-transform:none;font-size:.78rem;letter-spacing:0}
+.brand-subtitle,.studio-desc,.card-text{max-width:60ch}
+.btn-apk:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.btn-apk{background:#fff;color:#0040dd;border-color:#fff}
+.btn-apk:hover{background:#fff;transform:scale(1.04)}
+.btn-primary{background:rgba(255,255,255,.14);color:#fff;border:1.5px solid rgba(255,255,255,.55);padding:13px 24px;box-shadow:none}
+.btn-primary:hover{background:rgba(255,255,255,.24);box-shadow:none}
+.dl-note{margin-top:12px;font-size:.85rem;font-weight:500;color:rgba(255,255,255,.85);max-width:46ch}
+.copyright{margin-top:28px;font-size:.82rem;color:var(--text-3);text-align:center}
+.card:hover{filter:none}
+@media(hover:none){.card:hover,.icon-btn:hover,.btn-primary:hover,.btn-apk:hover,.contact-item:hover{transform:none}}
+@media(max-width:480px){.btn-row{flex-direction:column;align-items:stretch}.btn-row .btn-primary,.btn-row .btn-apk{width:100%;align-self:stretch}.card{padding:22px}}
+.header{animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.header{animation:none}}
 </style>
 </head>
 <body>
@@ -107,12 +133,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:
         <header class="header">
             <div>
                 <h1 class="brand-title">KLVF.</h1>
-                <p class="brand-subtitle">Independent Digital Architect & Audio Engineer. Building precise web experiences and deep simulation systems.</p>
+                <p class="brand-subtitle">Digital architect & audio engineer independen. Membangun pengalaman web yang presisi dan sistem simulasi yang dalam.</p>
             </div>
 
             <!-- Sosial Media -->
             <div class="social-section">
-                <span class="section-label">Networks</span>
+                <span class="section-label">Jejaring</span>
                 <div class="social-grid">
                     <!-- GitHub -->
                     <a href="https://github.com/jurkonstudio" target="_blank" class="icon-btn n-github" aria-label="GitHub" rel="noopener">
@@ -155,13 +181,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:
         <!-- JURKON STUDIO -->
         <section>
             <h2 class="studio-title">Jurkon Studio</h2>
-            <p class="studio-desc">An independent game development ecosystem. Crafting deep simulation mechanics, scalable cloud architectures, and immersive user interfaces.</p>
+            <p class="studio-desc">Studio game independen. Membuat mekanik simulasi yang dalam, sistem cloud yang skalabel, dan antarmuka yang nyaman dipakai di ponsel.</p>
 
             <div class="bento-grid">
                 
                 <!-- Game 1: Smartphone Empire (Wide) -->
                 <div class="card col-span-2 card-blue">
-                    <div class="flag-head"><span class="badge">Flagship Project</span>
+                    <div class="flag-head"><span class="badge">Proyek utama</span>
                     <h3 class="card-title">Smartphone Empire</h3></div>
                     <div class="flag-copy"><p class="card-text">
                         Sebuah simulasi ekonomi makro dan strategi bisnis teknologi. Pemain dituntut untuk menavigasi 
@@ -169,12 +195,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:
                         Dilengkapi dengan sistem <i>Cloud Save</i> dan sinkronisasi <i>real-time</i>.
                     </p>
                     <div class="btn-row">
-                        <a href="/" class="btn-primary">Enter the Simulation &rarr;</a>
-                        <a href="https://github.com/jurkonstudio/smartphone-empire/releases/download/Simulation/Smartphone.Empire.apk" class="btn-apk" rel="noopener" download>
+                        <a href="/" class="btn-primary">Enter the Simulation</a>
+                        <a href="https://github.com/jurkonstudio/smartphone-empire/releases/download/tycoon/Smartphone.Empire.apk" class="btn-apk" rel="noopener" download>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>
                             Download APK
                         </a>
-                    </div></div>
+                    </div>
+                    <p class="dl-note">Untuk Android. Jika diminta, izinkan instal dari sumber tidak dikenal.</p></div>
                     <ul class="specs-list">
                         <li><b>Dynamic Market:</b> Harga, tren, dan feedback konsumen bereaksi secara logis.</li>
                         <li><b>Deep Tech Tree:</b> Integrasi antara riset OS dan komponen Hardware.</li>
@@ -190,8 +217,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:
                         pengurusan perizinan (lisensi) yang kompleks, serta manajemen kredit dan arus kas perusahaan.
                     </p>
                     <div style="margin-top: 16px;">
-                        <span class="badge badge-solid">Simulation</span>
-                        <span class="badge badge-solid">Management</span>
+                        <span class="badge badge-solid">Simulasi</span>
+                        <span class="badge badge-solid">Manajemen</span>
                     </div>
                 </div>
 
@@ -202,16 +229,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:
                         Dibangun murni menggunakan Vanilla JavaScript dan HTML5 Canvas untuk performa optimal di perangkat mobile. 
                         Tanpa framework berat, memastikan <i>rendering</i> 60fps dan responsivitas sentuhan yang presisi.
                     </p>
-                    <p class="card-text" style="margin-top: 12px; font-size: 0.8rem; flex-grow:0; font-weight:600;">
-                        &copy; 2026 Jurkon Studio. All rights reserved.
-                    </p>
                 </div>
             </div>
         </section>
 
         <!-- CONTACT SECTION -->
         <footer class="contact-section">
-            <span class="section-label">Direct Contact</span>
+            <span class="section-label">Hubungi langsung</span>
             <div class="contact-links">
                 <!-- WhatsApp -->
                 <a href="https://wa.me/6282243562960" target="_blank" class="contact-item c-wa" rel="noopener">
@@ -232,6 +256,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:
                 </a>
             </div>
         </footer>
+
+        <p class="copyright">&copy; 2026 Jurkon Studio. All rights reserved.</p>
 
     </div>
 </body>
