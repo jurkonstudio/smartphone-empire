@@ -1,7 +1,7 @@
 // FILE: src/ui/components/TechNodeCard.js  (REPLACE)
 // ============================================================
 // Komponen baris node riset — dipakai ResearchPanel & ChipResearchPanel.
-// v2028.39 — Fixed CSS duplication & Swipe event bubbling (Carousel).
+// v2028.40 — Ultimate Fix for Swipe Bleed & CSS Cleanup.
 // ============================================================
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
@@ -156,13 +156,23 @@ export function ensureRndStyles() {
     el.textContent = RND_CSS;
     document.head.appendChild(el);
 
-    // 2. Fix Swipe Issue (Cegah Tab Utama Ikut Geser)
-    document.addEventListener('touchstart', function(e) {
-        // Jika yang disentuh adalah area carousel, hentikan event agar tidak sampai ke tab utama
-        if (e.target.closest && e.target.closest('.rnd-carousel-container')) {
-            e.stopPropagation();
-        }
-    }, { passive: true });
+    // 2. FIX BUG SWIPE: Cegah Tab Utama Ikut Geser
+    // Kita gunakan Capture Phase ({ capture: true }) agar event ditangkap 
+    // SEBELUM sampai ke main.js
+    if (!window._rndSwipeFixed) {
+        window._rndSwipeFixed = true;
+        
+        const stopSwipeBleed = (e) => {
+            // Jika yang disentuh berada di dalam container carousel R&D
+            if (e.target && e.target.closest && e.target.closest('.rnd-carousel-container')) {
+                e.stopPropagation(); // Hentikan event agar tidak naik ke document/app-view
+            }
+        };
+
+        document.addEventListener('touchstart', stopSwipeBleed, { capture: true, passive: true });
+        document.addEventListener('touchmove', stopSwipeBleed, { capture: true, passive: false }); // passive false agar bisa stopProp
+        document.addEventListener('touchend', stopSwipeBleed, { capture: true, passive: true });
+    }
 }
 
 export function renderRndOverview(ov, opts) {
@@ -180,9 +190,12 @@ export function renderRndOverview(ov, opts) {
     var txtDemand = t('tnc.ov.demand') || 'EFEK PERMINTAAN';
     var txtBuzz = t('tnc.ov.buzz') || 'Gaung pasar';
 
+    // Hide title if opts.title is explicitly empty string (to prevent double title)
+    var titleHtml = txtTitle ? '<div class="rnd-ov-title">' + escapeHtml(txtTitle) + '</div>' : '';
+
     return '<div class="rnd-ov" data-rnd-root>' +
         '<div class="rnd-ov-head">' +
-            '<div class="rnd-ov-title">' + escapeHtml(txtTitle) + '</div>' +
+            titleHtml +
             (ov.slots ? '<div class="rnd-ov-slots">' + escapeHtml(txtSlots) + '</div>' : '') +
         '</div>' +
         '<div class="rnd-ov-grid">' +
@@ -287,7 +300,7 @@ const RND_CSS = `
     padding-right: 12px;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    overscroll-behavior-x: contain; /* Mencegah scroll bocor ke parent */
+    overscroll-behavior-x: contain; /* Cegah scroll bocor ke parent */
     touch-action: pan-x; /* Hanya izinkan pan horizontal */
 }
 .rnd-carousel-container::-webkit-scrollbar { display: none; }
@@ -331,7 +344,7 @@ const RND_CSS = `
 .rnd-bar-bg { height: 4px; background: var(--bg-4); border-radius: 4px; overflow: hidden; }
 .rnd-bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s; }
 .rnd-bar-fill.active { background-image: linear-gradient(90deg, var(--accent) 0%, #60a5fa 50%, var(--accent) 100%); background-size: 200% 100%; animation: progressShimmer 2s infinite linear; }
-.rnd-btn-cancel { align-self: flex-end; background: transparent; border: none; color: var(--text-tertiary); font-size: 11px; font-weight: var(--fw-bold); cursor: pointer; padding: 0; text-decoration: underline; }
+.rnd-btn-cancel { align-self: flex-end; background: transparent; border: none; color: var(--text-tertiary); font-size: 11px; font-weight: var(--fw-bold); cursor: pointer; padding: 0; text-decoration: underline; margin-top: 4px; }
 .rnd-btn-cancel:hover { color: var(--danger); }
 .rnd-note { font-size: var(--fs-xs); color: var(--text-tertiary); margin-top: 6px; text-align: center; }
 `;
