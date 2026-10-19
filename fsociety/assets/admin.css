@@ -1,4 +1,30 @@
-:root{color-scheme:dark;--bg:#0f141d;--s1:#161d2a;--s2:#1c2535;--line:#27324a;--tx:#e7ebf3;--mu:#8e9ab1;--sil:#f2b84b;--ok:#4fd1a1;--bad:#ff6b6b;--ac:#7aa7ff;--r:14px}
+:/* ============================================================================
+   ADMIN — gaya iCloud web
+   Putih lembut + biru Apple, huruf sistem (SF di perangkat Apple), sudut besar,
+   header kaca tipis, tab segmented, daftar bergaya iOS, dialog sheet.
+   Mengikuti mode terang/gelap perangkat. Semua nama class lama dipertahankan,
+   jadi HTML dan dashboard.js tidak perlu diubah. (CSP: style-src 'self' — tanpa font/gambar luar.)
+   ============================================================================ */
+
+:root {
+    color-scheme: light dark;
+    --bg: #f5f5f7; --s1: #ffffff; --s2: #f5f5f7; --in: #ffffff;
+    --fill: rgba(120,120,128,.12); --fill-h: rgba(120,120,128,.2);
+    --line: rgba(60,60,67,.14); --line-strong: #d2d2d7;
+    --tx: #1d1d1f; --mu: #6e6e73;
+    --ac: #0071e3; --ac-solid: #0071e3; --ac-solid-h: #0077ed; --ring: rgba(0,113,227,.28);
+    --ok: #1e7e34; --ok-solid: #1e7e34; --on-ok: #ffffff;
+    --bad: #d70015; --sil: #a15700;
+    --ok-bg: rgba(52,199,89,.16); --bad-bg: rgba(255,59,48,.12); --info-bg: rgba(0,113,227,.12);
+    --warn-bg: rgba(255,159,10,.14); --warn-line: rgba(255,159,10,.5); --warn-tx: #6b4a00;
+    --badge: #d70015;
+    --hdr: rgba(245,245,247,.78); --seg-on: #ffffff;
+    --toast-bg: rgba(50,50,52,.94); --scrim: rgba(0,0,0,.32);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 30px rgba(0,0,0,.06);
+    --r: 18px; --hh: 3.5rem;
+}
+@media (prefers-color-scheme: dark) {
+    :root {f6b6b;--ac:#7aa7ff;--r:14px}
 *{box-sizing:border-box}html,body{margin:0}
 body{background:var(--bg);color:var(--tx);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-variant-numeric:tabular-nums;min-height:100dvh}
 a{color:var(--ac)}.muted{color:var(--mu)}.err{color:var(--bad)}.sil{color:var(--sil)}.ok{color:var(--ok)}
