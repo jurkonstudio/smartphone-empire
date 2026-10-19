@@ -27,6 +27,8 @@ let _conflictOpen = false;
 let _lastUploadAt = 0;
 let _lastUploadMinutes = -1;
 let _unsubRealtime = null;
+let _unsubWallet = null;
+let _walletTimer = null;
 let _siliconSyncing = false;
 let _silVersion = 0;       // naik setiap antrean belanja berubah (deteksi balapan saat fetch saldo)
 let _flushPromise = null;  // satu flush pada satu waktu
@@ -398,6 +400,11 @@ async function applyCloud(slot, opts) {
 
 async function _startRealtime() {
     _stopRealtime();
+    // Saldo SIL berubah di server -> tarik saldo baru lewat jalur sinkron yang sama (aman terhadap belanja tertunda).
+    _unsubWallet = await CloudService.subscribeWallet(function () {
+        clearTimeout(_walletTimer);
+        _walletTimer = setTimeout(syncSiliconOnLogin, 400);
+    });
     _unsubRealtime = await CloudService.subscribeSaves(function (row) {
         if (!row || row.device_id === getDeviceId()) return;
         if (row.slot !== CloudService.getSlot()) return;
@@ -414,6 +421,8 @@ async function _startRealtime() {
 }
 
 function _stopRealtime() {
+    clearTimeout(_walletTimer);
+    if (_unsubWallet) { try { _unsubWallet(); } catch (e) {} _unsubWallet = null; }
     if (_unsubRealtime) { try { _unsubRealtime(); } catch (e) {} _unsubRealtime = null; }
 }
 

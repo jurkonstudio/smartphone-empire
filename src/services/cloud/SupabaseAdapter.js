@@ -209,6 +209,16 @@ export const SupabaseAdapter = {
         return function () { try { c.removeChannel(ch); } catch (e) {} };
     },
 
+    // Dompet SIL: server memberi tahu saat saldo berubah (admin, top-up, belanja di perangkat lain).
+    subscribeWallet: async function (userId, cb) {
+        var c = await getClient();
+        var ch = c.channel('wallet:' + userId).on('postgres_changes',
+            { event: '*', schema: 'public', table: 'silicon_wallets', filter: 'user_id=eq.' + userId },
+            function () { cb(); }
+        ).subscribe();
+        return function () { try { c.removeChannel(ch); } catch (e) {} };
+    },
+
     subscribePresence: async function (userId, meta, onSync) {
         var c = await getClient();
         var ch = c.channel('online-users', {
