@@ -1,10 +1,5 @@
 // FILE: src/ui/panels/CompanyProfilePanel.js
-// v2027.42 — Profil dibagi 2 tab: Perusahaan | Pemain.
-//   Perusahaan: ringkasan, KPI, kondisi (meter), milestone, cloud.
-//   Pemain    : foto + nama pemain, ganti nama perusahaan (gratis 2x lalu 150 SIL),
-//               statistik leaderboard, tombol leaderboard.
-// v2027.45 — ID Pemain (8 digit) kini ada di tab Pemain (kartu ID, ketuk untuk menyalin);
-//            pemain lain bisa melihatnya di profil publik.
+// v2027.46 — Menambahkan tombol pintas "Kirim SIL" di tab Pemain.
 import { gIcon } from '../icons/GameIcons.js';
 import { t } from '../../core/LanguageService.js';
 import { CloudService } from '../../services/CloudService.js';
@@ -17,6 +12,7 @@ import { openPlayerListModal } from '../social/PlayerListPanel.js';
 import { compactNumber } from '../social/PlayerProfileModal.js';
 import { PlayerProfileService, NAME_RULES } from '../../systems/PlayerProfileService.js';
 import { pidTf, getCachedMyPublicId, loadMyPublicId, copyPublicId } from '../social/PlayerIdView.js';
+import { openSiliconStoreModal } from './SiliconStorePanel.js'; // IMPORT BARU
 
 var _tab = 'company';
 var _boundRoot = null;
@@ -81,9 +77,6 @@ function _cloudCard() {
     '</div>';
 }
 
-// ============================================================
-// TAB PERUSAHAAN
-// ============================================================
 function _companyTab(params) {
     var teamSystem = params.teamSystem;
     var opinionSystem = params.opinionSystem;
@@ -160,9 +153,6 @@ function _companyTab(params) {
     return hero + kpis + health + ms + _cloudCard();
 }
 
-// ============================================================
-// TAB PEMAIN
-// ============================================================
 function _playerTab(params) {
     var data = window.__game.state.get();
     var player = PlayerProfileService.getPlayer();
@@ -187,13 +177,14 @@ function _playerTab(params) {
                 '<span class="pf-tag"><i style="background:' + (connected ? 'var(--success)' : 'var(--text-tertiary)') + ';"></i>' +
                     esc(t(connected ? 'profile.cloud_connected' : 'profile.cloud_disconnected')) + '</span>' +
             '</div>' +
-            '<div class="pf-actions">' +
-                '<button class="btn-primary" data-pf="edit-player" type="button">' + esc(t('pp.player.edit')) + '</button>' +
-                '<button class="btn-secondary" data-pf="leaderboard" type="button">🏆 ' + esc(t('pp.lb.title')) + '</button>' +
+            '<div class="pf-actions" style="display:flex; flex-wrap:wrap; gap:8px;">' +
+                '<button class="btn-primary" data-pf="edit-player" type="button" style="flex:1;">' + esc(t('pp.player.edit')) + '</button>' +
+                '<button class="btn-secondary" data-pf="leaderboard" type="button" style="flex:1;">🏆 ' + esc(t('pp.lb.title')) + '</button>' +
+                // TOMBOL BARU: KIRIM SIL
+                '<button class="btn-secondary" data-pf="transfer-sil" type="button" style="flex:1; background:var(--accent); color:#fff; border:none;">' + gIcon('sil', 16) + ' Kirim SIL</button>' +
             '</div>' +
         '</div>';
 
-    // Kartu ID Pemain: ketuk untuk menyalin. Nilai dimuat dari server (cache per akun).
     var myId = connected ? getCachedMyPublicId() : null;
     if (connected && !myId) loadMyPublicId();
     var idCard =
@@ -250,7 +241,7 @@ export function renderCompanyProfilePanel(params) {
 }
 
 export function bindCompanyProfileActions(root) {
-    if (!root || _boundRoot === root) return;   // cegah listener dobel tiap render
+    if (!root || _boundRoot === root) return;
     _boundRoot = root;
 
     root.addEventListener('click', function (e) {
@@ -265,6 +256,7 @@ export function bindCompanyProfileActions(root) {
             else if (a === 'edit-company') openEditCompanyNameModal();
             else if (a === 'leaderboard') openPlayerListModal();
             else if (a === 'copy-id') copyPublicId(getCachedMyPublicId());
+            else if (a === 'transfer-sil') openSiliconStoreModal('transfer'); // BUKA TAB TRANSFER
             return;
         }
 
