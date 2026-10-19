@@ -1,5 +1,6 @@
 // FILE: src/services/cloud/CloudSync.js
-// v2028.44 — [PERF] Background Sync: Menghapus `await` pada syncSiliconOnLogin agar UI tidak freeze/lama saat loading.
+// v2028.45 — [FIX] Auto-load Cloud Save jika perangkat baru (fresh) tanpa pop-up konflik.
+//            Memastikan SIL Topup aman via pending queue & background sync.
 import { bus } from '../../core/EventBus.js';
 import { SaveService } from '../../core/SaveService.js';
 import { SCHEMA_VERSION } from '../../core/GameState.js';
@@ -79,7 +80,8 @@ export function decideSync(local, cloud) {
     if (!cloud) return { action: 'upload' };
     const cm = Number(cloud.game_minutes) || 0;
     if (!local || local.minutes <= 0) {
-        return cm > 0 ? { action: 'prompt', reason: 'fresh' } : { action: 'same' };
+        // [FIX] Otomatis muat cloud jika perangkat masih baru (local kosong)
+        return cm > 0 ? { action: 'cloud', reason: 'fresh' } : { action: 'same' };
     }
     if ((cloud.company_name || '') !== (local.company || '')) return { action: 'prompt', reason: 'different' };
     if (cm > local.minutes) return { action: 'prompt', reason: 'ahead' };
@@ -168,7 +170,6 @@ function _onVisibilityChange() {
     
     if (document.visibilityState === 'visible') {
         if (_isConnected()) {
-            console.info('[CloudSync] Tab aktif kembali, sinkronisasi saldo...');
             _debouncedSyncSilicon();
         }
     }
@@ -357,7 +358,6 @@ function _flushPending() {
     return p;
 }
 
-// [PERF] Fungsi sinkronisasi utama yang dioptimalkan
 async function syncSiliconOnLogin() {
     if (!_state || !_isConnected()) return;
     if (_siliconSyncing) { _siliconResync = true; return; }
@@ -518,11 +518,14 @@ async function checkOnConnect() {
         if (dec.action === 'upload') {
             _ready = true;
             await uploadNow({ auto: true });
+        } else if (dec.action === 'cloud') {
+            // [FIX] Perangkat baru: Tarik data dari cloud secara otomatis tanpa pop-up
+            await _autoResolve(slot, local, cloud, dec.reason);
         } else if (dec.action === 'same') {
             _ready = true;
             _lastUploadMinutes = local.minutes;
             _markSynced(slot);
-            syncSiliconOnLogin(); // [PERF] Dihapus await agar UI tidak menunggu
+            syncSiliconOnLogin(); // Background sync
         } else if (_hasSynced(slot)) {
             await _autoResolve(slot, local, cloud, dec.reason);
         } else {
@@ -556,7 +559,7 @@ async function applyCloud(slot, opts) {
         return { ok: false, reason: 'Data cloud tidak valid.', code: 'unknown' };
     }
     
-    syncSiliconOnLogin(); // [PERF] Dihapus await agar UI langsung render
+    syncSiliconOnLogin(); // Background sync
 
     SaveService.save(_state);
     const info = localInfo(_state);
