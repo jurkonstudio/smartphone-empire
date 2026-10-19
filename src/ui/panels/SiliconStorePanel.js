@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SiliconStorePanel.js
-// v2028.32 — [EXCHANGE] Menambahkan fitur Tukar Silicon menjadi Uang Tunai (Cash).
+// v2028.33 — [FIX] Menghapus forcePull yang menyebabkan SIL kembali ke 0 saat admin approve.
 import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 import { Modal } from '../modal.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
@@ -25,7 +25,6 @@ function _esc(s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
-// [i18n] Teks ter-escape dari kamus (kunci silstore.*), dipakai di template HTML.
 function _e(k, vars) { return _esc(t('silstore.' + k, vars)); }
 function _tf(key, fb, vars) {
     var v = t(key, vars);
@@ -40,11 +39,7 @@ function _price(o) {
     return '$' + o.priceUsd.toFixed(2);
 }
 
-// ============================================================
-// LOGIKA TUKAR SILICON KE UANG (EXCHANGE)
-// ============================================================
 function _getExchangePackages() {
-    // Kurs searah dengan Dompet Universal: 10 SIL = 10 x kurs dasar tahun berjalan.
     var multiplier = getCashPerSil(state.get().time.currentYear || 2000) / 2500;
     
     return [
@@ -94,20 +89,16 @@ function _handleExchange(silCost, cashReward) {
         return;
     }
 
-    // 1. Potong Silicon (Aman, tersinkron dengan Supabase jika login)
     var res = SiliconService.spendRaw(silCost, 'exchange-cash');
     if (!res.ok) {
         ToastService.error(res.reason || t('silstore.exch.spend_fail'));
         return;
     }
 
-    // 2. Tambahkan Uang Tunai
     state.addCash(cashReward);
     
-    // 3. Notifikasi & Render Ulang
     ToastService.success(t('silstore.exch.done', { sil: silCost, cash: cashReward.toLocaleString('en-US') }));
     
-    // Mainkan suara sukses
     if (window.__game && window.__game.AudioService) {
         window.__game.AudioService.play('success');
     }
@@ -115,9 +106,6 @@ function _handleExchange(silCost, cashReward) {
     _render();
 }
 
-// ============================================================
-// RENDER TAB BELI (BAWAAN)
-// ============================================================
 function _renderPackages() {
     return '<div class="sil-pkg-grid">' + PaymentService.getPackages().map(function (p) {
         var tag = p.tag ? '<span class="sil-pkg-tag sil-pkg-tag-' + p.tag + '">' + _tf('silicon.store.tag.' + p.tag, p.tag) + '</span>' : '';
@@ -196,9 +184,6 @@ function _renderOrders() {
         '<span class="section-label-line"></span></div><div class="node-list">' + rows + '</div>';
 }
 
-// ============================================================
-// RENDER UTAMA
-// ============================================================
 function _build() {
     var isBuy = (_storeTab === 'buy');
     var btnBuyStyle = isBuy ? 'background:var(--accent); color:#fff;' : 'background:var(--bg-3); color:var(--text-secondary);';
@@ -210,7 +195,6 @@ function _build() {
             '<div class="sil-balance-value">' + SiliconService.getBalance() + ' <span>SIL</span></div>' +
         '</div>' +
         
-        // Tab Switcher
         '<div style="display:flex; gap:8px; margin-bottom:16px;">' +
             '<button id="tab-buy" style="flex:1; padding:10px; border-radius:8px; border:none; font-weight:bold; font-size:13px; cursor:pointer; ' + btnBuyStyle + '">' + _e('tab.buy') + '</button>' +
             '<button id="tab-exchange" style="flex:1; padding:10px; border-radius:8px; border:none; font-weight:bold; font-size:13px; cursor:pointer; ' + btnExStyle + '">' + _e('tab.exchange') + '</button>' +
@@ -225,11 +209,9 @@ function _build() {
 function _onClick(e) {
     if (e.target.closest('[data-modal-close]')) { Modal.close(MODAL_ID); return; }
 
-    // Tab switching
     if (e.target.closest('#tab-buy')) { _storeTab = 'buy'; _render(); return; }
     if (e.target.closest('#tab-exchange')) { _storeTab = 'exchange'; _render(); return; }
 
-    // Exchange Button
     var exBtn = e.target.closest('.btn-exchange');
     if (exBtn && !exBtn.disabled) {
         var sil = parseInt(exBtn.dataset.sil, 10);
@@ -240,7 +222,6 @@ function _onClick(e) {
         return;
     }
 
-    // --- SISA LOGIKA BELI SILICON (BAWAAN) ---
     var pk = e.target.closest('[data-sil-pkg]');
     if (pk) { _sel.pkg = pk.dataset.silPkg; _render(); return; }
 
@@ -280,9 +261,6 @@ function _onClick(e) {
     }
 }
 
-// ============================================================
-// MODAL QR CODE MANUAL
-// ============================================================
 function _showPaymentModal(order) {
     var pkg = PaymentService.getPackage(order.packageId);
     
@@ -335,7 +313,10 @@ function _showPaymentModal(order) {
             cleanupTimers();
             Modal.close('payment-qr', true);
             ToastService.success(t('silstore.toast.approved'));
-            setTimeout(() => window.__game.forcePull(), 300);
+            // [FIX] Jangan gunakan forcePull yang mereset state, cukup syncSilicon
+            if (window.__game && window.__game.cloudSync) {
+                window.__game.cloudSync.syncSilicon();
+            }
         }
     });
 
@@ -436,7 +417,7 @@ function _render() {
 
 export function openSiliconStoreModal() {
     ensureIconStyles();
-    _storeTab = 'buy'; // Default tab saat dibuka
+    _storeTab = 'buy'; 
     Modal.open(MODAL_ID, _build());
     var root = document.querySelector('[data-modal-id="' + MODAL_ID + '"]');
     if (root) root.addEventListener('click', _onClick);
