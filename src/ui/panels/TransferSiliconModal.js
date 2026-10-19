@@ -29,7 +29,6 @@ export function openTransferSiliconModal() {
             <label class="field-label">ID Pemain Tujuan</label>
             <input type="number" id="trf-target" class="field-input" placeholder="Contoh: 48271956" style="margin-bottom:8px;" autocomplete="off">
             
-            <!-- Kotak Info Penerima -->
             <div id="trf-info" style="display:none; padding:10px; border-radius:8px; font-size:12px; margin-bottom:12px;"></div>
             
             <label class="field-label">Jumlah SIL</label>
@@ -57,10 +56,9 @@ export function openTransferSiliconModal() {
     var inputAmount = root.querySelector('#trf-amount');
     var infoBox = root.querySelector('#trf-info');
 
-    // FITUR BARU: Cek ID otomatis saat pemain selesai mengetik
     inputTarget.addEventListener('input', function() {
         var targetId = parseInt(inputTarget.value, 10);
-        btnSubmit.disabled = true; // Disable tombol sampai ID terverifikasi
+        btnSubmit.disabled = true;
         infoBox.style.display = 'none';
 
         if (!targetId || targetId < 10000000) return;
@@ -74,23 +72,22 @@ export function openTransferSiliconModal() {
 
             CloudService.getPlayerById(targetId).then(function(res) {
                 if (res.ok && res.data && res.data.ok) {
-                    // ID Ditemukan
                     infoBox.style.background = 'rgba(76, 175, 80, 0.1)';
                     infoBox.style.color = 'var(--success)';
                     infoBox.innerHTML = `✅ Penerima: <b>${res.data.company_name || res.data.player_name || 'Tanpa Nama'}</b>`;
                     btnSubmit.disabled = false;
                 } else {
-                    // ID Tidak Ditemukan
                     infoBox.style.background = 'rgba(244, 67, 54, 0.1)';
                     infoBox.style.color = 'var(--danger)';
                     infoBox.innerHTML = `❌ ID Pemain tidak ditemukan.`;
                 }
-            }).catch(function() {
+            }).catch(function(err) {
+                console.error('[Cek ID]', err);
                 infoBox.style.background = 'rgba(244, 67, 54, 0.1)';
                 infoBox.style.color = 'var(--danger)';
                 infoBox.innerHTML = `Gagal mengecek ID. Coba lagi.`;
             });
-        }, 800); // Tunggu 800ms setelah pemain berhenti mengetik (debounce)
+        }, 800);
     });
 
     btnSubmit.addEventListener('click', function() {
@@ -107,7 +104,7 @@ export function openTransferSiliconModal() {
         btnSubmit.textContent = 'Memproses...';
 
         CloudService.transferSilicon(targetId, amount).then(function(res) {
-            if (res.ok) {
+            if (res.ok && res.data && res.data.ok) {
                 ToastService.success(`Berhasil mengirim ${amount} SIL!`);
                 Modal.close(MODAL_ID, true);
                 
@@ -118,13 +115,18 @@ export function openTransferSiliconModal() {
                 btnSubmit.disabled = false;
                 btnSubmit.textContent = 'Kirim SIL';
                 
+                // TAMPILKAN ERROR ASLI DARI SERVER
+                console.error('[Transfer Gagal] Response:', res);
+                
                 var msg = res.reason || 'Gagal mengirim.';
+                if (res.data && res.data.message) msg = res.data.message; // Tangkap pesan SQL
+                
                 if (msg.includes('player_not_found')) msg = 'ID Pemain tidak ditemukan.';
-                if (msg.includes('insufficient_silicon')) msg = 'Saldo SIL Anda tidak cukup.';
-                if (msg.includes('cannot_transfer_to_self')) msg = 'Anda tidak bisa mengirim ke diri sendiri.';
-                if (msg.includes('invalid_amount')) msg = 'Jumlah SIL tidak valid.';
-                if (msg.includes('function') || msg.includes('does not exist')) {
-                    msg = 'Sistem database belum siap. Jalankan SQL transfer_silicon.';
+                else if (msg.includes('insufficient_silicon')) msg = 'Saldo SIL Anda tidak cukup.';
+                else if (msg.includes('cannot_transfer_to_self')) msg = 'Anda tidak bisa mengirim ke diri sendiri.';
+                else if (msg.includes('invalid_amount')) msg = 'Jumlah SIL tidak valid.';
+                else if (msg.includes('function') || msg.includes('does not exist')) {
+                    msg = 'Fungsi database belum siap. Jalankan ulang SQL transfer_silicon.';
                 }
                 
                 ToastService.error(msg);
