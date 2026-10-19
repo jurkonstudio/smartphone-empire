@@ -1,5 +1,5 @@
 // FILE: src/services/cloud/CloudSync.js
-// v2028.49 — [FIX CRITICAL] Membuang antrean 'spend' yang nyangkut jika server memiliki saldo yang jauh lebih besar (Admin top-up).
+// v2028.51 — [FIX FINAL] Sinkronisasi instan saat boot & pembersihan antrean desync (Admin top-up vs lokal).
 import { bus } from '../../core/EventBus.js';
 import { SaveService } from '../../core/SaveService.js';
 import { SCHEMA_VERSION } from '../../core/GameState.js';
@@ -366,55 +366,48 @@ async function syncSiliconOnLogin() {
         _queueQuestRecovery();
         try { await _withTimeout(_claimDailyOnce(), 3000, null); } catch (e) {}
 
-        for (var attempt = 0; attempt < 2; attempt++) {
-            await _withTimeout(_flushPending(), 3000, null);
-            var v0 = _silVersion;
-            var res = await _withTimeout(CloudService.getSiliconBalance(), 4000, { ok: false });
-            
-            if (!res.ok) {
-                if (!_silFailNotified) {
-                    _silFailNotified = true;
-                    ToastService.warning('Sinkronisasi server lambat. Mencoba lagi di latar belakang.');
-                }
-                return;
+        var res = await _withTimeout(CloudService.getSiliconBalance(), 4000, { ok: false });
+        if (!res.ok) {
+            if (!_silFailNotified) {
+                _silFailNotified = true;
+                ToastService.warning('Sinkronisasi server lambat. Mencoba lagi di latar belakang.');
             }
-            _silFailNotified = false;
-            
-            if (v0 !== _silVersion || _flushPromise) continue;
-
-            var serverBal = Math.floor(res.balance || 0);
-            var localBal = SiliconService.getBalance();
-            
-            var uid = CloudService.getUserId();
-            var list = _pendingAll();
-            var hasTopups = list.some(function(x) { return x.uid === uid && x.type === 'topup'; });
-            
-            if (hasTopups && serverBal >= localBal) {
-                _writePending(list.filter(function(x) { return !(x.uid === uid && x.type === 'topup'); }));
-                _silVersion++;
-            }
-
-            // [FIX CRITICAL] Jika server punya saldo jauh lebih besar (misal Admin Top-up) sementara lokal kecil,
-            // hapus antrean 'spend' lama yang mungkin nyangkut agar tidak menimpa saldo server.
-            var net = _pendingNet();
-            if (serverBal > localBal + 1000 && net > 0) {
-                 console.warn('[CloudSync] Terdeteksi desync (Server jauh lebih besar). Membuang antrean lama.');
-                 list = list.filter(function(x) { return x.uid !== uid || x.type !== 'spend'; });
-                 _writePending(list);
-                 _silVersion++;
-                 net = _pendingNet();
-            }
-
-            var effective = Math.max(0, serverBal - net);
-
-            if (effective !== localBal) {
-                console.info('[CloudSync] Silicon lokal (', localBal, ') -> (', effective, ')');
-                SiliconService.applyServerBalance(effective);
-                ToastService.info('Saldo Silicon disinkronkan (' + effective + ' SIL).');
-            }
-            if (!_hasSyncedSilicon()) _markSiliconSynced();
-            break;
+            return;
         }
+        _silFailNotified = false;
+
+        var serverBal = Math.floor(res.balance || 0);
+        var localBal = SiliconService.getBalance();
+        
+        var uid = CloudService.getUserId();
+        var list = _pendingAll();
+        var net = _pendingNet();
+
+        // [FIX] Desync Guard: Jika server jauh lebih besar (Admin Top-up) dan lokal kecil, buang antrean lama
+        if (serverBal > localBal + 1000 && net > 0) {
+             console.warn('[CloudSync] Desync terdeteksi (Server', serverBal, 'vs Lokal', localBal, '). Membuang antrean lama.');
+             list = list.filter(function(x) { return x.uid !== uid || x.type !== 'spend'; });
+             _writePending(list);
+             _silVersion++;
+             net = _pendingNet();
+        }
+
+        await _withTimeout(_flushPending(), 3000, null);
+        
+        var res2 = await _withTimeout(CloudService.getSiliconBalance(), 4000, { ok: false });
+        if (res2.ok) {
+            serverBal = Math.floor(res2.balance || 0);
+        }
+
+        var effective = Math.max(0, serverBal - net);
+
+        if (effective !== localBal) {
+            console.info('[CloudSync] Silicon lokal (', localBal, ') -> (', effective, ')');
+            SiliconService.applyServerBalance(effective);
+            ToastService.info('Saldo Silicon disinkronkan (' + effective + ' SIL).');
+        }
+        if (!_hasSyncedSilicon()) _markSiliconSynced();
+
     } catch (e) {
         console.warn('[CloudSync] syncSiliconOnLogin error:', e);
     } finally {
@@ -674,6 +667,7 @@ export const CloudSync = {
             } catch (err) {}
             _startRealtime();
             checkOnConnect();
+            syncSiliconOnLogin(); // [FIX] Sinkron instan saat init
         }
     },
 
