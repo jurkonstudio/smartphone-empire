@@ -4,7 +4,8 @@ import { getComponentById } from '../../data/components.data.js';
 import { getOsFeatureById } from '../../data/os.data.js';
 import { BALANCE } from '../../data/balance.data.js';
 import { renderOSPanel, openOsWizardModal, openCreateOsModal, openFeatureDetailModal } from './OSPanel.js';
-import { renderTimelinePanel, getTimelineFilter, setTimelineFilter } from './TimelinePanel.js';
+import { getTimelineFilter, setTimelineFilter } from './TimelinePanel.js';
+import { renderManufacturePanel } from './ManufacturePanel.js';
 import { renderChipResearchPanel, getChipResearchFilter, setChipResearchFilter, openChipNodeModal } from './ChipResearchPanel.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { renderTechNodeRow, statLabel, renderRndOverview, renderRndRow, ensureRndStyles } from '../components/TechNodeCard.js';
@@ -57,7 +58,7 @@ export function renderResearchPanel(params) {
         <div class="subtab-bar">
             <button class="subtab-btn ${subtab === 'tech'    ? 'active' : ''}" data-subtab="tech">${t('research.subtab.tech')}</button>
             <button class="subtab-btn ${subtab === 'os'      ? 'active' : ''}" data-subtab="os">${t('research.subtab.os')}</button>
-            <button class="subtab-btn ${subtab === 'sejarah' ? 'active' : ''}" data-subtab="sejarah">${t('research.subtab.history')}</button>
+            <button class="subtab-btn ${subtab === 'manufaktur' ? 'active' : ''}" data-subtab="manufaktur">${t('research.subtab.manufacture')}</button>
             ${chipTabVisible ? `<button class="subtab-btn ${subtab === 'chip' ? 'active' : ''}" data-subtab="chip">${t('research.subtab.chip')}</button>` : ''}
         </div>
     `;
@@ -65,8 +66,8 @@ export function renderResearchPanel(params) {
     let body = '';
     if (subtab === 'os') {
         body = renderOSPanel({ osSystem, researchSystem });
-    } else if (subtab === 'sejarah') {
-        body = renderTimelinePanel();
+    } else if (subtab === 'manufaktur' && chipResearchSystem) {
+        body = renderManufacturePanel({ chipResearchSystem });
     } else if (subtab === 'chip' && chipTabVisible && chipResearchSystem) {
         body = renderChipResearchPanel({ chipResearchSystem });
     } else {
