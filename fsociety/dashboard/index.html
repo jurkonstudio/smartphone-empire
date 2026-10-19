@@ -13,15 +13,14 @@
 </head>
 <body>
 <header>
-  <b>Smartphone Empire</b>
-  <nav aria-label="Menu admin">
-    <button class="on" data-tab="home">Ringkasan</button>
-    <button data-tab="orders">Pesanan</button>
-    <button data-tab="players">Pemain</button>
-  </nav>
-  <span class="who" id="who"></span>
+  <div class="brand"><b>Smartphone Empire</b><small id="who"></small></div>
   <button class="btn" id="logout">Keluar</button>
 </header>
+<nav class="tabs" aria-label="Menu admin">
+  <button class="on" data-tab="home">Ringkasan</button>
+  <button data-tab="orders">Pesanan</button>
+  <button data-tab="players">Pemain</button>
+</nav>
 <main id="main"><p class="muted">Memuat…</p></main>
 <dialog id="dlg">
   <form id="dlg-form" method="dialog">
