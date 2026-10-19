@@ -1,6 +1,6 @@
 // FILE: src/services/cloud/CloudSync.js
-// v2028.47 — [FIX CRITICAL] Menghapus pengaman yang memblokir update saldo dari server (Admin Top-up).
-//            Memastikan antrean belanja yang ditolak server langsung dibersihkan agar tidak macet.
+// v2028.48 — [FIX CRITICAL] Mencegah Auto-Save menimpa saldo server saat inisialisasi/perangkat baru.
+//            Menambahkan _checking pada guard auto-save, dan menunggu syncSilicon selesai di applyCloud.
 import { bus } from '../../core/EventBus.js';
 import { SaveService } from '../../core/SaveService.js';
 import { SCHEMA_VERSION } from '../../core/GameState.js';
@@ -90,7 +90,7 @@ export function decideSync(local, cloud) {
 
 function _buildPayload(slot) {
     const data = _state.serialize();
-    data.silicon = 0; 
+    data.silicon = 0; // SIL selalu 0 di JSON, karena diambil dari tabel silicon_wallets
     const t = data.time || {};
     return {
         slot: slot,
@@ -155,7 +155,7 @@ function _applyRemoteNow() {
 }
 
 function _uploadOnLeave() {
-    if (!_ready || _busy || _conflictOpen || _remotePending || !_isConnected() || !_state) return;
+    if (!_ready || _busy || _checking || _conflictOpen || _remotePending || !_isConnected() || !_state) return;
     if (localInfo(_state).minutes === _lastUploadMinutes) return;
     uploadNow({ auto: true });
 }
@@ -342,7 +342,6 @@ function _flushPending() {
 
                 if (/insufficient|invalid_amount/i.test(msg)) {
                     console.warn('[CloudSync] Belanja SIL ditolak server, dibuang dari antrean:', msg.trim());
-                    // [FIX CRITICAL] Hapus dari antrean agar sync tidak macet selamanya.
                     _removePending(item.id);
                     continue;
                 }
@@ -399,9 +398,6 @@ async function syncSiliconOnLogin() {
             var net = _pendingNet();
             var effective = Math.max(0, serverBal - net);
 
-            // [FIX CRITICAL] Selalu percaya server. Jika server lebih besar (Admin Top-up), 
-            // langsung timpa saldo lokal tanpa memblokir.
-
             if (effective !== localBal) {
                 console.info('[CloudSync] Silicon lokal (', localBal, ') -> (', effective, ')');
                 SiliconService.applyServerBalance(effective);
@@ -432,7 +428,6 @@ function _reconcileAfterFlush(bal) {
     if (bal == null || _siliconSyncing || _pendingCount() > 0) return;
     var eff = Math.max(0, Math.floor(bal));
     var local = SiliconService.getBalance();
-    
     if (eff < local) {
         SiliconService.applyServerBalance(eff);
     }
@@ -506,7 +501,8 @@ async function uploadNow(opts) {
 }
 
 function _onLocalSaved() {
-    if (!_ready || _busy || _conflictOpen || _remotePending || !_isConnected() || !_state) return;
+    // [FIX CRITICAL] Jangan auto-save jika sedang mengecek (loading data awal)
+    if (!_ready || _busy || _checking || _conflictOpen || _remotePending || !_isConnected() || !_state) return;
     const info = localInfo(_state);
     if (info.minutes === _lastUploadMinutes) return;
     if (Date.now() - _lastUploadAt < CLOUD.autoUploadMinMs) return;
@@ -568,7 +564,9 @@ async function applyCloud(slot, opts) {
         return { ok: false, reason: 'Data cloud tidak valid.', code: 'unknown' };
     }
     
-    syncSiliconOnLogin(); 
+    // [FIX CRITICAL] Tarik saldo server DULU, dan tunggu selesai, baru simpan.
+    // Ini mencegah auto-save menimpa data server dengan saldo default.
+    await syncSiliconOnLogin(); 
 
     SaveService.save(_state);
     const info = localInfo(_state);
