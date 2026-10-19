@@ -58,7 +58,8 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             active: [],
             completed: [],
             maxSlots: 1,
-            totalCompleted: 0
+            totalCompleted: 0,
+            unlocked: []   // node manufaktur yang dibuka lewat pembelian (>= 2023)
         },
 
         os: {
@@ -418,7 +419,8 @@ class GameState {
                 ...base.chipResearch,
                 ...(incoming.chipResearch || {}),
                 active: Array.isArray(incoming.chipResearch && incoming.chipResearch.active) ? incoming.chipResearch.active : [],
-                completed: Array.isArray(incoming.chipResearch && incoming.chipResearch.completed) ? incoming.chipResearch.completed : []
+                completed: Array.isArray(incoming.chipResearch && incoming.chipResearch.completed) ? incoming.chipResearch.completed : [],
+                unlocked: Array.isArray(incoming.chipResearch && incoming.chipResearch.unlocked) ? incoming.chipResearch.unlocked : []
             },
 
             os: {

@@ -19,6 +19,12 @@ import {
 } from '../data/chip-research.data.js';
 import { WalletService } from '../systems/WalletService.js';
 
+// Panel "Manufaktur": node riset fabrikasi yang masih terkunci bisa dibeli
+// (dibuka lebih awal) dengan uang game mulai tahun ini.
+export const FAB_UNLOCK_YEAR = 2023;
+export const FAB_UNLOCK_CATEGORIES = ['process', 'business'];
+export const FAB_UNLOCK_PRICE_MULT = 1.5;
+
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
 export class ChipResearchSystem {
@@ -63,6 +69,7 @@ export class ChipResearchSystem {
         }
         if (!Array.isArray(data.chipResearch.active))    data.chipResearch.active = [];
         if (!Array.isArray(data.chipResearch.completed)) data.chipResearch.completed = [];
+        if (!Array.isArray(data.chipResearch.unlocked))  data.chipResearch.unlocked = [];
         if (typeof data.chipResearch.maxSlots !== 'number') data.chipResearch.maxSlots = 1;
         if (typeof data.chipResearch.totalCompleted !== 'number') {
             data.chipResearch.totalCompleted = data.chipResearch.completed.length;
@@ -212,10 +219,11 @@ export class ChipResearchSystem {
         if (data.chipResearch.active.some(e => e.nodeId === nodeId)) {
             return { status: 'running', reason: null };
         }
-        if (data.time.currentYear < node.minYear) {
+        const bought = this.isPurchased(nodeId);
+        if (!bought && data.time.currentYear < node.minYear) {
             return { status: 'locked', reason: 'Tersedia tahun ' + node.minYear };
         }
-        const missing = (node.prerequisites || []).filter(p => data.chipResearch.completed.indexOf(p) === -1);
+        const missing = bought ? [] : (node.prerequisites || []).filter(p => data.chipResearch.completed.indexOf(p) === -1);
         if (missing.length) {
             const names = missing.map(m => (getChipResearchById(m) || {}).name || m);
             return { status: 'locked', reason: 'Butuh: ' + names.join(', ') };
@@ -326,6 +334,59 @@ export class ChipResearchSystem {
                 remainingDays
             };
         });
+    }
+
+    // ============================================================
+    // MANUFAKTUR — buka node terkunci dengan uang (>= FAB_UNLOCK_YEAR)
+    // ============================================================
+    isPurchased(nodeId) {
+        const cr = this.state.data.chipResearch;
+        return !!(cr && Array.isArray(cr.unlocked) && cr.unlocked.indexOf(nodeId) !== -1);
+    }
+
+    isFabUnlockOpen() {
+        return this.state.data.time.currentYear >= FAB_UNLOCK_YEAR;
+    }
+
+    getUnlockPrice(nodeId) {
+        const node = getChipResearchById(nodeId);
+        return node ? Math.round(node.cost * FAB_UNLOCK_PRICE_MULT) : 0;
+    }
+
+    // Node manufaktur yang belum selesai/berjalan dan masih terkunci oleh
+    // tahun atau prasyarat (belum dibuka lewat pembelian).
+    isGateLocked(nodeId) {
+        const data = this.state.data;
+        const node = getChipResearchById(nodeId);
+        if (!node || FAB_UNLOCK_CATEGORIES.indexOf(node.category) === -1) return false;
+        const cr = data.chipResearch;
+        if (cr.completed.indexOf(nodeId) !== -1) return false;
+        if (cr.active.some(e => e.nodeId === nodeId)) return false;
+        if (this.isPurchased(nodeId)) return false;
+        if (data.time.currentYear < node.minYear) return true;
+        return (node.prerequisites || []).some(p => cr.completed.indexOf(p) === -1);
+    }
+
+    getLockedManufactureNodes() {
+        return CHIP_RESEARCH_NODES.filter(n => this.isGateLocked(n.id));
+    }
+
+    purchaseUnlock(nodeId) {
+        const data = this.state.data;
+        const node = getChipResearchById(nodeId);
+        if (!node || FAB_UNLOCK_CATEGORIES.indexOf(node.category) === -1) return { ok: false, reason: 'Node tidak ditemukan.' };
+        if (!this.isFabUnlockOpen()) return { ok: false, reason: 'Pembukaan manufaktur baru tersedia tahun ' + FAB_UNLOCK_YEAR + '.' };
+        if (!this.isGateLocked(nodeId)) return { ok: false, reason: 'Node ini tidak perlu dibuka.' };
+        const price = this.getUnlockPrice(nodeId);
+        // Khusus uang game (bukan Silicon).
+        if ((data.cash || 0) < price) return { ok: false, reason: 'Uang tidak cukup ($' + price.toLocaleString('en-US') + ')' };
+
+        this.state.addCash(-price);
+        data.chipResearch.unlocked.push(nodeId);
+        this.state.addLog('Manufaktur chip dibuka: ' + node.name + ' ($' + price.toLocaleString('en-US') + ').', LOG_TYPES.success);
+        bus.emit('chip-research:unlocked', { nodeId, name: node.name, price });
+        bus.emit('state:changed', data);
+        return { ok: true, price };
     }
 
     isCompleted(nodeId) {
