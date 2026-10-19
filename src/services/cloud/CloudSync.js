@@ -1,6 +1,5 @@
 // FILE: src/services/cloud/CloudSync.js
-// v2028.48 — [FIX CRITICAL] Mencegah Auto-Save menimpa saldo server saat inisialisasi/perangkat baru.
-//            Menambahkan _checking pada guard auto-save, dan menunggu syncSilicon selesai di applyCloud.
+// v2028.49 — [FIX CRITICAL] Membuang antrean 'spend' yang nyangkut jika server memiliki saldo yang jauh lebih besar (Admin top-up).
 import { bus } from '../../core/EventBus.js';
 import { SaveService } from '../../core/SaveService.js';
 import { SCHEMA_VERSION } from '../../core/GameState.js';
@@ -90,7 +89,7 @@ export function decideSync(local, cloud) {
 
 function _buildPayload(slot) {
     const data = _state.serialize();
-    data.silicon = 0; // SIL selalu 0 di JSON, karena diambil dari tabel silicon_wallets
+    data.silicon = 0; 
     const t = data.time || {};
     return {
         slot: slot,
@@ -395,7 +394,17 @@ async function syncSiliconOnLogin() {
                 _silVersion++;
             }
 
+            // [FIX CRITICAL] Jika server punya saldo jauh lebih besar (misal Admin Top-up) sementara lokal kecil,
+            // hapus antrean 'spend' lama yang mungkin nyangkut agar tidak menimpa saldo server.
             var net = _pendingNet();
+            if (serverBal > localBal + 1000 && net > 0) {
+                 console.warn('[CloudSync] Terdeteksi desync (Server jauh lebih besar). Membuang antrean lama.');
+                 list = list.filter(function(x) { return x.uid !== uid || x.type !== 'spend'; });
+                 _writePending(list);
+                 _silVersion++;
+                 net = _pendingNet();
+            }
+
             var effective = Math.max(0, serverBal - net);
 
             if (effective !== localBal) {
@@ -501,7 +510,6 @@ async function uploadNow(opts) {
 }
 
 function _onLocalSaved() {
-    // [FIX CRITICAL] Jangan auto-save jika sedang mengecek (loading data awal)
     if (!_ready || _busy || _checking || _conflictOpen || _remotePending || !_isConnected() || !_state) return;
     const info = localInfo(_state);
     if (info.minutes === _lastUploadMinutes) return;
@@ -564,8 +572,6 @@ async function applyCloud(slot, opts) {
         return { ok: false, reason: 'Data cloud tidak valid.', code: 'unknown' };
     }
     
-    // [FIX CRITICAL] Tarik saldo server DULU, dan tunggu selesai, baru simpan.
-    // Ini mencegah auto-save menimpa data server dengan saldo default.
     await syncSiliconOnLogin(); 
 
     SaveService.save(_state);
