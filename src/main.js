@@ -35,6 +35,7 @@ import { bindRegionalActions } from './ui/panels/RegionalBindings.js';
 import { SiliconService } from './systems/SiliconService.js';
 import { renderHeader } from './ui/layout/Header.js';
 import { renderMobileNav } from './ui/layout/MobileNav.js';
+import { renderSidebar } from './ui/layout/Sidebar.js';
 import { renderEmptyState } from './ui/panels/EmptyState.js';
 import { renderSettingsPanel, bindSettingsActions } from './ui/panels/SettingsPanel.js';
 import { renderGuidePanel } from './ui/panels/GuidePanel.js';
@@ -123,6 +124,7 @@ var els = {
     header:  document.getElementById('app-header'),
     view:    document.getElementById('app-view'),
     nav:     document.getElementById('mobile-nav'),
+    sidebar: document.getElementById('sidebar'),
     loading: document.getElementById('loading-screen'),
     error:   document.getElementById('error-message'),
     toast:   document.getElementById('toast-container')
@@ -143,8 +145,29 @@ function renderHeaderOnly() {
 // ============================================================
 // NAV RENDER
 // ============================================================
+// Sidebar desktop (>=768px, lihat desktop.css). Dirender ulang hanya saat pertama kali / bahasa berganti;
+// selain itu cukup ganti status aktif agar fokus keyboard tidak hilang.
+var _sideLang = null;
+function renderSidebarOnly() {
+    if (!els.sidebar) return;
+    var curLang = LanguageService.getLang();
+    var hasRendered = !!els.sidebar.querySelector('.dk-nav-btn');
+    if (!hasRendered || _sideLang !== curLang) {
+        _sideLang = curLang;
+        els.sidebar.innerHTML = renderSidebar({ active: activeView });
+        return;
+    }
+    var sbtns = els.sidebar.querySelectorAll('.dk-nav-btn');
+    for (var si = 0; si < sbtns.length; si++) {
+        var sActive = sbtns[si].dataset.nav === activeView;
+        sbtns[si].classList.toggle('active', sActive);
+        sbtns[si].setAttribute('aria-current', sActive ? 'page' : 'false');
+    }
+}
+
 var _navLang = null;
 function renderNavOnly() {
+    renderSidebarOnly();
     if (!els.nav) return;
 
     var curLang = LanguageService.getLang();
