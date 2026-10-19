@@ -12,11 +12,11 @@ export const DESIGN_ERAS = [
         fromYear: 2000, toYear: 2002,
         label: 'Era LCD Monokrom',
         shortLabel: 'Monokrom',
-        description: 'Layar hijau/abu monokrom, ponsel kokoh, dominasi plastik.',
+        description: 'Layar hijau/abu monokrom, ponsel kokoh, dominasi plastik. Selain candybar sudah ada flip, slider, dan communicator.',
         screenStyle: 'monochrome',
         uiTheme: 'retro-mono',
         bodyColors: ['color_black', 'color_silver'],
-        formFactors: ['ff_candybar'],
+        formFactors: ['ff_candybar', 'ff_flip', 'ff_slider', 'ff_communicator'],
         aesthetic: {
             primary: '#4a5a3a',
             accent: '#7a9a6a',
@@ -33,11 +33,11 @@ export const DESIGN_ERAS = [
         fromYear: 2003, toYear: 2006,
         label: 'Era Layar TFT Warna',
         shortLabel: 'TFT Warna',
-        description: 'Layar warna pertama, ponsel candybar & flip, plastik berwarna.',
+        description: 'Layar warna pertama; candybar, flip, slider, PDA stylus, QWERTY, dan swivel bersaing.',
         screenStyle: 'color_tft',
         uiTheme: 'retro-color',
         bodyColors: ['color_black', 'color_silver', 'color_white', 'color_blue', 'color_red'],
-        formFactors: ['ff_candybar', 'ff_slider', 'ff_flip'],
+        formFactors: ['ff_candybar', 'ff_flip', 'ff_slider', 'ff_communicator', 'ff_pda', 'ff_qwerty', 'ff_swivel'],
         aesthetic: {
             primary: '#3a5a7a',
             accent: '#5aa0d0',
@@ -54,11 +54,11 @@ export const DESIGN_ERAS = [
         fromYear: 2007, toYear: 2010,
         label: 'Era Revolusi Touchscreen',
         shortLabel: 'Touchscreen',
-        description: 'Layar sentuh kapasitif, OS glossy, aplikasi mulai berlimpah.',
+        description: 'Layar sentuh kapasitif, OS glossy; keypad, QWERTY, dan layar penuh berebut pasar.',
         screenStyle: 'glossy',
         uiTheme: 'glossy',
         bodyColors: ['color_black', 'color_white', 'color_silver', 'color_blue', 'color_red'],
-        formFactors: ['ff_candybar', 'ff_touchscreen', 'ff_fullscreen'],
+        formFactors: ['ff_candybar', 'ff_flip', 'ff_slider', 'ff_communicator', 'ff_pda', 'ff_qwerty', 'ff_swivel', 'ff_fullscreen', 'ff_touch_slider'],
         aesthetic: {
             primary: '#1a3050',
             accent: '#0a8aef',
@@ -79,7 +79,7 @@ export const DESIGN_ERAS = [
         screenStyle: 'flat',
         uiTheme: 'material',
         bodyColors: ['color_black', 'color_white', 'color_silver', 'color_gold'],
-        formFactors: ['ff_fullscreen', 'ff_bezel'],
+        formFactors: ['ff_flip', 'ff_slider', 'ff_qwerty', 'ff_fullscreen', 'ff_touch_slider', 'ff_bezel'],
         aesthetic: {
             primary: '#20262e',
             accent: '#4f8cff',
@@ -100,7 +100,7 @@ export const DESIGN_ERAS = [
         screenStyle: 'amoled',
         uiTheme: 'premium',
         bodyColors: ['color_black', 'color_white', 'color_gold', 'color_silver', 'color_green'],
-        formFactors: ['ff_bezel', 'ff_fullscreen'],
+        formFactors: ['ff_qwerty', 'ff_fullscreen', 'ff_bezel', 'ff_edge', 'ff_popup'],
         aesthetic: {
             primary: '#1a1a1a',
             accent: '#c9a961',
@@ -121,7 +121,7 @@ export const DESIGN_ERAS = [
         screenStyle: 'hdr',
         uiTheme: 'modern',
         bodyColors: ['color_black', 'color_white', 'color_gold', 'color_green', 'color_red'],
-        formFactors: ['ff_bezel', 'ff_fullscreen'],
+        formFactors: ['ff_fullscreen', 'ff_bezel', 'ff_edge', 'ff_popup', 'ff_dual', 'ff_fold', 'ff_flip_fold'],
         aesthetic: {
             primary: '#0f1420',
             accent: '#00d4ff',
@@ -142,7 +142,7 @@ export const DESIGN_ERAS = [
         screenStyle: 'flexible',
         uiTheme: 'futuristic',
         bodyColors: ['color_black', 'color_titanium', 'color_green', 'color_white'],
-        formFactors: ['ff_foldable', 'ff_fullscreen'],
+        formFactors: ['ff_fullscreen', 'ff_bezel', 'ff_edge', 'ff_dual', 'ff_fold', 'ff_flip_fold', 'ff_tri_fold'],
         aesthetic: {
             primary: '#080810',
             accent: '#a855f7',
@@ -208,8 +208,20 @@ export function isBodyColorAvailable(colorId, year) {
     return available.includes(colorId);
 }
 
-// Cek apakah form factor tersedia di tahun tertentu
+// Cek apakah form factor ada di daftar era pada tahun tertentu
 export function isFormFactorAvailable(ffId, year) {
     const available = getFormFactorsForYear(year);
     return available.includes(ffId);
-      }
+}
+
+// Cek apakah sebuah komponen form factor boleh dipilih untuk desain BARU di tahun tertentu:
+// ada di daftar era, sudah lewat minYear, belum lewat maxYear, dan riset (jika perlu) selesai.
+// maxYear hanya membatasi desain baru — produk lama yang sudah rilis tidak terpengaruh.
+export function isFormFactorSelectable(ff, year, completedResearch) {
+    if (!ff || ff.category !== 'form_factor') return false;
+    if (typeof ff.minYear === 'number' && year < ff.minYear) return false;
+    if (typeof ff.maxYear === 'number' && year > ff.maxYear) return false;
+    if (ff.requiresResearch && (completedResearch || []).indexOf(ff.requiresResearch) === -1) return false;
+    const list = getFormFactorsForYear(year);
+    return !list.length || list.indexOf(ff.id) !== -1;
+}
