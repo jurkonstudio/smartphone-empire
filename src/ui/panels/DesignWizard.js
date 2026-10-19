@@ -1,5 +1,8 @@
 // FILE: src/ui/panels/DesignWizard.js  (REPLACE — i18n)
 // v2028.30 — [SMART NAMING] Auto-fill sekarang men-generate nama brand sesuai perusahaan & era.
+// v2028.31 — [VARIAN BENTUK & NAMA] Pilihan bentuk jadi kartu bergambar (render mockup) dengan badge rekomendasi,
+//   detail stat/biaya/contoh nyata; generator nama multi-gaya (era + bentuk + kode model + penerus seri)
+//   unik terhadap katalog, tombol 🎲 acak nama; auto-fill tidak menimpa bentuk yang dipilih manual.
 // i18n: teks UI lewat t()/_tf(); label kategori, era & warna bodi (data berbahasa Indonesia)
 // diterjemahkan lewat key wiz.cat.* / wiz.era.* / wiz.color.*. Saat 'lang:changed' wizard
 // (atau modal detail) dirender ulang tanpa kehilangan isian.
@@ -14,7 +17,7 @@ import {
     getComponentById, getComponentsByCategory, getBodyColorById
 } from '../../data/components.data.js';
 import { renderPhoneMockup } from '../phone/PhoneMockup.js';
-import { getDesignEraForYear } from '../../data/era-design.data.js';
+import { getDesignEraForYear, isFormFactorSelectable } from '../../data/era-design.data.js';
 import { resolveSpec } from '../../data/phone-specs.data.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
@@ -70,53 +73,135 @@ function _statTag(c) {
 }
 
 // ============================================================
-// SMART NAME GENERATOR
+// SMART NAME GENERATOR (v2028.31)
+// Banyak gaya penamaan: seri era, kata bentuk (Flip/Slide/Fold...), kode model
+// ala era, codename, tahun, huruf+angka, dan penerus seri ("Nova" -> "Nova 2").
+// Selalu unik terhadap katalog produk & hasil acak sebelumnya, maks. 24 karakter.
 // ============================================================
-function _generateBrandedName(companyName, year) {
-    // 1. Bersihkan nama perusahaan (hapus Inc, Corp, Ltd, dll)
-    let brand = String(companyName || 'My').replace(/\b(inc|ltd|corp|co|tech|group|labs|gooday)\b/gi, '').trim();
+const NAME_MAX = 24;
+
+const NAME_SERIES = {
+    era_lcd_mono:          ['Classic', 'Basic', 'Mini', 'Slim', 'Compact', 'Plus', 'Lite', 'Solid', 'Talk', 'Chat', 'Easy', 'Pocket'],
+    era_tft_color:         ['Color', 'Vision', 'Clip', 'Snap', 'Style', 'Fun', 'Mobi', 'Media', 'Wave', 'Spark', 'Joy', 'Pixel'],
+    era_touch_revolution:  ['Touch', 'Smart', 'Wave', 'Spark', 'Pulse', 'Glide', 'Tap', 'Swift', 'Aero', 'Orbit', 'Xpress', 'Gloss'],
+    era_smartphone_modern: ['Edge', 'Prime', 'Note', 'Studio', 'Air', 'Lite', 'Core', 'Flow', 'Zen', 'Metro', 'Neo', 'Vibe'],
+    era_premium:           ['Prime', 'Ultra', 'Elite', 'Pro', 'Aura', 'Edge', 'Lumen', 'Titan', 'Zenith', 'Vertex', 'Apex', 'Lux'],
+    era_ai_era:            ['AI', 'Nova', 'Vision', 'Neo', 'Quantum', 'Pulse', 'Aero', 'Nexus', 'Orion', 'Fusion', 'Vega', 'Lynx'],
+    era_foldable:          ['Fold', 'Ultra', 'Infinity', 'Nova', 'Vision', 'Aether', 'Helix', 'Prism', 'Eon', 'Zenith', 'Atlas', 'Horizon']
+};
+
+const NAME_FF_WORDS = {
+    ff_candybar:     ['Bar', 'Solid', 'Classic', 'Basic'],
+    ff_flip:         ['Flip', 'Clam', 'Snap', 'Shell'],
+    ff_slider:       ['Slide', 'Glide', 'Slider', 'Swish'],
+    ff_communicator: ['Comm', 'Office', 'Exec', 'Organizer'],
+    ff_pda:          ['PDA', 'Pocket', 'Pen', 'Stylus'],
+    ff_qwerty:       ['Key', 'Type', 'Mail', 'Biz'],
+    ff_swivel:       ['Twist', 'Spin', 'Swivel', 'Turn'],
+    ff_fullscreen:   ['Touch', 'Glass', 'View', 'One'],
+    ff_touch_slider: ['Slide Pro', 'Pull', 'Keys', 'Touch Key'],
+    ff_bezel:        ['Vista', 'Slim', 'Air', 'View'],
+    ff_edge:         ['Edge', 'Curve', 'Wave', 'Arc'],
+    ff_popup:        ['Pop', 'Rise', 'Lift', 'Vision'],
+    ff_dual:         ['Duo', 'Dual', 'Twin', 'Pair'],
+    ff_fold:         ['Fold', 'Flex', 'Book', 'Z'],
+    ff_flip_fold:    ['Flip', 'Petal', 'Pocket', 'Clam'],
+    ff_tri_fold:     ['Tri', 'Triple', 'Trio', 'Origami']
+};
+
+const NAME_CODENAMES = ['Garuda', 'Rinjani', 'Komodo', 'Merapi', 'Bromo', 'Krakatau', 'Kancil', 'Anggrek', 'Maleo',
+    'Atlas', 'Orion', 'Aurora', 'Phoenix', 'Zephyr', 'Lyra', 'Titan', 'Aster', 'Echo', 'Polar', 'Vega'];
+
+function _rnd(n) { return Math.floor(Math.random() * n); }
+function _choice(arr) { return arr[_rnd(arr.length)]; }
+
+// Kode model ala era: 4 digit (2000-2006), huruf+angka (2007-2014), angka/seri pendek (2015+).
+function _modelCode(year) {
+    if (year < 2007) return String(1 + _rnd(9)) + String(1 + _rnd(9)) + _choice(['0', '1', '2', '5', '6']) + '0';
+    if (year < 2015) return _choice(['S', 'X', 'N', 'i', 'G', 'T']) + (1 + _rnd(9)) + (_rnd(3) === 0 ? String(_rnd(10)) + '0' : '');
+    return _choice(['', '', 'S', 'A', 'M', 'X']) + String(_choice([3, 5, 6, 7, 8, 9, 10, 11, 12, 20, 30, 40, 50]));
+}
+
+function _smallNum(year) {
+    if (year < 2007) return String(_choice([2, 3, 5, 6, 7, 8]));
+    return String(_choice([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 20, 30]));
+}
+
+function _cleanBrand(companyName) {
+    // Hapus akhiran badan usaha; maksimal 2 kata pertama.
+    let brand = String(companyName || 'My').replace(/\b(inc|ltd|corp|co|tech|group|labs|gooday)\b/gi, '').replace(/\s+/g, ' ').trim();
     if (!brand) brand = 'Smart';
-    
-    // Ambil maksimal 2 kata pertama agar tidak kepanjangan (misal "Kopi Gooday Inc" -> "Kopi Gooday")
-    brand = brand.split(' ').slice(0, 2).join(' ');
+    return brand.split(' ').slice(0, 2).join(' ');
+}
 
-    // 2. Tentukan akhiran berdasarkan Era/Tahun
-    let suffixes, numbers;
-    if (year < 2006) { 
-        // Era Feature Phone
-        suffixes = ['Classic', 'Color', 'Slim', 'Mini', 'Flip', 'Basic'];
-        numbers = ['2000', '2001', '2002', '3300', '5110', '1100'];
-    } else if (year < 2013) { 
-        // Era Touchscreen Awal
-        suffixes = ['Touch', 'Smart', 'Eco', 'Wave', 'Spark', 'Pro'];
-        numbers = ['1', '2', '3', 'S', 'HD', 'Plus'];
-    } else if (year < 2019) { 
-        // Era Modern
-        suffixes = ['Edge', 'Prime', 'Note', 'Studio', 'Max', 'Lite'];
-        numbers = ['8', '9', '10', '20', '30', 'X'];
-    } else { 
-        // Era AI & Foldable
-        suffixes = ['Fold', 'AI', 'Ultra', 'Infinity', 'Nova', 'Vision'];
-        numbers = ['21', '22', '23', '40', '50', '100'];
+// Muat ke NAME_MAX karakter: persingkat brand, buang token ekor, lalu potong.
+function _fitName(brand, rest) {
+    let name = [brand].concat(rest).join(' ');
+    if (name.length <= NAME_MAX) return name;
+    const b1 = brand.split(' ')[0];
+    name = [b1].concat(rest).join(' ');
+    if (name.length <= NAME_MAX) return name;
+    for (let n = rest.length - 1; n >= 0; n--) {
+        name = [b1].concat(rest.slice(0, n)).join(' ');
+        if (name.length <= NAME_MAX) return name;
     }
+    return b1.slice(0, NAME_MAX).trim();
+}
 
-    // 3. Pilih secara acak
-    const randSuffix = suffixes[Math.floor(Math.random() * suffixes.length)];
-    const randNum = numbers[Math.floor(Math.random() * numbers.length)];
-    
-    // Tipe penamaan: 0 = Brand + Suffix, 1 = Brand + Number, 2 = Brand + Suffix + Number
-    const type = Math.floor(Math.random() * 3);
-    let finalName = '';
-
-    if (type === 0) finalName = brand + ' ' + randSuffix;
-    else if (type === 1) finalName = brand + ' ' + randNum;
-    else finalName = brand + ' ' + randSuffix + ' ' + randNum;
-
-    // 4. Potong jika lebih dari 24 karakter
-    if (finalName.length > 24) {
-        finalName = finalName.substring(0, 24).trim();
+// Penerus seri: jika produk terakhir bermerek sama berformat "<Brand> <Seri> [n]" → "<Brand> <Seri> n+1".
+function _successorTokens(brand, catalog) {
+    const low = brand.toLowerCase();
+    for (let i = catalog.length - 1; i >= 0; i--) {
+        const nm = String((catalog[i] && catalog[i].name) || '').trim();
+        if (nm.toLowerCase().indexOf(low) !== 0) continue;
+        const rest = nm.slice(brand.length).trim();
+        if (!rest) continue;
+        const m = rest.match(/^(.*?)(?:\s+(\d{1,2}))$/);
+        if (m && m[1] && Number(m[2]) <= 30) return [m[1], String(Number(m[2]) + 1)];
+        if (!/\d{3,}$/.test(rest)) return [rest, '2'];
+        return null;
     }
-    return finalName;
+    return null;
+}
+
+function _nameTokens(brand, year, ffId, catalog) {
+    const era = getDesignEraForYear(year);
+    const series = _choice(NAME_SERIES[era.id] || NAME_SERIES.era_ai_era);
+    const ffWord = _choice(NAME_FF_WORDS[ffId] || ['Phone']);
+    const code = _modelCode(year);
+
+    // 30%: lanjutkan seri produk sebelumnya bila ada.
+    if (_rnd(100) < 30) {
+        const next = _successorTokens(brand, catalog);
+        if (next) return next;
+    }
+    const r = _rnd(100);
+    if (r < 22) return [ffWord];                                   // Brand Flip
+    if (r < 36) return [ffWord, _smallNum(year)];                  // Brand Flip 3
+    if (r < 52) return [series];                                   // Brand Classic
+    if (r < 62) return [series, _smallNum(year)];                  // Brand Nova 5
+    if (r < 74) return [code];                                     // Brand 3310 / S5 / A52
+    if (r < 82) return [_choice(NAME_CODENAMES)];                  // Brand Garuda
+    if (r < 88) return [_choice(NAME_CODENAMES), _smallNum(year)]; // Brand Komodo 2
+    if (r < 94) return [series, String(year)];                     // Brand Mini 2001
+    return [ffWord, series];                                       // Brand Slide Pro
+}
+
+function _generateBrandedName(companyName, year, ffId, avoid) {
+    const brand = _cleanBrand(companyName);
+    const catalog = (state.get().products && state.get().products.catalog) || [];
+    const skip = (avoid || []).map(function (n) { return String(n || '').trim().toLowerCase(); });
+    for (let i = 0; i < 40; i++) {
+        const name = _fitName(brand, _nameTokens(brand, year, ffId, catalog));
+        const key = name.trim().toLowerCase();
+        if (!_isNameDuplicate(name) && skip.indexOf(key) === -1) return name;
+    }
+    // Cadangan: brand + kode model + angka acak (hampir pasti unik).
+    for (let j = 0; j < 20; j++) {
+        const name = _fitName(brand, [_modelCode(year), String(10 + _rnd(90))]);
+        if (!_isNameDuplicate(name)) return name;
+    }
+    return _fitName(brand, ['X' + Date.now().toString().slice(-4)]);
 }
 
 function _affordInfo(s) {
@@ -211,6 +296,29 @@ const WZ_CSS = `
 .wz-suggest-btn b { font-size:12px; color:var(--text-primary); }
 .wz-suggest-btn span { font-size:10px; color:var(--text-tertiary); margin-top:2px; }
 .wz-price-warning { font-size: 11px; color: var(--danger); margin-top: 4px; display: none; }
+.wiz-name-row { display: flex; gap: 8px; align-items: stretch; }
+.wiz-name-row .field-input { flex: 1; min-width: 0; }
+.wiz-name-dice { flex: 0 0 46px; border-radius: var(--r); background: var(--bg-3); border: 1px solid var(--border); font-size: 18px; line-height: 1; cursor: pointer; color: var(--text-primary); transition: transform 0.06s, border-color 0.15s; }
+.wiz-name-dice:hover { border-color: var(--accent); }
+.wiz-name-dice:active { transform: scale(0.92); }
+.wiz-name-dice.spin { animation: wiz-dice-spin 0.4s ease; }
+@keyframes wiz-dice-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.wiz-ff-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-top: 16px; }
+.wiz-ff-count { font-size: 11px; color: var(--text-tertiary); white-space: nowrap; }
+.wiz-ff-row { padding-top: 2px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.wiz-ff-card { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 118px; min-width: 118px; padding: 24px 8px 10px; text-align: center; scroll-snap-align: center; }
+.wiz-ff-thumb { height: 92px; width: 100%; display: flex; align-items: flex-end; justify-content: center; border-radius: var(--r); background: radial-gradient(ellipse at 50% 92%, var(--bg-2) 0%, transparent 72%); margin-bottom: 4px; pointer-events: none; }
+.wiz-ff-card .wiz-opt-name { font-size: 12px; line-height: 1.25; min-height: 30px; display: flex; align-items: center; justify-content: center; }
+.wiz-ff-card .wiz-opt-meta { font-size: 10px; line-height: 1.3; min-height: 26px; }
+[data-modal-id="design-wizard"] .wiz-ff-card.selected .wiz-opt-name { padding-right: 0; }
+.wiz-ff-badge { position: absolute; top: 6px; left: 8px; z-index: 1; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 99px; background: var(--accent); color: #fff; letter-spacing: 0.01em; }
+.wiz-ff-detail { margin-top: 6px; padding: 10px 12px; border-radius: var(--r); background: var(--bg-3); border: 1px solid var(--border); font-size: 12px; line-height: 1.45; color: var(--text-secondary); }
+.wiz-ff-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.wiz-ff-chip { font-size: 11px; padding: 3px 8px; border-radius: 99px; background: var(--bg-2); color: var(--text-secondary); border: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+.wiz-ff-chip.pos { color: var(--success, #34c759); }
+.wiz-ff-chip.neg { color: var(--warn); }
+.wiz-ff-ref { margin-top: 8px; font-size: 11px; color: var(--text-tertiary); }
+@media (prefers-reduced-motion: reduce) { .wiz-name-dice.spin { animation: none; } }
 `;
 
 function _injectStyles() {
@@ -229,7 +337,7 @@ function escapeHtml(s) {
 
 function defaultState() {
     return {
-        step: 1, name: '', formFactorId: null, displayId: null, cameraId: 'none',
+        step: 1, name: '', nameAuto: '', formFactorManual: false, formFactorId: null, displayId: null, cameraId: 'none',
         batteryId: null, chipId: null, networkId: null, osOptionId: null,
         bodyId: null, bodyColorId: null, price: 100, priceManuallyEdited: false, productionQty: 5000
     };
@@ -248,15 +356,21 @@ function filterComponentsByEra(catId) {
 
 function filterFormFactorsByEra() {
     const year = DesignEraService.getCurrentYear();
-    const era = getDesignEraForYear(year);
-    const all = COMPONENTS.filter(function (c) { return c.category === 'form_factor'; });
-    return all.filter(function (f) {
-        if (typeof f.minYear === 'number' && year < f.minYear) return false;
-        if (Array.isArray(era.formFactors) && era.formFactors.length) {
-            return era.formFactors.indexOf(f.id) !== -1;
-        }
-        return true;
+    const completed = state.get().research.completed || [];
+    return COMPONENTS.filter(function (c) {
+        return c.category === 'form_factor' && isFormFactorSelectable(c, year, completed);
     });
+}
+
+// Bentuk rekomendasi tahun ini: permintaan dasar tertinggi (seri/tier lebih tinggi menang bila seri).
+function _recommendedFormFactor(list) {
+    if (!list || !list.length) return null;
+    let best = list[0];
+    for (let i = 1; i < list.length; i++) {
+        const a = list[i], bm = best.baseDemandMultiplier || 1, am = a.baseDemandMultiplier || 1;
+        if (am > bm || (am === bm && (a.tier || 0) > (best.tier || 0))) best = a;
+    }
+    return best;
 }
 
 function filterBodyColorsByEra() {
@@ -295,8 +409,11 @@ function _pickMostExpensive(list) {
 
 function _autoFillBest(s) {
     const ffs = filterFormFactorsByEra();
-    const bestFf = _pickMostExpensive(ffs);
-    if (bestFf) s.formFactorId = bestFf.id;
+    const stillValid = s.formFactorId && ffs.some(function (f) { return f.id === s.formFactorId; });
+    if (!(s.formFactorManual && stillValid)) {
+        const bestFf = _recommendedFormFactor(ffs);
+        if (bestFf) s.formFactorId = bestFf.id;
+    }
 
     const catMap = { display: 'displayId', camera: 'cameraId', battery: 'batteryId', chip: 'chipId', network: 'networkId' };
     for (const catId in catMap) {
@@ -351,17 +468,25 @@ function _isNameDuplicate(name) {
     });
 }
 
+// Acak nama baru (unik, sesuai era & bentuk terpilih).
+function _rerollName(s) {
+    const rawCompany = state.get().companyName || 'Star';
+    s.name = _generateBrandedName(rawCompany, DesignEraService.getCurrentYear(), s.formFactorId, [s.name]);
+    s.nameAuto = s.name;
+}
+
 function _handleAutoFill() {
     const s = _wizardState;
     if (!s) return;
 
-    // [PERUBAHAN] Menggunakan generator nama random berbasis brand
-    if (!s.name.trim() || s.name.startsWith('Model ')) {
-        const rawCompany = state.get().companyName || 'Star';
-        s.name = _generateBrandedName(rawCompany, DesignEraService.getCurrentYear());
-    }
-
     _autoFillBest(s);
+
+    // Nama ikut diperbarui bila kosong, masih nama hasil acak sebelumnya, "Model ...", atau duplikat.
+    // Nama yang diketik sendiri oleh pemain tidak ditimpa.
+    const cur = (s.name || '').trim();
+    if (!cur || cur.indexOf('Model ') === 0 || (s.nameAuto && s.nameAuto === s.name) || _isNameDuplicate(cur)) {
+        _rerollName(s);
+    }
 
     const missing = _validateComplete(s);
     if (missing.length) {
@@ -384,7 +509,8 @@ export function openDesignWizard(params) {
 
     const s = defaultState();
     const ffs = filterFormFactorsByEra();
-    if (ffs.length) s.formFactorId = ffs[ffs.length - 1].id;
+    const recFf = _recommendedFormFactor(ffs);
+    if (recFf) s.formFactorId = recFf.id;
     const colors = filterBodyColorsByEra();
     if (colors.length) s.bodyColorId = colors[colors.length - 1].id;
 
@@ -495,12 +621,27 @@ function _bindStep() {
     const autofillBtn = root.querySelector('[data-wiz-autofill]');
     if (autofillBtn) autofillBtn.addEventListener('click', function () { _handleAutoFill(); });
 
+    const rerollBtn = root.querySelector('[data-wiz-reroll]');
+    if (rerollBtn) rerollBtn.addEventListener('click', function () {
+        _rerollName(_wizardState);
+        if (nameInput) nameInput.value = _wizardState.name;
+        // putar singkat pada ikon dadu sebagai umpan balik
+        rerollBtn.classList.remove('spin'); void rerollBtn.offsetWidth; rerollBtn.classList.add('spin');
+    });
+
+    const ffRow = root.querySelector('.wiz-ff-row');
+    if (ffRow && ffRow.scrollLeft === 0) {
+        const sel = ffRow.querySelector('.selected');
+        if (sel) ffRow.scrollLeft = Math.max(0, sel.offsetLeft - (ffRow.clientWidth - sel.offsetWidth) / 2);
+    }
+
     root.querySelectorAll('[data-wiz-pick]').forEach(function (btn) {
         btn.addEventListener('click', function () {
             const parts = btn.dataset.wizPick.split(':');
             const key = parts[0];
             const value = parts.slice(1).join(':');
             _wizardState[key] = value;
+            if (key === 'formFactorId') _wizardState.formFactorManual = true;
             if (key === 'cameraId') _wizardView = 'back';
             else if (key === 'displayId' || key === 'formFactorId') _wizardView = 'front';
             _render();
@@ -691,6 +832,38 @@ function _confirm() {
     if (game.render) game.render();
 }
 
+function _ffShortRef(f) {
+    return String(f.realReference || '').split('·')[0].trim();
+}
+
+function _ffDetailHtml(f, year) {
+    if (!f) return '';
+    const st = f.stats || {};
+    const chips = [];
+    if (st.usability) chips.push('<span class="wiz-ff-chip pos">' + escapeHtml(_tf('wiz.step1.ff_usability', 'Kegunaan')) + ' +' + st.usability + '</span>');
+    if (st.design) chips.push('<span class="wiz-ff-chip pos">' + escapeHtml(_tf('wiz.step1.ff_design', 'Desain')) + ' +' + st.design + '</span>');
+    if (f.costPerUnit > 0) chips.push('<span class="wiz-ff-chip neg">' + escapeHtml(_tf('wiz.step1.ff_cost', 'Biaya +${n}/unit', { n: f.costPerUnit })) + '</span>');
+    if (f.baseDemandMultiplier) chips.push('<span class="wiz-ff-chip">' + escapeHtml(_tf('wiz.step1.ff_demand', 'Permintaan ×{n}', { n: f.baseDemandMultiplier.toFixed(2) })) + '</span>');
+    const to = (typeof f.maxYear === 'number') ? f.maxYear : _tf('wiz.step1.ff_now', 'sekarang');
+    return '<div class="wiz-ff-detail">' +
+        '<div>' + escapeHtml(f.description || '') + '</div>' +
+        '<div class="wiz-ff-chips">' + chips.join('') + '</div>' +
+        '<div class="wiz-ff-ref">' + escapeHtml(_tf('wiz.step1.ff_ref', 'Contoh nyata: {ref}', { ref: f.realReference || '-' })) +
+        ' · ' + escapeHtml(_tf('wiz.step1.ff_window', 'Tersedia {from}–{to}', { from: f.minYear, to: to })) + '</div>' +
+        '</div>';
+}
+
+function _ffThumb(f, s) {
+    const colors = filterBodyColorsByEra();
+    const colorId = s.bodyColorId || (colors.length ? colors[0].id : 'color_black');
+    try {
+        return renderPhoneMockup(
+            { formFactorId: f.id, bodyColorId: colorId, cameraId: 'none', displayId: s.displayId || '' },
+            { fit: { w: 88, h: 88 }, view: 'front', isStatic: true, showBrand: false }
+        );
+    } catch (e) { return ''; }
+}
+
 function _step1(s) {
     const ffs = filterFormFactorsByEra();
     if (!ffs.length) {
@@ -702,9 +875,17 @@ function _step1(s) {
         `;
     }
 
+    const year = DesignEraService.getCurrentYear();
+    const rec = _recommendedFormFactor(ffs);
+    const selected = ffs.filter(function (f) { return f.id === s.formFactorId; })[0] || null;
+    const recLabel = _tf('wiz.step1.recommended', '★ Rekomendasi');
+
     return `
         <label class="field-label">${t('wiz.step1.name_label')}</label>
-        <input class="field-input" data-wiz-name maxlength="24" placeholder="${t('wiz.step1.name_ph')}" autocomplete="off" />
+        <div class="wiz-name-row">
+            <input class="field-input" data-wiz-name maxlength="24" placeholder="${t('wiz.step1.name_ph')}" autocomplete="off" />
+            <button type="button" class="wiz-name-dice" data-wiz-reroll aria-label="${escapeHtml(_tf('wiz.step1.reroll', 'Acak nama'))}" title="${escapeHtml(_tf('wiz.step1.reroll', 'Acak nama'))}">🎲</button>
+        </div>
 
         <button class="wiz-autofill-btn" data-wiz-autofill>
             <span class="wiz-autofill-ico">✨</span>
@@ -712,15 +893,22 @@ function _step1(s) {
         </button>
         <div class="wiz-autofill-hint">${t('wiz.step1.autofill_hint')}</div>
 
-        <label class="field-label" style="margin-top:16px;">${t('wiz.step1.ff_label')}</label>
-        <div class="wiz-options">
+        <div class="wiz-ff-head">
+            <label class="field-label" style="margin:0;">${t('wiz.step1.ff_label')}</label>
+            <span class="wiz-ff-count">${escapeHtml(_tf('wiz.step1.ff_count', '{n} pilihan di {year}', { n: ffs.length, year: year }))}</span>
+        </div>
+        <div class="wiz-options-row wiz-ff-row" role="listbox">
             ${ffs.map(function (f) {
-                return '<button class="wiz-option ' + (s.formFactorId === f.id ? 'selected' : '') + '" data-wiz-pick="formFactorId:' + f.id + '">' +
+                const sel = s.formFactorId === f.id;
+                return '<button class="wiz-option wiz-ff-card ' + (sel ? 'selected' : '') + '" role="option" aria-selected="' + sel + '" data-wiz-pick="formFactorId:' + f.id + '">' +
+                    (rec && rec.id === f.id ? '<span class="wiz-ff-badge">' + escapeHtml(recLabel) + '</span>' : '') +
+                    '<div class="wiz-ff-thumb">' + _ffThumb(f, s) + '</div>' +
                     '<div class="wiz-opt-name">' + escapeHtml(f.name) + '</div>' +
-                    '<div class="wiz-opt-meta">' + t('wiz.step1.ff_tier', { tier: f.tier, year: f.minYear }) + '</div>' +
+                    '<div class="wiz-opt-meta">' + escapeHtml(_ffShortRef(f)) + '</div>' +
                     '</button>';
             }).join('')}
         </div>
+        ${_ffDetailHtml(selected, year)}
 
         <div class="wiz-nav">
             <button class="btn-secondary" data-wiz-cancel style="flex:1;">${t('wiz.step1.cancel')}</button>
