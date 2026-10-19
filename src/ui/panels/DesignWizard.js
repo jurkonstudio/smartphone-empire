@@ -1,12 +1,4 @@
-// FILE: src/ui/panels/DesignWizard.js  (REPLACE — i18n)
-// v2028.30 — [SMART NAMING] Auto-fill sekarang men-generate nama brand sesuai perusahaan & era.
-// v2028.31 — [VARIAN BENTUK & NAMA] Pilihan bentuk jadi kartu bergambar (render mockup) dengan badge rekomendasi,
-//   detail stat/biaya/contoh nyata; generator nama multi-gaya (era + bentuk + kode model + penerus seri)
-//   unik terhadap katalog, tombol 🎲 acak nama; auto-fill tidak menimpa bentuk yang dipilih manual.
-// i18n: teks UI lewat t()/_tf(); label kategori, era & warna bodi (data berbahasa Indonesia)
-// diterjemahkan lewat key wiz.cat.* / wiz.era.* / wiz.color.*. Saat 'lang:changed' wizard
-// (atau modal detail) dirender ulang tanpa kehilangan isian.
-// CATATAN: nama & deskripsi komponen (components.data.js) masih dari data (belum diterjemahkan).
+// FILE: src/ui/panels/DesignWizard.js  (REPLACE — Final & Synced)
 import { Modal } from '../modal.js';
 import { bus } from '../../core/EventBus.js';
 import { ToastService } from '../../core/ToastService.js';
@@ -33,7 +25,6 @@ function _isEn() {
     try { return LanguageService.getLang() === 'en'; } catch (e) { return false; }
 }
 
-// t() dengan fallback bila key belum ada di kamus.
 function _tf(key, fallback, vars) {
     const v = t(key, vars);
     if (v && v !== key) return v;
@@ -43,7 +34,6 @@ function _tf(key, fallback, vars) {
 }
 function _pick(id, en) { return _isEn() ? en : id; }
 
-// Label data (Indonesia) → terjemahan.
 function _catName(cat) { return cat ? _tf('wiz.cat.' + cat.id, cat.name) : ''; }
 function _eraLabel(era) { return _tf('wiz.era.' + era.id + '.label', era.label); }
 function _eraDesc(era) { return _tf('wiz.era.' + era.id + '.desc', era.description); }
@@ -72,12 +62,6 @@ function _statTag(c) {
     return key ? _statLabel(key, L) + ' +' + val : '';
 }
 
-// ============================================================
-// SMART NAME GENERATOR (v2028.31)
-// Banyak gaya penamaan: seri era, kata bentuk (Flip/Slide/Fold...), kode model
-// ala era, codename, tahun, huruf+angka, dan penerus seri ("Nova" -> "Nova 2").
-// Selalu unik terhadap katalog produk & hasil acak sebelumnya, maks. 24 karakter.
-// ============================================================
 const NAME_MAX = 24;
 
 const NAME_SERIES = {
@@ -115,7 +99,6 @@ const NAME_CODENAMES = ['Garuda', 'Rinjani', 'Komodo', 'Merapi', 'Bromo', 'Kraka
 function _rnd(n) { return Math.floor(Math.random() * n); }
 function _choice(arr) { return arr[_rnd(arr.length)]; }
 
-// Kode model ala era: 4 digit (2000-2006), huruf+angka (2007-2014), angka/seri pendek (2015+).
 function _modelCode(year) {
     if (year < 2007) return String(1 + _rnd(9)) + String(1 + _rnd(9)) + _choice(['0', '1', '2', '5', '6']) + '0';
     if (year < 2015) return _choice(['S', 'X', 'N', 'i', 'G', 'T']) + (1 + _rnd(9)) + (_rnd(3) === 0 ? String(_rnd(10)) + '0' : '');
@@ -128,13 +111,11 @@ function _smallNum(year) {
 }
 
 function _cleanBrand(companyName) {
-    // Hapus akhiran badan usaha; maksimal 2 kata pertama.
     let brand = String(companyName || 'My').replace(/\b(inc|ltd|corp|co|tech|group|labs|gooday)\b/gi, '').replace(/\s+/g, ' ').trim();
     if (!brand) brand = 'Smart';
     return brand.split(' ').slice(0, 2).join(' ');
 }
 
-// Muat ke NAME_MAX karakter: persingkat brand, buang token ekor, lalu potong.
 function _fitName(brand, rest) {
     let name = [brand].concat(rest).join(' ');
     if (name.length <= NAME_MAX) return name;
@@ -148,7 +129,6 @@ function _fitName(brand, rest) {
     return b1.slice(0, NAME_MAX).trim();
 }
 
-// Penerus seri: jika produk terakhir bermerek sama berformat "<Brand> <Seri> [n]" → "<Brand> <Seri> n+1".
 function _successorTokens(brand, catalog) {
     const low = brand.toLowerCase();
     for (let i = catalog.length - 1; i >= 0; i--) {
@@ -170,21 +150,20 @@ function _nameTokens(brand, year, ffId, catalog) {
     const ffWord = _choice(NAME_FF_WORDS[ffId] || ['Phone']);
     const code = _modelCode(year);
 
-    // 30%: lanjutkan seri produk sebelumnya bila ada.
     if (_rnd(100) < 30) {
         const next = _successorTokens(brand, catalog);
         if (next) return next;
     }
     const r = _rnd(100);
-    if (r < 22) return [ffWord];                                   // Brand Flip
-    if (r < 36) return [ffWord, _smallNum(year)];                  // Brand Flip 3
-    if (r < 52) return [series];                                   // Brand Classic
-    if (r < 62) return [series, _smallNum(year)];                  // Brand Nova 5
-    if (r < 74) return [code];                                     // Brand 3310 / S5 / A52
-    if (r < 82) return [_choice(NAME_CODENAMES)];                  // Brand Garuda
-    if (r < 88) return [_choice(NAME_CODENAMES), _smallNum(year)]; // Brand Komodo 2
-    if (r < 94) return [series, String(year)];                     // Brand Mini 2001
-    return [ffWord, series];                                       // Brand Slide Pro
+    if (r < 22) return [ffWord];
+    if (r < 36) return [ffWord, _smallNum(year)];
+    if (r < 52) return [series];
+    if (r < 62) return [series, _smallNum(year)];
+    if (r < 74) return [code];
+    if (r < 82) return [_choice(NAME_CODENAMES)];
+    if (r < 88) return [_choice(NAME_CODENAMES), _smallNum(year)];
+    if (r < 94) return [series, String(year)];
+    return [ffWord, series];
 }
 
 function _generateBrandedName(companyName, year, ffId, avoid) {
@@ -196,7 +175,6 @@ function _generateBrandedName(companyName, year, ffId, avoid) {
         const key = name.trim().toLowerCase();
         if (!_isNameDuplicate(name) && skip.indexOf(key) === -1) return name;
     }
-    // Cadangan: brand + kode model + angka acak (hampir pasti unik).
     for (let j = 0; j < 20; j++) {
         const name = _fitName(brand, [_modelCode(year), String(10 + _rnd(90))]);
         if (!_isNameDuplicate(name)) return name;
@@ -208,7 +186,7 @@ function _affordInfo(s) {
     const ps = window.__game && window.__game.products;
     let unitCost = 0;
     try { unitCost = ps && ps.computeUnitCost ? ps.computeUnitCost(s) : 0; } catch (e) {}
-    const cost = unitCost * (s.productionQty || 0) + 2000;
+    const cost = unitCost * (s.productionQty || 0) + 2000; // Setup cost default
     let cash = 0;
     try { cash = state.get().cash || 0; } catch (e) {}
     let power = cash;
@@ -223,18 +201,14 @@ function _shortText(str, max) {
     return str.length > max ? str.slice(0, max - 1).trimEnd() + '…' : str;
 }
 
-// ============================================================
-// SARAN HARGA OTOMATIS
-// ============================================================
+// SINKRONISASI DENGAN ProductSystem.js confirmDesign
 function _getPriceLimits(s) {
     const ps = window.__game && window.__game.products;
     let unitCost = 50; 
     try { unitCost = ps.computeUnitCost(s); } catch(e) {}
     const minPrice = unitCost + 1;
-    const round5 = (n) => Math.ceil(n / 5) * 5;
-    const premiumPrice = round5(unitCost * 2.20);
-    const maxPrice = Math.max(premiumPrice * 1.5, unitCost * 4);
-    return { min: minPrice, max: Math.ceil(maxPrice) };
+    const maxPrice = Math.ceil(Math.max(unitCost * 2.2 * 1.5, unitCost * 4));
+    return { min: minPrice, max: maxPrice };
 }
 
 function _getSuggestedPrices(s) {
@@ -362,7 +336,6 @@ function filterFormFactorsByEra() {
     });
 }
 
-// Bentuk rekomendasi tahun ini: permintaan dasar tertinggi (seri/tier lebih tinggi menang bila seri).
 function _recommendedFormFactor(list) {
     if (!list || !list.length) return null;
     let best = list[0];
@@ -468,7 +441,6 @@ function _isNameDuplicate(name) {
     });
 }
 
-// Acak nama baru (unik, sesuai era & bentuk terpilih).
 function _rerollName(s) {
     const rawCompany = state.get().companyName || 'Star';
     s.name = _generateBrandedName(rawCompany, DesignEraService.getCurrentYear(), s.formFactorId, [s.name]);
@@ -481,8 +453,6 @@ function _handleAutoFill() {
 
     _autoFillBest(s);
 
-    // Nama ikut diperbarui bila kosong, masih nama hasil acak sebelumnya, "Model ...", atau duplikat.
-    // Nama yang diketik sendiri oleh pemain tidak ditimpa.
     const cur = (s.name || '').trim();
     if (!cur || cur.indexOf('Model ') === 0 || (s.nameAuto && s.nameAuto === s.name) || _isNameDuplicate(cur)) {
         _rerollName(s);
@@ -625,7 +595,6 @@ function _bindStep() {
     if (rerollBtn) rerollBtn.addEventListener('click', function () {
         _rerollName(_wizardState);
         if (nameInput) nameInput.value = _wizardState.name;
-        // putar singkat pada ikon dadu sebagai umpan balik
         rerollBtn.classList.remove('spin'); void rerollBtn.offsetWidth; rerollBtn.classList.add('spin');
     });
 
@@ -1283,4 +1252,4 @@ function _openDetailModal() {
     `;
 
     Modal.open('design-wizard-detail', html);
-        }
+}
