@@ -4688,3 +4688,22 @@ html[data-perf="lite"] body { background-attachment: scroll !important; }
     .onb-actions { flex-direction: column; }
     .onb-actions .btn-primary, .onb-actions .btn-secondary { flex: 1 1 auto; }
 }
+
+/* ===== Manufaktur (sub-tab Riset) ===== */
+.mf-hero { padding: 12px; margin: 8px 0; border-radius: 12px; background: var(--surface, rgba(255,255,255,.04)); }
+.mf-hero-title { font-weight: 700; font-size: 15px; }
+.mf-hero-sub { font-size: 12px; color: var(--text-dim); margin: 4px 0 8px; line-height: 1.4; }
+.mf-hero-stats { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--text-mute); }
+.mf-hero-stats b { color: var(--text); }
+.mf-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.mf-row { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 12px; background: var(--surface, rgba(255,255,255,.04)); }
+.mf-row-mystery { opacity: .55; filter: grayscale(1); }
+.mf-ico { flex: 0 0 auto; width: 32px; text-align: center; }
+.mf-main { flex: 1 1 auto; min-width: 0; }
+.mf-name { font-weight: 600; font-size: 14px; }
+.mf-desc, .mf-reason { font-size: 11.5px; color: var(--text-dim); line-height: 1.35; }
+.mf-reason { color: var(--text-mute); margin-top: 2px; }
+.mf-buy { flex: 0 0 auto; }
+.mf-buy-btn { padding: 8px 10px; font-size: 12px; white-space: nowrap; }
+.mf-buy-btn[disabled] { opacity: .45; }
+.mf-year { font-weight: 700; color: var(--text-mute); }
