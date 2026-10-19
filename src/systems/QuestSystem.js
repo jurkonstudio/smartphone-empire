@@ -1,8 +1,10 @@
 // FILE: src/systems/QuestSystem.js
 // v2027.2a — reward silicon.
+// v2028.41 — reward SIL lewat SiliconService.add('quest:<id>') (disinkronkan ke server).
 import { bus } from '../core/EventBus.js';
 import { BALANCE } from '../data/balance.data.js';
 import { LOG_TYPES } from '../config/constants.js';
+import { SiliconService } from './SiliconService.js';
 
 const QUEST_DEFS = [
     {
@@ -92,9 +94,9 @@ export class QuestSystem {
         }
         // [v2027.2a] Reward Silicon.
         if (r.silicon) {
-            const d = this.state.data;
-            d.silicon = (d.silicon || 0) + r.silicon;
-            bus.emit('silicon:changed', { balance: d.silicon, delta: r.silicon });
+            // [FIX] Lewat SiliconService.add (reason 'quest:<id>') supaya CloudSync mengklaimnya ke server.
+            // Dulu saldo diubah langsung -> tak pernah sampai ke server -> hilang saat sinkron berikutnya.
+            SiliconService.add(r.silicon, 'quest:' + def.id);
         }
         this.state.addLog(`Quest selesai: "${def.title}".`, LOG_TYPES.success);
         bus.emit('quest:completed', { id: def.id, title: def.title, rewards: r });

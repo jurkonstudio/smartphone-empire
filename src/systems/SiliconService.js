@@ -5,6 +5,12 @@
 // v2027.40 — unlock riset & boost riset pakai SIL (tech + chip), fix boost dev.
 // v2027.41 — percepatan waktu 2x/5x/10x berbayar SIL (batas waktu per 10 SIL); hapus skip7/skip30.
 // v2028.3  — Menambahkan dukungan percepatan OS (kind === 'os').
+// v2028.41 — [FIX SIL HILANG]
+//   • Mode bayar 'auto' tanpa persetujuan eksplisit pemain dianggap 'strict' (SIL tidak lagi
+//     terpotong diam-diam untuk menutup biaya uang; notifikasi default MATI sehingga tak terlihat).
+//   • Event silicon:changed membawa `reason` (+ `refund`) agar CloudSync bisa membatalkan belanja
+//     tertunda saat refund & mengirim reward quest ke server.
+//   • Hadiah harian di mode cloud ditentukan server (via CloudSync), bukan lagi ditimpa mentah.
 // ============================================================
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
@@ -21,6 +27,10 @@ import { getNodeById } from '../data/research.data.js';
 import { getChipResearchById } from '../data/chip-research.data.js';
 
 var MAX_HISTORY = 20;
+
+// [FIX] true = SIL hanya boleh menutup biaya uang bila pemain MEMILIH mode bayar sendiri
+// (Setelan -> Keuangan). Set false untuk mengembalikan perilaku lama ('auto' aktif otomatis).
+var WALLET_REQUIRE_CONSENT = true;
 
 export var SILICON_ACTIONS = [
     { id: 'research', group: 'research',     cost: 20, icon: '🔬', ready: true },
@@ -68,8 +78,11 @@ export var SiliconService = {
 
     // ---------- Dompet Universal: biaya berupa SIL boleh ditutup uang ($) ----------
     _payMode() {
-        var m = state.data.settings && state.data.settings.payMode;
-        return WALLET.modes.indexOf(m) >= 0 ? m : WALLET.defaultMode;
+        var s = state.data.settings || {};
+        var m = WALLET.modes.indexOf(s.payMode) >= 0 ? s.payMode : WALLET.defaultMode;
+        // 'auto' bawaan (belum pernah dipilih pemain) = 'strict': SIL tidak terpakai tanpa persetujuan.
+        if (WALLET_REQUIRE_CONSENT && m === 'auto' && s.payModeChosen !== true) return 'strict';
+        return m;
     },
     cashPerSil() { return getCashPerSil(state.data.time && state.data.time.currentYear); },
 
@@ -114,7 +127,7 @@ export var SiliconService = {
         if (!DEV_BUILD && !ALLOWED_CREDIT.test(String(reason || ''))) return { ok: false, reason: 'Sumber kredit tidak sah.' };
         state.data.silicon = (state.data.silicon || 0) + amount;
         _pushHistory('earn', amount, reason || 'reward');
-        bus.emit('silicon:changed', { balance: state.data.silicon, delta: amount });
+        bus.emit('silicon:changed', { balance: state.data.silicon, delta: amount, reason: String(reason || 'reward') });
         bus.emit('state:changed', state.data);
         return { ok: true, balance: state.data.silicon };
     },
@@ -126,7 +139,7 @@ export var SiliconService = {
         if (!this.canAffordRaw(amount)) return { ok: false, reason: 'Silicon tidak cukup.' };
         state.data.silicon = (state.data.silicon || 0) - amount;
         _pushHistory('spend', -amount, reason || 'spend');
-        bus.emit('silicon:changed', { balance: state.data.silicon, delta: -amount });
+        bus.emit('silicon:changed', { balance: state.data.silicon, delta: -amount, reason: String(reason || 'spend') });
         bus.emit('state:changed', state.data);
         return { ok: true, balance: state.data.silicon };
     },
@@ -292,7 +305,8 @@ export var SiliconService = {
     _refund(amount, reason) {
         state.data.silicon = (state.data.silicon || 0) + amount;
         _pushHistory('earn', amount, 'refund:' + reason);
-        bus.emit('silicon:changed', { balance: state.data.silicon, delta: amount });
+        // [FIX] refund:true -> CloudSync membatalkan belanja yang belum terkirim ke server.
+        bus.emit('silicon:changed', { balance: state.data.silicon, delta: amount, reason: 'refund:' + reason, refund: true });
         bus.emit('state:changed', state.data);
     },
 
@@ -353,16 +367,11 @@ export var SiliconService = {
         var reward = Math.min(streak, 7);
         d.dailyLogin.lastClaimDate = today;
         d.dailyLogin.streak = streak;
+        // Optimistis lokal. Saat login cloud, CloudSync mendengar reason 'daily-login' lalu meminta
+        // SERVER mengklaim hadiah (tanggal & streak dihitung server) dan saldo ditarik lewat jalur sinkron
+        // yang aman terhadap belanja tertunda. (Dulu: klaim server memakai window.__game yang belum ada
+        // saat boot -> hadiah hilang saat sinkron, dan tanggal lokal mengunci klaim ulang.)
         this.add(reward, 'daily-login');
-        // [HARDENING] Saat login cloud, server yang menentukan hadiah harian.
-        try {
-            var cs = window.__game && window.__game.cloud;
-            if (cs && cs.claimDailySilicon) {
-                cs.claimDailySilicon().then(function (r) {
-                    if (r && r.ok) SiliconService.applyServerBalance(r.balance);
-                }).catch(function () {});
-            }
-        } catch (e) {}
         return { ok: true, amount: reward, streak: streak };
     },
 

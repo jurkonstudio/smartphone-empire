@@ -18,15 +18,14 @@ export var WalletService = {
     // ---------- Kurs & mode ----------
     getRate() { return getCashPerSil(_d().time && _d().time.currentYear); },
 
-    getMode() {
-        var m = _d().settings && _d().settings.payMode;
-        return WALLET.modes.indexOf(m) >= 0 ? m : WALLET.defaultMode;
-    },
+    // [FIX] Satu sumber kebenaran dengan SiliconService: 'auto' yang belum pernah dipilih pemain = 'strict'.
+    getMode() { return SiliconService._payMode(); },
     setMode(mode) {
         if (WALLET.modes.indexOf(mode) < 0) return false;
         var d = _d();
         if (!d.settings || typeof d.settings !== 'object') d.settings = {};
         d.settings.payMode = mode;
+        d.settings.payModeChosen = true; // persetujuan eksplisit pemain
         bus.emit('wallet:mode-changed', { mode: mode });
         bus.emit('state:changed', d);
         return true;
