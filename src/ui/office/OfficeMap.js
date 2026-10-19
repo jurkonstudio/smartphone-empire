@@ -19,7 +19,7 @@ function loadThree() {
 
 export function renderOfficeLoading() {
     return '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;' +
-        'font-size:13px;color:var(--text-tertiary);">' + t('office.loading') + '</div>';
+        'font-size:13px;font-weight:600;letter-spacing:.02em;color:var(--text-tertiary);">' + t('office.loading') + '</div>';
 }
 
 export function renderOfficeFallback() {

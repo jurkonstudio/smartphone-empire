@@ -530,7 +530,7 @@ export function createOfficeScene(THREE, container, gameState) {
     // Rendering pipeline: richer color, restrained highlights, and crisp isometric edges.
     if ('outputColorSpace' in renderer && THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace;
     if ('toneMapping' in renderer && THREE.ACESFilmicToneMapping !== undefined) renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    if ('toneMappingExposure' in renderer) renderer.toneMappingExposure = 1.12;
+    if ('toneMappingExposure' in renderer) renderer.toneMappingExposure = 1.08;
     var canvas = renderer.domElement;
     canvas.style.cssText = 'width:100%;height:100%;display:block;';
     canvas.setAttribute('role', 'img');
@@ -539,17 +539,17 @@ export function createOfficeScene(THREE, container, gameState) {
     container.style.position = 'relative';
     container.style.isolation = 'isolate';
     container.style.overflow = 'hidden';
-    container.style.background = 'radial-gradient(ellipse at 50% 28%, rgba(148,163,184,.16) 0%, rgba(100,116,139,.07) 42%, transparent 72%), linear-gradient(145deg, var(--bg-2, #f7f9fc), var(--bg-1, #e9eef5))';
+    container.style.background = 'radial-gradient(ellipse at 50% 24%, rgba(96,165,250,.17) 0%, rgba(148,163,184,.09) 38%, transparent 72%), radial-gradient(ellipse at 50% 100%, rgba(15,23,42,.07), transparent 52%), linear-gradient(145deg, var(--bg-2, #f9fbff), var(--bg-1, #e7edf6))';
     container.appendChild(canvas);
 
     var scene = new THREE.Scene();
     var camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
-    var hemi = new THREE.HemisphereLight(0xeaf3ff, 0x64748b, 1.25);
-    var sun = new THREE.DirectionalLight(0xfff0dc, 1.15);
+    var hemi = new THREE.HemisphereLight(0xf0f6ff, 0x58677d, 1.35);
+    var sun = new THREE.DirectionalLight(0xfff2df, 1.22);
     sun.position.set(-7, 14, 9);
-    var fill = new THREE.DirectionalLight(0x9bc7ff, 0.38);
+    var fill = new THREE.DirectionalLight(0x9bc7ff, 0.46);
     fill.position.set(10, 8, -8);
-    var rim = new THREE.DirectionalLight(0xffffff, 0.24);
+    var rim = new THREE.DirectionalLight(0xdceaff, 0.30);
     rim.position.set(-10, 6, -5);
     scene.add(hemi, sun, fill, rim);
 
@@ -684,7 +684,7 @@ export function createOfficeScene(THREE, container, gameState) {
         labelTex.push(tex);
         var mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, opacity: dim ? 0.7 : 1 });
         var sp = new THREE.Sprite(mat);
-        sp.scale.set(0.46 * w / h, 0.46, 1);
+        sp.scale.set(0.49 * w / h, 0.49, 1);
         sp.renderOrder = 20;
         sp.userData.tex = tex;
         return sp;
@@ -1684,8 +1684,8 @@ export function createOfficeScene(THREE, container, gameState) {
         hemi.groundColor.setHex(P.hemiGround);
         hemi.intensity = P.hemiI;
         sun.intensity = P.dirI * 1.12;
-        fill.intensity = dark ? 0.52 : 0.38;
-        rim.intensity = dark ? 0.32 : 0.24;
+        fill.intensity = dark ? 0.56 : 0.46;
+        rim.intensity = dark ? 0.38 : 0.30;
         if (P.sunCol !== undefined) sun.color.setHex(P.sunCol);
         roomList.forEach(function (r) {
             r.ovMat.color.setHex(accentHex);
