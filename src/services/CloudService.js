@@ -300,6 +300,15 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
+    // ID pemain 8 digit (untuk top-up di web). Butuh supabase/player-id.sql.
+    async getPublicId() {
+        if (!_adapter) return NOT_CONFIGURED;
+        if (!_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.rpcGetMyPublicId !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, publicId: await _adapter.rpcGetMyPublicId() }; }
+        catch (err) { return _fail(err); }
+    },
+
     async addSiliconServer() { return { ok: false, code: 'FORBIDDEN' }; },
 
     async claimDailySilicon() {
