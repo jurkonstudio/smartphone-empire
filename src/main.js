@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2028.18 — [FIX] Memperbarui logika updateNavSlider & menambahkan popstate (anti-close tab).
+// v2028.52 — [FIX] Menambahkan pemicu syncSilicon instan saat boot dan saat sesi berhasil dipulihkan.
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -1102,12 +1102,27 @@ async function boot() {
             CloudService.registerAdapter(SupabaseAdapter);
             CloudSync.init(state);
             bindCloudUI();
+            
+            // [FIX] Sinkronisasi instan 1 detik setelah boot untuk mencegah bug rollback SIL
+            setTimeout(function() { 
+                if (CloudSync && typeof CloudSync.syncSilicon === 'function') {
+                    CloudSync.syncSilicon(); 
+                }
+            }, 1000);
+
             if (CloudService.getStatus() === 'connected') {
                 console.info('[Cloud] Sudah masuk dari layar awal:', CloudService.getEmail());
             } else if (typeof SupabaseAdapter.hasStoredSession === 'function' && SupabaseAdapter.hasStoredSession()) {
                 CloudService.restoreSession().then(function (r) {
-                    if (r && r.ok) console.info('[Cloud] Sesi dipulihkan:', r.email || r.userId);
-                    else console.info('[Cloud] Tidak ada sesi tersimpan.');
+                    if (r && r.ok) {
+                        console.info('[Cloud] Sesi dipulihkan:', r.email || r.userId);
+                        // [FIX] Langsung sinkron setelah sesi dipulihkan
+                        if (CloudSync && typeof CloudSync.syncSilicon === 'function') {
+                            CloudSync.syncSilicon();
+                        }
+                    } else {
+                        console.info('[Cloud] Tidak ada sesi tersimpan.');
+                    }
                 });
             } else {
                 console.info('[Cloud] Adapter terdaftar (belum login).');
