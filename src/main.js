@@ -677,6 +677,14 @@ function bindGlobalClicks() {
         var timelineFilter = e.target.closest('[data-timeline-filter]');
         if (timelineFilter) { e.preventDefault(); setTimelineFilter(timelineFilter.dataset.timelineFilter); renderView(); return; }
 
+        var fabBuy = e.target.closest('[data-chip-fab-buy]');
+        if (fabBuy) {
+            e.preventDefault();
+            var fres = chipResearch.purchaseUnlock(fabBuy.dataset.chipFabBuy);
+            if (!fres.ok) ToastService.error(fres.reason);
+            else { ToastService.success(tr('main.toast.fab_unlocked')); renderAll(); }
+            return;
+        }
         var chipFilterCat = e.target.closest('[data-chip-filter-cat]');
         if (chipFilterCat) { e.preventDefault(); setChipResearchFilter(chipFilterCat.dataset.chipFilterCat); renderView(); return; }
         var chipNodeCard = e.target.closest('[data-chip-node-detail]');
