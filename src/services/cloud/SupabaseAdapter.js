@@ -334,6 +334,13 @@ export const SupabaseAdapter = {
         return res.data == null ? 0 : res.data;
     },
 
+    rpcGetMyPublicId: async function () {
+        var c = await getClient();
+        var res = await c.rpc('get_my_public_id');
+        if (res.error) throw mk(res.error);
+        return res.data == null ? null : res.data;
+    },
+
     rpcClaimDaily: async function () {
         var c = await getClient();
         var res = await c.rpc('claim_daily_silicon');
