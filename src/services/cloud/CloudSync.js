@@ -1,27 +1,18 @@
 // FILE: src/services/cloud/CloudSync.js
-// v2028.49 — [FIX CRITICAL] Membuang antrean 'spend' yang nyangkut jika server memiliki saldo yang jauh lebih besar (Admin top-up).
+// v2029.2 — [TOTAL REWRITE] Menghapus Pending Queue lokal untuk mencegah desync.
+//            Menggunakan validasi ketat & transaksi server-side murni untuk debit/kredit.
 import { bus } from '../../core/EventBus.js';
 import { SaveService } from '../../core/SaveService.js';
 import { SCHEMA_VERSION } from '../../core/GameState.js';
 import { ToastService } from '../../core/ToastService.js';
 import { CloudService } from '../CloudService.js';
 import { SiliconService } from '../../systems/SiliconService.js';
-import { QUEST_DEFS } from '../../systems/QuestSystem.js';
 import { CLOUD } from './supabase.config.js';
 
 const DEVICE_KEY = 'smartphone-empire:device-id';
 const LAST_SYNC_KEY = 'smartphone-empire:cloud-last-sync';
-const SILICON_SYNC_KEY = 'smartphone-empire:silicon-synced';
 const SYNCED_PREFIX = 'smartphone-empire:cloud-synced:';
 const AUTOAPPLY_KEY = 'smartphone-empire:cloud-autoapply-at';
-const SIL_PENDING_KEY = 'smartphone-empire:silicon-pending';
-const QUEST_ACK_PREFIX = 'smartphone-empire:silicon-quest-ack:';
-
-const QUEST_SIL = (function () {
-    const m = {};
-    QUEST_DEFS.forEach(function (q) { if (q && q.rewards && q.rewards.silicon > 0) m[q.id] = q.rewards.silicon; });
-    return m;
-})();
 
 let _state = null;
 let _inited = false;
@@ -35,26 +26,15 @@ let _unsubRealtime = null;
 let _unsubWallet = null;
 let _walletTimer = null;
 let _siliconSyncing = false;
-let _siliconResync = false;
-let _silFailNotified = false;
 let _silPollTimer = null;
 const SIL_POLL_MS = 30000;
-let _questScanUid = null;
-let _dailyDay = '';
+let _reloadOnVisible = false;
+let _laterChosen = false;
+let _syncDebounceTimer = null;
 
 function _withTimeout(promise, ms, fallback) {
     return Promise.race([promise, new Promise(function (r) { setTimeout(function () { r(fallback); }, ms); })]);
 }
-let _silVersion = 0;
-let _flushPromise = null;
-// Proteksi agar respons saldo dari flush tidak menimpa perubahan lokal yang terjadi saat RPC berjalan.
-let _lastFlushVersion = -1;
-let _lastFlushHadConcurrentChange = false;
-let _remotePending = false;
-let _reloadOnVisible = false;
-let _laterChosen = false;
-let _lastRetryAt = 0;
-let _syncDebounceTimer = null;
 
 export function getDeviceId() {
     try {
@@ -148,291 +128,48 @@ function _reloadAfterApply(silent, delay) {
     setTimeout(function () { location.reload(); }, delay);
 }
 
-function _applyRemoteNow() {
-    if (!_remotePending || !_state || !_isConnected()) return;
-    _remotePending = false;
-    applyCloud(CloudService.getSlot(), { silent: true }).then(function (r) {
-        if (!r || !r.ok) _remotePending = true;
-    }).catch(function () { _remotePending = true; });
-}
-
 function _uploadOnLeave() {
-    if (!_ready || _busy || _checking || _conflictOpen || _remotePending || !_isConnected() || !_state) return;
+    if (!_ready || _busy || _checking || _conflictOpen || !_isConnected() || !_state) return;
     if (localInfo(_state).minutes === _lastUploadMinutes) return;
     uploadNow({ auto: true });
 }
 
 function _onVisibilityChange() {
     if (document.visibilityState === 'hidden') {
-        if (_remotePending) _applyRemoteNow();
-        else _uploadOnLeave();
+        _uploadOnLeave();
         return;
     }
     
     if (document.visibilityState === 'visible') {
-        if (_isConnected()) {
-            _debouncedSyncSilicon();
-        }
-    }
-
-    if (_reloadOnVisible) { _reloadOnVisible = false; location.reload(); return; }
-    if (_isConnected() && !_ready && !_checking && !_conflictOpen && !_laterChosen && _hasSynced()) {
-        if (Date.now() - _lastRetryAt < 30000) return;
-        _lastRetryAt = Date.now();
-        checkOnConnect();
+        if (_isConnected()) _debouncedSyncSilicon();
     }
 }
 
 // ============================================================
-// SILICON — SERVER IS THE BOSS
+// SILICON — STRICT SERVER AUTHORITATIVE (NO LOCAL PENDING QUEUE)
 // ============================================================
-function _hasSyncedSilicon() {
-    try { return localStorage.getItem(SILICON_SYNC_KEY) === '1'; } catch (e) { return false; }
-}
-
-function _markSiliconSynced() {
-    try { localStorage.setItem(SILICON_SYNC_KEY, '1'); } catch (e) {}
-}
-
-function _pendingAll() {
-    try {
-        var a = JSON.parse(localStorage.getItem(SIL_PENDING_KEY) || '[]');
-        return Array.isArray(a) ? a.filter(function (x) { return x && x.amount > 0 && x.uid; }) : [];
-    } catch (e) { return []; }
-}
-
-function _writePending(list) {
-    try {
-        if (!list.length) localStorage.removeItem(SIL_PENDING_KEY);
-        else localStorage.setItem(SIL_PENDING_KEY, JSON.stringify(list.slice(-200)));
-    } catch (e) {}
-}
-
-function _isQuest(x) { return x && x.type === 'quest'; }
-
-function _pendingNet() { 
-    var uid = CloudService.getUserId();
-    return _pendingAll().reduce(function (sum, x) {
-        if (x.uid !== uid) return sum;
-        if (x.type === 'topup') return sum - x.amount;
-        return _isQuest(x) ? sum - x.amount : sum + x.amount;
-    }, 0);
-}
-
-function _pendingCount() {
-    var uid = CloudService.getUserId();
-    return _pendingAll().filter(function (x) { return x.uid === uid; }).length;
-}
-
-function _enqueueSpend(amount) {
-    var uid = CloudService.getUserId();
-    if (!uid || !(amount > 0)) return;
-    var list = _pendingAll();
-    list.push({ id: 'sp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8), uid: uid, type: 'spend', amount: Math.floor(amount), at: Date.now() });
-    _writePending(list);
-    _silVersion++;
-}
-
-function _enqueueQuest(questId, amount) {
-    var uid = CloudService.getUserId();
-    if (!uid || !questId || !(amount > 0)) return;
-    var list = _pendingAll();
-    if (list.some(function (x) { return x.uid === uid && _isQuest(x) && x.key === questId; })) return;
-    list.push({ id: 'qc_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), uid: uid, type: 'quest', key: questId, amount: Math.floor(amount), at: Date.now() });
-    _writePending(list);
-    _silVersion++;
-}
-
-function _removePending(id) {
-    _writePending(_pendingAll().filter(function (x) { return x.id !== id; }));
-    _silVersion++;
-}
-
-function _markSent(id) {
-    _writePending(_pendingAll().map(function (x) { if (x.id === id) x.sent = true; return x; }));
-}
-
-function _cancelSpend(amount) {
-    var uid = CloudService.getUserId();
-    var left = Math.floor(amount);
-    var list = _pendingAll();
-    for (var i = list.length - 1; i >= 0 && left > 0; i--) {
-        var x = list[i];
-        if (x.uid !== uid || _isQuest(x) || x.sent || x.type === 'topup') continue;
-        var cut = Math.min(x.amount, left);
-        x.amount -= cut;
-        left -= cut;
-    }
-    _writePending(list.filter(function (x) { return x.amount > 0; }));
-    _silVersion++;
-    return left;
-}
-
-function _ackKey(uid) { return QUEST_ACK_PREFIX + uid; }
-function _ackedQuests(uid) {
-    try { var a = JSON.parse(localStorage.getItem(_ackKey(uid)) || '[]'); return Array.isArray(a) ? a : []; }
-    catch (e) { return []; }
-}
-function _ackQuest(uid, questId) {
-    try {
-        var a = _ackedQuests(uid);
-        if (a.indexOf(questId) < 0) { a.push(questId); localStorage.setItem(_ackKey(uid), JSON.stringify(a)); }
-    } catch (e) {}
-}
-
-function _queueQuestRecovery() {
-    var uid = CloudService.getUserId();
-    if (!uid || _questScanUid === uid || !_state) return;
-    _questScanUid = uid;
-    try {
-        var d = (_state.get && _state.get()) || _state.data || {};
-        var done = (d.quests && Array.isArray(d.quests.completed)) ? d.quests.completed : [];
-        var acked = _ackedQuests(uid);
-        done.forEach(function (id) {
-            var amt = QUEST_SIL[id];
-            if (amt && acked.indexOf(id) < 0) _enqueueQuest(id, amt);
-        });
-    } catch (e) { console.warn('[CloudSync] pemulihan reward quest gagal:', e); }
-}
-
-async function _claimDailyOnce() {
-    var day = new Date().toISOString().slice(0, 10);
-    if (_dailyDay === day) return;
-    var res = await CloudService.claimDailySilicon();
-    if (res && res.ok) _dailyDay = day;
-}
-
-function _flushPending() {
-    if (_flushPromise) return _flushPromise;
-    var p = (async function () {
-        await Promise.resolve(); 
-        var lastBal = null;
-        var skip = {};
-        var hadConcurrentChange = false;
-        try {
-            while (_isConnected()) {
-                var uid = CloudService.getUserId();
-                var item = _pendingAll().find(function (x) { return x.uid === uid && !skip[x.id]; });
-                if (!item) break;
-
-                var res;
-                // Snapshot versi sebelum RPC: perubahan lokal saat menunggu server membuat hasil ini
-                // tidak aman untuk langsung dipakai menimpa saldo yang sedang tampil.
-                var versionBeforeRequest = _silVersion;
-                if (item.type === 'topup') {
-                    skip[item.id] = true;
-                    continue;
-                }
-                if (_isQuest(item)) {
-                    res = await CloudService.claimQuestSilicon(item.key);
-                } else {
-                    _markSent(item.id);
-                    res = await CloudService.spendSiliconServer(item.amount, item.id);
-                }
-                if (_silVersion !== versionBeforeRequest) hadConcurrentChange = true;
-                if (res && res.ok) {
-                    _removePending(item.id);
-                    if (_isQuest(item)) _ackQuest(uid, item.key);
-                    lastBal = res.balance;
-                    continue;
-                }
-                var msg = String((res && res.reason) || '') + ' ' + String((res && res.code) || '');
-
-                if (_isQuest(item)) {
-                    if (/invalid_quest|invalid_amount/i.test(msg)) {
-                        _removePending(item.id);
-                    } else {
-                        skip[item.id] = true;
-                    }
-                    continue;
-                }
-
-                if (/insufficient|invalid_amount/i.test(msg)) {
-                    console.warn('[CloudSync] Belanja SIL ditolak server, dibuang dari antrean:', msg.trim());
-                    _removePending(item.id);
-                    continue;
-                }
-                break;
-            }
-        } catch (e) {
-            console.warn('[CloudSync] flush SIL error:', e);
-        } finally {
-            _lastFlushHadConcurrentChange = hadConcurrentChange;
-            _lastFlushVersion = _silVersion;
-            _flushPromise = null;
-        }
-        return lastBal;
-    })();
-    _flushPromise = p;
-    return p;
-}
-
 async function syncSiliconOnLogin() {
     if (!_state || !_isConnected()) return;
-    if (_siliconSyncing) { _siliconResync = true; return; }
+    if (_siliconSyncing) return;
     
     _siliconSyncing = true;
     try {
-        _queueQuestRecovery();
-        try { await _withTimeout(_claimDailyOnce(), 3000, null); } catch (e) {}
-
-        for (var attempt = 0; attempt < 2; attempt++) {
-            await _withTimeout(_flushPending(), 3000, null);
-            var v0 = _silVersion;
-            var res = await _withTimeout(CloudService.getSiliconBalance(), 4000, { ok: false });
-            
-            if (!res.ok) {
-                if (!_silFailNotified) {
-                    _silFailNotified = true;
-                    ToastService.warning('Sinkronisasi server lambat. Mencoba lagi di latar belakang.');
-                }
-                return;
-            }
-            _silFailNotified = false;
-            
-            if (v0 !== _silVersion || _flushPromise) continue;
-
-            var serverBal = Math.floor(res.balance || 0);
+        // 1. Ambil saldo server murni. Jika adapter memvalidasi (null/invalid), ini akan throw error.
+        var res = await _withTimeout(CloudService.getSiliconBalance(), 4000, { ok: false });
+        
+        if (res.ok && typeof res.balance === 'number') {
+            var serverBal = Math.floor(res.balance);
             var localBal = SiliconService.getBalance();
             
-            var uid = CloudService.getUserId();
-            var list = _pendingAll();
-            var hasTopups = list.some(function(x) { return x.uid === uid && x.type === 'topup'; });
-            
-            if (hasTopups && serverBal >= localBal) {
-                _writePending(list.filter(function(x) { return !(x.uid === uid && x.type === 'topup'); }));
-                _silVersion++;
+            if (serverBal !== localBal) {
+                console.info('[CloudSync] Sync Server (' + serverBal + ') -> Lokal (' + localBal + ')');
+                SiliconService.applyServerBalance(serverBal);
             }
-
-            // [FIX CRITICAL] Jika server punya saldo jauh lebih besar (misal Admin Top-up) sementara lokal kecil,
-            // hapus antrean 'spend' lama yang mungkin nyangkut agar tidak menimpa saldo server.
-            var net = _pendingNet();
-            if (serverBal > localBal + 1000 && net > 0) {
-                 console.warn('[CloudSync] Terdeteksi desync (Server jauh lebih besar). Membuang antrean lama.');
-                 list = list.filter(function(x) { return x.uid !== uid || x.type !== 'spend'; });
-                 _writePending(list);
-                 _silVersion++;
-                 net = _pendingNet();
-            }
-
-            var effective = Math.max(0, serverBal - net);
-
-            if (effective !== localBal) {
-                console.info('[CloudSync] Silicon lokal (', localBal, ') -> (', effective, ')');
-                SiliconService.applyServerBalance(effective);
-                ToastService.info('Saldo Silicon disinkronkan (' + effective + ' SIL).');
-            }
-            if (!_hasSyncedSilicon()) _markSiliconSynced();
-            break;
         }
     } catch (e) {
-        console.warn('[CloudSync] syncSiliconOnLogin error:', e);
+        console.warn('[CloudSync] Gagal sinkronisasi saldo, mempertahankan saldo lokal:', e);
     } finally {
         _siliconSyncing = false;
-        if (_siliconResync) {
-            _siliconResync = false;
-            setTimeout(function () { syncSiliconOnLogin(); }, 1000);
-        }
     }
 }
 
@@ -443,62 +180,63 @@ function _debouncedSyncSilicon() {
     }, 800); 
 }
 
-function _reconcileAfterFlush(bal) {
-    if (bal == null || !Number.isFinite(Number(bal)) || _siliconSyncing || _pendingCount() > 0) return;
-    // Jangan gunakan hasil RPC jika perubahan saldo lokal terjadi saat transaksi masih berjalan,
-    // atau jika ada perubahan baru setelah flush selesai. Sinkronisasi berikutnya akan membaca ulang.
-    if (_lastFlushHadConcurrentChange || _lastFlushVersion !== _silVersion) {
-        _debouncedSyncSilicon();
-        return;
-    }
-    var eff = Math.max(0, Math.floor(bal));
-    var local = SiliconService.getBalance();
-    if (eff < local) {
-        SiliconService.applyServerBalance(eff);
-    }
-}
-
-function _pushSiliconDelta(delta) {
-    if (!delta || delta >= 0) return;
-    if (!_state || !CloudService.getUserId()) return; 
-    _enqueueSpend(Math.abs(delta));
-    if (!_isConnected()) return;
-    _flushPending().then(_reconcileAfterFlush).catch(function () {});
-}
-
-function _onLocalCredit(delta, reason, isRefund) {
+// [DEBIT] Pemain membelanjakan SIL: Potong langsung ke server.
+function _onLocalDebit(delta) {
     if (!_state || !CloudService.getUserId()) return;
-    if (isRefund) {
-        var left = _cancelSpend(delta);
-        if (left > 0) console.warn('[CloudSync] refund', left, 'SIL tak bisa dibatalkan.');
+    var amount = Math.abs(delta);
+    if (amount <= 0) return;
+
+    var currentLocal = SiliconService.getBalance();
+    if (currentLocal < amount) return; 
+
+    var reqId = 'sp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    
+    // Tembak server
+    CloudService.spendSiliconServer(amount, reqId).then(function(res) {
+        if (!res.ok) {
+            // Gagal, kembalikan uang
+            SiliconService.applyServerBalance(currentLocal);
+            ToastService.error('Gagal memotong SIL: ' + (res.reason || 'Server error'));
+        } else {
+            // Sukses, pastikan saldo sama persis dengan server
+            SiliconService.applyServerBalance(res.balance);
+        }
+    }).catch(function() {
+        SiliconService.applyServerBalance(currentLocal);
+        ToastService.error('Koneksi gagal, SIL dikembalikan.');
+    });
+}
+
+// [KREDIT] Pemain mendapat SIL: HANYA terima jika server mengonfirmasi.
+function _onLocalCredit(delta, reason) {
+    if (!_state || !CloudService.getUserId()) return;
+    
+    if (reason.indexOf('quest:') === 0) {
+        var questId = reason.slice(6);
+        CloudService.claimQuestSilicon(questId).then(function(res) {
+            if (res.ok) _debouncedSyncSilicon();
+        });
         return;
     }
     
-    if (reason.indexOf('topup:') === 0) {
-        var uid = CloudService.getUserId();
-        var list = _pendingAll();
-        list.push({ id: 'tp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), uid: uid, type: 'topup', amount: delta, at: Date.now() });
-        _writePending(list);
-        _silVersion++;
-        return;
-    }
-
-    if (reason.indexOf('quest:') === 0) {
-        _enqueueQuest(reason.slice(6), delta);
-        if (_isConnected()) _flushPending().then(_reconcileAfterFlush).catch(function () {});
-        return;
-    }
     if (reason === 'daily-login') {
-        if (_isConnected()) _debouncedSyncSilicon(); 
+        CloudService.claimDailySilicon().then(function(res) {
+            if (res.ok) _debouncedSyncSilicon();
+        });
+        return;
+    }
+    
+    // Top-up dari Admin / pembelian
+    if (reason.indexOf('topup:') === 0 || reason === 'server-sync') {
+        _debouncedSyncSilicon();
+        return;
     }
 }
 
 async function uploadNow(opts) {
     opts = opts || {};
-    if (!_state) return { ok: false, reason: 'not_inited', code: 'unknown' };
-    if (!_isConnected()) return { ok: false, reason: 'Belum login.', code: 'not_signed_in' };
-    if (_busy) return { ok: false, reason: 'busy', code: 'busy' };
-    if ((_conflictOpen || _remotePending) && !opts.manual) return { ok: false, reason: 'conflict', code: 'conflict' };
+    if (!_state || !_isConnected() || _busy) return;
+    if ((_conflictOpen) && !opts.manual) return;
 
     _busy = true;
     try {
@@ -516,8 +254,6 @@ async function uploadNow(opts) {
             _markSynced(slot);
             try { localStorage.setItem(LAST_SYNC_KEY, String(_lastUploadAt)); } catch (e) {}
             res.slot = slot;
-        } else if (opts.auto) {
-            bus.emit('cloud:autosync-failed', { code: res.code });
         }
         return res;
     } finally {
@@ -526,7 +262,7 @@ async function uploadNow(opts) {
 }
 
 function _onLocalSaved() {
-    if (!_ready || _busy || _checking || _conflictOpen || _remotePending || !_isConnected() || !_state) return;
+    if (!_ready || _busy || _checking || _conflictOpen || !_isConnected() || !_state) return;
     const info = localInfo(_state);
     if (info.minutes === _lastUploadMinutes) return;
     if (Date.now() - _lastUploadAt < CLOUD.autoUploadMinMs) return;
@@ -548,15 +284,13 @@ async function checkOnConnect() {
         if (dec.action === 'upload') {
             _ready = true;
             await uploadNow({ auto: true });
-        } else if (dec.action === 'cloud') {
+        } else if (dec.action === 'cloud' || (_hasSynced(slot) && dec.action === 'prompt')) {
             await _autoResolve(slot, local, cloud, dec.reason);
         } else if (dec.action === 'same') {
             _ready = true;
             _lastUploadMinutes = local.minutes;
             _markSynced(slot);
             syncSiliconOnLogin(); 
-        } else if (_hasSynced(slot)) {
-            await _autoResolve(slot, local, cloud, dec.reason);
         } else {
             _conflictOpen = true;
             bus.emit('cloud:conflict', { slot: slot, local: local, cloud: cloud, reason: dec.reason });
@@ -613,10 +347,7 @@ async function _startRealtime() {
         const local = localInfo(_state);
         if ((Number(row.game_minutes) || 0) > local.minutes) {
             if (_hasSynced(row.slot)) {
-                _remotePending = true;
-                if (document.visibilityState === 'hidden') _applyRemoteNow();
-            } else {
-                bus.emit('cloud:remote-newer', { slot: row.slot, local: local, cloud: row });
+                applyCloud(CloudService.getSlot(), { silent: true });
             }
         }
     });
@@ -667,23 +398,17 @@ export const CloudSync = {
             } else if (e && e.status === 'disconnected') {
                 try { localStorage.removeItem('smartphone-empire:admin-email'); } catch(err) {}
                 _stopRealtime();
-                _questScanUid = null;
-                _dailyDay = '';
                 _ready = false;
                 _conflictOpen = false;
-                _remotePending = false;
                 _laterChosen = false;
             }
         });
 
         bus.on('silicon:changed', function (payload) {
             if (!payload || payload.fromServer) return;
-            // Semua perubahan lokal harus membatalkan respons sinkronisasi yang sedang berlangsung,
-            // termasuk daily-login yang sebelumnya tidak menaikkan _silVersion.
-            _silVersion++;
             var delta = payload.delta || 0;
-            if (delta < 0) _pushSiliconDelta(delta);
-            else if (delta > 0) _onLocalCredit(delta, String(payload.reason || ''), payload.refund === true);
+            if (delta < 0) _onLocalDebit(delta);
+            else if (delta > 0) _onLocalCredit(delta, String(payload.reason || ''));
         });
 
         if (_isConnected()) {
@@ -693,6 +418,7 @@ export const CloudSync = {
             } catch (err) {}
             _startRealtime();
             checkOnConnect();
+            syncSiliconOnLogin();
         }
     },
 
@@ -720,17 +446,11 @@ export const CloudSync = {
 
     syncSilicon: syncSiliconOnLogin,
 
-    resetSiliconSync: function () {
-        try { localStorage.removeItem(SILICON_SYNC_KEY); } catch (e) {}
-        console.info('[CloudSync] silicon-synced flag di-reset.');
-    },
-
     forcePull: async function () {
         if (!_state) return { ok: false, reason: 'Game belum siap.' };
         if (!_isConnected()) return { ok: false, reason: 'Kamu belum login ke Cloud.' };
         
         _conflictOpen = false;
-        _remotePending = false;
         _busy = true; 
         
         ToastService.warning('Menarik data dari server...');
@@ -743,11 +463,9 @@ export const CloudSync = {
                 _state.data.silicon = localSil;
             }
 
-            await _withTimeout(_flushPending(), 3000, null);
             var silRes = await _withTimeout(CloudService.getSiliconBalance(), 4000, { ok: false });
             if (silRes.ok) {
-                var net = _pendingNet();
-                SiliconService.applyServerBalance(Math.max(0, Math.floor(silRes.balance || 0) - net));
+                SiliconService.applyServerBalance(Math.floor(silRes.balance || 0));
             }
 
             try { SaveService.save(_state, { silent: true }); } catch (e) {}
@@ -767,5 +485,5 @@ export const CloudSync = {
         }
     },
 
-    _reset: function () { _inited = false; _ready = false; _busy = false; _checking = false; _conflictOpen = false; _remotePending = false; _reloadOnVisible = false; _laterChosen = false; _lastUploadAt = 0; _lastUploadMinutes = -1; _questScanUid = null; _dailyDay = ''; _siliconResync = false; _stopRealtime(); }
+    _reset: function () { _inited = false; _ready = false; _busy = false; _checking = false; _conflictOpen = false; _reloadOnVisible = false; _laterChosen = false; _lastUploadAt = 0; _lastUploadMinutes = -1; _stopRealtime(); }
 };
