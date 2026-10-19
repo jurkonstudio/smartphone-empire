@@ -8,6 +8,8 @@ import { bus } from '../../core/EventBus.js';
 import { LanguageService, t } from '../../core/LanguageService.js';
 import { CloudService } from '../CloudService.js';
 import { CloudSync } from './CloudSync.js';
+import { SaveService } from '../../core/SaveService.js';
+import { APP_CONFIG } from '../../config/app.config.js';
 import { isCloudConfigured, CLOUD } from './supabase.config.js';
 
 var KNOWN_ERRORS = ['invalid_credentials', 'email_exists', 'email_not_confirmed', 'weak_password', 'rate_limit',
@@ -159,6 +161,30 @@ function openAuth(mode, prefillEmail) {
     emailEl.focus();
 }
 
+// Terjemahan dengan cadangan teks bila kunci belum ada di kamus.
+function tf(key, id, en) {
+    var v = t(key);
+    if (v && v !== key) return v;
+    var isEn = false;
+    try { isEn = LanguageService.getLang() === 'en'; } catch (e) {}
+    return isEn ? en : id;
+}
+
+// Hapus data game lokal & penanda sinkron akun ini, lalu muat ulang ke halaman awal.
+function _resetToStart() {
+    try { SaveService.stopAutoSave(); } catch (e) {}
+    try { SaveService.clear(); } catch (e) {}
+    try {
+        ['smartphone-empire:silicon-pending', 'smartphone-empire:silicon-synced',
+         'smartphone-empire:cloud-last-sync', 'smartphone-empire:cloud-slot'].forEach(function (k) { localStorage.removeItem(k); });
+    } catch (e) {}
+    // Jaga-jaga: simpan terakhir saat halaman ditutup tidak boleh menghidupkan lagi data lama.
+    window.addEventListener('pagehide', function () {
+        try { localStorage.removeItem(APP_CONFIG.saveKey); } catch (e) {}
+    });
+    location.replace(location.pathname);
+}
+
 // ---------- Akun & slot ----------
 function openAccount() {
     var last = CloudSync.getLastSyncAt();
@@ -267,9 +293,21 @@ function openAccount() {
             return;
         }
         if (e.target.closest('[data-ca-signout]')) {
+            var soBtn = e.target.closest('[data-ca-signout]');
+            soBtn.disabled = true;
+            // 1. Simpan progres terakhir ke cloud sebelum keluar.
+            var last = await CloudSync.uploadNow({ manual: true });
+            if (!last.ok && !window.confirm(tf('cloud.signout.unsaved',
+                'Progres terakhir belum tersimpan ke cloud. Jika keluar sekarang, progres di perangkat ini akan hilang. Tetap keluar?',
+                'Your latest progress could not be saved to the cloud. If you sign out now, progress on this device will be lost. Sign out anyway?'))) {
+                soBtn.disabled = false;
+                return;
+            }
             var r = await CloudService.signOut();
+            if (!r.ok) { soBtn.disabled = false; ToastService.error(errText(r.code)); return; }
+            // 2. Bersihkan data game di perangkat ini, lalu kembali ke halaman paling awal.
             Modal.close('cloud-account', true);
-            if (r.ok) ToastService.info(t('cloud.auth.signed_out')); else ToastService.error(errText(r.code));
+            _resetToStart();
         }
     });
 

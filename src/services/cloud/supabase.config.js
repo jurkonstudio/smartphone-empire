@@ -11,7 +11,7 @@ export const SUPABASE_LIB_URLS = [
 ];
 
 export const CLOUD = {
-    slots: 3,
+    slots: 1,
     defaultSlot: 1,
     maxSaveBytes: 4 * 1024 * 1024,
     autoUploadMinMs: 120000,
