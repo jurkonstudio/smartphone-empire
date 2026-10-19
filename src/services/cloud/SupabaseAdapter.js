@@ -1,5 +1,5 @@
 // FILE: src/services/cloud/SupabaseAdapter.js
-// v2028.43 — [TRANSFER] Menambahkan rpcTransferSilicon untuk kirim SIL antar pemain.
+// v2028.44 — [TRANSFER] Menambahkan rpcGetPlayerById & rpcTransferSilicon.
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_LIB_URLS, CLOUD } from './supabase.config.js';
 
 var _client = null;
@@ -335,7 +335,15 @@ export const SupabaseAdapter = {
         return res.data == null ? null : res.data;
     },
 
-    // [NEW] Transfer SIL ke pemain lain
+    // [NEW] Cek detail pemain berdasarkan ID sebelum transfer
+    rpcGetPlayerById: async function (publicId) {
+        var c = await getClient();
+        var res = await c.rpc('get_player_by_id', { p_public_id: publicId });
+        if (res.error) throw mk(res.error);
+        return res.data;
+    },
+
+    // [NEW] Eksekusi transfer SIL
     rpcTransferSilicon: async function (receiverId, amount) {
         var c = await getClient();
         var res = await c.rpc('transfer_silicon', { 
