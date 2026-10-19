@@ -10,6 +10,9 @@ sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') location.replace('../
 
 let tab = 'home', status = 'pending', players = [], query = '', pfilter = 'all', psort = 'joined', pshown = 100;
 let cur = null, curTab = 'info', curSave = undefined, ledgerQ = '';
+const BROWSE = [['auth_users', 'Akun (auth)'], ['profiles', 'Profil'], ['save_heads', 'Ringkasan save'], ['game_saves', 'Save game'], ['silicon_wallets', 'Dompet SIL'],
+    ['silicon_ledger', 'Ledger SIL'], ['silicon_quest_claims', 'Klaim quest'], ['silicon_requests', 'Request belanja'], ['payment_orders', 'Pesanan'],
+    ['admin_users', 'Admin'], ['admin_audit', 'Audit'], ['storage_objects', 'File storage']];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => go(b.dataset.tab));
@@ -112,6 +115,8 @@ const views = {
             <td>${t.rls ? '<span class="tag ok">aktif</span>' : '<span class="tag bad">mati</span>'}</td><td class="n">${num(t.policies)}</td></tr>`).join('')}</tbody></table></div>
           <h3>Storage</h3><div class="tw"><table><thead><tr><th>Bucket</th><th>Akses</th><th class="n">File</th><th class="n">Ukuran</th><th class="n">Batas file</th></tr></thead><tbody>
           ${(s.buckets || []).map(b => `<tr><td>${esc(b.id)}</td><td>${b.public ? '<span class="tag warn">publik</span>' : '<span class="tag ok">privat</span>'}</td><td class="n">${num(b.files)}</td><td class="n">${bytes(b.bytes)}</td><td class="n">${b.file_size_limit ? bytes(b.file_size_limit) : '-'}</td></tr>`).join('')}</tbody></table></div>
+          <h3>Jelajahi data mentah (baca saja)</h3>
+          <div class="chips">${BROWSE.map(([k, v]) => `<button class="btn" data-browse="${k}">${v}</button>`).join('')}</div>
           <h3>Fungsi / RPC (${num(fn.length)})</h3>
           <div class="bar"><input id="fq" type="search" placeholder="Filter nama fungsi" value="${esc(fq)}"></div>
           <div class="tw"><table><thead><tr><th>Fungsi</th><th>Hasil</th><th>Definer</th><th>anon</th><th>login</th><th>service</th></tr></thead><tbody id="fbody"></tbody></table></div>
@@ -175,21 +180,27 @@ const setPT = t => document.querySelectorAll('[data-pt]').forEach(b => b.classLi
 async function drawPlayer() {
     if (!cur) return;
     const a = cur.account, p = cur.profile || {}, w = cur.wallet || {}, h = (cur.heads || [])[0];
-    $('#pd-title').innerHTML = esc(p.company_name || p.player_name || a.email) + (a.is_admin ? '<span class="tag info">admin</span>' : '')
+    $('#pd-title').innerHTML = esc(p.company_name || (h && h.company_name) || p.player_name || a.email) + (a.is_admin ? '<span class="tag info">admin</span>' : '')
         + (a.banned_until && new Date(a.banned_until) > new Date() ? '<span class="tag bad">diblokir</span>' : '');
     $('#pd-sub').textContent = 'ID ' + (p.public_id ?? '-') + ' · ' + a.email + ' · ' + a.id;
     setPT(curTab);
     if (curTab === 'info') {
         pbody.innerHTML = `<h3>Akun</h3>${kv([['ID Pemain (publik)', esc(p.public_id)], ['User ID (UUID)', esc(a.id)], ['Email', esc(a.email)], ['Provider', esc(a.provider)], ['Bergabung', when(a.created_at)], ['Login terakhir', when(a.last_sign_in_at) + ' (' + ago(a.last_sign_in_at) + ')'],
             ['Email terverifikasi', a.email_confirmed_at ? when(a.email_confirmed_at) : 'belum'], ['Status', a.banned_until && new Date(a.banned_until) > new Date() ? 'diblokir' : 'normal']])}
-          <h3>Profil publik &amp; statistik (dilaporkan klien)</h3>${kv([['Nama pemain', esc(p.player_name)], ['Nama display', esc(p.display_name)], ['Perusahaan', esc(p.company_name)],
+          <h3>Profil publik &amp; statistik (dilaporkan klien)</h3>${kv([['Nama pemain', esc(p.player_name)], ['Nama display', esc(p.display_name)], ['Perusahaan', esc(p.company_name || (h && h.company_name))],
             ['Berdiri', gameDate(p.founded_year, p.founded_month)], ['Ganti nama', num(p.name_changes)], ['Foto profil', esc(p.avatar_path)],
             ['Omzet', num(p.stat_revenue)], ['Unit terjual', num(p.stat_sold)], ['Reputasi', num(p.stat_reputation)], ['Pangsa pasar', num(p.stat_share) + '%'],
             ['Kas', num(p.stat_cash)], ['Produk', num(p.stat_products)], ['Statistik diperbarui', when(p.stats_updated_at)]])}
           <h3>Dompet SIL</h3>${kv([['Saldo', `<span class="sil">${num(w.balance)}</span>`], ['Streak harian', num(w.streak)], ['Klaim harian terakhir', esc(w.last_daily)],
             ['Total masuk', num(cur.ledger_totals.earned)], ['Total keluar', num(cur.ledger_totals.spent)], ['Transaksi', num(cur.ledger_totals.rows)], ['Quest diklaim', num((cur.quests || []).length)]])}
+          <h3>Berkas storage</h3><div id="pfiles"><p class="muted">Memuat…</p></div>
           <h3>Save cloud</h3>${h ? kv([['Perusahaan', esc(h.company_name)], ['Tanggal game', gameDate(h.game_year, h.game_month)], ['Waktu main (menit game)', num(h.game_minutes)],
             ['Disimpan', when(h.updated_at)], ['Skema', esc(h.schema_version)], ['Perangkat', esc(h.device_id)], ['Ukuran (terkompresi)', bytes(cur.save_bytes)]]) : '<p class="muted">Belum ada save cloud.</p>'}`;
+        const id = a.id;
+        rpc('admin_player_files', { p_user_id: id }).then(fl => { const el = $('#pfiles'); if (!el || !cur || cur.account.id !== id) return;
+            el.innerHTML = fl.length ? `<div class="tw"><table><thead><tr><th>Berkas</th><th>Tipe</th><th class="n">Ukuran</th><th>Diunggah</th></tr></thead><tbody>
+              ${fl.map(f => `<tr><td class="sm">${esc(f.name)}</td><td class="sm">${esc(f.mimetype)}</td><td class="n">${bytes(f.size)}</td><td class="sm">${when(f.created_at)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Belum ada berkas.</p>'; })
+          .catch(() => { const el = $('#pfiles'); if (el) el.innerHTML = '<p class="muted">Tidak tersedia (jalankan admin-v3.sql).</p>'; });
     } else if (curTab === 'wallet') {
         pbody.innerHTML = `<h3>Riwayat SIL (200 terakhir)</h3>${ledgerTable(cur.ledger || [], false)}
           <h3>Quest yang diklaim</h3>${(cur.quests || []).length ? kv(cur.quests.map(q => [q.quest_id, when(q.claimed_at)])) : '<p class="muted">Belum ada.</p>'}`;
@@ -287,6 +298,7 @@ main.addEventListener('click', async e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.id === 'pmore') { pshown += 100; return drawPlayers(); }
     if (b.dataset.pf) { pfilter = b.dataset.pf; pshown = 100; document.querySelectorAll('[data-pf]').forEach(x => x.classList.toggle('on', x === b)); return drawPlayers(); }
+    if (b.dataset.browse) return browseTable(b.dataset.browse, Number(b.dataset.off || 0));
     if (b.dataset.go) return go(b.dataset.go);
     if (b.dataset.st) { status = b.dataset.st; return go('orders'); }
     if (b.dataset.ok || b.dataset.rej) {
@@ -297,5 +309,27 @@ main.addEventListener('click', async e => {
         catch (err) { toast(err.message); b.disabled = false; }
     }
 });
+
+async function browseTable(t, off = 0) {
+    main.innerHTML = '<p class="muted">Memuat…</p>';
+    try {
+        const r = await rpc('admin_browse_table', { p_table: t, p_limit: 50, p_offset: off });
+        const rows = r.rows || [], cols = rows.length ? Object.keys(rows[0]) : [];
+        const cell = (k, v) => {
+            if (v == null) return '<span class="muted">-</span>';
+            if (typeof v === 'string' && UUID.test(v) && (k === 'user_id' || (k === 'id' && (t === 'auth_users' || t === 'profiles'))))
+                return `<button class="btn" data-open="${esc(v)}">${esc(v.slice(0, 8))}…</button>`;
+            const x = typeof v === 'object' ? JSON.stringify(v) : String(v);
+            return `<span title="${esc(x)}">${esc(x.length > 80 ? x.slice(0, 80) + '…' : x)}</span>`;
+        };
+        const name = (BROWSE.find(b => b[0] === t) || [t, t])[1];
+        main.innerHTML = `<div class="bar"><button class="btn" data-go="system">← Sistem</button><h2>${esc(name)} <small class="muted">(${num(r.total)} baris)</small></h2></div>
+          ${rows.length ? `<div class="tw"><table><thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>
+            ${rows.map(row => `<tr>${cols.map(c => `<td class="sm">${cell(c, row[c])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : '<div class="empty">Tabel kosong.</div>'}
+          <div class="bar"><button class="btn" data-browse="${esc(t)}" data-off="${Math.max(0, off - 50)}" ${off === 0 ? 'disabled' : ''}>← Sebelumnya</button>
+            <span class="muted sm">${r.total ? num(off + 1) + '–' + num(Math.min(off + 50, r.total)) : '0'} dari ${num(r.total)}</span>
+            <button class="btn" data-browse="${esc(t)}" data-off="${off + 50}" ${off + 50 >= r.total ? 'disabled' : ''}>Berikutnya →</button></div>`;
+    } catch (e) { if (e.denied) return out(); main.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
 
 go('home');
