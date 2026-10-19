@@ -11,7 +11,10 @@ export function createCampusControls(el, cfg) {
     var view = { x: 0, z: 0, zoom: 1 };
     var ptrs = new Map();
     var pinchDist = 0, moved = 0, downT = 0;
-    var minZoom = cfg.minZoom || 0.7, maxZoom = cfg.maxZoom || 2.4, limit = cfg.limit || 7;
+    var minZoom = cfg.minZoom || 0.55, maxZoom = cfg.maxZoom || 2.4;
+    // cfg.limit eksplisit tetap dihormati; bila tidak ada, kamera mengikuti dunia 100x100.
+    var limit = (typeof cfg.limit === 'number') ? Math.max(1, cfg.limit) :
+        Math.max(7, ((typeof cfg.worldSize === 'number' ? cfg.worldSize : 100) / 2) - 3);
 
     // inertia & animasi zoom
     var vel = { x: 0, y: 0 };      // px per ms
@@ -171,6 +174,8 @@ export function createCampusControls(el, cfg) {
         view: view,
         flyTo: flyTo,
         zoomTo: zoomTo,
+        getBounds: function () { return { minX: -limit, maxX: limit, minZ: -limit, maxZ: limit }; },
+        setLimit: function (nextLimit) { limit = Math.max(1, Number(nextLimit) || 1); view.x = clamp(view.x, -limit, limit); view.z = clamp(view.z, -limit, limit); changed(); },
         reset: function () { flyTo(0, 0, 1); },
         dispose: function () {
             if (raf) cancelAnimationFrame(raf);

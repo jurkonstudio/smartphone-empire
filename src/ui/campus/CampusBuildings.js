@@ -6,6 +6,8 @@
 // (era Premium+), Monorail layang (era Smartphone Matang+), gerbang jalan,
 // jalan lebih panjang, 18 blok kawasan kota, 29 pohon. Logika level lama
 // (hq/lab/factory/store/os/monument/billboard) TIDAK diubah.
+// v2027.51 — visual semi-realistic + ekspansi dunia 100x100, district instancing,
+// tetap mempertahankan RULES, computePlan, DESIGN_ERAS, i18n, slot, dan level.
 // v2027.37a — fasad jendela bertekstur, bayangan palsu, trotoar, lampu jalan,
 // kolam, taman, pohon 3 jenis, detail unik tiap bangunan.
 //
@@ -14,6 +16,10 @@
 import { DESIGN_ERAS, getDesignEraForYear } from '../../data/era-design.data.js';
 import { BALANCE } from '../../data/balance.data.js';
 import { t } from '../../core/LanguageService.js';
+
+// Ukuran dunia visual; koordinat inti lama tetap di tengah agar integrasi tidak bergeser.
+export const CAMPUS_WORLD_SIZE = 100;
+export const CAMPUS_WORLD_HALF = CAMPUS_WORLD_SIZE / 2;
 
 // true  = bangunan tidak pernah turun level (puncak disimpan di state.campusPeak)
 // false = level selalu mengikuti kondisi terkini (bisa turun kalau staf dipecat, dll)
@@ -467,8 +473,8 @@ function addGate(g, A, THREE, x, z, rot) {
 export function buildGround(A, THREE) {
     var g = new THREE.Group();
     var i;
-    g.add(mesh(A, THREE, A.box(29.6, 0.6, 29.6), 'soil', 0, -0.9, 0));
-    g.add(mesh(A, THREE, A.box(30, 0.6, 30), 'grass', 0, -0.3, 0));
+    g.add(mesh(A, THREE, A.box(CAMPUS_WORLD_SIZE - 0.4, 0.6, CAMPUS_WORLD_SIZE - 0.4), 'soil', 0, -0.9, 0));
+    g.add(mesh(A, THREE, A.box(CAMPUS_WORLD_SIZE, 0.6, CAMPUS_WORLD_SIZE), 'grass', 0, -0.3, 0));
     GRASS_PATCHES.forEach(function (p) {
         g.add(mesh(A, THREE, A.box(p[2], 0.02, p[3]), 'grass2', p[0], 0.01, p[1]));
     });
@@ -541,6 +547,70 @@ export function buildGround(A, THREE) {
     g.add(instanced(A, THREE, A.cyl(0.035, 0.045, 1.4, 6), 'metal', poles));
     g.add(instanced(A, THREE, A.sph(0.1, 8, 6), 'lamp', heads));
     g.add(instanced(A, THREE, A.cyl(0.8, 0.8, 0.01, 14), 'halo', halos));
+
+    // Ekspansi kota 100x100. Inti lama (radius 17) sengaja dibiarkan utuh.
+    // Jalan dibangun sebagai segmen instanced-friendly; blok kota memakai InstancedMesh
+    // supaya area luas tidak membuat ratusan draw call pada perangkat mobile.
+    var roadItems = [], sidewalkItems = [], laneItems = [];
+    var grid = [-42, -30, -18, 18, 30, 42];
+    grid.forEach(function (v) {
+        // jalan vertikal; celah pusat mempertahankan plaza/kawasan lama.
+        if (Math.abs(v) >= 18) {
+            roadItems.push([v, 0.025, -30, 1, 1, 24, 0]);
+            roadItems.push([v, 0.025, 30, 1, 1, 24, 0]);
+            sidewalkItems.push([v - 1.45, 0.055, -30, 1, 1, 24, 0]);
+            sidewalkItems.push([v + 1.45, 0.055, -30, 1, 1, 24, 0]);
+            sidewalkItems.push([v - 1.45, 0.055, 30, 1, 1, 24, 0]);
+            sidewalkItems.push([v + 1.45, 0.055, 30, 1, 1, 24, 0]);
+        }
+        // jalan horizontal di area luar, dipotong di sekitar pusat lama.
+        roadItems.push([-30, 0.025, v, 24, 1, 1, 0]);
+        roadItems.push([30, 0.025, v, 24, 1, 1, 0]);
+        sidewalkItems.push([-30, 0.055, v - 1.45, 24, 1, 1, 0]);
+        sidewalkItems.push([-30, 0.055, v + 1.45, 24, 1, 1, 0]);
+        sidewalkItems.push([30, 0.055, v - 1.45, 24, 1, 1, 0]);
+        sidewalkItems.push([30, 0.055, v + 1.45, 24, 1, 1, 0]);
+    });
+    if (roadItems.length) g.add(instanced(A, THREE, A.box(1, 1, 1), 'road', roadItems));
+    if (sidewalkItems.length) g.add(instanced(A, THREE, A.box(1, 1, 1), 'curb', sidewalkItems));
+
+    // Distrik pinggiran: gedung kantor, hunian, dan gudang dengan variasi tinggi/atap.
+    // Seed deterministik menjaga tata kota stabil antar-render.
+    var shells = [[], [], []], roofs = [[], [], []], seed = 918273;
+    function rand() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+    var coords = [];
+    for (var cx = -42; cx <= 42; cx += 6) {
+        for (var cz = -42; cz <= 42; cz += 6) {
+            if (Math.abs(cx) < 18 && Math.abs(cz) < 18) continue;
+            // sisakan koridor jalan pada kelipatan 12.
+            if (Math.abs(cx) % 12 < 2 || Math.abs(cz) % 12 < 2) continue;
+            if (rand() < 0.19) continue; // ruang hijau/plaza kecil
+            coords.push([cx + (rand() - 0.5) * 1.1, cz + (rand() - 0.5) * 1.1]);
+        }
+    }
+    coords.forEach(function (p, idx) {
+        var w = 2.2 + rand() * 1.7, d = 2.0 + rand() * 1.8;
+        var h = 2.2 + rand() * 7.8;
+        var tier = h < 4.2 ? 0 : (h < 7.0 ? 1 : 2);
+        shells[tier].push([p[0], h / 2, p[1], w, h, d, 0]);
+        roofs[tier].push([p[0], h + 0.035, p[1], w + 0.08, 0.07, d + 0.08, 0]);
+        // beberapa atap punya utilitas kecil (hanya pada sampel agar draw-call tetap rendah).
+        if (idx % 9 === 0) {
+            g.add(mesh(A, THREE, A.box(0.55, 0.32, 0.55), 'metal', p[0] + 0.25, h + 0.22, p[1] - 0.2));
+        }
+    });
+    for (var tier = 0; tier < 3; tier++) {
+        if (shells[tier].length) g.add(instanced(A, THREE, A.box(1, 1, 1), tier === 0 ? 'wall' : 'window', shells[tier]));
+        if (roofs[tier].length) g.add(instanced(A, THREE, A.box(1, 1, 1), tier === 2 ? 'metal' : 'roof', roofs[tier]));
+    }
+
+    // Garis batas halus mengisyaratkan luas dunia tanpa menambah geometri berat.
+    var edge = [];
+    edge.push([0, 0.012, -49.4, 98.8, 1, 0.12, 0]);
+    edge.push([0, 0.012, 49.4, 98.8, 1, 0.12, 0]);
+    edge.push([-49.4, 0.012, 0, 0.12, 1, 98.8, 0]);
+    edge.push([49.4, 0.012, 0, 0.12, 1, 98.8, 0]);
+    g.add(instanced(A, THREE, A.box(1, 1, 1), 'curb', edge));
     return g;
 }
 

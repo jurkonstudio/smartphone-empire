@@ -1,5 +1,5 @@
 // FILE: src/ui/campus/CampusFallback.js
-// Tampilan loading + kartu placeholder lama (dipakai kalau WebGL/Three.js gagal).
+// Tampilan loading + fallback responsif; tetap memakai ikon dan string i18n yang ada.
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
 
@@ -10,8 +10,8 @@ export function renderCampusLoading() {
 
 export function renderCampusFallback() {
     return '<div style="text-align:center;padding:60px 20px;">' +
-        '<div style="display:inline-flex;align-items:center;justify-content:center;width:88px;height:88px;border-radius:24px;background:var(--accent-soft);color:var(--accent);margin-bottom:18px;">' +
-            renderIcon('layers', 44) +
+        '<div style="display:inline-flex;align-items:center;justify-content:center;width:clamp(64px,18vw,88px);height:clamp(64px,18vw,88px);border-radius:24px;background:var(--accent-soft);color:var(--accent);margin-bottom:18px;">' +
+            renderIcon('layers', 40) +
         '</div>' +
         '<div style="font-size:17px;font-weight:700;margin-bottom:8px;letter-spacing:-0.01em;">' +
             t('home.placeholder.title') +
