@@ -1,7 +1,5 @@
 // FILE: src/services/CloudService.js
-// v2028.41 — [FIX SIL] spendSiliconServer(amount, requestId) + claimQuestSilicon.
-// v2028.40 — registerAdapter idempotent (login dari onboarding sebelum boot selesai).
-// v2028.27 — [ADMIN] Menambahkan fungsi adminGetAllProfiles & adminSetSilicon.
+// v2028.42 — [TRANSFER] Menambahkan transferSilicon.
 import { bus } from '../core/EventBus.js';
 
 const SLOT_KEY = 'smartphone-empire:cloud-slot';
@@ -16,7 +14,7 @@ let _authBound = false;
 function _loadSlot() {
     try {
         const n = parseInt(localStorage.getItem(SLOT_KEY), 10);
-        if (n >= 1 && n <= 9) return 1;   // satu slot saja: slot lama (2, 3, ...) dipetakan ke slot 1
+        if (n >= 1 && n <= 9) return 1; 
     } catch (e) {}
     return 1;
 }
@@ -66,7 +64,7 @@ export const CloudService = {
     setSlot(n) {
         n = parseInt(n, 10);
         if (!(n >= 1 && n <= 9)) return false;
-        n = 1;                            // satu slot saja
+        n = 1;                            
         _slot = n;
         try { localStorage.setItem(SLOT_KEY, String(n)); } catch (e) {}
         bus.emit('cloud:slot-changed', { slot: _slot });
@@ -75,7 +73,6 @@ export const CloudService = {
 
     registerAdapter(adapter) {
         if (!adapter) return { ok: false, reason: 'Adapter kosong.' };
-        // Adapter yang sama sudah terpasang (mis. oleh layar onboarding): jangan reset status/sesi.
         if (_adapter === adapter) return { ok: true, already: true };
         _adapter = adapter;
         _authBound = false;
@@ -300,12 +297,20 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
-    // ID pemain 8 digit (untuk top-up di web). Butuh supabase/player-id.sql.
     async getPublicId() {
         if (!_adapter) return NOT_CONFIGURED;
         if (!_userId) return NOT_SIGNED_IN;
         if (typeof _adapter.rpcGetMyPublicId !== 'function') return NOT_CONFIGURED;
         try { return { ok: true, publicId: await _adapter.rpcGetMyPublicId() }; }
+        catch (err) { return _fail(err); }
+    },
+
+    // [NEW] Transfer SIL
+    async transferSilicon(receiverId, amount) {
+        if (!_adapter) return NOT_CONFIGURED;
+        if (!_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.rpcTransferSilicon !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, data: await _adapter.rpcTransferSilicon(receiverId, amount) }; }
         catch (err) { return _fail(err); }
     },
 
@@ -319,7 +324,6 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
-    // requestId: kunci idempoten (id item antrean) agar retry/multi-tab tidak memotong dua kali.
     async spendSiliconServer(amount, requestId) {
         if (!_adapter) return NOT_CONFIGURED;
         if (!_userId) return NOT_SIGNED_IN;
@@ -328,7 +332,6 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
-    // Reward quest: server memvalidasi id & nominal, idempoten per akun.
     async claimQuestSilicon(questId) {
         if (!_adapter) return NOT_CONFIGURED;
         if (!_userId) return NOT_SIGNED_IN;
@@ -374,7 +377,6 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
-    // [ADMIN PANEL - MANAJEMEN PEMAIN]
     async adminGetAllProfiles() {
         if (!_adapter || !_userId) return NOT_SIGNED_IN;
         if (typeof _adapter.rpcAdminGetProfiles !== 'function') return NOT_CONFIGURED;
