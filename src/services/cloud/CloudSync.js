@@ -139,9 +139,17 @@ function _applyRemoteNow() {
     }).catch(function () { _remotePending = true; });
 }
 
+// Pemain menutup / meninggalkan game: unggah save (termasuk uang) sekarang, tanpa menunggu jeda otomatis.
+function _uploadOnLeave() {
+    if (!_ready || _busy || _conflictOpen || _remotePending || !_isConnected() || !_state) return;
+    if (localInfo(_state).minutes === _lastUploadMinutes) return;
+    uploadNow({ auto: true });
+}
+
 function _onVisibilityChange() {
     if (document.visibilityState === 'hidden') {
         if (_remotePending) _applyRemoteNow();
+        else _uploadOnLeave();
         return;
     }
     
@@ -437,6 +445,7 @@ export const CloudSync = {
         
         document.addEventListener('visibilitychange', _onVisibilityChange);
         window.addEventListener('online', function () { syncSiliconOnLogin(); });
+        window.addEventListener('pagehide', _uploadOnLeave);
         
         bus.on('cloud:status-changed', function (e) {
             if (e && e.status === 'connected') {
