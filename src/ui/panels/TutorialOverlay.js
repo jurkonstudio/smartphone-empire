@@ -58,7 +58,12 @@ function _show(stepIndex, step) {
 
 function _reposition() {
     if (!_node || !_currentStep) return;
-    const target = document.querySelector(_currentStep.target);
+    // Ambil elemen target yang TERLIHAT (di desktop bottom nav tersembunyi, sidebar yang tampil; di mobile sebaliknya).
+    const matches = document.querySelectorAll(_currentStep.target);
+    let target = null;
+    for (let i = 0; i < matches.length; i++) {
+        if (matches[i].getClientRects().length) { target = matches[i]; break; }
+    }
     if (!target) return;
     const r = target.getBoundingClientRect();
     const pad = 6;
