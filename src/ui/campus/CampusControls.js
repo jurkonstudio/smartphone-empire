@@ -1,4 +1,5 @@
 // FILE: src/ui/campus/CampusControls.js
+// v2027.45 — interaksi peta lebih halus untuk layar sentuh dan mouse.
 // v2027.44 (Tahap 4) — + flyTo(x, z, zoom) kamera terbang halus, zoomTo(z), reset().
 //   Sentuhan / roda mouse / double-tap membatalkan animasi terbang.
 // Kontrol sentuh: drag 1 jari = geser (dengan inertia), pinch 2 jari = zoom,
@@ -25,6 +26,9 @@ export function createCampusControls(el, cfg) {
     var fly = null;                // animasi kamera terbang { t0, dur, fx, fz, fzoom, tx, tz, tzoom }
 
     el.style.touchAction = 'none'; // cegah scroll/zoom bawaan browser di atas peta
+    el.style.webkitTapHighlightColor = 'transparent';
+    el.style.userSelect = 'none';
+    el.style.webkitUserSelect = 'none';
 
     function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
     function changed() { if (cfg.onChange) cfg.onChange(view); }
@@ -115,6 +119,7 @@ export function createCampusControls(el, cfg) {
     function onUp(e) {
         var wasTap = ptrs.size === 1 && moved < 8 && Date.now() - downT < 300;
         ptrs.delete(e.pointerId);
+        if (e.type === 'pointercancel') { vel.x = vel.y = 0; fly = null; zoomTarget = 0; }
         if (ptrs.size < 2) pinchDist = 0;
         if (wasTap) { vel.x = vel.y = 0; }
         else if (!ptrs.size && performance.now() - lastMoveT < 80) kick();   // lepas sambil bergerak -> luncur

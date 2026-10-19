@@ -6,6 +6,7 @@
 // (era Premium+), Monorail layang (era Smartphone Matang+), gerbang jalan,
 // jalan lebih panjang, 18 blok kawasan kota, 29 pohon. Logika level lama
 // (hq/lab/factory/store/os/monument/billboard) TIDAK diubah.
+// v2027.52 — visual polish: palet lebih kaya, fasad berlapis, detail jendela dan jalan.
 // v2027.51 — visual semi-realistic + ekspansi dunia 100x100, district instancing,
 // tetap mempertahankan RULES, computePlan, DESIGN_ERAS, i18n, slot, dan level.
 // v2027.37a — fasad jendela bertekstur, bayangan palsu, trotoar, lampu jalan,
@@ -29,22 +30,22 @@ export var NEVER_DOWNGRADE = true;
 // night: 1 = jendela & lampu jalan menyala. sunCol = warna matahari/bulan.
 export const PALETTES = {
     light: {
-        grass: 0xcfe6c8, plaza: 0xeceff4, road: 0xd3d9e2, wall: 0xffffff,
-        window: 0x8fb4e8, trunk: 0xb59a7a, leaf: 0x8cc98a,
-        solar: 0x4a6fa5, metal: 0x9aa5b4, glow: 0x00b8d9,
-        grass2: 0xbfdcb6, soil: 0x9c8467, curb: 0xc3cad6, water: 0x7ec8e8,
-        leaf2: 0xa6d9a0, gold: 0xe0b445, shade: 0x000000,
+        grass: 0xc4e3bd, plaza: 0xf3f5fa, road: 0xbfc9d8, wall: 0xf4f7fc,
+        window: 0x75aee8, trunk: 0x9b7655, leaf: 0x72bd78,
+        solar: 0x315c91, metal: 0x8494a8, glow: 0x00c7ed,
+        grass2: 0xaed99f, soil: 0x806b56, curb: 0xd2d9e5, water: 0x55b9e5,
+        leaf2: 0x91cf87, gold: 0xf0bd4e, shade: 0x000000,
         flowerA: 0xf472b6, flowerB: 0xfacc15,
         lamp: 0xfff1c4, beacon: 0xff4d4d, halo: 0xffd98a,
-        hemiSky: 0xffffff, hemiGround: 0xcfd6e0, hemiI: 0.95, dirI: 0.8,
+        hemiSky: 0xf0f6ff, hemiGround: 0xb8c8bb, hemiI: 1.05, dirI: 0.9,
         sunCol: 0xfff1da, night: 0
     },
     dark: {
-        grass: 0x2d4a3b, plaza: 0x3b4252, road: 0x30353f, wall: 0xb4becd,
-        window: 0x4f77b8, trunk: 0x6b5a45, leaf: 0x3f7a55,
-        solar: 0x2c4a7a, metal: 0x6c7686, glow: 0x00d4ff,
-        grass2: 0x264235, soil: 0x3d3228, curb: 0x4a5163, water: 0x2f6f9a,
-        leaf2: 0x4c8f66, gold: 0xc9a13a, shade: 0x000000,
+        grass: 0x203b32, plaza: 0x343e50, road: 0x252d3a, wall: 0xc0ccdc,
+        window: 0x5798e8, trunk: 0x5d4939, leaf: 0x347d51,
+        solar: 0x254a7a, metal: 0x78869a, glow: 0x00ddff,
+        grass2: 0x2b503b, soil: 0x332a26, curb: 0x515d72, water: 0x176d9f,
+        leaf2: 0x4c9b68, gold: 0xe3b348, shade: 0x000000,
         flowerA: 0xd9558f, flowerB: 0xd1a914,
         lamp: 0xfff1c4, beacon: 0xff4d4d, halo: 0xffd98a,
         hemiSky: 0x9fb0d0, hemiGround: 0x20242d, hemiI: 0.7, dirI: 0.55,
@@ -301,7 +302,7 @@ function makeFacade(THREE) {
     [tMap, tEmi].forEach(function (t) {
         t.wrapS = t.wrapT = THREE.RepeatWrapping;
         t.colorSpace = THREE.SRGBColorSpace;
-        t.anisotropy = 4;
+        t.anisotropy = 8;
     });
     var lit = [], seed = 7, i;
     for (i = 0; i < 16; i++) { seed = (seed * 16807) % 2147483647; lit.push((seed % 100) < 68); }
@@ -313,18 +314,30 @@ function makeFacade(THREE) {
         for (var r = 0; r < 4; r++) {
             for (var c = 0; c < 4; c++) {
                 var x = c * C, y = r * C;
-                a.fillStyle = hexCss(tint(wall, -0.07)); a.fillRect(x, y, 3, C);          // pilaster
-                a.fillStyle = hexCss(tint(wall, -0.14)); a.fillRect(x, y + C - 4, C, 4);   // pelat lantai
-                a.fillStyle = hexCss(tint(win, -0.4));   a.fillRect(x + 10, y + 12, 44, 38); // bingkai
-                var gr = a.createLinearGradient(0, y + 14, 0, y + 48);
-                gr.addColorStop(0, hexCss(tint(win, 0.4)));
-                gr.addColorStop(1, hexCss(win));
+                // Pilaster, shadow line, dan highlight tipis memberi kedalaman pada fasad.
+                a.fillStyle = hexCss(tint(wall, -0.11)); a.fillRect(x, y, 4, C);
+                a.fillStyle = hexCss(tint(wall, 0.13)); a.fillRect(x + 4, y, 2, C);
+                a.fillStyle = hexCss(tint(wall, -0.18)); a.fillRect(x, y + C - 4, C, 4);
+                // Bingkai jendela bertingkat dengan kaca gradasi.
+                a.fillStyle = hexCss(tint(win, -0.52)); a.fillRect(x + 8, y + 10, 48, 42);
+                a.fillStyle = hexCss(tint(win, -0.25)); a.fillRect(x + 10, y + 12, 44, 38);
+                var gr = a.createLinearGradient(x + 10, y + 12, x + 48, y + 50);
+                gr.addColorStop(0, hexCss(tint(win, 0.55)));
+                gr.addColorStop(0.48, hexCss(tint(win, 0.12)));
+                gr.addColorStop(1, hexCss(tint(win, -0.18)));
                 a.fillStyle = gr; a.fillRect(x + 12, y + 14, 40, 34);
-                a.fillStyle = hexCss(tint(win, -0.3));   a.fillRect(x + 31, y + 14, 2, 34);  // tiang tengah
+                // Refleksi kaca diagonal dan mullion.
+                a.fillStyle = 'rgba(255,255,255,0.22)';
+                a.beginPath(); a.moveTo(x + 13, y + 15); a.lineTo(x + 24, y + 15); a.lineTo(x + 13, y + 34); a.closePath(); a.fill();
+                a.fillStyle = hexCss(tint(win, -0.38)); a.fillRect(x + 31, y + 14, 2, 34);
+                a.fillStyle = hexCss(tint(win, -0.32)); a.fillRect(x + 12, y + 31, 40, 2);
                 if (lit[r * 4 + c]) {
-                    b.fillStyle = hexCss(tint(win, 0.2));
-                    b.fillRect(x + 12, y + 14, 19, 34);
-                    b.fillRect(x + 33, y + 14, 19, 34);
+                    b.fillStyle = hexCss(tint(win, 0.38));
+                    b.fillRect(x + 13, y + 15, 17, 15);
+                    b.fillRect(x + 34, y + 15, 17, 15);
+                    b.fillStyle = hexCss(tint(win, 0.15));
+                    b.fillRect(x + 13, y + 33, 17, 14);
+                    b.fillRect(x + 34, y + 33, 17, 14);
                 }
             }
         }
