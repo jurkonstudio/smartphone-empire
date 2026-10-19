@@ -1,4 +1,6 @@
 // FILE: src/systems/PaymentService.js
+// v2028.43 — [FIX] pesanan GoPay/QRIS wajib tersimpan di server (sebelumnya pemain yang belum login 'pending' tanpa
+//            pesanan di server -> tak pernah muncul di Admin Panel) + pesan error server yang jelas.
 // v2028.16 — [FIX] cs.syncSilicon is not a function (pakai CloudSync.syncSilicon + catch).
 // v2028.15 — [FIX] Memastikan _fulfill dan refresh selalu mengembalikan objek sukses agar UI bisa menutup modal.
 import { bus } from '../core/EventBus.js';
@@ -191,13 +193,25 @@ export var PaymentService = {
 // ============================================================
 // DAFTARKAN PROVIDER MANUAL UNTUK GOPAY & QRIS
 // ============================================================
+// Pesan ramah untuk kode error server (create_payment_order).
+function _orderErrorMessage(res) {
+    var m = String((res && (res.reason || res.code)) || '');
+    if (/too_many_pending/i.test(m)) return 'Kamu masih punya 5 pesanan yang menunggu persetujuan. Tunggu diproses admin atau batalkan salah satunya.';
+    if (/invalid_package/i.test(m)) return 'Paket tidak valid. Muat ulang game lalu coba lagi.';
+    if (/not_authenticated|not_signed_in/i.test(m)) return 'Sesi login berakhir. Masuk lagi lalu coba lagi.';
+    if (/network|failed to fetch|load failed/i.test(m) || (res && res.code === 'network')) return 'Gagal menyimpan pesanan ke server. Cek koneksi.';
+    return 'Gagal menyimpan pesanan ke server' + (m ? ' (' + m + ')' : '') + '.';
+}
+
 const ManualProvider = {
     serverVerified: true,
     checkout: async function(order) {
-        if (CloudService.getStatus() === 'connected') {
-            var res = await CloudService.createPaymentOrder(order.id, order.packageId, order.priceIdr, order.sil);
-            if (!res.ok) throw new Error('Gagal menyimpan pesanan ke server. Cek koneksi.');
+        // Pesanan harus ada di server agar admin menerima pemberitahuan & bisa menyetujuinya.
+        if (CloudService.getStatus() !== 'connected') {
+            throw new Error('Masuk ke akunmu dulu agar pesanan terkirim ke admin.');
         }
+        var res = await CloudService.createPaymentOrder(order.id, order.packageId, order.priceIdr, order.sil);
+        if (!res || !res.ok) throw new Error(_orderErrorMessage(res));
         return { status: 'pending' };
     },
     verify: async function(order) {
