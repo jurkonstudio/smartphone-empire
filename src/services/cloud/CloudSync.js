@@ -1,8 +1,5 @@
 // FILE: src/services/cloud/CloudSync.js
-// v2028.43 — [PERF] Optimasi kecepatan sinkronisasi:
-//   1. Timeout dipangkas (maks 3 detik), tidak ada retry berulang yang bikin lambat.
-//   2. Cegah double-trigger (checkOnConnect & syncSiliconOnLogin tidak lagi tabrakan).
-//   3. Gunakan debounce agar sinkronisasi tidak dipanggil berkali-kali dalam sedetik.
+// v2028.44 — [PERF] Background Sync: Menghapus `await` pada syncSiliconOnLogin agar UI tidak freeze/lama saat loading.
 import { bus } from '../../core/EventBus.js';
 import { SaveService } from '../../core/SaveService.js';
 import { SCHEMA_VERSION } from '../../core/GameState.js';
@@ -45,7 +42,6 @@ const SIL_POLL_MS = 30000;
 let _questScanUid = null;
 let _dailyDay = '';
 
-// [PERF] Timeout dipangkas drastis agar UI tidak freeze menunggu server
 function _withTimeout(promise, ms, fallback) {
     return Promise.race([promise, new Promise(function (r) { setTimeout(function () { r(fallback); }, ms); })]);
 }
@@ -55,7 +51,7 @@ let _remotePending = false;
 let _reloadOnVisible = false;
 let _laterChosen = false;
 let _lastRetryAt = 0;
-let _syncDebounceTimer = null; // [PERF] Cegah spam sinkronisasi
+let _syncDebounceTimer = null;
 
 export function getDeviceId() {
     try {
@@ -173,7 +169,6 @@ function _onVisibilityChange() {
     if (document.visibilityState === 'visible') {
         if (_isConnected()) {
             console.info('[CloudSync] Tab aktif kembali, sinkronisasi saldo...');
-            // [PERF] Gunakan debounce agar tidak spam
             _debouncedSyncSilicon();
         }
     }
@@ -370,12 +365,9 @@ async function syncSiliconOnLogin() {
     _siliconSyncing = true;
     try {
         _queueQuestRecovery();
-        // [PERF] Timeout harian dipotong jadi 3 detik
         try { await _withTimeout(_claimDailyOnce(), 3000, null); } catch (e) {}
 
-        // [PERF] Hanya coba 1x. Jika ada antrean baru saat proses, beri 1 kesempatan lagi.
         for (var attempt = 0; attempt < 2; attempt++) {
-            // [PERF] Flush dan Ambil saldo timeout maksimal 3 detik
             await _withTimeout(_flushPending(), 3000, null);
             var v0 = _silVersion;
             var res = await _withTimeout(CloudService.getSiliconBalance(), 4000, { ok: false });
@@ -418,18 +410,16 @@ async function syncSiliconOnLogin() {
         _siliconSyncing = false;
         if (_siliconResync) {
             _siliconResync = false;
-            // [PERF] Jeda 1 detik sebelum retry jika ada perubahan baru
             setTimeout(function () { syncSiliconOnLogin(); }, 1000);
         }
     }
 }
 
-// [PERF] Pembungkus Debounce untuk mencegah tabrakan
 function _debouncedSyncSilicon() {
     if (_syncDebounceTimer) clearTimeout(_syncDebounceTimer);
     _syncDebounceTimer = setTimeout(function() {
         syncSiliconOnLogin();
-    }, 800); // Tunggu 800ms sebelum eksekusi
+    }, 800); 
 }
 
 function _reconcileAfterFlush(bal) {
@@ -532,7 +522,7 @@ async function checkOnConnect() {
             _ready = true;
             _lastUploadMinutes = local.minutes;
             _markSynced(slot);
-            _debouncedSyncSilicon(); // [PERF] Pakai debounce
+            syncSiliconOnLogin(); // [PERF] Dihapus await agar UI tidak menunggu
         } else if (_hasSynced(slot)) {
             await _autoResolve(slot, local, cloud, dec.reason);
         } else {
@@ -566,7 +556,7 @@ async function applyCloud(slot, opts) {
         return { ok: false, reason: 'Data cloud tidak valid.', code: 'unknown' };
     }
     
-    _debouncedSyncSilicon(); // [PERF] Pakai debounce
+    syncSiliconOnLogin(); // [PERF] Dihapus await agar UI langsung render
 
     SaveService.save(_state);
     const info = localInfo(_state);
@@ -604,7 +594,7 @@ function _startSilPoll() {
     _stopSilPoll();
     _silPollTimer = setInterval(function () {
         if (document.visibilityState !== 'visible' || !_isConnected() || _siliconSyncing) return;
-        _debouncedSyncSilicon(); // [PERF] Pakai debounce
+        _debouncedSyncSilicon(); 
     }, SIL_POLL_MS);
 }
 
@@ -642,7 +632,6 @@ export const CloudSync = {
 
                 _startRealtime();
                 checkOnConnect(); 
-                // [PERF] Hapus syncSiliconOnLogin() di sini karena checkOnConnect sudah memanggilnya
             } else if (e && e.status === 'disconnected') {
                 try { localStorage.removeItem('smartphone-empire:admin-email'); } catch(err) {}
                 _stopRealtime();
@@ -669,7 +658,6 @@ export const CloudSync = {
             } catch (err) {}
             _startRealtime();
             checkOnConnect();
-            // [PERF] Hapus syncSiliconOnLogin() di sini
         }
     },
 
