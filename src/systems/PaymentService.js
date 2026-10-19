@@ -1,8 +1,5 @@
 // FILE: src/systems/PaymentService.js
-// v2028.43 — [FIX] pesanan GoPay/QRIS wajib tersimpan di server (sebelumnya pemain yang belum login 'pending' tanpa
-//            pesanan di server -> tak pernah muncul di Admin Panel) + pesan error server yang jelas.
-// v2028.16 — [FIX] cs.syncSilicon is not a function (pakai CloudSync.syncSilicon + catch).
-// v2028.15 — [FIX] Memastikan _fulfill dan refresh selalu mengembalikan objek sukses agar UI bisa menutup modal.
+// v2028.44 — [FIX] Optimistic update: Tambahkan SIL lokal seketika saat paid, cegah hilang tertimpa server.
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { isDevMode, DEV_BUILD } from '../config/dev.config.js';
@@ -166,22 +163,22 @@ export var PaymentService = {
 
     _fulfill(order) {
         if (order.status === 'paid') {
-            // UBAH DI SINI: Tetap kembalikan sil agar UI bisa nutup modal
             return { ok: true, order: order, already: true, sil: order.sil }; 
         }
         order.status = 'paid';
         order.fulfilledAt = Date.now();
         
+        // [FIX] OPTIMISTIC UPDATE: Tambahkan SIL secara lokal seketika
+        SiliconService.add(order.sil, 'topup:' + order.packageId);
+        
+        // Tarik saldo dari server untuk memastikan (CloudSync akan mencegah penimpaan)
         if (CloudService.getStatus() === 'connected') {
-            // [FIX] syncSilicon bukan named export; ada di objek CloudSync. Tarik saldo asli dari server.
             import('../services/cloud/CloudSync.js').then(function(cs) {
                 var sync = cs.CloudSync && cs.CloudSync.syncSilicon;
                 if (typeof sync === 'function') return sync();
             }).catch(function(e) {
                 console.warn('[PaymentService] sync saldo setelah top-up gagal:', e);
             });
-        } else {
-            SiliconService.add(order.sil, 'topup:' + order.packageId);
         }
         
         _save(order);
@@ -193,7 +190,6 @@ export var PaymentService = {
 // ============================================================
 // DAFTARKAN PROVIDER MANUAL UNTUK GOPAY & QRIS
 // ============================================================
-// Pesan ramah untuk kode error server (create_payment_order).
 function _orderErrorMessage(res) {
     var m = String((res && (res.reason || res.code)) || '');
     if (/too_many_pending/i.test(m)) return 'Kamu masih punya 5 pesanan yang menunggu persetujuan. Tunggu diproses admin atau batalkan salah satunya.';
@@ -206,7 +202,6 @@ function _orderErrorMessage(res) {
 const ManualProvider = {
     serverVerified: true,
     checkout: async function(order) {
-        // Pesanan harus ada di server agar admin menerima pemberitahuan & bisa menyetujuinya.
         if (CloudService.getStatus() !== 'connected') {
             throw new Error('Masuk ke akunmu dulu agar pesanan terkirim ke admin.');
         }
@@ -228,7 +223,6 @@ const ManualProvider = {
 PaymentService.registerProvider({ id: 'gopay', ...ManualProvider });
 PaymentService.registerProvider({ id: 'qris', ...ManualProvider });
 
-// ---------- Provider Sandbox (khusus dev) ----------
 if (DEV_BUILD) {
     PaymentService.registerProvider({
         id: 'sandbox',
