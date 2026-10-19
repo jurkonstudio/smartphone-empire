@@ -56,7 +56,7 @@ import { WalletService } from '../../systems/WalletService.js';
 import { FAB_LEVELS } from '../../systems/FabSystem.js';
 
 var BASE_VIEW = 17;
-var MAX_DPR = 1.5;
+var MAX_DPR = 1.75; // visual clarity on modern displays; adaptive quality still protects weaker phones
 var FRAME_MS = 33;
 var MIN_RESIZE_DELTA = 2;
 var MAX_DESKS = 30;
@@ -81,11 +81,11 @@ var ROOM_DEFS = [
 
 // Warna tema sendiri (selain warna dari PALETTES kampus). [terang, gelap]
 var COLORS = {
-    ground:  [0xcfe6c8, 0x2d4a3b],
-    base:    [0xdfe5ee, 0x3b4252],
-    wall:    [0xf6f8fb, 0x8d98ab],
-    wallTop: [0xffffff, 0xb4becd],
-    part:    [0xc9d2de, 0x5b6578],
+    ground:  [0xe9edf4, 0x202735],
+    base:    [0xcbd4e2, 0x303949],
+    wall:    [0xf8fafc, 0x707d91],
+    wallTop: [0xffffff, 0x9aa7ba],
+    part:    [0xb9c5d5, 0x465367],
     desk:    [0xc9a47a, 0x8a6f52],
     deskTop: [0xe2c9a4, 0xa88a68],
     chair:   [0x5b6678, 0x7a8599],
@@ -524,23 +524,34 @@ export function describeStaff(s) {
 // ============================================================
 export function createOfficeScene(THREE, container, gameState) {
     var PERF = window.__PERF || {};
-    var renderer = new THREE.WebGLRenderer({ antialias: PERF.antialias !== false, alpha: true, powerPreference: 'low-power' });
+    var renderer = new THREE.WebGLRenderer({ antialias: PERF.antialias !== false, alpha: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
     renderer.setClearColor(0x000000, 0);
+    // Rendering pipeline: richer color, restrained highlights, and crisp isometric edges.
+    if ('outputColorSpace' in renderer && THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace;
+    if ('toneMapping' in renderer && THREE.ACESFilmicToneMapping !== undefined) renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    if ('toneMappingExposure' in renderer) renderer.toneMappingExposure = 1.12;
     var canvas = renderer.domElement;
     canvas.style.cssText = 'width:100%;height:100%;display:block;';
     canvas.setAttribute('role', 'img');
     canvas.setAttribute('aria-label', t('office.aria'));
     container.innerHTML = '';
     container.style.position = 'relative';
+    container.style.isolation = 'isolate';
+    container.style.overflow = 'hidden';
+    container.style.background = 'radial-gradient(ellipse at 50% 28%, rgba(148,163,184,.16) 0%, rgba(100,116,139,.07) 42%, transparent 72%), linear-gradient(145deg, var(--bg-2, #f7f9fc), var(--bg-1, #e9eef5))';
     container.appendChild(canvas);
 
     var scene = new THREE.Scene();
     var camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
-    var hemi = new THREE.HemisphereLight(0xffffff, 0xcccccc, 1);
-    var sun = new THREE.DirectionalLight(0xfff1da, 0.8);
-    sun.position.set(8, 12, 6);
-    scene.add(hemi, sun);
+    var hemi = new THREE.HemisphereLight(0xeaf3ff, 0x64748b, 1.25);
+    var sun = new THREE.DirectionalLight(0xfff0dc, 1.15);
+    sun.position.set(-7, 14, 9);
+    var fill = new THREE.DirectionalLight(0x9bc7ff, 0.38);
+    fill.position.set(10, 8, -8);
+    var rim = new THREE.DirectionalLight(0xffffff, 0.24);
+    rim.position.set(-10, 6, -5);
+    scene.add(hemi, sun, fill, rim);
 
     // ---------- geometri bersama ----------
     var G = {
@@ -714,7 +725,10 @@ export function createOfficeScene(THREE, container, gameState) {
     scene.add(shell);
     var ground = mesh(shell, G.plane, 'ground', 40, 40, 1, 0, -0.22, 0);
     ground.rotation.x = -Math.PI / 2;
-    box(shell, 'base', 18.5, 0.18, 12.5, 0, -0.11, 0);
+    box(shell, 'base', 18.5, 0.22, 12.5, 0, -0.11, 0);
+    // Layered plinth gives the dollhouse a premium architectural presentation.
+    box(shell, 'metal', 18.72, 0.055, 12.72, 0, -0.235, 0);
+    box(shell, 'wallTop', 18.55, 0.035, 12.55, 0, -0.255, 0);
 
     function wallSeg(mat, x0, x1, z0, z1, h, th) {
         var w = Math.abs(x1 - x0) || th, d = Math.abs(z1 - z0) || th;
@@ -810,6 +824,14 @@ export function createOfficeScene(THREE, container, gameState) {
         rooms[def.id] = r;
         roomList.push(r);
         scene.add(g);
+        // Fine perimeter rails visually separate departments without cluttering the floor.
+        var railMat = new THREE.MeshLambertMaterial({ color: 0x9aa8ba, transparent: true, opacity: 0.52 });
+        var railY = 0.035, railH = 0.025, railT = 0.035;
+        box(g, railMat, Math.max(0.1, w - 0.18), railH, railT, 0, railY, -(d / 2) + 0.09);
+        box(g, railMat, Math.max(0.1, w - 0.18), railH, railT, 0, railY, (d / 2) - 0.09);
+        box(g, railMat, railT, railH, Math.max(0.1, d - 0.18), -(w / 2) + 0.09, railY, 0);
+        box(g, railMat, railT, railH, Math.max(0.1, d - 0.18), (w / 2) - 0.09, railY, 0);
+        r.railMat = railMat;
     });
 
     // ---------- bangunan perabot ----------
@@ -1661,12 +1683,14 @@ export function createOfficeScene(THREE, container, gameState) {
         hemi.color.setHex(P.hemiSky);
         hemi.groundColor.setHex(P.hemiGround);
         hemi.intensity = P.hemiI;
-        sun.intensity = P.dirI;
+        sun.intensity = P.dirI * 1.12;
+        fill.intensity = dark ? 0.52 : 0.38;
+        rim.intensity = dark ? 0.32 : 0.24;
         if (P.sunCol !== undefined) sun.color.setHex(P.sunCol);
         roomList.forEach(function (r) {
             r.ovMat.color.setHex(accentHex);
             r.patMat.color.setHex(dark ? 0xffffff : 0x000000);
-            r.patMat.opacity = dark ? 0.07 : 0.1;
+            r.patMat.opacity = dark ? 0.085 : 0.12;
             if (r.st) { applyRoomVisual(r); rebuildLabel(r); rebuildAlert(r); }
         });
     }
@@ -2247,7 +2271,7 @@ export function createOfficeScene(THREE, container, gameState) {
                 clearFurn(r);
                 if (r.label && r.label.material) r.label.material.dispose();
                 if (r.alertSp && r.alertSp.material) r.alertSp.material.dispose();
-                r.floorMat.dispose(); r.ovMat.dispose(); r.patMat.dispose();
+                r.floorMat.dispose(); r.ovMat.dispose(); r.patMat.dispose(); if (r.railMat) r.railMat.dispose();
             });
             labelTex.forEach(function (tx) { tx.dispose(); });
             ownTex.forEach(function (tx) { tx.dispose(); });

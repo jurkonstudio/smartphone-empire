@@ -23,7 +23,7 @@ export function renderOfficeLoading() {
 }
 
 export function renderOfficeFallback() {
-    return '<div style="text-align:center;padding:60px 20px;">' +
+    return '<div style="text-align:center;padding:60px 20px;background:radial-gradient(ellipse at 50% 20%,rgba(148,163,184,.16),transparent 70%);border-radius:18px;">' +
         '<div style="font-size:56px;line-height:1;margin-bottom:14px;">🏢</div>' +
         '<div style="font-size:16px;font-weight:700;margin-bottom:8px;">' + t('office.fallback.title') + '</div>' +
         '<div style="font-size:12.5px;color:var(--text-tertiary);line-height:1.6;max-width:300px;margin:0 auto;">' +
