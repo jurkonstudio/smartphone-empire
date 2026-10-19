@@ -1,4 +1,5 @@
 // FILE: src/systems/PaymentService.js
+// v2028.16 — [FIX] cs.syncSilicon is not a function (pakai CloudSync.syncSilicon + catch).
 // v2028.15 — [FIX] Memastikan _fulfill dan refresh selalu mengembalikan objek sukses agar UI bisa menutup modal.
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
@@ -170,8 +171,12 @@ export var PaymentService = {
         order.fulfilledAt = Date.now();
         
         if (CloudService.getStatus() === 'connected') {
+            // [FIX] syncSilicon bukan named export; ada di objek CloudSync. Tarik saldo asli dari server.
             import('../services/cloud/CloudSync.js').then(function(cs) {
-                cs.syncSilicon();
+                var sync = cs.CloudSync && cs.CloudSync.syncSilicon;
+                if (typeof sync === 'function') return sync();
+            }).catch(function(e) {
+                console.warn('[PaymentService] sync saldo setelah top-up gagal:', e);
             });
         } else {
             SiliconService.add(order.sil, 'topup:' + order.packageId);
