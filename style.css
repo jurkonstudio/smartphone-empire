@@ -4564,3 +4564,127 @@ html[data-perf="lite"] body { background-attachment: scroll !important; }
     from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* ============================================================================
+   ONBOARDING · MASUK / DAFTAR (v2028.40)
+   Memakai token tema yang sudah ada (--accent, --bg-*, --border, ...) sehingga
+   otomatis mengikuti tema gelap/terang & warna aksen pilihan pemain.
+   ============================================================================ */
+.onb-view { animation: onbIn 0.22s ease-out; }
+@keyframes onbIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Baris aksi: "Mulai Bermain" + "Masuk" berdampingan */
+.onb-actions { display: flex; gap: 10px; align-items: stretch; margin-top: 16px; }
+.onb-actions .btn-primary { flex: 1.35 1 0; min-width: 0; }
+.onb-actions .btn-secondary { flex: 1 1 0; min-width: 0; }
+.onb-actions .btn-primary:only-child { flex: 1 1 auto; }
+.onb-login-btn svg { flex: none; opacity: 0.9; }
+
+.onb-hint {
+    display: flex; align-items: flex-start; gap: 6px;
+    margin-top: 10px; font-size: var(--fs-xs);
+    color: var(--text-tertiary); line-height: 1.45;
+}
+.onb-hint svg { flex: none; margin-top: 1px; }
+
+/* Chip akun (sudah masuk) */
+.onb-account {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; margin-bottom: 4px;
+    background: var(--accent-soft);
+    border: 1px solid var(--border); border-radius: var(--r-lg);
+}
+.onb-account__icon { flex: none; display: inline-flex; color: var(--accent); }
+.onb-account__txt { flex: 1; min-width: 0; }
+.onb-account__label { font-size: var(--fs-2xs); color: var(--text-tertiary); letter-spacing: 0.02em; }
+.onb-account__email {
+    font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--text-primary);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Tautan teks */
+.onb-link {
+    background: none; border: 0; padding: 8px 4px; cursor: pointer;
+    color: var(--accent); font: inherit; font-size: var(--fs-sm); font-weight: var(--fw-semibold);
+}
+.onb-link:disabled { opacity: 0.5; cursor: default; }
+.onb-forgot { display: block; margin-top: 4px; padding-left: 0; }
+.onb-switch { display: block; width: 100%; margin-top: 10px; text-align: center; color: var(--text-secondary); }
+.onb-switch:hover { color: var(--accent); }
+
+.onb-back {
+    display: inline-flex; align-items: center; gap: 4px;
+    margin: -4px 0 8px -4px; padding: 6px 8px; border: 0; border-radius: var(--r);
+    background: none; color: var(--text-secondary); cursor: pointer;
+    font: inherit; font-size: var(--fs-sm); font-weight: var(--fw-semibold);
+}
+.onb-back:hover { background: var(--bg-3); color: var(--text-primary); }
+
+/* Tab Masuk | Daftar (segmented) */
+.onb-seg {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+    padding: 4px; margin-bottom: 14px;
+    background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--r-lg);
+}
+.onb-seg button {
+    min-height: 38px; border: 0; border-radius: calc(var(--r-lg) - 3px);
+    background: transparent; color: var(--text-secondary); cursor: pointer;
+    font: inherit; font-size: var(--fs-base); font-weight: var(--fw-semibold);
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.onb-seg button.active { background: var(--accent); color: #fff; box-shadow: 0 2px 8px var(--accent-glow); }
+
+/* Password + tombol tampilkan */
+.onb-passwrap { position: relative; }
+.onb-passwrap .field-input { padding-right: 46px; }
+.onb-eye {
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center;
+    border: 0; border-radius: var(--r); background: none; cursor: pointer;
+    color: var(--text-tertiary);
+}
+.onb-eye:hover { color: var(--text-primary); }
+
+.onb-msg { margin-top: 8px; font-size: var(--fs-sm); line-height: 1.4; }
+.onb-wide { width: 100%; margin-top: 14px; }
+
+/* Kartu progres cloud */
+.onb-save {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; margin-bottom: 4px;
+    background: var(--bg-3); border: 1px solid var(--accent); border-radius: var(--r-lg);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.onb-save__icon {
+    flex: none; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: var(--r-lg); background: var(--accent-soft); color: var(--accent);
+}
+.onb-save__txt { min-width: 0; }
+.onb-save__name {
+    font-size: var(--fs-md); font-weight: var(--fw-bold); letter-spacing: -0.01em;
+    color: var(--text-primary); word-break: break-word;
+}
+.onb-save__meta { font-size: var(--fs-xs); color: var(--text-secondary); margin-top: 2px; }
+
+/* Memeriksa progres */
+.onb-center { display: flex; flex-direction: column; align-items: center; padding: 28px 0 20px; }
+.onb-spin {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 3px solid var(--border-strong, var(--border)); border-top-color: var(--accent);
+    animation: onbSpin 0.8s linear infinite;
+}
+@keyframes onbSpin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .onb-view { animation: none; }
+    .onb-spin { animation-duration: 1.6s; }
+}
+
+/* Layar sangat sempit: tombol ditumpuk agar teks tidak terpotong */
+@media (max-width: 340px) {
+    .onb-actions { flex-direction: column; }
+    .onb-actions .btn-primary, .onb-actions .btn-secondary { flex: 1 1 auto; }
+}
