@@ -1,5 +1,5 @@
 // FILE: src/services/CloudService.js
-// v2028.42 — [TRANSFER] Menambahkan transferSilicon.
+// v2028.43 — [TRANSFER] Menambahkan getPlayerById & transferSilicon.
 import { bus } from '../core/EventBus.js';
 
 const SLOT_KEY = 'smartphone-empire:cloud-slot';
@@ -305,7 +305,16 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
-    // [NEW] Transfer SIL
+    // [NEW] Cek info pemain sebelum transfer
+    async getPlayerById(publicId) {
+        if (!_adapter) return NOT_CONFIGURED;
+        if (!_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.rpcGetPlayerById !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, data: await _adapter.rpcGetPlayerById(publicId) }; }
+        catch (err) { return _fail(err); }
+    },
+
+    // [NEW] Eksekusi transfer SIL
     async transferSilicon(receiverId, amount) {
         if (!_adapter) return NOT_CONFIGURED;
         if (!_userId) return NOT_SIGNED_IN;
