@@ -1,10 +1,5 @@
 // FILE: src/ui/panels/OnboardingModal.js
-// v2028.40 — Masuk / Daftar terpasang di onboarding, tepat di samping "Mulai Bermain".
-//   • Satu modal, tiga tampilan: 'start' (nama + kesulitan), 'auth' (masuk/daftar), 'found' (progres cloud ditemukan).
-//   • Nama perusahaan & tingkat kesulitan tetap tersimpan saat berpindah tampilan.
-//   • Akun yang sudah punya save cloud bisa langsung "Lanjutkan Progres" (tanpa membuat perusahaan baru).
-//   • Tetap bisa bermain offline tanpa akun (perilaku lama tidak berubah).
-// v2027.33b — validasi nama via name-blocklist.data.js
+// v2028.41 — [FIX STUCK] Menangani timeout koneksi. Mencegah layar "Checking cloud progress" macet selamanya.
 import { Modal } from '../modal.js';
 import { bus } from '../../core/EventBus.js';
 import { DIFFICULTY } from '../../config/constants.js';
@@ -32,9 +27,9 @@ const MONTHS = {
     en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 };
 
-const NET_TIMEOUT_MS = 25000;
+// [FIX] Waktu tunggu dikurangi jadi 6 detik agar pemain tidak bosan menunggu
+const NET_TIMEOUT_MS = 6000; 
 
-// ---------- util ----------
 function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
         return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -67,21 +62,23 @@ function _fmtDateTime(v) {
     catch (e) { return d.toISOString(); }
 }
 
-// Batasi tunggu: request menggantung tidak boleh membuat tombol macet selamanya.
-function _withTimeout(promise) {
+// [FIX] Pastikan promise tidak pernah "menggantung" atau melempar error tanpa tertangkap
+function _withTimeout(promise, ms) {
     return Promise.race([
         promise,
         new Promise(function (resolve) {
-            setTimeout(function () { resolve({ ok: false, code: 'timeout' }); }, NET_TIMEOUT_MS);
+            setTimeout(function () { resolve({ ok: false, code: 'timeout' }); }, ms || NET_TIMEOUT_MS);
         })
-    ]);
+    ]).catch(function (err) {
+        console.warn('[Onboarding] Network/Timeout Error:', err);
+        return { ok: false, code: 'network' };
+    });
 }
 
 function _failText(res) {
     return res && res.code === 'timeout' ? t('onb.auth.timeout') : _errText(res && res.code);
 }
 
-// Map reason -> i18n key
 function _reasonToKey(reason) {
     switch (reason) {
         case 'empty':      return 'onb.name.error_empty';
@@ -94,8 +91,6 @@ function _reasonToKey(reason) {
     }
 }
 
-// Daftarkan adapter lebih awal (sebelum game selesai boot) supaya login bisa dipakai di onboarding.
-// Idempotent: main.js memanggil registerAdapter lagi nanti tanpa efek samping.
 function _ensureCloud() {
     try {
         if (!isCloudConfigured()) return false;
@@ -111,7 +106,6 @@ function _isSignedIn() {
     return CloudService.getStatus() === 'connected' && !!CloudService.getUserId();
 }
 
-// ---------- tampilan ----------
 function _viewStart(cloudOk, form) {
     var signedIn = cloudOk && _isSignedIn();
 
@@ -221,7 +215,6 @@ function _viewFound(row) {
         '</div>';
 }
 
-// ---------- entry ----------
 export function showOnboarding() {
     return new Promise(function (resolve) {
         var cloudOk = _ensureCloud();
@@ -238,7 +231,6 @@ export function showOnboarding() {
 
         function $(sel) { return host.querySelector(sel); }
 
-        // ----- render per tampilan -----
         function render(view) {
             current = view;
             if (view === 'auth') host.innerHTML = _viewAuth(auth);
@@ -251,7 +243,6 @@ export function showOnboarding() {
             } else if (view === 'auth') {
                 $('[data-onb-email]').value = auth.email;
                 if (auth.notice) { _msg(auth.notice, 'ok'); auth.notice = ''; }
-                // Fokus otomatis: email dulu; bila sudah terisi langsung ke password.
                 setTimeout(function () {
                     var el = $(auth.email ? '[data-onb-pass]' : '[data-onb-email]');
                     if (el) el.focus();
@@ -259,7 +250,6 @@ export function showOnboarding() {
             }
         }
 
-        // ----- pesan & status -----
         function _msg(text, kind) {
             var el = $('[data-onb-msg]');
             if (!el) return;
@@ -304,7 +294,6 @@ export function showOnboarding() {
             resolve(result);
         }
 
-        // ----- aksi: autentikasi -----
         async function doAuth() {
             if (auth.busy) return;
             var emailEl = $('[data-onb-email]');
@@ -320,12 +309,12 @@ export function showOnboarding() {
             var res = await _withTimeout(auth.mode === 'register'
                 ? CloudService.signUp(email, pass)
                 : CloudService.signIn(email, pass));
+            
             if (finished || current !== 'auth') return;
             _setAuthBusy(false);
 
             if (!res.ok) { _msg(_failText(res), 'err'); return; }
 
-            // Daftar tapi perlu konfirmasi email -> arahkan ke tab masuk.
             if (auth.mode === 'register' && res.needsConfirm) {
                 auth.mode = 'login';
                 auth.notice = t('onb.auth.confirm_sent');
@@ -335,22 +324,29 @@ export function showOnboarding() {
             await afterSignedIn();
         }
 
-        // Setelah masuk: cek apakah akun sudah punya progres di cloud.
         async function afterSignedIn() {
             render('checking');
-            var list = await _withTimeout(CloudService.listSavesStrict());
-            var row = null;
-            if (list && list.ok) {
-                var slot = CloudService.getSlot();
-                row = (list.rows || []).find(function (r) { return r.slot === slot; }) || null;
-            }
+            
+            // [FIX] Batasi waktu maksimal 5 detik agar tidak stuck
+            var list = await _withTimeout(CloudService.listSavesStrict(), 5000);
+            
             if (finished) return;
+            
+            // [FIX] Jika gagal koneksi, kembalikan ke layar login dengan pesan error
+            if (!list || !list.ok) {
+                ToastService.error(t('cloud.err.network') || 'Koneksi ke server gagal. Coba lagi.');
+                render('auth');
+                return;
+            }
+
+            var slot = CloudService.getSlot();
+            var row = (list.rows || []).find(function (r) { return r.slot === slot; }) || null;
+
             ToastService.success(t('cloud.auth.signed_in'));
             if (row) { foundRow = row; render('found'); }
             else { render('start'); }
         }
 
-        // ----- aksi: lanjutkan progres cloud -----
         var _loadingCloud = false;
         async function doContinue() {
             if (_loadingCloud) return;
@@ -360,7 +356,7 @@ export function showOnboarding() {
             if (btn) { btn.disabled = true; btn.textContent = t('onb.cloud.loading'); }
             if (other) other.disabled = true;
 
-            var res = await _withTimeout(CloudService.downloadSave(CloudService.getSlot()));
+            var res = await _withTimeout(CloudService.downloadSave(CloudService.getSlot()), 8000);
             var data = res && res.ok && res.payload && res.payload.data;
             _loadingCloud = false;
             if (finished) return;
@@ -379,7 +375,6 @@ export function showOnboarding() {
             });
         }
 
-        // ----- aksi: mulai (perusahaan baru) -----
         var _checking = false;
         async function doSubmit() {
             if (_checking) return;
@@ -395,16 +390,18 @@ export function showOnboarding() {
 
             var finalName = nameInput.value.trim();
 
-            // Nama harus unik antar pemain.
             _checking = true;
             var origLabel = submitBtn.textContent;
             submitBtn.disabled = true;
             submitBtn.textContent = t('onb.name.checking');
-            var available = await checkCompanyNameAvailable(finalName);
+            
+            var available = await _withTimeout(checkCompanyNameAvailable(finalName), 4000);
+            
             _checking = false;
             if (finished) return;
             submitBtn.disabled = false;
             submitBtn.textContent = origLabel;
+            
             if (available === false) {
                 _showNameError('onb.name.error_taken');
                 nameInput.focus();
@@ -414,7 +411,6 @@ export function showOnboarding() {
             _finish({ companyName: finalName, difficulty: form.diff });
         }
 
-        // ----- event delegation (satu pendengar untuk semua tampilan) -----
         root.addEventListener('click', async function (e) {
             var el;
 
@@ -458,9 +454,9 @@ export function showOnboarding() {
                 var mail = $('[data-onb-email]').value.trim();
                 auth.email = mail;
                 if (!_validEmail(mail)) { _msg(t('cloud.auth.need_email_reset'), 'err'); $('[data-onb-email]').focus(); return; }
-                var r = await _withTimeout(CloudService.resetPassword(mail));
+                var r = await _withTimeout(CloudService.resetPassword(mail), 5000);
                 if (current !== 'auth') return;
-                if (r.ok) _msg(t('cloud.auth.reset_sent'), 'ok'); else _msg(_failText(r), 'err');
+                if (r && r.ok) _msg(t('cloud.auth.reset_sent'), 'ok'); else _msg(_failText(r), 'err');
                 return;
             }
 
@@ -484,7 +480,6 @@ export function showOnboarding() {
             }
         });
 
-        // Ketik nama: simpan + hapus error. Enter = Mulai Bermain.
         root.addEventListener('input', function (e) {
             if (e.target.matches('[data-onb-name]')) {
                 form.name = e.target.value;
@@ -502,24 +497,21 @@ export function showOnboarding() {
             }
         });
 
-        // Validasi nama saat blur
         root.addEventListener('focusout', function (e) {
             if (!e.target.matches || !e.target.matches('[data-onb-name]')) return;
             var name = e.target.value.trim();
             if (!name) return;
             var result = validateCompanyName(name);
             if (!result.ok) { _showNameError(_reasonToKey(result.reason)); return; }
-            // Cek nama sudah dipakai pemain lain (tanpa memblokir bila tidak bisa dicek).
+            
             checkCompanyNameAvailable(name).then(function (av) {
                 var cur = $('[data-onb-name]');
                 if (av === false && cur && cur.value.trim() === name) _showNameError('onb.name.error_taken');
             });
         });
 
-        // ----- mulai -----
         render('start');
 
-        // Sesi tersimpan (mis. setelah klik tautan konfirmasi email): pulihkan lalu perbarui tampilan awal.
         if (cloudOk && !_isSignedIn() && typeof SupabaseAdapter.hasStoredSession === 'function' && SupabaseAdapter.hasStoredSession()) {
             CloudService.restoreSession().then(function (r) {
                 if (finished || !(r && r.ok)) return;
@@ -527,4 +519,4 @@ export function showOnboarding() {
             }).catch(function () {});
         }
     });
-}
+    }
