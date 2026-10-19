@@ -1,6 +1,6 @@
 // FILE: src/services/cloud/CloudSync.js
-// v2028.46 — [FIX] Mencegah saldo SIL kembali naik (rollback) saat pemain membelanjakan SIL.
-//            Sistem akan menahan update dari server jika masih ada antrean pembelanjaan yang tertunda.
+// v2028.47 — [FIX CRITICAL] Menghapus pengaman yang memblokir update saldo dari server (Admin Top-up).
+//            Memastikan antrean belanja yang ditolak server langsung dibersihkan agar tidak macet.
 import { bus } from '../../core/EventBus.js';
 import { SaveService } from '../../core/SaveService.js';
 import { SCHEMA_VERSION } from '../../core/GameState.js';
@@ -341,10 +341,9 @@ function _flushPending() {
                 }
 
                 if (/insufficient|invalid_amount/i.test(msg)) {
-                    console.warn('[CloudSync] Belanja SIL ditolak server (insufficient).', msg.trim());
-                    // [FIX] JANGAN hapus antrean. Tandai agar tidak dikirim ulang, tapi tetap dihitung
-                    // di _pendingNet agar saldo lokal tidak naik kembali secara tidak wajar.
-                    skip[item.id] = true; 
+                    console.warn('[CloudSync] Belanja SIL ditolak server, dibuang dari antrean:', msg.trim());
+                    // [FIX CRITICAL] Hapus dari antrean agar sync tidak macet selamanya.
+                    _removePending(item.id);
                     continue;
                 }
                 break;
@@ -383,7 +382,6 @@ async function syncSiliconOnLogin() {
             }
             _silFailNotified = false;
             
-            // Jika ada perubahan antrean selama proses ambil saldo, ulangi.
             if (v0 !== _silVersion || _flushPromise) continue;
 
             var serverBal = Math.floor(res.balance || 0);
@@ -401,12 +399,8 @@ async function syncSiliconOnLogin() {
             var net = _pendingNet();
             var effective = Math.max(0, serverBal - net);
 
-            // [FIX] PENGAMAN UTAMA: Jika masih ada antrean (net != 0) dan saldo server 
-            // lebih besar dari saldo lokal, JANGAN TIMPA. Ini mencegah saldo kembali naik.
-            if (net !== 0 && effective > localBal) {
-                console.log('[CloudSync] Mencegah saldo SIL kembali naik saat ada antrean pending.');
-                break;
-            }
+            // [FIX CRITICAL] Selalu percaya server. Jika server lebih besar (Admin Top-up), 
+            // langsung timpa saldo lokal tanpa memblokir.
 
             if (effective !== localBal) {
                 console.info('[CloudSync] Silicon lokal (', localBal, ') -> (', effective, ')');
@@ -439,8 +433,6 @@ function _reconcileAfterFlush(bal) {
     var eff = Math.max(0, Math.floor(bal));
     var local = SiliconService.getBalance();
     
-    // [FIX] Jangan pernah naikkan saldo lokal secara otomatis lewat _reconcileAfterFlush 
-    // jika kita tidak yakin itu dari topup.
     if (eff < local) {
         SiliconService.applyServerBalance(eff);
     }
