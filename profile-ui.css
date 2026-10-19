@@ -218,3 +218,47 @@
     .pf-stats { gap: 6px; }
     .pf-stat-value { font-size: 14px; }
 }
+
+/* ---------- Setelan: profil dipisah dari pengaturan ---------- */
+.settings-profile-block { margin-bottom: 22px; }
+.settings-profile-block .settings-hero { margin-bottom: 0; }
+.settings-page-head {
+    display: flex; align-items: center; gap: 7px;
+    margin: 0 4px 10px; color: var(--text-tertiary);
+    font-size: 11px; font-weight: var(--fw-bold); letter-spacing: 0.8px; text-transform: uppercase;
+}
+.settings-page-head svg { opacity: 0.7; flex-shrink: 0; }
+.settings-page-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.settings-page-head + .settings-tabs { margin-bottom: 18px; }
+
+/* ---------- ID Pemain ---------- */
+.pf-id-wrap { padding-bottom: 12px; }
+.pf-id-card {
+    width: 100%; display: flex; align-items: center; gap: 12px;
+    background: var(--bg-3); border: 1px dashed var(--border);
+    border-radius: var(--r-md); padding: 12px 14px;
+    color: inherit; font-family: inherit; text-align: left; cursor: pointer;
+}
+.pf-id-card:active { opacity: 0.8; }
+.pf-id-card.is-off { cursor: default; opacity: 0.6; }
+.pf-id-ico {
+    flex-shrink: 0; width: 34px; height: 34px; border-radius: 10px;
+    background: var(--accent-soft); color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.pf-id-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pf-id-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-tertiary); font-weight: var(--fw-semibold); }
+.pf-id-value { font-size: var(--fs-lg); font-weight: var(--fw-black); letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
+.pf-id-copy {
+    flex-shrink: 0; padding: 5px 11px; border-radius: var(--r-pill);
+    background: var(--accent); color: #fff; font-size: var(--fs-xs); font-weight: var(--fw-bold);
+}
+/* chip ID di profil publik */
+.pf-id-chip {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
+    padding: 5px 12px; border-radius: var(--r-pill); border: 0;
+    background: var(--bg-4); color: var(--text-secondary);
+    font-family: inherit; font-size: var(--fs-xs); font-weight: var(--fw-semibold); cursor: pointer;
+}
+.pf-id-chip b { color: var(--text-primary); letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
+.pf-id-chip:active { opacity: 0.75; }
