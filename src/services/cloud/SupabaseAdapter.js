@@ -325,7 +325,20 @@ export const SupabaseAdapter = {
         var c = await getClient();
         var res = await c.rpc('get_silicon');
         if (res.error) throw mk(res.error);
-        return res.data == null ? 0 : res.data;
+        // Jangan mengartikan respons kosong/tidak valid sebagai saldo 0: nilai itu dapat
+        // menimpa saldo lokal yang sah saat sinkronisasi. Saldo nol yang sah tetap diterima.
+        if (res.data == null || res.data === '') {
+            var err = new Error('RPC get_silicon tidak mengembalikan saldo.');
+            err.code = 'INVALID_SILICON_BALANCE';
+            throw err;
+        }
+        var balance = Number(res.data);
+        if (!Number.isFinite(balance) || balance < 0 || Math.floor(balance) !== balance) {
+            var invalid = new Error('RPC get_silicon mengembalikan saldo tidak valid.');
+            invalid.code = 'INVALID_SILICON_BALANCE';
+            throw invalid;
+        }
+        return balance;
     },
 
     rpcGetMyPublicId: async function () {
