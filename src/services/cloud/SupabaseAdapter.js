@@ -1,4 +1,6 @@
 // FILE: src/services/cloud/SupabaseAdapter.js
+// v2028.42 — [ID PUBLIK] listProfiles/getProfileById ikut membaca public_id (butuh supabase/20-public-id-publik.sql);
+//            bila view belum diperbarui, otomatis jatuh ke kolom lama (tanpa public_id).
 // v2028.41 — [FIX SIL] rpcSpendSilicon idempoten (p_request_id) + rpcClaimQuest.
 // v2028.28 — [LEADERBOARD] Menambahkan created_at di listProfiles untuk Umur Akun Real-Life.
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_LIB_URLS, CLOUD } from './supabase.config.js';
@@ -6,6 +8,10 @@ import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_LIB_URLS, CLOUD } from './supabase
 var _client = null;
 var _loading = null;
 var _injected = null;
+var _pubIdOk = true; // false bila view public_profiles belum punya kolom public_id
+var PUB_COLS = 'id, display_name, avatar_path, company_name, founded_year, founded_month, game_minutes, created_at, updated_at, stat_revenue, stat_sold, stat_reputation, stat_share';
+function _pubCols() { return PUB_COLS + (_pubIdOk ? ', public_id' : ''); }
+function _isPubIdMissing(err) { return !!err && String(err.message || '').toLowerCase().indexOf('public_id') >= 0; }
 var _idemOk = true; // false bila server belum punya spend_silicon(p_amount, p_request_id)
 
 function classify(err) {
@@ -265,21 +271,24 @@ export const SupabaseAdapter = {
         var cols = { revenue: 'stat_revenue', sold: 'stat_sold', reputation: 'stat_reputation', share: 'stat_share', recent: 'updated_at' };
         var col = cols[orderBy] || cols.revenue;
         var c = await getClient();
-        var res = await c.from('public_profiles')
-            // TAMBAHAN: created_at
-            .select('id, display_name, avatar_path, company_name, founded_year, founded_month, game_minutes, created_at, updated_at, stat_revenue, stat_sold, stat_reputation, stat_share')
-            .order(col, { ascending: false, nullsFirst: false })
-            .limit(100);
+        var res = await c.from('public_profiles').select(_pubCols())
+            .order(col, { ascending: false, nullsFirst: false }).limit(100);
+        if (res.error && _pubIdOk && _isPubIdMissing(res.error)) {
+            _pubIdOk = false;
+            res = await c.from('public_profiles').select(_pubCols())
+                .order(col, { ascending: false, nullsFirst: false }).limit(100);
+        }
         if (res.error) throw mk(res.error);
         return res.data || [];
     },
 
     getProfileById: async function (id) {
         var c = await getClient();
-        var res = await c.from('public_profiles')
-            .select('id, display_name, avatar_path, company_name, founded_year, founded_month, game_minutes, updated_at, created_at, stat_revenue, stat_sold, stat_reputation, stat_share')
-            .eq('id', id)
-            .maybeSingle();
+        var res = await c.from('public_profiles').select(_pubCols()).eq('id', id).maybeSingle();
+        if (res.error && _pubIdOk && _isPubIdMissing(res.error)) {
+            _pubIdOk = false;
+            res = await c.from('public_profiles').select(_pubCols()).eq('id', id).maybeSingle();
+        }
         if (res.error) throw mk(res.error);
         return res.data;
     },
