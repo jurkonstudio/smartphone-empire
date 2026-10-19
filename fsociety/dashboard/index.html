@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#0f141d">
 <link rel="icon" href="../../favicon.ico">
@@ -14,16 +14,17 @@
 <body>
 <header>
   <div class="brand"><b>Smartphone Empire</b><small id="who"></small></div>
-  <button class="btn" id="logout">Keluar</button>
+  <div class="hbtns"><button class="btn" id="bell" type="button" title="Aktifkan suara &amp; notifikasi browser">🔔 Notifikasi</button><button class="btn" id="logout">Keluar</button></div>
 </header>
 <nav class="tabs" aria-label="Menu admin">
   <button class="on" data-tab="home">Ringkasan</button>
-  <button data-tab="orders">Pesanan</button>
+  <button data-tab="orders">Pesanan<span class="nb" id="nb" hidden></span></button>
   <button data-tab="players">Pemain</button>
   <button data-tab="sil">Ledger SIL</button>
   <button data-tab="audit">Audit</button>
   <button data-tab="system">Sistem</button>
 </nav>
+<div id="obanner" role="alert" hidden><span id="obmsg"></span><span class="obacts"><button class="btn good" id="obgo" type="button">Lihat</button><button class="btn" id="obx" type="button" aria-label="Tutup">×</button></span></div>
 <main id="main"><p class="muted">Memuat…</p></main>
 <dialog id="pdlg" class="wide">
   <div class="dhead"><div><h3 id="pd-title">Pemain</h3><p class="muted" id="pd-sub"></p></div>
