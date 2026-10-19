@@ -30,6 +30,11 @@ let _unsubRealtime = null;
 let _unsubWallet = null;
 let _walletTimer = null;
 let _siliconSyncing = false;
+let _siliconSyncStart = 0;
+// Batasi tunggu: request yang menggantung tidak boleh mengunci sinkron saldo selamanya.
+function _withTimeout(promise, ms, fallback) {
+    return Promise.race([promise, new Promise(function (r) { setTimeout(function () { r(fallback); }, ms); })]);
+}
 let _silVersion = 0;       // naik setiap antrean belanja berubah (deteksi balapan saat fetch saldo)
 let _flushPromise = null;  // satu flush pada satu waktu
 let _remotePending = false;
@@ -257,14 +262,15 @@ function _flushPending() {
 
 async function syncSiliconOnLogin() {
     if (!_state || !_isConnected()) return;
-    if (_siliconSyncing) return;
+    if (_siliconSyncing && Date.now() - _siliconSyncStart < 20000) return;
     _siliconSyncing = true;
+    _siliconSyncStart = Date.now();
     try {
         // Maksimal 3 percobaan bila ada belanja baru selama proses (hindari balapan).
         for (var attempt = 0; attempt < 3; attempt++) {
-            await _flushPending();
+            await _withTimeout(_flushPending(), 8000, null);
             var v0 = _silVersion;
-            var res = await CloudService.getSiliconBalance();
+            var res = await _withTimeout(CloudService.getSiliconBalance(), 10000, { ok: false });
             if (!res.ok) return;
             if (v0 !== _silVersion || _flushPromise) continue;
 
