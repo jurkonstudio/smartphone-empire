@@ -5,6 +5,7 @@ import { Modal } from '../modal.js';
 import { LanguageService, t } from '../../core/LanguageService.js';
 import { avatarHtml, resolveAvatarUrls, esc } from './AvatarView.js';
 import { pidTf, copyPublicId } from './PlayerIdView.js';
+// v2.4 — teks waktu/umur akun & label tidak lagi hardcoded Indonesia (ikut bahasa aktif).
 
 var MONTHS = {
     id: ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'],
@@ -33,12 +34,12 @@ function _timeAgo(iso) {
     var diffMs = Date.now() - date.getTime();
     var diffMins = Math.floor(diffMs / 60000);
     
-    if (diffMins < 1) return 'Baru saja';
-    if (diffMins < 60) return diffMins + ' mnt lalu';
+    if (diffMins < 1) return pidTf('pp.time.just_now', _lang() === 'en' ? 'Just now' : 'Baru saja');
+    if (diffMins < 60) return pidTf('pp.time.min_ago', _lang() === 'en' ? '{n} min ago' : '{n} mnt lalu', { n: diffMins });
     var diffHrs = Math.floor(diffMins / 60);
-    if (diffHrs < 24) return diffHrs + ' jam lalu';
+    if (diffHrs < 24) return pidTf('pp.time.hour_ago', _lang() === 'en' ? '{n} hr ago' : '{n} jam lalu', { n: diffHrs });
     var diffDays = Math.floor(diffHrs / 24);
-    if (diffDays < 30) return diffDays + ' hari lalu';
+    if (diffDays < 30) return pidTf('pp.time.day_ago', _lang() === 'en' ? '{n} days ago' : '{n} hari lalu', { n: diffDays });
     return _fmtDate(iso);
 }
 
@@ -49,12 +50,12 @@ function _accountAge(iso) {
     var diffMs = Date.now() - date.getTime();
     var days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     
-    if (days === 0) return 'Hari ini';
-    if (days < 30) return days + ' Hari';
+    if (days === 0) return pidTf('pp.age.today', _lang() === 'en' ? 'Today' : 'Hari ini');
+    if (days < 30) return pidTf('pp.age.days', _lang() === 'en' ? '{n} Days' : '{n} Hari', { n: days });
     var months = Math.floor(days / 30);
-    if (months < 12) return months + ' Bulan';
+    if (months < 12) return pidTf('pp.age.months', _lang() === 'en' ? '{n} Months' : '{n} Bulan', { n: months });
     var years = Math.floor(months / 12);
-    return years + ' Tahun ' + (months % 12) + ' Bln';
+    return pidTf('pp.age.years', _lang() === 'en' ? '{y} Yr {m} Mo' : '{y} Tahun {m} Bln', { y: years, m: months % 12 });
 }
 
 export function compactNumber(n) {
@@ -96,8 +97,8 @@ export async function openPlayerProfileModal(profile) {
             _stat(t('pp.stats.reputation'), Number(profile.stat_reputation || 0).toFixed(1)) +
             _stat(t('pp.stats.share'), Number(profile.stat_share || 0).toFixed(1) + '%') +
         '</div>' +
-        '<div class="sum-row"><span>⏳ Lama Bermain</span><b style="color:var(--accent);">' + esc(age) + '</b></div>' +
-        '<div class="sum-row"><span>🟢 Terakhir Aktif</span><b>' + esc(lastSeen) + '</b></div>' +
+        '<div class="sum-row"><span>⏳ ' + esc(pidTf('pp.view.playtime', _lang() === 'en' ? 'Time Playing' : 'Lama Bermain')) + '</span><b style="color:var(--accent);">' + esc(age) + '</b></div>' +
+        '<div class="sum-row"><span>🟢 ' + esc(pidTf('pp.view.last_seen', _lang() === 'en' ? 'Last Active' : 'Terakhir Aktif')) + '</span><b>' + esc(lastSeen) + '</b></div>' +
         '<div class="sum-row"><span>' + esc(t('pp.view.joined')) + '</span><b>' + esc(_fmtDate(profile.created_at)) + '</b></div>' +
         '<div class="sum-row"><span>' + esc(t('pp.view.founded')) + '</span><b>' + esc(_fmtFounded(profile.founded_year, profile.founded_month)) + '</b></div>' +
         '<button type="button" class="btn-secondary" data-modal-close style="width:100%;margin-top:16px;padding:10px;">' + esc(t('pp.view.close')) + '</button>';
