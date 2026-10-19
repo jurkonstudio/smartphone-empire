@@ -1035,13 +1035,19 @@ async function boot() {
         } else {
             hideLoading();
             var onb = await showOnboarding();
-            state.patch({ companyName: onb.companyName, difficulty: onb.difficulty });
-            var mod = await import('./data/balance.data.js');
-            var starting = mod.BALANCE.startingCash[onb.difficulty] || mod.BALANCE.startingCash.normal;
-            state.setCash(starting);
-            state.addMilestone('founded', 'Perusahaan ' + onb.companyName + ' didirikan.');
-            state.addLog('Perusahaan ' + onb.companyName + ' didirikan.', 'success');
-            SaveService.save(state);
+            if (onb.cloudData && state.hydrate(onb.cloudData)) {
+                // Masuk dari layar awal & akun sudah punya progres: lanjutkan, bukan buat perusahaan baru.
+                SaveService.save(state);
+                console.info('[boot] Progres dimuat dari cloud:', onb.companyName);
+            } else {
+                state.patch({ companyName: onb.companyName, difficulty: onb.difficulty });
+                var mod = await import('./data/balance.data.js');
+                var starting = mod.BALANCE.startingCash[onb.difficulty] || mod.BALANCE.startingCash.normal;
+                state.setCash(starting);
+                state.addMilestone('founded', 'Perusahaan ' + onb.companyName + ' didirikan.');
+                state.addLog('Perusahaan ' + onb.companyName + ' didirikan.', 'success');
+                SaveService.save(state);
+            }
         }
 
         splash(88);
@@ -1089,7 +1095,9 @@ async function boot() {
             CloudService.registerAdapter(SupabaseAdapter);
             CloudSync.init(state);
             bindCloudUI();
-            if (typeof SupabaseAdapter.hasStoredSession === 'function' && SupabaseAdapter.hasStoredSession()) {
+            if (CloudService.getStatus() === 'connected') {
+                console.info('[Cloud] Sudah masuk dari layar awal:', CloudService.getEmail());
+            } else if (typeof SupabaseAdapter.hasStoredSession === 'function' && SupabaseAdapter.hasStoredSession()) {
                 CloudService.restoreSession().then(function (r) {
                     if (r && r.ok) console.info('[Cloud] Sesi dipulihkan:', r.email || r.userId);
                     else console.info('[Cloud] Tidak ada sesi tersimpan.');
