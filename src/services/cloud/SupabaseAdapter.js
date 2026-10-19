@@ -1,18 +1,15 @@
 // FILE: src/services/cloud/SupabaseAdapter.js
-// v2028.42 — [ID PUBLIK] listProfiles/getProfileById ikut membaca public_id (butuh supabase/20-public-id-publik.sql);
-//            bila view belum diperbarui, otomatis jatuh ke kolom lama (tanpa public_id).
-// v2028.41 — [FIX SIL] rpcSpendSilicon idempoten (p_request_id) + rpcClaimQuest.
-// v2028.28 — [LEADERBOARD] Menambahkan created_at di listProfiles untuk Umur Akun Real-Life.
+// v2028.43 — [TRANSFER] Menambahkan rpcTransferSilicon untuk kirim SIL antar pemain.
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_LIB_URLS, CLOUD } from './supabase.config.js';
 
 var _client = null;
 var _loading = null;
 var _injected = null;
-var _pubIdOk = true; // false bila view public_profiles belum punya kolom public_id
+var _pubIdOk = true; 
 var PUB_COLS = 'id, display_name, avatar_path, company_name, founded_year, founded_month, game_minutes, created_at, updated_at, stat_revenue, stat_sold, stat_reputation, stat_share';
 function _pubCols() { return PUB_COLS + (_pubIdOk ? ', public_id' : ''); }
 function _isPubIdMissing(err) { return !!err && String(err.message || '').toLowerCase().indexOf('public_id') >= 0; }
-var _idemOk = true; // false bila server belum punya spend_silicon(p_amount, p_request_id)
+var _idemOk = true;
 
 function classify(err) {
     if (!err) return 'unknown';
@@ -217,7 +214,6 @@ export const SupabaseAdapter = {
         return function () { try { c.removeChannel(ch); } catch (e) {} };
     },
 
-    // Dompet SIL: server memberi tahu saat saldo berubah (admin, top-up, belanja di perangkat lain).
     subscribeWallet: async function (userId, cb) {
         var c = await getClient();
         var ch = c.channel('wallet:' + userId).on('postgres_changes',
@@ -232,25 +228,14 @@ export const SupabaseAdapter = {
         var ch = c.channel('online-users', {
             config: { presence: { key: userId } }
         });
-
         ch.on('presence', { event: 'sync' }, function () {
-            try {
-                var state = ch.presenceState() || {};
-                var ids = Object.keys(state);
-                onSync(ids);
-            } catch (e) { onSync([]); }
+            try { var state = ch.presenceState() || {}; var ids = Object.keys(state); onSync(ids); } 
+            catch (e) { onSync([]); }
         });
-
         ch.subscribe(function (status) {
-            if (status === 'SUBSCRIBED') {
-                try { ch.track(meta || { online_at: new Date().toISOString() }); } catch (e) {}
-            }
+            if (status === 'SUBSCRIBED') { try { ch.track(meta || { online_at: new Date().toISOString() }); } catch (e) {} }
         });
-
-        return function () {
-            try { ch.untrack(); } catch (e) {}
-            try { c.removeChannel(ch); } catch (e) {}
-        };
+        return function () { try { ch.untrack(); } catch (e) {} try { c.removeChannel(ch); } catch (e) {} };
     },
 
     getProfile: async function (userId) {
@@ -350,6 +335,17 @@ export const SupabaseAdapter = {
         return res.data == null ? null : res.data;
     },
 
+    // [NEW] Transfer SIL ke pemain lain
+    rpcTransferSilicon: async function (receiverId, amount) {
+        var c = await getClient();
+        var res = await c.rpc('transfer_silicon', { 
+            p_receiver_id: receiverId, 
+            p_amount: Math.floor(amount) 
+        });
+        if (res.error) throw mk(res.error);
+        return res.data;
+    },
+
     rpcClaimDaily: async function () {
         var c = await getClient();
         var res = await c.rpc('claim_daily_silicon');
@@ -357,9 +353,6 @@ export const SupabaseAdapter = {
         return res.data == null ? 0 : res.data;
     },
 
-    // [FIX] requestId = kunci idempoten: retry (timeout/koneksi putus) atau dua tab yang mengirim item
-    // antrean yang sama TIDAK memotong saldo dua kali. Butuh supabase/silicon-fix.sql; bila belum
-    // dijalankan, otomatis jatuh ke RPC lama (tanpa idempotensi).
     rpcSpendSilicon: async function (amount, requestId) {
         var c = await getClient();
         var args = { p_amount: Math.floor(amount) };
@@ -373,7 +366,6 @@ export const SupabaseAdapter = {
         return res.data == null ? 0 : res.data;
     },
 
-    // Klaim reward quest (idempoten per quest, nominal ditentukan server).
     rpcClaimQuest: async function (questId) {
         var c = await getClient();
         var res = await c.rpc('claim_quest_silicon', { p_quest_id: String(questId) });
@@ -416,7 +408,6 @@ export const SupabaseAdapter = {
         return res.data;
     },
 
-    // [ADMIN PANEL - MANAJEMEN PEMAIN]
     rpcAdminGetProfiles: async function () {
         var c = await getClient();
         var res = await c.rpc('admin_get_all_profiles');
