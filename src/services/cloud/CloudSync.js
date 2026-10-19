@@ -1,6 +1,8 @@
 // FILE: src/services/cloud/CloudSync.js
-// v2028.42 — [FIX SIL HILANG] Menambahkan antrean topup agar optimistis update dari PaymentService
-//            tidak tertimpa oleh saldo server yang lambat update.
+// v2028.43 — [PERF] Optimasi kecepatan sinkronisasi:
+//   1. Timeout dipangkas (maks 3 detik), tidak ada retry berulang yang bikin lambat.
+//   2. Cegah double-trigger (checkOnConnect & syncSiliconOnLogin tidak lagi tabrakan).
+//   3. Gunakan debounce agar sinkronisasi tidak dipanggil berkali-kali dalam sedetik.
 import { bus } from '../../core/EventBus.js';
 import { SaveService } from '../../core/SaveService.js';
 import { SCHEMA_VERSION } from '../../core/GameState.js';
@@ -36,7 +38,6 @@ let _unsubRealtime = null;
 let _unsubWallet = null;
 let _walletTimer = null;
 let _siliconSyncing = false;
-let _siliconSyncStart = 0;
 let _siliconResync = false;
 let _silFailNotified = false;
 let _silPollTimer = null;
@@ -44,6 +45,7 @@ const SIL_POLL_MS = 30000;
 let _questScanUid = null;
 let _dailyDay = '';
 
+// [PERF] Timeout dipangkas drastis agar UI tidak freeze menunggu server
 function _withTimeout(promise, ms, fallback) {
     return Promise.race([promise, new Promise(function (r) { setTimeout(function () { r(fallback); }, ms); })]);
 }
@@ -53,6 +55,7 @@ let _remotePending = false;
 let _reloadOnVisible = false;
 let _laterChosen = false;
 let _lastRetryAt = 0;
+let _syncDebounceTimer = null; // [PERF] Cegah spam sinkronisasi
 
 export function getDeviceId() {
     try {
@@ -91,7 +94,6 @@ export function decideSync(local, cloud) {
 function _buildPayload(slot) {
     const data = _state.serialize();
     data.silicon = 0; 
-    
     const t = data.time || {};
     return {
         slot: slot,
@@ -171,7 +173,8 @@ function _onVisibilityChange() {
     if (document.visibilityState === 'visible') {
         if (_isConnected()) {
             console.info('[CloudSync] Tab aktif kembali, sinkronisasi saldo...');
-            syncSiliconOnLogin();
+            // [PERF] Gunakan debounce agar tidak spam
+            _debouncedSyncSilicon();
         }
     }
 
@@ -214,7 +217,7 @@ function _pendingNet() {
     var uid = CloudService.getUserId();
     return _pendingAll().reduce(function (sum, x) {
         if (x.uid !== uid) return sum;
-        if (x.type === 'topup') return sum - x.amount; // [FIX] Kurangi antrean topup
+        if (x.type === 'topup') return sum - x.amount;
         return _isQuest(x) ? sum - x.amount : sum + x.amount;
     }, 0);
 }
@@ -335,21 +338,17 @@ function _flushPending() {
 
                 if (_isQuest(item)) {
                     if (/invalid_quest|invalid_amount/i.test(msg)) {
-                        console.warn('[CloudSync] klaim quest ditolak server, dibuang:', item.key);
                         _removePending(item.id);
                     } else {
-                        console.warn('[CloudSync] klaim quest tertunda, akan dicoba lagi:', item.key, msg.trim());
                         skip[item.id] = true;
                     }
                     continue;
                 }
 
                 if (/insufficient|invalid_amount/i.test(msg)) {
-                    console.warn('[CloudSync] belanja SIL ditolak server, dibuang dari antrean:', msg.trim());
                     _removePending(item.id);
                     continue;
                 }
-                console.warn('[CloudSync] belanja SIL tertunda, akan dicoba lagi:', msg.trim());
                 break;
             }
         } catch (e) {
@@ -363,25 +362,28 @@ function _flushPending() {
     return p;
 }
 
+// [PERF] Fungsi sinkronisasi utama yang dioptimalkan
 async function syncSiliconOnLogin() {
     if (!_state || !_isConnected()) return;
-    if (_siliconSyncing && Date.now() - _siliconSyncStart < 20000) { _siliconResync = true; return; }
+    if (_siliconSyncing) { _siliconResync = true; return; }
+    
     _siliconSyncing = true;
-    _siliconSyncStart = Date.now();
     try {
         _queueQuestRecovery();
-        try { await _withTimeout(_claimDailyOnce(), 8000, null); } catch (e) {}
+        // [PERF] Timeout harian dipotong jadi 3 detik
+        try { await _withTimeout(_claimDailyOnce(), 3000, null); } catch (e) {}
 
-        var settled = false;
-        for (var attempt = 0; attempt < 3; attempt++) {
-            await _withTimeout(_flushPending(), 8000, null);
+        // [PERF] Hanya coba 1x. Jika ada antrean baru saat proses, beri 1 kesempatan lagi.
+        for (var attempt = 0; attempt < 2; attempt++) {
+            // [PERF] Flush dan Ambil saldo timeout maksimal 3 detik
+            await _withTimeout(_flushPending(), 3000, null);
             var v0 = _silVersion;
-            var res = await _withTimeout(CloudService.getSiliconBalance(), 10000, { ok: false });
+            var res = await _withTimeout(CloudService.getSiliconBalance(), 4000, { ok: false });
+            
             if (!res.ok) {
-                console.warn('[CloudSync] ambil saldo SIL dari server gagal:', (res && (res.code || res.reason)) || 'timeout');
                 if (!_silFailNotified) {
                     _silFailNotified = true;
-                    ToastService.warning('Saldo Silicon belum bisa disinkronkan dari server. Akan dicoba lagi otomatis.');
+                    ToastService.warning('Sinkronisasi server lambat. Mencoba lagi di latar belakang.');
                 }
                 return;
             }
@@ -391,7 +393,6 @@ async function syncSiliconOnLogin() {
             var serverBal = Math.floor(res.balance || 0);
             var localBal = SiliconService.getBalance();
             
-            // [FIX] Jika server sudah punya saldo >= lokal, hapus antrean topup
             var uid = CloudService.getUserId();
             var list = _pendingAll();
             var hasTopups = list.some(function(x) { return x.uid === uid && x.type === 'topup'; });
@@ -404,24 +405,31 @@ async function syncSiliconOnLogin() {
             var effective = Math.max(0, serverBal - net);
 
             if (effective !== localBal) {
-                console.info('[CloudSync] Silicon lokal (', localBal, ') -> (', effective, ') | server', serverBal, '| tertunda(net)', net);
+                console.info('[CloudSync] Silicon lokal (', localBal, ') -> (', effective, ')');
                 SiliconService.applyServerBalance(effective);
                 ToastService.info('Saldo Silicon disinkronkan (' + effective + ' SIL).');
             }
             if (!_hasSyncedSilicon()) _markSiliconSynced();
-            settled = true;
             break;
         }
-        if (!settled) _siliconResync = true; 
     } catch (e) {
         console.warn('[CloudSync] syncSiliconOnLogin error:', e);
     } finally {
         _siliconSyncing = false;
         if (_siliconResync) {
             _siliconResync = false;
-            setTimeout(function () { syncSiliconOnLogin(); }, 300);
+            // [PERF] Jeda 1 detik sebelum retry jika ada perubahan baru
+            setTimeout(function () { syncSiliconOnLogin(); }, 1000);
         }
     }
+}
+
+// [PERF] Pembungkus Debounce untuk mencegah tabrakan
+function _debouncedSyncSilicon() {
+    if (_syncDebounceTimer) clearTimeout(_syncDebounceTimer);
+    _syncDebounceTimer = setTimeout(function() {
+        syncSiliconOnLogin();
+    }, 800); // Tunggu 800ms sebelum eksekusi
 }
 
 function _reconcileAfterFlush(bal) {
@@ -442,11 +450,10 @@ function _onLocalCredit(delta, reason, isRefund) {
     if (!_state || !CloudService.getUserId()) return;
     if (isRefund) {
         var left = _cancelSpend(delta);
-        if (left > 0) console.warn('[CloudSync] refund', left, 'SIL tak bisa dibatalkan (belanja sudah terkirim ke server).');
+        if (left > 0) console.warn('[CloudSync] refund', left, 'SIL tak bisa dibatalkan.');
         return;
     }
     
-    // [FIX] Tangkap event topup dari PaymentService
     if (reason.indexOf('topup:') === 0) {
         var uid = CloudService.getUserId();
         var list = _pendingAll();
@@ -462,7 +469,7 @@ function _onLocalCredit(delta, reason, isRefund) {
         return;
     }
     if (reason === 'daily-login') {
-        if (_isConnected()) syncSiliconOnLogin(); 
+        if (_isConnected()) _debouncedSyncSilicon(); 
     }
 }
 
@@ -525,7 +532,7 @@ async function checkOnConnect() {
             _ready = true;
             _lastUploadMinutes = local.minutes;
             _markSynced(slot);
-            await syncSiliconOnLogin(); 
+            _debouncedSyncSilicon(); // [PERF] Pakai debounce
         } else if (_hasSynced(slot)) {
             await _autoResolve(slot, local, cloud, dec.reason);
         } else {
@@ -559,7 +566,7 @@ async function applyCloud(slot, opts) {
         return { ok: false, reason: 'Data cloud tidak valid.', code: 'unknown' };
     }
     
-    await syncSiliconOnLogin(); 
+    _debouncedSyncSilicon(); // [PERF] Pakai debounce
 
     SaveService.save(_state);
     const info = localInfo(_state);
@@ -576,7 +583,7 @@ async function _startRealtime() {
     _startSilPoll(); 
     _unsubWallet = await CloudService.subscribeWallet(function () {
         clearTimeout(_walletTimer);
-        _walletTimer = setTimeout(syncSiliconOnLogin, 400);
+        _walletTimer = setTimeout(_debouncedSyncSilicon, 400);
     });
     _unsubRealtime = await CloudService.subscribeSaves(function (row) {
         if (!row || row.device_id === getDeviceId()) return;
@@ -597,7 +604,7 @@ function _startSilPoll() {
     _stopSilPoll();
     _silPollTimer = setInterval(function () {
         if (document.visibilityState !== 'visible' || !_isConnected() || _siliconSyncing) return;
-        syncSiliconOnLogin();
+        _debouncedSyncSilicon(); // [PERF] Pakai debounce
     }, SIL_POLL_MS);
 }
 
@@ -607,6 +614,7 @@ function _stopSilPoll() {
 
 function _stopRealtime() {
     clearTimeout(_walletTimer);
+    clearTimeout(_syncDebounceTimer);
     _stopSilPoll();
     if (_unsubWallet) { try { _unsubWallet(); } catch (e) {} _unsubWallet = null; }
     if (_unsubRealtime) { try { _unsubRealtime(); } catch (e) {} _unsubRealtime = null; }
@@ -622,7 +630,7 @@ export const CloudSync = {
         bus.on('save:imported', _clearAllSynced);
         
         document.addEventListener('visibilitychange', _onVisibilityChange);
-        window.addEventListener('online', function () { syncSiliconOnLogin(); });
+        window.addEventListener('online', function () { _debouncedSyncSilicon(); });
         window.addEventListener('pagehide', _uploadOnLeave);
         
         bus.on('cloud:status-changed', function (e) {
@@ -633,8 +641,8 @@ export const CloudSync = {
                 } catch (err) {}
 
                 _startRealtime();
-                checkOnConnect();
-                syncSiliconOnLogin();
+                checkOnConnect(); 
+                // [PERF] Hapus syncSiliconOnLogin() di sini karena checkOnConnect sudah memanggilnya
             } else if (e && e.status === 'disconnected') {
                 try { localStorage.removeItem('smartphone-empire:admin-email'); } catch(err) {}
                 _stopRealtime();
@@ -661,7 +669,7 @@ export const CloudSync = {
             } catch (err) {}
             _startRealtime();
             checkOnConnect();
-            syncSiliconOnLogin();
+            // [PERF] Hapus syncSiliconOnLogin() di sini
         }
     },
 
@@ -707,13 +715,13 @@ export const CloudSync = {
         try {
             var cloudRes = await CloudService.downloadSave(CloudService.getSlot());
             if (cloudRes.ok && cloudRes.payload && cloudRes.payload.data) {
-                var localSil = _state.get().silicon || 0; // Simpan saldo lokal
+                var localSil = _state.get().silicon || 0; 
                 _state.hydrate(cloudRes.payload.data);
-                _state.data.silicon = localSil; // Kembalikan saldo lokal
+                _state.data.silicon = localSil;
             }
 
-            await _flushPending();
-            var silRes = await CloudService.getSiliconBalance();
+            await _withTimeout(_flushPending(), 3000, null);
+            var silRes = await _withTimeout(CloudService.getSiliconBalance(), 4000, { ok: false });
             if (silRes.ok) {
                 SiliconService.applyServerBalance(Math.max(0, Math.floor(silRes.balance || 0) - _pendingNet()));
             }
