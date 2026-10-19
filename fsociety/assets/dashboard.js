@@ -18,6 +18,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => go(b.dataset.tab));
 async function go(t) {
     tab = t;
+    if (t === 'orders') $('#obanner').hidden = true;
     document.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
     main.innerHTML = '<p class="muted">Memuat…</p>';
     try { await views[t](); }
@@ -331,5 +332,86 @@ async function browseTable(t, off = 0) {
             <button class="btn" data-browse="${esc(t)}" data-off="${off + 50}" ${off + 50 >= r.total ? 'disabled' : ''}>Berikutnya →</button></div>`;
     } catch (e) { if (e.denied) return out(); main.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
 }
+
+// ---- Notifikasi pesanan top-up (otomatis) ----
+// Jalur 1: Realtime Supabase (instan) -> memicu pengecekan. Jalur 2: polling 20 dtk (cadangan bila realtime
+// belum aktif / terputus). Keduanya lewat SATU fungsi (pollOrders) sehingga tak ada notifikasi ganda.
+const seenOrders = new Set(), baseTitle = document.title.replace(/^\(\d+\)\s*/, '');
+let seeded = false, pollBusy = false, pollAgain = false, lastKey = '', pendingN = 0, actx = null, ordersCh = null;
+const nb = $('#nb'), banner = $('#obanner'), obmsg = $('#obmsg'), bell = $('#bell');
+
+function unlockAudio() {   // browser hanya mengizinkan suara setelah interaksi pengguna
+    try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch {}
+}
+['pointerdown', 'keydown'].forEach(ev => addEventListener(ev, unlockAudio, { once: true }));
+function beep() {
+    try {
+        if (!actx || actx.state !== 'running') return;
+        const o = actx.createOscillator(), g = actx.createGain();
+        o.type = 'sine'; o.frequency.value = 880; g.gain.value = 0.08;
+        o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + 0.25);
+    } catch {}
+}
+function setPending(n) {
+    pendingN = n;
+    nb.textContent = n > 99 ? '99+' : String(n); nb.hidden = n <= 0;
+    document.title = (n > 0 ? `(${n}) ` : '') + baseTitle;
+}
+function bellLabel() {
+    const p = 'Notification' in window ? Notification.permission : 'denied';
+    bell.textContent = p === 'granted' ? '🔔 Aktif' : p === 'denied' ? '🔕 Diblokir' : '🔔 Notifikasi';
+}
+bellLabel();
+bell.onclick = async () => {
+    unlockAudio(); try { await actx.resume(); } catch {} beep();
+    if ('Notification' in window && Notification.permission === 'default') { try { await Notification.requestPermission(); } catch {} }
+    bellLabel(); toast('Notifikasi pesanan aktif: suara + banner' + ('Notification' in window && Notification.permission === 'granted' ? ' + notifikasi browser.' : '.'));
+};
+function showBanner(text, loud) {
+    obmsg.textContent = text; banner.hidden = false;
+    if (!loud) return;
+    beep();
+    try { if (document.hidden && 'Notification' in window && Notification.permission === 'granted') new Notification('Pesanan top-up baru', { body: text }); } catch {}
+}
+$('#obgo').onclick = () => { status = 'pending'; go('orders'); };
+$('#obx').onclick = () => { banner.hidden = true; };
+
+async function pollOrders() {
+    if (pollBusy) { pollAgain = true; return; }
+    pollBusy = true;
+    try {
+        do {
+            pollAgain = false;
+            const list = await rpc('admin_list_orders', { p_status: 'pending' });
+            const fresh = list.filter(o => !seenOrders.has(o.id));
+            list.forEach(o => seenOrders.add(o.id));
+            setPending(list.length);
+            if (!seeded) { if (list.length) showBanner(`${list.length} pesanan top-up menunggu persetujuan`, false); }
+            else if (fresh.length === 1) {
+                const o = fresh[0];
+                showBanner(`Pesanan baru: ${idr(o.amount)} · ${num(o.sil_amount)} SIL · ${o.company_name || o.email}`, true);
+            } else if (fresh.length > 1) showBanner(`${fresh.length} pesanan top-up baru menunggu persetujuan`, true);
+            const key = list.map(o => o.id).join(',');
+            const changed = seeded && key !== lastKey;
+            seeded = true; lastKey = key;
+            if (changed && (tab === 'orders' || tab === 'home')) {   // daftar berubah -> segarkan halaman yang sedang dibuka
+                try { await views[tab](); } catch {}
+            }
+        } while (pollAgain);
+    } catch (e) { if (e.denied) out(); }   // gagal sementara (jaringan): coba lagi di putaran berikutnya
+    finally { pollBusy = false; }
+}
+function startOrderRealtime() {
+    try {
+        ordersCh = sb.channel('admin-orders')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_orders' }, () => pollOrders())
+            .subscribe();
+    } catch {}
+}
+startOrderRealtime();
+setInterval(pollOrders, 20000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) pollOrders(); });
+addEventListener('pagehide', () => { try { if (ordersCh) sb.removeChannel(ordersCh); } catch {} });
+pollOrders();
 
 go('home');

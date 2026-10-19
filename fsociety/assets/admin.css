@@ -80,3 +80,14 @@ pre{margin:0;padding:.8rem;background:var(--bg);border:1px solid var(--line);bor
 .act{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:.5rem 0}.act input{flex:1 1 160px;width:auto}
 .note{background:#262216;border:1px solid #4b4020;color:#e8d9a8;border-radius:10px;padding:.55rem .8rem;font-size:.86rem;margin:.6rem 0}
 tr.click{cursor:pointer}tr.click:hover td{background:var(--s2)}
+
+/* notifikasi pesanan top-up */
+.hbtns{display:flex;gap:.5rem;align-items:center}
+.nb{display:inline-block;min-width:1.35em;padding:0 .4em;margin-left:.4rem;border-radius:99px;background:var(--sil);color:#1a1405;font-size:.72rem;font-weight:700;line-height:1.5;text-align:center}
+.nb[hidden]{display:none}
+#obanner{position:sticky;top:3.7rem;z-index:7;max-width:1100px;margin:.6rem auto 0;display:flex;align-items:center;justify-content:space-between;gap:.8rem;padding:.7rem 1rem;background:#262216;border:1px solid var(--sil);border-radius:12px;animation:obin .25s ease-out}
+#obanner[hidden]{display:none}
+#obanner .obacts{display:flex;gap:.4rem;flex:none}
+@keyframes obin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){#obanner{animation:none}}
+@media(max-width:719px){#obanner{margin:.5rem .6rem 0;top:3.5rem}}
