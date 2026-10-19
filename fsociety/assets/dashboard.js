@@ -61,7 +61,7 @@ const views = {
         const chips = [['pending', 'Menunggu'], ['approved', 'Disetujui'], ['rejected', 'Ditolak'], ['all', 'Semua']]
             .map(([k, v]) => `<button class="btn ${k === status ? 'on' : ''}" data-st="${k}">${v}</button>`).join('');
         const rows = list.length ? list.map(o => `<div class="row"><div class="main">
-            <div>${esc(o.company_name || o.email)}</div><small>${esc(o.email)} · ${when(o.created_at)} · ${esc(o.id)}</small></div>
+            <div>${esc(o.company_name || o.email)}</div><small>ID ${esc(o.public_id)} · ${esc(o.email)} · ${when(o.created_at)} · ${esc(o.id)}</small></div>
             <div><strong>${idr(o.amount)}</strong> <span class="sil">${num(o.sil_amount)} SIL</span></div>
             ${o.status === 'pending'
                 ? `<div class="acts"><button class="btn bad" data-rej="${esc(o.id)}">Tolak</button><button class="btn good" data-ok="${esc(o.id)}">Setujui</button></div>`
@@ -74,7 +74,7 @@ const views = {
         players = await rpc('admin_get_all_profiles');
         const F = [['all', 'Semua'], ['active7', 'Aktif 7 hari'], ['save', 'Punya save'], ['nosave', 'Tanpa save'], ['paid', 'Pernah top-up'], ['banned', 'Diblokir'], ['admin', 'Admin']];
         main.innerHTML = `<h2>Pemain (<span id="pcount">${num(players.length)}</span>)</h2>
-          <div class="bar"><input id="q" type="search" placeholder="Cari nama, perusahaan, email, atau ID" aria-label="Cari pemain" value="${esc(query)}">
+          <div class="bar"><input id="q" type="search" placeholder="Cari nama, perusahaan, email, atau ID pemain (8 digit)" aria-label="Cari pemain" value="${esc(query)}">
             <select id="psort" aria-label="Urutkan">${[['joined', 'Terbaru bergabung'], ['login', 'Login terakhir'], ['sil', 'SIL terbanyak'], ['revenue', 'Omzet game'], ['cash', 'Kas game'], ['sold', 'Unit terjual'], ['save', 'Save terbaru'], ['spent', 'Top-up (Rp)']]
               .map(([k, v]) => `<option value="${k}" ${k === psort ? 'selected' : ''}>${v}</option>`).join('')}</select>
             <button class="btn" id="pcsv">Ekspor CSV</button></div>
@@ -136,7 +136,7 @@ const FILTERS = {
 };
 function filtered() {
     const q = query.trim().toLowerCase();
-    return players.filter(FILTERS[pfilter]).filter(p => !q || [p.email, p.company_name, p.player_name, p.display_name, p.id].some(v => (v || '').toLowerCase().includes(q)))
+    return players.filter(FILTERS[pfilter]).filter(p => !q || [p.email, p.company_name, p.player_name, p.display_name, p.id, p.public_id == null ? '' : String(p.public_id)].some(v => (v || '').toLowerCase().includes(q)))
         .sort((a, b) => SORTS[psort](b) - SORTS[psort](a));
 }
 function drawPlayers() {
@@ -144,14 +144,14 @@ function drawPlayers() {
     $('#pcount').textContent = num(f.length) + (f.length !== players.length ? ' / ' + num(players.length) : '');
     el.innerHTML = f.length ? f.slice(0, pshown).map(p => `<div class="row click" data-open="${esc(p.id)}" tabindex="0"><div class="main">
         <div>${pname(p)}${p.is_admin ? '<span class="tag info">admin</span>' : ''}${p.banned ? '<span class="tag bad">diblokir</span>' : ''}${!p.save_updated_at ? '<span class="tag">tanpa save</span>' : ''}</div>
-        <small>${esc(p.email)} · login ${ago(p.last_sign_in_at)} · bergabung ${when(p.created_at)}${p.save_updated_at ? ` · game ${gameDate(p.game_year, p.game_month)}` : ''}</small></div>
+        <small>ID ${esc(p.public_id)} · ${esc(p.email)} · login ${ago(p.last_sign_in_at)} · bergabung ${when(p.created_at)}${p.save_updated_at ? ` · game ${gameDate(p.game_year, p.game_month)}` : ''}</small></div>
         <div class="sm muted">Omzet ${num(p.stat_revenue)}<br>Kas ${num(p.stat_cash)}</div>
         <div class="sil"><strong>${num(p.silicon_balance)}</strong> SIL</div></div>`).join('')
         + (f.length > pshown ? `<button class="btn more" id="pmore">Tampilkan lebih banyak (${num(f.length - pshown)})</button>` : '')
         : '<div class="empty">Tidak ada pemain yang cocok.</div>';
 }
 function exportCsv() {
-    const cols = ['id', 'email', 'player_name', 'company_name', 'created_at', 'last_sign_in_at', 'banned', 'silicon_balance', 'streak', 'last_daily', 'stat_revenue', 'stat_sold', 'stat_reputation', 'stat_share', 'stat_cash', 'stat_products', 'game_year', 'game_month', 'game_minutes', 'save_updated_at', 'orders_count', 'spent_idr'];
+    const cols = ['public_id', 'id', 'email', 'player_name', 'company_name', 'created_at', 'last_sign_in_at', 'banned', 'silicon_balance', 'streak', 'last_daily', 'stat_revenue', 'stat_sold', 'stat_reputation', 'stat_share', 'stat_cash', 'stat_products', 'game_year', 'game_month', 'game_minutes', 'save_updated_at', 'orders_count', 'spent_idr'];
     const cell = v => { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     download('pemain.csv', [cols.join(','), ...filtered().map(p => cols.map(c => cell(p[c])).join(','))].join('\n'), 'text/csv');
 }
@@ -177,10 +177,10 @@ async function drawPlayer() {
     const a = cur.account, p = cur.profile || {}, w = cur.wallet || {}, h = (cur.heads || [])[0];
     $('#pd-title').innerHTML = esc(p.company_name || p.player_name || a.email) + (a.is_admin ? '<span class="tag info">admin</span>' : '')
         + (a.banned_until && new Date(a.banned_until) > new Date() ? '<span class="tag bad">diblokir</span>' : '');
-    $('#pd-sub').textContent = a.email + ' · ' + a.id;
+    $('#pd-sub').textContent = 'ID ' + (p.public_id ?? '-') + ' · ' + a.email + ' · ' + a.id;
     setPT(curTab);
     if (curTab === 'info') {
-        pbody.innerHTML = `<h3>Akun</h3>${kv([['Email', esc(a.email)], ['Provider', esc(a.provider)], ['Bergabung', when(a.created_at)], ['Login terakhir', when(a.last_sign_in_at) + ' (' + ago(a.last_sign_in_at) + ')'],
+        pbody.innerHTML = `<h3>Akun</h3>${kv([['ID Pemain (publik)', esc(p.public_id)], ['User ID (UUID)', esc(a.id)], ['Email', esc(a.email)], ['Provider', esc(a.provider)], ['Bergabung', when(a.created_at)], ['Login terakhir', when(a.last_sign_in_at) + ' (' + ago(a.last_sign_in_at) + ')'],
             ['Email terverifikasi', a.email_confirmed_at ? when(a.email_confirmed_at) : 'belum'], ['Status', a.banned_until && new Date(a.banned_until) > new Date() ? 'diblokir' : 'normal']])}
           <h3>Profil publik &amp; statistik (dilaporkan klien)</h3>${kv([['Nama pemain', esc(p.player_name)], ['Nama display', esc(p.display_name)], ['Perusahaan', esc(p.company_name)],
             ['Berdiri', gameDate(p.founded_year, p.founded_month)], ['Ganti nama', num(p.name_changes)], ['Foto profil', esc(p.avatar_path)],
