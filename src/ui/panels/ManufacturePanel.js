@@ -39,12 +39,12 @@ export function renderManufacturePanel(params) {
         '</div></div>';
 
     if (!open) {
-        var cards = locked.map(function () {
-            return '<div class="mf-row mf-row-mystery"><div class="mf-ico">🔒</div>' +
-                '<div class="mf-main"><div class="mf-name">???</div>' +
-                '<div class="mf-desc">' + esc(_tf('mf.hidden', 'Teknologi manufaktur belum terlihat.')) + '</div></div>' +
-                '<div class="mf-buy"><span class="mf-year">' + FAB_UNLOCK_YEAR + '</span></div></div>';
-        }).join('');
+        var cards = locked.length
+            ? '<div class="mf-row mf-row-mystery"><div class="mf-ico">🔒</div>' +
+              '<div class="mf-main"><div class="mf-name">??? × ' + locked.length + '</div>' +
+              '<div class="mf-desc">' + esc(_tf('mf.hidden', 'Teknologi manufaktur belum terlihat.')) + '</div></div>' +
+              '<div class="mf-buy"><span class="mf-year">' + FAB_UNLOCK_YEAR + '</span></div></div>'
+            : '';
         return head + '<div class="mf-list">' + (cards || _empty()) + '</div>';
     }
 
