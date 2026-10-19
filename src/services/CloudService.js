@@ -14,7 +14,7 @@ let _authBound = false;
 function _loadSlot() {
     try {
         const n = parseInt(localStorage.getItem(SLOT_KEY), 10);
-        if (n >= 1 && n <= 9) return n;
+        if (n >= 1 && n <= 9) return 1;   // satu slot saja: slot lama (2, 3, ...) dipetakan ke slot 1
     } catch (e) {}
     return 1;
 }
@@ -64,6 +64,7 @@ export const CloudService = {
     setSlot(n) {
         n = parseInt(n, 10);
         if (!(n >= 1 && n <= 9)) return false;
+        n = 1;                            // satu slot saja
         _slot = n;
         try { localStorage.setItem(SLOT_KEY, String(n)); } catch (e) {}
         bus.emit('cloud:slot-changed', { slot: _slot });
