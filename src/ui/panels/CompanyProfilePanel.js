@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/CompanyProfilePanel.js
-// v2027.46 — Menambahkan tombol pintas "Kirim SIL" di tab Pemain.
+// v2027.47 — Mengarahkan tombol "Kirim SIL" ke modal khusus (TransferSiliconModal).
 import { gIcon } from '../icons/GameIcons.js';
 import { t } from '../../core/LanguageService.js';
 import { CloudService } from '../../services/CloudService.js';
@@ -12,7 +12,9 @@ import { openPlayerListModal } from '../social/PlayerListPanel.js';
 import { compactNumber } from '../social/PlayerProfileModal.js';
 import { PlayerProfileService, NAME_RULES } from '../../systems/PlayerProfileService.js';
 import { pidTf, getCachedMyPublicId, loadMyPublicId, copyPublicId } from '../social/PlayerIdView.js';
-import { openSiliconStoreModal } from './SiliconStorePanel.js'; // IMPORT BARU
+
+// IMPORT MODAL BARU KITA
+import { openTransferSiliconModal } from './TransferSiliconModal.js';
 
 var _tab = 'company';
 var _boundRoot = null;
@@ -180,7 +182,7 @@ function _playerTab(params) {
             '<div class="pf-actions" style="display:flex; flex-wrap:wrap; gap:8px;">' +
                 '<button class="btn-primary" data-pf="edit-player" type="button" style="flex:1;">' + esc(t('pp.player.edit')) + '</button>' +
                 '<button class="btn-secondary" data-pf="leaderboard" type="button" style="flex:1;">🏆 ' + esc(t('pp.lb.title')) + '</button>' +
-                // TOMBOL BARU: KIRIM SIL
+                // TOMBOL KIRIM SIL
                 '<button class="btn-secondary" data-pf="transfer-sil" type="button" style="flex:1; background:var(--accent); color:#fff; border:none;">' + gIcon('sil', 16) + ' Kirim SIL</button>' +
             '</div>' +
         '</div>';
@@ -256,7 +258,7 @@ export function bindCompanyProfileActions(root) {
             else if (a === 'edit-company') openEditCompanyNameModal();
             else if (a === 'leaderboard') openPlayerListModal();
             else if (a === 'copy-id') copyPublicId(getCachedMyPublicId());
-            else if (a === 'transfer-sil') openSiliconStoreModal('transfer'); // BUKA TAB TRANSFER
+            else if (a === 'transfer-sil') openTransferSiliconModal(); // <-- UBAH DISINI
             return;
         }
 
