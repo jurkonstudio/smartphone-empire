@@ -1,4 +1,6 @@
 // FILE: src/ui/panels/SettingsPanel.js  (REPLACE — i18n)
+// v2027.45 — profil dipisah dari pengaturan: kartu profil (hero) jadi blok sendiri, lalu judul "Pengaturan" + tab.
+//            Baris "Profil Pemain" (duplikat hero) dan "ID Pemain" dipindah ke Profil > tab Pemain.
 // v2027.42 — hero baru (foto pemain), tab Umum tersusun (Akun & Profil / Permainan / Komunitas / Bantuan),
 //            ganti nama perusahaan lewat ProfileEditModals (gratis 2x, lalu 150 SIL).
 // i18n: semua teks lewat t()/_tf() (key settings.*). Nama bulan memakai date.month.N,
@@ -85,7 +87,14 @@ function _refresh() {
 
 export function renderSettingsPanel() {
     const s = state.get();
-    return _heroCard(s) + _tabBar() + _tabContent(s);
+    return '<div class="settings-profile-block">' + _heroCard(s) + '</div>' +
+        _pageHead() + _tabBar() + _tabContent(s);
+}
+
+// Pemisah antara blok profil dan area pengaturan.
+function _pageHead() {
+    return '<div class="settings-page-head">' + renderIcon('settings', 12) +
+        '<span>' + escapeHtml(_tf('settings.page_head', _pick('Pengaturan', 'Settings'))) + '</span></div>';
 }
 
 function _heroCard(s) {
@@ -148,17 +157,6 @@ function _tabContent(s) {
     }
 }
 
-let _playerPublicId = null;
-function _loadPlayerPublicId() {
-    if (_playerPublicId || CloudService.getStatus() !== 'connected') return;
-    CloudService.getPublicId().then(function (r) {
-        if (!r || !r.ok || !r.publicId) return;
-        _playerPublicId = String(r.publicId);
-        var el = document.querySelector('[data-player-public-id]');
-        if (el) el.textContent = _playerPublicId;
-    }).catch(function () {});
-}
-
 function _tabUmum(s) {
     const info = PlayerProfileService.getNameChangeInfo();
     const nameHint = info.cost > 0
@@ -166,12 +164,9 @@ function _tabUmum(s) {
         : t('pp.company.free_left', { n: info.freeLeft });
     const connected = CloudService.getStatus() === 'connected';
     const cloudKey = connected ? 'profile.cloud_connected' : 'profile.cloud_disconnected';
-    _loadPlayerPublicId();
 
     return _section('portrait', t('pp.settings.section_account'),
-        _row({ icon: 'portrait', label: t('pp.settings.row_profile'), hint: t('pp.settings.row_profile_hint'), action: true, attrs: 'data-set="player-profile"', chevron: true }) +
         _row({ icon: 'building', label: t('pp.settings.row_company'), hint: nameHint, value: escapeHtml(s.companyName || '—'), action: true, attrs: 'data-set="edit-name"', chevron: true }) +
-        (connected ? _row({ icon: 'portrait', label: 'ID Pemain', hint: 'Ketuk untuk menyalin. Pakai ID ini saat top-up SIL di web.', value: '<span data-player-public-id>' + escapeHtml(_playerPublicId || '…') + '</span>', action: true, attrs: 'data-set="copy-id"' }) : '') +
         _row({ icon: 'cloud', label: t('pp.settings.row_cloud'), value: '<span style="color:' + (connected ? 'var(--success)' : 'var(--text-tertiary)') + ';">' + escapeHtml(t(cloudKey)) + '</span>', action: true, attrs: 'data-set="cloud"', chevron: true })
     ) +
     _section('gamepad', t('pp.settings.section_game'),
@@ -590,12 +585,6 @@ function _handleSet(action) {
         case 'edit-name':   openEditCompanyNameModal(); break;
         case 'player-list': openPlayerListModal(); break;
         case 'leaderboard': openPlayerListModal('revenue'); break;
-        case 'copy-id':
-            if (_playerPublicId) {
-                try { navigator.clipboard.writeText(_playerPublicId); ToastService.info('ID Pemain disalin: ' + _playerPublicId); }
-                catch (e) { ToastService.info('ID Pemain: ' + _playerPublicId); }
-            }
-            break;
         case 'cloud':       openCloudPanel(); break;
         case 'player-profile': setProfileTab('player'); window.__game.navigate('profile'); break;
         case 'studio':      _openStudioPage(); break;

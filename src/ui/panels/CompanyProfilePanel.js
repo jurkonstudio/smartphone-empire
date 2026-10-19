@@ -3,6 +3,8 @@
 //   Perusahaan: ringkasan, KPI, kondisi (meter), milestone, cloud.
 //   Pemain    : foto + nama pemain, ganti nama perusahaan (gratis 2x lalu 150 SIL),
 //               statistik leaderboard, tombol leaderboard.
+// v2027.45 — ID Pemain (8 digit) kini ada di tab Pemain (kartu ID, ketuk untuk menyalin);
+//            pemain lain bisa melihatnya di profil publik.
 import { gIcon } from '../icons/GameIcons.js';
 import { t } from '../../core/LanguageService.js';
 import { CloudService } from '../../services/CloudService.js';
@@ -14,6 +16,7 @@ import { openEditCompanyNameModal, openEditPlayerModal } from '../social/Profile
 import { openPlayerListModal } from '../social/PlayerListPanel.js';
 import { compactNumber } from '../social/PlayerProfileModal.js';
 import { PlayerProfileService, NAME_RULES } from '../../systems/PlayerProfileService.js';
+import { pidTf, getCachedMyPublicId, loadMyPublicId, copyPublicId } from '../social/PlayerIdView.js';
 
 var _tab = 'company';
 var _boundRoot = null;
@@ -190,6 +193,24 @@ function _playerTab(params) {
             '</div>' +
         '</div>';
 
+    // Kartu ID Pemain: ketuk untuk menyalin. Nilai dimuat dari server (cache per akun).
+    var myId = connected ? getCachedMyPublicId() : null;
+    if (connected && !myId) loadMyPublicId();
+    var idCard =
+        '<div class="card pf-card pf-id-wrap">' +
+            '<button class="pf-id-card' + (connected ? '' : ' is-off') + '" data-pf="copy-id" type="button"' + (connected ? '' : ' disabled') + '>' +
+                '<span class="pf-id-ico">' + renderIcon('portrait', 16) + '</span>' +
+                '<span class="pf-id-main">' +
+                    '<span class="pf-id-label">' + esc(pidTf('pp.id.label', 'ID Pemain')) + '</span>' +
+                    '<span class="pf-id-value" data-player-public-id>' + esc(connected ? (myId || '…') : '—') + '</span>' +
+                '</span>' +
+                (connected ? '<span class="pf-id-copy">' + esc(pidTf('pp.id.copy', 'Salin')) + '</span>' : '') +
+            '</button>' +
+            '<div class="pf-hint">' + esc(connected
+                ? pidTf('pp.id.hint', 'Pemain lain bisa melihat ID ini di profil publikmu. Pakai ID ini saat top-up SIL di web.')
+                : pidTf('pp.id.hint_off', 'Masuk akun cloud untuk mendapatkan ID Pemain.')) + '</div>' +
+        '</div>';
+
     var company =
         '<div class="card pf-card">' +
             '<div class="card-title">' + esc(t('pp.company.title')) + '</div>' +
@@ -220,7 +241,7 @@ function _playerTab(params) {
             '<div class="pf-hint">' + esc(t('pp.stats.hint')) + ' ' + esc(t(connected ? 'pp.player.cloud_on' : 'pp.player.cloud_off')) + '</div>' +
         '</div>';
 
-    return hero + company + statsCard + _cloudCard();
+    return hero + idCard + company + statsCard + _cloudCard();
 }
 
 export function renderCompanyProfilePanel(params) {
@@ -243,6 +264,7 @@ export function bindCompanyProfileActions(root) {
             if (a === 'edit-player') openEditPlayerModal();
             else if (a === 'edit-company') openEditCompanyNameModal();
             else if (a === 'leaderboard') openPlayerListModal();
+            else if (a === 'copy-id') copyPublicId(getCachedMyPublicId());
             return;
         }
 
