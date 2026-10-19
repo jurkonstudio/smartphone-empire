@@ -1,4 +1,5 @@
 // FILE: src/services/cloud/CloudSync.js
+// v2028.40 — init() langsung sinkron bila sudah login (onboarding).
 // v2028.30 — [AUTO-SYNC] Menambahkan sinkronisasi saldo otomatis saat tab game kembali dibuka.
 // v2028.31 — [FIX SIL] Saldo tidak "terisi lagi" setelah dipakai: pembelanjaan SIL yang gagal/terlewat
 //            dikirim ke server disimpan di antrean persisten (localStorage) dan diulang, dan sinkronisasi
@@ -477,6 +478,17 @@ export const CloudSync = {
             if (!payload || payload.fromServer) return;
             _pushSiliconDelta(payload.delta || 0);
         });
+
+        // Sudah masuk sebelum init (login dari layar onboarding): event 'connected' sudah lewat, jalankan sekarang.
+        if (_isConnected()) {
+            try {
+                var em = CloudService.getEmail();
+                if (em) localStorage.setItem('smartphone-empire:admin-email', em);
+            } catch (err) {}
+            _startRealtime();
+            checkOnConnect();
+            syncSiliconOnLogin();
+        }
     },
 
     uploadNow: uploadNow,
