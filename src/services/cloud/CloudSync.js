@@ -51,6 +51,9 @@ let _walletTimer = null;
 let _siliconSyncing = false;
 let _siliconSyncStart = 0;
 let _siliconResync = false;   // ada permintaan sinkron yang bertabrakan -> ulangi setelah selesai
+let _silFailNotified = false; // toast gagal-sinkron SIL hanya sekali sampai berhasil lagi
+let _silPollTimer = null;     // polling berkala: jaring pengaman bila Realtime tidak aktif / terputus
+const SIL_POLL_MS = 30000;
 let _questScanUid = null;    // akun yang reward quest-nya sudah dipindai untuk pemulihan
 let _dailyDay = '';          // hari UTC terakhir hadiah harian berhasil diklaim ke server
 // Batasi tunggu: request yang menggantung tidak boleh mengunci sinkron saldo selamanya.
@@ -402,7 +405,16 @@ async function syncSiliconOnLogin() {
             await _withTimeout(_flushPending(), 8000, null);
             var v0 = _silVersion;
             var res = await _withTimeout(CloudService.getSiliconBalance(), 10000, { ok: false });
-            if (!res.ok) return;
+            if (!res.ok) {
+                // [FIX] Dulu gagal diam-diam sehingga saldo game bisa tertinggal dari server tanpa ada petunjuk.
+                console.warn('[CloudSync] ambil saldo SIL dari server gagal:', (res && (res.code || res.reason)) || 'timeout');
+                if (!_silFailNotified) {
+                    _silFailNotified = true;
+                    ToastService.warning('Saldo Silicon belum bisa disinkronkan dari server. Akan dicoba lagi otomatis.');
+                }
+                return;
+            }
+            _silFailNotified = false;
             if (v0 !== _silVersion || _flushPromise) continue;
 
             var serverBal = Math.floor(res.balance || 0);
@@ -573,6 +585,7 @@ async function applyCloud(slot, opts) {
 
 async function _startRealtime() {
     _stopRealtime();
+    _startSilPoll(); // jalan walau langganan Realtime gagal (mis. tabel belum masuk publication)
     // Saldo SIL berubah di server -> tarik saldo baru lewat jalur sinkron yang sama (aman terhadap belanja tertunda).
     _unsubWallet = await CloudService.subscribeWallet(function () {
         clearTimeout(_walletTimer);
@@ -593,8 +606,24 @@ async function _startRealtime() {
     });
 }
 
+// [FIX] Saldo di game harus selalu sama dengan server (yang ditampilkan Admin Panel). Realtime Supabase
+// butuh supabase/realtime-wallet.sql & koneksi websocket yang sehat; polling ini memastikan perubahan dari
+// admin / top-up / perangkat lain tetap sampai ke semua pemain yang sedang login, maksimal ~30 detik.
+function _startSilPoll() {
+    _stopSilPoll();
+    _silPollTimer = setInterval(function () {
+        if (document.visibilityState !== 'visible' || !_isConnected() || _siliconSyncing) return;
+        syncSiliconOnLogin();
+    }, SIL_POLL_MS);
+}
+
+function _stopSilPoll() {
+    if (_silPollTimer) { clearInterval(_silPollTimer); _silPollTimer = null; }
+}
+
 function _stopRealtime() {
     clearTimeout(_walletTimer);
+    _stopSilPoll();
     if (_unsubWallet) { try { _unsubWallet(); } catch (e) {} _unsubWallet = null; }
     if (_unsubRealtime) { try { _unsubRealtime(); } catch (e) {} _unsubRealtime = null; }
 }

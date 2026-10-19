@@ -79,6 +79,8 @@ export function openCloudPanel() {
 export async function syncNow() {
     if (!(CloudService.isAvailable() && CloudService.getStatus() === 'connected')) { openCloudPanel(); return; }
     var r = await CloudSync.uploadNow({ manual: true });
+    // [FIX] "Sinkron Sekarang" juga menarik saldo SIL dari server (dulu hanya mengunggah save).
+    try { await CloudSync.syncSilicon(); } catch (e) {}
     if (r.ok) ToastService.success(t('cloud.upload_ok', { n: r.slot || CloudService.getSlot() }));
     else ToastService.error(errText(r.code));
 }
