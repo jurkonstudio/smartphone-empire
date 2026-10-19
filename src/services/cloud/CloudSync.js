@@ -1,6 +1,6 @@
 // FILE: src/services/cloud/CloudSync.js
-// v2028.45 — [FIX] Auto-load Cloud Save jika perangkat baru (fresh) tanpa pop-up konflik.
-//            Memastikan SIL Topup aman via pending queue & background sync.
+// v2028.46 — [FIX] Mencegah saldo SIL kembali naik (rollback) saat pemain membelanjakan SIL.
+//            Sistem akan menahan update dari server jika masih ada antrean pembelanjaan yang tertunda.
 import { bus } from '../../core/EventBus.js';
 import { SaveService } from '../../core/SaveService.js';
 import { SCHEMA_VERSION } from '../../core/GameState.js';
@@ -80,7 +80,6 @@ export function decideSync(local, cloud) {
     if (!cloud) return { action: 'upload' };
     const cm = Number(cloud.game_minutes) || 0;
     if (!local || local.minutes <= 0) {
-        // [FIX] Otomatis muat cloud jika perangkat masih baru (local kosong)
         return cm > 0 ? { action: 'cloud', reason: 'fresh' } : { action: 'same' };
     }
     if ((cloud.company_name || '') !== (local.company || '')) return { action: 'prompt', reason: 'different' };
@@ -342,7 +341,10 @@ function _flushPending() {
                 }
 
                 if (/insufficient|invalid_amount/i.test(msg)) {
-                    _removePending(item.id);
+                    console.warn('[CloudSync] Belanja SIL ditolak server (insufficient).', msg.trim());
+                    // [FIX] JANGAN hapus antrean. Tandai agar tidak dikirim ulang, tapi tetap dihitung
+                    // di _pendingNet agar saldo lokal tidak naik kembali secara tidak wajar.
+                    skip[item.id] = true; 
                     continue;
                 }
                 break;
@@ -380,6 +382,8 @@ async function syncSiliconOnLogin() {
                 return;
             }
             _silFailNotified = false;
+            
+            // Jika ada perubahan antrean selama proses ambil saldo, ulangi.
             if (v0 !== _silVersion || _flushPromise) continue;
 
             var serverBal = Math.floor(res.balance || 0);
@@ -388,6 +392,7 @@ async function syncSiliconOnLogin() {
             var uid = CloudService.getUserId();
             var list = _pendingAll();
             var hasTopups = list.some(function(x) { return x.uid === uid && x.type === 'topup'; });
+            
             if (hasTopups && serverBal >= localBal) {
                 _writePending(list.filter(function(x) { return !(x.uid === uid && x.type === 'topup'); }));
                 _silVersion++;
@@ -395,6 +400,13 @@ async function syncSiliconOnLogin() {
 
             var net = _pendingNet();
             var effective = Math.max(0, serverBal - net);
+
+            // [FIX] PENGAMAN UTAMA: Jika masih ada antrean (net != 0) dan saldo server 
+            // lebih besar dari saldo lokal, JANGAN TIMPA. Ini mencegah saldo kembali naik.
+            if (net !== 0 && effective > localBal) {
+                console.log('[CloudSync] Mencegah saldo SIL kembali naik saat ada antrean pending.');
+                break;
+            }
 
             if (effective !== localBal) {
                 console.info('[CloudSync] Silicon lokal (', localBal, ') -> (', effective, ')');
@@ -425,7 +437,13 @@ function _debouncedSyncSilicon() {
 function _reconcileAfterFlush(bal) {
     if (bal == null || _siliconSyncing || _pendingCount() > 0) return;
     var eff = Math.max(0, Math.floor(bal));
-    if (eff !== SiliconService.getBalance()) SiliconService.applyServerBalance(eff);
+    var local = SiliconService.getBalance();
+    
+    // [FIX] Jangan pernah naikkan saldo lokal secara otomatis lewat _reconcileAfterFlush 
+    // jika kita tidak yakin itu dari topup.
+    if (eff < local) {
+        SiliconService.applyServerBalance(eff);
+    }
 }
 
 function _pushSiliconDelta(delta) {
@@ -519,13 +537,12 @@ async function checkOnConnect() {
             _ready = true;
             await uploadNow({ auto: true });
         } else if (dec.action === 'cloud') {
-            // [FIX] Perangkat baru: Tarik data dari cloud secara otomatis tanpa pop-up
             await _autoResolve(slot, local, cloud, dec.reason);
         } else if (dec.action === 'same') {
             _ready = true;
             _lastUploadMinutes = local.minutes;
             _markSynced(slot);
-            syncSiliconOnLogin(); // Background sync
+            syncSiliconOnLogin(); 
         } else if (_hasSynced(slot)) {
             await _autoResolve(slot, local, cloud, dec.reason);
         } else {
@@ -559,7 +576,7 @@ async function applyCloud(slot, opts) {
         return { ok: false, reason: 'Data cloud tidak valid.', code: 'unknown' };
     }
     
-    syncSiliconOnLogin(); // Background sync
+    syncSiliconOnLogin(); 
 
     SaveService.save(_state);
     const info = localInfo(_state);
@@ -714,7 +731,8 @@ export const CloudSync = {
             await _withTimeout(_flushPending(), 3000, null);
             var silRes = await _withTimeout(CloudService.getSiliconBalance(), 4000, { ok: false });
             if (silRes.ok) {
-                SiliconService.applyServerBalance(Math.max(0, Math.floor(silRes.balance || 0) - _pendingNet()));
+                var net = _pendingNet();
+                SiliconService.applyServerBalance(Math.max(0, Math.floor(silRes.balance || 0) - net));
             }
 
             try { SaveService.save(_state, { silent: true }); } catch (e) {}
