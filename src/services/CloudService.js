@@ -1,4 +1,5 @@
 // FILE: src/services/CloudService.js
+// v2028.40 — registerAdapter idempotent (login dari onboarding sebelum boot selesai).
 // v2028.27 — [ADMIN] Menambahkan fungsi adminGetAllProfiles & adminSetSilicon.
 import { bus } from '../core/EventBus.js';
 
@@ -73,6 +74,8 @@ export const CloudService = {
 
     registerAdapter(adapter) {
         if (!adapter) return { ok: false, reason: 'Adapter kosong.' };
+        // Adapter yang sama sudah terpasang (mis. oleh layar onboarding): jangan reset status/sesi.
+        if (_adapter === adapter) return { ok: true, already: true };
         _adapter = adapter;
         _authBound = false;
         _setStatus('disconnected');
