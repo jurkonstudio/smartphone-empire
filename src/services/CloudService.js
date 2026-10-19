@@ -1,4 +1,5 @@
 // FILE: src/services/CloudService.js
+// v2028.41 — [FIX SIL] spendSiliconServer(amount, requestId) + claimQuestSilicon.
 // v2028.40 — registerAdapter idempotent (login dari onboarding sebelum boot selesai).
 // v2028.27 — [ADMIN] Menambahkan fungsi adminGetAllProfiles & adminSetSilicon.
 import { bus } from '../core/EventBus.js';
@@ -309,11 +310,21 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
-    async spendSiliconServer(amount) {
+    // requestId: kunci idempoten (id item antrean) agar retry/multi-tab tidak memotong dua kali.
+    async spendSiliconServer(amount, requestId) {
         if (!_adapter) return NOT_CONFIGURED;
         if (!_userId) return NOT_SIGNED_IN;
         if (typeof _adapter.rpcSpendSilicon !== 'function') return NOT_CONFIGURED;
-        try { return { ok: true, balance: await _adapter.rpcSpendSilicon(amount) }; }
+        try { return { ok: true, balance: await _adapter.rpcSpendSilicon(amount, requestId) }; }
+        catch (err) { return _fail(err); }
+    },
+
+    // Reward quest: server memvalidasi id & nominal, idempoten per akun.
+    async claimQuestSilicon(questId) {
+        if (!_adapter) return NOT_CONFIGURED;
+        if (!_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.rpcClaimQuest !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, balance: await _adapter.rpcClaimQuest(questId) }; }
         catch (err) { return _fail(err); }
     },
 
