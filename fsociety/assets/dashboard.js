@@ -23,14 +23,12 @@ const views = {
     async home() {
         const s = await rpc('admin_dashboard_stats'), d = s.signups_14d || [], max = Math.max(1, ...d);
         const bars = d.map((c, i) => { const h = Math.round((c / max) * 70); return `<rect x="${i * 24 + 4}" y="${80 - h}" width="16" height="${h}" rx="3" fill="#7aa7ff"><title>${c} pendaftar</title></rect>`; }).join('');
-        main.innerHTML = `<h2>Ringkasan</h2><div class="grid">
-          <div class="stat"><span>Pemain terdaftar</span><strong>${num(s.players)}</strong></div>
-          <div class="stat"><span>Baru 7 hari terakhir</span><strong>${num(s.new_7d)}</strong></div>
-          <div class="stat"><span>Save cloud</span><strong>${num(s.saves)}</strong></div>
+        main.innerHTML = `<div class="grid">
+          <button class="stat ${s.pending > 0 ? 'hot' : ''}" data-go="orders"><span>Pesanan menunggu</span><strong>${num(s.pending)}</strong></button>
+          <div class="stat"><span>Pemain</span><strong>${num(s.players)}</strong><small>+${num(s.new_7d)} minggu ini</small></div>
           <div class="stat"><span>SIL beredar</span><strong class="sil">${num(s.sil_total)}</strong></div>
-          <div class="stat"><span>Pesanan menunggu</span><strong>${num(s.pending)}</strong></div>
-          <div class="stat"><span>Pendapatan disetujui</span><strong class="ok">${idr(s.revenue)}</strong></div></div>
-          <div class="panel"><h2>Pendaftar 14 hari terakhir</h2>
+          <div class="stat"><span>Pendapatan</span><strong class="ok">${idr(s.revenue)}</strong></div></div>
+          <div class="panel"><h2>Pendaftar 14 hari</h2>
           <svg viewBox="0 0 340 86" width="100%" role="img" aria-label="Grafik pendaftar harian">${bars}</svg></div>`;
     },
 
@@ -69,6 +67,7 @@ function drawPlayers() {
 
 main.addEventListener('click', async e => {
     const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.go) return go(b.dataset.go);
     if (b.dataset.st) { status = b.dataset.st; return go('orders'); }
     if (b.dataset.ok || b.dataset.rej) {
         const ok = !!b.dataset.ok, id = b.dataset.ok || b.dataset.rej;
