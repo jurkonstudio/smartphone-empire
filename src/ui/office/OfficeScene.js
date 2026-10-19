@@ -1,5 +1,51 @@
-// FILE: src/ui/office/OfficeScene.js
-// v2027.53 — [VISUAL UPGRADE] PBR Materials, Real Shadows (di HP kuat), Emissive Lights, & Better Props.
+// FILE: src/ui/office/OfficeScene.js  (REPLACE)
+// v2027.52a — Office 3D Map: interior kantor isometrik (dollhouse) yang terhubung ke data game.
+//
+// Peningkatan v2027.52a (tahap 3):
+//   * UPGRADE LANGSUNG DARI PETA — kartu Lab Chip memuat tombol "Bangun Fab" / "Upgrade ke …" lengkap
+//     dengan harga, estimasi hari & alasan bila belum bisa (riset belum ada / uang kurang). Kartu staf
+//     memuat tombol "Latih" (biaya & progres skill). Semua memakai sistem game yang sama dengan panel
+//     (FabSystem.buildFab/upgradeFab, TeamSystem.trainStaff) — tidak ada logika ganda.
+//   * Konstruksi 3D: saat Fab dibangun / di-upgrade, Lab Chip menampilkan lokasi konstruksi (perancah,
+//     derek berputar, bangunan yang tumbuh, bar progres) dan kartu menampilkan persen + sisa hari.
+//   * Staf lebih hidup: tujuan jalan sesuai peran (Lab, Studio Desain, Marketing, Showroom, Ruang CEO,
+//     dispenser air), maksimal 5 staf berjalan sekaligus, rute bergantian tiap siklus, gelembung emoji
+//     (☕ 💡 💤 🧪 🎨 📣 …), gerakan minum kopi di meja, dan baris "Aktivitas" yang hidup di kartu staf.
+//   * Rapi di HP: kartu bawah bisa diciutkan, tinggi dibatasi + bisa di-scroll, area aman (notch),
+//     tombol lebih besar, di layar lebar kartu jadi panel melayang; kamera otomatis bergeser supaya
+//     ruangan/staf terpilih tidak tertutup kartu; chip ruangan tidak lagi "loncat" ke awal tiap update
+//     dan otomatis menggulung ke chip terpilih; kartu tidak dibangun ulang bila isinya tak berubah
+//     (ketukan tombol tidak lagi hilang saat state game berubah).
+//
+// Peningkatan v2027.51a (sesi 1) — tetap berlaku:
+//   * Lantai bermotif per ruangan (kayu / ubin / grid / karpet), bayangan palsu di bawah perabot,
+//     kolam cahaya hangat + jendela menyala saat malam (tema gelap), keset pintu, jam & papan nama
+//     perusahaan di dinding.
+//   * Staf lebih hidup: wajah (mata), rambut bervariasi, aksesori per peran (headphone / kacamata /
+//     headset), plat nama berwarna sesuai tier skill, pose lesu saat moral rendah, dan beberapa staf
+//     berjalan keluar meja menuju ruang CEO / Lab lalu kembali (hanya jika animasi aktif).
+//   * Ruangan lebih detail: kipas rak server, lengan robot di Lab Chip, sinar spotlight showroom,
+//     koin berputar di brankas, karpet + lukisan di ruang CEO, mesin kopi + laptop/PC sesuai era.
+//   * Gelembung peringatan di atas ruangan (bug OS, kas negatif, moral staf rendah) + titik
+//     peringatan pada chip ruangan.
+//   * Interaksi: staf terpilih diberi cincin sorot + kamera fokus, kartu staf memuat trait & negara,
+//     tombol legenda (ⓘ), pemulihan WebGL context-loss, kualitas render adaptif untuk HP lemah.
+//   * Perbaikan: bug material 'glow' globe CEO, kebocoran tekstur, label tidak ikut ganti bahasa.
+//
+//   Staf            -> orang di meja (warna = peran, bola kecil = moral). Ketuk untuk detail.
+//   Riset           -> Lab R&D (orb melayang = riset aktif, papan tulis = riset selesai)
+//   Desain produk   -> Studio Desain (ponsel di turntable + 4 pip fase pengembangan)
+//   OS              -> Ruang Server (rak = versi OS, LED merah = bug terbuka)
+//   Fab / chip      -> Lab Chip (mesin = level Fab, konveyor jalan saat produksi)
+//   Produk dijual   -> Showroom (podium per produk, peti = stok)
+//   Kampanye        -> Ruang Marketing (layar menyala = kampanye aktif)
+//   Kas / utang     -> Keuangan (brankas, tumpukan koin, map utang, papan bursa)
+//   Reputasi/pangsa -> Ruang CEO (piala di rak)
+//
+// Ruangan terkunci tampil sebagai "blueprint" sampai syaratnya terpenuhi.
+// Ketuk ruangan -> kartu info + tombol menuju panel terkait (lewat bus 'advisor:go').
+// Level & era dibaca dari computePlan() milik Campus supaya konsisten dengan peta kampus.
+// Render-on-demand; animasi ambient ~30fps dan berhenti saat tab tersembunyi / di luar layar.
 import { computePlan, rememberPeak, PALETTES, ERA_WINDOWS } from '../campus/CampusBuildings.js';
 import { createCampusControls } from '../campus/CampusControls.js';
 import { ROLES, SKILL_TIERS, TRAITS } from '../../data/staff.data.js';
@@ -10,13 +56,14 @@ import { WalletService } from '../../systems/WalletService.js';
 import { FAB_LEVELS } from '../../systems/FabSystem.js';
 
 var BASE_VIEW = 17;
-var MAX_DPR = 1.75;
+var MAX_DPR = 1.75; // visual clarity on modern displays; adaptive quality still protects weaker phones
 var FRAME_MS = 33;
 var MIN_RESIZE_DELTA = 2;
 var MAX_DESKS = 30;
 var COLS = 6, ROWS = 5;
 var PHASES = ['design', 'prototype', 'production', 'released'];
 
+// Denah lantai: x -9..9, z -6..6 (kamera isometrik melihat dari +x,+z).
 var FLOOR = { x0: -9, x1: 9, z0: -6, z1: 6 };
 
 var ROOM_DEFS = [
@@ -25,46 +72,47 @@ var ROOM_DEFS = [
     { id: 'design', pat: 'dots',    x0: -1,   x1: 3,    z0: -6,   z1: -1.5, tone: 0xe6dcf5, go: { nav: 'products', subtab: 'design' } },
     { id: 'server', pat: 'grid',    x0: 3,    x1: 6.5,  z0: -6,   z1: -1.5, tone: 0xd5ecea, go: { nav: 'research', subtab: 'os' } },
     { id: 'chip', pat: 'grid',      x0: 6.5,  x1: 9,    z0: -6,   z1: -1.5, tone: 0xf3e3cf, go: { nav: 'products', subtab: 'chip' } },
-    { id: 'work', pat: 'carpet',    x0: -9,   x1: 3,    z0: -1.5, z1: 6,    tone: 0xe8ecf2, go: { nav: 'team', subtab: 'team' } },
+    { id: 'work', pat: 'carpet',      x0: -9,   x1: 3,    z0: -1.5, z1: 6,    tone: 0xe8ecf2, go: { nav: 'team', subtab: 'team' } },
     { id: 'showroom', pat: 'tile',  x0: 3,    x1: 9,    z0: -1.5, z1: 1.8,  tone: 0xf5e6e6, go: { nav: 'products', subtab: 'catalog' } },
-    { id: 'marketing', pat: 'carpet', x0: 3,  x1: 6,    z0: 1.8,  z1: 6,    tone: 0xdff3e3, go: { nav: 'market', subtab: 'promo' } },
+    { id: 'marketing', pat: 'carpet', x0: 3,    x1: 6,    z0: 1.8,  z1: 6,    tone: 0xdff3e3, go: { nav: 'market', subtab: 'promo' } },
     { id: 'finance', pat: 'diag',   x0: 6,    x1: 9,    z0: 1.8,  z1: 6,    tone: 0xf6efcf, go: { nav: 'team', subtab: 'bank' },
                        go2: { nav: 'team', subtab: 'exchange', labelKey: 'office.btn.exchange' } }
 ];
 
+// Warna tema sendiri (selain warna dari PALETTES kampus). [terang, gelap]
 var COLORS = {
-    ground:  [0xe9edf4, 0x181e28],
-    base:    [0xcbd4e2, 0x252d3b],
-    wall:    [0xf8fafc, 0x5b6779],
-    wallTop: [0xffffff, 0x7c8ba1],
-    part:    [0xb9c5d5, 0x3a4557],
-    desk:    [0xc9a47a, 0x6f573e],
-    deskTop: [0xe2c9a4, 0x8a6f52],
-    chair:   [0x5b6678, 0x6a7588],
-    metal:   [0xaab4c2, 0x5c6677],
-    rack:    [0x3a4352, 0x1b212b],
-    white:   [0xffffff, 0xa8b3c4],
-    paper:   [0xf2efe6, 0xa6a29b],
-    gold:    [0xe0b445, 0xbf8a2a],
-    plant:   [0x6fb274, 0x3f784b],
-    pot:     [0xb78a62, 0x694b33],
-    wood:    [0x9a6e46, 0x5b3f29],
-    dark:    [0x2a303b, 0x10131a],
-    red:     [0xef5350, 0xc73d3b],
-    amber:   [0xf5b83d, 0xcf9022],
-    green:   [0x43c07a, 0x2f9057],
-    glass:   [0x9cc7ee, 0x365a91],
-    win:     [0x8fb4e8, 0x4271be],
-    mat:     [0x8a97b3, 0x2c364a]
+    ground:  [0xe9edf4, 0x202735],
+    base:    [0xcbd4e2, 0x303949],
+    wall:    [0xf8fafc, 0x707d91],
+    wallTop: [0xffffff, 0x9aa7ba],
+    part:    [0xb9c5d5, 0x465367],
+    desk:    [0xc9a47a, 0x8a6f52],
+    deskTop: [0xe2c9a4, 0xa88a68],
+    chair:   [0x5b6678, 0x7a8599],
+    metal:   [0xaab4c2, 0x6c7686],
+    rack:    [0x3a4352, 0x252b36],
+    white:   [0xffffff, 0xc2cada],
+    paper:   [0xf2efe6, 0xbdb9ad],
+    gold:    [0xe0b445, 0xc9a13a],
+    plant:   [0x6fb274, 0x4c8f66],
+    pot:     [0xb78a62, 0x7d5f43],
+    wood:    [0x9a6e46, 0x6f4f33],
+    dark:    [0x2a303b, 0x161a21],
+    red:     [0xef5350, 0xd0443f],
+    amber:   [0xf5b83d, 0xd9a02a],
+    green:   [0x43c07a, 0x38a468],
+    glass:   [0x9cc7ee, 0x4f77b8],
+    win:     [0x8fb4e8, 0x4f77b8],
+    mat:     [0x8a97b3, 0x3a4560]
 };
 
 var SKIN = [0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0xffdbac];
 var HAIR = [0x1b1b1f, 0x3b2a1e, 0x6b4a2b, 0xb98b4a, 0xc7c7cc, 0x8c3b2a];
-var WALKERS_MAX = 5;
-var NARROW_PX = 640;
-var CORRIDORS = [-2.01, -0.56, 0.89, 2.34];
-var DOOR_NORTH = { ceo: -4.25, lab: -0.25, design: 4.0 };
-var DOOR_EAST = { showroom: -2.05, marketing: 1.65 };
+var WALKERS_MAX = 5;               // staf yang boleh berjalan keluar meja (dibatasi juga oleh jumlah staf)
+var NARROW_PX = 640;               // di bawah lebar ini kartu = lembar bawah (HP); di atasnya = panel melayang
+var CORRIDORS = [-2.01, -0.56, 0.89, 2.34];   // lorong horizontal di antara baris meja (koordinat lokal Work)
+var DOOR_NORTH = { ceo: -4.25, lab: -0.25, design: 4.0 };      // x pintu di dinding utara Work
+var DOOR_EAST = { showroom: -2.05, marketing: 1.65 };          // z pintu di dinding timur Work
 var DEST_ROOM = { ceo: 'ceo', lab: 'lab', design: 'design', showroom: 'showroom', marketing: 'marketing' };
 var DEST_BY_ROLE = {
     engineer: ['lab', 'design', 'water', 'ceo'],
@@ -73,8 +121,12 @@ var DEST_BY_ROLE = {
 };
 var DEST_DEFAULT = ['water', 'showroom', 'ceo'];
 var DEST_EMOJI = { lab: '🧪', design: '🎨', marketing: '📣', showroom: '🛍️', ceo: '📋', water: '💧' };
-var MORALE_HEX = [0xef5350, 0xf5b83d, 0x43c07a];
+var SHADOW_OPACITY = 0.14;
+var MORALE_HEX = [0xef5350, 0xf5b83d, 0x43c07a];   // rendah, sedang, tinggi
 
+// ============================================================
+// UTIL
+// ============================================================
 function len(a) { return Array.isArray(a) ? a.length : 0; }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 function hash(str) {
@@ -82,7 +134,7 @@ function hash(str) {
     for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
     return h >>> 0;
 }
-function tint(n, f) {
+function tint(n, f) {   // f: -1 (gelap) .. 1 (terang)
     var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
     var tg = f < 0 ? 0 : 255, a = Math.abs(f);
     r = Math.round(r + (tg - r) * a); g = Math.round(g + (tg - g) * a); b = Math.round(b + (tg - b) * a);
@@ -143,6 +195,9 @@ function moneyBucket(v) {
     return s * Math.floor(Math.log10(Math.max(1, Math.abs(v))) * 2);
 }
 
+// ============================================================
+// LOGIKA RUANGAN (murni, tanpa THREE) — status buka/terkunci, level, signature, teks kartu.
+// ============================================================
 var ROOM_LOGIC = {
     ceo: {
         state: function (d, p) { return { open: true, level: clamp(1 + (p.levels.monument || 0), 1, 3) }; },
@@ -319,6 +374,7 @@ var ROOM_LOGIC = {
     }
 };
 
+// bit buka/terkunci ruang tujuan jalan staf (supaya ruang Work dibangun ulang saat salah satunya terbuka)
 function destOpenBits(d, p) {
     var out = '';
     ['ceo', 'lab', 'design', 'showroom', 'marketing'].forEach(function (id) {
@@ -336,6 +392,7 @@ function totalDebt(d) {
     for (var i = 0; i < l.length; i++) s += (l[i].remaining || 0);
     return s;
 }
+// ---------- Fab: progres & aksi (murni; dipakai kartu + adegan 3D) ----------
 function fabTier(level) {
     for (var i = 0; i < FAB_LEVELS.length; i++) if (FAB_LEVELS[i].level === level) return FAB_LEVELS[i];
     return null;
@@ -343,6 +400,7 @@ function fabTier(level) {
 function canPay(cost) {
     try { return !!WalletService.canAfford(cost); } catch (e) { return false; }
 }
+// -> null bila tidak ada konstruksi; selain itu { pct 0..1, daysLeft, target, isBuild }
 export function fabProgress(d) {
     var u = d && d.fab && d.fab.upgrade;
     if (!u) return null;
@@ -355,6 +413,8 @@ export function fabProgress(d) {
         isBuild: !!u.isBuild
     };
 }
+// Aksi Fab yang ditawarkan di kartu Lab Chip.
+// -> { id:'fab-build'|'fab-upgrade', tier, disabled, noteKey } atau null (sedang konstruksi / sudah maksimal)
 export function fabActionInfo(d) {
     var f = (d && d.fab) || {};
     if (f.upgrade) return null;
@@ -376,12 +436,14 @@ function trophyCount(d, p) {
     return clamp((p.levels.monument || 0) + (rep >= 50 ? 1 : 0), 0, 3);
 }
 
+// Peringatan ruangan (murni). null = aman.
 export function roomAlert(id, data, plan) {
     var logic = ROOM_LOGIC[id];
     if (!logic || !logic.alert) return null;
     try { return logic.alert(data, plan); } catch (e) { return null; }
 }
 
+// Info untuk kartu (ruangan). Dipakai scene & bisa dites tanpa THREE.
 export function describeRoom(id, data, plan) {
     var def = null, i;
     for (i = 0; i < ROOM_DEFS.length; i++) if (ROOM_DEFS[i].id === id) def = ROOM_DEFS[i];
@@ -462,26 +524,13 @@ export function describeStaff(s) {
 // ============================================================
 export function createOfficeScene(THREE, container, gameState) {
     var PERF = window.__PERF || {};
-    var isLite = PERF.lite === true; // Tentukan apakah kita menggunakan mode kualitas rendah
-    
-    var renderer = new THREE.WebGLRenderer({ 
-        antialias: !isLite, 
-        alpha: true, 
-        powerPreference: 'high-performance' 
-    });
+    var renderer = new THREE.WebGLRenderer({ antialias: PERF.antialias !== false, alpha: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
     renderer.setClearColor(0x000000, 0);
-    
-    // [VISUAL UPGRADE] PBR Tone Mapping & Shadows
+    // Rendering pipeline: richer color, restrained highlights, and crisp isometric edges.
     if ('outputColorSpace' in renderer && THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace;
     if ('toneMapping' in renderer && THREE.ACESFilmicToneMapping !== undefined) renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    if ('toneMappingExposure' in renderer) renderer.toneMappingExposure = 1.15;
-    
-    if (!isLite) {
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Bayangan lebih halus
-    }
-
+    if ('toneMappingExposure' in renderer) renderer.toneMappingExposure = 1.12;
     var canvas = renderer.domElement;
     canvas.style.cssText = 'width:100%;height:100%;display:block;';
     canvas.setAttribute('role', 'img');
@@ -495,82 +544,56 @@ export function createOfficeScene(THREE, container, gameState) {
 
     var scene = new THREE.Scene();
     var camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
-    
-    // [VISUAL UPGRADE] Pencahayaan Studio
-    var hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
-    var sun = new THREE.DirectionalLight(0xfff5e6, 1.8);
-    sun.position.set(-10, 20, 15);
-    if (!isLite) {
-        sun.castShadow = true;
-        sun.shadow.mapSize.width = 1024;
-        sun.shadow.mapSize.height = 1024;
-        sun.shadow.camera.left = -15;
-        sun.shadow.camera.right = 15;
-        sun.shadow.camera.top = 15;
-        sun.shadow.camera.bottom = -15;
-        sun.shadow.camera.near = 0.5;
-        sun.shadow.camera.far = 50;
-        sun.shadow.bias = -0.001;
-    }
-    var fill = new THREE.DirectionalLight(0xaaccff, 0.8);
-    fill.position.set(15, 10, -10);
-    var rim = new THREE.DirectionalLight(0xffffff, 0.5);
-    rim.position.set(-10, 5, -15);
+    var hemi = new THREE.HemisphereLight(0xeaf3ff, 0x64748b, 1.25);
+    var sun = new THREE.DirectionalLight(0xfff0dc, 1.15);
+    sun.position.set(-7, 14, 9);
+    var fill = new THREE.DirectionalLight(0x9bc7ff, 0.38);
+    fill.position.set(10, 8, -8);
+    var rim = new THREE.DirectionalLight(0xffffff, 0.24);
+    rim.position.set(-10, 6, -5);
     scene.add(hemi, sun, fill, rim);
 
+    // ---------- geometri bersama ----------
     var G = {
         box: new THREE.BoxGeometry(1, 1, 1),
-        cyl: new THREE.CylinderGeometry(1, 1, 1, 24),
-        sph: new THREE.SphereGeometry(1, 20, 16),
-        cone: new THREE.ConeGeometry(1, 1, 20),
-        tor: new THREE.TorusGeometry(1, 0.07, 10, 32),
+        cyl: new THREE.CylinderGeometry(1, 1, 1, 20),
+        sph: new THREE.SphereGeometry(1, 16, 12),
+        cone: new THREE.ConeGeometry(1, 1, 18),
+        tor: new THREE.TorusGeometry(1, 0.07, 8, 28),
         plane: new THREE.PlaneGeometry(1, 1),
-        circle: new THREE.CircleGeometry(1, 32),
-        arc: new THREE.TorusGeometry(1, 0.07, 8, 20, Math.PI),
+        circle: new THREE.CircleGeometry(1, 28),
+        arc: new THREE.TorusGeometry(1, 0.07, 6, 18, Math.PI),
         ring: new THREE.RingGeometry(0.78, 1, 36)
     };
 
-    // [VISUAL UPGRADE] Material PBR (StandardMaterial) menggantikan Lambert
+    // ---------- material bersama ----------
     var M = {};
-    Object.keys(COLORS).forEach(function (k) { 
-        M[k] = new THREE.MeshStandardMaterial({ 
-            color: COLORS[k][0],
-            roughness: (k === 'metal' || k === 'glass') ? 0.2 : 0.7,
-            metalness: (k === 'metal' || k === 'gold') ? 0.8 : 0.1
-        }); 
-    });
-    
-    M.glass.transparent = true; M.glass.opacity = 0.4; M.glass.roughness = 0.1;
-    M.ghost = new THREE.MeshStandardMaterial({ color: COLORS.desk[0], transparent: true, opacity: 0.4, roughness: 0.9 });
-    
-    // [VISUAL UPGRADE] Layar menyala menggunakan Emissive (Cahaya)
-    M.screenOn = new THREE.MeshStandardMaterial({ color: 0x8fb4e8, emissive: 0x8fb4e8, emissiveIntensity: 1.5, roughness: 0.2 });
-    M.screenOff = new THREE.MeshStandardMaterial({ color: 0x1b2028, roughness: 0.4 });
-    M.glow = new THREE.MeshStandardMaterial({ color: 0x00b8d9, emissive: 0x00b8d9, emissiveIntensity: 2.0 });
-    M.holo = new THREE.MeshBasicMaterial({ color: 0x00b8d9, transparent: true, opacity: 0.28, depthWrite: false, blending: THREE.AdditiveBlending });
-    
-    M.ledG = new THREE.MeshStandardMaterial({ color: 0x43e08a, emissive: 0x43e08a, emissiveIntensity: 1.5 });
-    M.ledR = new THREE.MeshStandardMaterial({ color: 0xff4d4d, emissive: 0xff4d4d, emissiveIntensity: 1.5 });
-    M.ledA = new THREE.MeshStandardMaterial({ color: 0xffc247, emissive: 0xffc247, emissiveIntensity: 1.5 });
-    
-    // Bayangan palsu (untuk HP lemah)
-    M.shade = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.15, depthWrite: false });
+    Object.keys(COLORS).forEach(function (k) { M[k] = new THREE.MeshLambertMaterial({ color: COLORS[k][0] }); });
+    M.glass.transparent = true; M.glass.opacity = 0.55;
+    M.ghost = new THREE.MeshLambertMaterial({ color: COLORS.desk[0], transparent: true, opacity: 0.4 });
+    M.screenOn = new THREE.MeshBasicMaterial({ color: 0x8fb4e8 });
+    M.screenOff = new THREE.MeshBasicMaterial({ color: 0x1b2028 });
+    M.glow = new THREE.MeshBasicMaterial({ color: 0x00b8d9 });
+    M.holo = new THREE.MeshBasicMaterial({ color: 0x00b8d9, transparent: true, opacity: 0.28, depthWrite: false });
+    M.ledG = new THREE.MeshBasicMaterial({ color: 0x43e08a });
+    M.ledR = new THREE.MeshBasicMaterial({ color: 0xff4d4d });
+    M.ledA = new THREE.MeshBasicMaterial({ color: 0xffc247 });
+    M.shade = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.12, depthWrite: false });
     M.pool = new THREE.MeshBasicMaterial({ color: 0xffe2a8, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
     M.selRing = new THREE.MeshBasicMaterial({ color: 0x2563eb, transparent: true, opacity: 0.95, depthTest: false, side: THREE.DoubleSide });
-    
-    var hairMat = HAIR.map(function (c) { return new THREE.MeshStandardMaterial({ color: c, roughness: 0.8 }); });
+    M.shade.opacity = SHADOW_OPACITY;
+    var hairMat = HAIR.map(function (c) { return new THREE.MeshLambertMaterial({ color: c }); });
     var tierMat = {};
-    SKILL_TIERS.forEach(function (tr) { tierMat[tr.tier] = new THREE.MeshStandardMaterial({ color: parseInt(String(tr.color).replace('#', ''), 16) || 0x949aab, roughness: 0.4 }); });
+    SKILL_TIERS.forEach(function (tr) { tierMat[tr.tier] = new THREE.MeshBasicMaterial({ color: parseInt(String(tr.color).replace('#', ''), 16) || 0x949aab }); });
     var roleMat = {};
-    ROLES.forEach(function (r) { roleMat[r.id] = new THREE.MeshStandardMaterial({ color: parseInt(String(r.color).replace('#', ''), 16) || 0x888888, roughness: 0.7 }); });
-    var skinMat = SKIN.map(function (c) { return new THREE.MeshStandardMaterial({ color: c, roughness: 0.6 }); });
-    var moraleMat = MORALE_HEX.map(function (c) { return new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.5 }); });
+    ROLES.forEach(function (r) { roleMat[r.id] = new THREE.MeshLambertMaterial({ color: parseInt(String(r.color).replace('#', ''), 16) || 0x888888 }); });
+    var skinMat = SKIN.map(function (c) { return new THREE.MeshLambertMaterial({ color: c }); });
+    var moraleMat = MORALE_HEX.map(function (c) { return new THREE.MeshBasicMaterial({ color: c }); });
     var hueMats = {};
-    
     function hueMat(key) {
         if (!hueMats[key]) {
             var h = hash(key) % 360;
-            hueMats[key] = new THREE.MeshStandardMaterial({ color: new THREE.Color('hsl(' + h + ', 62%, 58%)'), roughness: 0.6 });
+            hueMats[key] = new THREE.MeshLambertMaterial({ color: new THREE.Color('hsl(' + h + ', 62%, 58%)') });
         }
         return hueMats[key];
     }
@@ -579,13 +602,6 @@ export function createOfficeScene(THREE, container, gameState) {
         var m = new THREE.Mesh(geo, typeof mat === 'string' ? M[mat] : mat);
         m.scale.set(sx, sy, sz);
         m.position.set(x, y, z);
-        
-        if (!isLite) {
-            // Hanya furnitur padat yang membuang bayangan (menghemat performa)
-            if (mat !== 'glass' && mat !== 'shade' && mat !== 'pool') m.castShadow = true;
-            m.receiveShadow = true;
-        }
-        
         parent.add(m);
         return m;
     }
@@ -593,7 +609,7 @@ export function createOfficeScene(THREE, container, gameState) {
     function cyl(p, mat, r, h, x, y, z) { return mesh(p, G.cyl, mat, r, h, r, x, y, z); }
     function sph(p, mat, r, x, y, z) { return mesh(p, G.sph, mat, r, r, r, x, y, z); }
     function cone(p, mat, r, h, x, y, z) { return mesh(p, G.cone, mat, r, h, r, x, y, z); }
-    
+    // bayangan palsu: bidang gelap tipis di lantai (murah, tanpa shadow map)
     function shadowBox(p, w, d, x, z) {
         var m = mesh(p, G.plane, 'shade', w, d, 1, x, 0.03, z);
         m.rotation.x = -Math.PI / 2;
@@ -605,6 +621,7 @@ export function createOfficeScene(THREE, container, gameState) {
         return m;
     }
 
+    // ---------- tekstur motif lantai (putih transparan; warna diatur lewat material) ----------
     var ownTex = [];
     function makePatternTexture(type, w, d) {
         var c = document.createElement('canvas');
@@ -627,7 +644,7 @@ export function createOfficeScene(THREE, container, gameState) {
         } else if (type === 'dots') {
             for (var gx = 16; gx < 128; gx += 32) for (var gy = 16; gy < 128; gy += 32) { ctx.moveTo(gx + 3, gy); ctx.arc(gx, gy, 3, 0, Math.PI * 2); }
             ctx.fill();
-        } else {
+        } else {   // carpet: garis diagonal halus
             ctx.lineWidth = 2;
             for (i = -128; i <= 128; i += 16) { ctx.moveTo(i, 0); ctx.lineTo(i + 128, 128); }
         }
@@ -639,6 +656,7 @@ export function createOfficeScene(THREE, container, gameState) {
         return tex;
     }
 
+    // ---------- label sprite ----------
     var labelTex = [];
     function makeLabel(text, dark, dim, accentHex) {
         var c = document.createElement('canvas');
@@ -672,14 +690,15 @@ export function createOfficeScene(THREE, container, gameState) {
         return sp;
     }
 
+    // ---------- state scene ----------
     var dark = false, accentHex = 0x2563eb, eraIdx = 0, winHex = 0x8fb4e8;
-    var rooms = {};
+    var rooms = {};           // id -> room obj
     var roomList = [];
-    var staffObjs = {};
+    var staffObjs = {};       // staffId -> group (untuk highlight / info)
     var lastData = null, lastPlan = null;
-    var selected = null;
+    var selected = null;      // { room, staffId }
     var disposed = false;
-    var animRooms = [];
+    var animRooms = [];       // room yang punya tick()
     var aspect = 1, lastW = 0, lastH = 0, resizeScheduled = false, fitted = false;
     var raycaster = new THREE.Raycaster();
     var ndc = new THREE.Vector2();
@@ -689,23 +708,25 @@ export function createOfficeScene(THREE, container, gameState) {
     selRing.rotation.x = -Math.PI / 2;
     selRing.renderOrder = 15;
     selRing.visible = false;
-    var alertTex = {};
+    var alertTex = {};         // kind -> CanvasTexture bersama
     var legendOn = false;
     var quality = { slow: 0, fast: 0, lowered: false, frameMs: FRAME_MS };
     var lastRendered = 0, ctxLost = false;
     var tmpV = new THREE.Vector3();
-    var activity = {};
-    var bubbleTex = {};
-    var shiftPx = 0, shiftTarget = 0;
+    var activity = {};         // staffId -> { key, dest } aktivitas terkini (untuk kartu staf)
+    var bubbleTex = {};        // emoji -> CanvasTexture bersama (gelembung di atas staf)
+    var shiftPx = 0, shiftTarget = 0;      // geser kamera ke atas supaya objek terpilih tidak tertutup kartu (HP)
     var cardCollapsed = false, cardSig = '', chipSig = '', cardWasVisible = false, actLabelTick = 0;
-    var actLabelEl = null;
-    var busy = false;
+    var actLabelEl = null;     // elemen baris "Aktivitas" di kartu staf
+    var busy = false;          // cegah ketukan ganda pada tombol aksi
 
+    // ---------- shell statis (lantai dasar, dinding, partisi) ----------
     var shell = new THREE.Group();
     scene.add(shell);
     var ground = mesh(shell, G.plane, 'ground', 40, 40, 1, 0, -0.22, 0);
     ground.rotation.x = -Math.PI / 2;
     box(shell, 'base', 18.5, 0.22, 12.5, 0, -0.11, 0);
+    // Layered plinth gives the dollhouse a premium architectural presentation.
     box(shell, 'metal', 18.72, 0.055, 12.72, 0, -0.235, 0);
     box(shell, 'wallTop', 18.55, 0.035, 12.55, 0, -0.255, 0);
 
@@ -713,20 +734,21 @@ export function createOfficeScene(THREE, container, gameState) {
         var w = Math.abs(x1 - x0) || th, d = Math.abs(z1 - z0) || th;
         return box(shell, mat, w, h, d, (x0 + x1) / 2, h / 2, (z0 + z1) / 2);
     }
+    // dinding luar: belakang (z=-6) & kiri (x=-9) tinggi; depan & kanan rendah
     wallSeg('wall', FLOOR.x0 - 0.12, FLOOR.x1 + 0.12, FLOOR.z0 - 0.12, FLOOR.z0 + 0.12, 2.4, 0.24);
     wallSeg('wall', FLOOR.x0 - 0.12, FLOOR.x0 + 0.12, FLOOR.z0, FLOOR.z1, 2.4, 0.24);
     wallSeg('wallTop', FLOOR.x0 - 0.12, FLOOR.x1 + 0.12, FLOOR.z1 - 0.1, FLOOR.z1 + 0.12, 0.35, 0.22);
     wallSeg('wallTop', FLOOR.x1 - 0.1, FLOOR.x1 + 0.12, FLOOR.z0, FLOOR.z1, 0.35, 0.22);
-    
+    // jendela di dinding belakang & kiri
     var i0;
     for (i0 = 0; i0 < 11; i0++) {
         box(shell, 'win', 1.15, 0.8, 0.06, -8.2 + i0 * 1.64, 1.55, FLOOR.z0 + 0.13);
     }
     for (i0 = 0; i0 < 7; i0++) {
-        if (i0 === 4 || i0 === 5) continue;
+        if (i0 === 4 || i0 === 5) continue;     // ruang untuk papan nama perusahaan (BUILD.work)
         box(shell, 'win', 0.06, 0.8, 1.15, FLOOR.x0 + 0.13, 1.55, -5.1 + i0 * 1.7);
     }
-
+    // jam dinding (jarum mengikuti jam game)
     var clockG = new THREE.Group();
     clockG.position.set(0.82, 1.55, FLOOR.z0 + 0.15);
     shell.add(clockG);
@@ -745,6 +767,7 @@ export function createOfficeScene(THREE, container, gameState) {
         clockMin.rotation.z = -(mi / 60) * Math.PI * 2;
     }
 
+    // partisi dalam (setinggi 0.7) dengan celah pintu
     function partition(axis, fixed, from, to, gaps) {
         var cuts = [from], k;
         (gaps || []).forEach(function (g) {
@@ -767,7 +790,7 @@ export function createOfficeScene(THREE, container, gameState) {
             else wallSeg('part', fixed - 0.06, fixed + 0.06, a, b, 0.7, 0.12);
         }
     }
-    partition('x', -1.5, -9, 9, [-7.25, -3.25, 1, 4.75, 7.75]);
+    partition('x', -1.5, -9, 9, [-7.25, -3.25, 1, 4.75, 7.75]);          // z = -1.5 memanjang di x
     partition('z', -5.5, -6, -1.5, []);
     partition('z', -1, -6, -1.5, []);
     partition('z', 3, -6, 6, [0.2, 3.9]);
@@ -775,12 +798,13 @@ export function createOfficeScene(THREE, container, gameState) {
     partition('x', 1.8, 3, 9, [4.5]);
     partition('z', 6, 1.8, 6, [3.9]);
 
+    // ---------- ruangan ----------
     ROOM_DEFS.forEach(function (def) {
         var w = def.x1 - def.x0, d = def.z1 - def.z0;
         var g = new THREE.Group();
         g.position.set((def.x0 + def.x1) / 2, 0, (def.z0 + def.z1) / 2);
         g.userData.roomId = def.id;
-        var floorMat = new THREE.MeshStandardMaterial({ color: def.tone, transparent: true, opacity: 1, roughness: 0.8 });
+        var floorMat = new THREE.MeshLambertMaterial({ color: def.tone, transparent: true, opacity: 1 });
         var slab = box(g, floorMat, w - 0.12, 0.12, d - 0.12, 0, -0.04, 0);
         var ovMat = new THREE.MeshBasicMaterial({ color: accentHex, transparent: true, opacity: 0.26, depthWrite: false });
         var ov = mesh(g, G.plane, ovMat, w - 0.2, d - 0.2, 1, 0, 0.025, 0);
@@ -800,8 +824,8 @@ export function createOfficeScene(THREE, container, gameState) {
         rooms[def.id] = r;
         roomList.push(r);
         scene.add(g);
-        
-        var railMat = new THREE.MeshStandardMaterial({ color: 0x9aa8ba, transparent: true, opacity: 0.52, roughness: 0.4, metalness: 0.5 });
+        // Fine perimeter rails visually separate departments without cluttering the floor.
+        var railMat = new THREE.MeshLambertMaterial({ color: 0x9aa8ba, transparent: true, opacity: 0.52 });
         var railY = 0.035, railH = 0.025, railT = 0.035;
         box(g, railMat, Math.max(0.1, w - 0.18), railH, railT, 0, railY, -(d / 2) + 0.09);
         box(g, railMat, Math.max(0.1, w - 0.18), railH, railT, 0, railY, (d / 2) - 0.09);
@@ -810,12 +834,13 @@ export function createOfficeScene(THREE, container, gameState) {
         r.railMat = railMat;
     });
 
+    // ---------- bangunan perabot ----------
     function monitor(p, x, y, z, on) {
         var scr = on ? 'screenOn' : 'screenOff';
-        if (eraIdx <= 1) {
+        if (eraIdx <= 1) {                                // CRT tebal
             box(p, 'paper', 0.42, 0.34, 0.38, x, y + 0.17, z);
             box(p, scr, 0.32, 0.24, 0.02, x, y + 0.18, z + 0.2);
-        } else {
+        } else {                                          // layar datar
             box(p, 'dark', 0.5, 0.3, 0.03, x, y + 0.26, z);
             box(p, scr, 0.46, 0.26, 0.012, x, y + 0.26, z + 0.02);
             box(p, 'metal', 0.07, 0.12, 0.05, x, y + 0.06, z);
@@ -829,11 +854,8 @@ export function createOfficeScene(THREE, container, gameState) {
     function plant(p, x, z, s) {
         s = s || 1;
         cyl(p, 'pot', 0.16 * s, 0.24 * s, x, 0.12 * s, z);
-        // [VISUAL UPGRADE] Bentuk tanaman lebih organik
         sph(p, 'plant', 0.24 * s, x, 0.42 * s, z);
         sph(p, 'plant', 0.16 * s, x + 0.1 * s, 0.6 * s, z - 0.05 * s);
-        sph(p, 'plant', 0.14 * s, x - 0.1 * s, 0.55 * s, z + 0.08 * s);
-        sph(p, 'plant', 0.12 * s, x + 0.02 * s, 0.72 * s, z + 0.05 * s);
     }
     function desk(p, x, z, ghost) {
         var top = ghost ? 'ghost' : 'deskTop', side = ghost ? 'ghost' : 'desk';
@@ -851,7 +873,9 @@ export function createOfficeScene(THREE, container, gameState) {
         p.add(g);
         return g;
     }
-
+    // ---------- orang ----------
+    // routes: [{ path:[{x,z}…], dest }] — tiap rute dimulai dari kursi. Tiap siklus staf memakai rute berikutnya:
+    // duduk bekerja -> berjalan ke tujuan -> berdiri sebentar -> kembali duduk.
     function makeWalk(routes, seed) {
         var SPEED = 0.95, STAY = 2.6, maxTW = 0;
         var infos = routes.map(function (rt) {
@@ -871,6 +895,7 @@ export function createOfficeScene(THREE, container, gameState) {
             return { x: path[k - 1].x + (path[k].x - path[k - 1].x) * u, z: path[k - 1].z + (path[k].z - path[k - 1].z) * u,
                      dx: path[k].x - path[k - 1].x, dz: path[k].z - path[k - 1].z };
         }
+        // -> { x, z, lift 0..1, moving, dx, dz, phase: sit|out|stay|back, dest }
         return function (sec) {
             var s = sec + off, ci = Math.floor(s / cycle), tt = s - ci * cycle;
             var inf = infos[(ci + seed) % infos.length], pt;
@@ -890,6 +915,7 @@ export function createOfficeScene(THREE, container, gameState) {
         };
     }
 
+    // gelembung emoji di atas kepala (tekstur dibagi antar staf)
     function bubbleTexture(emoji) {
         if (bubbleTex[emoji]) return bubbleTex[emoji];
         var c = document.createElement('canvas');
@@ -913,6 +939,7 @@ export function createOfficeScene(THREE, container, gameState) {
     function person(p, s, x, z, tickers, opts) {
         opts = opts || {};
         var h = hash(s.id);
+        // kursi (diam di meja)
         var seat = new THREE.Group();
         seat.userData.staffId = s.id;
         seat.position.set(x, 0, z);
@@ -920,6 +947,7 @@ export function createOfficeScene(THREE, container, gameState) {
         shadowRound(seat, 0.34, 0, 0.02);
         p.add(seat);
 
+        // badan (bisa berjalan)
         var g = new THREE.Group();
         g.userData.staffId = s.id;
         g.position.set(x, 0, z);
@@ -928,41 +956,42 @@ export function createOfficeScene(THREE, container, gameState) {
         var skin = skinMat[h % skinMat.length];
         var hairM = hairMat[(h >> 3) % hairMat.length];
         var style = (h >> 6) % 3;
-        var torso = cyl(g, rm, 0.15, 0.42, 0, 0.62, -0.02);
+        var torso = cyl(g, rm, 0.15, 0.42, 0, 0.62, -0.02);                 // badan
         var headG = new THREE.Group();
         headG.position.set(0, 0.97, -0.02);
         g.add(headG);
-        sph(headG, skin, 0.115, 0, 0, 0);
-        sph(headG, hairM, 0.12, 0, 0.03, 0.03).scale.set(0.12, 0.07, 0.12);
-        if (style === 1) box(headG, hairM, 0.2, 0.2, 0.06, 0, -0.02, 0.1);
-        else if (style === 2) sph(headG, hairM, 0.05, 0, 0.13, 0.04);
-        box(headG, 'dark', 0.02, 0.03, 0.01, -0.04, 0.012, -0.112);
+        sph(headG, skin, 0.115, 0, 0, 0);                                   // kepala
+        sph(headG, hairM, 0.12, 0, 0.03, 0.03).scale.set(0.12, 0.07, 0.12); // rambut (topi)
+        if (style === 1) box(headG, hairM, 0.2, 0.2, 0.06, 0, -0.02, 0.1);  // rambut panjang
+        else if (style === 2) sph(headG, hairM, 0.05, 0, 0.13, 0.04);       // cepol
+        box(headG, 'dark', 0.02, 0.03, 0.01, -0.04, 0.012, -0.112);         // mata
         box(headG, 'dark', 0.02, 0.03, 0.01, 0.04, 0.012, -0.112);
-        if (s.role === 'engineer') {
+        if (s.role === 'engineer') {                                        // headphone
             mesh(headG, G.arc, 'dark', 0.125, 0.125, 0.125, 0, 0, 0);
             cyl(headG, 'dark', 0.04, 0.035, -0.125, 0, 0).rotation.z = Math.PI / 2;
             cyl(headG, 'dark', 0.04, 0.035, 0.125, 0, 0).rotation.z = Math.PI / 2;
-        } else if (s.role === 'designer') {
+        } else if (s.role === 'designer') {                                 // kacamata
             box(headG, 'dark', 0.17, 0.012, 0.01, 0, 0.02, -0.114);
             box(headG, 'glass', 0.06, 0.05, 0.008, -0.045, 0.015, -0.116);
             box(headG, 'glass', 0.06, 0.05, 0.008, 0.045, 0.015, -0.116);
-        } else if (s.role === 'marketer') {
+        } else if (s.role === 'marketer') {                                 // headset + mic
             cyl(headG, 'dark', 0.035, 0.03, 0.125, 0, 0).rotation.z = Math.PI / 2;
             box(headG, 'dark', 0.012, 0.012, 0.1, 0.09, -0.05, -0.07);
         }
         var armL = box(g, rm, 0.07, 0.07, 0.32, -0.14, 0.7, -0.2);
         var armR = box(g, rm, 0.07, 0.07, 0.32, 0.14, 0.7, -0.2);
-        var dot = sph(g, moraleMat[mt], 0.055, 0, 1.2, -0.02);
-        var legs = new THREE.Group();
+        var dot = sph(g, moraleMat[mt], 0.055, 0, 1.2, -0.02);              // indikator moral
+        var legs = new THREE.Group();                                        // kaki (hanya terlihat saat berdiri)
         var legL = box(legs, 'dark', 0.07, 0.73, 0.08, -0.06, 0.045, -0.02);
         var legR = box(legs, 'dark', 0.07, 0.73, 0.08, 0.06, 0.045, -0.02);
         legs.visible = false;
         g.add(legs);
-        if (mt === 0) { headG.rotation.x = -0.38; }
+        if (mt === 0) { headG.rotation.x = -0.38; }                           // lesu saat moral rendah
         var ph = (h % 628) / 100;
         var amp = mt === 0 ? 0.006 : 0.012;
         var walk = (opts.routes && opts.routes.length && ambient) ? makeWalk(opts.routes, h) : null;
 
+        // jadwal kecil di meja: minum kopi / ide / menguap — deterministik per staf
         var period = 22 + (h % 17), sipOn = (h % 2 === 0), ideaOn = ((s.skill || 1) >= 3 && h % 3 === 0);
         var bub = null, bubKind = '', actKey = '';
         function setBubble(emoji) {
@@ -973,7 +1002,7 @@ export function createOfficeScene(THREE, container, gameState) {
                 bub = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleTexture(emoji), transparent: true, depthTest: false }));
                 bub.scale.set(0.4, 0.4, 1);
                 bub.renderOrder = 22;
-                bub.userData.own = 1;
+                bub.userData.own = 1;                       // material milik sprite ini (tekstur dibagi, jangan dibuang)
                 g.add(bub);
             }
             bub.material.map = bubbleTexture(emoji);
@@ -1003,6 +1032,7 @@ export function createOfficeScene(THREE, container, gameState) {
                 else g.rotation.y = 0;
                 legs.visible = lift > 0.02;
             }
+            // aktivitas + gelembung
             if (!seated) {
                 if (ws.phase === 'out') setAct('office.act.go.' + ws.dest, ws.dest);
                 else if (ws.phase === 'stay') setAct('office.act.at.' + ws.dest, ws.dest);
@@ -1016,7 +1046,7 @@ export function createOfficeScene(THREE, container, gameState) {
 
             var base = mt === 0 ? 0.93 : 0.97;
             headG.position.y = base + b * amp;
-            headG.rotation.y = seated && mt > 0 && ambient ? Math.sin(sec * 0.6 + ph) * 0.22 : 0;
+            headG.rotation.y = seated && mt > 0 && ambient ? Math.sin(sec * 0.6 + ph) * 0.22 : 0;   // menoleh sesekali
             dot.position.y = 1.2 + b * 0.02;
             if (ws && ws.moving) {
                 var sw = Math.sin(sec * 8 + ph);
@@ -1028,7 +1058,7 @@ export function createOfficeScene(THREE, container, gameState) {
                 var typing = lift < 0.5 && !sipping;
                 var k = mt === 0 ? 0.5 : 1;
                 armL.position.y = 0.7 + (typing ? Math.sin(sec * 9 + ph) * 0.012 * k : 0);
-                if (sipping) {
+                if (sipping) {                                   // tangan kanan membawa cangkir ke mulut
                     armR.position.set(0.14, 0.86, -0.17); armR.rotation.x = -1.15;
                 } else {
                     armR.rotation.x = 0; armR.position.set(0.14, 0.7 + (typing ? Math.cos(sec * 8 + ph) * 0.012 * k : 0), -0.2);
@@ -1061,13 +1091,13 @@ export function createOfficeScene(THREE, container, gameState) {
         ownTex.push(tex);
         return tex;
     }
-
+    // jalur jalan staf: kursi -> lorong -> pintu ruang tujuan (koordinat lokal ruang Work)
     var AISLES = [-4, -2, 0, 2, 4];
     function pickAisle(x, targetX) {
         var aisle = AISLES[0], best = 99, i;
         for (i = 0; i < AISLES.length; i++) {
             var a = AISLES[i];
-            if (Math.abs(a - x) > 1.05) continue;
+            if (Math.abs(a - x) > 1.05) continue;               // hanya lorong yang bersebelahan dengan meja
             var sc = Math.abs(a - targetX);
             if (sc < best) { best = sc; aisle = a; }
         }
@@ -1088,6 +1118,7 @@ export function createOfficeScene(THREE, container, gameState) {
         pts.push({ x: gapX, z: endZ });
         return pts;
     }
+    // rute ke tujuan: pintu utara (CEO/Lab/Studio), pintu timur (Showroom/Marketing) atau dispenser air
     function routeTo(dest, x, z) {
         var aisle, zc, dz;
         if (DOOR_NORTH[dest] !== undefined) return walkPath(x, z, DOOR_NORTH[dest], dest === 'design' ? -4.2 : -4.45);
@@ -1098,7 +1129,7 @@ export function createOfficeScene(THREE, container, gameState) {
             return [{ x: x, z: z }, { x: aisle, z: z }, { x: aisle, z: zc }, { x: 5.95, z: zc },
                     { x: 5.95, z: dz }, { x: 6.45, z: dz }];
         }
-        aisle = pickAisle(x, -99);
+        aisle = pickAisle(x, -99);                               // water
         return [{ x: x, z: z }, { x: aisle, z: z }, { x: aisle, z: 3.45 }, { x: -5.35, z: 3.45 }];
     }
 
@@ -1106,8 +1137,8 @@ export function createOfficeScene(THREE, container, gameState) {
 
     BUILD.ceo = function (r, d, p, st, tk) {
         var f = r.furn;
-        var rug = box(f, new THREE.MeshStandardMaterial({ color: tint(accentHex, dark ? -0.45 : 0.6), roughness: 0.9 }), 2.4, 0.02, 1.8, 0.1, 0.02, -0.45);
-        rug.userData.own = 1;
+        var rug = box(f, new THREE.MeshLambertMaterial({ color: tint(accentHex, dark ? -0.45 : 0.6) }), 2.4, 0.02, 1.8, 0.1, 0.02, -0.45);
+        rug.userData.own = 1;                                            // karpet mengikuti warna aksen
         shadowBox(f, 1.8, 0.95, 0.1, -0.85);
         shadowBox(f, 0.9, 1.4, -1.25, 1.2);
         shadowBox(f, 2.6, 0.45, 0, -1.95);
@@ -1115,27 +1146,28 @@ export function createOfficeScene(THREE, container, gameState) {
         box(f, 'desk', 0.08, 0.7, 0.7, -0.7, 0.35, -0.9);
         box(f, 'desk', 0.08, 0.7, 0.7, 0.9, 0.35, -0.9);
         monitor(f, 0.1, 0.76, -1.0, true);
-        box(f, 'gold', 0.3, 0.05, 0.08, 0.4, 0.78, -0.62);
+        box(f, 'gold', 0.3, 0.05, 0.08, 0.4, 0.78, -0.62);               // papan nama
         chair(f, 0.1, -0.15, 'wood');
-        box(f, 'wood', 2.5, 1.3, 0.3, 0.0, 0.65, -2.05);
+        box(f, 'wood', 2.5, 1.3, 0.3, 0.0, 0.65, -2.05);                 // rak buku
         var cols = [accentHex, 0xe0b445, 0x43c07a, 0xef5350, 0x8a7fe0, 0x4fb3e8];
-        for (var i = 0; i < 9; i++) box(f, new THREE.MeshStandardMaterial({ color: cols[i % cols.length], roughness: 0.6 }), 0.16, 0.34, 0.2, -1.0 + i * 0.25, 0.92, -1.93).userData.own = 1;
+        for (var i = 0; i < 9; i++) box(f, new THREE.MeshLambertMaterial({ color: cols[i % cols.length] }), 0.16, 0.34, 0.2, -1.0 + i * 0.25, 0.92, -1.93).userData.own = 1;
         var tn = trophyCount(d, p);
         for (var k = 0; k < tn; k++) {
             cyl(f, 'gold', 0.1, 0.05, -0.8 + k * 0.45, 1.36, -2.0);
             cyl(f, 'gold', 0.03, 0.2, -0.8 + k * 0.45, 1.46, -2.0);
             sph(f, 'gold', 0.1, -0.8 + k * 0.45, 1.64, -2.0);
         }
-        box(f, 'chair', 0.7, 0.35, 1.3, -1.2, 0.18, 1.2);
+        box(f, 'chair', 0.7, 0.35, 1.3, -1.2, 0.18, 1.2);                // sofa
         box(f, 'chair', 0.18, 0.55, 1.3, -1.5, 0.4, 1.2);
         plant(f, 1.3, 1.7, 1.1);
+        // lukisan di dinding kiri + lampu meja
         box(f, 'wood', 0.05, 0.62, 0.92, -1.6, 1.45, 0.2);
-        var art = box(f, new THREE.MeshStandardMaterial({ color: tint(accentHex, 0.3), roughness: 0.5 }), 0.03, 0.5, 0.8, -1.57, 1.45, 0.2);
+        var art = box(f, new THREE.MeshLambertMaterial({ color: tint(accentHex, 0.3) }), 0.03, 0.5, 0.8, -1.57, 1.45, 0.2);
         art.userData.own = 1;
         box(f, 'gold', 0.03, 0.2, 0.3, -1.55, 1.4, 0.35);
         cyl(f, 'metal', 0.05, 0.02, -0.4, 0.77, -1.05);
         box(f, 'amber', 0.04, 0.2, 0.04, -0.4, 0.88, -1.05);
-        if ((p.levels.monument || 0) >= 2) {
+        if ((p.levels.monument || 0) >= 2) {                              // globe
             cyl(f, 'metal', 0.18, 0.06, 1.25, 0.03, -0.2);
             var gl = sph(f, 'glow', 0.28, 1.25, 0.4, -0.2);
             tk.push(function (sec) { gl.rotation.y = sec * 0.6; });
@@ -1147,6 +1179,7 @@ export function createOfficeScene(THREE, container, gameState) {
         var staff = sortedStaff(d);
         var cap = deskCapacity(p, staff.length);
         var showN = Math.min(staff.length, MAX_DESKS);
+        // pilih staf yang boleh berjalan (moral cukup, hanya bila animasi aktif); jumlahnya ikut ukuran tim
         var walkers = {};
         if (ambient && showN >= 2) {
             var budget = Math.min(WALKERS_MAX, Math.max(1, Math.floor(showN / 3)));
@@ -1158,6 +1191,7 @@ export function createOfficeScene(THREE, container, gameState) {
             });
             for (var wq = 0; wq < cand.length && wq < budget; wq++) walkers[staff[cand[wq]].id] = wq;
         }
+        // tujuan yang tersedia: ruang harus terbuka; dispenser air hanya bila baris meja terakhir kosong
         function destOpen(dest) {
             if (dest === 'water') return cap <= 24;
             var rid = DEST_ROOM[dest];
@@ -1183,13 +1217,13 @@ export function createOfficeScene(THREE, container, gameState) {
                 monitor(f, x, 0.655, z - 0.1, true);
                 var hs = hash(s.id);
                 if (eraIdx <= 1) {
-                    box(f, 'paper', 0.2, 0.4, 0.45, x + 0.3, 0.2, z - 0.02);
+                    box(f, 'paper', 0.2, 0.4, 0.45, x + 0.3, 0.2, z - 0.02);              // PC tower di bawah meja
                 } else {
-                    box(f, 'metal', 0.34, 0.015, 0.24, x - 0.38, 0.665, z + 0.04);
+                    box(f, 'metal', 0.34, 0.015, 0.24, x - 0.38, 0.665, z + 0.04);        // laptop
                     box(f, 'dark', 0.34, 0.21, 0.012, x - 0.38, 0.77, z - 0.08).rotation.x = -0.2;
                 }
-                cyl(f, hueMat('m' + (hs % 7)), 0.03, 0.06, x + 0.46, 0.7, z + 0.1);
-                box(f, tierMat[clamp(s.skill || 1, 1, 5)], 0.2, 0.015, 0.06, x, 0.66, z + 0.27);
+                cyl(f, hueMat('m' + (hs % 7)), 0.03, 0.06, x + 0.46, 0.7, z + 0.1);       // cangkir
+                box(f, tierMat[clamp(s.skill || 1, 1, 5)], 0.2, 0.015, 0.06, x, 0.66, z + 0.27);   // plat tier skill
                 var opts = null;
                 if (walkers[s.id] !== undefined) {
                     var rts = routesFor(s, walkers[s.id], x, z + 0.52);
@@ -1202,12 +1236,13 @@ export function createOfficeScene(THREE, container, gameState) {
         plant(f, 5.75, -3.55, 0.9);
         plant(f, 5.6, 3.3, 1.2);
         shadowRound(f, 0.3, -5.7, 3.3);
-        cyl(f, 'metal', 0.17, 0.12, -5.7, 0.06, 3.3);
+        cyl(f, 'metal', 0.17, 0.12, -5.7, 0.06, 3.3);                     // dispenser air
         cyl(f, 'glass', 0.15, 0.5, -5.7, 0.4, 3.3);
         shadowBox(f, 0.5, 0.45, 5.72, 0.2);
-        box(f, 'white', 0.3, 0.7, 0.4, 5.72, 0.35, 0.2);
+        box(f, 'white', 0.3, 0.7, 0.4, 5.72, 0.35, 0.2);                  // printer
+        // papan nama perusahaan di dinding kiri
         var tex = signTexture(d.companyName);
-        var sm = new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.6 });
+        var sm = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
         var sign = mesh(f, G.plane, sm, 2.3, 0.575, 1, -5.84, 1.55, 0.3);
         sign.rotation.y = Math.PI / 2;
         sign.userData.own = 1; sign.userData.tex = tex;
@@ -1226,7 +1261,7 @@ export function createOfficeScene(THREE, container, gameState) {
             cyl(f, 'glass', 0.06, 0.3, x + 0.15, 0.69, -1.4);
             sph(f, 'glow', 0.05, x - 0.2, 0.62, -1.4);
         }
-        cyl(f, 'metal', 0.55, 0.3, 0, 0.15, 0.5);
+        cyl(f, 'metal', 0.55, 0.3, 0, 0.15, 0.5);                         // meja holo
         cyl(f, 'glow', 0.4, 0.03, 0, 0.32, 0.5);
         var ring = mesh(f, G.tor, 'glow', 0.6, 0.6, 0.6, 0, 1.0, 0.5);
         ring.rotation.x = Math.PI / 2;
@@ -1240,7 +1275,7 @@ export function createOfficeScene(THREE, container, gameState) {
                 orbs[q].position.set(Math.cos(a) * 0.9, 1.1 + Math.sin(sec * 2 + q) * 0.08, 0.5 + Math.sin(a) * 0.9);
             }
         });
-        box(f, 'white', 3.4, 1.0, 0.05, 0, 1.3, -2.18);
+        box(f, 'white', 3.4, 1.0, 0.05, 0, 1.3, -2.18);                   // papan riset selesai
         var done = Math.min(12, len(d.research && d.research.completed));
         for (var c = 0; c < 12; c++) {
             box(f, c < done ? 'glow' : 'part', 0.24, 0.24, 0.02, -1.4 + (c % 6) * 0.56, 1.5 - Math.floor(c / 6) * 0.4, -2.14);
@@ -1263,13 +1298,13 @@ export function createOfficeScene(THREE, container, gameState) {
             var x = -1.2 + k * 2.4;
             desk(f, x, -1.5, false);
             monitor(f, x, 0.655, -1.6, true);
-            box(f, 'dark', 0.5, 0.02, 0.32, x, 0.67, -1.3);
+            box(f, 'dark', 0.5, 0.02, 0.32, x, 0.67, -1.3);                // tablet gambar
             chair(f, x, -0.8);
         }
-        box(f, 'white', 3.0, 1.0, 0.05, 0, 1.3, -2.18);
+        box(f, 'white', 3.0, 1.0, 0.05, 0, 1.3, -2.18);                    // mood board
         var cs = [accentHex, 0xe0b445, 0x43c07a, 0xef5350, 0x8a7fe0, 0x4fb3e8, 0xf472b6, 0xfb923c];
         for (var c = 0; c < 8; c++) {
-            box(f, new THREE.MeshStandardMaterial({ color: cs[c], roughness: 0.7 }), 0.5, 0.34, 0.02, -1.0 + (c % 4) * 0.67, 1.48 - Math.floor(c / 4) * 0.42, -2.14).userData.own = 1;
+            box(f, new THREE.MeshLambertMaterial({ color: cs[c] }), 0.5, 0.34, 0.02, -1.0 + (c % 4) * 0.67, 1.48 - Math.floor(c / 4) * 0.42, -2.14).userData.own = 1;
         }
     };
 
@@ -1283,7 +1318,7 @@ export function createOfficeScene(THREE, container, gameState) {
             var x = (col - (cols - 1) / 2) * 1.0, z = -1.6 + row * 1.5;
             shadowBox(f, 0.85, 0.75, x, z);
             box(f, 'rack', 0.7, 1.4, 0.6, x, 0.7, z);
-            cyl(f, 'dark', 0.14, 0.03, x, 1.415, z);
+            cyl(f, 'dark', 0.14, 0.03, x, 1.415, z);                           // kipas pendingin
             var blade = box(f, 'metal', 0.24, 0.012, 0.04, x, 1.435, z);
             fans.push(blade);
             box(f, 'metal', 0.62, 0.04, 0.02, x, 1.3, z + 0.31);
@@ -1295,7 +1330,7 @@ export function createOfficeScene(THREE, container, gameState) {
             }
             box(f, 'ledA', 0.28, 0.04, 0.02, x + 0.18, 1.1, z + 0.31);
         }
-        box(f, 'dark', 3.0, 0.02, 0.1, 0, 0.012, 0.9);
+        box(f, 'dark', 3.0, 0.02, 0.1, 0, 0.012, 0.9);                      // kabel
         box(f, 'dark', 0.1, 0.02, 2.4, -1.4, 0.012, 0);
         var holo = null;
         if (d.os && d.os.developing) {
@@ -1314,20 +1349,21 @@ export function createOfficeScene(THREE, container, gameState) {
         if (!holo) plant(f, 1.4, 1.8, 0.8);
     };
 
+    // lokasi konstruksi Fab: fondasi, bangunan yang tumbuh sesuai progres, perancah, derek berputar, bar progres
     function constructionSite(f, x, z, w, dp, fp, tk) {
         var pct = fp.pct, hgt = 0.1 + pct * 0.9, px = w / 2 + 0.02, pz = dp / 2 + 0.02, top = 1.25;
         shadowBox(f, w + 0.3, dp + 0.3, x, z);
-        box(f, 'metal', w + 0.1, 0.06, dp + 0.1, x, 0.03, z);
-        box(f, 'white', w * 0.86, hgt, dp * 0.8, x, 0.06 + hgt / 2, z);
-        box(f, 'glow', w * 0.88, 0.04, dp * 0.82, x, 0.08 + hgt, z);
-        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {
+        box(f, 'metal', w + 0.1, 0.06, dp + 0.1, x, 0.03, z);                          // fondasi
+        box(f, 'white', w * 0.86, hgt, dp * 0.8, x, 0.06 + hgt / 2, z);               // bangunan yang tumbuh
+        box(f, 'glow', w * 0.88, 0.04, dp * 0.82, x, 0.08 + hgt, z);                  // atap/pelat teratas
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {                    // tiang perancah
             box(f, 'wood', 0.05, top, 0.05, x + c[0] * px, top / 2, z + c[1] * pz);
         });
         box(f, 'wood', w + 0.1, 0.04, 0.04, x, 0.6, z + pz);
         box(f, 'wood', w + 0.1, 0.04, 0.04, x, top, z + pz);
         box(f, 'wood', 0.04, 0.04, dp + 0.1, x - px, 0.9, z);
         box(f, 'wood', 0.04, 0.04, dp + 0.1, x + px, top, z);
-        for (var k = 0; k < 4; k++) box(f, k % 2 ? 'dark' : 'amber', 0.16, 0.06, 0.05, x - px + 0.12 + k * (w + 0.1) / 4, 0.1, z + pz + 0.12);
+        for (var k = 0; k < 4; k++) box(f, k % 2 ? 'dark' : 'amber', 0.16, 0.06, 0.05, x - px + 0.12 + k * (w + 0.1) / 4, 0.1, z + pz + 0.12);   // pagar bahaya
         var crane = new THREE.Group();
         crane.position.set(x + px + 0.1, 0, z - pz - 0.05);
         f.add(crane);
@@ -1336,11 +1372,11 @@ export function createOfficeScene(THREE, container, gameState) {
         arm.position.y = 1.85;
         crane.add(arm);
         box(arm, 'amber', 1.1, 0.06, 0.06, -0.4, 0, 0);
-        box(arm, 'dark', 0.14, 0.14, 0.14, 0.22, -0.02, 0);
-        box(arm, 'dark', 0.015, 0.55, 0.015, -0.85, -0.27, 0);
-        box(arm, 'gold', 0.1, 0.07, 0.1, -0.85, -0.56, 0);
+        box(arm, 'dark', 0.14, 0.14, 0.14, 0.22, -0.02, 0);                            // bobot penyeimbang
+        box(arm, 'dark', 0.015, 0.55, 0.015, -0.85, -0.27, 0);                         // kabel
+        box(arm, 'gold', 0.1, 0.07, 0.1, -0.85, -0.56, 0);                            // kait
         tk.push(function (sec) { arm.rotation.y = Math.sin(sec * 0.5 + x) * 0.9; });
-        var bw = Math.max(1.0, w), fw = bw * Math.max(0.03, pct);
+        var bw = Math.max(1.0, w), fw = bw * Math.max(0.03, pct);                      // bar progres di lantai
         box(f, 'dark', bw + 0.1, 0.05, 0.14, x, 0.03, z + pz + 0.4);
         var fill = box(f, pct >= 0.66 ? 'ledG' : 'ledA', fw, 0.06, 0.1, x - bw / 2 + fw / 2, 0.045, z + pz + 0.4);
         tk.push(function (sec) { fill.scale.y = 1 + Math.sin(sec * 4) * 0.12; });
@@ -1361,7 +1397,7 @@ export function createOfficeScene(THREE, container, gameState) {
             }
             chair(f, 0, -0.5);
             plant(f, 0.9, 1.8, 0.9);
-            if (fp) constructionSite(f, 0, 0.95, 1.3, 1.0, fp, tk);
+            if (fp) constructionSite(f, 0, 0.95, 1.3, 1.0, fp, tk);                // Fab pertama sedang dibangun
             return;
         }
         var nM = Math.min(4, fab.level || 1);
@@ -1371,7 +1407,7 @@ export function createOfficeScene(THREE, container, gameState) {
             box(f, 'glow', 0.04, 0.35, 0.55, -0.09, 0.62, z);
             box(f, 'ledA', 0.1, 0.06, 0.06, -0.8, 1.04, z);
         }
-        box(f, 'dark', 0.5, 0.05, 4.0, 0.5, 0.06, -0.2);
+        box(f, 'dark', 0.5, 0.05, 4.0, 0.5, 0.06, -0.2);                    // konveyor
         var items = [];
         for (var k = 0; k < 6; k++) items.push(box(f, 'gold', 0.2, 0.1, 0.2, 0.5, 0.14, -2.0 + k * 0.7));
         var prod = !!fab.producing;
@@ -1381,6 +1417,7 @@ export function createOfficeScene(THREE, container, gameState) {
                 items[q].position.z = prod ? (-2.0 + ((base + 2.0 + sec * 0.8) % 4.2)) : base;
             }
         });
+        // lengan robot: bergerak saat produksi berjalan
         shadowRound(f, 0.25, 1.0, -0.6);
         cyl(f, 'metal', 0.13, 0.3, 1.0, 0.15, -0.6);
         var armP = new THREE.Group();
@@ -1390,7 +1427,7 @@ export function createOfficeScene(THREE, container, gameState) {
         box(armP, 'dark', 0.1, 0.12, 0.12, -0.55, -0.04, 0);
         tk.push(function (sec) { armP.rotation.y = prod ? Math.sin(sec * 1.4) * 0.7 : 0; });
         var siteZ = -1.8 + nM * 1.05;
-        if (fp && nM < 4) constructionSite(f, -0.55, siteZ, 0.9, 0.7, fp, tk);
+        if (fp && nM < 4) constructionSite(f, -0.55, siteZ, 0.9, 0.7, fp, tk);       // slot mesin berikutnya dibangun
         var crateShift = (fp && nM >= 3) ? 0.3 : 0;
         var crates = clamp(Math.ceil(Math.log10((fab.inventory || 0) + 1) * 2), 0, 8);
         for (var c = 0; c < crates; c++) {
@@ -1415,10 +1452,10 @@ export function createOfficeScene(THREE, container, gameState) {
             pg.position.set(x, 0.68, z);
             spin.push(pg);
             sph(f, pd.stock > 0 ? 'ledG' : 'ledR', 0.045, x, 0.2, z + 0.3);
-            if (pd.stock > 0) cone(f, 'holo', 0.32, 1.05, x, 0.9, z);
+            if (pd.stock > 0) cone(f, 'holo', 0.32, 1.05, x, 0.9, z);          // sorot lampu
         }
         tk.push(function (sec) { for (var q = 0; q < spin.length; q++) spin[q].rotation.y = sec * 0.7 + q; });
-        box(f, 'glow', 2.4, 0.45, 0.05, -0.6, 1.5, -1.58);
+        box(f, 'glow', 2.4, 0.45, 0.05, -0.6, 1.5, -1.58);                   // banner
         var crates = clamp(Math.round(Math.log10(totalStock(d) + 1) * 3), 0, 12);
         for (var c = 0; c < crates; c++) {
             box(f, 'wood', 0.34, 0.3, 0.34, 2.45 + (c % 2) * 0.38, 0.15 + Math.floor(c / 6) * 0.31, -1.1 + (Math.floor(c / 2) % 3) * 0.4);
@@ -1472,7 +1509,7 @@ export function createOfficeScene(THREE, container, gameState) {
             var hgt = 0.12 * (1 + (i % 3)) + 0.08 * Math.floor(i / 3);
             cyl(f, 'gold', 0.14, hgt, -1.0 + i * 0.34, hgt / 2, -1.2);
         }
-        if (cash >= 1e6) {
+        if (cash >= 1e6) {                                                   // koin berputar saat kas >= $1M
             var pv = new THREE.Group();
             pv.position.set(-0.5, 1.85, -1.6);
             f.add(pv);
@@ -1484,6 +1521,7 @@ export function createOfficeScene(THREE, container, gameState) {
         var bad = cash < 0;
         var lamp = sph(f, bad ? 'ledR' : 'ledG', 0.07, -1.1, 0.45, 1.7);
         cyl(f, 'metal', 0.025, 0.4, -1.1, 0.2, 1.7);
+        // papan bursa
         box(f, 'dark', 1.15, 0.75, 0.05, 0.85, 1.4, -2.05);
         var hold = len(d.stocks && d.stocks.portfolio);
         var bars = [];
@@ -1505,6 +1543,7 @@ export function createOfficeScene(THREE, container, gameState) {
         chair(f, 0.6, 1.2);
     };
 
+    // ---------- bangun / bangun ulang ruangan ----------
     function clearFurn(r) {
         var f = r.furn;
         for (var i = f.children.length - 1; i >= 0; i--) {
@@ -1603,6 +1642,7 @@ export function createOfficeScene(THREE, container, gameState) {
             try { BUILD[r.def.id](r, d, p, st, tickers); }
             catch (e) { console.warn('[OfficeScene] gagal bangun ruangan ' + r.def.id, e); }
         } else {
+            // blueprint terkunci: gembok di tengah
             var f = r.furn;
             box(f, 'metal', 0.6, 0.5, 0.25, 0, 0.35, 0);
             var sh = mesh(f, G.tor, 'metal', 0.22, 0.22, 0.22, 0, 0.72, 0);
@@ -1611,7 +1651,7 @@ export function createOfficeScene(THREE, container, gameState) {
         }
         if (tickers.length) {
             r.tick = function (sec) { for (var i = 0; i < tickers.length; i++) tickers[i](sec); };
-            r.tick(0);
+            r.tick(0);   // posisi awal yang rapi (juga untuk mode reduced-motion yang tanpa loop)
         }
         animRooms = roomList.filter(function (x) { return !!x.tick; });
         rebuildLabel(r);
@@ -1619,6 +1659,7 @@ export function createOfficeScene(THREE, container, gameState) {
         dropStaffRefs();
     }
 
+    // ---------- tema & era ----------
     function applyTheme() {
         dark = document.documentElement.getAttribute('data-theme') === 'dark';
         var P = dark ? PALETTES.dark : PALETTES.light;
@@ -1628,41 +1669,24 @@ export function createOfficeScene(THREE, container, gameState) {
         var ew = ERA_WINDOWS[Math.max(0, eraIdx)] || ERA_WINDOWS[3];
         winHex = dark ? ew.dark : ew.light;
         var ix = dark ? 1 : 0;
-        
-        Object.keys(COLORS).forEach(function (k) { 
-            M[k].color.setHex(COLORS[k][ix]); 
-            if (M[k].emissive && !M[k].transparent) {
-                 M[k].emissive.setHex(COLORS[k][ix]);
-                 M[k].emissiveIntensity = 0.05; // Sedikit pendaran agar warna lebih kaya
-            }
-        });
-        
+        Object.keys(COLORS).forEach(function (k) { M[k].color.setHex(COLORS[k][ix]); });
         M.win.color.setHex(winHex);
-        M.win.emissive.setHex(dark ? tint(winHex, -0.45) : 0x000000);
-        M.win.emissiveIntensity = dark ? 0.8 : 0;
-        
+        if (M.win.emissive) M.win.emissive.setHex(dark ? tint(winHex, -0.45) : 0x000000);
         M.ghost.color.setHex(COLORS.desk[ix]);
         M.screenOn.color.setHex(tint(winHex, dark ? 0.05 : 0.25));
-        M.screenOn.emissive.setHex(tint(winHex, dark ? 0.05 : 0.25));
-        
         M.screenOff.color.setHex(dark ? 0x10141a : 0x232a34);
         M.glow.color.setHex(accentHex);
-        M.glow.emissive.setHex(accentHex);
-        
         M.holo.color.setHex(accentHex);
         M.selRing.color.setHex(accentHex);
         M.pool.opacity = dark ? 0.2 : 0;
-        M.shade.opacity = dark ? 0.25 : 0.15;
-        
+        M.shade.opacity = dark ? SHADOW_OPACITY + 0.08 : SHADOW_OPACITY;
         hemi.color.setHex(P.hemiSky);
         hemi.groundColor.setHex(P.hemiGround);
-        hemi.intensity = P.hemiI * 0.8;
-        
-        sun.intensity = P.dirI * (isLite ? 1.5 : 2.2);
-        fill.intensity = dark ? 0.6 : 0.4;
-        rim.intensity = dark ? 0.4 : 0.2;
+        hemi.intensity = P.hemiI;
+        sun.intensity = P.dirI * 1.12;
+        fill.intensity = dark ? 0.52 : 0.38;
+        rim.intensity = dark ? 0.32 : 0.24;
         if (P.sunCol !== undefined) sun.color.setHex(P.sunCol);
-        
         roomList.forEach(function (r) {
             r.ovMat.color.setHex(accentHex);
             r.patMat.color.setHex(dark ? 0xffffff : 0x000000);
@@ -1671,9 +1695,11 @@ export function createOfficeScene(THREE, container, gameState) {
         });
     }
 
+    // ---------- kamera ----------
     function applyCamera() {
         var v = controls.view;
         var h = BASE_VIEW / v.zoom, w = h * aspect;
+        // shiftPx: geser tampilan ke atas supaya titik fokus tidak tertutup kartu di bawah (HP)
         var sh = shiftPx ? (shiftPx / 2) / Math.max(1, container.clientHeight) * h : 0;
         camera.left = -w / 2; camera.right = w / 2; camera.top = h / 2 - sh; camera.bottom = -h / 2 - sh;
         camera.position.set(v.x + 20, 20, v.z + 20);
@@ -1698,6 +1724,7 @@ export function createOfficeScene(THREE, container, gameState) {
         }
         focusRaf = requestAnimationFrame(step);
     }
+    // hitung ulang geser kamera menurut tinggi kartu (hanya layar sempit); animasikan bila berubah
     function updateShift() {
         var H = container.clientHeight || 0, want = 0;
         if (card.style.display !== 'none' && container.clientWidth < NARROW_PX) {
@@ -1715,6 +1742,7 @@ export function createOfficeScene(THREE, container, gameState) {
         tweenView(r.group.position.x, r.group.position.z, Math.max(controls.view.zoom, 1.25));
     }
 
+    // ---------- render loop ----------
     function animateOverlays(sec) {
         for (var i = 0; i < roomList.length; i++) {
             var sp = roomList[i].alertSp;
@@ -1725,12 +1753,13 @@ export function createOfficeScene(THREE, container, gameState) {
             sp.scale.set(sc, sc, 1);
         }
         updateRing(sec);
-        if (actLabelEl && selected && selected.staffId && sec - actLabelTick > 0.4) {
+        if (actLabelEl && selected && selected.staffId && sec - actLabelTick > 0.4) {     // baris "Aktivitas" di kartu staf
             actLabelTick = sec;
             var txt = activityText(selected.staffId);
             if (actLabelEl.textContent !== txt) actLabelEl.textContent = txt;
         }
     }
+    // turunkan kualitas otomatis bila perangkat tidak sanggup menjaga ~30fps
     function watchQuality(now) {
         if (quality.lowered || !lastRendered) { lastRendered = now; return; }
         var gap = now - lastRendered;
@@ -1741,9 +1770,9 @@ export function createOfficeScene(THREE, container, gameState) {
             quality.frameMs = 50;
             renderer.setPixelRatio(1);
             if (lastW && lastH) renderer.setSize(lastW, lastH, false);
-            renderer.shadowMap.enabled = false; // Matikan bayangan jika HP lemah
         }
     }
+    // PERF: antar frame, tidur dengan setTimeout lalu minta rAF sekali — tidak bangun di tiap vsync (60-120 Hz).
     function scheduleNext() {
         var fm = Math.max(quality.frameMs, PERF.frameMs || 0);
         var wait = fm - (performance.now() - lastFrame) - 5;
@@ -1799,6 +1828,7 @@ export function createOfficeScene(THREE, container, gameState) {
         tweenView(tmpV.x, tmpV.z, Math.max(controls.view.zoom, 1.5));
     }
 
+    // ---------- UI overlay (chip ruangan + kartu info) ----------
     var chipBar = document.createElement('div');
     chipBar.className = 'office-chips';
     chipBar.style.cssText = 'position:absolute;left:8px;right:44px;top:8px;z-index:3;display:flex;gap:6px;' +
@@ -1815,7 +1845,7 @@ export function createOfficeScene(THREE, container, gameState) {
         'border:1px solid var(--border);box-shadow:var(--shadow);';
     card.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
     container.appendChild(card);
-    
+    // HP: lembar bawah penuh lebar (tinggi dibatasi, area aman notch); layar lebar: panel melayang di kiri-bawah
     function isNarrow() { return container.clientWidth < NARROW_PX; }
     function applyCardLayout() {
         var cs = card.style;
@@ -1893,6 +1923,7 @@ export function createOfficeScene(THREE, container, gameState) {
         return b;
     }
 
+    // ---- chip ruangan: dibangun ulang hanya bila isinya berubah; posisi gulir dijaga; chip terpilih digulung ke tengah
     var lastCenteredRoom = null;
     function rebuildChips() {
         var selRoom = selected ? selected.room : '';
@@ -1941,6 +1972,7 @@ export function createOfficeScene(THREE, container, gameState) {
         bus.emit('advisor:go', { nav: g.nav, subtab: g.subtab });
     }
 
+    // ---- aksi langsung dari peta (bangun/upgrade Fab, latih staf) — memakai sistem game yang sama dengan panel
     function runAction(a) {
         if (!a || busy) return;
         if (a.disabled) { try { if (a.note) ToastService.info(a.note); } catch (e) {} return; }
@@ -1992,6 +2024,7 @@ export function createOfficeScene(THREE, container, gameState) {
             if (cardWasVisible) { cardWasVisible = false; updateShift(); }
             return;
         }
+        // isi tidak berubah -> jangan bangun ulang DOM (supaya ketukan tombol tidak hilang saat state game berubah)
         var sig = cardSignature(info);
         if (sig === cardSig && card.style.display !== 'none') return;
         cardSig = sig;
@@ -2034,7 +2067,7 @@ export function createOfficeScene(THREE, container, gameState) {
             (info.lines || []).forEach(function (ln) {
                 var d = document.createElement('div'); d.textContent = ln; lines.appendChild(d);
             });
-            if (info.staffId) {
+            if (info.staffId) {                               // baris aktivitas yang diperbarui live dari animasi
                 actLabelEl = document.createElement('div');
                 actLabelEl.style.cssText = 'color:var(--accent);font-weight:700;';
                 actLabelEl.textContent = activityText(info.staffId);
@@ -2094,6 +2127,7 @@ export function createOfficeScene(THREE, container, gameState) {
         requestRender();
     }
 
+    // ---------- tap / pick ----------
     function handleTap(cx, cy) {
         if (disposed) return;
         var rect = canvas.getBoundingClientRect();
@@ -2142,13 +2176,14 @@ export function createOfficeScene(THREE, container, gameState) {
             aspect = w / h;
             if (!fitted) { fitted = true; controls.view.zoom = fitZoom(); }
             applyCardLayout();
-            cardSig = ''; chipSig = '';
+            cardSig = ''; chipSig = '';          // tata letak HP <-> layar lebar bisa berubah (rotasi layar)
             refreshCard(); rebuildChips();
             applyCamera();
             requestRender();
         });
     }
 
+    // ---------- sinkron dengan state game ----------
     function update(data) {
         if (disposed || !data) return;
         var plan = computePlan(data);
@@ -2208,12 +2243,13 @@ export function createOfficeScene(THREE, container, gameState) {
         updateClock: function (data) { if (disposed) return; setClock(data); if (!ambient) requestRender(); },
         refreshTheme: function () {
             applyTheme();
+            // papan nama & label mengikuti tema: bangun ulang ruang Work
             if (rooms.work) rooms.work.sig = null;
             if (lastData) update(lastData); else requestRender();
         },
         relabel: relabel,
         select: function (id) { select(id ? { room: id } : null); if (id) focusRoom(id); },
-        selectStaff: function (id) {
+        selectStaff: function (id) {        // pilih staf (kartu + kamera fokus); dipakai juga untuk uji
             if (!staffObjs[id]) return false;
             select({ room: 'work', staffId: id });
             focusStaff(id);
@@ -2254,4 +2290,4 @@ export function createOfficeScene(THREE, container, gameState) {
             [chipBar, card, hint, legendBtn, legend, canvas].forEach(function (el) { if (el.parentNode) el.parentNode.removeChild(el); });
         }
     };
-        }
+}
