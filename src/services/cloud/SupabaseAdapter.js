@@ -1,10 +1,12 @@
 // FILE: src/services/cloud/SupabaseAdapter.js
+// v2028.41 — [FIX SIL] rpcSpendSilicon idempoten (p_request_id) + rpcClaimQuest.
 // v2028.28 — [LEADERBOARD] Menambahkan created_at di listProfiles untuk Umur Akun Real-Life.
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_LIB_URLS, CLOUD } from './supabase.config.js';
 
 var _client = null;
 var _loading = null;
 var _injected = null;
+var _idemOk = true; // false bila server belum punya spend_silicon(p_amount, p_request_id)
 
 function classify(err) {
     if (!err) return 'unknown';
@@ -339,9 +341,26 @@ export const SupabaseAdapter = {
         return res.data == null ? 0 : res.data;
     },
 
-    rpcSpendSilicon: async function (amount) {
+    // [FIX] requestId = kunci idempoten: retry (timeout/koneksi putus) atau dua tab yang mengirim item
+    // antrean yang sama TIDAK memotong saldo dua kali. Butuh supabase/silicon-fix.sql; bila belum
+    // dijalankan, otomatis jatuh ke RPC lama (tanpa idempotensi).
+    rpcSpendSilicon: async function (amount, requestId) {
         var c = await getClient();
-        var res = await c.rpc('spend_silicon', { p_amount: Math.floor(amount) });
+        var args = { p_amount: Math.floor(amount) };
+        if (requestId && _idemOk) args.p_request_id = String(requestId).slice(0, 64);
+        var res = await c.rpc('spend_silicon', args);
+        if (res.error && args.p_request_id && /could not find the function|schema cache/i.test(String(res.error.message || ''))) {
+            _idemOk = false;
+            res = await c.rpc('spend_silicon', { p_amount: Math.floor(amount) });
+        }
+        if (res.error) throw mk(res.error);
+        return res.data == null ? 0 : res.data;
+    },
+
+    // Klaim reward quest (idempoten per quest, nominal ditentukan server).
+    rpcClaimQuest: async function (questId) {
+        var c = await getClient();
+        var res = await c.rpc('claim_quest_silicon', { p_quest_id: String(questId) });
         if (res.error) throw mk(res.error);
         return res.data == null ? 0 : res.data;
     },
