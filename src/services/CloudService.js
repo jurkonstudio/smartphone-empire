@@ -214,6 +214,12 @@ export const CloudService = {
         catch (err) { return function () {}; }
     },
 
+    async subscribeWallet(cb) {
+        if (!_adapter || !_userId || typeof _adapter.subscribeWallet !== 'function') return function () {};
+        try { return await _adapter.subscribeWallet(_userId, cb); }
+        catch (err) { return function () {}; }
+    },
+
     async subscribePresence(meta, onSync) {
         if (!_adapter || !_userId) return function () {};
         if (typeof _adapter.subscribePresence !== 'function') return function () {};
