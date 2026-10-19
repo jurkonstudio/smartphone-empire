@@ -1,8 +1,10 @@
 // FILE: src/ui/social/PlayerProfileModal.js
 // v2.2 — Menampilkan Umur Akun Real-Life & Terakhir Aktif.
+// v2.3 — Menampilkan ID Pemain (publik, ketuk untuk menyalin) bila server menyediakannya.
 import { Modal } from '../modal.js';
 import { LanguageService, t } from '../../core/LanguageService.js';
 import { avatarHtml, resolveAvatarUrls, esc } from './AvatarView.js';
+import { pidTf, copyPublicId } from './PlayerIdView.js';
 
 var MONTHS = {
     id: ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'],
@@ -85,6 +87,8 @@ export async function openPlayerProfileModal(profile) {
             avatarHtml({ src: urls[profile.id], name: company, size: 84, cls: 'pp-avatar-lg' }) +
             '<div class="pf-view-company">' + esc(company) + '</div>' +
             (player ? '<div class="pf-view-player">' + esc(player) + '</div>' : '') +
+            (profile.public_id ? '<button type="button" class="pf-id-chip" data-copy-pid="' + esc(profile.public_id) + '">' +
+                esc(pidTf('pp.id.label', 'ID Pemain')) + ' <b>' + esc(profile.public_id) + '</b></button>' : '') +
         '</div>' +
         '<div class="pf-mini-grid">' +
             _stat(t('pp.stats.revenue'), '$' + compactNumber(profile.stat_revenue)) +
@@ -99,4 +103,6 @@ export async function openPlayerProfileModal(profile) {
         '<button type="button" class="btn-secondary" data-modal-close style="width:100%;margin-top:16px;padding:10px;">' + esc(t('pp.view.close')) + '</button>';
 
     Modal.open('player-profile', html);
+    var chip = document.querySelector('[data-modal-id="player-profile"] [data-copy-pid]');
+    if (chip) chip.addEventListener('click', function () { copyPublicId(chip.getAttribute('data-copy-pid')); });
 }
