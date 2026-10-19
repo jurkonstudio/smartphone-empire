@@ -1,5 +1,5 @@
 // FILE: src/ui/panels/SiliconStorePanel.js
-// v2028.34 — [NEW] Menambahkan tab "Kirim" (Transfer SIL ke pemain lain).
+// v2028.35 — [FIX] Mengganti _e() ke _tf() pada tombol dan deskripsi tab Transfer agar teks tidak mentah.
 import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 import { Modal } from '../modal.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
@@ -27,9 +27,12 @@ function _esc(s) {
             .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 function _e(k, vars) { return _esc(t('silstore.' + k, vars)); }
-function _tf(key, fb, vars) {
+
+// [FIX] Fungsi _tf ini akan mengecek apakah terjemahan ada. Jika tidak ada, pakai teks cadangan (fallback).
+function _tf(key, fallback, vars) {
     var v = t(key, vars);
-    return (v && v !== key) ? v : fb;
+    // Jika hasilnya sama dengan key, berarti terjemahan tidak ditemukan
+    return (v && v !== key) ? v : fallback;
 }
 
 function _isId() {
@@ -59,7 +62,7 @@ function _renderTransferTab() {
 
     return `
         <div style="font-size:12px; color:var(--text-secondary); margin-bottom:16px; text-align:center;">
-            ${_e('transfer.intro') || 'Kirim SIL ke pemain lain dengan memasukkan ID Pemain (8 digit) mereka.'}
+            ${_tf('silstore.transfer.intro', 'Kirim SIL ke pemain lain dengan memasukkan ID Pemain (8 digit) mereka.')}
         </div>
         
         <div style="background:var(--bg-3); border:1px solid var(--border); border-radius:12px; padding:16px;">
@@ -105,7 +108,6 @@ function _handleTransfer() {
             targetInput.value = '';
             amountInput.value = '';
             
-            // Tarik saldo terbaru dari server
             if (window.__game && window.__game.cloudSync) {
                 window.__game.cloudSync.syncSilicon();
             }
@@ -278,16 +280,16 @@ function _build() {
     else if (isEx) content = _renderExchangeTab();
     else content = _renderTransferTab();
 
-    return '<div class="modal-title g-ico-title">' + gIcon('sil', 20) + '<span>' + _tf('silicon.store.title', 'Silicon Store') + '</span></div>' +
+    return '<div class="modal-title g-ico-title">' + gIcon('sil', 20) + '<span>' + _tf('silstore.title', 'Silicon Store') + '</span></div>' +
         '<div class="sil-balance sil-balance-compact">' +
             '<div class="sil-balance-label">' + _tf('silicon.balance', 'SALDO') + '</div>' +
             '<div class="sil-balance-value">' + SiliconService.getBalance() + ' <span>SIL</span></div>' +
         '</div>' +
         
         '<div style="display:flex; gap:6px; margin-bottom:16px;">' +
-            '<button id="tab-buy" style="' + btnStyle + (isBuy ? on : off) + '">' + (_e('tab.buy') || 'Beli') + '</button>' +
-            '<button id="tab-exchange" style="' + btnStyle + (isEx ? on : off) + '">' + (_e('tab.exchange') || 'Tukar Uang') + '</button>' +
-            '<button id="tab-transfer" style="' + btnStyle + (isTrf ? on : off) + '">' + (_e('tab.transfer') || 'Kirim') + '</button>' +
+            '<button id="tab-buy" style="' + btnStyle + (isBuy ? on : off) + '">' + _tf('silstore.tab.buy', 'Beli') + '</button>' +
+            '<button id="tab-exchange" style="' + btnStyle + (isEx ? on : off) + '">' + _tf('silstore.tab.exchange', 'Tukar Uang') + '</button>' +
+            '<button id="tab-transfer" style="' + btnStyle + (isTrf ? on : off) + '">' + _tf('silstore.tab.transfer', 'Kirim') + '</button>' +
         '</div>' +
 
         content +
@@ -342,11 +344,10 @@ function _onClick(e) {
     }
 }
 
-// ... (Fungsi _showPaymentModal, _render, openSiliconStoreModal biarkan persis seperti aslinya)
 function _showPaymentModal(order) {
     var pkg = PaymentService.getPackage(order.packageId);
-    var mockBtnHtml = DEV_BUILD ? `<div style="margin-top:24px; padding-top:16px; border-top:1px dashed var(--border); text-align:center;"><button type="button" data-qr-mock style="background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger); padding:8px; border-radius:8px; font-size:11px; width:100%; cursor:pointer;">${_e('qr.mock')}</button></div>` : '';
-    var html = `<div class="modal-title" style="text-align:center; font-size:18px;">${_e('qr.title')}</div><div class="modal-sub" style="text-align:center; margin-bottom:16px;">${_e('qr.time_left')} <b id="qr-timer" style="color:var(--danger); font-family:monospace; font-size:14px;">15:00</b></div><div style="text-align:center; margin-bottom:12px;"><div style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">${_e('qr.total')}</div><div style="font-size:24px; font-weight:bold; color:var(--accent);">${_price(pkg)}</div></div><div style="text-align:center; padding: 12px; background: #fff; border-radius: 12px; margin-bottom:16px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);"><img src="${STATIC_QRIS_URL}" style="width:100%; max-width:250px; display:block; margin:0 auto; border-radius:8px;" alt="QRIS" /></div><div style="font-size:13px; color:var(--text-secondary); text-align:center; margin-bottom:16px; line-height:1.5;">${_e('qr.scan')}<br><b>${_e('qr.important')}</b> ${_e('qr.note_pre')} <b>${_esc(order.id)}</b> ${_e('qr.note_post')}</div><div style="display:flex; flex-direction:column; gap:8px;"><button type="button" class="btn-primary" data-qr-check style="width:100%;">${_e('qr.check')}</button><button type="button" class="btn-secondary" data-qr-cancel style="width:100%;">${_e('qr.cancel')}</button></div>${mockBtnHtml}`;
+    var mockBtnHtml = DEV_BUILD ? `<div style="margin-top:24px; padding-top:16px; border-top:1px dashed var(--border); text-align:center;"><button type="button" data-qr-mock style="background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger); padding:8px; border-radius:8px; font-size:11px; width:100%; cursor:pointer;">${_tf('silstore.qr.mock', 'Simulasi Lunas')}</button></div>` : '';
+    var html = `<div class="modal-title" style="text-align:center; font-size:18px;">${_tf('silstore.qr.title', 'Pindai QRIS')}</div><div class="modal-sub" style="text-align:center; margin-bottom:16px;">${_tf('silstore.qr.time_left', 'Sisa waktu')} <b id="qr-timer" style="color:var(--danger); font-family:monospace; font-size:14px;">15:00</b></div><div style="text-align:center; margin-bottom:12px;"><div style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">${_tf('silstore.qr.total', 'Total Pembayaran')}</div><div style="font-size:24px; font-weight:bold; color:var(--accent);">${_price(pkg)}</div></div><div style="text-align:center; padding: 12px; background: #fff; border-radius: 12px; margin-bottom:16px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);"><img src="${STATIC_QRIS_URL}" style="width:100%; max-width:250px; display:block; margin:0 auto; border-radius:8px;" alt="QRIS" /></div><div style="font-size:13px; color:var(--text-secondary); text-align:center; margin-bottom:16px; line-height:1.5;">${_tf('silstore.qr.scan', 'Pindai kode di atas menggunakan aplikasi bank atau e-wallet Anda.')}<br><b>${_tf('silstore.qr.important', 'PENTING')}</b> ${_tf('silstore.qr.note_pre', 'Sertakan Order ID')} <b>${_esc(order.id)}</b> ${_tf('silstore.qr.note_post', 'pada berita transfer.')}</div><div style="display:flex; flex-direction:column; gap:8px;"><button type="button" class="btn-primary" data-qr-check style="width:100%;">${_tf('silstore.qr.check', 'Cek Status')}</button><button type="button" class="btn-secondary" data-qr-cancel style="width:100%;">${_tf('silstore.qr.cancel', 'Batal')}</button></div>${mockBtnHtml}`;
     Modal.open('payment-qr', html);
     var root = document.querySelector('[data-modal-id="payment-qr"]'); if (!root) return;
     var timerEl = root.querySelector('#qr-timer'); var btnCheck = root.querySelector('[data-qr-check]');
