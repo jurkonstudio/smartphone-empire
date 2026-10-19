@@ -65,7 +65,6 @@ import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
 import { openNewsArticleModal } from './ui/panels/NewsArticleModal.js';
 import { openSiliconModal } from './ui/panels/SiliconPanel.js';
 import { openSiliconStoreModal } from './ui/panels/SiliconStorePanel.js';
-import { openAdminPanel } from './ui/panels/AdminPanel.js';
 import { PaymentService } from './systems/PaymentService.js';
 import { t as tr } from './core/LanguageService.js';
 import { handleNewsListClick } from './ui/panels/NewsListPanel.js';
@@ -1116,7 +1115,6 @@ async function boot() {
             cloud: CloudService,
             cloudSync: CloudSync,
             forcePull: function() { return CloudSync.forcePull(); },
-            openAdminPanel: openAdminPanel,
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
