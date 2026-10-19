@@ -15,8 +15,44 @@ export function openTransferSiliconModal() {
         return;
     }
 
-    var balance = SiliconService.getBalance();
-    
+    // Tampilkan modal dengan loading state
+    var html = `
+        <div class="modal-title" style="display:flex; align-items:center; gap:8px;">
+            ${gIcon('sil', 20)} <span>Kirim SIL</span>
+        </div>
+        <div class="modal-sub" style="margin-bottom:16px;">
+            Memeriksa saldo terbaru dari server...
+        </div>
+        <div style="text-align:center; padding:20px;">
+            <div class="onb-spin" style="margin:0 auto;"></div>
+        </div>
+    `;
+    Modal.open(MODAL_ID, html);
+
+    var root = document.querySelector('[data-modal-id="' + MODAL_ID + '"]');
+    if (!root) return;
+
+    // [FIX DESYNC] Tarik saldo asli dari server saat modal dibuka
+    CloudService.getSiliconBalance().then(function(res) {
+        if (!res.ok) {
+            Modal.close(MODAL_ID, true);
+            ToastService.error('Gagal terhubung ke server. Coba lagi.');
+            return;
+        }
+
+        // Update saldo di local storage agar UI di belakang ikut sinkron
+        var serverBalance = Math.floor(res.balance || 0);
+        SiliconService.applyServerBalance(serverBalance);
+
+        // Render form asli dengan saldo yang sudah 100% valid
+        _renderForm(root, serverBalance);
+    }).catch(function() {
+        Modal.close(MODAL_ID, true);
+        ToastService.error('Gagal terhubung ke server. Coba lagi.');
+    });
+}
+
+function _renderForm(root, balance) {
     var html = `
         <div class="modal-title" style="display:flex; align-items:center; gap:8px;">
             ${gIcon('sil', 20)} <span>Kirim SIL</span>
@@ -38,6 +74,8 @@ export function openTransferSiliconModal() {
                 <span>Saldo Anda saat ini:</span>
                 <b style="color:var(--accent);">${balance} SIL</b>
             </div>
+
+            <div id="trf-error" style="display:none; color:var(--danger); font-size:12px; margin-bottom:12px; background:var(--danger-soft); padding:10px; border-radius:8px; word-break:break-word;"></div>
             
             <div style="display:flex; gap:8px;">
                 <button type="button" class="btn-secondary" data-modal-close style="flex:1;">Batal</button>
@@ -46,20 +84,20 @@ export function openTransferSiliconModal() {
         </div>
     `;
 
-    Modal.open(MODAL_ID, html);
-
-    var root = document.querySelector('[data-modal-id="' + MODAL_ID + '"]');
-    if (!root) return;
+    var card = root.querySelector('.modal-card') || root;
+    card.innerHTML = html;
 
     var btnSubmit = root.querySelector('#btn-do-transfer');
     var inputTarget = root.querySelector('#trf-target');
     var inputAmount = root.querySelector('#trf-amount');
     var infoBox = root.querySelector('#trf-info');
+    var errorBox = root.querySelector('#trf-error');
 
     inputTarget.addEventListener('input', function() {
         var targetId = parseInt(inputTarget.value, 10);
         btnSubmit.disabled = true;
         infoBox.style.display = 'none';
+        errorBox.style.display = 'none';
 
         if (!targetId || targetId < 10000000) return;
 
@@ -82,7 +120,6 @@ export function openTransferSiliconModal() {
                     infoBox.innerHTML = `❌ ID Pemain tidak ditemukan.`;
                 }
             }).catch(function(err) {
-                console.error('[Cek ID]', err);
                 infoBox.style.background = 'rgba(244, 67, 54, 0.1)';
                 infoBox.style.color = 'var(--danger)';
                 infoBox.innerHTML = `Gagal mengecek ID. Coba lagi.`;
@@ -96,12 +133,13 @@ export function openTransferSiliconModal() {
 
         if (!amount || amount <= 0) return ToastService.error('Jumlah SIL tidak valid.');
         if (amount > 5000) return ToastService.error('Maksimal pengiriman adalah 5000 SIL.');
-        if (SiliconService.getBalance() < amount) return ToastService.error('Saldo SIL Anda tidak cukup.');
+        if (balance < amount) return ToastService.error('Saldo SIL Anda tidak cukup.');
 
         if (!confirm(`Kirim ${amount} SIL ke ID ${targetId}?`)) return;
 
         btnSubmit.disabled = true;
         btnSubmit.textContent = 'Memproses...';
+        errorBox.style.display = 'none';
 
         CloudService.transferSilicon(targetId, amount).then(function(res) {
             if (res.ok && res.data && res.data.ok) {
@@ -115,21 +153,13 @@ export function openTransferSiliconModal() {
                 btnSubmit.disabled = false;
                 btnSubmit.textContent = 'Kirim SIL';
                 
-                // TAMPILKAN ERROR ASLI DARI SERVER
-                console.error('[Transfer Gagal] Response:', res);
+                var errMsg = res.reason || 'Gagal mengirim.';
+                if (errMsg.includes('insufficient_silicon')) errMsg = 'Saldo SIL di server database tidak cukup.';
+                if (errMsg.includes('player_not_found')) errMsg = 'ID Pemain tujuan tidak ditemukan.';
+                if (errMsg.includes('cannot_transfer_to_self')) errMsg = 'Anda tidak bisa mengirim ke diri sendiri.';
                 
-                var msg = res.reason || 'Gagal mengirim.';
-                if (res.data && res.data.message) msg = res.data.message; // Tangkap pesan SQL
-                
-                if (msg.includes('player_not_found')) msg = 'ID Pemain tidak ditemukan.';
-                else if (msg.includes('insufficient_silicon')) msg = 'Saldo SIL Anda tidak cukup.';
-                else if (msg.includes('cannot_transfer_to_self')) msg = 'Anda tidak bisa mengirim ke diri sendiri.';
-                else if (msg.includes('invalid_amount')) msg = 'Jumlah SIL tidak valid.';
-                else if (msg.includes('function') || msg.includes('does not exist')) {
-                    msg = 'Fungsi database belum siap. Jalankan ulang SQL transfer_silicon.';
-                }
-                
-                ToastService.error(msg);
+                errorBox.style.display = 'block';
+                errorBox.innerHTML = `❌ <b>Gagal:</b> ${errMsg}`;
             }
         });
     });
