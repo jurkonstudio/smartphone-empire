@@ -1720,4 +1720,538 @@ export function createOfficeScene(THREE, container, gameState) {
             var sp = roomList[i].alertSp;
             if (!sp) continue;
             var bad = roomList[i].alert && roomList[i].alert.lvl === 'bad';
-            sp.position.y = roomList[i].alertBase
+            sp.position.y = roomList[i].alertBase + Math.sin(sec * (bad ? 5 : 3) + i) * 0.05;
+            var sc = bad ? 0.42 + Math.sin(sec * 5 + i) * 0.03 : 0.42;
+            sp.scale.set(sc, sc, 1);
+        }
+        updateRing(sec);
+        if (actLabelEl && selected && selected.staffId && sec - actLabelTick > 0.4) {
+            actLabelTick = sec;
+            var txt = activityText(selected.staffId);
+            if (actLabelEl.textContent !== txt) actLabelEl.textContent = txt;
+        }
+    }
+    function watchQuality(now) {
+        if (quality.lowered || !lastRendered) { lastRendered = now; return; }
+        var gap = now - lastRendered;
+        lastRendered = now;
+        if (gap > quality.frameMs * 2) quality.slow++; else if (quality.slow > 0) quality.slow -= 0.25;
+        if (quality.slow >= 24) {
+            quality.lowered = true;
+            quality.frameMs = 50;
+            renderer.setPixelRatio(1);
+            if (lastW && lastH) renderer.setSize(lastW, lastH, false);
+            renderer.shadowMap.enabled = false; // Matikan bayangan jika HP lemah
+        }
+    }
+    function scheduleNext() {
+        var fm = Math.max(quality.frameMs, PERF.frameMs || 0);
+        var wait = fm - (performance.now() - lastFrame) - 5;
+        if (wait > 4) {
+            loopTimer = setTimeout(function () { loopTimer = 0; loopRaf = requestAnimationFrame(frame); }, wait);
+        } else {
+            loopRaf = requestAnimationFrame(frame);
+        }
+    }
+    function frame(now) {
+        loopRaf = 0;
+        if (disposed || document.hidden || !inView) { lastRendered = 0; return; }
+        if (now - lastFrame < Math.max(quality.frameMs, PERF.frameMs || 0) - 2) { scheduleNext(); return; }
+        lastFrame = now;
+        scheduleNext();
+        if (ctxLost) return;
+        var sec = now / 1000;
+        for (var i = 0; i < animRooms.length; i++) animRooms[i].tick(sec);
+        animateOverlays(sec);
+        renderer.render(scene, camera);
+        watchQuality(now);
+    }
+    function startLoop() {
+        if (!ambient || loopRaf || loopTimer || disposed || document.hidden || !inView) return;
+        lastRendered = 0;
+        loopRaf = requestAnimationFrame(frame);
+    }
+    function requestRender() {
+        if (ambient) { startLoop(); if (loopRaf || loopTimer) return; }
+        if (raf || disposed) return;
+        raf = requestAnimationFrame(function () {
+            raf = 0;
+            if (disposed || document.hidden || ctxLost) return;
+            updateRing(0);
+            renderer.render(scene, camera);
+        });
+    }
+
+    function updateRing(sec) {
+        if (!selected || !selected.staffId) { selRing.visible = false; return; }
+        var g = staffObjs[selected.staffId];
+        if (!g) { selRing.visible = false; return; }
+        g.getWorldPosition(tmpV);
+        selRing.position.set(tmpV.x, 0.05, tmpV.z);
+        var k = 0.5 + Math.sin(sec * 4) * 0.03;
+        selRing.scale.set(k, k, 1);
+        selRing.visible = true;
+    }
+    function focusStaff(id) {
+        var g = staffObjs[id];
+        if (!g) return;
+        g.getWorldPosition(tmpV);
+        tweenView(tmpV.x, tmpV.z, Math.max(controls.view.zoom, 1.5));
+    }
+
+    var chipBar = document.createElement('div');
+    chipBar.className = 'office-chips';
+    chipBar.style.cssText = 'position:absolute;left:8px;right:44px;top:8px;z-index:3;display:flex;gap:6px;' +
+        'overflow-x:auto;touch-action:pan-x;scrollbar-width:none;padding:2px 0;' +
+        '-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent);' +
+        'mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent);';
+    container.appendChild(chipBar);
+
+    var card = document.createElement('div');
+    card.className = 'office-card';
+    card.style.cssText = 'position:absolute;z-index:3;display:none;box-sizing:border-box;overflow-y:auto;' +
+        'overscroll-behavior:contain;-webkit-overflow-scrolling:touch;' +
+        'padding:12px 14px;border-radius:14px;background:var(--bg-2);color:var(--text-primary);' +
+        'border:1px solid var(--border);box-shadow:var(--shadow);';
+    card.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+    container.appendChild(card);
+    
+    function isNarrow() { return container.clientWidth < NARROW_PX; }
+    function applyCardLayout() {
+        var cs = card.style;
+        if (isNarrow()) {
+            cs.left = '10px'; cs.right = '10px'; cs.width = 'auto';
+            cs.bottom = 'calc(10px + env(safe-area-inset-bottom, 0px))';
+            cs.maxHeight = 'min(46%, 340px)';
+        } else {
+            cs.left = '12px'; cs.right = 'auto'; cs.width = 'min(380px, 44%)';
+            cs.bottom = '12px'; cs.maxHeight = '72%';
+        }
+    }
+    applyCardLayout();
+
+    var hint = document.createElement('div');
+    hint.style.cssText = 'position:absolute;left:12px;bottom:10px;z-index:2;font-size:11px;pointer-events:none;' +
+        'color:var(--text-tertiary);max-width:80%;transition:opacity .4s;';
+    hint.textContent = t('office.hint');
+    container.appendChild(hint);
+    var hintGone = false;
+
+    var legendBtn = document.createElement('button');
+    legendBtn.type = 'button';
+    legendBtn.textContent = 'ⓘ';
+    legendBtn.style.cssText = 'position:absolute;right:8px;top:8px;z-index:4;width:32px;height:32px;border-radius:50%;' +
+        'border:1px solid var(--border);background:var(--bg-2);color:var(--text-primary);font-size:15px;line-height:1;cursor:pointer;padding:0;';
+    legendBtn.setAttribute('aria-expanded', 'false');
+    container.appendChild(legendBtn);
+    var legend = document.createElement('div');
+    legend.style.cssText = 'position:absolute;right:8px;top:46px;z-index:4;display:none;max-width:240px;padding:10px 12px;' +
+        'border-radius:12px;background:var(--bg-2);color:var(--text-primary);border:1px solid var(--border);' +
+        'box-shadow:var(--shadow);font-size:11.5px;line-height:1.5;max-height:calc(100% - 60px);overflow-y:auto;';
+    container.appendChild(legend);
+    function legendRow(color, text, round) {
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:7px;margin-top:3px;';
+        var sw = document.createElement('span');
+        sw.style.cssText = 'flex:0 0 auto;width:10px;height:10px;background:' + color + ';border-radius:' + (round === false ? '2px' : '50%') + ';';
+        var tx = document.createElement('span');
+        tx.textContent = text;
+        row.appendChild(sw); row.appendChild(tx);
+        return row;
+    }
+    function rebuildLegend() {
+        legend.innerHTML = '';
+        var h1 = document.createElement('div');
+        h1.style.cssText = 'font-weight:800;font-size:12px;';
+        h1.textContent = t('office.legend.title');
+        legend.appendChild(h1);
+        ROLES.forEach(function (rd) { legend.appendChild(legendRow(rd.color, rd.label, false)); });
+        legend.appendChild(legendRow('#43c07a', t('office.legend.morale.high')));
+        legend.appendChild(legendRow('#f5b83d', t('office.legend.morale.mid')));
+        legend.appendChild(legendRow('#ef5350', t('office.legend.morale.low')));
+        legend.appendChild(legendRow('#e0b445', t('office.legend.tier'), false));
+        legend.appendChild(legendRow('#f59e0b', t('office.legend.alert')));
+        legend.appendChild(legendRow('#8fb4e8', t('office.legend.bubble')));
+        legend.appendChild(legendRow('#9fb4d6', t('office.legend.locked'), false));
+    }
+    legendBtn.addEventListener('click', function () {
+        legendOn = !legendOn;
+        legend.style.display = legendOn ? 'block' : 'none';
+        legendBtn.setAttribute('aria-expanded', legendOn ? 'true' : 'false');
+        if (legendOn) rebuildLegend();
+    });
+    legendBtn.setAttribute('aria-label', 'legend');
+
+    function mkBtn(label, primary, tall) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        b.style.cssText = 'border:1px solid ' + (primary ? 'var(--accent)' : 'var(--border)') + ';' +
+            'background:' + (primary ? 'var(--accent)' : 'var(--bg-3)') + ';color:' + (primary ? '#fff' : 'var(--text-primary)') + ';' +
+            'border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:700;cursor:pointer;' +
+            (tall ? 'min-height:' + (isNarrow() ? 40 : 34) + 'px;' : '');
+        return b;
+    }
+
+    var lastCenteredRoom = null;
+    function rebuildChips() {
+        var selRoom = selected ? selected.room : '';
+        var parts = [selRoom, t('office.btn.all')];
+        roomList.forEach(function (r) {
+            parts.push(r.def.id + ':' + ((!r.st || r.st.open) ? 1 : 0) + ':' + (r.alert ? r.alert.lvl : '') + ':' + t('office.room.' + r.def.id));
+        });
+        var sig = parts.join('|');
+        if (sig === chipSig) return;
+        chipSig = sig;
+        var keepLeft = chipBar.scrollLeft, selBtn = null;
+        chipBar.innerHTML = '';
+        var all = mkBtn(t('office.btn.all'), false);
+        all.style.padding = '6px 12px'; all.style.fontSize = '11.5px'; all.style.flex = '0 0 auto';
+        all.style.background = 'var(--bg-2)';
+        all.addEventListener('click', function () { select(null); resetView(); });
+        chipBar.appendChild(all);
+        roomList.forEach(function (r) {
+            var open = !r.st || r.st.open;
+            var isSel = !!(selected && selected.room === r.def.id);
+            var b = mkBtn((open ? '' : '🔒 ') + t('office.room.' + r.def.id), isSel);
+            b.style.padding = '6px 12px'; b.style.fontSize = '11.5px'; b.style.flex = '0 0 auto'; b.style.whiteSpace = 'nowrap';
+            if (!isSel) b.style.background = 'var(--bg-2)';
+            if (!open) b.style.opacity = '0.7';
+            if (open && r.alert) {
+                var dot = document.createElement('span');
+                dot.textContent = ' ●';
+                dot.style.cssText = 'color:' + (r.alert.lvl === 'bad' ? '#ef4444' : '#f59e0b') + ';';
+                b.appendChild(dot);
+            }
+            b.addEventListener('click', function () { select({ room: r.def.id }); focusRoom(r.def.id); });
+            chipBar.appendChild(b);
+            if (isSel) selBtn = b;
+        });
+        chipBar.scrollLeft = keepLeft;
+        if (selBtn && lastCenteredRoom !== selRoom) {
+            var left = selBtn.offsetLeft - (chipBar.clientWidth - selBtn.offsetWidth) / 2;
+            try { chipBar.scrollTo({ left: Math.max(0, left), behavior: prefersReducedMotion() ? 'auto' : 'smooth' }); }
+            catch (e) { chipBar.scrollLeft = Math.max(0, left); }
+        }
+        lastCenteredRoom = selRoom || null;
+    }
+
+    function goTo(g) {
+        if (!g) return;
+        bus.emit('advisor:go', { nav: g.nav, subtab: g.subtab });
+    }
+
+    function runAction(a) {
+        if (!a || busy) return;
+        if (a.disabled) { try { if (a.note) ToastService.info(a.note); } catch (e) {} return; }
+        var g = window.__game;
+        if (!g) return;
+        busy = true;
+        var res = null;
+        try {
+            if (a.id === 'fab-build' && g.fab) res = g.fab.buildFab(1);
+            else if (a.id === 'fab-upgrade' && g.fab) res = g.fab.upgradeFab();
+            else if (a.id === 'train' && g.teamSystem) res = g.teamSystem.trainStaff(a.staffId);
+        } catch (e) {
+            console.warn('[OfficeScene] aksi gagal:', e);
+            res = { ok: false, reason: String((e && e.message) || e) };
+        }
+        if (res && res.ok === false && res.reason) { try { ToastService.error(res.reason); } catch (e2) {} }
+        else { try { if (navigator.vibrate) navigator.vibrate(15); } catch (e3) {} }
+        setTimeout(function () { busy = false; }, 350);
+    }
+
+    function activityText(staffId) {
+        var a = activity[staffId];
+        return t('office.staff.activity', { a: t(a ? a.key : 'office.act.working') });
+    }
+
+    function cardSignature(info) {
+        return JSON.stringify([
+            info.title, info.badge, info.lines,
+            (info.actions || []).map(function (a) { return [a.id, a.label, a.note, a.disabled ? 1 : 0, a.staffId || '']; }),
+            info.go ? info.go.label : '', info.go2 ? info.go2.label : '',
+            cardCollapsed ? 1 : 0, isNarrow() ? 1 : 0, info.staffId || ''
+        ]);
+    }
+
+    function refreshCard() {
+        var info = null;
+        if (selected && lastData && lastPlan) {
+            if (selected.staffId) {
+                var st = null, ss = lastData.staff || [];
+                for (var i = 0; i < ss.length; i++) if (ss[i].id === selected.staffId) st = ss[i];
+                if (st) info = describeStaff(st);
+                else { selected.staffId = null; updateRing(0); }
+            }
+            if (!info) info = describeRoom(selected.room, lastData, lastPlan);
+        }
+        if (!info) {
+            card.style.display = 'none'; cardSig = ''; actLabelEl = null;
+            hint.style.display = hintGone ? 'none' : '';
+            if (cardWasVisible) { cardWasVisible = false; updateShift(); }
+            return;
+        }
+        var sig = cardSignature(info);
+        if (sig === cardSig && card.style.display !== 'none') return;
+        cardSig = sig;
+        var keepScroll = card.scrollTop;
+        applyCardLayout();
+        card.innerHTML = '';
+        actLabelEl = null;
+
+        var head = document.createElement('div');
+        head.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:' + (cardCollapsed ? '0' : '6px') + ';';
+        var ttl = document.createElement('div');
+        ttl.style.cssText = 'font-size:15px;font-weight:800;letter-spacing:-0.01em;flex:1;min-width:0;' +
+            'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+        ttl.textContent = info.title;
+        var badge = document.createElement('span');
+        badge.style.cssText = 'font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;' +
+            'background:var(--accent-soft);color:var(--accent);white-space:nowrap;';
+        badge.textContent = info.badge;
+        head.appendChild(ttl); head.appendChild(badge);
+        if (isNarrow()) {
+            var tg = document.createElement('button');
+            tg.type = 'button';
+            tg.textContent = cardCollapsed ? '▴' : '▾';
+            tg.setAttribute('aria-label', t(cardCollapsed ? 'office.card.expand' : 'office.card.collapse'));
+            tg.setAttribute('aria-expanded', cardCollapsed ? 'false' : 'true');
+            tg.style.cssText = 'border:none;background:transparent;color:var(--text-tertiary);font-size:16px;cursor:pointer;padding:4px 8px;min-width:36px;min-height:36px;';
+            tg.addEventListener('click', function () { cardCollapsed = !cardCollapsed; cardSig = ''; refreshCard(); });
+            head.appendChild(tg);
+        }
+        var x = document.createElement('button');
+        x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'close');
+        x.style.cssText = 'border:none;background:transparent;color:var(--text-tertiary);font-size:15px;cursor:pointer;padding:4px 8px;min-width:36px;min-height:36px;';
+        x.addEventListener('click', function () { select(null); });
+        head.appendChild(x);
+        card.appendChild(head);
+
+        if (!(cardCollapsed && isNarrow())) {
+            var lines = document.createElement('div');
+            lines.style.cssText = 'font-size:12.5px;line-height:1.55;color:var(--text-secondary, var(--text-tertiary));';
+            (info.lines || []).forEach(function (ln) {
+                var d = document.createElement('div'); d.textContent = ln; lines.appendChild(d);
+            });
+            if (info.staffId) {
+                actLabelEl = document.createElement('div');
+                actLabelEl.style.cssText = 'color:var(--accent);font-weight:700;';
+                actLabelEl.textContent = activityText(info.staffId);
+                lines.appendChild(actLabelEl);
+            }
+            card.appendChild(lines);
+
+            if (info.actions && info.actions.length) {
+                var arow = document.createElement('div');
+                arow.style.cssText = 'display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:flex-start;';
+                info.actions.forEach(function (a) {
+                    var wrap = document.createElement('div');
+                    wrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;max-width:100%;';
+                    var ab = mkBtn(a.label, !a.disabled, true);
+                    if (a.disabled) { ab.style.opacity = '0.55'; ab.style.background = 'var(--bg-3)'; ab.style.color = 'var(--text-primary)'; ab.style.borderColor = 'var(--border)'; ab.style.cursor = 'not-allowed'; }
+                    ab.setAttribute('aria-disabled', a.disabled ? 'true' : 'false');
+                    ab.addEventListener('click', function () { runAction(a); });
+                    wrap.appendChild(ab);
+                    if (a.note) {
+                        var nt = document.createElement('div');
+                        nt.style.cssText = 'font-size:11px;color:var(--text-tertiary);padding:0 6px;';
+                        nt.textContent = a.note;
+                        wrap.appendChild(nt);
+                    }
+                    arow.appendChild(wrap);
+                });
+                card.appendChild(arow);
+            }
+
+            if (info.go || info.go2) {
+                var row = document.createElement('div');
+                row.style.cssText = 'display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;';
+                var hasActions = !!(info.actions && info.actions.length);
+                if (info.go) { var b1 = mkBtn(info.go.label, !hasActions, true); b1.addEventListener('click', function () { goTo(info.go); }); row.appendChild(b1); }
+                if (info.go2) { var b2 = mkBtn(info.go2.label, false, true); b2.addEventListener('click', function () { goTo(info.go2); }); row.appendChild(b2); }
+                card.appendChild(row);
+            }
+        }
+        card.style.display = 'block';
+        card.scrollTop = keepScroll;
+        hint.style.display = 'none';
+        if (!cardWasVisible) cardWasVisible = true;
+        updateShift();
+    }
+
+    function select(sel) {
+        selected = sel;
+        if (sel) hintGone = true;
+        roomList.forEach(function (r) {
+            var on = !!(sel && sel.room === r.def.id);
+            r.ov.visible = on;
+        });
+        cardSig = '';
+        refreshCard();
+        rebuildChips();
+        updateRing(0);
+        requestRender();
+    }
+
+    function handleTap(cx, cy) {
+        if (disposed) return;
+        var rect = canvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        ndc.set(((cx - rect.left) / rect.width) * 2 - 1, -((cy - rect.top) / rect.height) * 2 + 1);
+        scene.updateMatrixWorld(true);
+        camera.updateMatrixWorld(true);
+        raycaster.setFromCamera(ndc, camera);
+        var groups = roomList.map(function (r) { return r.group; });
+        var hits = raycaster.intersectObjects(groups, true);
+        var staffId = null, roomId = null;
+        for (var i = 0; i < hits.length && !roomId; i++) {
+            if (hits[i].object.isSprite) continue;
+            var o = hits[i].object;
+            while (o) {
+                if (o.userData && o.userData.staffId && !staffId) staffId = o.userData.staffId;
+                if (o.userData && o.userData.roomId) { roomId = o.userData.roomId; break; }
+                o = o.parent;
+            }
+        }
+        if (!roomId) { select(null); return; }
+        select({ room: roomId, staffId: staffId });
+        if (staffId) focusStaff(staffId);
+    }
+
+    var controls = createCampusControls(canvas, {
+        unitsPerPixel: function (zoom) { return (BASE_VIEW / zoom) / Math.max(1, container.clientHeight); },
+        minZoom: 0.3,
+        maxZoom: 3,
+        limit: 9,
+        onChange: function () { applyCamera(); requestRender(); },
+        onTap: handleTap
+    });
+
+    function resize() {
+        if (disposed || resizeScheduled) return;
+        resizeScheduled = true;
+        requestAnimationFrame(function () {
+            resizeScheduled = false;
+            if (disposed || document.hidden) return;
+            var w = container.clientWidth, h = container.clientHeight;
+            if (!w || !h) return;
+            if (Math.abs(w - lastW) < MIN_RESIZE_DELTA && Math.abs(h - lastH) < MIN_RESIZE_DELTA) return;
+            lastW = w; lastH = h;
+            renderer.setSize(w, h, false);
+            aspect = w / h;
+            if (!fitted) { fitted = true; controls.view.zoom = fitZoom(); }
+            applyCardLayout();
+            cardSig = ''; chipSig = '';
+            refreshCard(); rebuildChips();
+            applyCamera();
+            requestRender();
+        });
+    }
+
+    function update(data) {
+        if (disposed || !data) return;
+        var plan = computePlan(data);
+        rememberPeak(data, plan);
+        lastData = data; lastPlan = plan;
+        setClock(data);
+        var force = false;
+        if (plan.eraIdx !== eraIdx) { eraIdx = plan.eraIdx; applyTheme(); force = true; }
+        roomList.forEach(function (r) {
+            var logic = ROOM_LOGIC[r.def.id];
+            var st = logic.state(data, plan);
+            var sig = (st.open ? 1 : 0) + ':' + st.level + ':' + logic.sig(data, plan) + ':' + eraIdx;
+            if (!force && sig === r.sig) return;
+            r.sig = sig;
+            rebuildRoom(r, data, plan, st);
+        });
+        rebuildChips();
+        refreshCard();
+        requestRender();
+    }
+
+    function relabel() {
+        hint.textContent = t('office.hint');
+        canvas.setAttribute('aria-label', t('office.aria'));
+        roomList.forEach(function (r) { rebuildLabel(r); rebuildAlert(r); });
+        if (legendOn) rebuildLegend();
+        chipSig = ''; cardSig = '';
+        rebuildChips();
+        refreshCard();
+        requestRender();
+    }
+
+    function onVis() { if (!document.hidden) requestRender(); }
+    var io = null;
+    if (typeof IntersectionObserver !== 'undefined') {
+        io = new IntersectionObserver(function (en) {
+            inView = en[en.length - 1].isIntersecting;
+            if (inView) requestRender();
+        });
+        io.observe(container);
+    }
+    document.addEventListener('visibilitychange', onVis);
+    function onCtxLost(e) { e.preventDefault(); ctxLost = true; }
+    function onCtxRestored() { ctxLost = false; requestRender(); }
+    canvas.addEventListener('webglcontextlost', onCtxLost);
+    canvas.addEventListener('webglcontextrestored', onCtxRestored);
+    var ro = null;
+    if (typeof ResizeObserver !== 'undefined') { ro = new ResizeObserver(resize); ro.observe(container); }
+    else window.addEventListener('resize', resize);
+
+    applyTheme();
+    update(gameState);
+    resize();
+
+    return {
+        update: update,
+        updateClock: function (data) { if (disposed) return; setClock(data); if (!ambient) requestRender(); },
+        refreshTheme: function () {
+            applyTheme();
+            if (rooms.work) rooms.work.sig = null;
+            if (lastData) update(lastData); else requestRender();
+        },
+        relabel: relabel,
+        select: function (id) { select(id ? { room: id } : null); if (id) focusRoom(id); },
+        selectStaff: function (id) {
+            if (!staffObjs[id]) return false;
+            select({ room: 'work', staffId: id });
+            focusStaff(id);
+            return true;
+        },
+        dispose: function () {
+            disposed = true;
+            if (raf) cancelAnimationFrame(raf);
+            if (loopRaf) cancelAnimationFrame(loopRaf);
+            if (loopTimer) { clearTimeout(loopTimer); loopTimer = 0; }
+            if (focusRaf) cancelAnimationFrame(focusRaf);
+            if (io) io.disconnect();
+            if (ro) ro.disconnect(); else window.removeEventListener('resize', resize);
+            document.removeEventListener('visibilitychange', onVis);
+            canvas.removeEventListener('webglcontextlost', onCtxLost);
+            canvas.removeEventListener('webglcontextrestored', onCtxRestored);
+            controls.dispose();
+            roomList.forEach(function (r) {
+                clearFurn(r);
+                if (r.label && r.label.material) r.label.material.dispose();
+                if (r.alertSp && r.alertSp.material) r.alertSp.material.dispose();
+                r.floorMat.dispose(); r.ovMat.dispose(); r.patMat.dispose(); if (r.railMat) r.railMat.dispose();
+            });
+            labelTex.forEach(function (tx) { tx.dispose(); });
+            ownTex.forEach(function (tx) { tx.dispose(); });
+            Object.keys(alertTex).forEach(function (k) { alertTex[k].dispose(); });
+            Object.keys(bubbleTex).forEach(function (k) { bubbleTex[k].dispose(); });
+            hairMat.forEach(function (m) { m.dispose(); });
+            Object.keys(tierMat).forEach(function (k) { tierMat[k].dispose(); });
+            Object.keys(G).forEach(function (k) { G[k].dispose(); });
+            Object.keys(M).forEach(function (k) { M[k].dispose(); });
+            Object.keys(roleMat).forEach(function (k) { roleMat[k].dispose(); });
+            skinMat.forEach(function (m) { m.dispose(); });
+            moraleMat.forEach(function (m) { m.dispose(); });
+            Object.keys(hueMats).forEach(function (k) { hueMats[k].dispose(); });
+            renderer.dispose();
+            try { renderer.forceContextLoss(); } catch (e) {}
+            [chipBar, card, hint, legendBtn, legend, canvas].forEach(function (el) { if (el.parentNode) el.parentNode.removeChild(el); });
+        }
+    };
+        }
