@@ -5,6 +5,63 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0f0f0f">
 
+<!-- ============================================================
+     SEO UTAMA (Untuk Hasil Pencarian Google)
+     ============================================================ -->
+<title>Smartphone Empire - Game Simulasi Bisnis & Strategi Teknologi</title>
+<meta name="description" content="Bangun kerajaan teknologi smartphone-mu dari nol! Lakukan riset, desain ponsel, kelola karyawan, dan kuasai pasar global. Mainkan Smartphone Empire secara gratis di browser.">
+<meta name="keywords" content="game simulasi, game bisnis, game strategi, smartphone empire, game web, game ringan, game tanpa download, jurkon studio">
+<meta name="author" content="Jurkon Studio">
+<link rel="canonical" href="https://smartphone-empire.my.id/">
+
+<!-- ============================================================
+     OPEN GRAPH (Tampilan saat link dibagikan di WhatsApp/Discord/FB)
+     ============================================================ -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://smartphone-empire.my.id/">
+<meta property="og:title" content="Smartphone Empire - Bangun Kerajaan Teknologimu">
+<meta property="og:description" content="Dari perusahaan rintisan menjadi raksasa teknologi dunia. Kelola bisnis smartphone-mu sekarang secara gratis!">
+<meta property="og:image" content="https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/assets/img/loading-screen.jpg">
+
+<!-- ============================================================
+     TWITTER CARDS
+     ============================================================ -->
+<meta property="twitter:card" content="summary_large_image">
+<meta property="twitter:url" content="https://smartphone-empire.my.id/">
+<meta property="twitter:title" content="Smartphone Empire - Game Simulasi Bisnis">
+<meta property="twitter:description" content="Bangun kerajaan smartphone-mu dari nol. Mainkan sekarang secara gratis!">
+<meta property="twitter:image" content="https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/assets/img/loading-screen.jpg">
+
+<!-- ============================================================
+     SCHEMA MARKUP (Memberitahu Google bahwa ini adalah VideoGame)
+     ============================================================ -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Smartphone Empire",
+  "url": "https://smartphone-empire.my.id/",
+  "image": "https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/assets/img/loading-screen.jpg",
+  "description": "Game simulasi bisnis di mana pemain membangun perusahaan teknologi, melakukan riset inovasi, dan bersaing di pasar global.",
+  "genre": ["Simulation", "Strategy", "Business"],
+  "gamePlatform": ["Web Browser", "Mobile Web", "Android"],
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "IDR"
+  },
+  "author": {
+    "@type": "Organization",
+    "name": "Jurkon Studio"
+  }
+}
+</script>
+
+<!-- ============================================================
+     ASSETS & PWA
+     ============================================================ -->
 <link rel="icon" type="image/png" sizes="32x32" href="./assets/icon/favicon-32.png">
 <link rel="icon" type="image/png" sizes="48x48" href="./assets/icon/favicon-48.png">
 <link rel="shortcut icon" href="./favicon.ico">
@@ -18,13 +75,9 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Smartphone Empire</title>
 
 <!-- ============================================================
      PERF TIER — deteksi HP lemah / hemat baterai SEBELUM render pertama.
-     Tidak menurunkan resolusi. Hanya mematikan efek dekoratif mahal (blur kaca, animasi tanpa henti)
-     dan menurunkan frekuensi animasi ambient 3D dari 30 ke 24 fps pada mode hemat.
-     Paksa manual: localStorage['smartphone-empire:perf'] = 'lite' | 'full' | 'auto'  (atau ?perf=lite di URL)
      ============================================================ -->
 <script>
 (function () {
@@ -39,8 +92,8 @@
         } catch (e) { return 'auto'; }
     }
     var forced = pref();
-    var base = null;        // alasan permanen (perangkat)
-    var lowBattery = false; // alasan dinamis (baterai)
+    var base = null;        
+    var lowBattery = false; 
     try {
         var nav = navigator, c = nav.connection || {};
         if (nav.deviceMemory && nav.deviceMemory <= 3) base = 'ram<=3GB';
@@ -52,8 +105,8 @@
         if (forced === 'full') lite = false;
         P.lite = lite;
         P.reason = lite ? (forced === 'lite' ? 'manual' : (base || 'battery<=20%')) : 'full';
-        P.frameMs = lite ? 42 : 33;           // 24 fps vs 30 fps
-        P.antialias = !(lite && base);        // AA dimatikan hanya di HP lemah (DPR tetap sama)
+        P.frameMs = lite ? 42 : 33;           
+        P.antialias = !(lite && base);        
         if (lite) root.setAttribute('data-perf', 'lite'); else root.removeAttribute('data-perf');
     }
     apply();
@@ -75,29 +128,23 @@
     (function() {
         var tapCount = 0;
         var tapTimer;
-        var ADMIN_EMAIL = 'jurkon@yahoo.com'; // GANTI DENGAN EMAIL ADMINMU
+        var ADMIN_EMAIL = 'jurkon@yahoo.com';
 
         document.addEventListener('click', function(e) {
-            // Hanya deteksi ketukan di pojok kiri atas (area header)
             if (e.clientY < 100 && e.clientX < 200) {
                 tapCount++;
-                
                 clearTimeout(tapTimer);
                 tapTimer = setTimeout(function() { tapCount = 0; }, 1000);
 
                 if (tapCount >= 5) {
                     tapCount = 0;
-                    
-                    // 1. Cek apakah yang login adalah Admin
                     var currentEmail = '';
                     try {
-                        // Ambil email dari localStorage (disimpan oleh CloudSync saat login)
                         var cloudEmail = localStorage.getItem('smartphone-empire:admin-email');
                         if (cloudEmail) currentEmail = cloudEmail.toLowerCase();
                     } catch(err) {}
 
                     if (currentEmail !== ADMIN_EMAIL.toLowerCase()) {
-                        // JIKA BUKAN ADMIN: Tampilkan pesan error dan jangan buka Eruda
                         var toast = document.createElement('div');
                         toast.textContent = '⚠️ Akses Ditolak: Fitur ini khusus Admin.';
                         toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#d32f2f;color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;z-index:999999;';
@@ -106,7 +153,6 @@
                         return;
                     }
 
-                    // 2. JIKA ADMIN: Muat Eruda secara Dinamis
                     if (typeof eruda === 'undefined') {
                         var script = document.createElement('script');
                         script.src = 'https://cdn.jsdelivr.net/npm/eruda';
@@ -203,11 +249,9 @@ window.addEventListener('unhandledrejection', function (e) {
 <link rel="modulepreload" href="./src/core/EventBus.js">
 <link rel="modulepreload" href="./src/core/TimeSystem.js">
 <link rel="modulepreload" href="./src/core/SaveService.js">
-
 <link rel="modulepreload" href="./src/config/time.config.js">
 <link rel="modulepreload" href="./src/config/app.config.js">
 <link rel="modulepreload" href="./src/config/constants.js">
-
 <link rel="modulepreload" href="./src/data/components.data.js">
 <link rel="modulepreload" href="./src/data/os.data.js">
 <link rel="modulepreload" href="./src/data/research.data.js">
@@ -215,17 +259,14 @@ window.addEventListener('unhandledrejection', function (e) {
 <link rel="modulepreload" href="./src/data/era-design.data.js">
 <link rel="modulepreload" href="./src/data/historical-timeline.data.js">
 <link rel="modulepreload" href="./src/data/phone-specs.data.js">
-
 <link rel="modulepreload" href="./src/systems/ResearchSystem.js">
 <link rel="modulepreload" href="./src/systems/OSSystem.js">
 <link rel="modulepreload" href="./src/systems/ProductSystem.js">
 <link rel="modulepreload" href="./src/systems/MarketSystem.js">
-
 <link rel="modulepreload" href="./src/ui/panels/ProductPanel.js">
 <link rel="modulepreload" href="./src/ui/panels/OSPanel.js">
 <link rel="modulepreload" href="./src/ui/panels/ResearchPanel.js">
 <link rel="modulepreload" href="./src/ui/panels/TimelinePanel.js">
-
 <link rel="modulepreload" href="./src/ui/phone/PhoneMockup.js">
 <link rel="modulepreload" href="./src/ui/phone/OsScreenMockup.js">
 
@@ -233,6 +274,24 @@ window.addEventListener('unhandledrejection', function (e) {
 <link rel="stylesheet" href="./profile-ui.css">
 </head>
 <body>
+
+    <!-- ============================================================
+         TEKS SEO UNTUK GOOGLE (Tersembunyi dari mata pemain, 
+         tapi sangat disukai Robot Google agar game Anda muncul di pencarian)
+         ============================================================ -->
+    <div style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0;">
+        <h1>Smartphone Empire - Game Simulasi Bisnis dan Strategi Teknologi</h1>
+        <p>Smartphone Empire adalah game simulasi bisnis berbasis web yang seru. Bangun perusahaan Anda dari awal, lakukan riset teknologi canggih, desain ponsel impian, kelola staf, dan kuasai pangsa pasar global. Mainkan secara gratis langsung di browser HP atau PC Anda tanpa perlu download.</p>
+        <h2>Fitur Game:</h2>
+        <ul>
+            <li>Riset dan inovasi teknologi smartphone</li>
+            <li>Simulasi ekonomi pasar yang dinamis</li>
+            <li>Manajemen tim dan karyawan</li>
+            <li>Sistem top-up dan mata uang Silicon (SIL)</li>
+        </ul>
+    </div>
+    <!-- AKHIR TEKS SEO -->
+
     <div id="app">
         <header id="app-header" class="app-header"></header>
         <main id="app-view" class="app-view" role="main"></main>
@@ -250,6 +309,7 @@ window.addEventListener('unhandledrejection', function (e) {
             </div>
         </div>
     </div>
+
     <script>
     /* Loading screen: persen = progres nyata (modul JS yang sudah terunduh + tahap boot di main.js). */
     window.__splash = (function () {
@@ -258,8 +318,8 @@ window.addEventListener('unhandledrejection', function (e) {
         var pct = document.getElementById('ls-pct');
         var meta = document.querySelector('meta[name="theme-color"]');
         var origTheme = meta ? meta.getAttribute('content') : null;
-        var TOTAL_MODULES = 190;   // jumlah modul statis dari main.js; hanya untuk estimasi, aman bila meleset
-        var MODULE_CAP = 70;       // unduhan modul mengisi sampai 70%, sisanya dari tahap boot
+        var TOTAL_MODULES = 190;   
+        var MODULE_CAP = 70;       
         var target = 2, shown = 0, finished = false, raf = 0, closed = false, seen = {};
         if (meta) meta.setAttribute('content', '#fafafa');
 
@@ -309,6 +369,7 @@ window.addEventListener('unhandledrejection', function (e) {
         };
     })();
     </script>
+
     <div id="error-message" class="error-message" role="alert"></div>
 
     <script type="module" src="./src/main.js"></script>
