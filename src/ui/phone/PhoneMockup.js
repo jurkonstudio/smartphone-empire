@@ -5,6 +5,9 @@
 //   ponsel modern tinggi/tipis). Semua berdiri di "garis lantai" sama.
 // - Era keypad (2000-2006): keypad fisik, antena, pelat wajah.
 // - QWERTY, slider, flip (klasik & lipat modern), fold, tri-fold.
+// - v2028.31: bentuk baru — communicator (clamshell landscape), PDA stylus, swivel,
+//   slider touch+QWERTY, edge melengkung, kamera pop-up, dual screen, flip lipat vertikal.
+//   Opsi baru renderPhoneMockup: fit {w,h} = crop viewBox ke bodi (untuk kartu pilihan bentuk).
 // - Material: plastik, aluminium, kaca, titanium (rim logam).
 // - Tampak depan & belakang (kamera mengikuti pilihan + era).
 // API publik tetap: renderPhoneMockup, renderPhoneThumbnail,
@@ -99,6 +102,52 @@ function getGeom(formFactor, spec) {
         const qh = Math.min(h, 128), qw = Math.round(qh * 0.56);
         return mk('qwerty', (100 - qw) / 2, GROUND - qh, qw, qh, 7, yr, mat);
     }
+    if (formFactor === 'ff_communicator') {
+        const g = mk('communicator', 3, GROUND - 56, 94, 30, 6, yr, mat);
+        g.low = { y: g.y + 31, h: 25 };
+        g.th = 56;
+        return g;
+    }
+    if (formFactor === 'ff_pda') {
+        const ph = Math.min(h + 8, 132), pw = Math.round(ph * 0.46);
+        return mk('pda', (100 - pw) / 2, GROUND - ph, pw, ph, Math.min(rx, 8), yr, mat);
+    }
+    if (formFactor === 'ff_swivel') {
+        const g = mk('swivel', 26, GROUND - 126, 48, 58, 8, yr, mat);
+        g.low = { y: g.y + 64, h: 62 };
+        g.th = 126;
+        g.rot = -20;
+        g.pivot = [g.x + g.w * 0.8, g.y + g.h];
+        return g;
+    }
+    if (formFactor === 'ff_touch_slider') {
+        const g = mk('slider', 22, GROUND - 146, 56, 100, 9, yr, mat);
+        g.low = { y: g.y + 92, h: 54 };
+        g.th = 146;
+        g.keys = 'qwerty';
+        g.touch = true;
+        return g;
+    }
+    if (formFactor === 'ff_edge') {
+        const g = mk('bar', (100 - w) / 2, GROUND - h, w, h, 11, yr, mat);
+        g.edge = true;
+        return g;
+    }
+    if (formFactor === 'ff_popup') {
+        const g = mk('bar', (100 - w) / 2, GROUND - h, w, h, rx, yr, mat);
+        g.popup = true;
+        return g;
+    }
+    if (formFactor === 'ff_dual') {
+        return mk('dual', 5, GROUND - 102, 90, 102, 7, yr, mat);
+    }
+    if (formFactor === 'ff_flip_fold') {
+        const fh = Math.min(h + 4, 152), fw = Math.round(fh * 0.43);
+        const g = mk('bar', (100 - fw) / 2, GROUND - fh, fw, fh, rx, yr, mat);
+        g.crease = true;
+        g.hinge = true;
+        return g;
+    }
     if (formFactor === 'ff_slider') {
         const g = mk('slider', 23, GROUND - 138, 54, 84, 8, yr, mat);
         g.low = { y: g.y + 78, h: 60 };
@@ -109,6 +158,7 @@ function getGeom(formFactor, spec) {
         if (yr >= 2019) {
             const g = mk('bar', (100 - w) / 2, GROUND - h, w, h, rx, yr, mat);
             g.crease = true;
+            g.hinge = true;
             return g;
         }
         const g = mk('flip', 23, GROUND - 132, 54, 64, 9, yr, mat);
@@ -126,7 +176,19 @@ function getGeom(formFactor, spec) {
 }
 
 function getScreenRect(spec, g) {
+    const r = _baseScreenRect(spec, g);
+    if (g.edge) { r.x = g.x + 1.5; r.w = g.w - 3; r.cornerRadius = Math.max(r.cornerRadius, 8); }
+    if (g.popup) { const d = r.y - (g.y + 2.2); r.y -= d; r.h += d; }
+    return r;
+}
+
+function _baseScreenRect(spec, g) {
     const s = spec.screen || { insetTop: 20, insetBottom: 20, insetSide: 8, cornerRadius: 6 };
+    if (g.kind === 'communicator') return { x: g.x + 7, y: g.y + 3.5, w: g.w - 14, h: g.h - 7, cornerRadius: 2 };
+    if (g.kind === 'pda') return { x: g.x + 4.5, y: g.y + 12, w: g.w - 9, h: g.h * 0.56, cornerRadius: 2 };
+    if (g.kind === 'swivel') return { x: g.x + 5, y: g.y + 9, w: g.w - 10, h: g.h - 18, cornerRadius: 2 };
+    if (g.kind === 'dual') return { x: g.x + 3, y: g.y + 3, w: g.w - 6, h: g.h - 6, cornerRadius: 4 };
+    if (g.kind === 'slider' && g.touch) return { x: g.x + 5, y: g.y + 8, w: g.w - 10, h: g.h - 20, cornerRadius: 3.5 };
     if (g.kind === 'qwerty') {
         return { x: g.x + 5, y: g.y + 11, w: g.w - 10, h: g.h * (g.yr >= 2007 ? 0.40 : 0.35), cornerRadius: 2.5 };
     }
@@ -482,6 +544,13 @@ function bodyShape(x, y, w, h, rx, ids, mat) {
 
 function renderBodyLayer(g, ids, hex) {
     const mat = g.material;
+    if (g.kind === 'communicator') {
+        const hingeY = g.y + g.h;
+        return bodyShape(g.x, g.low.y, g.w, g.low.h, g.rx, ids, mat) +
+            bodyShape(g.x, g.y, g.w, g.h, g.rx, ids, mat) +
+            `<rect x="${g.x + 10}" y="${hingeY - 1.2}" width="${g.w - 20}" height="3.4" rx="1.4" fill="url(#${ids.rim})" stroke="#000" stroke-opacity="0.4" stroke-width="0.3"/>`;
+    }
+    if (g.kind === 'swivel') return bodyShape(g.x, g.low.y, g.w, g.low.h, g.rx, ids, mat);
     if (g.kind === 'slider') {
         const lowX = g.x + 3, lowW = g.w - 6;
         return bodyShape(lowX, g.low.y, lowW, g.low.h, 7, ids, mat) + bodyShape(g.x, g.y, g.w, g.h, g.rx, ids, mat);
@@ -495,6 +564,16 @@ function renderBodyLayer(g, ids, hex) {
     if (g.kind === 'fold') {
         const cx = g.x + g.w / 2;
         out += `<rect x="${cx - 1.4}" y="${g.y + 2}" width="2.8" height="${g.h - 4}" fill="#000" opacity="0.22"/>`;
+    }
+    if (g.kind === 'dual') {
+        const cx = g.x + g.w / 2;
+        out += `<rect x="${cx - 2.6}" y="${g.y + 1}" width="5.2" height="${g.h - 2}" fill="url(#${ids.rim})" stroke="#000" stroke-opacity="0.45" stroke-width="0.3"/>
+            ${[0.22, 0.5, 0.78].map(function (f) { return `<rect x="${cx - 3.4}" y="${g.y + g.h * f - 3}" width="6.8" height="6" rx="1.6" fill="${shadeHex('#808080', 10)}" stroke="#000" stroke-opacity="0.45" stroke-width="0.3"/>`; }).join('')}`;
+    }
+    if (g.hinge) {
+        const cy = g.y + g.h / 2;
+        out += `<rect x="${g.x - 0.9}" y="${cy - 3.2}" width="2.2" height="6.4" rx="0.9" fill="url(#${ids.rim})" stroke="#000" stroke-opacity="0.4" stroke-width="0.25"/>
+            <rect x="${g.x + g.w - 1.3}" y="${cy - 3.2}" width="2.2" height="6.4" rx="0.9" fill="url(#${ids.rim})" stroke="#000" stroke-opacity="0.4" stroke-width="0.25"/>`;
     }
     if (g.kind === 'trifold') {
         [1, 2].forEach(function (i) {
@@ -516,6 +595,16 @@ function renderSideButtons(g) {
 }
 
 function renderAntenna(g, hex) {
+    if (g.kind === 'pda') {
+        return `<rect x="${g.x + g.w - 11}" y="${g.y - 4.5}" width="3.4" height="7" rx="1.4" fill="${shadeHex(hex, -18)}" stroke="#000" stroke-opacity="0.4" stroke-width="0.3"/>`;
+    }
+    if (g.popup) {
+        const cx = g.x + g.w / 2;
+        return `<rect x="${cx - 7}" y="${g.y - 3.6}" width="14" height="7" rx="2" fill="${shadeHex(hex, -10)}" stroke="#000" stroke-opacity="0.45" stroke-width="0.35"/>
+            <circle cx="${cx - 2.4}" cy="${g.y - 1}" r="1.5" fill="#0a0d14" stroke="#555" stroke-width="0.3"/>
+            <circle cx="${cx - 2.7}" cy="${g.y - 1.3}" r="0.4" fill="#fff" opacity="0.7"/>
+            <circle cx="${cx + 3.2}" cy="${g.y - 1}" r="0.8" fill="#fff4d1" opacity="0.9"/>`;
+    }
     if (g.kind !== 'bar' || g.yr >= 2003) return '';
     return `<rect x="${g.x + g.w - 13}" y="${g.y - 6}" width="5" height="8" rx="2.2" fill="${shadeHex(hex, -12)}" stroke="#000" stroke-opacity="0.35" stroke-width="0.3"/>`;
 }
@@ -574,20 +663,22 @@ function renderKeypad(x, top, w, bottom, hex, style, withNav) {
 }
 
 function renderQwerty(g, scr, hex) {
+    return qwertyKeys(g.x + 4.5, scr.y + scr.h + 3, g.w - 9, g.y + g.h - 5, hex, true);
+}
+
+// Blok keyboard QWERTY generik (bar QWERTY, slider touch, communicator).
+function qwertyKeys(x, top, w, bottom, hex, withNav) {
     const k = keyColors(hex);
-    const x = g.x + 4.5, w = g.w - 9;
-    const top = scr.y + scr.h + 3;
-    const bottom = g.y + g.h - 5;
-    const cx = g.x + g.w / 2;
+    const cx = x + w / 2;
     let out = '';
-    const navY = top + 4.5;
-    out += `<circle cx="${cx}" cy="${navY}" r="3.4" fill="${k.fill}" stroke="#000" stroke-opacity="0.45" stroke-width="0.35"/>
+    const navY = withNav ? top + 4.5 : top - 2;
+    if (withNav) out += `<circle cx="${cx}" cy="${navY}" r="3.4" fill="${k.fill}" stroke="#000" stroke-opacity="0.45" stroke-width="0.35"/>
         <circle cx="${cx - 0.9}" cy="${navY - 0.9}" r="1" fill="#fff" opacity="0.25"/>`;
-    [[x, '#2e9d4f'], [x + 10, k.fill], [x + w - 20, k.fill], [x + w - 10, '#c0392b']].forEach(function (p) {
+    if (withNav) [[x, '#2e9d4f'], [x + 10, k.fill], [x + w - 20, k.fill], [x + w - 10, '#c0392b']].forEach(function (p) {
         out += `<rect x="${p[0]}" y="${navY - 2.2}" width="9" height="4.4" rx="2" fill="${p[1]}" stroke="#000" stroke-opacity="0.35" stroke-width="0.3"/>`;
     });
     const rows = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
-    const kt = navY + 5;
+    const kt = withNav ? navY + 5 : top;
     const gap = 0.7;
     const kh = (bottom - kt - gap * 2) / 3;
     const kw = (w - gap * 9) / 10;
@@ -604,6 +695,27 @@ function renderQwerty(g, scr, hex) {
 
 function renderKeysForKind(g, scr, hex, spec) {
     if (g.kind === 'qwerty') return renderQwerty(g, scr, hex);
+    if (g.kind === 'communicator') {
+        return qwertyKeys(g.x + 5, g.low.y + 2.5, g.w - 10, g.low.y + g.low.h - 2.5, hex, false);
+    }
+    if (g.kind === 'swivel') {
+        return renderKeypad(g.x + 7, g.low.y + 5, g.w - 14, g.low.y + g.low.h - 5, hex, g.yr < 2007 ? 'color' : 'multi', true);
+    }
+    if (g.kind === 'pda') {
+        const cx = g.x + g.w / 2, y0 = scr.y + scr.h + 5, k = keyColors(hex);
+        let out = `<circle cx="${cx}" cy="${y0 + 7}" r="5.4" fill="${k.fill}" stroke="#000" stroke-opacity="0.4" stroke-width="0.35"/>
+            <circle cx="${cx}" cy="${y0 + 7}" r="2.2" fill="${k.hi}" stroke="#000" stroke-opacity="0.3" stroke-width="0.25"/>
+            <rect x="${g.x + 5}" y="${y0 + 2}" width="9" height="4.4" rx="2" fill="#2e9d4f" stroke="#000" stroke-opacity="0.35" stroke-width="0.3"/>
+            <rect x="${g.x + g.w - 14}" y="${y0 + 2}" width="9" height="4.4" rx="2" fill="#c0392b" stroke="#000" stroke-opacity="0.35" stroke-width="0.3"/>`;
+        [0, 1, 2, 3].forEach(function (i) {
+            const bx = g.x + 6 + i * ((g.w - 12 - 6) / 3);
+            out += `<rect x="${bx}" y="${y0 + 13.5}" width="6" height="4" rx="1.6" fill="${k.fill}" stroke="#000" stroke-opacity="0.35" stroke-width="0.3"/>`;
+        });
+        return out;
+    }
+    if (g.kind === 'slider' && g.keys === 'qwerty') {
+        return qwertyKeys(g.x + 4, g.y + g.h + 3.5, g.w - 8, g.low.y + g.low.h - 4, hex, false);
+    }
     if (g.kind === 'slider') {
         return renderKeypad(g.x + 8, g.low.y + 6, g.w - 22, g.low.y + g.low.h - 6, hex, 'color', false);
     }
@@ -667,9 +779,10 @@ function renderFace(g, scr, spec, hex, brand) {
     return out;
 }
 
-function renderNotchLayer(spec, scr) {
+function renderNotchLayer(spec, scr, g) {
     const notch = spec.notch || 'none';
     if (notch === 'none') return '';
+    if (g && (g.popup || g.kind === 'dual' || g.kind === 'communicator')) return '';
     const cx = scr.x + scr.w / 2;
     const top = scr.y;
     if (notch === 'notch') {
@@ -745,6 +858,49 @@ function renderCrease(g, scr) {
     const cy = scr.y + scr.h / 2;
     return `<rect x="${scr.x}" y="${cy - 0.5}" width="${scr.w}" height="1" fill="#000" opacity="0.28"/>
         <rect x="${scr.x}" y="${cy + 0.5}" width="${scr.w}" height="0.4" fill="#fff" opacity="0.08"/>`;
+}
+
+// Highlight kaca melengkung di sisi kiri-kanan layar (bentuk Edge).
+function renderEdgeLayer(g, scr, uid) {
+    if (!g.edge) return '';
+    const y = scr.y + 4, h = scr.h - 8;
+    return `<defs>
+            <linearGradient id="edgeL_${uid}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0.75"/><stop offset="0.35" stop-color="#7fb4ff" stop-opacity="0.22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+            <linearGradient id="edgeR_${uid}" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0.6"/><stop offset="0.35" stop-color="#7fb4ff" stop-opacity="0.18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+        </defs>
+        <rect x="${scr.x}" y="${y}" width="4.2" height="${h}" rx="2" fill="url(#edgeL_${uid})"/>
+        <rect x="${scr.x + scr.w - 4.2}" y="${y}" width="4.2" height="${h}" rx="2" fill="url(#edgeR_${uid})"/>`;
+}
+
+// Layar landscape lebar (communicator): bar judul + daftar + panel ikon.
+function screenWide(r, uid, brand, style) {
+    const x0 = r.x, y0 = r.y, w = r.w, h = r.h;
+    const mono = style === 'monochrome';
+    const tft = style === 'color_tft';
+    const bg = mono ? ['#a8bf80', '#8ca768'] : tft ? ['#2b6cb8', '#0b1f3d'] : ['#1b2a44', '#0a1220'];
+    const ink = mono ? '#1c2a10' : '#e8f1ff';
+    const bar = mono ? '#1c2a10' : (tft ? '#06132a' : '#050a14');
+    let icons = '';
+    if (!mono) {
+        for (let i = 0; i < 5; i++) icons += appIcon(x0 + w * 0.46 + i * 8.6, y0 + h * 0.42, 6.4, ICON_COLORS[i], true);
+    }
+    let lines = '';
+    for (let i = 0; i < 4; i++) {
+        lines += `<rect x="${x0 + 3}" y="${y0 + 6.4 + i * 3.8}" width="${w * (mono ? 0.78 : 0.34) - (i % 2) * 6}" height="1.5" rx="0.6" fill="${ink}" opacity="${mono ? 0.8 : 0.55}"/>`;
+    }
+    return `
+        <defs><linearGradient id="wide_${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${bg[0]}"/><stop offset="1" stop-color="${bg[1]}"/></linearGradient>
+            <pattern id="px_${uid}w" width="0.7" height="0.7" patternUnits="userSpaceOnUse"><path d="M0.7 0H0V0.7" fill="none" stroke="#000" stroke-opacity="0.14" stroke-width="0.12"/></pattern></defs>
+        <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="url(#wide_${uid})"/>
+        <rect x="${x0}" y="${y0}" width="${w}" height="3.6" fill="${bar}" opacity="0.85"/>
+        ${sigBars(x0 + 1.5, y0 + 0.3, mono ? '#b9cf92' : '#bcd8ff')}
+        <text x="${x0 + w / 2}" y="${y0 + 2.8}" text-anchor="middle" font-size="2.3" font-family="sans-serif" font-weight="700" fill="${mono ? '#b9cf92' : '#bcd8ff'}">${brand}</text>
+        ${batt(x0 + w - 1.5, y0 + 0.8, mono ? '#b9cf92' : '#bcd8ff')}
+        ${lines}${icons}
+        <rect x="${x0}" y="${y0 + h - 3.4}" width="${w}" height="3.4" fill="${bar}" opacity="0.9"/>
+        <text x="${x0 + 1.6}" y="${y0 + h - 1}" font-size="2" font-family="sans-serif" font-weight="700" fill="${mono ? '#b9cf92' : '#9ec5ff'}">${_scr('phone.mock.menu', 'Menu', 'Menu')}</text>
+        <text x="${x0 + w - 1.6}" y="${y0 + h - 1}" text-anchor="end" font-size="2" font-family="sans-serif" font-weight="700" fill="${mono ? '#b9cf92' : '#9ec5ff'}">${_scr('phone.mock.names', 'Nama', 'Names')}</text>
+        ${mono ? `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="url(#px_${uid}w)" opacity="1"/>` : ''}`;
 }
 
 // ============================================================
@@ -831,8 +987,19 @@ function renderBackView(g, spec, ids, hex, brand, n) {
     if (mat === 'glass' || mat === 'titanium') {
         out += `<path d="M ${T.x + 4} ${T.y + 2} L ${T.x + T.w * 0.62} ${T.y + 2} L ${T.x + 3} ${T.y + T.h * 0.5} Z" fill="#fff" opacity="${mat === 'glass' ? 0.1 : 0.05}"/>`;
     }
-    if (g.kind === 'flip' || g.kind === 'slider') {
+    if (g.kind === 'flip' || g.kind === 'slider' || g.hinge) {
         out += `<rect x="${T.x + 2}" y="${T.y + T.h * 0.5 - 0.5}" width="${T.w - 4}" height="1" fill="#000" opacity="0.3"/>`;
+    }
+    if (g.kind === 'dual' || g.kind === 'fold' || g.kind === 'trifold') {
+        out += `<rect x="${T.x + T.w / 2 - 0.6}" y="${T.y + 2}" width="1.2" height="${T.h - 4}" fill="#000" opacity="0.3"/>`;
+    }
+    if (g.kind === 'communicator') {
+        out += `<rect x="${T.x + 2}" y="${T.y + 30.5}" width="${T.w - 4}" height="1" fill="#000" opacity="0.3"/>`;
+    }
+    if (g.hinge) {
+        // layar cover mungil di sisi luar (flip lipat vertikal)
+        out += `<rect x="${T.x + T.w - 17}" y="${T.y + 5}" width="12" height="14" rx="3.2" fill="#07090f" stroke="#555" stroke-width="0.3"/>
+            <text x="${T.x + T.w - 11}" y="${T.y + 13}" text-anchor="middle" font-size="3.4" font-family="sans-serif" font-weight="700" fill="#cfe3ff">12:30</text>`;
     }
     out += renderRearCamera(T, n, yr, hex, spec);
     if (brand) {
@@ -848,11 +1015,71 @@ function renderBackView(g, spec, ids, hex, brand, n) {
 // opts: size, year, showBrand, view ('front'|'back'),
 //       isStatic, label (teks kecil di bawah ponsel)
 // ============================================================
+// Kotak batas bodi (unit viewBox) — dipakai opsi `fit` untuk meng-crop viewBox.
+function getBounds(g) {
+    if (g.kind === 'swivel') {
+        const a = g.rot * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a);
+        const px = g.pivot[0], py = g.pivot[1];
+        let x0 = g.x, x1 = g.x + g.w, y0 = g.low.y + g.low.h, y1 = y0;
+        [[g.x, g.y], [g.x + g.w, g.y], [g.x, g.y + g.h], [g.x + g.w, g.y + g.h]].forEach(function (pt) {
+            const dx = pt[0] - px, dy = pt[1] - py;
+            const rx = px + dx * c - dy * sn, ry = py + dx * sn + dy * c;
+            x0 = Math.min(x0, rx); x1 = Math.max(x1, rx); y0 = Math.min(y0, ry);
+        });
+        return [x0 - 3, y0 - 4, x1 + 3, GROUND + 9];
+    }
+    const top = (typeof g.ty === 'number' ? g.ty : g.y) - (g.popup || g.kind === 'pda' ? 9 : 5);
+    return [g.x - 3.5, top, g.x + g.w + 3.5, GROUND + 9];
+}
+
+// Layar depan: satu layar, dua layar (dual), atau layar lebar (communicator).
+function renderScreens(g, scr, era, uid, brand, displayId) {
+    if (g.kind === 'dual') {
+        const gap = 6.2, hw = (scr.w - gap) / 2;
+        return [0, 1].map(function (i) {
+            const r = { x: scr.x + i * (hw + gap), y: scr.y, w: hw, h: scr.h, cornerRadius: scr.cornerRadius };
+            const id = uid + 'd' + i;
+            return `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="${r.cornerRadius}" fill="#050505"/>
+                <clipPath id="screenclip_${id}"><rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="${r.cornerRadius}"/></clipPath>
+                <g clip-path="url(#screenclip_${id})">${screenContent(era.screenStyle, r, id, brand, displayId)}</g>
+                ${renderReflectionLayer(r, id, g.yr)}`;
+        }).join('');
+    }
+    const content = g.kind === 'communicator'
+        ? screenWide(scr, uid, brand, era.screenStyle)
+        : screenContent(era.screenStyle, scr, uid, brand, displayId);
+    return `<rect x="${scr.x}" y="${scr.y}" width="${scr.w}" height="${scr.h}" rx="${scr.cornerRadius}" fill="#050505"/>
+        <clipPath id="screenclip_${uid}">
+            <rect x="${scr.x}" y="${scr.y}" width="${scr.w}" height="${scr.h}" rx="${scr.cornerRadius}"/>
+        </clipPath>
+        <g clip-path="url(#screenclip_${uid})">
+            ${content}
+            ${renderCrease(g, scr)}
+        </g>
+        ${renderReflectionLayer(scr, uid, g.yr)}`;
+}
+
+// Swivel: keypad di bawah, badan layar berputar (tampak depan, pose setengah putar).
+function renderSwivelFront(g, scr, spec, hex, brand, ids, era, uid, displayId) {
+    const lower = renderBodyLayer(g, ids, hex) + renderKeysForKind(g, scr, hex, spec);
+    const upper = bodyShape(g.x, g.y, g.w, g.h, g.rx, ids, g.material) +
+        renderFace(g, scr, spec, hex, brand) +
+        renderScreens(g, scr, era, uid, brand, displayId);
+    const pivot = `<circle cx="${g.pivot[0]}" cy="${g.pivot[1]}" r="2.6" fill="url(#${ids.rim})" stroke="#000" stroke-opacity="0.5" stroke-width="0.3"/>`;
+    return lower + `<g transform="rotate(${g.rot} ${g.pivot[0]} ${g.pivot[1]})">${upper}</g>` + pivot;
+}
+
+// ============================================================
+// MAIN RENDER
+// opts: size, year, showBrand, view ('front'|'back'),
+//       isStatic, label (teks kecil di bawah ponsel),
+//       fit {w,h} — crop viewBox ke bodi & muat ke kotak (kartu pilihan bentuk)
+// ============================================================
 export function renderPhoneMockup(config, opts) {
     opts = opts || {};
     const size = opts.size || 220;
-    const width = Math.round(size * 0.55);
-    const height = size;
+    let width = Math.round(size * 0.55);
+    let height = size;
 
     const st = safeGetState();
     const year = opts.year || (st.time && st.time.currentYear) || 2000;
@@ -882,6 +1109,8 @@ export function renderPhoneMockup(config, opts) {
     let layers;
     if (view === 'back') {
         layers = renderBackView(g, spec, ids, bodyHex, brand, n);
+    } else if (g.kind === 'swivel') {
+        layers = renderSwivelFront(g, scr, spec, bodyHex, brand, ids, era, uid, displayId);
     } else {
         layers = `
             ${renderAntenna(g, bodyHex)}
@@ -889,22 +1118,25 @@ export function renderPhoneMockup(config, opts) {
             ${renderBodyLayer(g, ids, bodyHex)}
             ${renderFace(g, scr, spec, bodyHex, brand)}
             ${renderKeysForKind(g, scr, bodyHex, spec)}
-            <rect x="${scr.x}" y="${scr.y}" width="${scr.w}" height="${scr.h}" rx="${scr.cornerRadius}" fill="#050505"/>
-            <clipPath id="screenclip_${uid}">
-                <rect x="${scr.x}" y="${scr.y}" width="${scr.w}" height="${scr.h}" rx="${scr.cornerRadius}"/>
-            </clipPath>
-            <g clip-path="url(#screenclip_${uid})">
-                ${screenContent(era.screenStyle, scr, uid, brand, displayId)}
-                ${renderCrease(g, scr)}
-            </g>
-            ${renderReflectionLayer(scr, uid, g.yr)}
-            ${renderNotchLayer(spec, scr)}
+            ${renderScreens(g, scr, era, uid, brand, displayId)}
+            ${renderEdgeLayer(g, scr, uid)}
+            ${renderNotchLayer(spec, scr, g)}
             ${renderHomeLayer(spec, g, scr)}
         `;
     }
 
+    let viewBox = '0 0 100 180';
+    if (opts.fit && opts.fit.w && opts.fit.h) {
+        const bb = getBounds(g);
+        const bw = bb[2] - bb[0], bh = bb[3] - bb[1];
+        const sc = Math.min(opts.fit.w / bw, opts.fit.h / bh);
+        viewBox = bb[0] + ' ' + bb[1] + ' ' + bw + ' ' + bh;
+        width = Math.round(bw * sc);
+        height = Math.round(bh * sc);
+    }
+
     const svg = `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 180" width="${width}" height="${height}">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}">
             <defs>
                 <linearGradient id="${ids.body}" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="${shadeHex(bodyHex, 15)}"/>
@@ -924,7 +1156,7 @@ export function renderPhoneMockup(config, opts) {
         </svg>
     `;
 
-    const brandHtml = (opts.showBrand === false || view === 'back') ? '' :
+    const brandHtml = (opts.showBrand === false || view === 'back' || opts.fit) ? '' :
         (companyName ? `<div class="phone-brand">${escapeHtml(companyName)}</div>` : '');
     const capHtml = opts.label ? `<div class="phone-cap">${escapeHtml(opts.label)}</div>` : '';
     const cls = 'phone-mockup-wrap phone-era-' + era.id + ' phone-spec-' + spec.id + (opts.isStatic ? ' phone-static' : '');
