@@ -1,1 +1,37 @@
-
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0f141d">
+<link rel="icon" href="../../favicon.ico">
+<title>Admin · Smartphone Empire</title>
+<link rel="stylesheet" href="../assets/admin.css">
+</head>
+<body>
+<header>
+  <b>Smartphone Empire</b>
+  <nav aria-label="Menu admin">
+    <button class="on" data-tab="home">Ringkasan</button>
+    <button data-tab="orders">Pesanan</button>
+    <button data-tab="players">Pemain</button>
+  </nav>
+  <span class="who" id="who"></span>
+  <button class="btn" id="logout">Keluar</button>
+</header>
+<main id="main"><p class="muted">Memuat…</p></main>
+<dialog id="dlg">
+  <form id="dlg-form" method="dialog">
+    <h3>Atur saldo SIL</h3><p class="muted" id="dlg-name"></p>
+    <input type="hidden" id="dlg-id">
+    <div class="field"><label for="dlg-amt">Saldo baru</label><input id="dlg-amt" type="number" min="0" max="10000000" step="1" required></div>
+    <div class="field"><label for="dlg-why">Alasan (tercatat di ledger)</label><input id="dlg-why" maxlength="80" placeholder="Contoh: kompensasi bug"></div>
+    <div class="acts"><button class="btn" id="dlg-cancel" type="button">Batal</button><button class="btn pri" id="dlg-save" type="submit">Simpan</button></div>
+  </form>
+</dialog>
+<script type="module" src="../assets/dashboard.js"></script>
+</body>
+</html>
