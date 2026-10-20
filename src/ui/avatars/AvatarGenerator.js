@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/avatars/AvatarGenerator.js
 // v2027.7a — Modern 2026 avatar: geometric + initials.
 // Gaya Slack/Linear/Notion. Deterministik dari nama.
@@ -15,8 +16,8 @@ function getInitials(name) {
     if (!name) return '??';
     const parts = String(name).trim().split(/\s+/).filter(Boolean);
     if (!parts.length) return '??';
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    if (parts.length === 1) return escapeHtml(parts[0].slice(0, 2).toUpperCase());
+    return escapeHtml((parts[0][0] + parts[parts.length - 1][0]).toUpperCase());
 }
 
 const AVATAR_PALETTES = [
