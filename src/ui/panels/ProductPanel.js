@@ -5,8 +5,10 @@ import { escapeHtml } from '../../utils/html.js';
 // v2027.50 — i18n tuntas: fallback error, label lifecycle chip, nama tier fab,
 //           nama kampanye, meta kampanye, aria-label; + listener lang:changed
 //           untuk modal detail/kampanye/order yang sedang terbuka.
+// v2029.7 — [FIX OS NAME] Menampilkan nama OS/Lisensi yang rapi di detail produk, bukan ID mentah.
 import { renderSalesChart } from './SalesChart.js';
 import { getComponentById } from '../../data/components.data.js';
+import { getLicenseById } from '../../data/os.data.js'; // [FIX] Import data lisensi OS
 import { state } from '../../core/GameState.js';
 import { ToastService } from '../../core/ToastService.js';
 import { openChipDesigner } from './ChipDesignerPanel.js';
@@ -23,6 +25,29 @@ function safe(fn, fallback) {
         console.error('[ProductPanel] section error:', err);
         return fallback || '<div class="card" style="border-color:var(--danger);"><div class="card-title" style="color:var(--danger);">' + tx('prod.error', 'Error') + '</div><div style="font-size:12px;color:var(--text-dim);">' + escapeHtml(err.message || tx('prod.error_unknown', 'tidak diketahui')) + '</div></div>';
     }
+}
+
+// [FIX] Fungsi untuk menerjemahkan ID OS menjadi nama yang rapi
+function _getOsDisplayName(osOptionId) {
+    if (!osOptionId) return '-';
+    
+    // Jika menggunakan OS milik sendiri (own:versi_id)
+    if (osOptionId.startsWith('own:')) {
+        const versionId = osOptionId.slice(4);
+        const osData = state.get().os || {};
+        const versions = osData.versions || [];
+        const v = versions.find(x => x.id === versionId);
+        return v ? (v.versionString || v.name || 'OS Milik Sendiri') : 'OS Milik Sendiri';
+    }
+    
+    // Jika menggunakan lisensi pihak ketiga (license:lis_xxx)
+    if (osOptionId.startsWith('license:')) {
+        const licenseId = osOptionId.slice(8);
+        const lic = getLicenseById(licenseId);
+        return lic ? lic.name : osOptionId;
+    }
+    
+    return osOptionId;
 }
 
 // ============================================================
@@ -431,17 +456,24 @@ export function openProductDetailModal(params) {
 
         var specRows = '';
         var specs = [
-            [t('prod.detail.spec_screen'), p.config.displayId],
-            [t('prod.detail.spec_camera'), p.config.cameraId],
-            [t('prod.detail.spec_battery'), p.config.batteryId],
-            [t('prod.detail.spec_chip'), p.config.chipId],
-            [t('prod.detail.spec_network'), p.config.networkId],
-            [t('prod.detail.spec_body'), p.config.bodyId],
-            [t('prod.detail.spec_os'), p.config.osOptionId]
+            [t('prod.detail.spec_screen'), p.config.displayId, 'comp'],
+            [t('prod.detail.spec_camera'), p.config.cameraId, 'comp'],
+            [t('prod.detail.spec_battery'), p.config.batteryId, 'comp'],
+            [t('prod.detail.spec_chip'), p.config.chipId, 'comp'],
+            [t('prod.detail.spec_network'), p.config.networkId, 'comp'],
+            [t('prod.detail.spec_body'), p.config.bodyId, 'comp'],
+            [t('prod.detail.spec_os'), p.config.osOptionId, 'os'] // [FIX] Tandai baris ini sebagai OS
         ];
+        
         for (var i = 0; i < specs.length; i++) {
-            var comp = getComponentById(specs[i][1]);
-            var label = comp ? comp.name : (specs[i][1] || '-');
+            var label = '-';
+            // [FIX] Gunakan fungsi khusus untuk OS
+            if (specs[i][2] === 'os') {
+                label = _getOsDisplayName(specs[i][1]);
+            } else {
+                var comp = getComponentById(specs[i][1]);
+                label = comp ? comp.name : (specs[i][1] || '-');
+            }
             specRows += '<div class="sum-row"><span>' + specs[i][0] + '</span><b>' + escapeHtml(label) + '</b></div>';
         }
 
@@ -551,4 +583,4 @@ export function openOrderProductionModal(params) {
     } catch (err) {
         console.error('[openOrderProductionModal] error:', err);
     }
-}
+            }
