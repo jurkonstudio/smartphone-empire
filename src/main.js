@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2028.52 — [FIX] Menambahkan pemicu syncSilicon instan saat boot dan saat sesi berhasil dipulihkan.
+// v2028.53 — [FIX] Optimasi render header (debounce via rAF) agar tidak tabrakan dengan panel SIL.
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -971,8 +971,18 @@ function bindStateEvents() {
     });
 
     bus.on('lang:changed', function () { renderAll(); updateTitle(); });
-    bus.on('silicon:changed', function () { renderHeaderOnly(); });
-    bus.on('silicon:display', function () { renderHeaderOnly(); });
+    
+    // [FIX] Optimasi render header agar tidak bertabrakan dengan panel SIL
+    var _headerDebounce = null;
+    function _debouncedRenderHeader() {
+        if (_headerDebounce) return;
+        _headerDebounce = requestAnimationFrame(function() {
+            _headerDebounce = null;
+            renderHeaderOnly();
+        });
+    }
+    bus.on('silicon:changed', _debouncedRenderHeader);
+    bus.on('silicon:display', _debouncedRenderHeader);
 
     // Dompet Universal: beri tahu pemain saat SIL/uang dipakai lintas mata uang.
     (function () {
