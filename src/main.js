@@ -120,6 +120,12 @@ var activeSubtab = 'tech';
 var activeProdSubtab = 'design';
 var activeMarketSubtab = 'share';
 var activeHqSubtab = 'overview';
+var NAV_SUBTABS = {
+    research: ['tech', 'os', 'manufaktur', 'chip'],
+    products: ['design', 'catalog', 'sales', 'chip'],
+    market: ['share', 'competitors', 'trends', 'promo', 'public'],
+    team: ['office', 'overview', 'team', 'exchange', 'bank']
+};
 var _burnWarn = null;
 
 var els = {
@@ -538,7 +544,20 @@ function bindGlobalClicks() {
         if (notifBtn) { e.preventDefault(); vibrate(8); toggleNotificationPanel(); return; }
 
         var navBtn = e.target.closest('[data-nav]');
-        if (navBtn) { e.preventDefault(); vibrate(8); navigate(navBtn.dataset.nav); return; }
+        if (navBtn) {
+            e.preventDefault(); vibrate(8);
+            // data-nav-sub: buka sub-tab tertentu (dipakai kartu peta kampus). Hanya id yang dikenal.
+            var navSub = navBtn.dataset.navSub, navView = navBtn.dataset.nav;
+            if (navSub && NAV_SUBTABS[navView] && NAV_SUBTABS[navView].indexOf(navSub) >= 0) {
+                if (navView === 'research') activeSubtab = navSub;
+                else if (navView === 'products') activeProdSubtab = navSub;
+                else if (navView === 'market') activeMarketSubtab = navSub;
+                else if (navView === 'team') activeHqSubtab = navSub;
+                if (navView === activeView) { renderView(); return; }   // sudah di tab itu: cukup ganti sub-tab
+            }
+            navigate(navView);
+            return;
+        }
 
         var guideReport = e.target.closest('[data-guide-report]');
         if (guideReport) { e.preventDefault(); vibrate(8); openDiagnosticModal(); return; }
