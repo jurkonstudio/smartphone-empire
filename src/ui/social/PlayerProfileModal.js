@@ -5,6 +5,8 @@ import { Modal } from '../modal.js';
 import { LanguageService, t } from '../../core/LanguageService.js';
 import { avatarHtml, resolveAvatarUrls, esc } from './AvatarView.js';
 import { pidTf, copyPublicId } from './PlayerIdView.js';
+import { CloudService } from '../../services/CloudService.js';
+import { openInboxCompose } from '../panels/InboxPanel.js';
 // v2.4 — teks waktu/umur akun & label tidak lagi hardcoded Indonesia (ikut bahasa aktif).
 
 var MONTHS = {
@@ -101,9 +103,17 @@ export async function openPlayerProfileModal(profile) {
         '<div class="sum-row"><span>🟢 ' + esc(pidTf('pp.view.last_seen', _lang() === 'en' ? 'Last Active' : 'Terakhir Aktif')) + '</span><b>' + esc(lastSeen) + '</b></div>' +
         '<div class="sum-row"><span>' + esc(t('pp.view.joined')) + '</span><b>' + esc(_fmtDate(profile.created_at)) + '</b></div>' +
         '<div class="sum-row"><span>' + esc(t('pp.view.founded')) + '</span><b>' + esc(_fmtFounded(profile.founded_year, profile.founded_month)) + '</b></div>' +
+        ((profile.public_id && profile.id !== CloudService.getUserId() && CloudService.getStatus() === 'connected')
+            ? '<button type="button" class="btn-secondary" data-pf-msg="' + esc(profile.public_id) + '" style="width:100%;margin-top:14px;padding:10px;">✉ Kirim pesan</button>' : '') +
         '<button type="button" class="btn-secondary" data-modal-close style="width:100%;margin-top:16px;padding:10px;">' + esc(t('pp.view.close')) + '</button>';
 
     Modal.open('player-profile', html);
     var chip = document.querySelector('[data-modal-id="player-profile"] [data-copy-pid]');
     if (chip) chip.addEventListener('click', function () { copyPublicId(chip.getAttribute('data-copy-pid')); });
+    var msgBtn = document.querySelector('[data-modal-id="player-profile"] [data-pf-msg]');
+    if (msgBtn) msgBtn.addEventListener('click', function () {
+        var pid = msgBtn.getAttribute('data-pf-msg'), nm = company;
+        Modal.close('player-profile', true);
+        openInboxCompose(pid, nm);
+    });
 }
