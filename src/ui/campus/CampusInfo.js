@@ -52,20 +52,6 @@ var NAV = {
 var VIEW_LABEL = {
     team: ['HQ', 'HQ'], research: ['Riset', 'Research'], products: ['Produk', 'Products'], market: ['Pasar', 'Market']
 };
-// Status "isi game" per bangunan: [Indonesia, English]. Tampil di kartu info saat bangunan dipilih.
-var STATUS = {
-    hq: ['Perusahaan: {name}', 'Company: {name}'],
-    hqWarn: ['⚠️ Kas negatif — segera perbaiki arus kas!', '⚠️ Negative cash — fix your cash flow soon!'],
-    labBusy: ['🔬 Riset sedang berjalan', '🔬 Research in progress'],
-    labIdle: ['Lab siap — mulai riset baru', 'Lab is ready — start new research'],
-    factoryBusy: ['🏭 Fab sedang memproduksi chip', '🏭 Fab is producing chips'],
-    factoryIdle: ['Fab menganggur', 'Fab is idle'],
-    osBusy: ['🖥️ Versi OS baru sedang dikembangkan', '🖥️ A new OS version is in development'],
-    osBugs: ['🐞 {n} bug aktif belum diperbaiki', '🐞 {n} active bug(s) still unpatched'],
-    osOk: ['Server stabil, tanpa bug aktif', 'Servers stable, no active bugs'],
-    hero: ['📱 Produk andalan: {name}', '📱 Flagship product: {name}'],
-    launch: ['🚀 Produk baru sedang disiapkan', '🚀 A new product is being prepared']
-};
 var UI = [
     {   // id
         levelOf: 'Level {lv} dari {max}', maxed: 'Level maksimum tercapai ✨',
@@ -111,25 +97,6 @@ function _name(id) { return _tf('campus.info.name.' + id, NAMES[id]); }
 function _desc(id) { return _tf('campus.info.desc.' + id, DESC[id]); }
 function _unit(id) { return _tf('campus.info.unit.' + id, UNITS[id]); }
 function _view(v) { return _tf('campus.info.view.' + v, VIEW_LABEL[v]); }
-function _st(k, vars) { return _tf('campus.info.status.' + k, STATUS[k], vars); }
-
-// Baris status dari isi game (plan.flavor). Kosong bila tidak ada yang relevan.
-function statusLines(id, plan) {
-    var f = plan && plan.flavor, out = [];
-    if (!f) return out;
-    if (id === 'hq') out.push(f.warn ? _st('hqWarn') : _st('hq', { name: f.brand }));
-    else if (id === 'lab') out.push(f.research ? _st('labBusy') : _st('labIdle'));
-    else if (id === 'factory') out.push(f.fabBusy ? _st('factoryBusy') : _st('factoryIdle'));
-    else if (id === 'os') {
-        if (f.osBugs > 0) out.push(_st('osBugs', { n: f.osBugs }));
-        else out.push(_st('osOk'));
-        if (f.osBusy) out.push(_st('osBusy'));
-    } else if (id === 'store' || id === 'billboard' || id === 'arena') {
-        if (f.hero && f.hero.name) out.push(_st('hero', { name: f.hero.name }));
-        if (id === 'arena' && f.launch) out.push(_st('launch'));
-    }
-    return out;
-}
 
 export function getUiStrings() {
     return {
@@ -147,14 +114,16 @@ export function getBuildingName(id) {
 export function hasCelebration(id) { return !!RULES[id]; }
 
 // Mengembalikan struktur siap-render untuk kartu info, atau null bila id tidak dikenal.
-export function getBuildingInfo(id, plan, data) {
+export function getBuildingInfo(id, plan, data, alerts) {
     if (!plan || !NAMES[id]) return null;
     var L = langIdx();
     var info = {
         id: id, icon: ICONS[id] || '🏗️', name: _name(id), desc: _desc(id),
         level: 0, max: 0, hasLevels: false, pct: 0, maxed: false, hint: '', levelText: '', nav: null,
-        status: statusLines(id, plan).join('\n')
+        alert: null
     };
+    var al = alerts && alerts[id];
+    if (al) info.alert = { tone: al.tone, text: al.text, action: al.action };
     var r = RULES[id];
     if (!r) {
         info.levelText = _ui('decor');
@@ -184,6 +153,6 @@ export function getBuildingInfo(id, plan, data) {
         var view = NAV[id];
         if (view) info.nav = { view: view, label: _ui('open', { view: _view(view) }) };
     }
-    info.sig = [id, L, info.level, Math.round(info.pct * 100), info.hint, info.status].join('|');
+    info.sig = [id, L, info.level, Math.round(info.pct * 100), info.hint, info.alert ? info.alert.tone + info.alert.text : ''].join('|');
     return info;
 }

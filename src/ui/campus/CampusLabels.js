@@ -25,11 +25,17 @@ var CSS = [
     'background:var(--accent-soft,rgba(37,99,235,.14));}',
     '.cmp-lbl.max .l{color:#8a6a10;background:rgba(224,180,69,.26);}',
     '.cmp-lbl.hov{border-color:var(--accent,#2563eb);}',
+    '.cmp-lbl .a{display:none;flex:0 0 auto;width:8px;height:8px;border-radius:50%;}',
+    '.cmp-lbl.warn .a,.cmp-lbl.info .a{display:block;animation:cmpAl 1.4s ease-in-out infinite;}',
+    '.cmp-lbl.warn .a{background:#ef4444;box-shadow:0 0 0 2px rgba(239,68,68,.28);}',
+    '.cmp-lbl.info .a{background:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.28);}',
+    '.cmp-lbl.warn{border-color:rgba(239,68,68,.6);}',
+    '@keyframes cmpAl{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.45;transform:scale(.8);}}',
     '.cmp-lbl.sel{background:var(--accent,#2563eb);border-color:var(--accent,#2563eb);color:#fff;}',
     '.cmp-lbl.sel .l{color:#fff;background:rgba(255,255,255,.22);}',
     'html[data-theme="dark"] .cmp-lbl.max .l{color:#f1cf72;}',
     'html[data-perf="lite"] .cmp-lbl{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--bg-2,#fff);}',
-    '@media (prefers-reduced-motion:reduce){.cmp-lbl{transition:none;}}'
+    '@media (prefers-reduced-motion:reduce){.cmp-lbl{transition:none;}.cmp-lbl .a{animation:none!important;}}'
 ].join('');
 
 function ensureStyle() {
@@ -71,7 +77,8 @@ export function createCampusLabels(THREE, container) {
                 node.className = 'cmp-lbl';
                 var nEl = document.createElement('span'); nEl.className = 'n';
                 var lEl = document.createElement('span'); lEl.className = 'l';
-                node.appendChild(nEl); node.appendChild(lEl);
+                var aEl = document.createElement('span'); aEl.className = 'a';
+                node.appendChild(aEl); node.appendChild(nEl); node.appendChild(lEl);
                 layer.appendChild(node);
                 cur = items[it.key] = { key: it.key, node: node, nEl: nEl, lEl: lEl, vis: false, px: -1, py: -1, name: '', level: -1, w: 60 };
             }
@@ -80,6 +87,9 @@ export function createCampusLabels(THREE, container) {
             if (cur.level !== it.level) { cur.level = it.level; cur.lEl.textContent = 'Lv ' + it.level; }
             cur.node.classList.toggle('max', !!it.max && it.level >= it.max);
             cur.hasLevel = !!it.max;
+            cur.alert = it.alert || '';
+            cur.node.classList.toggle('warn', cur.alert === 'warn');
+            cur.node.classList.toggle('info', cur.alert === 'info');
         }
         for (var k in items) {
             if (!seen[k]) { layer.removeChild(items[k].node); delete items[k]; }
@@ -99,7 +109,7 @@ export function createCampusLabels(THREE, container) {
 
     function estWidth(it, showLevel) {
         // Estimasi lebar tanpa mengukur DOM (hindari layout thrash): ~5.9px per huruf + padding.
-        var w = it.name.length * 5.9 + 18 + (showLevel && it.hasLevel ? 30 : 0);
+        var w = it.name.length * 5.9 + 18 + (showLevel && it.hasLevel ? 30 : 0) + (it.alert ? 13 : 0);
         return Math.min(160, w);
     }
 
@@ -112,7 +122,7 @@ export function createCampusLabels(THREE, container) {
         for (var n = 0; n < order.length; n++) {
             var it = items[order[n]];
             var important = it.key === selKey || it.key === hovKey;
-            var allowed = important || zoom >= ZOOM_ALL || it.prio <= 1;
+            var allowed = important || zoom >= ZOOM_ALL || it.prio <= 1 || !!it.alert;
             var show = false, sx = 0, sy = 0, bw = 0;
             if (allowed) {
                 v.set(it.x, it.y, it.z).project(cam);

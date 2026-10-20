@@ -33,11 +33,21 @@ var CSS = [
     '.cmp-bar i{display:block;height:100%;width:0;border-radius:inherit;background:var(--accent,#2563eb);transition:width .35s ease;}',
     '.cmp-card.max .cmp-bar i{background:linear-gradient(90deg,#e0b445,#f5d77a);}',
     '.cmp-hint{font-size:12px;color:var(--text-secondary,#4a5260);}',
-    '.cmp-status{font-size:12px;font-weight:600;color:var(--accent,#2563eb);margin-top:4px;white-space:pre-line;}',
-    '.cmp-card.compact .cmp-status{display:none;}',
     '.cmp-desc{font-size:11px;color:var(--text-tertiary,#7a8494);margin-top:2px;}',
     '.cmp-go{margin-top:8px;width:100%;min-height:40px;border:0;border-radius:10px;background:var(--accent,#2563eb);',
     'color:#fff;font-weight:600;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;}',
+    '.cmp-alert{display:none;margin-top:6px;padding:6px 9px;border-radius:9px;font-size:12px;font-weight:600;line-height:1.3;}',
+    '.cmp-alert.warn{display:block;background:rgba(239,68,68,.13);color:#b91c1c;border:1px solid rgba(239,68,68,.35);}',
+    '.cmp-alert.info{display:block;background:rgba(245,158,11,.14);color:#92580a;border:1px solid rgba(245,158,11,.35);}',
+    'html[data-theme=\"dark\"] .cmp-alert.warn{color:#fca5a5;}html[data-theme=\"dark\"] .cmp-alert.info{color:#fcd34d;}',
+    '.cmp-go.sec{background:var(--bg-3,#e5e8ee);color:var(--text-primary,#111);font-weight:500;min-height:34px;margin-top:6px;}',
+    '.cmp-go.warn{background:#dc2626;}.cmp-go.info{background:#d97706;}',
+    '.cmp-ctl .cmp-al{position:relative;display:none;color:#fff;font-weight:800;font-size:16px;}',
+    '.cmp-ctl .cmp-al.on{display:block;}',
+    '.cmp-ctl .cmp-al.warn{background:#dc2626;border-color:#dc2626;}.cmp-ctl .cmp-al.info{background:#d97706;border-color:#d97706;}',
+    '.cmp-ctl .cmp-al b{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;',
+    'background:#fff;color:#111;font-size:10px;line-height:16px;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.3);}',
+    '.cmp-card.compact .cmp-alert{margin-top:4px;padding:4px 8px;}',
     '.cmp-card.compact{padding:8px 10px 10px;}',
     '.cmp-card.compact .cmp-pips,.cmp-card.compact .cmp-desc{display:none;}',
     '.cmp-card.compact .cmp-ico{width:30px;height:30px;font-size:16px;}',
@@ -91,15 +101,20 @@ export function createCampusOverlay(container, cfg) {
     var pips = el('div', 'cmp-pips');
     var bar = el('div', 'cmp-bar'); var fill = el('i'); bar.appendChild(fill);
     var hint = el('div', 'cmp-hint');
-    var status = el('div', 'cmp-status');
     var desc = el('div', 'cmp-desc');
-    var go = el('button', 'cmp-go'); go.type = 'button';
+    var alertEl = el('div', 'cmp-alert');
+    var goA = el('button', 'cmp-go'); goA.type = 'button';     // aksi dari alert (utama bila ada)
+    var go = el('button', 'cmp-go'); go.type = 'button';       // tombol \"Buka ...\" biasa
     card.appendChild(head); card.appendChild(pips); card.appendChild(bar);
-    card.appendChild(hint); card.appendChild(status); card.appendChild(desc); card.appendChild(go);
+    card.appendChild(hint); card.appendChild(desc); card.appendChild(alertEl);
+    card.appendChild(goA); card.appendChild(go);
 
     // ---------- tombol peta ----------
     var ctl = el('div', 'cmp-ctl');
     var bIn = el('button', '', '+'), bOut = el('button', '', '−'), bReset = el('button', '', '⌂');
+    var bAlert = el('button', 'cmp-al'); bAlert.type = 'button';
+    var bAlertN = el('b'); bAlert.textContent = '!'; bAlert.appendChild(bAlertN);
+    ctl.appendChild(bAlert);
     [bIn, bOut, bReset].forEach(function (b) { b.type = 'button'; ctl.appendChild(b); });
 
     // ---------- banner ----------
@@ -127,6 +142,23 @@ export function createCampusOverlay(container, cfg) {
     bIn.addEventListener('click', function () { if (cfg.onZoom) cfg.onZoom(1); });
     bOut.addEventListener('click', function () { if (cfg.onZoom) cfg.onZoom(-1); });
     bReset.addEventListener('click', function () { if (cfg.onReset) cfg.onReset(); });
+    bAlert.addEventListener('click', function () { if (cfg.onAlert) cfg.onAlert(); });
+
+    // Pasang aksi pada tombol lewat atribut data-* (ditangani delegasi klik di main.js).
+    var ACT_ATTRS = ['data-nav', 'data-nav-sub', 'data-chip-action'];
+    function setAction(btn, label, nav, sub, attrs) {
+        ACT_ATTRS.forEach(function (a) { btn.removeAttribute(a); });
+        btn.textContent = label + ' →';
+        if (nav) btn.setAttribute('data-nav', nav);
+        if (sub) btn.setAttribute('data-nav-sub', sub);
+        if (attrs) { for (var k in attrs) btn.setAttribute(k, attrs[k]); }
+    }
+    function setAlertCount(n, warn) {
+        bAlert.classList.toggle('on', n > 0);
+        bAlert.classList.toggle('warn', n > 0 && !!warn);
+        bAlert.classList.toggle('info', n > 0 && !warn);
+        bAlertN.textContent = n > 9 ? '9+' : String(n);
+    }
     // Sentuhan di atas kartu/tombol tidak boleh ikut menggeser peta.
     [card, ctl, banner].forEach(function (n) { n.addEventListener('pointerdown', stop); });
 
@@ -141,8 +173,6 @@ export function createCampusOverlay(container, cfg) {
         name.textContent = info.name;
         sub.textContent = info.levelText;
         hint.textContent = info.hint;
-        status.textContent = info.status || '';
-        status.style.display = info.status ? '' : 'none';
         desc.textContent = info.desc;
         card.classList.toggle('max', !!info.maxed);
         pips.style.display = info.hasLevels ? '' : 'none';
@@ -156,13 +186,22 @@ export function createCampusOverlay(container, cfg) {
             }
             fill.style.width = Math.round(info.pct * 100) + '%';
         }
+        var al = info.alert;
+        alertEl.className = 'cmp-alert' + (al ? ' ' + al.tone : '');
+        alertEl.textContent = al ? (al.tone === 'warn' ? '⚠ ' : '💡 ') + al.text : '';
+        if (al && al.action) {
+            goA.style.display = '';
+            goA.className = 'cmp-go ' + al.tone;
+            setAction(goA, al.action.label, al.action.nav, al.action.sub, al.action.attrs);
+        } else {
+            goA.style.display = 'none';
+        }
         if (info.nav) {
             go.style.display = '';
-            go.textContent = info.nav.label + ' →';
-            go.setAttribute('data-nav', info.nav.view);   // ditangani delegasi klik di main.js
+            go.className = 'cmp-go' + (al && al.action ? ' sec' : '');
+            setAction(go, info.nav.label, info.nav.view, '', null);
         } else {
             go.style.display = 'none';
-            go.removeAttribute('data-nav');
         }
     }
 
@@ -206,6 +245,7 @@ export function createCampusOverlay(container, cfg) {
         showBanner: showBanner,
         setLabels: setLabels,
         setCompact: setCompact,
+        setAlertCount: setAlertCount,
         dispose: function () {
             document.removeEventListener('keydown', onKey);
             if (bannerTimer) clearTimeout(bannerTimer);
