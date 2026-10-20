@@ -215,6 +215,36 @@ export const SupabaseAdapter = {
         return function () { try { c.removeChannel(ch); } catch (e) {} };
     },
 
+    // ---------- Inbox (pesan admin + notifikasi SIL) ----------
+    inboxList: async function (limit) {
+        var c = await getClient();
+        var res = await c.from('inbox_messages')
+            .select('id, kind, title, body, amount, created_at, read_at')
+            .order('id', { ascending: false }).limit(limit || 60);
+        if (res.error) throw mk(res.error);
+        return res.data || [];
+    },
+    inboxMarkRead: async function (ids) {
+        var c = await getClient();
+        var res = await c.rpc('inbox_mark_read', { p_ids: ids && ids.length ? ids : null });
+        if (res.error) throw mk(res.error);
+        return res.data || 0;
+    },
+    inboxDelete: async function (ids) {
+        var c = await getClient();
+        var res = await c.rpc('inbox_delete', { p_ids: ids && ids.length ? ids : null });
+        if (res.error) throw mk(res.error);
+        return res.data || 0;
+    },
+    subscribeInbox: async function (userId, cb) {
+        var c = await getClient();
+        var ch = c.channel('inbox:' + userId).on('postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'inbox_messages', filter: 'user_id=eq.' + userId },
+            function (p) { if (p && p.new) cb(p.new); }
+        ).subscribe();
+        return function () { try { c.removeChannel(ch); } catch (e) {} };
+    },
+
     subscribeWallet: async function (userId, cb) {
         var c = await getClient();
         var ch = c.channel('wallet:' + userId).on('postgres_changes',
