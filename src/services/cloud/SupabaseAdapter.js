@@ -10,6 +10,7 @@ var PUB_COLS = 'id, display_name, avatar_path, company_name, founded_year, found
 function _pubCols() { return PUB_COLS + (_pubIdOk ? ', public_id' : ''); }
 function _isPubIdMissing(err) { return !!err && String(err.message || '').toLowerCase().indexOf('public_id') >= 0; }
 var _idemOk = true;
+var _reasonOk = true;
 
 function classify(err) {
     if (!err) return 'unknown';
@@ -374,15 +375,32 @@ export const SupabaseAdapter = {
         return res.data == null ? 0 : res.data;
     },
 
-    rpcSpendSilicon: async function (amount, requestId) {
+    rpcSpendSilicon: async function (amount, requestId, reason) {
         var c = await getClient();
+        var missing = /could not find the function|schema cache/i;
         var args = { p_amount: Math.floor(amount) };
         if (requestId && _idemOk) args.p_request_id = String(requestId).slice(0, 64);
+        if (reason && _reasonOk && args.p_request_id) args.p_reason = String(reason).slice(0, 80);
         var res = await c.rpc('spend_silicon', args);
-        if (res.error && args.p_request_id && /could not find the function|schema cache/i.test(String(res.error.message || ''))) {
+        // Kompatibel mundur: SQL lama (tanpa p_reason / tanpa p_request_id) tetap jalan.
+        if (res.error && args.p_reason !== undefined && missing.test(String(res.error.message || ''))) {
+            _reasonOk = false;
+            delete args.p_reason;
+            res = await c.rpc('spend_silicon', args);
+        }
+        if (res.error && args.p_request_id && missing.test(String(res.error.message || ''))) {
             _idemOk = false;
             res = await c.rpc('spend_silicon', { p_amount: Math.floor(amount) });
         }
+        if (res.error) throw mk(res.error);
+        return res.data == null ? 0 : res.data;
+    },
+
+    // [AUDIT] Kembalikan potongan SIL (aksi gagal setelah bayar). Server hanya mengembalikan SEKALI
+    // dan hanya untuk potongan milik akun ini (lihat supabase/21-silicon-audit-fix.sql).
+    rpcRefundSilicon: async function (requestId) {
+        var c = await getClient();
+        var res = await c.rpc('refund_silicon', { p_request_id: String(requestId).slice(0, 64) });
         if (res.error) throw mk(res.error);
         return res.data == null ? 0 : res.data;
     },
