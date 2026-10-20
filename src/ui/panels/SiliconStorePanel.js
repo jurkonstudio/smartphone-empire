@@ -1,412 +1,1303 @@
-// FILE: src/ui/panels/SiliconStorePanel.js
-// v2029.6 — [FIX] Cegah double-render saat proses sinkronisasi. Ganti _e() ke _tf().
-import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
-import { Modal } from '../modal.js';
-import { t, LanguageService } from '../../core/LanguageService.js';
-import { SiliconService } from '../../systems/SiliconService.js';
-import { PaymentService } from '../../systems/PaymentService.js';
-import { PAYMENT_GROUPS, getCashPerSil } from '../../data/silicon.data.js';
-import { ToastService } from '../../core/ToastService.js';
-import { bus } from '../../core/EventBus.js';
-import { DEV_BUILD } from '../../config/dev.config.js';
-import { state } from '../../core/GameState.js';
-import { CloudService } from '../../services/CloudService.js';
+// FILE: src/main.js
+// v2028.53 — [FIX] Optimasi render header (debounce via rAF) agar tidak tabrakan dengan panel SIL.
+import { APP_CONFIG } from './config/app.config.js';
+import { VIEW_TITLES } from './config/constants.js';
+import { bus } from './core/EventBus.js';
+import { state } from './core/GameState.js';
+import { TimeSystem } from './core/TimeSystem.js';
+import { SaveService } from './core/SaveService.js';
+import { DEV_BUILD } from './config/dev.config.js';
+import { ToastService } from './core/ToastService.js';
+import { NotificationPrefs } from './core/NotificationPrefs.js';
+import { ThemeService } from './core/ThemeService.js';
+import { LanguageService } from './core/LanguageService.js';
+import { ChipResearchSystem } from './core/ChipResearchSystem.js';
+import { EconomySystem } from './systems/EconomySystem.js';
+import { QuestSystem } from './systems/QuestSystem.js';
+import { TutorialSystem } from './systems/TutorialSystem.js';
+import { ResearchSystem } from './systems/ResearchSystem.js';
+import { OSSystem } from './systems/OSSystem.js';
+import { ProductSystem } from './systems/ProductSystem.js';
+import { MarketSystem } from './systems/MarketSystem.js';
+import { CompetitorSystem } from './systems/CompetitorSystem.js';
+import { CompetitorActionSystem } from './systems/CompetitorActionSystem.js';
+import { PublicOpinionSystem } from './systems/PublicOpinionSystem.js';
+import { EraSystem } from './systems/EraSystem.js';
+import { TeamSystem } from './systems/TeamSystem.js';
+import { ChipSystem } from './systems/ChipSystem.js';
+import { FabSystem } from './systems/FabSystem.js';
+import { NewsSystem } from './systems/NewsSystem.js';
+import { AdvisorSystem } from './systems/AdvisorSystem.js';
+import { StockSystem } from './systems/StockSystem.js';
+import { PromotionSystem } from './systems/PromotionSystem.js';
+import { BankSystem } from './systems/BankSystem.js';
+import { bindRegionalActions } from './ui/panels/RegionalBindings.js';
+import { SiliconService } from './systems/SiliconService.js';
+import { renderHeader } from './ui/layout/Header.js';
+import { renderMobileNav } from './ui/layout/MobileNav.js';
+import { renderSidebar } from './ui/layout/Sidebar.js';
+import { renderEmptyState } from './ui/panels/EmptyState.js';
+import { renderSettingsPanel, bindSettingsActions } from './ui/panels/SettingsPanel.js';
+import { renderGuidePanel } from './ui/panels/GuidePanel.js';
+import { renderCompanyProfilePanel, bindCompanyProfileActions } from './ui/panels/CompanyProfilePanel.js';
+import { mountToastContainer } from './ui/panels/ToastContainer.js';
+import { drawCashChart } from './ui/panels/CashChart.js';
+import { initTutorialOverlay } from './ui/panels/TutorialOverlay.js';
+import { showOnboarding } from './ui/panels/OnboardingModal.js';
+import { initMonthlySummary } from './ui/panels/MonthlySummaryModal.js';
+import { initGameOverScreen } from './ui/panels/GameOverScreen.js';
+import { Modal } from './ui/modal.js';
+import { mountAdvisorButton } from './ui/panels/AdvisorPanel.js';
+import { renderResearchPanel, setFilterCategory, setTimelineFilter, getChipResearchFilter, setChipResearchFilter, openNodeDetailModal, openOsWizardModal, openCreateOsModal, openFeatureDetailModal, openChipNodeModal } from './ui/panels/ResearchPanel.js';
+import { renderProductPanel, setCatalogView, openProductDetailModal, openCampaignModal, openOrderProductionModal } from './ui/panels/ProductPanel.js';
+import { openDesignWizard } from './ui/panels/DesignWizard.js';
+import { renderMarketPanel, drawShareChart } from './ui/panels/MarketPanel.js';
+import { openCompetitorDetailModal } from './ui/panels/CompetitorDetailModal.js';
+import { openViralResponseModal } from './ui/panels/PublicOpinionPanel.js';
+import { drawSalesChart } from './ui/panels/SalesChart.js';
+import { openCandidateDetailModal, setRecruitFilter, setTeamMode } from './ui/panels/TeamPanel.js';
+import { renderHqPanel } from './ui/panels/HqPanel.js';
+import { renderHomePanel, initHomeTabs, refreshHomeSlides } from './ui/panels/HomePanel.js';
+import { mountCampusMap, unmountCampusMap } from './ui/campus/CampusMap.js';
+import { mountOfficeMap, unmountOfficeMap, isOfficeMounted } from './ui/office/OfficeMap.js';
+import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
+import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
+import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
+import { openNewsArticleModal } from './ui/panels/NewsArticleModal.js';
+import { openSiliconModal } from './ui/panels/SiliconPanel.js';
+import { openSiliconStoreModal } from './ui/panels/SiliconStorePanel.js';
+import { PaymentService } from './systems/PaymentService.js';
+import { t as tr } from './core/LanguageService.js';
+import { handleNewsListClick } from './ui/panels/NewsListPanel.js';
+import { renderChipMockup } from './ui/phone/ChipMockup.js';
+import { renderChipRadarChart } from './ui/charts/ChipRadarChart.js';
+import { setExchangeCategory, setExchangeStock, drawExchangeChart, openBuyModal, openSellModal } from './ui/panels/ExchangePanel.js';
+import { buildReport, formatReportText } from './diagnostics/DiagnosticReport.js';
+import { openDiagnosticModal } from './diagnostics/DiagnosticUI.js';
+import { CloudService } from './services/CloudService.js';
+import { SupabaseAdapter } from './services/cloud/SupabaseAdapter.js';
+import { CloudSync } from './services/cloud/CloudSync.js';
+import { bindCloudUI } from './services/cloud/CloudUI.js';
+import * as marketingModule from './data/marketing.data.js';
+import * as feedbackModule from './data/feedback.data.js';
+import { getActiveRendererIdPublic, toggleNotificationPanel, closeNotificationPanel } from './ui/notifications/NotificationRenderer.js';
+import { initSwipe, showSwipeAnimation } from './core/SwipeService.js';
+import { initNavSliderDrag } from './core/NavSliderDrag.js';
+import { AudioService } from './core/AudioService.js';
 
-var MODAL_ID = 'silicon-store';
-var _sel = { pkg: 'pkg_l', method: null, busy: false };
-var _pollingTimer = null;
-var _countdownTimer = null;
-var _adminApprovedUnsub = null;
-var _storeTab = 'buy'; // 'buy' | 'exchange' | 'transfer'
+// ============ INSTANCE ============
+var timeSystem        = new TimeSystem(state);
+var economy           = new EconomySystem(state);
+var quests            = new QuestSystem(state);
+var tutorial          = new TutorialSystem(state);
+var research          = new ResearchSystem(state);
+var chipResearch      = new ChipResearchSystem(state);
+var os                = new OSSystem(state);
+var products          = new ProductSystem(state);
+var market            = new MarketSystem(state);
+var competitors       = new CompetitorSystem(state);
+var competitorActions = new CompetitorActionSystem(state);
+var opinion           = new PublicOpinionSystem(state);
+var eraSystem         = new EraSystem(state);
+var teamSystem        = new TeamSystem(state);
+var chipSystem        = new ChipSystem(state);
+var fabSystem         = new FabSystem(state);
+var advisor           = new AdvisorSystem(state, { research: research });
+var stockSystem       = new StockSystem(state);
+var promotion         = new PromotionSystem(state);
+var bank              = new BankSystem(state);
 
-var STATIC_QRIS_URL = 'https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/qris-gopay.png';
+market.setCompetitorSystem(competitors);
+products.setPromotionSystem(promotion);
+bank.setPromotionSystem(promotion);
+economy.setBank(bank);
 
-function _esc(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+// ============ STATE UI ============
+var activeView = 'dashboard';
+var activeSubtab = 'tech';
+var activeProdSubtab = 'design';
+var activeMarketSubtab = 'share';
+var activeHqSubtab = 'overview';
+var _burnWarn = null;
+
+var els = {
+    header:  document.getElementById('app-header'),
+    view:    document.getElementById('app-view'),
+    nav:     document.getElementById('mobile-nav'),
+    sidebar: document.getElementById('sidebar'),
+    loading: document.getElementById('loading-screen'),
+    error:   document.getElementById('error-message'),
+    toast:   document.getElementById('toast-container')
+};
+
+function getTime() { return timeSystem.snapshot(); }
+function hideLoading() {
+    if (window.__splash) window.__splash.finish();
+    else if (els.loading) els.loading.style.display = 'none';
 }
-function _e(k, vars) { return _esc(t('silstore.' + k, vars)); }
-function _tf(key, fallback, vars) {
-    var v = t(key, vars);
-    return (v && v !== key) ? v : fallback;
-}
+function splash(pct) { if (window.__splash) window.__splash.set(pct); }
 
-function _isId() {
-    try { return LanguageService.getLang() === 'id'; } catch (e) { return true; }
-}
-function _price(o) {
-    if (_isId()) return 'Rp' + o.priceIdr.toLocaleString('id-ID');
-    return '$' + o.priceUsd.toFixed(2);
+function renderHeaderOnly() {
+    if (!els.header) return;
+    els.header.innerHTML = renderHeader({ state: state.get(), timeSnapshot: getTime(), warning: (_burnWarn == null ? null : tr('main.burn_short', { n: _burnWarn })) });
 }
 
 // ============================================================
-// TAB KIRIM SIL (TRANSFER)
+// NAV RENDER
 // ============================================================
-function _renderTransferTab() {
-    var balance = SiliconService.getBalance();
-    var isConnected = CloudService.getStatus() === 'connected';
+// Sidebar desktop (>=768px, lihat desktop.css). Dirender ulang hanya saat pertama kali / bahasa berganti;
+// selain itu cukup ganti status aktif agar fokus keyboard tidak hilang.
+var _sideLang = null;
+function renderSidebarOnly() {
+    if (!els.sidebar) return;
+    var curLang = LanguageService.getLang();
+    var hasRendered = !!els.sidebar.querySelector('.dk-nav-btn');
+    if (!hasRendered || _sideLang !== curLang) {
+        _sideLang = curLang;
+        els.sidebar.innerHTML = renderSidebar({ active: activeView });
+        return;
+    }
+    var sbtns = els.sidebar.querySelectorAll('.dk-nav-btn');
+    for (var si = 0; si < sbtns.length; si++) {
+        var sActive = sbtns[si].dataset.nav === activeView;
+        sbtns[si].classList.toggle('active', sActive);
+        sbtns[si].setAttribute('aria-current', sActive ? 'page' : 'false');
+    }
+}
 
-    if (!isConnected) {
-        return `
-            <div style="text-align:center; padding: 20px;">
-                <div style="font-size:40px; margin-bottom:10px;">☁️</div>
-                <div style="font-weight:bold; margin-bottom:8px;">Fitur ini membutuhkan akun Cloud</div>
-                <div style="font-size:12px; color:var(--text-tertiary);">Silakan login ke akun cloud terlebih dahulu di menu Setelan untuk dapat mengirim SIL ke pemain lain.</div>
-            </div>
-        `;
+var _navLang = null;
+function renderNavOnly() {
+    renderSidebarOnly();
+    if (!els.nav) return;
+
+    var curLang = LanguageService.getLang();
+    var hasRendered = !!els.nav.querySelector('.nav-btn');
+    var langChanged = hasRendered && _navLang !== curLang;
+
+    if (!hasRendered || langChanged) {
+        _navLang = curLang;
+        els.nav.innerHTML = renderMobileNav({ active: activeView });
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () { updateNavSlider(false); });
+        });
+    } else {
+        var buttons = els.nav.querySelectorAll('.nav-btn');
+        for (var i = 0; i < buttons.length; i++) {
+            var isActive = buttons[i].dataset.nav === activeView;
+            buttons[i].classList.toggle('active', isActive);
+            buttons[i].setAttribute('aria-current', isActive ? 'page' : 'false');
+        }
+        updateNavSlider(true);
+    }
+}
+
+function updateNavSlider(animated) {
+    if (!els.nav) return;
+    if (els.nav.dataset.dragging === '1') return;
+
+    var slider = els.nav.querySelector('.nav-slider');
+    if (!slider) return;
+
+    var buttons = els.nav.querySelectorAll('.nav-btn');
+    if (!buttons.length) return;
+
+    var idx = -1;
+    for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i].classList.contains('active')) { idx = i; break; }
+    }
+    if (idx < 0) idx = 0;
+
+    var navW = els.nav.clientWidth;
+    if (navW <= 0) return;
+
+    var count = buttons.length;
+    var itemW = navW / count;
+    
+    // PRESISI: Lebar slider dikunci 46px
+    var sliderW = Math.max(56, Math.min(itemW * 0.88, 80)); // harus sama dengan NavSliderDrag._readMetrics
+    var x = (idx * itemW) + ((itemW - sliderW) / 2);
+
+    if (!animated) {
+        slider.style.transition = 'none';
+        slider.style.width = sliderW + 'px';
+        slider.style.transform = 'translateX(' + x + 'px)'; 
+        void slider.offsetWidth;
+        requestAnimationFrame(function () { slider.style.transition = ''; });
+    } else {
+        slider.style.width = sliderW + 'px';
+        slider.style.transform = 'translateX(' + x + 'px)';
+    }
+}
+
+// ============ RENDER VIEW ============
+// Kunci halaman+subtab terakhir yang dirender. Bila render ulang terjadi pada
+// halaman yang SAMA (mis. toggle/aksi di dalam panel), posisi scroll dipertahankan;
+// hanya pindah halaman/subtab yang membawa layar kembali ke atas.
+var _lastViewKey = null;
+function _viewKey() {
+    return [activeView, activeSubtab, activeProdSubtab, activeMarketSubtab, activeHqSubtab].join('|');
+}
+
+function renderView(opts) {
+    if (!els.view) return;
+    var soft = !!(opts && opts.soft);
+    if (soft && activeView === 'team' && activeHqSubtab === 'office' && isOfficeMounted()) return;
+    var prevScroll = els.view.scrollTop;
+    var viewKey = _viewKey();
+    var sameView = (viewKey === _lastViewKey);
+    _lastViewKey = viewKey;
+    var keepScroll = soft || sameView;
+    if (soft) els.view.classList.add('soft-update');
+
+    var html = '';
+    try {
+        if (activeView === 'dashboard') html = renderHomePanel();
+        else if (activeView === 'profile') html = renderCompanyProfilePanel({ teamSystem: teamSystem, marketSystem: market, competitors: competitors, opinionSystem: opinion });
+        else if (activeView === 'team') html = renderHqPanel({ subtab: activeHqSubtab, state: state.get(), timeSnapshot: getTime(), researchSystem: research, teamSystem: teamSystem, stockSystem: stockSystem });
+        else if (activeView === 'research') html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os, chipResearchSystem: chipResearch });
+        else if (activeView === 'products') html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os });
+        else if (activeView === 'market') html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion });
+        else if (activeView === 'settings') html = renderSettingsPanel();
+        else if (activeView === 'guide') html = renderGuidePanel();
+        else html = renderEmptyState({ icon: '?', title: tr('main.not_found') });
+    } catch (err) {
+        console.error('[renderView] Error:', err);
+        html = '<div class="card" style="border-color:var(--danger);margin-top:20px;"><div class="card-title" style="color:var(--danger);">Error Render</div><div style="font-size:13px;line-height:1.6;word-break:break-word;"><b>View:</b> ' + activeView + '<br><b>Error:</b> ' + (err && err.message ? err.message : 'Unknown') + '</div></div>';
+    }
+    unmountCampusMap();
+    unmountOfficeMap();
+    els.view.classList.toggle('view-home', activeView === 'dashboard');
+    document.body.classList.toggle('is-home', activeView === 'dashboard');
+    els.view.innerHTML = html;
+
+    if (!keepScroll) {
+        els.view.classList.add('view-fresh');
+        if (window.__viewFreshTimer) clearTimeout(window.__viewFreshTimer);
+        window.__viewFreshTimer = setTimeout(function () {
+            if (els.view) els.view.classList.remove('view-fresh');
+        }, 600);
     }
 
-    return `
-        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:16px; text-align:center;">
-            ${_tf('silstore.transfer.intro', 'Kirim SIL ke pemain lain dengan memasukkan ID Pemain (8 digit) mereka.')}
-        </div>
-        
-        <div style="background:var(--bg-3); border:1px solid var(--border); border-radius:12px; padding:16px;">
-            <label style="font-size:12px; color:var(--text-secondary); margin-bottom:4px; display:block;">ID Pemain Tujuan</label>
-            <input type="number" id="trf-target" class="field-input" placeholder="Contoh: 48271956" style="margin-bottom:12px;">
-            
-            <label style="font-size:12px; color:var(--text-secondary); margin-bottom:4px; display:block;">Jumlah SIL</label>
-            <input type="number" id="trf-amount" class="field-input" placeholder="Maksimal 5000" style="margin-bottom:16px;">
-            
-            <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-tertiary); margin-bottom:16px;">
-                <span>Saldo Anda saat ini:</span>
-                <b style="color:var(--accent);">${balance} SIL</b>
-            </div>
-            
-            <button class="btn-primary" id="btn-do-transfer" style="width:100%; padding:10px; font-weight:bold;">
-                Kirim SIL Sekarang
-            </button>
-        </div>
-    `;
+    if (keepScroll) {
+        els.view.scrollTop = prevScroll;
+        requestAnimationFrame(function () { if (els.view) { els.view.scrollTop = prevScroll; els.view.classList.remove('soft-update'); } });
+    } else {
+        els.view.scrollTop = 0;
+    }
+    try {
+        if (activeView === 'team' && activeHqSubtab === 'overview') {
+            var chart = els.view.querySelector('.chart-wrap'); if (chart) drawCashChart(chart);
+        }
+        if (activeView === 'products' && activeProdSubtab === 'sales') { var sc = els.view.querySelector('.chart-wrap'); if (sc) drawSalesChart(sc); }
+        if (activeView === 'market' && activeMarketSubtab === 'share') { var sc2 = els.view.querySelector('.chart-wrap'); if (sc2) drawShareChart(sc2); }
+        if (activeView === 'settings') bindSettingsActions(els.view);
+        if (activeView === 'profile') bindCompanyProfileActions(els.view);
+        if (activeView === 'team' && activeHqSubtab === 'exchange') {
+            var exChart = els.view.querySelector('[data-ex-chart]');
+            if (exChart) drawExchangeChart(exChart);
+        }
+        if (activeView === 'team' && activeHqSubtab === 'office') {
+            var officeEl = els.view.querySelector('#office-map');
+            if (officeEl) mountOfficeMap(officeEl, state.get());
+        }
+        if (activeView === 'dashboard') {
+            var campusEl = els.view.querySelector('#campus-map');
+            if (campusEl) mountCampusMap(campusEl, state.get());
+            var wrapperEl = els.view.querySelector('.home-wrapper');
+            if (wrapperEl) {
+                initHomeTabs(wrapperEl);
+                _bindCarouselPerf(wrapperEl);
+            }
+        }
+    } catch (err) { console.error('[renderView] Post:', err); }
 }
 
-function _handleTransfer() {
-    var targetInput = document.getElementById('trf-target');
-    var amountInput = document.getElementById('trf-amount');
-    var btn = document.getElementById('btn-do-transfer');
+function _bindCarouselPerf(wrapperEl) {
+    var map = wrapperEl && wrapperEl.querySelector('#campus-map');
+    if (map) map.classList.remove('scrolling');
+}
 
-    var targetId = parseInt(targetInput.value, 10);
-    var amount = parseInt(amountInput.value, 10);
+function renderAll() { renderHeaderOnly(); renderNavOnly(); renderView(); }
 
-    if (!targetId || targetId < 10000000) return ToastService.error('ID Pemain tidak valid (harus 8 digit).');
-    if (!amount || amount <= 0) return ToastService.error('Jumlah SIL tidak valid.');
-    if (amount > 5000) return ToastService.error('Maksimal pengiriman adalah 5000 SIL.');
-    if (SiliconService.getBalance() < amount) return ToastService.error('Saldo SIL Anda tidak cukup.');
+// Render ulang tanpa melompat ke atas: posisi scroll dipertahankan (dipakai toggle/pilihan di Settings).
+function renderSoft() { renderHeaderOnly(); renderView({ soft: true }); }
 
-    if (!confirm(`Kirim ${amount} SIL ke ID ${targetId}?`)) return;
+function updateDashboardLive() {
+    var t = state.get().time;
+    var d = document.querySelector('[data-kpi-day]'); if (d) d.textContent = t.currentDay;
+    var m = document.querySelector('[data-kpi-month]'); if (m) m.textContent = t.currentMonth;
+    var y = document.querySelector('[data-kpi-year]'); if (y) y.textContent = t.currentYear;
+}
 
-    btn.disabled = true;
-    btn.textContent = 'Memproses...';
+// ============ CASH ANIMATION ============
+var _cashRaf = null;
+function _showCashDelta(diff) {
+    var el = document.querySelector('[data-cash-delta]');
+    if (!el) return;
+    if (!diff || Math.abs(diff) < 1) return;
+    var isUp = diff > 0;
+    var sign = isUp ? '+' : '−';
+    var text = sign + '$' + Math.abs(Math.round(diff)).toLocaleString('en-US');
+    el.textContent = text;
+    el.classList.remove('up', 'down');
+    el.classList.add(isUp ? 'up' : 'down');
+    el.classList.add('show');
+    if (window.__deltaTimer) clearTimeout(window.__deltaTimer);
+    window.__deltaTimer = setTimeout(function () {
+        el.classList.remove('show');
+    }, 2500);
+}
 
-    CloudService.transferSilicon(targetId, amount).then(function(res) {
-        if (res.ok) {
-            ToastService.success(`Berhasil mengirim ${amount} SIL!`);
-            targetInput.value = '';
-            amountInput.value = '';
-            
-            if (window.__game && window.__game.cloudSync) {
-                window.__game.cloudSync.syncSilicon();
-            }
-            _render();
-        } else {
-            btn.disabled = false;
-            btn.textContent = 'Kirim SIL Sekarang';
-            
-            var msg = res.reason || 'Gagal mengirim.';
-            if (msg.includes('player_not_found')) msg = 'ID Pemain tidak ditemukan.';
-            if (msg.includes('insufficient_silicon')) msg = 'Saldo SIL Anda tidak cukup.';
-            if (msg.includes('cannot_transfer_to_self')) msg = 'Anda tidak bisa mengirim ke diri sendiri.';
-            if (msg.includes('invalid_amount')) msg = 'Jumlah SIL tidak valid.';
-            
-            ToastService.error(msg);
+function animateCash(from, to) {
+    if (_cashRaf) { cancelAnimationFrame(_cashRaf); _cashRaf = null; }
+    var targets = document.querySelectorAll('[data-cash]');
+    if (!targets.length || from === to) return;
+    var start = performance.now();
+    function step(ts) {
+        var p = Math.min(1, (ts - start) / 520);
+        var eased = 1 - Math.pow(1 - p, 3);
+        var val = from + (to - from) * eased;
+        var text = '$' + Math.round(val).toLocaleString('en-US');
+        targets.forEach(function (el) { el.textContent = text; });
+        if (p < 1) _cashRaf = requestAnimationFrame(step); else _cashRaf = null;
+    }
+    _cashRaf = requestAnimationFrame(step);
+    _showCashDelta(to - from);
+}
+
+// ============ NAV ============
+function navigate(id) {
+    closeNotificationPanel();
+    if (id === activeView) return;
+    activeView = id;
+    if (els.view) els.view.classList.add('soft-update');
+    renderAll();
+    updateTitle();
+    if (els.view) {
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                if (els.view) els.view.classList.remove('soft-update');
+            });
+        });
+    }
+    bus.emit('view:changed', { id: id });
+    bus.emit('tutorial:action', { id: 'nav:' + id });
+}
+
+function updateTitle() {
+    var meta = VIEW_TITLES[activeView];
+    var navKey = 'nav.' + activeView;
+    var label = tr(navKey);
+    if (!label || label === navKey) label = meta ? meta.title : 'Dashboard';
+    document.title = APP_CONFIG.name + ' - ' + label;
+}
+
+// Getar pengiring notifikasi: ikut mati bila jenis notifikasinya dimatikan.
+function notifVibrate(ms, type) {
+    if (!NotificationPrefs.isTypeEnabled(type)) return;
+    vibrate(ms);
+}
+
+function vibrate(ms) {
+    var s = state.get();
+    if (!s.settings.vibrate) return;
+    if (navigator && typeof navigator.vibrate === 'function') { try { navigator.vibrate(ms); } catch (e) {} }
+}
+
+// ============ MODAL HELPERS (Exchange) ============
+function _updateBuyTotal() {
+    var root = document.querySelector('[data-modal-id="buy-modal"]');
+    if (!root) return;
+    var btn = root.querySelector('[data-buy-confirm]');
+    if (!btn) return;
+    var stockId = btn.dataset.buyConfirm;
+    var qty = parseInt(root.querySelector('[data-qty-input]').value, 10) || 0;
+    var el = root.querySelector('[data-buy-total]');
+    if (!el) return;
+    if (!window.__game || !window.__game.stocks) return;
+    var priceUSD = window.__game.stocks.getPriceUSD(stockId);
+    el.textContent = '$' + (priceUSD * qty).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function _updateSellTotal() {
+    var root = document.querySelector('[data-modal-id="sell-modal"]');
+    if (!root) return;
+    var btn = root.querySelector('[data-sell-confirm]');
+    if (!btn) return;
+    var stockId = btn.dataset.sellConfirm;
+    var qty = parseInt(root.querySelector('[data-qty-input]').value, 10) || 0;
+    var el = root.querySelector('[data-sell-total]');
+    if (!el) return;
+    if (!window.__game || !window.__game.stocks) return;
+    var priceUSD = window.__game.stocks.getPriceUSD(stockId);
+    el.textContent = '$' + (priceUSD * qty).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function _refreshProductUi(productId) {
+    var modalOpen = Modal.isOpen('product-detail');
+    renderAll();
+    if (modalOpen) {
+        var body = document.querySelector('[data-modal-id="product-detail"] .modal-card');
+        var scroll = body ? body.scrollTop : 0;
+        openProductDetailModal({ productId: productId, productSystem: products });
+        var nb = document.querySelector('[data-modal-id="product-detail"] .modal-card');
+        if (nb) nb.scrollTop = scroll;
+    }
+}
+
+// ============ CLICKS ============
+function bindGlobalClicks() {
+    document.body.addEventListener('input', function (e) {
+        if (e.target.matches('[data-qty-input]')) {
+            var root = e.target.closest('[data-modal-id]');
+            if (!root) return;
+            if (root.dataset.modalId === 'buy-modal') _updateBuyTotal();
+            else if (root.dataset.modalId === 'sell-modal') _updateSellTotal();
         }
     });
-}
 
-// ============================================================
-// TAB TUKAR SIL KE UANG (EXCHANGE)
-// ============================================================
-function _getExchangePackages() {
-    var multiplier = getCashPerSil(state.get().time.currentYear || 2000) / 2500;
-    return [
-        { sil: 10,  cash: Math.round(25000 * multiplier),  label: t('silstore.exch.pkg.small') },
-        { sil: 50,  cash: Math.round(150000 * multiplier), label: t('silstore.exch.pkg.big') },
-        { sil: 100, cash: Math.round(400000 * multiplier), label: t('silstore.exch.pkg.suitcase') },
-        { sil: 500, cash: Math.round(2500000 * multiplier), label: t('silstore.exch.pkg.truck') }
-    ];
-}
+    document.body.addEventListener('click', function (e) {
+        try {
+            var clickable = e.target.closest('button, [role="button"], .nav-btn, .chip, .chip-small, .subtab-btn, .wiz-option, .wiz-color, .staff-row, .cand-row');
+            if (clickable && !clickable.disabled) {
+                if (clickable.classList.contains('toggle-switch') || clickable.hasAttribute('data-toggle')) {
+                    AudioService.play('toggle');
+                } else if (clickable.classList.contains('chip') ||
+                           clickable.classList.contains('chip-small') ||
+                           clickable.classList.contains('subtab-btn') ||
+                           clickable.classList.contains('wiz-option') ||
+                           clickable.classList.contains('wiz-color')) {
+                    AudioService.play('select');
+                } else {
+                    AudioService.play('tap');
+                }
+            }
+        } catch (err) {}
 
-function _renderExchangeTab() {
-    var pkgs = _getExchangePackages();
-    var balance = SiliconService.getBalance();
+        var autoToggle = e.target.closest('[data-auto-toggle]');
+        if (autoToggle) {
+            e.preventDefault(); vibrate(8);
+            var p = state.get().products.catalog.find(function (x) { return x.id === autoToggle.dataset.prodId; });
+            if (p) {
+                products.toggleAutoRestock(p.id, !(p.autoRestock && p.autoRestock.enabled));
+                _refreshProductUi(p.id);
+            }
+            return;
+        }
+        var autoThresh = e.target.closest('[data-auto-threshold]');
+        if (autoThresh) { e.preventDefault(); vibrate(6); products.setAutoRestockThreshold(autoThresh.dataset.prodId, parseInt(autoThresh.dataset.autoThreshold, 10) || 20); _refreshProductUi(autoThresh.dataset.prodId); return; }
+        var catFilter = e.target.closest('[data-catalog-filter]');
+        if (catFilter) { e.preventDefault(); setCatalogView('filter', catFilter.dataset.catalogFilter); renderAll(); return; }
+        var catSort = e.target.closest('[data-catalog-sort]');
+        if (catSort) { e.preventDefault(); setCatalogView('sort', catSort.dataset.catalogSort); renderAll(); return; }
 
-    var cards = pkgs.map(function(p) {
-        var canAfford = balance >= p.sil;
-        var btnStyle = canAfford ? 'background:#00c853; color:#fff;' : 'background:#333; color:#666; cursor:not-allowed;';
-        
-        return `
-            <div style="background:var(--bg-3); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:10px; display:flex; flex-direction:column; gap:10px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="font-weight:bold; color:var(--text-primary); font-size:15px;">${p.label}</div>
-                    <div style="color:var(--accent); font-weight:bold;">${p.sil} SIL</div>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="font-size:12px; color:var(--text-tertiary);">${_e('exch.you_get')}</div>
-                    <div style="color:var(--success); font-weight:bold; font-size:16px;">$${p.cash.toLocaleString('en-US')}</div>
-                </div>
-                <button class="btn-exchange" data-sil="${p.sil}" data-cash="${p.cash}" style="width:100%; padding:8px; border-radius:8px; border:none; font-weight:bold; font-size:13px; ${btnStyle}" ${canAfford ? '' : 'disabled'}>
-                    ${canAfford ? _e('exch.btn') : _e('exch.short')}
-                </button>
-            </div>
-        `;
-    }).join('');
+        var chipAction = e.target.closest('[data-chip-action]');
+        if (chipAction) {
+            e.preventDefault(); vibrate(8);
+            var a = chipAction.dataset.chipAction;
+            if (a === 'new') { openChipDesigner(); return; }
+            if (a === 'fab') { openFabPanel(); return; }
+            if (a === 'cancel-design') { var r = chipSystem.cancelDesign(); if (r.ok) { ToastService.info(tr('main.toast.cancelled')); renderAll(); } else ToastService.error(r.reason); return; }
+        }
 
-    return `
-        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:16px; text-align:center;">
-            ${_e('exch.intro')}
-        </div>
-        ${cards}
-    `;
-}
+        var fabAction = e.target.closest('[data-fab-action]');
+        if (fabAction) {
+            e.preventDefault(); vibrate(8);
+            var a = fabAction.dataset.fabAction;
+            if (a === 'build') { var r = fabSystem.buildFab(parseInt(fabAction.dataset.fabLevel, 10) || 1); if (r.ok) { Modal.close('fab-panel', true); renderAll(); } else ToastService.error(r.reason); return; }
+            if (a === 'upgrade') { var r = fabSystem.upgradeFab(); if (r.ok) { Modal.close('fab-panel', true); renderAll(); } else ToastService.error(r.reason); return; }
+            if (a === 'cancel-upgrade') { var r = fabSystem.cancelUpgrade(); if (r.ok) { Modal.close('fab-panel', true); renderAll(); } else ToastService.error(r.reason); return; }
+            if (a === 'cancel-prod') { var r = fabSystem.cancelProduction(); if (r.ok) { Modal.close('fab-panel', true); renderAll(); } else ToastService.error(r.reason); return; }
+            if (a === 'select-prod') { Modal.close('fab-panel', true); setTimeout(function () { openProductionQtyModal(fabAction.dataset.chipId); }, 100); return; }
+            if (a === 'confirm-prod') {
+                var root = document.querySelector('[data-modal-id="fab-prod-qty"]');
+                var qty = parseInt(root.querySelector('[data-prod-qty]').value, 10) || 0;
+                var res = fabSystem.orderProduction(fabAction.dataset.chipId, qty);
+                if (!res.ok) ToastService.error(res.reason);
+                else { ToastService.success(tr('main.toast.prod_started')); Modal.close('fab-prod-qty', true); renderAll(); }
+                return;
+            }
+        }
 
-function _handleExchange(silCost, cashReward) {
-    if (SiliconService.getBalance() < silCost) {
-        ToastService.error(t('silstore.exch.low_balance'));
-        return;
-    }
+        var chipRow = e.target.closest('[data-chip-detail]');
+        if (chipRow) {
+            e.preventDefault();
+            var chip = chipSystem.getChipById(chipRow.dataset.chipDetail);
+            if (chip) _openChipDetail(chip);
+            return;
+        }
 
-    var res = SiliconService.spendRaw(silCost, 'exchange-cash');
-    if (!res.ok) {
-        ToastService.error(res.reason || t('silstore.exch.spend_fail'));
-        return;
-    }
+        if (handleNewsListClick(e)) return;
 
-    state.addCash(cashReward);
-    ToastService.success(t('silstore.exch.done', { sil: silCost, cash: cashReward.toLocaleString('en-US') }));
-    
-    if (window.__game && window.__game.AudioService) {
-        window.__game.AudioService.play('success');
-    }
-    _render();
-}
+        var notifBtn = e.target.closest('[data-notif-toggle]');
+        if (notifBtn) { e.preventDefault(); vibrate(8); toggleNotificationPanel(); return; }
 
-// ============================================================
-// TAB BELI (BUY)
-// ============================================================
-function _renderPackages() {
-    return '<div class="sil-pkg-grid">' + PaymentService.getPackages().map(function (p) {
-        var tag = p.tag ? '<span class="sil-pkg-tag sil-pkg-tag-' + p.tag + '">' + _tf('silicon.store.tag.' + p.tag, p.tag) + '</span>' : '';
-        return '<button type="button" class="sil-pkg' + (_sel.pkg === p.id ? ' active' : '') + '" data-sil-pkg="' + p.id + '">' +
-            tag + '<span class="sil-pkg-ico">' + gIcon(p.icon, 20) + '</span>' +
-            '<span class="sil-pkg-amt">' + p.sil + '</span>' +
-            '<span class="sil-pkg-bonus">' + (p.bonus ? '+' + p.bonus + ' ' + _tf('silicon.store.bonus', 'bonus') : '&nbsp;') + '</span>' +
-            '<span class="sil-pkg-price">' + _price(p) + '</span>' +
-        '</button>';
-    }).join('') + '</div>';
-}
+        var navBtn = e.target.closest('[data-nav]');
+        if (navBtn) { e.preventDefault(); vibrate(8); navigate(navBtn.dataset.nav); return; }
 
-function _renderMethods(methods) {
-    var html = '';
-    PAYMENT_GROUPS.forEach(function (g) {
-        var items = methods.filter(function (m) { return m.group === g; });
-        if (!items.length) return;
-        html += '<div class="sil-method-group">' + _tf('silicon.store.group.' + g, g) + '</div>';
-        html += items.map(function (m) {
-            var avail = m.status === 'available';
-            var badge = avail ? '<span class="sil-badge sil-badge-on">' + _tf('silicon.store.available', 'Aktif') + '</span>' : '<span class="sil-badge">' + _tf('silicon.store.soon', 'Segera') + '</span>';
-            return '<button type="button" class="sil-method' + (_sel.method === m.id ? ' active' : '') + (avail ? '' : ' is-soon') + '" data-sil-method="' + m.id + '"' + (avail ? '' : ' disabled') + '>' +
-                '<span class="sil-method-ico">' + gIcon(m.icon || 'wallet', 18) + '</span>' +
-                '<span class="sil-method-name">' + _esc(m.name) + '</span>' + badge + '<span class="sil-radio"></span>' +
-            '</button>';
-        }).join('');
+        var guideReport = e.target.closest('[data-guide-report]');
+        if (guideReport) { e.preventDefault(); vibrate(8); openDiagnosticModal(); return; }
+
+        var siliconBtn = e.target.closest('[data-silicon-open]');
+        if (siliconBtn) { e.preventDefault(); vibrate(8); openSiliconModal(); return; }
+
+        var silRes = e.target.closest('[data-sil-research]');
+        if (silRes) {
+            e.preventDefault(); vibrate(8);
+            if (silRes.dataset.silShort) { ToastService.warning(tr('silicon.short')); openSiliconStoreModal(); return; }
+            var silMode = silRes.dataset.silResearch;
+            var silKind = silRes.dataset.kind;
+            var silNode = silRes.dataset.nodeId;
+            var silR = (silMode === 'unlock' || silMode === 'instant')
+                ? SiliconService.unlockResearch(silKind, silNode, silMode === 'instant')
+                : SiliconService.boostResearch(silKind, silNode, silMode);
+            if (!silR.ok) {
+                ToastService.error(silR.reason || tr('main.toast.failed'));
+                if (silR.need) openSiliconStoreModal();
+                return;
+            }
+            if (silMode === 'unlock') ToastService.success(tr('sil.research.msg.unlock', { n: silR.spent }));
+            else if (silMode === 'instant') ToastService.success(tr('sil.research.msg.instant', { n: silR.spent }));
+            else if (silR.completed) ToastService.success(tr('sil.research.msg.finish', { n: silR.spent }));
+            else ToastService.success(tr('sil.research.msg.boost', { n: silR.spent }));
+            Modal.close('node-detail', true);
+            Modal.close('chip-node-detail', true);
+            renderAll();
+            return;
+        }
+
+        var timeBtn = e.target.closest('[data-time-action]');
+        if (timeBtn) {
+            e.preventDefault(); vibrate(12);
+            var a = timeBtn.dataset.timeAction;
+            if (a === 'toggle-pause') { timeSystem.togglePause(); bus.emit('tutorial:action', { id: 'action:toggle-pause' }); }
+            else if (a === 'cycle-speed') { timeSystem.cycleSpeed(); bus.emit('tutorial:action', { id: 'action:cycle-speed' }); }
+            return;
+        }
+
+        var hqSubBtn = e.target.closest('[data-hq-subtab]');
+        if (hqSubBtn) { e.preventDefault(); activeHqSubtab = hqSubBtn.dataset.hqSubtab; renderView(); return; }
+
+        var exCat = e.target.closest('[data-ex-cat]');
+        if (exCat) { e.preventDefault(); vibrate(6); setExchangeCategory(exCat.dataset.exCat); renderView(); return; }
+
+        var exSel = e.target.closest('[data-ex-select]');
+        if (exSel) { e.preventDefault(); vibrate(6); setExchangeStock(exSel.dataset.exSelect); renderView(); return; }
+
+        var exBuy = e.target.closest('[data-ex-buy]');
+        if (exBuy) { e.preventDefault(); vibrate(8); openBuyModal(exBuy.dataset.exBuy); return; }
+
+        var exSell = e.target.closest('[data-ex-sell]');
+        if (exSell) { e.preventDefault(); vibrate(8); openSellModal(exSell.dataset.exSell); return; }
+
+        var buyPreset = e.target.closest('[data-buy-preset]');
+        if (buyPreset) {
+            e.preventDefault();
+            var bRoot = document.querySelector('[data-modal-id="buy-modal"]');
+            if (!bRoot) return;
+            var bInp = bRoot.querySelector('[data-qty-input]');
+            var bv = buyPreset.dataset.buyPreset;
+            if (bv === 'max') {
+                var sid = buyPreset.dataset.buyStock;
+                if (window.__game && window.__game.stocks) {
+                    bInp.value = window.__game.stocks.getMaxAffordableShares(sid);
+                }
+            } else {
+                bInp.value = bv;
+            }
+            _updateBuyTotal();
+            return;
+        }
+
+        var sellPreset = e.target.closest('[data-sell-preset]');
+        if (sellPreset) {
+            e.preventDefault();
+            var sRoot = document.querySelector('[data-modal-id="sell-modal"]');
+            if (!sRoot) return;
+            var sInp = sRoot.querySelector('[data-qty-input]');
+            var sv = sellPreset.dataset.sellPreset;
+            sInp.value = (sv === 'all') ? sInp.max : sv;
+            _updateSellTotal();
+            return;
+        }
+
+        var buyConfirm = e.target.closest('[data-buy-confirm]');
+        if (buyConfirm) {
+            e.preventDefault();
+            var cRoot = document.querySelector('[data-modal-id="buy-modal"]');
+            var cQty = parseInt(cRoot.querySelector('[data-qty-input]').value, 10) || 0;
+            if (!window.__game || !window.__game.stocks) return;
+            var cRes = window.__game.stocks.buyStock(buyConfirm.dataset.buyConfirm, cQty);
+            if (!cRes.ok) { ToastService.error(cRes.reason); return; }
+            ToastService.success(tr('main.toast.stock_buy', { n: cRes.shares.toLocaleString('en-US') }));
+            vibrate(15);
+            Modal.close('buy-modal', true);
+            renderView();
+            return;
+        }
+
+        var sellConfirm = e.target.closest('[data-sell-confirm]');
+        if (sellConfirm) {
+            e.preventDefault();
+            var csRoot = document.querySelector('[data-modal-id="sell-modal"]');
+            var csQty = parseInt(csRoot.querySelector('[data-qty-input]').value, 10) || 0;
+            if (!window.__game || !window.__game.stocks) return;
+            var csRes = window.__game.stocks.sellStock(sellConfirm.dataset.sellConfirm, csQty);
+            if (!csRes.ok) { ToastService.error(csRes.reason); return; }
+            ToastService.success(tr('main.toast.stock_sell', { n: csRes.shares.toLocaleString('en-US') }));
+            vibrate(15);
+            Modal.close('sell-modal', true);
+            renderView();
+            return;
+        }
+
+        var teamModeBtn = e.target.closest('[data-team-mode]');
+        if (teamModeBtn) {
+            e.preventDefault();
+            vibrate(6);
+            setTeamMode(teamModeBtn.dataset.teamMode);
+            renderView();
+            return;
+        }
+
+        var recruitFilterBtn = e.target.closest('[data-recruit-filter]');
+        if (recruitFilterBtn) {
+            e.preventDefault();
+            setRecruitFilter(recruitFilterBtn.dataset.recruitFilter);
+            renderView();
+            return;
+        }
+
+        var teamAction = e.target.closest('[data-team-action]');
+        if (teamAction) {
+            e.preventDefault(); vibrate(8);
+            var ta = teamAction.dataset.teamAction;
+            if (ta === 'hire') {
+                var res = teamSystem.hireCandidate(teamAction.dataset.candidateId);
+                if (!res.ok) ToastService.error(res.reason);
+                else { Modal.close('candidate-detail', true); renderAll(); }
+                return;
+            }
+            if (ta === 'refresh-pool') { teamSystem.refreshCandidates(); ToastService.success(tr('main.toast.pool_refreshed')); renderAll(); return; }
+            if (ta === 'goto-recruit') { setTeamMode('recruit'); renderView(); return; }
+            if (ta === 'open-candidate') { openCandidateDetailModal({ candidateId: teamAction.dataset.candidateId }); return; }
+        }
+
+        var staffCard = e.target.closest('[data-staff-detail]');
+        if (staffCard && !e.target.closest('[data-staff-action]')) { e.preventDefault(); openStaffDetailModal({ staffId: staffCard.dataset.staffDetail }); return; }
+        var staffAction = e.target.closest('[data-staff-action]');
+        if (staffAction) {
+            e.preventDefault();
+            var sa = staffAction.dataset.staffAction; var sid2 = staffAction.dataset.staffId;
+            if (sa === 'fire') { var res = teamSystem.fireStaff(sid2); if (!res.ok) ToastService.error(res.reason); else { Modal.close('staff-detail', true); renderAll(); } return; }
+            if (sa === 'train') { var res = teamSystem.trainStaff(sid2); if (!res.ok) ToastService.error(res.reason); else { Modal.close('staff-detail', true); openStaffDetailModal({ staffId: sid2 }); renderAll(); } return; }
+        }
+
+        var subBtn = e.target.closest('[data-subtab]');
+        if (subBtn) { e.preventDefault(); activeSubtab = subBtn.dataset.subtab; renderView(); return; }
+        var chipFilter = e.target.closest('[data-filter-cat]');
+        if (chipFilter) { e.preventDefault(); setFilterCategory(chipFilter.dataset.filterCat); renderView(); return; }
+        var timelineFilter = e.target.closest('[data-timeline-filter]');
+        if (timelineFilter) { e.preventDefault(); setTimelineFilter(timelineFilter.dataset.timelineFilter); renderView(); return; }
+
+        var fabBuy = e.target.closest('[data-chip-fab-buy]');
+        if (fabBuy) {
+            e.preventDefault();
+            var fres = chipResearch.purchaseUnlock(fabBuy.dataset.chipFabBuy);
+            if (!fres.ok) ToastService.error(fres.reason);
+            else { ToastService.success(tr('main.toast.fab_unlocked')); renderAll(); }
+            return;
+        }
+        var chipFilterCat = e.target.closest('[data-chip-filter-cat]');
+        if (chipFilterCat) { e.preventDefault(); setChipResearchFilter(chipFilterCat.dataset.chipFilterCat); renderView(); return; }
+        var chipNodeCard = e.target.closest('[data-chip-node-detail]');
+        if (chipNodeCard) { e.preventDefault(); openChipNodeModal({ nodeId: chipNodeCard.dataset.chipNodeDetail, chipResearchSystem: chipResearch }); return; }
+        var chipRAction = e.target.closest('[data-chip-research-action]');
+        if (chipRAction) {
+            e.preventDefault();
+            var cra = chipRAction.dataset.chipResearchAction; var cnodeId = chipRAction.dataset.nodeId;
+            if (cra === 'start') { var res = chipResearch.startResearch(cnodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.success(tr('main.toast.chip_research_started')); Modal.close('chip-node-detail', true); renderAll(); } }
+            else if (cra === 'cancel') { var res = chipResearch.cancelResearch(cnodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.info(tr('main.toast.cancelled')); Modal.close('chip-node-detail', true); renderAll(); } }
+            return;
+        }
+
+        var nodeCard = e.target.closest('[data-node-detail]');
+        if (nodeCard) { e.preventDefault(); openNodeDetailModal({ nodeId: nodeCard.dataset.nodeDetail, researchSystem: research }); return; }
+        var rAction = e.target.closest('[data-research-action]');
+        if (rAction) {
+            e.preventDefault();
+            var ra = rAction.dataset.researchAction; var rnodeId = rAction.dataset.nodeId;
+            if (ra === 'start') { var res = research.startResearch(rnodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.success(tr('main.toast.research_started')); Modal.close('node-detail', true); renderAll(); } }
+            else if (ra === 'cancel') { var res = research.cancelResearch(rnodeId); if (!res.ok) ToastService.error(res.reason); else { ToastService.info(tr('main.toast.cancelled')); Modal.close('node-detail', true); renderAll(); } }
+            return;
+        }
+
+        var osAction = e.target.closest('[data-os-action]');
+        if (osAction) {
+            e.preventDefault();
+            var oa = osAction.dataset.osAction;
+            if (oa === 'create') { openCreateOsModal({ osSystem: os }); return; }
+            if (oa === 'wizard') { openOsWizardModal({ osSystem: os }); return; }
+            if (oa === 'cancel-deving') { var res = os.cancelVersion(); if (res.ok) { ToastService.info(tr('main.toast.cancelled')); renderAll(); } else ToastService.error(res.reason); return; }
+            if (oa === 'patch-bug') { var r = os.patchBug(osAction.dataset.bugId); if (r.ok) { ToastService.success(tr('main.toast.patch_started')); renderAll(); } else ToastService.error(r.reason); return; }
+            if (oa === 'ignore-bug') { var r = os.ignoreBug(osAction.dataset.bugId); if (r.ok) { ToastService.warning(tr('main.toast.ignored')); renderAll(); } else ToastService.error(r.reason); return; }
+            if (oa === 'start-app') { var r = os.startApp(osAction.dataset.appId); if (r.ok) { ToastService.success(tr('main.toast.app_released')); renderAll(); } else ToastService.error(r.reason); return; }
+            if (oa === 'invite-devs') { var r = os.inviteDevelopers(); if (r.ok) { ToastService.success(tr('main.toast.devs_invited', { n: r.bonus })); renderAll(); } else ToastService.error(r.reason); return; }
+            if (oa === 'feature-detail') { openFeatureDetailModal({ osSystem: os, featureId: osAction.dataset.featureId }); return; }
+        }
+
+        var prodSub = e.target.closest('[data-prod-subtab]');
+        if (prodSub) { e.preventDefault(); activeProdSubtab = prodSub.dataset.prodSubtab; renderView(); return; }
+        var prodAction = e.target.closest('[data-prod-action]');
+        if (prodAction) {
+            e.preventDefault();
+            var pa = prodAction.dataset.prodAction; var pid = prodAction.dataset.prodId;
+            if (pa === 'open-wizard') { openDesignWizard({ researchSystem: research, osSystem: os, productSystem: products }); return; }
+            if (pa === 'cancel-dev') { var r = products.cancelDevelopment(); if (r.ok) { ToastService.info(tr('main.toast.cancelled')); renderAll(); } else ToastService.error(r.reason); return; }
+            if (pa === 'order-prod') { openOrderProductionModal({ productId: pid }); return; }
+            if (pa === 'campaign') { openCampaignModal({ productId: pid }); return; }
+            if (pa === 'discontinue') { var r = products.discontinueProduct(pid); if (r.ok) { ToastService.info(tr('main.toast.product_discontinued')); Modal.close('product-detail', true); renderAll(); } else ToastService.error(r.reason); return; }
+        }
+        var prodCard = e.target.closest('[data-prod-detail]');
+        if (prodCard && !e.target.closest('[data-prod-action]') && !e.target.closest('[data-auto-toggle]') && !e.target.closest('[data-auto-threshold]')) {
+            e.preventDefault(); openProductDetailModal({ productId: prodCard.dataset.prodDetail, productSystem: products }); return;
+        }
+        var campPick = e.target.closest('[data-campaign-pick]');
+        if (campPick) {
+            e.preventDefault();
+            var res = products.startCampaign(campPick.dataset.prodId, campPick.dataset.campaignPick);
+            if (!res.ok) ToastService.error(res.reason);
+            else { ToastService.success(tr('main.toast.campaign_started')); Modal.close('campaign-pick', true); renderAll(); }
+            return;
+        }
+        var orderConfirm = e.target.closest('[data-order-confirm]');
+        if (orderConfirm) {
+            e.preventDefault();
+            var oRoot = document.querySelector('[data-modal-id="order-prod"]');
+            var oQty = parseInt(oRoot.querySelector('[data-order-qty]').value, 10) || 0;
+            var res = products.orderProduction(orderConfirm.dataset.prodId, oQty);
+            if (!res.ok) ToastService.error(res.reason);
+            else { ToastService.success(tr('main.toast.order_created')); Modal.close('order-prod', true); renderAll(); }
+            return;
+        }
+
+        var mktSub = e.target.closest('[data-market-subtab]');
+        if (mktSub) { e.preventDefault(); activeMarketSubtab = mktSub.dataset.marketSubtab; renderView(); return; }
+        var compCard = e.target.closest('[data-competitor-detail]');
+        if (compCard) {
+            e.preventDefault();
+            var mode = state.get().settings.competitorMode || 'real';
+            var cdata = competitors.getCompetitorData(compCard.dataset.competitorDetail, mode);
+            openCompetitorDetailModal({ competitorData: cdata });
+            return;
+        }
+        var viralRespond = e.target.closest('[data-viral-respond]');
+        if (viralRespond) { e.preventDefault(); openViralResponseModal({ viralId: viralRespond.dataset.viralId }); return; }
+        var viralPick = e.target.closest('[data-viral-response-pick]');
+        if (viralPick) {
+            e.preventDefault();
+            var res = opinion.respondToViral(viralPick.dataset.viralId, viralPick.dataset.viralResponsePick);
+            if (!res.ok) ToastService.error(res.reason);
+            else { ToastService.success(tr('main.toast.response_sent')); Modal.close('viral-response', true); renderAll(); }
+            return;
+        }
     });
-    return html;
-}
 
-function _renderBuyTab() {
-    var methods = PaymentService.getMethods();
-    var anyAvail = methods.some(function (m) { return m.status === 'available'; });
-    var cur = methods.find(function (m) { return m.id === _sel.method && m.status === 'available'; });
-    if (!cur) { var first = methods.find(function (m) { return m.status === 'available'; }); _sel.method = first ? first.id : null; }
-    var pkg = PaymentService.getPackage(_sel.pkg) || PaymentService.getPackages()[0];
-    var canPay = !!_sel.method && !_sel.busy;
-
-    return '<div class="section-label"><span class="section-label-text">' + _tf('silicon.store.packages', 'Paket') + '</span><span class="section-label-line"></span></div>' +
-        _renderPackages() +
-        '<div class="section-label"><span class="section-label-text">' + _tf('silicon.store.methods', 'Metode Pembayaran') + '</span><span class="section-label-line"></span></div>' +
-        (anyAvail ? '' : '<div class="sil-hint">' + _tf('silicon.store.none', 'Metode pembayaran belum aktif. Segera hadir.') + '</div>') +
-        '<div class="sil-methods">' + _renderMethods(methods) + '</div>' +
-        '<div class="sil-summary">' +
-            '<div class="sum-row"><span>' + _tf('silicon.store.you_get', 'Kamu dapat') + '</span><b>' + (pkg.sil + pkg.bonus) + ' SIL</b></div>' +
-            '<div class="sum-row total"><span>' + _tf('silicon.store.total', 'Total') + '</span><b>' + _price(pkg) + '</b></div>' +
-        '</div>' +
-        '<button type="button" class="btn-primary" data-sil-pay style="width:100%;margin-top:12px;"' + (canPay ? '' : ' disabled') + '>' +
-            (_sel.busy ? _tf('silicon.store.processing', 'Memproses…') : _tf('silicon.store.pay', 'Bayar') + ' · ' + _price(pkg)) + '</button>';
-}
-
-function _renderOrders() {
-    var orders = PaymentService.getOrders().slice(0, 4);
-    if (!orders.length) return '';
-    var rows = orders.map(function (o) {
-        var cls = o.status === 'paid' ? 'pos' : (o.status === 'pending' ? 'warn' : 'neg');
-        var refresh = o.status === 'pending' ? ' <button type="button" class="slot-boost" data-sil-order-refresh="' + o.id + '">' + _tf('silicon.store.check', 'Cek') + '</button>' : '';
-        return '<div class="sil-hist-row">' +
-            '<span class="sil-hist-reason">' + _esc(o.packageId.replace('pkg_', '').toUpperCase()) + ' · ' + o.sil + ' SIL' + refresh + '</span>' +
-            '<span class="sil-hist-delta ' + cls + '">' + _tf('silicon.store.status.' + o.status, o.status) + '</span>' +
-        '</div>';
-    }).join('');
-    return '<div class="section-label"><span class="section-label-text">' + _tf('silicon.store.orders', 'Pesanan') + '</span>' +
-        '<span class="section-label-line"></span></div><div class="node-list">' + rows + '</div>';
-}
-
-// ============================================================
-// RENDER UTAMA
-// ============================================================
-function _build() {
-    var isBuy = (_storeTab === 'buy');
-    var isEx = (_storeTab === 'exchange');
-    var isTrf = (_storeTab === 'transfer');
-
-    var btnStyle = 'flex:1; padding:10px; border-radius:8px; border:none; font-weight:bold; font-size:12px; cursor:pointer;';
-    var on = 'background:var(--accent); color:#fff;';
-    var off = 'background:var(--bg-3); color:var(--text-secondary);';
-
-    var content = '';
-    if (isBuy) content = _renderBuyTab();
-    else if (isEx) content = _renderExchangeTab();
-    else content = _renderTransferTab();
-
-    return '<div class="modal-title g-ico-title">' + gIcon('sil', 20) + '<span>' + _tf('silstore.title', 'Silicon Store') + '</span></div>' +
-        '<div class="sil-balance sil-balance-compact">' +
-            '<div class="sil-balance-label">' + _tf('silicon.balance', 'SALDO') + '</div>' +
-            '<div class="sil-balance-value">' + SiliconService.getDisplayBalance() + ' <span>SIL</span></div>' +
-        '</div>' +
-        
-        '<div style="display:flex; gap:6px; margin-bottom:16px;">' +
-            '<button id="tab-buy" style="' + btnStyle + (isBuy ? on : off) + '">' + _tf('silstore.tab.buy', 'Beli') + '</button>' +
-            '<button id="tab-exchange" style="' + btnStyle + (isEx ? on : off) + '">' + _tf('silstore.tab.exchange', 'Tukar Uang') + '</button>' +
-            '<button id="tab-transfer" style="' + btnStyle + (isTrf ? on : off) + '">' + _tf('silstore.tab.transfer', 'Kirim') + '</button>' +
-        '</div>' +
-
-        content +
-        
-        (isBuy ? _renderOrders() : '') +
-        '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">' + _tf('common.close', 'Tutup') + '</button>';
-}
-
-function _onClick(e) {
-    if (e.target.closest('[data-modal-close]')) { Modal.close(MODAL_ID); return; }
-
-    if (e.target.closest('#tab-buy')) { _storeTab = 'buy'; _render(); return; }
-    if (e.target.closest('#tab-exchange')) { _storeTab = 'exchange'; _render(); return; }
-    if (e.target.closest('#tab-transfer')) { _storeTab = 'transfer'; _render(); return; }
-
-    if (e.target.closest('#btn-do-transfer')) { _handleTransfer(); return; }
-
-    var exBtn = e.target.closest('.btn-exchange');
-    if (exBtn && !exBtn.disabled) {
-        var sil = parseInt(exBtn.dataset.sil, 10);
-        var cash = parseInt(exBtn.dataset.cash, 10);
-        if (confirm(t('silstore.exch.confirm', { sil: sil, cash: cash.toLocaleString('en-US') }))) { _handleExchange(sil, cash); }
-        return;
-    }
-
-    var pk = e.target.closest('[data-sil-pkg]');
-    if (pk) { _sel.pkg = pk.dataset.silPkg; _render(); return; }
-
-    var md = e.target.closest('[data-sil-method]');
-    if (md && !md.disabled) { _sel.method = md.dataset.silMethod; _render(); return; }
-
-    var rf = e.target.closest('[data-sil-order-refresh]');
-    if (rf) {
-        var btn = rf; btn.textContent = '...';
-        PaymentService.refresh(rf.dataset.silOrderRefresh).then(function (r) {
-            if (r.ok && r.sil) ToastService.success(_tf('silicon.store.done', '+{n} SIL ditambahkan.', { n: r.sil }));
-            else if (r.pending) ToastService.info(_tf('silicon.store.still_pending', 'Menunggu konfirmasi Admin.'));
-            _render();
-        });
-        return;
-    }
-
-    if (e.target.closest('[data-sil-pay]')) {
-        if (!_sel.method || _sel.busy) return;
-        _sel.busy = true; _render();
-        PaymentService.pay(_sel.pkg, _sel.method).then(function (r) {
-            _sel.busy = false;
-            if (r.ok && r.sil) { ToastService.success(_tf('silicon.store.done', '+{n} SIL ditambahkan.', { n: r.sil })); _render(); }
-            else if (r.ok && r.pending) { _render(); _showPaymentModal(r.order); }
-            else { ToastService.error(r.reason || _tf('silicon.store.failed', 'Pembayaran gagal.')); _render(); }
-        });
-    }
-}
-
-function _showPaymentModal(order) {
-    var pkg = PaymentService.getPackage(order.packageId);
-    var mockBtnHtml = DEV_BUILD ? `<div style="margin-top:24px; padding-top:16px; border-top:1px dashed var(--border); text-align:center;"><button type="button" data-qr-mock style="background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger); padding:8px; border-radius:8px; font-size:11px; width:100%; cursor:pointer;">${_tf('silstore.qr.mock', 'Simulasi Lunas')}</button></div>` : '';
-    var html = `<div class="modal-title" style="text-align:center; font-size:18px;">${_tf('silstore.qr.title', 'Pindai QRIS')}</div><div class="modal-sub" style="text-align:center; margin-bottom:16px;">${_tf('silstore.qr.time_left', 'Sisa waktu')} <b id="qr-timer" style="color:var(--danger); font-family:monospace; font-size:14px;">15:00</b></div><div style="text-align:center; margin-bottom:12px;"><div style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">${_tf('silstore.qr.total', 'Total Pembayaran')}</div><div style="font-size:24px; font-weight:bold; color:var(--accent);">${_price(pkg)}</div></div><div style="text-align:center; padding: 12px; background: #fff; border-radius: 12px; margin-bottom:16px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);"><img src="${STATIC_QRIS_URL}" style="width:100%; max-width:250px; display:block; margin:0 auto; border-radius:8px;" alt="QRIS" /></div><div style="font-size:13px; color:var(--text-secondary); text-align:center; margin-bottom:16px; line-height:1.5;">${_tf('silstore.qr.scan', 'Pindai kode di atas menggunakan aplikasi bank atau e-wallet Anda.')}<br><b>${_tf('silstore.qr.important', 'PENTING')}</b> ${_tf('silstore.qr.note_pre', 'Sertakan Order ID')} <b>${_esc(order.id)}</b> ${_tf('silstore.qr.note_post', 'pada berita transfer.')}</div><div style="display:flex; flex-direction:column; gap:8px;"><button type="button" class="btn-primary" data-qr-check style="width:100%;">${_tf('silstore.qr.check', 'Cek Status')}</button><button type="button" class="btn-secondary" data-qr-cancel style="width:100%;">${_tf('silstore.qr.cancel', 'Batal')}</button></div>${mockBtnHtml}`;
-    Modal.open('payment-qr', html);
-    var root = document.querySelector('[data-modal-id="payment-qr"]'); if (!root) return;
-    var timerEl = root.querySelector('#qr-timer'); var btnCheck = root.querySelector('[data-qr-check]');
-    
-    if (_adminApprovedUnsub) _adminApprovedUnsub();
-    _adminApprovedUnsub = bus.on('payment:approved', function(approvedId) {
-        if (approvedId === order.id) { cleanupTimers(); Modal.close('payment-qr', true); ToastService.success(t('silstore.toast.approved')); if (window.__game && window.__game.cloudSync) window.__game.cloudSync.syncSilicon(); }
+    document.addEventListener('keydown', function (e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.code === 'Space') { e.preventDefault(); timeSystem.togglePause(); }
+        if (e.key === 'f' || e.key === 'F') timeSystem.cycleSpeed();
     });
-    function handleSiliconChange(payload) { if (payload && payload.delta > 0) { cleanupTimers(); Modal.close('payment-qr', true); ToastService.success(t('silstore.toast.paid_synced')); _render(); } }
-    bus.on('silicon:changed', handleSiliconChange);
-    function cleanupTimers() { if (_countdownTimer) clearInterval(_countdownTimer); if (_pollingTimer) clearInterval(_pollingTimer); document.removeEventListener('visibilitychange', _onVisibilityChange); if (_adminApprovedUnsub) { _adminApprovedUnsub(); _adminApprovedUnsub = null; } bus.off('silicon:changed', handleSiliconChange); }
-    function _onVisibilityChange() { if (document.visibilityState === 'visible') checkStatus(false); }
-    document.addEventListener('visibilitychange', _onVisibilityChange);
-    var timeLeft = 15 * 60; if (_countdownTimer) clearInterval(_countdownTimer);
-    _countdownTimer = setInterval(function() { timeLeft--; var m = Math.floor(timeLeft / 60); var s = timeLeft % 60; if (timerEl) timerEl.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`; if (timeLeft <= 0) { cleanupTimers(); ToastService.error(t('silstore.toast.expired')); Modal.close('payment-qr', true); } }, 1000);
-    function checkStatus(isManual) {
-        if (isManual) btnCheck.textContent = t('silstore.qr.checking');
-        PaymentService.refresh(order.id).then(function(r) {
-            var isPaid = r.ok && (r.sil || (r.order && r.order.status === 'paid'));
-            if (isPaid) { cleanupTimers(); Modal.close('payment-qr', true); ToastService.success(t('silstore.toast.paid')); _render(); }
-            else { if (isManual) { btnCheck.textContent = t('silstore.qr.check'); ToastService.warning(t('silstore.toast.not_confirmed')); } }
+}
+
+function _openChipDetail(chip) {
+    if (!chip) return;
+    var lifecycle = chipSystem.getChipLifecycle ? chipSystem.getChipLifecycle(chip) : null;
+    var ageMonths = chipSystem.getChipAgeMonths ? chipSystem.getChipAgeMonths(chip) : 0;
+
+    var mockupHtml = '';
+    try { mockupHtml = renderChipMockup(chip.config, { size: 170 }); } catch (e) {}
+    var radarHtml = '';
+    try { radarHtml = renderChipRadarChart({ performance: chip.stats.performance, efficiency: chip.stats.efficiency, costPerUnit: chip.stats.costPerUnit, yieldRate: chip.yieldRate }, { size: 150 }); } catch (e) {}
+
+    var html = '<div class="modal-title">' + chip.name + '</div>' +
+        '<div class="modal-sub">Dirilis ' + chip.releaseDate.day + '/' + chip.releaseDate.month + '/' + chip.releaseDate.year + ' - ' + ageMonths + ' bulan</div>' +
+        '<div class="chip-detail-layout">' +
+        '<div class="chip-detail-left">' +
+        '<div class="chip-detail-device">' + mockupHtml + '</div>' +
+        '<div class="chip-detail-radar">' + radarHtml + '</div>' +
+        '</div>' +
+        '<div class="chip-detail-right">' +
+        '<div class="sum-row"><span>Performance</span><b style="color:var(--success);">' + chip.stats.performance + '</b></div>' +
+        '<div class="sum-row"><span>Efficiency</span><b style="color:var(--info);">' + chip.stats.efficiency + '</b></div>' +
+        '<div class="sum-row"><span>Cost per unit</span><b>$' + chip.stats.costPerUnit + '</b></div>' +
+        '<div class="sum-row"><span>Yield Rate</span><b>' + Math.round(chip.yieldRate * 100) + '%</b></div>' +
+        '<div class="sum-row"><span>Cores</span><b>' + chip.stats.cores + 'x @ ' + chip.stats.clock + ' GHz</b></div>' +
+        '<div class="sum-row"><span>Cache</span><b>' + chip.stats.cacheMB.toFixed(2) + ' MB</b></div>' +
+        (lifecycle ? '<div class="sum-row"><span>Lifecycle</span><b style="color:' + lifecycle.color + ';">' + lifecycle.label + ' (x' + lifecycle.multiplier.toFixed(2) + ')</b></div>' : '') +
+        '</div>' +
+        '</div>' +
+        '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">Tutup</button>';
+
+    Modal.open('chip-detail', html);
+}
+
+function _refreshFinishCost(kind, nodeId) {
+    var btn = els.view.querySelector('[data-sil-research="finish"][data-kind="' + kind + '"][data-node-id="' + nodeId + '"]');
+    if (!btn) return;
+    var list = kind === 'chip' ? state.get().chipResearch.active : state.get().research.active;
+    var entry = list.find(function (e) { return e.nodeId === nodeId; });
+    if (!entry) return;
+    var cost = SiliconService.researchFinishCost(entry);
+    var b = btn.querySelector('b'); if (b) b.textContent = cost;
+    if (SiliconService.canAfford(cost)) btn.removeAttribute('data-sil-short'); else btn.setAttribute('data-sil-short', '1');
+}
+
+function bindProgressEvents() {
+    bus.on('research:progress', function (data) {
+        if (activeView !== 'research' || activeSubtab !== 'tech') return;
+        var slotsEl = els.view.querySelector('[data-research-slots]');
+        if (slotsEl) slotsEl.textContent = data.active.length + '/' + data.maxSlots;
+        data.active.forEach(function (r) {
+            var pct = Math.round(r.percent * 100);
+            var bar = els.view.querySelector('[data-research-bar="' + r.nodeId + '"]'); if (bar) bar.style.width = pct + '%';
+            var pctEl = els.view.querySelector('[data-research-pct="' + r.nodeId + '"]'); if (pctEl) pctEl.textContent = pct + '%';
+            var etaEl = els.view.querySelector('[data-research-eta="' + r.nodeId + '"]'); if (etaEl) etaEl.textContent = tr('main.eta_left', { n: Math.ceil(r.remainingDays) });
+            _refreshFinishCost('tech', r.nodeId);
+        });
+    });
+    bus.on('os:progress', function (data) {
+        if (activeView !== 'research' || activeSubtab !== 'os') return;
+        var pct = Math.round(data.percent * 100);
+        var bar = els.view.querySelector('[data-os-dev-bar]'); if (bar) bar.style.width = pct + '%';
+        var pctEl = els.view.querySelector('[data-os-dev-pct]'); if (pctEl) pctEl.textContent = pct + '%';
+        var eta = els.view.querySelector('[data-os-dev-eta]'); if (eta) eta.textContent = tr('main.eta_left', { n: Math.ceil(data.remainingDays) });
+    });
+    bus.on('product:development-progress', function (data) {
+        if (activeView !== 'products' || activeProdSubtab !== 'design') return;
+        var phaseMap = { design: 'Desain', prototype: 'Prototipe', production: 'Produksi', released: 'Rilis' };
+        var phaseEl = els.view.querySelector('[data-prod-dev-phase]'); if (phaseEl) phaseEl.textContent = phaseMap[data.phase] || data.phase;
+        var pctEl = els.view.querySelector('[data-prod-dev-pct]'); if (pctEl) pctEl.textContent = data.percentOverall + '%';
+        var barEl = els.view.querySelector('[data-prod-dev-bar]'); if (barEl) barEl.style.width = data.percentOverall + '%';
+        var etaEl = els.view.querySelector('[data-prod-dev-eta]'); if (etaEl) etaEl.textContent = tr('main.eta_left', { n: data.remainingDays });
+    });
+
+    bus.on('chip-research:progress', function (data) {
+        if (activeView !== 'research' || activeSubtab !== 'chip') return;
+        var slotsEl = els.view.querySelector('[data-chip-research-slots]');
+        if (slotsEl) slotsEl.textContent = data.active.length + '/' + data.maxSlots;
+        data.active.forEach(function (r) {
+            var pct = Math.round(r.percent * 100);
+            var bar = els.view.querySelector('[data-chip-research-bar="' + r.nodeId + '"]'); if (bar) bar.style.width = pct + '%';
+            var pctEl = els.view.querySelector('[data-chip-research-pct="' + r.nodeId + '"]'); if (pctEl) pctEl.textContent = pct + '%';
+            var etaEl = els.view.querySelector('[data-chip-research-eta="' + r.nodeId + '"]'); if (etaEl) etaEl.textContent = tr('main.eta_left', { n: Math.ceil(r.remainingDays) });
+            _refreshFinishCost('chip', r.nodeId);
+        });
+    });
+
+    bus.on('research:started',   function () { if (activeView === 'research' && activeSubtab === 'tech') renderView({ soft: true }); });
+    bus.on('research:completed', function () { if (activeView === 'research' && activeSubtab === 'tech') renderView({ soft: true }); });
+    bus.on('research:cancelled', function () { if (activeView === 'research' && activeSubtab === 'tech') renderView({ soft: true }); });
+
+    bus.on('chip-research:started',   function () { if (activeView === 'research' && activeSubtab === 'chip') renderView({ soft: true }); });
+    bus.on('chip-research:completed', function () { if (activeView === 'research' && activeSubtab === 'chip') renderView({ soft: true }); });
+    bus.on('chip-research:cancelled', function () { if (activeView === 'research' && activeSubtab === 'chip') renderView({ soft: true }); });
+
+    bus.on('product:development-started',   function () { if (activeView === 'products') renderView({ soft: true }); });
+    bus.on('product:released',              function () { if (activeView === 'products') renderView({ soft: true }); });
+    bus.on('product:development-cancelled', function () { if (activeView === 'products') renderView({ soft: true }); });
+}
+
+function bindTimeEvents() {
+    bus.on('time:tick', function () {
+        var meta = els.header && els.header.querySelector('.header-meta');
+        if (!meta) return;
+        var snap = getTime();
+        var hh = String(Math.floor(snap.currentHour)).padStart(2, '0');
+        var mm = String(Math.floor(snap.currentMinute)).padStart(2, '0');
+        var mKey = 'date.month.' + (snap.currentMonth || 1);
+        var mShort = LanguageService.t(mKey);
+        if (mShort === mKey) mShort = String(snap.currentMonth || 1);
+        var d = meta.querySelector('[data-time-date]');
+        if (d) d.textContent = LanguageService.t('header.day_prefix') + ' ' + snap.currentDay + ' ' + mShort + ' ' + snap.currentYear;
+        var c = meta.querySelector('[data-time-clock]'); if (c) c.textContent = hh + ':' + mm;
+        var s = meta.querySelector('[data-time-status]'); if (s) { s.textContent = snap.isPaused ? 'Paused' : (snap.gameSpeed + 'x'); s.classList.toggle('running', !snap.isPaused); }
+    });
+    bus.on('time:day-changed', function () { if (activeView === 'team' && activeHqSubtab === 'overview') updateDashboardLive(); });
+    bus.on('time:speed-changed', function () { renderHeaderOnly(); });
+}
+
+function bindStateEvents() {
+    bus.on('state:cash-changed', function (data) { animateCash(data.prev, data.next); });
+    bus.on('state:log-changed', function () { if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true }); });
+    bus.on('state:milestone-added', function () { if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true }); });
+    bus.on('quest:completed', function (data) { ToastService.success(tr('main.toast.quest_done', { title: data.title })); notifVibrate(20, 'success'); });
+    bus.on('quest:activated', function () { if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true }); });
+    bus.on('economy:warn-burnrate', function (data) {
+        _burnWarn = data.monthsLeft;
+        renderHeaderOnly();
+        ToastService.warning(tr('main.toast.burn_warn', { n: data.monthsLeft }));
+        notifVibrate(30, 'warning');
+    });
+    bus.on('settings:take-loan', function (data) {
+        var res = economy.takeLoan(data.loanId);
+        if (!res.ok) ToastService.error(res.error);
+        else { ToastService.success(tr('main.toast.loan_received')); renderView(); }
+    });
+    bus.on('settings:changed', function (settings) {
+        if (settings && typeof settings.sound === 'boolean') {
+            AudioService.setEnabled(settings.sound);
+        }
+    });
+    bus.on('tutorial:restart', function () { tutorial.restart(); });
+    bus.on('era:changed', function () { renderAll(); });
+    bus.on('team:changed', function () { if (activeView === 'team') renderView({ soft: true }); });
+    bus.on('team:recruited', function () { if (activeView === 'team') renderView({ soft: true }); });
+    bus.on('team:fired', function () { if (activeView === 'team') renderView({ soft: true }); });
+
+    function refreshRegionalView() {
+        if ((activeView === 'market' && activeMarketSubtab === 'promo') ||
+            (activeView === 'team' && activeHqSubtab === 'bank') ||
+            activeView === 'settings') {
+            renderView({ soft: true });
+        }
+    }
+    bus.on('regional:ui', refreshRegionalView);
+    bus.on('promo:changed', refreshRegionalView);
+    bus.on('bank:changed', refreshRegionalView);
+    bus.on('economy:month-processed', refreshRegionalView);
+    bus.on('time:day-changed', function () {
+        if (activeView === 'market' && activeMarketSubtab === 'promo') renderView({ soft: true });
+    });
+
+    bus.on('lang:changed', function () { renderAll(); updateTitle(); });
+    
+    // [FIX] Optimasi render header agar tidak bertabrakan dengan panel SIL
+    var _headerDebounce = null;
+    function _debouncedRenderHeader() {
+        if (_headerDebounce) return;
+        _headerDebounce = requestAnimationFrame(function() {
+            _headerDebounce = null;
+            renderHeaderOnly();
         });
     }
-    if (_pollingTimer) clearInterval(_pollingTimer);
-    _pollingTimer = setInterval(function() { checkStatus(false); }, 5000); 
-    btnCheck.addEventListener('click', function() { checkStatus(true); });
-    root.querySelector('[data-qr-cancel]').addEventListener('click', function() { cleanupTimers(); PaymentService.cancel(order.id); Modal.close('payment-qr', true); _render(); });
-    var btnMock = root.querySelector('[data-qr-mock]');
-    if (btnMock) { btnMock.addEventListener('click', function() { PaymentService._fulfill(order); cleanupTimers(); Modal.close('payment-qr', true); ToastService.success(t('silstore.toast.mock_paid')); _render(); }); }
+    bus.on('silicon:changed', _debouncedRenderHeader);
+    bus.on('silicon:display', _debouncedRenderHeader);
+
+    // Dompet Universal: beri tahu pemain saat SIL/uang dipakai lintas mata uang.
+    (function () {
+        function _cash(n) { return Number(n).toLocaleString('en-US'); }
+        bus.on('wallet:paid-with-sil', function (p) {
+            if (!p || !p.sil) return;
+            ToastService.info(p.cash
+                ? tr('main.wallet.paid_sil_cash', { sil: p.sil, cash: _cash(p.cash) })
+                : tr('main.wallet.paid_sil', { sil: p.sil }));
+        });
+        bus.on('wallet:paid-with-cash', function (p) {
+            if (!p || !p.cash) return;
+            ToastService.info(tr('main.wallet.paid_cash', { cash: _cash(p.cash) }));
+        });
+        bus.on('wallet:rescue', function (p) {
+            if (!p) return;
+            ToastService.warning(tr('main.wallet.rescue', { sil: p.sil }));
+        });
+    })();
+
+    bus.on('advisor:go', function (p) {
+        if (!p || !p.nav) return;
+        Modal.closeAll();
+        if (p.subtab) {
+            if (p.nav === 'research') activeSubtab = p.subtab;
+            else if (p.nav === 'products') activeProdSubtab = p.subtab;
+            else if (p.nav === 'market') activeMarketSubtab = p.subtab;
+            else if (p.nav === 'team') activeHqSubtab = p.subtab;
+        }
+        if (p.nav === activeView) renderView(); else navigate(p.nav);
+    });
+
+    bus.on('news:published', function (data) {
+        try {
+            var article = data && data.article;
+            if (!article) return;
+            var shortMsg = article.source + ': ' + article.headline;
+            if (shortMsg.length > 70) shortMsg = shortMsg.slice(0, 67) + '...';
+            ToastService.show(shortMsg, 'news', 6500, {
+                action: {
+                    label: 'Baca',
+                    onClick: function () { openNewsArticleModal(article); }
+                }
+            });
+            if (activeView === 'team' && activeHqSubtab === 'overview') renderView({ soft: true });
+            if (activeView === 'dashboard') refreshHomeSlides();
+            notifVibrate(15, 'news');
+        } catch (err) {
+            console.error('[main] news:published handler error:', err);
+        }
+    });
+
+    function _refreshHomeIfActive() {
+        if (activeView === 'dashboard') {
+            try { refreshHomeSlides(); } catch (e) { console.error('[home] refresh error:', e); }
+        }
+    }
+
+    bus.on('state:log-changed',      function () { _refreshHomeIfActive(); });
+    bus.on('state:milestone-added',  function () { _refreshHomeIfActive(); });
+    bus.on('quest:activated',        function () { _refreshHomeIfActive(); });
+    bus.on('quest:completed',        function () { _refreshHomeIfActive(); });
+    bus.on('research:started',       function () { _refreshHomeIfActive(); });
+    bus.on('research:completed',     function () { _refreshHomeIfActive(); });
+    bus.on('research:cancelled',     function () { _refreshHomeIfActive(); });
+    bus.on('chip-research:started',   function () { _refreshHomeIfActive(); });
+    bus.on('chip-research:completed', function () { _refreshHomeIfActive(); });
+    bus.on('chip-research:cancelled', function () { _refreshHomeIfActive(); });
+    bus.on('product:development-started',   function () { _refreshHomeIfActive(); });
+    bus.on('product:released',              function () { _refreshHomeIfActive(); });
+    bus.on('product:development-cancelled', function () { _refreshHomeIfActive(); });
 }
 
-function _render() {
-    if (!Modal.isOpen(MODAL_ID)) return;
-    var card = document.querySelector('[data-modal-id="' + MODAL_ID + '"] .modal-card');
-    if (!card) return;
-    var scroll = card.scrollTop;
-    card.innerHTML = _build();
-    card.scrollTop = scroll;
+async function boot() {
+    try {
+        splash(72);
+        if (!els.header || !els.view || !els.nav) throw new Error('Elemen HTML utama tidak ditemukan.');
+        ThemeService.init();
+        LanguageService.init();
+        AudioService.init();
+        AudioService.setEnabled(!!state.get().settings.sound);
+        mountToastContainer(els.toast);
+        initTutorialOverlay();
+        initMonthlySummary();
+        initGameOverScreen();
+        splash(80);
+
+        if (SaveService.hasSave()) {
+            var saved = SaveService.load();
+            if (saved) { state.hydrate(saved); console.info('[boot] Save dimuat.'); }
+        } else {
+            hideLoading();
+            var onb = await showOnboarding();
+            if (onb.cloudData && state.hydrate(onb.cloudData)) {
+                // Masuk dari layar awal & akun sudah punya progres: lanjutkan, bukan buat perusahaan baru.
+                SaveService.save(state);
+                console.info('[boot] Progres dimuat dari cloud:', onb.companyName);
+            } else {
+                state.patch({ companyName: onb.companyName, difficulty: onb.difficulty });
+                var mod = await import('./data/balance.data.js');
+                var starting = mod.BALANCE.startingCash[onb.difficulty] || mod.BALANCE.startingCash.normal;
+                state.setCash(starting);
+                state.addMilestone('founded', 'Perusahaan ' + onb.companyName + ' didirikan.');
+                state.addLog('Perusahaan ' + onb.companyName + ' didirikan.', 'success');
+                SaveService.save(state);
+            }
+        }
+
+        splash(88);
+
+        if (!state.get().settings.competitorMode) state.get().settings.competitorMode = 'real';
+
+        try {
+            var dl = SiliconService.claimDailyLogin();
+            if (dl && dl.ok) {
+                ToastService.success(tr('main.toast.daily_login', { amount: dl.amount, streak: dl.streak }));
+                console.info('[Silicon] Daily login +' + dl.amount + ' SIL, streak ' + dl.streak);
+            } else if (dl && dl.reason === 'already_claimed') {
+                console.info('[Silicon] Daily login sudah diklaim hari ini.');
+            }
+        } catch (e) {
+            console.warn('[Silicon] Daily login gagal:', e);
+        }
+
+        eraSystem.start();
+        economy.start();
+        quests.start();
+        tutorial.start();
+        teamSystem.start();
+        if (!state.get().candidates || state.get().candidates.length === 0) teamSystem.refreshCandidates();
+        research.start();
+        chipResearch.start();
+        os.start();
+        products.start();
+        competitors.start();
+        competitorActions.start();
+        market.start();
+        opinion.start();
+        chipSystem.start();
+        fabSystem.start();
+        NewsSystem.start();
+        advisor.start();
+        stockSystem.start();
+        promotion.start();
+        bank.start();
+        bindRegionalActions();
+        mountAdvisorButton(advisor);
+        splash(96);
+
+        try {
+            CloudService.registerAdapter(SupabaseAdapter);
+            CloudSync.init(state);
+            bindCloudUI();
+            
+            // [FIX] Sinkronisasi instan 1 detik setelah boot untuk mencegah bug rollback SIL
+            setTimeout(function() { 
+                if (CloudSync && typeof CloudSync.syncSilicon === 'function') {
+                    CloudSync.syncSilicon(); 
+                }
+            }, 1000);
+
+            if (CloudService.getStatus() === 'connected') {
+                console.info('[Cloud] Sudah masuk dari layar awal:', CloudService.getEmail());
+            } else if (typeof SupabaseAdapter.hasStoredSession === 'function' && SupabaseAdapter.hasStoredSession()) {
+                CloudService.restoreSession().then(function (r) {
+                    if (r && r.ok) {
+                        console.info('[Cloud] Sesi dipulihkan:', r.email || r.userId);
+                        // [FIX] Langsung sinkron setelah sesi dipulihkan
+                        if (CloudSync && typeof CloudSync.syncSilicon === 'function') {
+                            CloudSync.syncSilicon();
+                        }
+                    } else {
+                        console.info('[Cloud] Tidak ada sesi tersimpan.');
+                    }
+                });
+            } else {
+                console.info('[Cloud] Adapter terdaftar (belum login).');
+            }
+        } catch (e) {
+            console.warn('[Cloud] Init gagal:', e);
+        }
+
+        window.__game = {
+            report: function (opts) { return buildReport(state.get(), window.__game, opts || {}); },
+            reportText: function (opts) { return formatReportText(buildReport(state.get(), window.__game, opts || {})); },
+            reportShow: function () { openDiagnosticModal(); },
+            cloud: CloudService,
+            cloudSync: CloudSync,
+            forcePull: function() { return CloudSync.forcePull(); },
+            state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
+            research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
+            chips: chipSystem, fab: fabSystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
+            silicon: SiliconService, promotion: promotion, bank: bank, payment: PaymentService,
+            openSiliconStore: openSiliconStoreModal, LanguageService: LanguageService,
+            SaveService: SaveService, ToastService: ToastService, Modal: Modal, navigate: navigate, render: renderAll, renderSoft: renderSoft,
+            modules: { marketing: marketingModule, feedbackData: feedbackModule },
+            cheat: {
+                addCash: function (n) { state.addCash(n); },
+                fastForwardDays: function (n) { return timeSystem.fastForwardDays(n); },
+                skipDays: function (n) { return timeSystem.fastForwardDays(n); },
+                skipToMonth: function (n) { timeSystem.fastForwardDays(n * 30); },
+                finishTutorial: function () { tutorial.skip(); },
+                addEngineers: function (n) { teamSystem.fillStaff('engineer', n, 3); },
+                addDesigners: function (n) { teamSystem.fillStaff('designer', n, 3); },
+                addMarketers: function (n) { teamSystem.fillStaff('marketer', n, 3); },
+                completeAllResearch: function () { return research.completeAllResearch(); },
+                completeResearch: function (id) { return research.completeResearch(id); },
+                completeAllChipResearch: function () { return chipResearch.completeAllResearch(); },
+                completeChipResearch: function (id) { return chipResearch.completeResearch(id); },
+                startOsWith: function (ids) { return os.quickSetup(ids); },
+                quickRelease: function (cfg) { return products.quickRelease(cfg); },
+                setYear: function (y) { var cur = state.get().time.currentYear; return timeSystem.fastForwardDays((y - cur) * 365.25); },
+                forceEra: function (eraId) { state.get().era = eraId; bus.emit('state:changed', state.get()); renderAll(); return { era: eraId }; },
+                setTheme: function (id) { ThemeService.setTheme(id); renderAll(); return { theme: id }; },
+                setAccent: function (id) { ThemeService.setAccent(id); renderAll(); return { accent: id }; },
+                setLang: function (id) { LanguageService.setLang(id); renderAll(); return { lang: id }; },
+                setHqSubtab: function (id) { activeHqSubtab = id; renderAll(); return { subtab: id }; },
+                setTeamMode: function (id) { setTeamMode(id); renderAll(); return { mode: id }; },
+                unlockChipDesign: function () { ['chip_design_tool','chip_arch_arm_a','node_180','node_130','node_90','chip_isp_basic','chip_dvfs','fab_construction'].forEach(function (id) { research.completeResearch(id); chipResearch.completeResearch(id); }); return { ok: true }; },
+                quickDesignChip: function (cfg) { return chipSystem.quickDesignChip(cfg); },
+                buildFab: function (lvl) { return fabSystem.quickBuildFab(lvl || 1); },
+                produceChips: function (chipId, qty) { var id = chipId || (state.get().chips.catalog[0] && state.get().chips.catalog[0].id); return fabSystem.orderProduction(id, qty || 1000); },
+                testNews: function () { var a = NewsSystem.generateTestArticle(); if (a) bus.emit('news:published', { article: a }); return a; },
+                addSilicon: function (n) { return SiliconService.add(n, 'cheat'); },
+                claimDaily: function () { return SiliconService.claimDailyLogin(); }
+            }
+        };
+
+        if (!DEV_BUILD) { delete window.__game.cheat; }
+
+        window.render = renderAll;
+        window.navigate = navigate;
+        window.renderAll = renderAll;
+
+        renderAll();
+        bindGlobalClicks();
+        bindTimeEvents();
+        bindStateEvents();
+        bindProgressEvents();
+        updateTitle();
+
+        timeSystem.start();
+        SaveService.startAutoSave(function () { return state; });
+
+        window.addEventListener('resize', function () { updateNavSlider(false); });
+        window.addEventListener('orientationchange', function () { setTimeout(function () { updateNavSlider(false); }, 200); });
+
+        var cash = state.get().cash;
+        if (cash > 0) {
+            document.querySelectorAll('[data-cash]').forEach(function (el) { el.textContent = '$0'; });
+            animateCash(0, cash);
+        }
+
+        initNavSliderDrag({
+            nav: els.nav,
+            getActiveView: function () { return activeView; },
+            navigate: navigate
+        });
+
+        initSwipe({
+            getView: function () { return activeView; },
+            getSubtab: function () {
+                if (activeView === 'research') return activeSubtab;
+                if (activeView === 'products') return activeProdSubtab;
+                if (activeView === 'market')   return activeMarketSubtab;
+                if (activeView === 'team')     return activeHqSubtab;
+                return null;
+            },
+            setSubtab: function (id, direction) {
+                if (activeView === 'research') activeSubtab = id;
+                else if (activeView === 'products') activeProdSubtab = id;
+                else if (activeView === 'market')   activeMarketSubtab = id;
+                else if (activeView === 'team')     activeHqSubtab = id;
+                renderView();
+                showSwipeAnimation(direction);
+            }
+        });
+
+        // ============================================================
+        // POPSTATE HANDLER (Anti-close Tab & Back Button)
+        // ============================================================
+        if (window.history && window.history.pushState) {
+            history.pushState({ game: true }, document.title);
+        }
+        
+        window.addEventListener('popstate', function(e) {
+            // 1. Jika ada Modal yang terbuka, tutup modalnya terlebih dahulu
+            var openModal = document.querySelector('[data-modal-id]');
+            if (openModal) {
+                Modal.closeAll();
+                history.pushState({ game: true }, document.title);
+                return;
+            }
+
+            // 2. Jika tidak ada Modal, tampilkan konfirmasi keluar
+            if (window.confirm("Yakin ingin keluar dari Smartphone Empire? Progres permainan akan disimpan.")) {
+                // Simpan game sebelum keluar
+                if (window.__game && window.__game.SaveService) {
+                    window.__game.SaveService.save(window.__game.state);
+                }
+                // Izinkan browser untuk kembali (keluar dari game)
+                window.history.back();
+            } else {
+                // Tahan pemain di dalam game
+                history.pushState({ game: true }, document.title);
+            }
+        });
+
+        hideLoading();
+        console.info('[' + APP_CONFIG.name + '] siap. Era: ' + state.get().era + ', Lang: ' + LanguageService.getLang() + ', SIL: ' + SiliconService.getBalance());
+    } catch (err) {
+        console.error('[boot] gagal:', err);
+        hideLoading();
+        if (els.error) { els.error.style.display = 'block'; els.error.textContent = 'Boot error: ' + err.message; }
+    }
 }
 
-export function openSiliconStoreModal(defaultTab) {
-    ensureIconStyles();
-    _storeTab = defaultTab || 'buy'; 
-    Modal.open(MODAL_ID, _build());
-    var root = document.querySelector('[data-modal-id="' + MODAL_ID + '"]');
-    if (root) root.addEventListener('click', _onClick);
-    // Tarik saldo asli dengan jeda agar tidak tabrakan dengan render awal
-    setTimeout(function() {
-        try { var cs = window.__game && window.__game.cloudSync; if (cs && cs.syncSilicon) cs.syncSilicon(); } catch (e) {}
-    }, 300);
-}
-
-// [FIX] Cegah double-render yang menimpa saldo server dengan cache lokal
-var _renderDebounce = null;
-bus.on('silicon:changed', function (payload) { 
-    if (!Modal.isOpen(MODAL_ID)) return;
-    if (_renderDebounce) clearTimeout(_renderDebounce);
-    _renderDebounce = setTimeout(function() { 
-        _render(); 
-    }, 50); 
-});
-
-bus.on('lang:changed', function () { 
-    if (Modal.isOpen(MODAL_ID)) _render(); 
-});
+boot();
