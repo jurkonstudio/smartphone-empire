@@ -179,20 +179,12 @@ function _renderExchangeTab() {
         `;
     }).join('');
 
-    var tr = SiliconService.getTrace();
-    var trHtml = '<details style="margin-top:12px;font-size:10px;color:var(--text-tertiary);word-break:break-all;"><summary>Log saldo (diagnostik)</summary>' +
-        '<div>server-terkonfirmasi: ' + (SiliconService.isServerConfirmed() ? 'ya' : 'belum') + ' | saldo lokal: ' + balance + '</div>' +
-        (tr.length ? tr.map(function (x) {
-            return '<div style="margin-top:6px;border-top:1px solid var(--border);padding-top:4px;">' + _esc(x.t + ' ' + x.k + ' ' + x.a + ' → ' + x.b) + '<br>' + _esc(x.s || '') + '</div>';
-        }).join('') : '<div>(kosong)</div>') + '</details>';
-
     return `
         <div style="font-size:12px; color:var(--text-secondary); margin-bottom:16px; text-align:center;">
             ${_e('exch.intro')}
         </div>
         ${notice}
         ${cards}
-        ${trHtml}
     `;
 }
 
