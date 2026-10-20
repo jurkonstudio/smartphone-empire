@@ -46,6 +46,12 @@ function _cloudOn() {
 // (Setelan -> Keuangan). Set false untuk mengembalikan perilaku lama ('auto' aktif otomatis).
 var WALLET_REQUIRE_CONSENT = true;
 
+// [FIX SALDO] Saldo yang DITAMPILKAN harus sama dengan server (Supabase).
+// _serverConfirmed = true setelah saldo server berhasil dibaca pada sesi cloud ini.
+// _serverFailed    = true bila pembacaan server gagal/timeout (jatuh ke saldo lokal agar tidak '…' selamanya).
+var _serverConfirmed = false;
+var _serverFailed = false;
+
 export var SILICON_ACTIONS = [
     { id: 'research', group: 'research',     cost: 20, icon: '🔬', ready: true },
     { id: 'chipResearch', group: 'research', cost: 20, icon: '💠', ready: true },
@@ -89,6 +95,29 @@ export var SiliconService = {
     getBalance() {
         return state.data.silicon || 0;
     },
+
+    // Teks saldo untuk UI. Mode cloud: '…' sampai saldo server terkonfirmasi.
+    // Offline / DEV_BUILD / server gagal dibaca: tampilkan saldo lokal.
+    getDisplayBalance() {
+        var bal = state.data.silicon || 0;
+        if (DEV_BUILD || !CLOUD_ONLY) return bal;
+        if (!_cloudOn()) return bal;
+        if (_serverConfirmed || _serverFailed) return bal;
+        return '…';
+    },
+
+    isServerConfirmed() { return _serverConfirmed; },
+
+    // Dipanggil CloudSync: true = saldo server sudah dibaca, false = gagal membaca.
+    markServerSync(ok) {
+        var was = _serverConfirmed || _serverFailed;
+        if (ok) { _serverConfirmed = true; _serverFailed = false; }
+        else if (!_serverConfirmed) { _serverFailed = true; }
+        if (!was || ok) bus.emit('silicon:display', { confirmed: _serverConfirmed });
+    },
+
+    // Panggil saat logout / ganti akun agar saldo lama tidak tampil sebagai saldo server.
+    resetServerSync() { _serverConfirmed = false; _serverFailed = false; },
 
     // true bila SIL boleh dipakai/ditambah (login cloud aktif).
     isActive() { return _cloudOn(); },
@@ -190,7 +219,12 @@ export var SiliconService = {
     applyServerBalance(newBalance) {
         newBalance = Math.max(0, Math.floor(newBalance || 0));
         var old = state.data.silicon || 0;
-        if (old === newBalance) return { ok: true, balance: newBalance, changed: false };
+        var firstConfirm = !_serverConfirmed;
+        _serverConfirmed = true; _serverFailed = false;
+        if (old === newBalance) {
+            if (firstConfirm) { bus.emit('silicon:changed', { balance: newBalance, delta: 0, fromServer: true }); }
+            return { ok: true, balance: newBalance, changed: false };
+        }
         var delta = newBalance - old;
         state.data.silicon = newBalance;
         _pushHistory('sync', delta, 'server-sync');
