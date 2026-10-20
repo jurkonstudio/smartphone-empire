@@ -1,21 +1,24 @@
 // FILE: src/data/research.data.js
 // ============================================================
-// DATA RISET — 5 kategori × 7-9 node, tersebar 2000-2025.
+// DATA RISET — 8 kategori (Layar, Kamera, Baterai, Chip, Jaringan, Bodi, Sensor, Audio).
 // Semua angka balancing di sini (bukan di logic/UI).
 // ============================================================
 
 import { BALANCE } from './balance.data.js';
 
 export const RESEARCH_CATEGORIES = [
-    { id: 'display',   name: 'Layar',    icon: 'monitor' },
-    { id: 'camera',    name: 'Kamera',   icon: 'camera' },
-    { id: 'battery',   name: 'Baterai',  icon: 'battery' },
-    { id: 'chip',      name: 'Chip',     icon: 'cpu' },
-    { id: 'network',   name: 'Jaringan', icon: 'signal' }
+    { id: 'display',   name: 'Layar',        icon: 'monitor' },
+    { id: 'camera',    name: 'Kamera',       icon: 'camera' },
+    { id: 'battery',   name: 'Baterai',      icon: 'battery' },
+    { id: 'chip',      name: 'Chip',         icon: 'cpu' },
+    { id: 'network',   name: 'Jaringan',     icon: 'signal' },
+    { id: 'body',      name: 'Bodi',         icon: 'layers' },      // BARU
+    { id: 'sensor',    name: 'Sensor',       icon: 'shield' },      // BARU
+    { id: 'audio',     name: 'Audio & Fitur',icon: 'headphones' }   // BARU
 ];
 
 export const RESEARCH_NODES = [
-    // ==================== LAYAR ====================
+    // ==================== LAYAR (Asli) ====================
     { id: 'layar_mono', category: 'display', tier: 1, minYear: 2000,
       name: 'Layar Monokrom',
       description: 'Layar hitam-putih sederhana untuk ponsel fitur awal.',
@@ -57,7 +60,7 @@ export const RESEARCH_NODES = [
       cost: 350000, durationDays: 110, prerequisites: ['layar_hfr'],
       effects: { unlocksComponents: ['scr_fold'], statBonuses: { display: 90 }, unlocksOsFeatures: [] } },
 
-    // ==================== KAMERA ====================
+    // ==================== KAMERA (Asli + Tambahan) ====================
     { id: 'cam_vga', category: 'camera', tier: 1, minYear: 2001,
       name: 'Kamera VGA',
       description: 'Kamera 0.3 MP pertama untuk ponsel.',
@@ -98,8 +101,21 @@ export const RESEARCH_NODES = [
       description: 'Sensor besar dengan piksel binning.',
       cost: 380000, durationDays: 105, prerequisites: ['cam_dual'],
       effects: { unlocksComponents: ['cam_48mp'], statBonuses: { camera: 92 }, unlocksOsFeatures: [] } },
+    // --- TAMBAHAN KAMERA ---
+    { id: 'cam_var_aperture', category: 'camera', tier: 4, minYear: 2019,
+      name: 'Variable Aperture', description: 'Bukaan lensa yang bisa berubah untuk kontrol cahaya.',
+      cost: 150000, durationDays: 60, prerequisites: ['cam_dual'],
+      effects: { unlocksComponents: ['cam_var_aperture'], statBonuses: { camera: 10 }, unlocksOsFeatures: [] } },
+    { id: 'cam_periscope', category: 'camera', tier: 5, minYear: 2020,
+      name: 'Periscope Zoom', description: 'Lensa periskop untuk zoom optik 5x-10x tanpa bodi tebal.',
+      cost: 250000, durationDays: 80, prerequisites: ['cam_48mp'],
+      effects: { unlocksComponents: ['cam_periscope'], statBonuses: { camera: 15 }, unlocksOsFeatures: [] } },
+    { id: 'cam_gimbal', category: 'camera', tier: 5, minYear: 2021,
+      name: 'Gimbal Stabilization', description: 'Stabilizer mekanik mikro untuk video super mulus.',
+      cost: 280000, durationDays: 85, prerequisites: ['cam_12mp'],
+      effects: { unlocksComponents: ['cam_gimbal'], statBonuses: { camera: 15, quality: 5 }, unlocksOsFeatures: [] } },
 
-    // ==================== BATERAI ====================
+    // ==================== BATERAI (Asli + Tambahan) ====================
     { id: 'bat_nimh', category: 'battery', tier: 1, minYear: 2000,
       name: 'Baterai NiMH',
       description: 'Baterai nikel-metal hidrida generasi awal.',
@@ -140,13 +156,31 @@ export const RESEARCH_NODES = [
       description: 'Kapasitas besar untuk pemakaian seharian.',
       cost: 220000, durationDays: 90, prerequisites: ['bat_wireless'],
       effects: { unlocksComponents: ['bat_5000'], statBonuses: { battery: 85 }, unlocksOsFeatures: ['fw_dark_mode'] } },
+    { id: 'bat_sicarbon', category: 'battery', tier: 5, minYear: 2023,
+      name: 'Baterai Silicon-Carbon (Si/C)',
+      description: 'Anoda silikon untuk kapasitas besar di bodi tetap tipis.',
+      cost: 320000, durationDays: 100, prerequisites: ['bat_big5000'],
+      effects: { unlocksComponents: ['bat_sicarbon'], statBonuses: { battery: 95 }, unlocksOsFeatures: [] } },
     { id: 'bat_graphene', category: 'battery', tier: 5, minYear: 2024,
       name: 'Baterai Graphene',
       description: 'Teknologi masa depan dengan kepadatan energi ekstrem.',
-      cost: 450000, durationDays: 120, prerequisites: ['bat_big5000'],
+      cost: 450000, durationDays: 120, prerequisites: ['bat_sicarbon'],
       effects: { unlocksComponents: ['bat_graphene'], statBonuses: { battery: 100 }, unlocksOsFeatures: [] } },
+    // --- TAMBAHAN BATERAI ---
+    { id: 'bat_wireless_50w', category: 'battery', tier: 4, minYear: 2021,
+      name: '50W Wireless Charging', description: 'Pengisian nirkabel super cepat.',
+      cost: 180000, durationDays: 70, prerequisites: ['bat_wireless'],
+      effects: { unlocksComponents: ['bat_wireless_50w'], statBonuses: { battery: 10 }, unlocksOsFeatures: [] } },
+    { id: 'bat_200w', category: 'battery', tier: 5, minYear: 2022,
+      name: '200W Super Fast Charging', description: 'Mengisi daya penuh dalam waktu kurang dari 10 menit.',
+      cost: 300000, durationDays: 90, prerequisites: ['bat_fast'],
+      effects: { unlocksComponents: ['bat_200w'], statBonuses: { battery: 15 }, unlocksOsFeatures: [] } },
+    { id: 'bat_solidstate', category: 'battery', tier: 5, minYear: 2026,
+      name: 'Solid-State Battery', description: 'Baterai masa depan tanpa elektrolit cair, sangat aman dan padat.',
+      cost: 600000, durationDays: 150, prerequisites: ['bat_graphene'],
+      effects: { unlocksComponents: ['bat_solidstate'], statBonuses: { battery: 20 }, unlocksOsFeatures: [] } },
 
-    // ==================== CHIP ====================
+    // ==================== CHIP (Asli) ====================
     { id: 'chip_single', category: 'chip', tier: 1, minYear: 2000,
       name: 'Chip Single-core',
       description: 'Prosesor satu inti untuk fitur dasar.',
@@ -188,7 +222,7 @@ export const RESEARCH_NODES = [
       cost: 480000, durationDays: 120, prerequisites: ['chip_5nm'],
       effects: { unlocksComponents: ['chip_3nm'], statBonuses: { performance: 100 }, unlocksOsFeatures: [] } },
 
-    // ==================== JARINGAN ====================
+    // ==================== JARINGAN (Asli + Tambahan) ====================
     { id: 'net_gsm', category: 'network', tier: 1, minYear: 2000,
       name: 'GSM',
       description: 'Jaringan seluler 2G untuk panggilan dan SMS.',
@@ -228,7 +262,102 @@ export const RESEARCH_NODES = [
       name: 'Wi-Fi 6 / eSIM',
       description: 'Konektivitas modern dengan eSIM terintegrasi.',
       cost: 400000, durationDays: 110, prerequisites: ['net_5g'],
-      effects: { unlocksComponents: ['net_wifi6'], statBonuses: { connectivity: 100 }, unlocksOsFeatures: ['fw_ecosystem'] } }
+      effects: { unlocksComponents: ['net_wifi6'], statBonuses: { connectivity: 100 }, unlocksOsFeatures: ['fw_ecosystem'] } },
+    // --- TAMBAHAN JARINGAN ---
+    { id: 'net_uwb', category: 'network', tier: 4, minYear: 2019,
+      name: 'Ultra-Wideband (UWB)', description: 'Pelacakan posisi presisi tinggi (seperti AirTag).',
+      cost: 120000, durationDays: 60, prerequisites: ['net_4g'],
+      effects: { unlocksComponents: ['net_uwb'], statBonuses: { connectivity: 15 }, unlocksOsFeatures: ['fw_ecosystem'] } },
+    { id: 'net_satellite', category: 'network', tier: 5, minYear: 2023,
+      name: 'Satellite SOS', description: 'Pesan darurat via satelit saat tidak ada sinyal seluler.',
+      cost: 400000, durationDays: 120, prerequisites: ['net_5g'],
+      effects: { unlocksComponents: ['net_satellite'], statBonuses: { connectivity: 20, quality: 10 }, unlocksOsFeatures: [] } },
+
+    // ==================== BODI (BARU) ====================
+    { id: 'body_plastic', category: 'body', tier: 1, minYear: 2000,
+      name: 'Plastik ABS', description: 'Bodi plastik kokoh untuk ponsel fitur awal.',
+      cost: 2000, durationDays: 10, prerequisites: [],
+      effects: { unlocksComponents: ['body_plastic'], statBonuses: { quality: 5 }, unlocksOsFeatures: [] } },
+    { id: 'body_aluminum', category: 'body', tier: 2, minYear: 2004,
+      name: 'Aluminium Anodized', description: 'Bodi logam ringan dan premium.',
+      cost: 15000, durationDays: 25, prerequisites: ['body_plastic'],
+      effects: { unlocksComponents: ['body_aluminum'], statBonuses: { quality: 15 }, unlocksOsFeatures: [] } },
+    { id: 'body_glass', category: 'body', tier: 3, minYear: 2010,
+      name: 'Kaca Tempered', description: 'Kaca kuat dengan lapisan oleophobic.',
+      cost: 45000, durationDays: 40, prerequisites: ['body_aluminum'],
+      effects: { unlocksComponents: ['body_glass'], statBonuses: { quality: 30 }, unlocksOsFeatures: [] } },
+    { id: 'body_steel', category: 'body', tier: 4, minYear: 2017,
+      name: 'Stainless Steel 316L', description: 'Baja tahan karat, sangat kokoh dan mewah.',
+      cost: 100000, durationDays: 60, prerequisites: ['body_glass'],
+      effects: { unlocksComponents: ['body_stainless'], statBonuses: { quality: 50 }, unlocksOsFeatures: [] } },
+    { id: 'body_ceramic', category: 'body', tier: 4, minYear: 2020,
+      name: 'Keramik Zirkonia', description: 'Bodi keramik tahan gores dan elegan.',
+      cost: 180000, durationDays: 70, prerequisites: ['body_steel'],
+      effects: { unlocksComponents: ['body_ceramic'], statBonuses: { quality: 70 }, unlocksOsFeatures: [] } },
+    { id: 'body_titanium', category: 'body', tier: 5, minYear: 2023,
+      name: 'Titanium Grade 5', description: 'Material aerospace-grade, ringan dan super kuat.',
+      cost: 300000, durationDays: 90, prerequisites: ['body_ceramic'],
+      effects: { unlocksComponents: ['body_titanium'], statBonuses: { quality: 90 }, unlocksOsFeatures: [] } },
+    { id: 'body_vegan_leather', category: 'body', tier: 3, minYear: 2020,
+      name: 'Vegan Leather', description: 'Kulit sintetis premium yang tidak licin dan tahan lama.',
+      cost: 80000, durationDays: 50, prerequisites: ['body_glass'],
+      effects: { unlocksComponents: ['body_vegan_leather'], statBonuses: { quality: 15, design: 10 }, unlocksOsFeatures: [] } },
+    { id: 'body_aramid', category: 'body', tier: 5, minYear: 2021,
+      name: 'Aramid Fiber', description: 'Serat karbon ringan dan kuat, khas HP gaming.',
+      cost: 220000, durationDays: 75, prerequisites: ['body_ceramic'],
+      effects: { unlocksComponents: ['body_aramid'], statBonuses: { quality: 20, design: 5 }, unlocksOsFeatures: [] } },
+
+    // ==================== SENSOR (BARU) ====================
+    { id: 'sensor_accel', category: 'sensor', tier: 1, minYear: 2006,
+      name: 'Akselerometer', description: 'Sensor gerak untuk putar layar otomatis.',
+      cost: 5000, durationDays: 15, prerequisites: [],
+      effects: { unlocksComponents: ['sensor_accel'], statBonuses: { usability: 10 }, unlocksOsFeatures: [] } },
+    { id: 'sensor_gyro', category: 'sensor', tier: 2, minYear: 2010,
+      name: 'Giroskop & Kompas', description: 'Sensor orientasi 6-sumbu presisi.',
+      cost: 20000, durationDays: 30, prerequisites: ['sensor_accel'],
+      effects: { unlocksComponents: ['sensor_gyro'], statBonuses: { usability: 20 }, unlocksOsFeatures: [] } },
+    { id: 'sensor_fp_rear', category: 'sensor', tier: 3, minYear: 2013,
+      name: 'Sidik Jari (Belakang)', description: 'Sensor sidik jari kapasitif cepat.',
+      cost: 60000, durationDays: 45, prerequisites: ['sensor_gyro', 'layar_touch_cap'],
+      effects: { unlocksComponents: ['sensor_fp_rear'], statBonuses: { security: 40 }, unlocksOsFeatures: ['fw_biometric'] } },
+    { id: 'sensor_face3d', category: 'sensor', tier: 4, minYear: 2017,
+      name: 'Face ID (3D Pemindai)', description: 'Pemindaian wajah dengan titik inframerah.',
+      cost: 150000, durationDays: 70, prerequisites: ['sensor_fp_rear', 'cam_dual'],
+      effects: { unlocksComponents: ['sensor_faceid'], statBonuses: { security: 60 }, unlocksOsFeatures: [] } },
+    { id: 'sensor_indisplay', category: 'sensor', tier: 4, minYear: 2018,
+      name: 'Sidik Jari Dalam Layar', description: 'Sensor optik tersembunyi di bawah layar.',
+      cost: 180000, durationDays: 80, prerequisites: ['sensor_fp_rear', 'layar_amoled'],
+      effects: { unlocksComponents: ['sensor_indisplay'], statBonuses: { security: 75 }, unlocksOsFeatures: [] } },
+    { id: 'sensor_lidar', category: 'sensor', tier: 5, minYear: 2020,
+      name: 'Sensor LiDAR', description: 'Pemindai kedalaman ruang 3D.',
+      cost: 250000, durationDays: 90, prerequisites: ['sensor_face3d'],
+      effects: { unlocksComponents: ['sensor_lidar'], statBonuses: { security: 90 }, unlocksOsFeatures: [] } },
+
+    // ==================== AUDIO & FITUR (BARU) ====================
+    { id: 'audio_jack', category: 'audio', tier: 1, minYear: 2000,
+      name: 'Jack Audio 3.5mm', description: 'Colokan headphone standar.',
+      cost: 1000, durationDays: 5, prerequisites: [],
+      effects: { unlocksComponents: ['audio_jack'], statBonuses: { usability: 5 }, unlocksOsFeatures: [] } },
+    { id: 'audio_bt', category: 'audio', tier: 1, minYear: 2002,
+      name: 'Bluetooth 2.0', description: 'Transfer file dan headset nirkabel.',
+      cost: 6000, durationDays: 15, prerequisites: ['audio_jack'],
+      effects: { unlocksComponents: ['audio_bt'], statBonuses: { connectivity: 10 }, unlocksOsFeatures: ['fw_bt_basic'] } },
+    { id: 'audio_stereo', category: 'audio', tier: 2, minYear: 2013,
+      name: 'Speaker Stereo', description: 'Speaker ganda kiri-kanan.',
+      cost: 35000, durationDays: 35, prerequisites: ['audio_bt'],
+      effects: { unlocksComponents: ['audio_stereo'], statBonuses: { quality: 15 }, unlocksOsFeatures: [] } },
+    { id: 'audio_nfc', category: 'audio', tier: 3, minYear: 2017,
+      name: 'NFC (Pembayaran)', description: 'Chip komunikasi jarak dekat.',
+      cost: 70000, durationDays: 50, prerequisites: ['audio_bt'],
+      effects: { unlocksComponents: ['audio_nfc'], statBonuses: { connectivity: 20 }, unlocksOsFeatures: ['fw_wallet'] } },
+    { id: 'audio_esim', category: 'audio', tier: 4, minYear: 2018,
+      name: 'eSIM', description: 'Kartu SIM digital tanpa fisik.',
+      cost: 120000, durationDays: 65, prerequisites: ['audio_nfc', 'net_4g'],
+      effects: { unlocksComponents: ['audio_esim'], statBonuses: { connectivity: 25 }, unlocksOsFeatures: ['fw_ecosystem'] } },
+    { id: 'audio_spatial', category: 'audio', tier: 5, minYear: 2021,
+      name: 'Audio Spasial', description: 'Suara surround 3D dengan pelacakan kepala.',
+      cost: 200000, durationDays: 80, prerequisites: ['audio_stereo'],
+      effects: { unlocksComponents: ['audio_spatial'], statBonuses: { quality: 30 }, unlocksOsFeatures: [] } }
 ];
 
 // ============================================================
@@ -283,7 +412,7 @@ export function getNodeById(id) {
 }
 export function getNodesByCategory(catId) {
     return RESEARCH_NODES.filter(n => n.category === catId);
-     }
+}
 
 // ============================================================
 // R&D BERKELANJUTAN — definisi jalur + fungsi murni (tanpa state)
@@ -294,7 +423,11 @@ export const RND_TRACKS = {
     camera:  { name: 'Penyempurnaan Kamera',  hint: 'Sensor, optik, dan pemrosesan gambar',         productStat: 'camera' },
     battery: { name: 'Penyempurnaan Baterai', hint: 'Kepadatan sel, pengisian cepat, manajemen daya', productStat: 'battery' },
     chip:    { name: 'Penyempurnaan Chip',    hint: 'Efisiensi, performa, dan termal',               productStat: 'performance' },
-    network: { name: 'Penyempurnaan Jaringan', hint: 'Antena, modem, dan kestabilan sinyal',         productStat: 'connectivity' }
+    network: { name: 'Penyempurnaan Jaringan', hint: 'Antena, modem, dan kestabilan sinyal',         productStat: 'connectivity' },
+    // TAMBAHAN RND TRACKS:
+    body:    { name: 'Penyempurnaan Bodi',    hint: 'Material, bobot, dan durabilitas',              productStat: 'quality' },
+    sensor:  { name: 'Penyempurnaan Sensor',  hint: 'Akurasi biometrik dan fitur keamanan',          productStat: 'security' },
+    audio:   { name: 'Penyempurnaan Audio',   hint: 'Kualitas suara, konektivitas, dan fitur',       productStat: 'usability' }
 };
 
 // Standar level teknologi yang dianggap "normal" oleh pasar pada tahun tertentu.
@@ -320,4 +453,4 @@ export function computeTechEdge(levels, year) {
     var delta = avg - bench;
     var factor = Math.max(cfg.edge.min, Math.min(cfg.edge.max, 1 + cfg.edge.perLevel * delta));
     return { avg: avg, benchmark: bench, delta: delta, factor: factor };
-}
+          }
