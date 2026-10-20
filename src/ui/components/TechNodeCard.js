@@ -1,12 +1,8 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/components/TechNodeCard.js  (REPLACE)
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 function _tf(key, fallback, vars) {
     var v = t(key, vars);
