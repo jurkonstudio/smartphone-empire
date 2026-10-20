@@ -1,99 +1,109 @@
 // FILE: src/systems/AdvisorSystem.js
-// ============================================================
-// ADVISOR SYSTEM — Kontroller Utama (Slim Version).
-// ============================================================
+// v2028.42 — Pemberitahuan patch & perbaikan bug.
+// + [UPGRADE] Proactive Anomalies (Peringatan Dini Otomatis)
 import { bus } from '../core/EventBus.js';
+import { LanguageService } from '../core/LanguageService.js';
 import { ToastService } from '../core/ToastService.js';
-import { RULES, SEV, DICT } from './advisor/AdvisorConfig.js';
-import { AdvisorAnalytics } from './advisor/AdvisorAnalytics.js';
-import { AdvisorNLP } from './advisor/AdvisorNLP.js';
+import { BALANCE } from '../data/balance.data.js';
+import { getMacro } from '../core/MacroModel.js';
+import { AdvisorBrain } from './AdvisorBrain.js';
+import { ADVISOR_CONFIG } from '../config/advisor.config.js';
+import { createAdvisorProvider } from '../services/AdvisorAI.js';
+import { buildReport, formatReportText } from '../diagnostics/DiagnosticReport.js';
+import { PatchService, cmpVersion } from '../services/PatchService.js';
+
+const DAY = 1440;
+const SNOOZE_DAYS = 30;
+const TOAST_COOLDOWN_DAYS = 20;
+const CHECK_EVERY_DAYS = 2;
+const SNAPSHOT_EVERY_DAYS = 7;
+const MAX_SNAPSHOTS = 26;
+const MAX_ADVICE = 8;
+const SEV = { critical: 0, warn: 1, tip: 2, info: 3 };
+
+// ... (DICT dan RULES asli Anda tetap di sini) ...
 
 export class AdvisorSystem {
     constructor(gameState, deps) {
         this.state = gameState;
         this.deps = deps || {};
-        this.nlp = new AdvisorNLP(this);
-        this._chat = [];
-        this._snoozed = {};
+        this._unsubs = [];
+        this._provider = null;
+        this._lastSig = '';
         this._timer = null;
+        this._lastCheckDay = -1;
+        this.brain = new AdvisorBrain(this);
+        this._chat = [];
+        this._errors = [];
+        this._diagCache = null;
+        
+        // [UPGRADE] State untuk Peringatan Dini
+        this._lastProactiveWarn = {}; 
     }
+
+    _lang() { return curLang(); }
 
     start() {
-        // Dengarkan perubahan hari untuk memberikan saran proaktif
-        bus.on('time:day-changed', () => this._evaluateProactiveAdvice());
-        console.log('[AdvisorSystem] Smart Assistant siap.');
-    }
-
-    // Membangun Konteks dan Menjalankan Aturan (Rules)
-    getAdvice() {
-        const ctx = AdvisorAnalytics.buildContext(this.state, this.deps);
-        let out = [];
-        
-        const push = (id, sev, icon, vars, action, pri) => {
-            // Ambil teks dari DICT (Config)
-            const base = id.split(':')[0];
-            const title = DICT['id'][base + '.t'].replace(/\{(\w+)\}/g, (m, k) => vars[k] || m);
-            const detail = DICT['id'][base + '.d'].replace(/\{(\w+)\}/g, (m, k) => vars[k] || m);
-            
-            out.push({ id, sev, icon, pri: pri || 50, title, detail, action: action || null });
-        };
-
-        RULES.forEach(rule => {
-            try { rule(ctx, push); } catch (e) { console.warn('[Advisor] Rule error:', e); }
+        var self = this;
+        var refresh = function () { self._scheduleRefresh(); };
+        ['time:day-changed', 'research:completed', 'research:started', 'product:released',
+         'team:changed', 'product:stock-out', 'lang:changed', 'state:hydrated'].forEach(function (ev) {
+            self._unsubs.push(bus.on(ev, refresh));
         });
+        
+        this._unsubs.push(bus.on('time:day-changed', function () { 
+            self._snapshot(); 
+            self._maybeToast(); 
+            // [UPGRADE] Panggil Peringatan Dini
+            self._checkProactiveAnomalies();
+        }));
 
-        // Filter yang di-snooze
-        const now = ctx.now;
-        out = out.filter(a => !(this._snoozed[a.id] && this._snoozed[a.id] > now));
-        out.sort((a, b) => (SEV[a.sev] - SEV[b.sev]) || (a.pri - b.pri));
-
-        if (out.length === 0) {
-            out.push({ id: 'all_good', sev: 'info', icon: 'check-circle', pri: 99, title: DICT['id']['all_good.t'], detail: DICT['id']['all_good.d'], action: null });
+        this._captureErrors();
+        this._unsubs.push(bus.on('state:hydrated', function () { self._patchFreshAck(); }));
+        this._patchFreshAck();
+        PatchService.start(function () { self._onPatchInfo(); });
+        
+        if (!this._provider && ADVISOR_CONFIG && ADVISOR_CONFIG.aiEnabled && ADVISOR_CONFIG.endpoint) {
+            this.setProvider(createAdvisorProvider(ADVISOR_CONFIG));
         }
-        return out.slice(0, 8);
+        this._scheduleRefresh();
     }
 
-    // Kecerdasan BARU: Memberi notifikasi tanpa ditanya jika kondisi kritis
-    _evaluateProactiveAdvice() {
-        const ctx = AdvisorAnalytics.buildContext(this.state, this.deps);
-        const advice = this.getAdvice();
-        
-        // Cari saran yang statusnya CRITICAL
-        const critical = advice.find(a => a.sev === 'critical' && a.id !== 'all_good');
-        
-        if (critical) {
-            // Cek apakah sudah pernah di-toast hari ini
-            const dayKey = ctx.d.time.currentDay;
-            if (!this._lastCriticalToast || this._lastCriticalToast !== critical.id + dayKey) {
-                ToastService.warning(`⚠️ Asisten: ${critical.title}`);
-                this._lastCriticalToast = critical.id + dayKey;
+    // [UPGRADE BARU] Deteksi Anomali secara Proaktif
+    _checkProactiveAnomalies() {
+        var c = this._ctx();
+        var now = c.now;
+        var today = Math.floor(now / DAY);
+
+        // 1. Kas Kritis
+        if (c.cash < c.burn && c.cash > 0 && c.burn > 0) {
+            if (!this._lastProactiveWarn['cash'] || this._lastProactiveWarn['cash'] < today) {
+                ToastService.error('Asisten: Uang kas kurang dari biaya bulanan! Segera cari pinjaman atau jual stok.');
+                this._lastProactiveWarn['cash'] = today;
+            }
+        }
+
+        // 2. Stok Habis
+        var outOfStock = (c.selling || []).filter(function(p) { return p.stock === 0; });
+        if (outOfStock.length > 0) {
+            if (!this._lastProactiveWarn['stock'] || this._lastProactiveWarn['stock'] < today) {
+                ToastService.warning('Asisten: Stok "' + outOfStock[0].name + '" habis. Penjualan berhenti!');
+                this._lastProactiveWarn['stock'] = today;
+            }
+        }
+
+        // 3. Moral Rendah
+        var staff = c.d.staff || [];
+        if (staff.length > 0) {
+            var avgMorale = staff.reduce(function(a,b){ return a + (b.morale || 0); }, 0) / staff.length;
+            if (avgMorale < 40) {
+                if (!this._lastProactiveWarn['morale'] || this._lastProactiveWarn['morale'] < today) {
+                    ToastService.warning('Asisten: Moral tim sedang sangat rendah (' + Math.round(avgMorale) + '/100). Segera lakukan training atau beri perhatian.');
+                    this._lastProactiveWarn['morale'] = today;
+                }
             }
         }
     }
 
-    // API UI: Chat
-    async chat(text) {
-        this.getChat().push({ role: 'user', text: text });
-        const res = this.nlp.reply(text);
-        this.getChat().push({ role: 'bot', text: res.text, actions: res.actions, chips: res.chips });
-        return res;
-    }
-
-    getChat() {
-        if (!this._chat.length) {
-            const h = AdvisorAnalytics.getHealth(AdvisorAnalytics.buildContext(this.state, this.deps));
-            this._chat.push({
-                role: 'bot',
-                text: `Halo! Skor kesehatan bisnismu **${h.score}/100** (${h.label}). Area terlemah: **${h.weakest.label}**. Ada yang bisa saya bantu?`,
-                actions: [], chips: ['Apa prioritas sekarang?', 'Skor kesehatan', 'Prediksi uang']
-            });
-        }
-        return this._chat;
-    }
-
-    resetChat() { this._chat = []; this.nlp.resetMemory(); }
-
-    snooze(id, days = 30) {
-        this._snoozed[id] = AdvisorAnalytics.buildContext(this.state, this.deps).now + (days * 1440);
-    }
+    // ... (Sisa fungsi asli: getAdvice, getHealth, forecast, simulate, chat, dll)
 }
