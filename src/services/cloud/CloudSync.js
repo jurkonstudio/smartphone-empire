@@ -334,6 +334,23 @@ async function _claimDailyOnConnect() {
     } catch (e) { /* abaikan: sinkron berikutnya tetap menarik saldo server */ }
 }
 
+// [CLOUD-ONLY] Quest yang selesai saat offline tidak memberi SIL (ditolak SiliconService.add). Saat login,
+// klaim ke server — whitelist & sekali-per-akun dijaga server, jadi aman dipanggil berulang.
+var QUEST_SIL_IDS = ['first_start_research', 'first_recruit', 'first_product'];
+async function _claimQuestsOnConnect() {
+    try {
+        if (!_isConnected() || !_state) return;
+        var q = (_state.get().quests && _state.get().quests.completed) || [];
+        var any = false;
+        for (var i = 0; i < QUEST_SIL_IDS.length; i++) {
+            if (q.indexOf(QUEST_SIL_IDS[i]) < 0) continue;
+            var r = await CloudService.claimQuestSilicon(QUEST_SIL_IDS[i]);
+            if (r && r.ok) any = true;
+        }
+        if (any) _debouncedSyncSilicon();
+    } catch (e) { /* abaikan */ }
+}
+
 async function uploadNow(opts) {
     opts = opts || {};
     if (!_state || !_isConnected() || _busy) return;
@@ -499,6 +516,7 @@ export const CloudSync = {
                 _startRealtime();
                 checkOnConnect();
                 _claimDailyOnConnect();
+                _claimQuestsOnConnect();
             } else if (e && e.status === 'disconnected') {
                 try { localStorage.removeItem('smartphone-empire:admin-email'); } catch(err) {}
                 _stopRealtime();
@@ -524,6 +542,7 @@ export const CloudSync = {
             checkOnConnect();
             syncSiliconOnLogin();
             _claimDailyOnConnect();
+            _claimQuestsOnConnect();
         }
     },
 
