@@ -100,7 +100,23 @@ export const TEXT_FIX_I18N = {
         'silstore.title': 'Silicon Store',
         'silstore.tab.transfer': 'Kirim',
         'silstore.transfer.intro': 'Kirim SIL ke pemain lain dengan memasukkan ID Pemain (8 digit) mereka.',
-        'cloud.signout.unsaved': 'Progres terakhir belum tersimpan ke cloud. Jika keluar sekarang, progres di perangkat ini akan hilang. Tetap keluar?'
+        'cloud.signout.unsaved': 'Progres terakhir belum tersimpan ke cloud. Jika keluar sekarang, progres di perangkat ini akan hilang. Tetap keluar?',
+        // ---- Mockup: kemasan ----
+        'wiz.view.box': 'Kemasan',
+        'mock.pack.new': 'BARU',
+        'mock.pack.eco': 'KEMASAN DAUR ULANG',
+        'mock.pack.contents': 'Isi kotak',
+        'mock.pack.phone': 'Ponsel',
+        'mock.pack.cable_usbc': 'Kabel USB Tipe-C',
+        'mock.pack.cable_micro': 'Kabel Micro-USB',
+        'mock.pack.cable_barrel': 'Kabel colokan bulat',
+        'mock.pack.cable_dock': 'Dok pengisi daya',
+        'mock.pack.qi': 'Pad Qi',
+        'mock.pack.charger': 'Charger',
+        'mock.pack.charger_w': 'Charger {w}W',
+        'mock.pack.no_charger': 'Tanpa charger',
+        'mock.pack.earphone': 'Earphone berkabel',
+        'mock.pack.hint_usbc': 'Riset USB Tipe-C untuk kabel modern.'
     },
     en: {
         'silstore.tab.buy': 'Buy',
@@ -187,6 +203,22 @@ export const TEXT_FIX_I18N = {
         'silstore.title': 'Silicon Store',
         'silstore.tab.transfer': 'Send',
         'silstore.transfer.intro': 'Send SIL to another player by entering their Player ID (8 digits).',
-        'cloud.signout.unsaved': 'Your latest progress could not be saved to the cloud. If you sign out now, progress on this device will be lost. Sign out anyway?'
+        'cloud.signout.unsaved': 'Your latest progress could not be saved to the cloud. If you sign out now, progress on this device will be lost. Sign out anyway?',
+        // ---- Mockup: packaging ----
+        'wiz.view.box': 'Box',
+        'mock.pack.new': 'NEW',
+        'mock.pack.eco': 'RECYCLED PACKAGING',
+        'mock.pack.contents': 'In the box',
+        'mock.pack.phone': 'Phone',
+        'mock.pack.cable_usbc': 'USB Type-C cable',
+        'mock.pack.cable_micro': 'Micro-USB cable',
+        'mock.pack.cable_barrel': 'Barrel-plug cable',
+        'mock.pack.cable_dock': 'Charging dock',
+        'mock.pack.qi': 'Qi pad',
+        'mock.pack.charger': 'Charger',
+        'mock.pack.charger_w': 'Charger {w}W',
+        'mock.pack.no_charger': 'No charger',
+        'mock.pack.earphone': 'Wired earphones',
+        'mock.pack.hint_usbc': 'Research USB Type-C for the modern cable.'
     }
 };
