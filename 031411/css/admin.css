@@ -1,1 +1,61 @@
-
+:root{--bg:#242424;--bg2:#1c1c1c;--bg3:#2f2f2f;--bd:#4a4a4a;--tx:#d4d4d4;--dim:#8a8a8a;--ac:#2196f3;--ok:#4caf50;--er:#fca3a3;--erbg:#290000;--wn:#f5c36b;--wnbg:#332b00;--mono:Menlo,Consolas,"Liberation Mono",monospace}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:12px/1.5 var(--mono);-webkit-text-size-adjust:100%}
+button,input{font:inherit;color:inherit}
+.hide{display:none!important}
+/* login */
+#login{min-height:100%;display:flex;align-items:center;justify-content:center;padding:16px}
+.card{width:100%;max-width:360px;background:var(--bg2);border:1px solid var(--bd);border-radius:4px;padding:16px}
+.card h1{margin:0 0 4px;font-size:14px;color:var(--ac)}
+.card p{margin:0 0 14px;color:var(--dim)}
+label{display:block;margin:10px 0 4px;color:var(--dim)}
+input{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:9px 10px;outline:none}
+input:focus{border-color:var(--ac)}
+.btn{background:var(--bg3);border:1px solid var(--bd);border-radius:3px;padding:7px 12px;cursor:pointer}
+.btn:active{background:#3a3a3a}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+.btn.dng{border-color:#8b3a3a;color:var(--er)}
+.btn.sm{padding:3px 8px;font-size:11px}
+.btn:disabled{opacity:.5}
+.msg{margin-top:10px;padding:8px;border-radius:3px;display:none}
+.msg.er{display:block;background:var(--erbg);color:var(--er);border:1px solid #5a1a1a}
+/* app shell */
+#app{display:flex;flex-direction:column;height:100%}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:var(--bg2);border-bottom:1px solid var(--bd)}
+header b{color:var(--ac)}
+header span{color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+nav{display:flex;overflow-x:auto;background:var(--bg2);border-bottom:1px solid var(--bd)}
+nav button{flex:none;background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px;color:var(--dim);cursor:pointer}
+nav button.on{color:var(--ac);border-bottom-color:var(--ac)}
+main{flex:1;overflow:auto;padding:10px}
+.row{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.row input{flex:1;min-width:140px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+.stat{background:var(--bg2);border:1px solid var(--bd);border-radius:3px;padding:10px}
+.stat small{display:block;color:var(--dim)}
+.stat b{font-size:18px;color:var(--tx)}
+.tw{overflow-x:auto;border:1px solid var(--bd);border-radius:3px}
+table{border-collapse:collapse;width:100%;white-space:nowrap}
+th,td{padding:6px 8px;border-bottom:1px solid var(--bd);text-align:left}
+th{background:var(--bg3);color:var(--dim);font-weight:normal;position:sticky;top:0}
+tbody tr:nth-child(even){background:#282828}
+tbody tr[data-a]{cursor:pointer}
+tbody tr[data-a]:active{background:#33425a}
+.dim{color:var(--dim)}
+h2{font-size:12px;margin:14px 0 6px;color:var(--dim);font-weight:normal;text-transform:uppercase}
+/* console */
+.ln{padding:4px 8px;border-bottom:1px solid var(--bd);word-break:break-all}
+.ln.er{background:var(--erbg);color:var(--er)}
+.ln.wn{background:var(--wnbg);color:var(--wn)}
+.ln.ok{color:var(--ok)}
+.ln i{color:var(--dim);font-style:normal;margin-right:6px}
+/* sheet */
+#sheet{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;z-index:9}
+#sheet .in{width:100%;max-height:85%;overflow:auto;background:var(--bg);border-top:1px solid var(--bd);padding:12px}
+textarea{width:100%;min-height:70px;background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:8px;color:var(--tx);font:inherit;outline:none}
+pre{margin:0 0 10px;padding:8px;background:var(--bg2);border:1px solid var(--bd);border-radius:3px;overflow:auto;max-height:320px;white-space:pre-wrap;word-break:break-all}
+details{margin:8px 0}summary{cursor:pointer;color:var(--dim)}
+th[data-a=sort]{cursor:pointer}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:2px 8px;margin:8px 0 12px}
+.kv span:nth-child(odd){color:var(--dim)}
+.kv span:nth-child(even){word-break:break-all}
