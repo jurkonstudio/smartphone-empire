@@ -1,6 +1,5 @@
 // FILE: src/services/cloud/CloudSync.js
-// v2029.2 — [TOTAL REWRITE] Menghapus Pending Queue lokal untuk mencegah desync.
-//            Menggunakan validasi ketat & transaksi server-side murni untuk debit/kredit.
+// v2029.5 — [FIX] Mencegah UI saldo kembali ke nilai awal (rollback) saat pemain membelanjakan SIL.
 import { bus } from '../../core/EventBus.js';
 import { SaveService } from '../../core/SaveService.js';
 import { SCHEMA_VERSION } from '../../core/GameState.js';
@@ -26,21 +25,16 @@ let _unsubRealtime = null;
 let _unsubWallet = null;
 let _walletTimer = null;
 let _siliconSyncing = false;
-// [FIX SIL BALIK] Potongan SIL lokal yang belum dikonfirmasi server + penanda perubahan lokal.
-// Sinkronisasi saldo (poll/realtime) TIDAK boleh menimpa saldo lokal saat ada potongan tertunda,
-// atau bila saldo lokal berubah selagi permintaan baca saldo masih berjalan (hasilnya basi).
+
+// [FIX] Kunci antrean: Selama _pendingDebits > 0, sinkronisasi DILARANG menimpa saldo lokal.
 let _pendingDebits = 0;
 let _localEpoch = 0;
 let _debitChain = Promise.resolve();
-// [FIX SIL LOKAL MENUTUPI SERVER] Bila antrean potongan macet (request menggantung / handler melempar error),
-// _pendingDebits tidak pernah turun ke 0 -> sinkron saldo server ditunda selamanya & saldo lokal basi tampil.
 let _pendingSince = 0;
 const PENDING_STUCK_MS = 45000;
 const SPEND_TIMEOUT_MS = 25000;
+
 let _silPollTimer = null;
-// [AUDIT] Catatan potongan terbaru agar refund aksi-gagal bisa dibatalkan / dikembalikan di server.
-let _debitLog = [];
-const DEBIT_LOG_MAX = 40;
 const SIL_POLL_MS = 30000;
 let _reloadOnVisible = false;
 let _laterChosen = false;
@@ -160,84 +154,46 @@ function _onVisibilityChange() {
 }
 
 // ============================================================
-// SILICON — STRICT SERVER AUTHORITATIVE (NO LOCAL PENDING QUEUE)
+// SILICON — STRICT SERVER AUTHORITATIVE
 // ============================================================
-// [FIX TOP-UP TIDAK MASUK] Penyebab: pembacaan saldo server dibatasi 4 dtk lalu HASILNYA DIBUANG.
-// Di jaringan seluler yang lambat (4G/Supabase dingin) get_silicon sering > 4 dtk, sehingga saldo hasil
-// top-up (mis. 853 di server) tidak pernah diterapkan dan game terus menampilkan saldo lokal (10).
-// Perbaikan:
-//  • batas "lunak" (SIL_SOFT_MS) hanya melepas tampilan '…' -> saldo lokal; permintaan TETAP ditunggu
-//    sampai batas keras (SIL_HARD_MS) dan hasilnya diterapkan bila masih segar;
-//  • panggilan yang datang saat sinkron berjalan tidak lagi dibuang: dijadwalkan ulang (_silAgain);
-//  • gagal/timeout -> coba lagi dengan backoff (bukan menunggu poll 30 dtk).
-const SIL_SOFT_MS = 4000;
-const SIL_HARD_MS = 20000;
-const SIL_RETRY_MS = [2000, 5000, 10000, 20000];
-let _silAgain = false;
-let _silRetryN = 0;
-let _silRetryTimer = null;
-
-function _scheduleSilRetry() {
-    if (_silRetryTimer) return;
-    const wait = SIL_RETRY_MS[Math.min(_silRetryN, SIL_RETRY_MS.length - 1)];
-    _silRetryN++;
-    _silRetryTimer = setTimeout(function () { _silRetryTimer = null; syncSiliconOnLogin(); }, wait);
-}
-
 async function syncSiliconOnLogin() {
     if (!_state || !_isConnected()) return;
-    if (_siliconSyncing) { _silAgain = true; return; }   // jangan buang: baca ulang setelah yang berjalan selesai
-    // Ada potongan SIL yang belum dikonfirmasi server -> jangan baca saldo basi; ulangi setelahnya.
-    if (_pendingDebits > 0 && _pendingSince && Date.now() - _pendingSince > PENDING_STUCK_MS) {
-        console.warn('[CloudSync] Antrean potongan SIL macet >' + PENDING_STUCK_MS + 'ms, direset agar saldo server bisa diterapkan.');
-        _pendingDebits = 0; _pendingSince = 0; _debitChain = Promise.resolve();
+    if (_siliconSyncing) return;
+    
+    // [FIX] Jika ada potongan yang belum selesai, JANGAN tarik saldo dari server. 
+    // Tunggu sampai potongan selesai.
+    if (_pendingDebits > 0) {
+        if (_pendingSince && Date.now() - _pendingSince > PENDING_STUCK_MS) {
+            console.warn('[CloudSync] Antrean potongan macet, direset.');
+            _pendingDebits = 0; _pendingSince = 0; _debitChain = Promise.resolve();
+        } else {
+            return; 
+        }
     }
-    if (_pendingDebits > 0) { _debouncedSyncSilicon(); return; }
 
     _siliconSyncing = true;
-    _silAgain = false;
-    var epochAtStart = _localEpoch;
-    var settled = false;
-    // Batas lunak: hanya melepas '…' agar UI tidak menggantung; hasil server tetap ditunggu.
-    var softTimer = setTimeout(function () {
-        if (!settled) { try { SiliconService.markServerSync(false); } catch (_) {} }
-    }, SIL_SOFT_MS);
-    var needRetry = false;
     try {
-        var res = await _withTimeout(CloudService.getSiliconBalance(), SIL_HARD_MS, { ok: false, timeout: true });
-
-        // Saldo lokal berubah (belanja/refund) selama permintaan berjalan -> hasil server basi, buang.
-        if (_pendingDebits > 0 || epochAtStart !== _localEpoch) {
-            _silAgain = true;
-            return;
-        }
+        var res = await _withTimeout(CloudService.getSiliconBalance(), 8000, { ok: false });
+        
+        // Jika selama menunggu ada potongan baru, batalkan update.
+        if (_pendingDebits > 0) return;
 
         if (res.ok && typeof res.balance === 'number') {
             var serverBal = Math.floor(res.balance);
             var localBal = SiliconService.getBalance();
-            _silRetryN = 0;
-
+            
             if (serverBal !== localBal) {
-                console.info('[CloudSync] Sync Server (' + serverBal + ') -> Lokal (' + localBal + ')');
                 SiliconService.applyServerBalance(serverBal);
             } else {
                 SiliconService.markServerSync(true);
-                bus.emit('silicon:changed', { balance: serverBal, delta: 0, fromServer: true });
             }
         } else {
             SiliconService.markServerSync(false);
-            needRetry = true;
         }
     } catch (e) {
-        try { SiliconService.markServerSync(false); } catch (_) {}
-        needRetry = true;
-        console.warn('[CloudSync] Gagal sinkronisasi saldo, mempertahankan saldo lokal:', e);
+        console.warn('[CloudSync] Gagal sinkronisasi saldo:', e);
     } finally {
-        settled = true;
-        clearTimeout(softTimer);
         _siliconSyncing = false;
-        if (_silAgain) { _silAgain = false; _debouncedSyncSilicon(); }
-        else if (needRetry) _scheduleSilRetry();
     }
 }
 
@@ -248,9 +204,6 @@ function _debouncedSyncSilicon() {
     }, 800); 
 }
 
-// Kirim potongan; bila gagal karena jaringan/timeout, ulangi dengan request_id YANG SAMA.
-// Server idempoten (silicon_requests), jadi retry tidak pernah memotong dua kali. Penolakan bisnis
-// (saldo kurang, jumlah/login tidak valid) tidak diulang.
 function _spendWithRetry(amount, reqId, reason) {
     var BUSINESS = /insufficient_silicon|invalid_amount|invalid_request|not_authenticated/i;
     function attempt(n) {
@@ -266,8 +219,6 @@ function _spendWithRetry(amount, reqId, reason) {
     return attempt(0);
 }
 
-// [DEBIT] Pemain membelanjakan SIL: Potong langsung ke server.
-// Permintaan diserialkan (satu per satu) agar respons tidak saling menimpa tak berurutan.
 function _onLocalDebit(delta, reason) {
     if (!_state || !CloudService.getUserId()) return;
     var amount = Math.abs(delta);
@@ -277,34 +228,23 @@ function _onLocalDebit(delta, reason) {
     if (_pendingDebits === 0) _pendingSince = Date.now();
     _pendingDebits++;
     var reqId = 'sp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-    var entry = { amount: amount, reqId: reqId, started: false, cancelled: false, done: false, failed: false, refunded: false };
-    _debitLog.push(entry);
-    if (_debitLog.length > DEBIT_LOG_MAX) _debitLog.shift();
 
     _debitChain = _debitChain.then(function () {
-        // Dibatalkan (aksi gagal & di-refund sebelum potongan sempat dikirim) -> tidak ada yang dikirim.
-        if (entry.cancelled) return;
-        entry.started = true;
         return _withTimeout(_spendWithRetry(amount, reqId, reason), SPEND_TIMEOUT_MS, { ok: false, reason: 'Koneksi timeout' }).then(function (res) {
             if (!res.ok) {
-                entry.failed = true;
-                // Gagal di server: kembalikan HANYA jumlah ini (bukan snapshot lama).
                 SiliconService._refund(amount, 'server-rejected');
                 ToastService.error('Gagal memotong SIL: ' + (res.reason || 'Server error'));
             } else {
-                entry.done = true;
                 if (_pendingDebits <= 1 && typeof res.balance === 'number') {
-                    // Potongan terakhir: saldo server sudah final, samakan.
                     SiliconService.applyServerBalance(res.balance);
                 }
             }
         }).catch(function () {
-            entry.failed = true;
             SiliconService._refund(amount, 'network-error');
             ToastService.error('Koneksi gagal, SIL dikembalikan.');
         });
     }).catch(function (e) {
-        console.warn('[CloudSync] antrean potongan SIL error:', e);
+        console.warn('[CloudSync] error potong SIL:', e);
     }).then(function () {
         _pendingDebits = Math.max(0, _pendingDebits - 1);
         if (_pendingDebits === 0) _pendingSince = 0;
@@ -313,53 +253,8 @@ function _onLocalDebit(delta, reason) {
     });
 }
 
-// [AUDIT FIX] Refund karena AKSI GAGAL setelah SIL terpotong (mis. startResearch menolak).
-// Dulu: SIL lokal dikembalikan tetapi server tetap terpotong -> saldo ditimpa server pada sinkron berikutnya
-// = SIL hilang permanen. Sekarang: potongan yang belum terkirim dibatalkan; yang sudah terkirim di-refund
-// lewat RPC refund_silicon (idempoten, hanya sekali per potongan).
-function _onLocalRefund(amount) {
-    if (!_state || !CloudService.getUserId()) return;
-    var entry = null;
-    for (var i = _debitLog.length - 1; i >= 0; i--) {
-        var e = _debitLog[i];
-        if (!e.refunded && !e.cancelled && !e.failed && e.amount === amount) { entry = e; break; }
-    }
-    if (!entry) return;                // tidak ada potongan yang cocok -> biarkan sinkron berikutnya menyamakan
-    entry.refunded = true;
-    _localEpoch++;
-    if (!entry.started) { entry.cancelled = true; return; }   // belum dikirim: batalkan saja
-
-    if (_pendingDebits === 0) _pendingSince = Date.now();
-    _pendingDebits++;                  // tahan sinkron saldo sampai refund server selesai
-    _debitChain = _debitChain.then(function () {
-        return _withTimeout(CloudService.refundSiliconServer(entry.reqId), SPEND_TIMEOUT_MS, { ok: false, reason: 'timeout' }).then(function (res) {
-            if (!res.ok) {
-                ToastService.error('Refund SIL gagal di server: ' + (res.reason || 'error'));
-            }
-        }).catch(function () {
-            ToastService.error('Refund SIL gagal (koneksi).');
-        });
-    }).catch(function (e) {
-        console.warn('[CloudSync] antrean refund SIL error:', e);
-    }).then(function () {
-        _pendingDebits = Math.max(0, _pendingDebits - 1);
-        if (_pendingDebits === 0) _pendingSince = 0;
-        _localEpoch++;
-        _debouncedSyncSilicon();       // server = sumber kebenaran
-    });
-}
-
-// [KREDIT] Pemain mendapat SIL: HANYA terima jika server mengonfirmasi.
 function _onLocalCredit(delta, reason, payload) {
     if (!_state || !CloudService.getUserId()) return;
-
-    // Refund dari aksi yang gagal (bukan refund internal akibat penolakan server / jaringan).
-    if (reason.indexOf('refund:') === 0) {
-        if (reason === 'refund:server-rejected' || reason === 'refund:network-error') return;
-        _onLocalRefund(Math.floor((payload && payload.amount) || delta));
-        return;
-    }
-    
     if (reason.indexOf('quest:') === 0) {
         var questId = reason.slice(6);
         CloudService.claimQuestSilicon(questId).then(function(res) {
@@ -367,47 +262,16 @@ function _onLocalCredit(delta, reason, payload) {
         });
         return;
     }
-    
     if (reason === 'daily-login') {
         CloudService.claimDailySilicon().then(function(res) {
             if (res.ok) _debouncedSyncSilicon();
         });
         return;
     }
-    
-    // Top-up dari Admin / pembelian
-    if (reason.indexOf('topup:') === 0 || reason === 'server-sync') {
+    if (reason.indexOf('topup:') === 0 || reason === 'server-sync' || reason.indexOf('refund:') === 0) {
         _debouncedSyncSilicon();
         return;
     }
-}
-
-// [AUDIT FIX] Hadiah harian: klaim lokal saat boot terjadi SEBELUM login cloud selesai, sehingga permintaan klaim
-// ke server tidak pernah terkirim (tanggal lokal sudah terkunci -> hadiah hilang). Server idempoten
-// (satu kali per hari UTC), jadi aman dipanggil setiap kali koneksi cloud terbentuk.
-async function _claimDailyOnConnect() {
-    try {
-        if (!_isConnected()) return;
-        var res = await CloudService.claimDailySilicon();
-        if (res && res.ok) _debouncedSyncSilicon();
-    } catch (e) { /* abaikan: sinkron berikutnya tetap menarik saldo server */ }
-}
-
-// [CLOUD-ONLY] Quest yang selesai saat offline tidak memberi SIL (ditolak SiliconService.add). Saat login,
-// klaim ke server — whitelist & sekali-per-akun dijaga server, jadi aman dipanggil berulang.
-var QUEST_SIL_IDS = ['first_start_research', 'first_recruit', 'first_product'];
-async function _claimQuestsOnConnect() {
-    try {
-        if (!_isConnected() || !_state) return;
-        var q = (_state.get().quests && _state.get().quests.completed) || [];
-        var any = false;
-        for (var i = 0; i < QUEST_SIL_IDS.length; i++) {
-            if (q.indexOf(QUEST_SIL_IDS[i]) < 0) continue;
-            var r = await CloudService.claimQuestSilicon(QUEST_SIL_IDS[i]);
-            if (r && r.ok) any = true;
-        }
-        if (any) _debouncedSyncSilicon();
-    } catch (e) { /* abaikan */ }
 }
 
 async function uploadNow(opts) {
@@ -495,7 +359,7 @@ async function applyCloud(slot, opts) {
     _conflictOpen = false;
     if (!res.ok) return res;
     const payload = res.payload || {};
- var keepSil = SiliconService.getBalance();   // saldo hidup; snapshot cloud berisi saldo saat upload (basi)
+    var keepSil = SiliconService.getBalance(); 
     if (!payload.data || !_state.hydrate(payload.data)) {
         return { ok: false, reason: 'Data cloud tidak valid.', code: 'unknown' };
     }
@@ -532,35 +396,12 @@ async function _startRealtime() {
     });
 }
 
-// [FIX TOP-UP] Ada pesanan top-up yang masih 'pending' di perangkat ini?
-function _hasPendingOrders() {
-    try {
-        var o = _state && _state.get().paymentOrders;
-        return Array.isArray(o) && o.some(function (x) { return x && (x.status === 'pending' || x.status === 'created'); });
-    } catch (e) { return false; }
-}
-
-// Tanyakan status pesanan ke server; bila admin sudah menyetujui, PaymentService menandai 'paid' dan menarik saldo.
-function _refreshPendingOrders() {
-    import('../../systems/PaymentService.js').then(function (m) {
-        var list = m.PaymentService.getOrders().filter(function (o) { return o.status === 'pending'; });
-        list.forEach(function (o) { m.PaymentService.refresh(o.id); });
-    }).catch(function () {});
-}
-
 function _startSilPoll() {
     _stopSilPoll();
-    var tick = 0;
-    // Tiap 10 dtk bila ada pesanan menunggu (top-up baru diajukan), selain itu tiap SIL_POLL_MS.
     _silPollTimer = setInterval(function () {
         if (document.visibilityState !== 'visible' || !_isConnected()) return;
-        tick += 10000;
-        var pending = _hasPendingOrders();
-        if (!pending && tick < SIL_POLL_MS) return;
-        tick = 0;
-        if (pending) _refreshPendingOrders();
         _debouncedSyncSilicon();
-    }, 10000);
+    }, SIL_POLL_MS);
 }
 
 function _stopSilPoll() {
@@ -570,7 +411,6 @@ function _stopSilPoll() {
 function _stopRealtime() {
     clearTimeout(_walletTimer);
     clearTimeout(_syncDebounceTimer);
-    clearTimeout(_silRetryTimer); _silRetryTimer = null; _silRetryN = 0; _silAgain = false;
     _stopSilPoll();
     if (_unsubWallet) { try { _unsubWallet(); } catch (e) {} _unsubWallet = null; }
     if (_unsubRealtime) { try { _unsubRealtime(); } catch (e) {} _unsubRealtime = null; }
@@ -598,8 +438,6 @@ export const CloudSync = {
 
                 _startRealtime();
                 checkOnConnect();
-                _claimDailyOnConnect();
-                _claimQuestsOnConnect();
             } else if (e && e.status === 'disconnected') {
                 try { localStorage.removeItem('smartphone-empire:admin-email'); } catch(err) {}
                 _stopRealtime();
@@ -623,9 +461,6 @@ export const CloudSync = {
             } catch (err) {}
             _startRealtime();
             checkOnConnect();
-            syncSiliconOnLogin();
-            _claimDailyOnConnect();
-            _claimQuestsOnConnect();
         }
     },
 
@@ -670,7 +505,7 @@ export const CloudSync = {
                 _state.data.silicon = localSil;
             }
 
-            var silRes = await _withTimeout(CloudService.getSiliconBalance(), SIL_HARD_MS, { ok: false });
+            var silRes = await _withTimeout(CloudService.getSiliconBalance(), 8000, { ok: false });
             if (silRes.ok) {
                 SiliconService.applyServerBalance(Math.floor(silRes.balance || 0));
             }
@@ -692,5 +527,5 @@ export const CloudSync = {
         }
     },
 
-    _reset: function () { _debitLog = []; _inited = false; _ready = false; _busy = false; _checking = false; _conflictOpen = false; _reloadOnVisible = false; _laterChosen = false; _lastUploadAt = 0; _lastUploadMinutes = -1; _stopRealtime(); }
+    _reset: function () { _debitChain = Promise.resolve(); _pendingDebits = 0; _pendingSince = 0; _inited = false; _ready = false; _busy = false; _checking = false; _conflictOpen = false; _reloadOnVisible = false; _laterChosen = false; _lastUploadAt = 0; _lastUploadMinutes = -1; _stopRealtime(); }
 };
