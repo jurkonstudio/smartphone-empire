@@ -55,8 +55,8 @@ import { bus } from '../../core/EventBus.js';
 import { computePlan, rememberPeak, PALETTES, ERA_WINDOWS } from '../campus/CampusBuildings.js';
 import { createCampusControls } from '../campus/CampusControls.js';
 import { t } from '../../core/LanguageService.js';
-import { BASE_VIEW, COLORS, COLS, CORRIDORS, DEST_BY_ROLE, DEST_DEFAULT, DEST_EMOJI, DEST_ROOM, DOOR_EAST, DOOR_NORTH, FLOOR, FRAME_MS, HAIR, MAX_DESKS, MAX_DPR, MIN_RESIZE_DELTA, MORALE_HEX, NARROW_PX, PHASES, ROOM_DEFS, SHADOW_OPACITY, SKIN, WALKERS_MAX, clamp, deskCapacity, hash, hexCss, len, moraleTier, prefersReducedMotion, readAccent, roleCount, sortedStaff, tint } from './OfficeConfig.js';
-import { describeRoom, describeStaff, fabProgress, roomAlert, totalStock, trophyCount } from './OfficeLogic.js';
+import { BASE_VIEW, COLORS, COLS, ROWS, CORRIDORS, DEST_BY_ROLE, DEST_DEFAULT, DEST_EMOJI, DEST_ROOM, DOOR_EAST, DOOR_NORTH, FLOOR, FRAME_MS, HAIR, MAX_DESKS, MAX_DPR, MIN_RESIZE_DELTA, MORALE_HEX, NARROW_PX, PHASES, ROOM_DEFS, SHADOW_OPACITY, SKIN, WALKERS_MAX, clamp, deskCapacity, hash, hexCss, len, moraleTier, prefersReducedMotion, readAccent, roleCount, sortedStaff, tint } from './OfficeConfig.js';
+import { describeRoom, describeStaff, fabProgress, roomAlert, totalStock, trophyCount, ROOM_LOGIC } from './OfficeLogic.js';
 
 // ============================================================
 // SCENE

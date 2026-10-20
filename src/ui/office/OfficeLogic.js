@@ -9,7 +9,7 @@ import { MAX_DESKS, ROOM_DEFS, clamp, deskCapacity, fmtMoney, len, lowMoraleCoun
 // ============================================================
 // LOGIKA RUANGAN (murni, tanpa THREE) — status buka/terkunci, level, signature, teks kartu.
 // ============================================================
-var ROOM_LOGIC = {
+export var ROOM_LOGIC = {
     ceo: {
         state: function (d, p) { return { open: true, level: clamp(1 + (p.levels.monument || 0), 1, 3) }; },
         sig: function (d, p) { return [p.levels.monument || 0, Math.round((d.market && d.market.reputation) || 0) >= 50 ? 1 : 0, d.companyName].join('|'); },
