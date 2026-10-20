@@ -1,0 +1,263 @@
+--- smartphone-empire-main/src/systems/TeamSystem.js	2026-10-20 13:54:12.000000000 +0000
++++ /mnt/user-data/outputs/recruitment-update/src/systems/TeamSystem.js	2026-10-20 14:27:38.038290606 +0000
+@@ -27,6 +27,21 @@
+ 
+ const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
+ 
++// Pengali kontribusi per staf dari trait (dipakai di bonus statis).
++// productive: output +15%, specialist: +25% di bidangnya (sesuai deskripsi trait di staff.data.js).
++function _contribMult(s) {
++    let m = 1.0;
++    if (s && s.traits && s.traits.includes('productive')) m *= 1.15;
++    if (s && s.traits && s.traits.includes('specialist')) m *= 1.25;
++    return m;
++}
++
++const NEGOTIATION_LEVELS = {
++    light: { pct: 0.05, chance: 0.7 },
++    hard:  { pct: 0.12, chance: 0.35 }
++};
++const MAX_NEGOTIATION_DISCOUNT = 0.15;
++
+ export class TeamSystem {
+     constructor(gameState) {
+         this.state = gameState;
+@@ -129,6 +144,24 @@
+             s.morale = Math.max(cfg.moraleMin || 0, (s.morale || 75) - decay);
+             moraleChanged = true;
+         }
++        const tpCount = data.staff.filter(s => s.traits && s.traits.includes('team_player')).length;
++        if (tpCount > 0) {
++            for (const s of data.staff) {
++                if (s.traits && s.traits.includes('team_player')) continue;
++                s.morale = Math.min(cfg.moraleMax || 100, (s.morale || 0) + 0.5 * tpCount);
++            }
++            moraleChanged = true;
++        }
++        // innovative: peluang ide brilian tiap bulan, memberi moral kecil ke seluruh tim.
++        for (const s of data.staff) {
++            if (!(s.traits && s.traits.includes('innovative'))) continue;
++            if (Math.random() < 0.05) {
++                for (const o of data.staff) o.morale = Math.min(cfg.moraleMax || 100, (o.morale || 0) + 1);
++                moraleChanged = true;
++                this.state.addLog(s.name + ' mencetuskan ide brilian. Moral tim naik.', LOG_TYPES.success);
++                ToastService.info('💡 ' + s.name + ' punya ide brilian!');
++            }
++        }
+         if (moraleChanged) bus.emit('state:changed', data);
+ 
+         const now = data.time.elapsedGameMinutes;
+@@ -170,7 +203,7 @@
+         const countryInfo = getCountryById(region);
+         const name = generateNameForRegion(region);
+ 
+-        const role = ROLES[Math.floor(Math.random() * ROLES.length)];
++        const role = this._pickRoleForPool();
+         const skill = this._rollSkill(year);
+         const traits = rollTraits();
+         const specialty = pickSpecialty(role.id);
+@@ -208,6 +241,27 @@
+         };
+     }
+ 
++    // Role kandidat dipilih mengikuti kebutuhan tim: role kosong paling sering muncul,
++    // role yang sudah penuh (kapasitas) jarang muncul.
++    _pickRoleForPool() {
++        const counts = this.getTeamCounts();
++        const cur = { engineer: counts.engineers, designer: counts.designers, marketer: counts.marketers };
++        const weights = ROLES.map(r => {
++            const cap = (BALANCE.teamCap && BALANCE.teamCap[r.id]) || 20;
++            if (cur[r.id] >= cap) return 0.2;
++            if (cur[r.id] === 0) return 3;
++            if (cur[r.id] <= 2) return 2;
++            return 1;
++        });
++        const sum = weights.reduce((a, b) => a + b, 0);
++        let roll = Math.random() * sum;
++        for (let i = 0; i < ROLES.length; i++) {
++            roll -= weights[i];
++            if (roll < 0) return ROLES[i];
++        }
++        return ROLES[ROLES.length - 1];
++    }
++
+     _rollSkill(year) {
+         const cfg = BALANCE.team || {};
+         const weights = cfg.skillWeightsByYear || {};
+@@ -298,6 +352,138 @@
+         return { ok: true, staff: newStaff, cost: totalCost };
+     }
+ 
++    // ============ TAWAR GAJI (kandidat) ============
++    // Peluang sukses tergantung tawaran dan trait. Gagal = kandidat mundur dari pool.
++    // Hanya sekali per kandidat, potongan total maks 15% dari harga awal.
++    negotiationOdds(cand, level) {
++        const lvl = NEGOTIATION_LEVELS[level];
++        if (!lvl || !cand) return 0;
++        let chance = lvl.chance;
++        if (cand.traits && cand.traits.includes('demanding')) chance -= 0.2;
++        return Math.max(0.05, Math.min(0.95, chance));
++    }
++
++    negotiateCandidate(candidateId, level) {
++        const data = this.state.data;
++        const cand = data.candidates.find(c => c.id === candidateId);
++        if (!cand) return { ok: false, reason: 'Kandidat tidak ditemukan.' };
++        const lvl = NEGOTIATION_LEVELS[level];
++        if (!lvl) return { ok: false, reason: 'Pilihan tawar tidak valid.' };
++        if (cand.negotiated) return { ok: false, reason: cand.name + ' tidak mau ditawar lagi.' };
++
++        if (cand.askSalary == null) cand.askSalary = cand.salary;
++        const floor = Math.round(cand.askSalary * (1 - MAX_NEGOTIATION_DISCOUNT));
++        const offer = Math.max(floor, Math.round(cand.salary * (1 - lvl.pct)));
++        if (offer >= cand.salary) return { ok: false, reason: 'Gaji sudah di batas bawah tawar-menawar.' };
++
++        const success = Math.random() < this.negotiationOdds(cand, level);
++        cand.negotiated = true;
++
++        if (!success) {
++            data.candidates = data.candidates.filter(c => c.id !== candidateId);
++            this.state.addLog(cand.name + ' menolak tawaran dan mundur dari pool.', LOG_TYPES.warning);
++            ToastService.info(cand.name + ' menolak tawaran Anda.');
++            bus.emit('state:changed', data);
++            return { ok: true, success: false };
++        }
++
++        const signingMult = (BALANCE.team && BALANCE.team.signingBonusMult) || 0.6;
++        const roleRecruitCost = Math.round(((BALANCE.recruitCost && BALANCE.recruitCost[cand.role]) || 2000) * this._wageScale());
++        cand.salary = offer;
++        cand.signingBonus = Math.round(offer * signingMult * 3);
++        cand.totalCost = roleRecruitCost + cand.signingBonus;
++
++        this.state.addLog(cand.name + ' setuju tawaran: $' + offer.toLocaleString('en-US') + '/bln.', LOG_TYPES.success);
++        ToastService.success('🤝 ' + cand.name + ' setuju dengan tawaran.');
++        bus.emit('state:changed', data);
++        return { ok: true, success: true, salary: offer, totalCost: cand.totalCost };
++    }
++
++    // ============ HEADHUNTER (refresh pool berbayar) ============
++    headhuntCost() {
++        const cfg = BALANCE.team || {};
++        return Math.round((cfg.headhuntCostBase || 2500) * this._wageScale());
++    }
++
++    // Sisa cooldown dalam menit game (0 = bisa dipakai).
++    headhuntCooldownLeft() {
++        const data = this.state.data;
++        const cfg = BALANCE.team || {};
++        const last = data.candidatePool && data.candidatePool.lastHeadhuntMinute;
++        if (last == null) return 0;
++        const cooldown = (cfg.headhuntCooldownDays || 3) * MINUTES_PER_DAY;
++        const now = (data.time && data.time.elapsedGameMinutes) || 0;
++        return Math.max(0, cooldown - (now - last));
++    }
++
++    // Ganti seluruh pool kandidat dengan bayaran. Dibatasi cooldown agar tidak jadi cara cepat "scum" pool.
++    headhunt() {
++        const data = this.state.data;
++        if (this.headhuntCooldownLeft() > 0) {
++            return { ok: false, reason: 'Headhunter masih cooldown. Coba beberapa hari lagi.' };
++        }
++        const cost = this.headhuntCost();
++        if (!WalletService.canAfford(cost)) {
++            return { ok: false, reason: 'Uang tidak cukup. Butuh $' + cost.toLocaleString('en-US') + '.' };
++        }
++        WalletService.pay(cost, 'headhunt');
++        this.refreshCandidates();
++        data.candidatePool.lastHeadhuntMinute = data.time.elapsedGameMinutes;
++        this.state.addLog('Headhunter mencari kandidat baru ($' + cost.toLocaleString('en-US') + ').', LOG_TYPES.info);
++        ToastService.success('🔎 Kandidat baru sudah tersedia.');
++        bus.emit('state:changed', data);
++        return { ok: true, cost };
++    }
++
++    // ============ DAMPAK REKRUT (preview untuk UI) ============
++    // Hitung perubahan bonus tim jika kandidat ini direkrut. Dipakai untuk menampilkan
++    // "apa efeknya ke riset / produk / kampanye" sebelum pemain membayar.
++    getHireImpact(cand) {
++        if (!cand) return null;
++        const data = this.state.data;
++        const staff = data.staff || [];
++        const hypo = { role: cand.role, skill: cand.skill, traits: cand.traits || [] };
++        const before = TeamSystem._bonusSnapshot(staff);
++        const after = TeamSystem._bonusSnapshot(staff.concat([hypo]));
++        const counts = this.getTeamCounts();
++        const current = cand.role === 'engineer' ? counts.engineers
++                      : cand.role === 'designer' ? counts.designers
++                      : counts.marketers;
++        const cap = (BALANCE.teamCap && BALANCE.teamCap[cand.role]) || 20;
++        const totalCost = cand.totalCost != null ? cand.totalCost : (cand.salary || 0) * 3;
++        const cash = Math.max(0, data.cash || 0);
++        return {
++            current,
++            cap,
++            capped: current >= cap,
++            cost: totalCost,
++            affordable: WalletService.canAfford(totalCost),
++            shortfall: Math.max(0, totalCost - cash),
++            monthlySalary: cand.salary || 0,
++            deltas: {
++                research: after.research - before.research,
++                slots: after.slots - before.slots,
++                osDev: after.osDev - before.osDev,
++                productSpeed: after.productSpeed - before.productSpeed,
++                quality: after.quality - before.quality,
++                marketing: after.marketing - before.marketing
++            }
++        };
++    }
++
++    static _bonusSnapshot(list) {
++        const r = TeamSystem.getResearchBonusFromStaff(list);
++        const p = TeamSystem.getProductDevBonusFromStaff(list);
++        return {
++            research: r.speedMult,
++            slots: r.extraSlots,
++            osDev: TeamSystem.getOsDevBonusFromStaff(list),
++            productSpeed: p.speedMult,
++            quality: p.qualityBonus,
++            marketing: TeamSystem.getMarketingBonusFromStaff(list)
++        };
++    }
++
+     // ============ FIRE ============
+     fireStaff(staffId) {
+         const data = this.state.data;
+@@ -390,7 +576,7 @@
+         let speedMult = 1.0;
+         engineers.forEach(s => {
+             const skillDef = getSkillTier(s.skill);
+-            speedMult += bonusPerEng * (skillDef.bonusMult || 1);
++            speedMult += bonusPerEng * (skillDef.bonusMult || 1) * _contribMult(s);
+         });
+         speedMult = Math.min(speedMult, maxSpeed);
+ 
+@@ -412,7 +598,7 @@
+         let mult = 1.0;
+         engineers.forEach(s => {
+             const skillDef = getSkillTier(s.skill);
+-            mult += bonusPerEng * (skillDef.bonusMult || 1);
++            mult += bonusPerEng * (skillDef.bonusMult || 1) * _contribMult(s);
+         });
+         return Math.min(mult, maxSpeed);
+     }
+@@ -431,8 +617,8 @@
+         let qualityBonus = 0;
+         designers.forEach(s => {
+             const skillDef = getSkillTier(s.skill);
+-            speedMult += (cfg.productDevSpeedPerDesigner || 0.1) * (skillDef.bonusMult || 1);
+-            qualityBonus += (cfg.qualityBonusPerDesigner || 0.5) * (skillDef.bonusMult || 1);
++            speedMult += (cfg.productDevSpeedPerDesigner || 0.1) * (skillDef.bonusMult || 1) * _contribMult(s);
++            qualityBonus += (cfg.qualityBonusPerDesigner || 0.5) * (skillDef.bonusMult || 1) * _contribMult(s);
+         });
+         speedMult = Math.min(speedMult, cfg.maxProductDevSpeed || 3.0);
+         qualityBonus = Math.min(qualityBonus, cfg.maxQualityBonus || 15);
+@@ -447,7 +633,7 @@
+         let mult = 1.0;
+         marketers.forEach(s => {
+             const skillDef = getSkillTier(s.skill);
+-            mult += (cfg.marketingBonusPerMarketer || 0.1) * (skillDef.bonusMult || 1);
++            mult += (cfg.marketingBonusPerMarketer || 0.1) * (skillDef.bonusMult || 1) * _contribMult(s);
+         });
+         return Math.min(mult, cfg.maxMarketingBonus || 2.0);
+     }

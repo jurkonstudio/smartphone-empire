@@ -1,0 +1,352 @@
+--- smartphone-empire-main/src/ui/panels/TeamPanel.js	2026-10-20 13:54:12.000000000 +0000
++++ /mnt/user-data/outputs/recruitment-update/src/ui/panels/TeamPanel.js	2026-10-20 14:27:38.131565521 +0000
+@@ -175,7 +175,7 @@
+         `;
+     }).join('');
+ 
+-    return summary + roleSections;
++    return _rosterStyle() + summary + roleSections;
+ }
+ 
+ function _renderStaffRow(s) {
+@@ -216,6 +216,7 @@
+                     <span>•</span>
+                     <span style="color:${moraleColor};">${escapeHtml(t('team.roster.morale'))} ${morale}</span>
+                 </div>
++                ${_progressHtml(s)}
+             </div>
+             <div class="staff-arrow">›</div>
+         </div>
+@@ -233,10 +234,29 @@
+     const daysSinceRefresh = Math.floor((nowMinute - lastRefreshMinute) / 1440);
+     const cfg = BALANCE.team || {};
+     const refreshIn = Math.max(0, (cfg.poolRefreshDays || 30) - daysSinceRefresh);
++    const counts = _countsOf(teamSystem);
++
++    // Urutan: role yang paling kurang dulu, lalu skill tertinggi, lalu biaya termurah.
++    const sorted = allCandidates.slice().sort(function (a, b) {
++        const ga = _roleCountOf(counts, a.role) - (ROLE_TARGET[a.role] || 1);
++        const gb = _roleCountOf(counts, b.role) - (ROLE_TARGET[b.role] || 1);
++        if (ga !== gb) return ga - gb;
++        if ((b.skill || 1) !== (a.skill || 1)) return (b.skill || 1) - (a.skill || 1);
++        return (a.totalCost || 0) - (b.totalCost || 0);
++    });
+ 
+     const candidates = _recruitFilter === 'all'
+-        ? allCandidates
+-        : allCandidates.filter(c => c.role === _recruitFilter);
++        ? sorted
++        : sorted.filter(c => c.role === _recruitFilter);
++
++    // Headhunter: tombol ganti pool berbayar, dengan cooldown.
++    const cdMinutes = (teamSystem && teamSystem.headhuntCooldownLeft) ? teamSystem.headhuntCooldownLeft() : 0;
++    const hhCost = (teamSystem && teamSystem.headhuntCost) ? teamSystem.headhuntCost() : 0;
++    const hhBtn = cdMinutes > 0
++        ? '<button class="btn-secondary recruit-hh" disabled>' + escapeHtml(_tf('team.recruit.hh_cooldown', 'Headhunter cooldown ' + Math.ceil(cdMinutes / 1440) + ' hari')) + '</button>'
++        : '<button class="btn-secondary recruit-hh" data-team-action="headhunt">' +
++            renderIcon('users', 13) + ' ' + escapeHtml(_tf('team.recruit.hh_btn', 'Headhunter')) + ' · ' + _fmtMoney(hhCost) +
++          '</button>';
+ 
+     const header = `
+         <div class="recruit-header">
+@@ -246,6 +266,8 @@
+                 <span class="recruit-header-dot">·</span>
+                 <span class="recruit-header-label">${escapeHtml(t('team.recruit.refresh_in', { n: refreshIn }))}</span>
+             </div>
++            <div class="recruit-hh-row">${hhBtn}</div>
++            <div class="recruit-hh-hint">${escapeHtml(_tf('team.recruit.hh_hint', 'Headhunter mengganti seluruh kandidat dengan pool baru.'))}</div>
+         </div>
+     `;
+ 
+@@ -254,15 +276,18 @@
+             <button class="chip ${_recruitFilter === 'all' ? 'active' : ''}" data-recruit-filter="all">${escapeHtml(t('team.recruit.filter_all'))} (${allCandidates.length})</button>
+             ${ROLES.map(function(r) {
+                 var count = allCandidates.filter(c => c.role === r.id).length;
++                var need = _roleCountOf(counts, r.id) === 0 ? ' !' : '';
+                 return '<button class="chip ' + (_recruitFilter === r.id ? 'active' : '') + '" data-recruit-filter="' + r.id + '">' +
+-                    renderIcon(r.icon, 12) + ' ' + escapeHtml(_roleLabel(r)) + ' (' + count + ')' +
++                    renderIcon(r.icon, 12) + ' ' + escapeHtml(_roleLabel(r)) + ' (' + count + ')' + need +
+                     '</button>';
+             }).join('')}
+         </div>
+     `;
+ 
++    const pipeline = _renderPipeline(data, teamSystem);
++
+     if (!candidates.length) {
+-        return header + filterChips + `
++        return _recruitStyle() + pipeline + header + filterChips + `
+             <div class="empty">
+                 <div class="empty-title">${escapeHtml(t('team.recruit.empty_title'))}</div>
+                 <div class="empty-desc">${escapeHtml(allCandidates.length ? t('team.recruit.empty_hint_filter') : t('team.recruit.empty_hint_wait'))}</div>
+@@ -271,11 +296,140 @@
+         `;
+     }
+ 
+-    const rows = candidates.map(_renderCandidateRow).join('');
+-    return header + filterChips + '<div class="cand-list">' + rows + '</div>';
++    const rows = candidates.map(function (c) {
++        return _renderCandidateRow(c, _impactOf(teamSystem, c));
++    }).join('');
++    return _recruitStyle() + pipeline + header + filterChips + '<div class="cand-list">' + rows + '</div>';
++}
++
++// ---------- Helper rekrut (v2027.10c) ----------
++// Target awal per role: engineer untuk riset, designer untuk produk, marketer untuk kampanye.
++const ROLE_TARGET = { engineer: 2, designer: 1, marketer: 1 };
++
++const ROLE_EFFECT_HINT = {
++    engineer: 'Mempercepat riset dan OS. Dengan 1 engineer, riset hanya punya 1 slot; 2 engineer membuka slot tambahan.',
++    designer: 'Mempercepat pengembangan produk dan menambah kualitas ponsel.',
++    marketer: 'Memperkuat efek kampanye pemasaran dan penjualan.'
++};
++
++function _countsOf(teamSystem) {
++    var c = { engineers: 0, designers: 0, marketers: 0 };
++    try { if (teamSystem && teamSystem.getTeamCounts) c = teamSystem.getTeamCounts() || c; } catch (e) {}
++    return c;
++}
++
++function _roleCountOf(counts, roleId) {
++    return roleId === 'engineer' ? (counts.engineers || 0)
++         : roleId === 'designer' ? (counts.designers || 0)
++         : (counts.marketers || 0);
+ }
+ 
+-function _renderCandidateRow(c) {
++function _fmtMoney(n) { return '$' + Math.round(n || 0).toLocaleString('en-US'); }
++
++function _pct(delta) { return '+' + Math.round(delta * 100) + '%'; }
++
++function _impactOf(teamSystem, c) {
++    try {
++        if (teamSystem && typeof teamSystem.getHireImpact === 'function') return teamSystem.getHireImpact(c);
++    } catch (e) {}
++    return null;
++}
++
++// Dampak kandidat dalam bentuk ringkas, mis. ["Riset +8%", "+1 slot riset"].
++function _impactChips(role, impact) {
++    if (!impact || !impact.deltas) return [];
++    var d = impact.deltas, out = [];
++    var EPS = 0.0005;
++    if (role === 'engineer') {
++        if (d.research > EPS) out.push(_tf('team.recruit.fx_research', 'Riset ') + _pct(d.research));
++        if (d.slots > 0) out.push('+' + d.slots + ' ' + _tf('team.recruit.fx_slot', 'slot riset'));
++        if (d.osDev > EPS) out.push(_tf('team.recruit.fx_os', 'OS ') + _pct(d.osDev));
++    } else if (role === 'designer') {
++        if (d.productSpeed > EPS) out.push(_tf('team.recruit.fx_product', 'Produk ') + _pct(d.productSpeed));
++        if (d.quality > EPS) out.push(_tf('team.recruit.fx_quality', 'Kualitas +') + d.quality.toFixed(2));
++    } else if (role === 'marketer') {
++        if (d.marketing > EPS) out.push(_tf('team.recruit.fx_mkt', 'Kampanye ') + _pct(d.marketing));
++    }
++    return out;
++}
++
++// Panel "kebutuhan tim": kondisi per role + langkah berikutnya yang terhubung ke alur game.
++function _renderPipeline(data, teamSystem) {
++    const counts = _countsOf(teamSystem);
++    const total = (data.staff || []).length;
++
++    const cards = ROLES.map(function (r) {
++        var n = _roleCountOf(counts, r.id);
++        var target = ROLE_TARGET[r.id] || 1;
++        var st = n === 0 ? { c: 'var(--danger)', l: _tf('team.recruit.st_empty', 'Kosong') }
++              : n < target ? { c: 'var(--warn)', l: _tf('team.recruit.st_low', 'Kurang') }
++              : { c: 'var(--success)', l: _tf('team.recruit.st_ok', 'Aman') };
++        return '<div class="recruit-need">' +
++            '<div class="recruit-need-top">' +
++                '<span class="recruit-need-role" style="color:' + r.color + ';">' + escapeHtml(_roleLabel(r)) + '</span>' +
++                '<span class="recruit-need-status" style="color:' + st.c + ';">' + escapeHtml(st.l) + '</span>' +
++            '</div>' +
++            '<div class="recruit-need-num">' + n + '<span> / ' + target + '</span></div>' +
++            '<div class="recruit-need-hint">' + escapeHtml(_tf('team.recruit.hint.' + r.id, ROLE_EFFECT_HINT[r.id] || '')) + '</div>' +
++        '</div>';
++    }).join('');
++
++    var nextRole = ROLES.find(function (r) { return _roleCountOf(counts, r.id) < (ROLE_TARGET[r.id] || 1); });
++    var nextLine = nextRole
++        ? _tf('team.recruit.next_prefix', 'Langkah berikutnya: rekrut ') + '<b style="color:' + nextRole.color + ';">' + escapeHtml(_roleLabel(nextRole)) + '</b>.'
++        : escapeHtml(_tf('team.recruit.next_done', 'Target awal tim sudah terpenuhi. Fokus ke produk dan penjualan.'));
++
++    var questLine = '';
++    if (total === 0) {
++        var reward = (BALANCE.questRewards && BALANCE.questRewards.first_recruit && BALANCE.questRewards.first_recruit.cash) || 0;
++        questLine = '<div class="recruit-quest">' +
++            escapeHtml(_tf('team.recruit.quest_prefix', 'Quest “Bangun tim” menunggu: rekrut 1 anggota untuk bonus ')) +
++            '<b>' + _fmtMoney(reward) + '</b> + 3 Silicon.</div>';
++    }
++
++    return '<div class="recruit-pipeline">' +
++        '<div class="recruit-need-grid">' + cards + '</div>' +
++        '<div class="recruit-next">' + nextLine + '</div>' +
++        questLine +
++    '</div>';
++}
++
++function _recruitStyle() {
++    return '<style>' +
++        '.nego-row{display:flex;gap:8px;margin-bottom:4px;}' +
++        '.nego-row button{flex:1;font-size:12px;}' +
++        '.nego-hint{font-size:10.5px;color:var(--text-tertiary);margin-bottom:6px;line-height:1.4;}' +
++        '.recruit-pipeline{margin-bottom:10px;}' +
++        '.recruit-need-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}' +
++        '.recruit-need{background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:8px 8px 7px;min-width:0;}' +
++        '.recruit-need-top{display:flex;justify-content:space-between;align-items:center;gap:4px;font-size:11px;}' +
++        '.recruit-need-role{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
++        '.recruit-need-status{font-size:10px;font-weight:600;flex-shrink:0;}' +
++        '.recruit-need-num{font-size:18px;font-weight:700;margin:2px 0;color:var(--text);}' +
++        '.recruit-need-num span{font-size:11px;color:var(--text-tertiary);font-weight:500;}' +
++        '.recruit-need-hint{font-size:10.5px;line-height:1.4;color:var(--text-secondary);}' +
++        '.recruit-next{margin-top:8px;font-size:12px;color:var(--text-secondary);line-height:1.5;}' +
++        '.recruit-quest{margin-top:6px;font-size:11.5px;color:var(--text-tertiary);line-height:1.5;}' +
++        '.recruit-hh-row{margin-top:6px;}' +
++        '.recruit-hh{max-width:100%;font-size:12px;}' +
++        '.recruit-hh-hint{font-size:10.5px;color:var(--text-tertiary);margin-top:4px;}' +
++        '.cand-row-fx{margin-top:4px;font-size:11px;color:var(--success);display:flex;flex-wrap:wrap;gap:4px 8px;}' +
++        '.cand-row-warn{color:var(--warn);}' +
++        '.cand-row-fx-none{color:var(--text-tertiary);}' +
++    '</style>';
++}
++
++function _candidateNotes(role, impact) {
++    var notes = [];
++    if (!impact) return { chips: [], warn: [] };
++    var chips = _impactChips(role, impact);
++    if (impact.current === 0) notes.push(_tf('team.recruit.fills', 'Mengisi slot kosong'));
++    if (impact.capped) notes.push(_tf('team.recruit.cap_full', 'Kapasitas penuh'));
++    if (!impact.affordable) notes.push(_tf('team.recruit.short', 'Kurang ') + _fmtMoney(impact.shortfall));
++    return { chips: chips, warn: notes };
++}
++
++function _renderCandidateRow(c, impact) {
+     if (!c || !c.id) return '';
+     const role = getRoleById(c.role) || { id: c.role, label: c.role || '?', icon: 'cpu', color: '#666' };
+     const tier = getSkillTier(c.skill || 1) || { label: '' };
+@@ -300,6 +454,14 @@
+         ? _tierLabel(tier, c.skill)
+         : (tier.label || t('staff.detail.tier_label', { n: c.skill }));
+ 
++    const notes = _candidateNotes(c.role, impact);
++    const fxHtml = (notes.chips.length || notes.warn.length)
++        ? '<div class="cand-row-fx">' +
++            notes.chips.map(function (x) { return '<span>▲ ' + escapeHtml(x) + '</span>'; }).join('') +
++            notes.warn.map(function (x) { return '<span class="cand-row-warn">' + escapeHtml(x) + '</span>'; }).join('') +
++          '</div>'
++        : '<div class="cand-row-fx cand-row-fx-none">' + escapeHtml(_tf('team.recruit.fx_none', 'Belum ada efek langsung untuk role ini')) + '</div>';
++
+     return `
+         <div class="cand-row" data-team-action="open-candidate" data-candidate-id="${c.id}">
+             <div class="cand-row-avatar">${avatar}</div>
+@@ -320,6 +482,7 @@
+                     <span class="cand-row-dot">·</span>
+                     <span class="cand-row-total">${escapeHtml(t('team.recruit.total'))} $${totalCost.toLocaleString('en-US')}</span>
+                 </div>
++                ${fxHtml}
+             </div>
+             <div class="cand-row-actions">
+                 <button class="cand-cta" data-team-action="hire" data-candidate-id="${c.id}" aria-label="${escapeHtml(t('team.modal.aria_hire'))}">
+@@ -330,6 +493,32 @@
+     `;
+ }
+ 
++// Bagian "Dampak" di modal kandidat.
++function _modalImpactHtml(c, data) {
++    const ts = window.__game && window.__game.teamSystem;
++    const impact = _impactOf(ts, c);
++    if (!impact) return '';
++    const chips = _impactChips(c.role, impact);
++    const rows = [
++        { label: _tf('team.recruit.m_cap', 'Kapasitas role'), value: impact.current + ' / ' + impact.cap },
++        { label: _tf('team.recruit.m_monthly', 'Tambahan gaji/bulan'), value: _fmtMoney(c.salary) },
++        { label: _tf('team.recruit.m_cash', 'Kas sekarang'), value: _fmtMoney(data.cash) },
++        { label: _tf('team.recruit.m_fx', 'Efek ke tim'), value: chips.length ? chips.join(' · ') : _tf('team.recruit.fx_none', 'Belum ada efek langsung untuk role ini') }
++    ];
++    const body = rows.map(function (r) {
++        return '<div class="cand-modal-detail-row">' +
++            '<div class="cand-modal-detail-label">' + escapeHtml(r.label) + '</div>' +
++            '<div class="cand-modal-detail-value">' + escapeHtml(String(r.value)) + '</div>' +
++        '</div>';
++    }).join('');
++    const warn = [];
++    if (!impact.affordable) warn.push(_tf('team.recruit.short', 'Kurang ') + _fmtMoney(impact.shortfall));
++    if (impact.capped) warn.push(_tf('team.recruit.cap_full', 'Kapasitas penuh'));
++    return '<div class="cand-modal-section-title">' + renderIcon('sparkles', 11) + escapeHtml(_tf('team.recruit.m_title', 'Dampak')) + '</div>' +
++        '<div class="cand-modal-details">' + body + '</div>' +
++        (warn.length ? '<div class="cand-modal-note">' + renderIcon('warn', 14) + '<span>' + escapeHtml(warn.join(' · ')) + '</span></div>' : '');
++}
++
+ // ============================================================
+ // MODAL DETAIL KANDIDAT
+ // ============================================================
+@@ -401,6 +590,8 @@
+     const nameLabel = c.name || t('team.roster.unnamed');
+     const tierText = tier.tier ? _tierLabel(tier, c.skill) : (tier.label || '');
+ 
++    const impactSection = _modalImpactHtml(c, data);
++    const negotiateHtml = _negotiateHtml(c);
+     return '<div class="cand-modal">' +
+             '<div class="cand-modal-header">' +
+                 '<div class="cand-modal-avatar">' + avatar + '</div>' +
+@@ -418,7 +609,7 @@
+             '<div class="cand-modal-section-title">' + renderIcon('sparkles', 11) + escapeHtml(t('team.modal.traits')) + '</div>' +
+             '<div class="cand-modal-traits">' + traitHtml + '</div>' +
+             detailSectionHtml +
+-            '<div class="cand-modal-section-title">' + renderIcon('coin', 11) + escapeHtml(t('team.modal.cost')) + '</div>' +
++            impactSection + '<div class="cand-modal-section-title">' + renderIcon('coin', 11) + escapeHtml(t('team.modal.cost')) + '</div>' +
+             '<div class="cand-modal-costs">' +
+                 '<div class="cand-modal-cost-row">' +
+                     '<span>' + escapeHtml(t('team.modal.cost_salary')) + '</span>' +
+@@ -433,7 +624,7 @@
+                     '<b>$' + total.toLocaleString('en-US') + '</b>' +
+                 '</div>' +
+             '</div>' +
+-            '<div class="cand-modal-actions">' +
++            negotiateHtml + '<div class="cand-modal-actions">' +
+                 '<button class="btn-secondary" data-modal-close style="flex:1;">' + escapeHtml(t('team.modal.btn_cancel')) + '</button>' +
+                 '<button class="btn-primary" data-team-action="hire" data-candidate-id="' + c.id + '" style="flex:2;">' + escapeHtml(t('team.modal.btn_hire')) + '</button>' +
+             '</div>' +
+@@ -547,3 +738,43 @@
+ 
+     return engSec + desSec + mktSec + extraSec + tips;
+ }
++
++// ---------- Progres skill & tawar gaji (v2027.10d) ----------
++function _rosterStyle() {
++    return '<style>' +
++        '.skill-prog{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:10.5px;color:var(--text-tertiary);}' +
++        '.skill-prog-track{flex:1;max-width:120px;height:4px;border-radius:2px;background:var(--bg-3);overflow:hidden;}' +
++        '.skill-prog-fill{height:100%;background:var(--accent);border-radius:2px;}' +
++    '</style>';
++}
++
++function _progressHtml(s) {
++    const skill = s.skill || 1;
++    if (skill >= 5) {
++        return '<div class="skill-prog"><span>' + escapeHtml(_tf('team.roster.max_tier', 'Tier maksimum')) + '</span></div>';
++    }
++    const pct = Math.max(0, Math.min(100, s.skillProgress || 0));
++    const next = getSkillTier(skill + 1);
++    return '<div class="skill-prog">' +
++        '<div class="skill-prog-track"><div class="skill-prog-fill" style="width:' + pct.toFixed(0) + '%;"></div></div>' +
++        '<span>' + escapeHtml(_tf('team.roster.next_tier', 'Menuju')) + ' ' + escapeHtml(_tierLabel(next, skill + 1)) + ' · ' + Math.round(pct) + '%</span>' +
++    '</div>';
++}
++
++function _negotiateHtml(c) {
++    const ts = window.__game && window.__game.teamSystem;
++    if (!ts || typeof ts.negotiateCandidate !== 'function') return '';
++    if (c.negotiated) {
++        return '<div class="cand-modal-note"><span>' + escapeHtml(_tf('team.nego.done', 'Kandidat ini sudah tidak bisa ditawar lagi.')) + '</span></div>';
++    }
++    const light = Math.round(ts.negotiationOdds(c, 'light') * 100);
++    const hard = Math.round(ts.negotiationOdds(c, 'hard') * 100);
++    return '<div class="cand-modal-section-title">' + renderIcon('coin', 11) + escapeHtml(_tf('team.nego.title', 'Tawar gaji')) + '</div>' +
++        '<div class="nego-row">' +
++            '<button class="btn-secondary" data-team-action="negotiate" data-level="light" data-candidate-id="' + c.id + '">' +
++                escapeHtml(_tf('team.nego.light', 'Ringan −5%')) + ' · ' + light + '%</button>' +
++            '<button class="btn-secondary" data-team-action="negotiate" data-level="hard" data-candidate-id="' + c.id + '">' +
++                escapeHtml(_tf('team.nego.hard', 'Keras −12%')) + ' · ' + hard + '%</button>' +
++        '</div>' +
++        '<div class="nego-hint">' + escapeHtml(_tf('team.nego.hint', 'Kalau ditolak, kandidat mundur dari pool. Hanya bisa sekali, potongan maks 15%.')) + '</div>';
++}
