@@ -396,6 +396,19 @@ export const SupabaseAdapter = {
         return res.data == null ? 0 : res.data;
     },
 
+    // [EXCHANGE] Tukar SIL -> uang. Server menentukan harga SIL & jumlah uang dari ID paket + tahun game.
+    // Hasil: { ok, balance, sil, cash }. request_id sama = tidak memotong dua kali.
+    rpcExchangeSilicon: async function (pkg, year, requestId) {
+        var c = await getClient();
+        var res = await c.rpc('exchange_silicon', {
+            p_package: String(pkg),
+            p_year: Math.floor(year),
+            p_request_id: String(requestId).slice(0, 64)
+        });
+        if (res.error) throw mk(res.error);
+        return res.data;
+    },
+
     // [AUDIT] Kembalikan potongan SIL (aksi gagal setelah bayar). Server hanya mengembalikan SEKALI
     // dan hanya untuk potongan milik akun ini (lihat supabase/21-silicon-audit-fix.sql).
     rpcRefundSilicon: async function (requestId) {
