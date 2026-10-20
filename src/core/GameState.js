@@ -170,6 +170,7 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
         siliconHistory: [],
         paymentOrders: [],
         dailyLogin: { lastClaimDate: null, streak: 0 },
+        freeSpeed: { used: 0, windowStart: 0 },   // jatah percepatan gratis (reset tiap 24 jam)
 
         era: 'feature_phone',
         eraStartYear: TIME_CONFIG.startYear,
@@ -490,6 +491,7 @@ class GameState {
         if (typeof this.data.silicon !== 'number') this.data.silicon = 10;
         if (!Array.isArray(this.data.siliconHistory)) this.data.siliconHistory = [];
         if (!Array.isArray(this.data.paymentOrders)) this.data.paymentOrders = [];
+        if (!this.data.freeSpeed || typeof this.data.freeSpeed !== 'object') this.data.freeSpeed = { used: 0, windowStart: 0 };
         if (!this.data.dailyLogin || typeof this.data.dailyLogin !== 'object') {
             this.data.dailyLogin = { lastClaimDate: null, streak: 0 };
         }
