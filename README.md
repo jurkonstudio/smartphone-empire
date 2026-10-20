@@ -58,7 +58,7 @@ Angka di bawah dihitung langsung dari file data di repo ini.
 ### 📱 Produk dan Penjualan
 
 - **Wizard desain ponsel** dengan preview real-time. Ada **87 komponen** dalam 7 kategori (layar, kamera, baterai, chip, jaringan, bodi, form factor) dan 8 warna bodi. Pilihan ikut tahun, jadi nggak ada layar OLED di 2001.
-- **Pengembangan 4 fase**: Desain → Prototipe  Produksi → Rilis.
+- **Pengembangan 4 fase**: Desain → Prototipe → Produksi → Rilis.
 - **Rumus permintaan transparan**: kualitas × harga × reputasi × pemasaran × OS × tren × kompetitor × lifecycle × kondisi makro.
 - **Lifecycle produk**: naik → puncak → turun → mati. Ada stok gudang, restock otomatis, dan maksimal 5 produk aktif.
 - **Pemasaran**: 5 jenis kampanye (Iklan Online, Sponsor Event, Peluncuran Produk, Billboard Kota, Kampanye Influencer).
@@ -102,10 +102,16 @@ Angka di bawah dihitung langsung dari file data di repo ini.
 ### ☁️ Cloud, Akun, dan Save
 
 - **Save lokal** otomatis, plus export/import file save.
-- **Cloud save** lewat Supabase: login, **3 slot**, profil pemain (nama tampil dan avatar), dan pengecekan nama perusahaan unik.
+- **Cloud save** lewat Supabase: login, **1 slot** (menyimpan save terbaru), profil pemain (nama tampil dan avatar), pengecekan nama perusahaan unik, dan leaderboard.
 - **Dompet Universal**: uang ($) dan SIL bisa dipakai untuk APA SAJA. Biaya berupa uang (riset, rekrut, produk, fab, OS, chip, promosi, bank, saham) boleh ditutup SIL; biaya berupa SIL (percepatan waktu, unlock/boost riset, aksi instan) boleh ditutup uang. Kurs mengikuti inflasi (2000: 1 SIL = $2.500). SIL tidak pernah dicetak dari uang. Mode bayar (Otomatis / Uang dulu / SIL dulu / Terpisah) dan Dana Darurat SIL ada di Setelan → Keuangan.
-- **Silicon (SIL)**: mata uang premium untuk mempercepat waktu dan riset, dengan bonus login harian. Skema top-up sudah disiapkan (daftar metode pembayaran dan alur order), tapi provider pembayaran produksi belum terhubung.
-- **Keamanan**: save diberi tanda tangan integritas (penghalang edit manual, bukan enkripsi). Proteksi sesungguhnya ada di sisi server lewat Row Level Security dan skrip `supabase/hardening.sql` (wallet dan ledger SIL). Detail ada di `SECURITY.md`.
+- **Silicon (SIL)**: mata uang premium untuk mempercepat waktu dan riset, dengan bonus login harian. Top-up saat ini manual (GoPay/QRIS) dan disetujui admin lewat panel `/fsociety`. Provider pembayaran otomatis belum terhubung.
+- **Keamanan**: save diberi tanda tangan integritas (penghalang edit manual, bukan enkripsi). Saldo SIL dan ledger dijaga di sisi server lewat Row Level Security dan fungsi yang hanya bisa dipanggil server. Detail ada di `SECURITY.md`.
+
+### ⚠️ Known issues
+
+- **Tukar SIL → uang belum berfungsi.** Fungsi `exchange_silicon` dipanggil klien tetapi belum ada di file SQL. Saat ini pemanggilan gagal dan SIL tidak terpotong.
+- **Statistik leaderboard dilaporkan klien.** Angka seperti pendapatan dan kas dikirim dari perangkat pemain, jadi belum bisa dipercaya sebagai peringkat resmi.
+- **Gate admin di sisi klien hanya kosmetik.** Admin yang sebenarnya diverifikasi di server lewat `is_admin()`.
 
 ---
 
@@ -133,14 +139,17 @@ Lalu buka `http://localhost:8000`. Tidak ada langkah build dan tidak ada `npm in
 - **Three.js** (versi dipin, dimuat lazy dari CDN) untuk Peta Kampus dan Office 3D Map. Kalau WebGL atau CDN gagal, game tetap jalan dengan tampilan cadangan.
 - **Supabase** (`supabase-js` dari CDN) untuk auth, cloud save, profil, dan storage avatar.
 - Komunikasi antar sistem lewat **event bus** (daftar event ada di `src/config/event.md`).
-- Total sekitar **200 file JS dan 50 ribu baris**.
+- Total sekitar **230 file JS** (sekitar **63 ribu baris** di `src/`).
+- Belum ada test otomatis, linter, atau `package.json`.
 
 ### Struktur folder
 
 ```
 smartphone-empire/
-├─ index.html · style.css · density.css · profile-ui.css
-├─ supabase/            skema SQL: schema, player-profile, company-name-unique, hardening
+├─ index.html · style.css · density.css · profile-ui.css · desktop.css
+├─ 031411/              panel admin (dashboard data pemain, persetujuan SIL)
+├─ supabase/            skema SQL 01–09 + panduan urutan (lihat BACA-DULU.md)
+├─ assets/              ikon, gambar, dan audio
 └─ src/
    ├─ main.js           boot, routing tab, binding event
    ├─ config/           konstanta, waktu, dev flag, dokumentasi event
@@ -156,15 +165,33 @@ Data dipisah dari logika: menambah komponen, saham, kompetitor, atau headline cu
 
 ---
 
+## Setup Supabase (untuk cloud save dan pembayaran)
+
+Game bisa jalan tanpa Supabase, tapi cloud save, SIL, dan panel admin membutuhkannya. Jalankan file di `supabase/` **berurutan** lewat SQL Editor (lihat `supabase/BACA-DULU.md`):
+
+- **Wajib:** `01` → `05`, lalu `08` (ganti email di `08-jadikan-admin.sql` dulu).
+- **Opsional:** `06`–`07` (panel admin lengkap), `09` (fitur pesan pemain).
+
+Semua file aman dijalankan ulang. Proyek lama cukup menjalankan `01` → `08`.
+
+---
+
 ## Yang belum kelar
 
 Proyek ini masih jalan. Catatan roadmap saya:
 
-- ✅ **Office 3D Map tahap 3** (v2027.52a): bangun/upgrade Fab dan latih staf langsung dari peta, konstruksi Fab 3D, aktivitas staf lebih hidup (rute antar ruangan, gelembung emoji), dan tampilan lebih rapi di HP
+- ✅ **Office 3D Map tahap 3**: bangun/upgrade Fab dan latih staf langsung dari peta, konstruksi Fab 3D, aktivitas staf lebih hidup (rute antar ruangan, gelembung emoji), dan tampilan lebih rapi di HP
 - ⏳ **Event acak dengan pilihan**, era transition screen, dan polish UI
 - ⏳ **Patch UI Evolution**: tampilan notifikasi berubah per era (monokrom → glossy → flat → Dynamic Island)
 - ⏳ **Berita bilingual**: headline versi English sudah ada, sebagian template ulasan masih Indonesia
 - ⏳ **Pembayaran Silicon**: menghubungkan provider pembayaran produksi dengan verifikasi server
+- ⏳ **Perbaikan known issues** di atas (fungsi tukar SIL, validasi leaderboard, pembersihan gate admin di klien)
+
+---
+
+## Versi
+
+Versi terbaru: **0.2.1** (18 Oktober 2026). Daftar perubahan ada di `patches.json` dan `PERF-CHANGES.md`.
 
 ---
 
@@ -173,4 +200,3 @@ Proyek ini masih jalan. Catatan roadmap saya:
 Bug atau saran? Buka [issue](https://github.com/jurkonstudio/smartphone-empire/issues). Kalau menemukan celah keamanan, baca dulu `SECURITY.md`.
 
 Nama dan merek perusahaan dalam game dipakai untuk tujuan edukasi dan hiburan, dan hak ciptanya milik pemiliknya masing-masing. Data historis disederhanakan untuk kebutuhan gameplay.
-y.
