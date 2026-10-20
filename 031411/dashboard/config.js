@@ -14,7 +14,8 @@ export const CFG = {
     setSilicon: 'admin_set_silicon',           // args: { p_user_id, p_amount }
     sendMessage: 'admin_send_message',         // args: { p_user_id, p_title, p_body }
     broadcast: 'admin_broadcast_message',      // args: { p_title, p_body }
-    listMessages: 'admin_list_messages'        // args: { p_limit }
+    listMessages: 'admin_list_messages',       // args: { p_limit }
+    listReports: 'admin_list_reports'          // args: { p_limit }  (laporan DM antar pemain)
   },
   tables: { wallets: 'silicon_wallets', ledger: 'silicon_ledger' },
   quickTables: ['profiles', 'silicon_wallets', 'silicon_ledger'],

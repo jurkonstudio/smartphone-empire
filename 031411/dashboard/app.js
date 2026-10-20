@@ -249,8 +249,9 @@ function renderMsg(out) {
     '<label for="mb">Isi pesan <span class="dim" id="mbc">0/1000</span></label><textarea id="mb" maxlength="1000" placeholder="Tulis pesan untuk pemain…">' + esc(S.msgB || '') + '</textarea>' +
     '<div class="row" style="margin-top:10px"><button class="btn pri" style="flex:1" data-a="sendmsg">Kirim pesan</button></div>' +
     '<div class="dim" style="margin-bottom:6px">Notifikasi SIL masuk (top-up, tambah saldo dari admin, transfer) dikirim otomatis oleh server.</div>' +
-    (out || '') + '<h2>Riwayat pesan terakhir</h2><div id="mhist"><div class="dim">Memuat…</div></div>';
-  msgCount(); loadMsgHist();
+    (out || '') + '<h2>Laporan pemain</h2><div id="mrep"><div class="dim">Memuat…</div></div>' +
+    '<h2>Riwayat pesan terakhir</h2><div id="mhist"><div class="dim">Memuat…</div></div>';
+  msgCount(); loadMsgHist(); loadReports();
 }
 function msgCount() { const t = $('#mt'), b = $('#mb'); if (t) $('#mtc').textContent = t.value.length + '/80'; if (b) $('#mbc').textContent = b.value.length + '/1000'; }
 async function loadMsgHist() {
@@ -259,6 +260,13 @@ async function loadMsgHist() {
     rows.forEach(r => { r.dibaca = r.read_at ? 'ya' : '-'; r.pemain = r.company_name || r.email; });
     const el = $('#mhist'); if (el) el.innerHTML = table(rows, ['created_at', 'kind', 'pemain', 'title', 'dibaca'], null).replace(/data-a="player"/g, '');
   } catch (e) { const el = $('#mhist'); if (el) el.innerHTML = '<div class="ln er">' + esc(e.message || e) + ' (jalankan supabase/09-pesan-inbox.sql)</div>'; }
+}
+async function loadReports() {
+  const el = () => $('#mrep');
+  try {
+    const rows = rowsOf(await rpc(CFG.rpc.listReports, { p_limit: 40 }));
+    if (el()) el().innerHTML = rows.length ? table(rows, ['created_at', 'sender_public_id', 'sender_name', 'pesan', 'alasan', 'pelapor'], null).replace(/data-a="player"/g, '') : '<div class="dim">Belum ada laporan.</div>';
+  } catch (e) { if (el()) el().innerHTML = '<div class="ln er">' + esc(e.message || e) + ' (jalankan supabase/10-pesan-antar-pemain.sql)</div>'; }
 }
 async function sendMsg() {
   S.msgMode = $('#mm').value; S.msgT = $('#mt').value.trim(); S.msgB = $('#mb').value.trim();
