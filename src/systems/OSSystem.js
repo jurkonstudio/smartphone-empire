@@ -1,3 +1,4 @@
+import { escapeHtml } from '../utils/html.js';
 // FILE: src/systems/OSSystem.js
 // v2028.35 — Context-Aware Bugs (Tahun & Fitur), lengkap & kompatibel dengan os.data.js baru.
 import { bus } from '../core/EventBus.js';
@@ -21,10 +22,6 @@ import { WalletService } from './WalletService.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 function _getStarterFeatureIds() {
     return OS_FEATURES.filter(function (f) { return f.starter === true; }).map(function (f) { return f.id; });

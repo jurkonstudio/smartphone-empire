@@ -38,7 +38,8 @@ function niceRound(n, floor) {
     return (floor ? Math.floor(q) : Math.round(q)) * step;
 }
 
-function annuity(principal, rate, months) {
+// Diekspor agar bisa diuji (tests/bank.test.mjs). Tidak dipakai di luar modul ini.
+export function annuity(principal, rate, months) {
     if (months <= 0) return principal;
     if (rate <= 0) return Math.round(principal / months);
     return Math.round((principal * rate) / (1 - Math.pow(1 + rate, -months)));
