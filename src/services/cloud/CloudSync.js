@@ -438,14 +438,10 @@ export const CloudSync = {
         
         bus.on('cloud:status-changed', function (e) {
             if (e && e.status === 'connected') {
-                try {
-                    var email = CloudService.getEmail();
-                    if (email) localStorage.setItem('smartphone-empire:admin-email', email);
-                } catch (err) {}
-
                 _startRealtime();
                 checkOnConnect();
             } else if (e && e.status === 'disconnected') {
+                // Bersihkan kunci lama yang pernah menyimpan email (tidak dipakai lagi).
                 try { localStorage.removeItem('smartphone-empire:admin-email'); } catch(err) {}
                 _stopRealtime();
                 _ready = false;
@@ -462,10 +458,6 @@ export const CloudSync = {
         });
 
         if (_isConnected()) {
-            try {
-                var em = CloudService.getEmail();
-                if (em) localStorage.setItem('smartphone-empire:admin-email', em);
-            } catch (err) {}
             _startRealtime();
             checkOnConnect();
         }
