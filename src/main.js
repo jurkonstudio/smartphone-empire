@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2028.53 — [FIX] Optimasi render header (debounce via rAF) agar tidak tabrakan dengan panel SIL.
+// v2028.54 — [UPDATE] Integrasi AdvisorNLP (Chat Asisten Bisnis)
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -86,6 +86,7 @@ import { getActiveRendererIdPublic, toggleNotificationPanel, closeNotificationPa
 import { initSwipe, showSwipeAnimation } from './core/SwipeService.js';
 import { initNavSliderDrag } from './core/NavSliderDrag.js';
 import { AudioService } from './core/AudioService.js';
+import advisorNLP from './systems/Advisor/AdvisorNLP.js'; // <-- IMPORT ADVISOR NLP
 
 // ============ INSTANCE ============
 var timeSystem        = new TimeSystem(state);
@@ -153,8 +154,6 @@ function renderHeaderOnly() {
 // ============================================================
 // NAV RENDER
 // ============================================================
-// Sidebar desktop (>=768px, lihat desktop.css). Dirender ulang hanya saat pertama kali / bahasa berganti;
-// selain itu cukup ganti status aktif agar fokus keyboard tidak hilang.
 var _sideLang = null;
 function renderSidebarOnly() {
     if (!els.sidebar) return;
@@ -221,8 +220,7 @@ function updateNavSlider(animated) {
     var count = buttons.length;
     var itemW = navW / count;
     
-    // PRESISI: Lebar slider dikunci 46px
-    var sliderW = Math.max(56, Math.min(itemW * 0.88, 80)); // harus sama dengan NavSliderDrag._readMetrics
+    var sliderW = Math.max(56, Math.min(itemW * 0.88, 80));
     var x = (idx * itemW) + ((itemW - sliderW) / 2);
 
     if (!animated) {
@@ -238,9 +236,6 @@ function updateNavSlider(animated) {
 }
 
 // ============ RENDER VIEW ============
-// Kunci halaman+subtab terakhir yang dirender. Bila render ulang terjadi pada
-// halaman yang SAMA (mis. toggle/aksi di dalam panel), posisi scroll dipertahankan;
-// hanya pindah halaman/subtab yang membawa layar kembali ke atas.
 var _lastViewKey = null;
 function _viewKey() {
     return [activeView, activeSubtab, activeProdSubtab, activeMarketSubtab, activeHqSubtab].join('|');
@@ -326,8 +321,6 @@ function _bindCarouselPerf(wrapperEl) {
 }
 
 function renderAll() { renderHeaderOnly(); renderNavOnly(); renderView(); }
-
-// Render ulang tanpa melompat ke atas: posisi scroll dipertahankan (dipakai toggle/pilihan di Settings).
 function renderSoft() { renderHeaderOnly(); renderView({ soft: true }); }
 
 function updateDashboardLive() {
@@ -400,7 +393,6 @@ function updateTitle() {
     document.title = APP_CONFIG.name + ' - ' + label;
 }
 
-// Getar pengiring notifikasi: ikut mati bila jenis notifikasinya dimatikan.
 function notifVibrate(ms, type) {
     if (!NotificationPrefs.isTypeEnabled(type)) return;
     vibrate(ms);
@@ -451,6 +443,69 @@ function _refreshProductUi(productId) {
         var nb = document.querySelector('[data-modal-id="product-detail"] .modal-card');
         if (nb) nb.scrollTop = scroll;
     }
+}
+
+// ============ ADVISOR CHAT INTEGRATION ============
+function initAdvisorChat() {
+    // 1. Handle "Enter" di keyboard
+    document.body.addEventListener('keydown', function(e) {
+        if (e.target.matches('input[placeholder*="Tanya apa saja"], input[placeholder*="Tanya"]')) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                var parent = e.target.parentElement;
+                var sendBtn = parent.querySelector('button');
+                if(sendBtn) sendBtn.click();
+            }
+        }
+    });
+
+    // 2. Handle klik tombol Send (Panah biru)
+    document.body.addEventListener('click', function(e) {
+        var sendBtn = e.target.closest('button');
+        if (sendBtn) {
+            var parent = sendBtn.parentElement;
+            var input = parent.querySelector('input[placeholder*="Tanya apa saja"], input[placeholder*="Tanya"]');
+            if (input) {
+                e.preventDefault();
+                e.stopPropagation();
+                var text = input.value.trim();
+                if (!text) return;
+                input.value = '';
+
+                // Ambil state game saat ini
+                var s = state.get();
+                var gs = {
+                    year: s.time.currentYear,
+                    funds: s.cash,
+                    sales: s.stats && s.stats.salesToday ? s.stats.salesToday : 0,
+                    researchLevel: s.research && s.research.completed ? s.research.completed.length : 0,
+                    activeProducts: s.products && s.products.catalog ? s.products.catalog.filter(function(p){return p.status === 'active';}).length : 0
+                };
+
+                // Cari container chat (sesuaikan class dengan UI Anda)
+                var chatContainer = document.querySelector('.chat-messages') || parent.parentElement;
+                
+                // Tampilkan chat user
+                var userDiv = document.createElement('div');
+                userDiv.className = 'chat-bubble-user';
+                userDiv.style.cssText = 'align-self:flex-end;background:#007AFF;color:white;padding:8px 12px;border-radius:12px;margin:5px 0;max-width:80%;margin-left:auto;font-size:14px;';
+                userDiv.innerText = text;
+                chatContainer.appendChild(userDiv);
+
+                // Tampilkan loading / respons AI
+                setTimeout(function() {
+                    var aiResponse = advisorNLP.chat(text, gs);
+                    var aiDiv = document.createElement('div');
+                    aiDiv.className = 'chat-bubble-ai';
+                    aiDiv.style.cssText = 'align-self:flex-start;background:#2C2C2E;color:white;padding:8px 12px;border-radius:12px;margin:5px 0;max-width:80%;font-size:14px;';
+                    aiDiv.innerText = aiResponse;
+                    chatContainer.appendChild(aiDiv);
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                    vibrate(10);
+                }, 600);
+            }
+        }
+    });
 }
 
 // ============ CLICKS ============
@@ -546,14 +601,13 @@ function bindGlobalClicks() {
         var navBtn = e.target.closest('[data-nav]');
         if (navBtn) {
             e.preventDefault(); vibrate(8);
-            // data-nav-sub: buka sub-tab tertentu (dipakai kartu peta kampus). Hanya id yang dikenal.
             var navSub = navBtn.dataset.navSub, navView = navBtn.dataset.nav;
             if (navSub && NAV_SUBTABS[navView] && NAV_SUBTABS[navView].indexOf(navSub) >= 0) {
                 if (navView === 'research') activeSubtab = navSub;
                 else if (navView === 'products') activeProdSubtab = navSub;
                 else if (navView === 'market') activeMarketSubtab = navSub;
                 else if (navView === 'team') activeHqSubtab = navSub;
-                if (navView === activeView) { renderView(); return; }   // sudah di tab itu: cukup ganti sub-tab
+                if (navView === activeView) { renderView(); return; }
             }
             navigate(navView);
             return;
@@ -1011,7 +1065,6 @@ function bindStateEvents() {
 
     bus.on('lang:changed', function () { renderAll(); updateTitle(); });
     
-    // [FIX] Optimasi render header agar tidak bertabrakan dengan panel SIL
     var _headerDebounce = null;
     function _debouncedRenderHeader() {
         if (_headerDebounce) return;
@@ -1023,7 +1076,6 @@ function bindStateEvents() {
     bus.on('silicon:changed', _debouncedRenderHeader);
     bus.on('silicon:display', _debouncedRenderHeader);
 
-    // Dompet Universal: beri tahu pemain saat SIL/uang dipakai lintas mata uang.
     (function () {
         function _cash(n) { return Number(n).toLocaleString('en-US'); }
         bus.on('wallet:paid-with-sil', function (p) {
@@ -1116,7 +1168,6 @@ async function boot() {
             hideLoading();
             var onb = await showOnboarding();
             if (onb.cloudData && state.hydrate(onb.cloudData)) {
-                // Masuk dari layar awal & akun sudah punya progres: lanjutkan, bukan buat perusahaan baru.
                 SaveService.save(state);
                 console.info('[boot] Progres dimuat dari cloud:', onb.companyName);
             } else {
@@ -1177,7 +1228,6 @@ async function boot() {
             InboxService.init();
             bindCloudUI();
             
-            // [FIX] Sinkronisasi instan 1 detik setelah boot untuk mencegah bug rollback SIL
             setTimeout(function() { 
                 if (CloudSync && typeof CloudSync.syncSilicon === 'function') {
                     CloudSync.syncSilicon(); 
@@ -1190,7 +1240,6 @@ async function boot() {
                 CloudService.restoreSession().then(function (r) {
                     if (r && r.ok) {
                         console.info('[Cloud] Sesi dipulihkan:', r.email || r.userId);
-                        // [FIX] Langsung sinkron setelah sesi dipulihkan
                         if (CloudSync && typeof CloudSync.syncSilicon === 'function') {
                             CloudSync.syncSilicon();
                         }
@@ -1262,6 +1311,7 @@ async function boot() {
         bindTimeEvents();
         bindStateEvents();
         bindProgressEvents();
+        initAdvisorChat(); // <-- INISIALISASI CHAT ADVISOR
         updateTitle();
 
         timeSystem.start();
@@ -1301,32 +1351,23 @@ async function boot() {
             }
         });
 
-        // ============================================================
-        // POPSTATE HANDLER (Anti-close Tab & Back Button)
-        // ============================================================
         if (window.history && window.history.pushState) {
             history.pushState({ game: true }, document.title);
         }
         
         window.addEventListener('popstate', function(e) {
-            // 1. Jika ada Modal yang terbuka, tutup modalnya terlebih dahulu
             var openModal = document.querySelector('[data-modal-id]');
             if (openModal) {
                 Modal.closeAll();
                 history.pushState({ game: true }, document.title);
                 return;
             }
-
-            // 2. Jika tidak ada Modal, tampilkan konfirmasi keluar
             if (window.confirm("Yakin ingin keluar dari Smartphone Empire? Progres permainan akan disimpan.")) {
-                // Simpan game sebelum keluar
                 if (window.__game && window.__game.SaveService) {
                     window.__game.SaveService.save(window.__game.state);
                 }
-                // Izinkan browser untuk kembali (keluar dari game)
                 window.history.back();
             } else {
-                // Tahan pemain di dalam game
                 history.pushState({ game: true }, document.title);
             }
         });
