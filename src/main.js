@@ -702,6 +702,21 @@ function bindGlobalClicks() {
                 else { Modal.close('candidate-detail', true); renderAll(); }
                 return;
             }
+            if (ta === 'negotiate') {
+                var cidN = teamAction.dataset.candidateId;
+                var nr = teamSystem.negotiateCandidate(cidN, teamAction.dataset.level);
+                if (!nr.ok) { ToastService.error(nr.reason); return; }
+                Modal.close('candidate-detail', true);
+                if (nr.success) openCandidateDetailModal({ candidateId: cidN });
+                renderAll();
+                return;
+            }
+            if (ta === 'headhunt') {
+                var hh = teamSystem.headhunt();
+                if (!hh.ok) ToastService.error(hh.reason);
+                else { renderAll(); }
+                return;
+            }
             if (ta === 'refresh-pool') { teamSystem.refreshCandidates(); ToastService.success(tr('main.toast.pool_refreshed')); renderAll(); return; }
             if (ta === 'goto-recruit') { setTeamMode('recruit'); renderView(); return; }
             if (ta === 'open-candidate') { openCandidateDetailModal({ candidateId: teamAction.dataset.candidateId }); return; }
