@@ -11,6 +11,7 @@ import { bus } from '../../core/EventBus.js';
 import { DEV_BUILD } from '../../config/dev.config.js';
 import { state } from '../../core/GameState.js';
 import { CloudService } from '../../services/CloudService.js';
+import { SaveService } from '../../core/SaveService.js';
 
 var MODAL_ID = 'silicon-store';
 var _sel = { pkg: 'pkg_l', method: null, busy: false };
@@ -18,6 +19,7 @@ var _pollingTimer = null;
 var _countdownTimer = null;
 var _adminApprovedUnsub = null;
 var _storeTab = 'buy'; // 'buy' | 'exchange' | 'transfer'
+var _exBusy = false;   // cegah dobel-tap saat penukaran diproses server
 
 var STATIC_QRIS_URL = 'https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/qris-gopay.png';
 
@@ -137,12 +139,27 @@ function _getExchangePackages() {
     ];
 }
 
+function _resyncBalance() {
+    try { var cs = window.__game && window.__game.cloudSync; if (cs && cs.syncSilicon) return cs.syncSilicon(); } catch (e) {}
+}
+
 function _renderExchangeTab() {
     var pkgs = _getExchangePackages();
     var balance = SiliconService.getBalance();
+    // [FIX] Tombol hanya aktif bila saldo SERVER sudah terbaca. Dulu tombol memakai saldo lokal (bisa basi/10).
+    var active = SiliconService.isActive();
+    var ready = SiliconService.isReady();
+
+    var notice = '';
+    if (!active) {
+        notice = '<div style="font-size:12px; color:var(--warning,#f5a623); text-align:center; margin-bottom:12px;">Login ke Cloud dulu untuk menukar SIL.</div>';
+    } else if (!ready) {
+        notice = '<div style="font-size:12px; color:var(--text-secondary); text-align:center; margin-bottom:12px;">Menyinkronkan saldo dari server… ' +
+            '<button type="button" id="btn-sil-resync" style="background:none;border:none;color:var(--accent);text-decoration:underline;cursor:pointer;font-size:12px;">Coba lagi</button></div>';
+    }
 
     var cards = pkgs.map(function(p) {
-        var canAfford = balance >= p.sil;
+        var canAfford = active && ready && !_exBusy && balance >= p.sil;
         var btnStyle = canAfford ? 'background:#00c853; color:#fff;' : 'background:#333; color:#666; cursor:not-allowed;';
         
         return `
@@ -156,7 +173,7 @@ function _renderExchangeTab() {
                     <div style="color:var(--success); font-weight:bold; font-size:16px;">$${p.cash.toLocaleString('en-US')}</div>
                 </div>
                 <button class="btn-exchange" data-sil="${p.sil}" data-cash="${p.cash}" style="width:100%; padding:8px; border-radius:8px; border:none; font-weight:bold; font-size:13px; ${btnStyle}" ${canAfford ? '' : 'disabled'}>
-                    ${canAfford ? _e('exch.btn') : _e('exch.short')}
+                    ${_exBusy ? '…' : (canAfford ? _e('exch.btn') : (active && ready ? _e('exch.short') : '…'))}
                 </button>
             </div>
         `;
@@ -166,25 +183,44 @@ function _renderExchangeTab() {
         <div style="font-size:12px; color:var(--text-secondary); margin-bottom:16px; text-align:center;">
             ${_e('exch.intro')}
         </div>
+        ${notice}
         ${cards}
     `;
 }
 
-function _handleExchange(silCost, cashReward) {
+// [FIX TUKAR SIL] Server-dulu: SIL dipotong di server, BARU uang diberikan.
+// Dulu: SIL dipotong lokal -> uang langsung diberikan -> server memotong di belakang layar; bila server
+// menolak/timeout, SIL dikembalikan lokal tetapi uang tetap ada (SIL "balik lagi" + uang dobel).
+async function _handleExchange(silCost, cashReward) {
+    if (_exBusy) return;
+    if (!SiliconService.isReady()) {
+        ToastService.warning('Saldo belum tersinkron dari server. Coba lagi sebentar.');
+        _resyncBalance();
+        return;
+    }
     if (SiliconService.getBalance() < silCost) {
         ToastService.error(t('silstore.exch.low_balance'));
         return;
     }
 
-    var res = SiliconService.spendRaw(silCost, 'exchange-cash');
-    if (!res.ok) {
-        ToastService.error(res.reason || t('silstore.exch.spend_fail'));
+    _exBusy = true; _render();
+    var res;
+    try { res = await SiliconService.spendServer(silCost, 'exchange-cash'); }
+    catch (e) { res = { ok: false, reason: 'Koneksi gagal.' }; }
+    _exBusy = false;
+
+    if (!res || !res.ok) {
+        ToastService.error((res && res.reason) || t('silstore.exch.spend_fail'));
+        _resyncBalance();
+        _render();
         return;
     }
 
     state.addCash(cashReward);
+    // Simpan segera: SIL sudah dipotong di server, uangnya jangan sampai hilang bila tab ditutup.
+    try { SaveService.save(state, { silent: true }); } catch (e) {}
     ToastService.success(t('silstore.exch.done', { sil: silCost, cash: cashReward.toLocaleString('en-US') }));
-    
+
     if (window.__game && window.__game.AudioService) {
         window.__game.AudioService.play('success');
     }
@@ -303,6 +339,7 @@ function _onClick(e) {
     if (e.target.closest('#tab-transfer')) { _storeTab = 'transfer'; _render(); return; }
 
     if (e.target.closest('#btn-do-transfer')) { _handleTransfer(); return; }
+    if (e.target.closest('#btn-sil-resync')) { _resyncBalance(); return; }
 
     var exBtn = e.target.closest('.btn-exchange');
     if (exBtn && !exBtn.disabled) {
@@ -406,6 +443,8 @@ bus.on('silicon:changed', function (payload) {
         _render(); 
     }, 50); 
 });
+
+bus.on('silicon:display', function () { if (Modal.isOpen(MODAL_ID)) _render(); });
 
 bus.on('lang:changed', function () { 
     if (Modal.isOpen(MODAL_ID)) _render(); 
