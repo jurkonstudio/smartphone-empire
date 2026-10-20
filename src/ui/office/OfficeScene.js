@@ -53,6 +53,7 @@ import { ROLES, SKILL_TIERS, TRAITS } from '../../data/staff.data.js';
 import { ToastService } from '../../core/ToastService.js';
 import { bus } from '../../core/EventBus.js';
 import { computePlan, rememberPeak, PALETTES, ERA_WINDOWS } from '../campus/CampusBuildings.js';
+import { createLookRig, detectQuality } from '../campus/CampusLook.js';
 import { createCampusControls } from '../campus/CampusControls.js';
 import { t } from '../../core/LanguageService.js';
 import { BASE_VIEW, COLORS, COLS, ROWS, CORRIDORS, DEST_BY_ROLE, DEST_DEFAULT, DEST_EMOJI, DEST_ROOM, DOOR_EAST, DOOR_NORTH, FLOOR, FRAME_MS, HAIR, MAX_DESKS, MAX_DPR, MIN_RESIZE_DELTA, MORALE_HEX, NARROW_PX, PHASES, ROOM_DEFS, SHADOW_OPACITY, SKIN, WALKERS_MAX, clamp, deskCapacity, hash, hexCss, len, moraleTier, prefersReducedMotion, readAccent, roleCount, sortedStaff, tint } from './OfficeConfig.js';
@@ -63,13 +64,10 @@ import { describeRoom, describeStaff, fabProgress, roomAlert, totalStock, trophy
 // ============================================================
 export function createOfficeScene(THREE, container, gameState) {
     var PERF = window.__PERF || {};
+    var look = detectQuality(PERF);     // tier kualitas sama dengan Peta Kampus (low | medium | high)
     var renderer = new THREE.WebGLRenderer({ antialias: PERF.antialias !== false, alpha: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR, look.maxDpr));
     renderer.setClearColor(0x000000, 0);
-    // Rendering pipeline: richer color, restrained highlights, and crisp isometric edges.
-    if ('outputColorSpace' in renderer && THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace;
-    if ('toneMapping' in renderer && THREE.ACESFilmicToneMapping !== undefined) renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    if ('toneMappingExposure' in renderer) renderer.toneMappingExposure = 1.08;
     var canvas = renderer.domElement;
     canvas.style.cssText = 'width:100%;height:100%;display:block;';
     canvas.setAttribute('role', 'img');
@@ -83,14 +81,10 @@ export function createOfficeScene(THREE, container, gameState) {
 
     var scene = new THREE.Scene();
     var camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
-    var hemi = new THREE.HemisphereLight(0xf0f6ff, 0x58677d, 1.35);
-    var sun = new THREE.DirectionalLight(0xfff2df, 1.22);
-    sun.position.set(-7, 14, 9);
-    var fill = new THREE.DirectionalLight(0x9bc7ff, 0.46);
-    fill.position.set(10, 8, -8);
-    var rim = new THREE.DirectionalLight(0xdceaff, 0.30);
-    rim.position.set(-10, 6, -5);
-    scene.add(hemi, sun, fill, rim);
+    // Cahaya, tone mapping, environment map & bayangan nyata: rig yang sama dengan Peta Kampus.
+    var rig = createLookRig(THREE, renderer, scene, look);
+    // Ruangan dan staf bergerak, jadi shadow map ikut diperbarui (kantor kecil, biayanya kecil).
+    renderer.shadowMap.autoUpdate = !!rig.shadowsOn;
 
     // ---------- geometri bersama ----------
     var G = {
@@ -107,9 +101,20 @@ export function createOfficeScene(THREE, container, gameState) {
 
     // ---------- material bersama ----------
     var M = {};
-    Object.keys(COLORS).forEach(function (k) { M[k] = new THREE.MeshLambertMaterial({ color: COLORS[k][0] }); });
+    // Material PBR ringan (MeshStandard) supaya menangkap env map & bayangan seperti bangunan kampus.
+    var PBR = {                  // [roughness, metalness]
+        ground: [0.95, 0], base: [0.8, 0], metal: [0.35, 0.35], glass: [0.12, 0.1],
+        gold: [0.3, 0.6], leaf: [0.7, 0], trunk: [0.9, 0]
+    };
+    function pbr(color, key) {
+        var p = PBR[key] || [0.7, 0];
+        var mt = new THREE.MeshStandardMaterial({ color: color, roughness: p[0], metalness: p[1] });
+        mt.envMapIntensity = 0.6;
+        return mt;
+    }
+    Object.keys(COLORS).forEach(function (k) { M[k] = pbr(COLORS[k][0], k); });
     M.glass.transparent = true; M.glass.opacity = 0.55;
-    M.ghost = new THREE.MeshLambertMaterial({ color: COLORS.desk[0], transparent: true, opacity: 0.4 });
+    M.ghost = new THREE.MeshStandardMaterial({ color: COLORS.desk[0], transparent: true, opacity: 0.4 });
     M.screenOn = new THREE.MeshBasicMaterial({ color: 0x8fb4e8 });
     M.screenOff = new THREE.MeshBasicMaterial({ color: 0x1b2028 });
     M.glow = new THREE.MeshBasicMaterial({ color: 0x00b8d9 });
@@ -121,26 +126,30 @@ export function createOfficeScene(THREE, container, gameState) {
     M.pool = new THREE.MeshBasicMaterial({ color: 0xffe2a8, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
     M.selRing = new THREE.MeshBasicMaterial({ color: 0x2563eb, transparent: true, opacity: 0.95, depthTest: false, side: THREE.DoubleSide });
     M.shade.opacity = SHADOW_OPACITY;
-    var hairMat = HAIR.map(function (c) { return new THREE.MeshLambertMaterial({ color: c }); });
+    var hairMat = HAIR.map(function (c) { return new THREE.MeshStandardMaterial({ color: c }); });
     var tierMat = {};
     SKILL_TIERS.forEach(function (tr) { tierMat[tr.tier] = new THREE.MeshBasicMaterial({ color: parseInt(String(tr.color).replace('#', ''), 16) || 0x949aab }); });
     var roleMat = {};
-    ROLES.forEach(function (r) { roleMat[r.id] = new THREE.MeshLambertMaterial({ color: parseInt(String(r.color).replace('#', ''), 16) || 0x888888 }); });
-    var skinMat = SKIN.map(function (c) { return new THREE.MeshLambertMaterial({ color: c }); });
+    ROLES.forEach(function (r) { roleMat[r.id] = new THREE.MeshStandardMaterial({ color: parseInt(String(r.color).replace('#', ''), 16) || 0x888888 }); });
+    var skinMat = SKIN.map(function (c) { return new THREE.MeshStandardMaterial({ color: c }); });
     var moraleMat = MORALE_HEX.map(function (c) { return new THREE.MeshBasicMaterial({ color: c }); });
     var hueMats = {};
     function hueMat(key) {
         if (!hueMats[key]) {
             var h = hash(key) % 360;
-            hueMats[key] = new THREE.MeshLambertMaterial({ color: new THREE.Color('hsl(' + h + ', 62%, 58%)') });
+            hueMats[key] = new THREE.MeshStandardMaterial({ color: new THREE.Color('hsl(' + h + ', 62%, 58%)') });
         }
         return hueMats[key];
     }
 
     function mesh(parent, geo, mat, sx, sy, sz, x, y, z) {
-        var m = new THREE.Mesh(geo, typeof mat === 'string' ? M[mat] : mat);
+        var mm = typeof mat === 'string' ? M[mat] : mat;
+        var m = new THREE.Mesh(geo, mm);
         m.scale.set(sx, sy, sz);
         m.position.set(x, y, z);
+        // Bayangan nyata hanya untuk benda padat. Material transparan & unlit (layar, sorot, gelembung) tidak melempar bayangan.
+        m.castShadow = !!look.shadows && !mm.transparent && !mm.isMeshBasicMaterial;
+        m.receiveShadow = !!look.shadows;
         parent.add(m);
         return m;
     }
@@ -152,11 +161,13 @@ export function createOfficeScene(THREE, container, gameState) {
     function shadowBox(p, w, d, x, z) {
         var m = mesh(p, G.plane, 'shade', w, d, 1, x, 0.03, z);
         m.rotation.x = -Math.PI / 2;
+        m.visible = !look.shadows;     // tier low saja: bayangan palsu. Tier lain memakai bayangan nyata.
         return m;
     }
     function shadowRound(p, r, x, z) {
         var m = mesh(p, G.circle, 'shade', r, r, 1, x, 0.03, z);
         m.rotation.x = -Math.PI / 2;
+        m.visible = !look.shadows;
         return m;
     }
 
@@ -268,6 +279,11 @@ export function createOfficeScene(THREE, container, gameState) {
     // Layered plinth gives the dollhouse a premium architectural presentation.
     box(shell, 'metal', 18.72, 0.055, 12.72, 0, -0.235, 0);
     box(shell, 'wallTop', 18.55, 0.035, 12.55, 0, -0.255, 0);
+    // Pepohonan bulat di sudut halaman, seperti taman di Peta Kampus.
+    [[-11.2, -7.4], [11.3, -7.2], [-11.4, 7.1], [11.4, 7.3]].forEach(function (c) {
+        cyl(shell, 'trunk', 0.14, 0.9, c[0], 0.45, c[1]);
+        sph(shell, 'leaf', 0.8, c[0], 1.35, c[1]);
+    });
 
     function wallSeg(mat, x0, x1, z0, z1, h, th) {
         var w = Math.abs(x1 - x0) || th, d = Math.abs(z1 - z0) || th;
@@ -343,7 +359,7 @@ export function createOfficeScene(THREE, container, gameState) {
         var g = new THREE.Group();
         g.position.set((def.x0 + def.x1) / 2, 0, (def.z0 + def.z1) / 2);
         g.userData.roomId = def.id;
-        var floorMat = new THREE.MeshLambertMaterial({ color: def.tone, transparent: true, opacity: 1 });
+        var floorMat = new THREE.MeshStandardMaterial({ color: def.tone, transparent: true, opacity: 1 });
         var slab = box(g, floorMat, w - 0.12, 0.12, d - 0.12, 0, -0.04, 0);
         var ovMat = new THREE.MeshBasicMaterial({ color: accentHex, transparent: true, opacity: 0.26, depthWrite: false });
         var ov = mesh(g, G.plane, ovMat, w - 0.2, d - 0.2, 1, 0, 0.025, 0);
@@ -364,7 +380,7 @@ export function createOfficeScene(THREE, container, gameState) {
         roomList.push(r);
         scene.add(g);
         // Fine perimeter rails visually separate departments without cluttering the floor.
-        var railMat = new THREE.MeshLambertMaterial({ color: 0x9aa8ba, transparent: true, opacity: 0.52 });
+        var railMat = new THREE.MeshStandardMaterial({ color: 0x9aa8ba, transparent: true, opacity: 0.52 });
         var railY = 0.035, railH = 0.025, railT = 0.035;
         box(g, railMat, Math.max(0.1, w - 0.18), railH, railT, 0, railY, -(d / 2) + 0.09);
         box(g, railMat, Math.max(0.1, w - 0.18), railH, railT, 0, railY, (d / 2) - 0.09);
@@ -676,7 +692,7 @@ export function createOfficeScene(THREE, container, gameState) {
 
     BUILD.ceo = function (r, d, p, st, tk) {
         var f = r.furn;
-        var rug = box(f, new THREE.MeshLambertMaterial({ color: tint(accentHex, dark ? -0.45 : 0.6) }), 2.4, 0.02, 1.8, 0.1, 0.02, -0.45);
+        var rug = box(f, new THREE.MeshStandardMaterial({ color: tint(accentHex, dark ? -0.45 : 0.6) }), 2.4, 0.02, 1.8, 0.1, 0.02, -0.45);
         rug.userData.own = 1;                                            // karpet mengikuti warna aksen
         shadowBox(f, 1.8, 0.95, 0.1, -0.85);
         shadowBox(f, 0.9, 1.4, -1.25, 1.2);
@@ -689,7 +705,7 @@ export function createOfficeScene(THREE, container, gameState) {
         chair(f, 0.1, -0.15, 'wood');
         box(f, 'wood', 2.5, 1.3, 0.3, 0.0, 0.65, -2.05);                 // rak buku
         var cols = [accentHex, 0xe0b445, 0x43c07a, 0xef5350, 0x8a7fe0, 0x4fb3e8];
-        for (var i = 0; i < 9; i++) box(f, new THREE.MeshLambertMaterial({ color: cols[i % cols.length] }), 0.16, 0.34, 0.2, -1.0 + i * 0.25, 0.92, -1.93).userData.own = 1;
+        for (var i = 0; i < 9; i++) box(f, new THREE.MeshStandardMaterial({ color: cols[i % cols.length] }), 0.16, 0.34, 0.2, -1.0 + i * 0.25, 0.92, -1.93).userData.own = 1;
         var tn = trophyCount(d, p);
         for (var k = 0; k < tn; k++) {
             cyl(f, 'gold', 0.1, 0.05, -0.8 + k * 0.45, 1.36, -2.0);
@@ -701,7 +717,7 @@ export function createOfficeScene(THREE, container, gameState) {
         plant(f, 1.3, 1.7, 1.1);
         // lukisan di dinding kiri + lampu meja
         box(f, 'wood', 0.05, 0.62, 0.92, -1.6, 1.45, 0.2);
-        var art = box(f, new THREE.MeshLambertMaterial({ color: tint(accentHex, 0.3) }), 0.03, 0.5, 0.8, -1.57, 1.45, 0.2);
+        var art = box(f, new THREE.MeshStandardMaterial({ color: tint(accentHex, 0.3) }), 0.03, 0.5, 0.8, -1.57, 1.45, 0.2);
         art.userData.own = 1;
         box(f, 'gold', 0.03, 0.2, 0.3, -1.55, 1.4, 0.35);
         cyl(f, 'metal', 0.05, 0.02, -0.4, 0.77, -1.05);
@@ -843,7 +859,7 @@ export function createOfficeScene(THREE, container, gameState) {
         box(f, 'white', 3.0, 1.0, 0.05, 0, 1.3, -2.18);                    // mood board
         var cs = [accentHex, 0xe0b445, 0x43c07a, 0xef5350, 0x8a7fe0, 0x4fb3e8, 0xf472b6, 0xfb923c];
         for (var c = 0; c < 8; c++) {
-            box(f, new THREE.MeshLambertMaterial({ color: cs[c] }), 0.5, 0.34, 0.02, -1.0 + (c % 4) * 0.67, 1.48 - Math.floor(c / 4) * 0.42, -2.14).userData.own = 1;
+            box(f, new THREE.MeshStandardMaterial({ color: cs[c] }), 0.5, 0.34, 0.02, -1.0 + (c % 4) * 0.67, 1.48 - Math.floor(c / 4) * 0.42, -2.14).userData.own = 1;
         }
     };
 
@@ -1201,7 +1217,6 @@ export function createOfficeScene(THREE, container, gameState) {
     // ---------- tema & era ----------
     function applyTheme() {
         dark = document.documentElement.getAttribute('data-theme') === 'dark';
-        var P = dark ? PALETTES.dark : PALETTES.light;
         var ac = new THREE.Color();
         try { ac.set(readAccent()); } catch (e) { ac.setHex(0x2563eb); }
         accentHex = ac.getHex();
@@ -1219,13 +1234,7 @@ export function createOfficeScene(THREE, container, gameState) {
         M.selRing.color.setHex(accentHex);
         M.pool.opacity = dark ? 0.2 : 0;
         M.shade.opacity = dark ? SHADOW_OPACITY + 0.08 : SHADOW_OPACITY;
-        hemi.color.setHex(P.hemiSky);
-        hemi.groundColor.setHex(P.hemiGround);
-        hemi.intensity = P.hemiI;
-        sun.intensity = P.dirI * 1.12;
-        fill.intensity = dark ? 0.56 : 0.46;
-        rim.intensity = dark ? 0.38 : 0.30;
-        if (P.sunCol !== undefined) sun.color.setHex(P.sunCol);
+        rig.applyTheme(dark);          // warna & intensitas cahaya sama dengan Peta Kampus
         roomList.forEach(function (r) {
             r.ovMat.color.setHex(accentHex);
             r.patMat.color.setHex(dark ? 0xffffff : 0x000000);
@@ -1824,6 +1833,7 @@ export function createOfficeScene(THREE, container, gameState) {
             skinMat.forEach(function (m) { m.dispose(); });
             moraleMat.forEach(function (m) { m.dispose(); });
             Object.keys(hueMats).forEach(function (k) { hueMats[k].dispose(); });
+            rig.dispose();
             renderer.dispose();
             try { renderer.forceContextLoss(); } catch (e) {}
             [chipBar, card, hint, legendBtn, legend, canvas].forEach(function (el) { if (el.parentNode) el.parentNode.removeChild(el); });

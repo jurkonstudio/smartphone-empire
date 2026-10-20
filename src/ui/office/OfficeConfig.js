@@ -75,10 +75,12 @@ export var ROOM_DEFS = [
 
 // Warna tema sendiri (selain warna dari PALETTES kampus). [terang, gelap]
 export var COLORS = {
-    ground:  [0xe9edf4, 0x202735],
-    base:    [0xcbd4e2, 0x303949],
-    wall:    [0xf8fafc, 0x707d91],
+    ground:  [0xc4e3bd, 0x203b32],   // rumput (palet kampus)
+    base:    [0xf3f5fa, 0x343e50],   // plaza (palet kampus)
+    wall:    [0xf4f7fc, 0xc0ccdc],
     wallTop: [0xffffff, 0x9aa7ba],
+    leaf:    [0x72bd78, 0x347d51],   // daun pohon (palet kampus)
+    trunk:   [0x9b7655, 0x5d4939],   // batang pohon (palet kampus)
     part:    [0xb9c5d5, 0x465367],
     desk:    [0xc9a47a, 0x8a6f52],
     deskTop: [0xe2c9a4, 0xa88a68],
