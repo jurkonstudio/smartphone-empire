@@ -1,14 +1,10 @@
+import { escapeHtml } from '../utils/html.js';
 // FILE: src/diagnostics/DiagnosticUI.js
 // v2027.1a — Modal tampilan report + tombol copy.
 import { Modal } from '../ui/modal.js';
 import { ToastService } from '../core/ToastService.js';
 import { buildReport, formatReportText } from './DiagnosticReport.js';
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 export function openDiagnosticModal() {
     var game = window.__game;
