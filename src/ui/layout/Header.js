@@ -9,6 +9,7 @@ import { t } from '../../core/LanguageService.js';
 import { SiliconService } from '../../systems/SiliconService.js';
 import { formatCurrency } from '../../utils/format.js';
 import { getUnreadCount, isNotificationPanelOpen } from '../notifications/NotificationRenderer.js';
+import { InboxService } from '../../services/InboxService.js';
 
 export function renderHeader({ state, timeSnapshot, warning }) {
     const time = timeSnapshot;
@@ -28,6 +29,9 @@ export function renderHeader({ state, timeSnapshot, warning }) {
     const unread = getUnreadCount();
     const unreadTxt = unread > 99 ? '99+' : String(unread);
     const notifOpen = isNotificationPanelOpen();
+
+    const inboxN = InboxService.getUnread();
+    const inboxTxt = inboxN > 99 ? '99+' : String(inboxN);
 
     const silicon = SiliconService.getDisplayBalance();   // '…' sampai saldo server terkonfirmasi
 
@@ -67,6 +71,10 @@ export function renderHeader({ state, timeSnapshot, warning }) {
                     <span class="header-boost" data-time-boost style="${boostOn ? '' : 'display:none;'}">${boostTxt}</span>
                 </div>
                 <div class="header-controls">
+                    <button class="btn-icon header-inbox" data-inbox-open type="button" aria-label="Pesan">
+                        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+                        <span class="header-inbox-badge" data-inbox-badge ${inboxN > 0 ? '' : 'hidden'}>${inboxN > 0 ? inboxTxt : ''}</span>
+                    </button>
                     <button class="btn-icon" data-time-action="toggle-pause" aria-label="${pauseAria}">
                         ${time.isPaused ? '▶' : '❚❚'}
                     </button>
