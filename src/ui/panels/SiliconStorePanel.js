@@ -132,10 +132,10 @@ function _handleTransfer() {
 function _getExchangePackages() {
     var multiplier = getCashPerSil(state.get().time.currentYear || 2000) / 2500;
     return [
-        { sil: 10,  cash: Math.round(25000 * multiplier),  label: t('silstore.exch.pkg.small') },
-        { sil: 50,  cash: Math.round(150000 * multiplier), label: t('silstore.exch.pkg.big') },
-        { sil: 100, cash: Math.round(400000 * multiplier), label: t('silstore.exch.pkg.suitcase') },
-        { sil: 500, cash: Math.round(2500000 * multiplier), label: t('silstore.exch.pkg.truck') }
+        { id: 'small',    sil: 10,  cash: Math.round(25000 * multiplier),  label: t('silstore.exch.pkg.small') },
+        { id: 'big',      sil: 50,  cash: Math.round(150000 * multiplier), label: t('silstore.exch.pkg.big') },
+        { id: 'suitcase', sil: 100, cash: Math.round(400000 * multiplier), label: t('silstore.exch.pkg.suitcase') },
+        { id: 'truck',    sil: 500, cash: Math.round(2500000 * multiplier), label: t('silstore.exch.pkg.truck') }
     ];
 }
 
@@ -172,7 +172,7 @@ function _renderExchangeTab() {
                     <div style="font-size:12px; color:var(--text-tertiary);">${_e('exch.you_get')}</div>
                     <div style="color:var(--success); font-weight:bold; font-size:16px;">$${p.cash.toLocaleString('en-US')}</div>
                 </div>
-                <button class="btn-exchange" data-sil="${p.sil}" data-cash="${p.cash}" style="width:100%; padding:8px; border-radius:8px; border:none; font-weight:bold; font-size:13px; ${btnStyle}" ${canAfford ? '' : 'disabled'}>
+                <button class="btn-exchange" data-pkg="${p.id}" data-sil="${p.sil}" data-cash="${p.cash}" style="width:100%; padding:8px; border-radius:8px; border:none; font-weight:bold; font-size:13px; ${btnStyle}" ${canAfford ? '' : 'disabled'}>
                     ${_exBusy ? '…' : (canAfford ? _e('exch.btn') : (active && ready ? _e('exch.short') : '…'))}
                 </button>
             </div>
@@ -189,9 +189,10 @@ function _renderExchangeTab() {
 }
 
 // [FIX TUKAR SIL] Server-dulu: SIL dipotong di server, BARU uang diberikan.
+// [EXCHANGE SERVER] Jumlah uang dihitung SERVER (exchange_silicon); angka di kartu hanya tampilan.
 // Dulu: SIL dipotong lokal -> uang langsung diberikan -> server memotong di belakang layar; bila server
 // menolak/timeout, SIL dikembalikan lokal tetapi uang tetap ada (SIL "balik lagi" + uang dobel).
-async function _handleExchange(silCost, cashReward) {
+async function _handleExchange(pkgId, silCost) {
     if (_exBusy) return;
     if (!SiliconService.isReady()) {
         ToastService.warning('Saldo belum tersinkron dari server. Coba lagi sebentar.');
@@ -205,7 +206,7 @@ async function _handleExchange(silCost, cashReward) {
 
     _exBusy = true; _render();
     var res;
-    try { res = await SiliconService.spendServer(silCost, 'exchange-cash'); }
+    try { res = await SiliconService.exchangeServer(pkgId); }
     catch (e) { res = { ok: false, reason: 'Koneksi gagal.' }; }
     _exBusy = false;
 
@@ -216,6 +217,7 @@ async function _handleExchange(silCost, cashReward) {
         return;
     }
 
+    var cashReward = res.cash;
     state.addCash(cashReward);
     // Simpan segera: SIL sudah dipotong di server, uangnya jangan sampai hilang bila tab ditutup.
     try { SaveService.save(state, { silent: true }); } catch (e) {}
@@ -345,7 +347,8 @@ function _onClick(e) {
     if (exBtn && !exBtn.disabled) {
         var sil = parseInt(exBtn.dataset.sil, 10);
         var cash = parseInt(exBtn.dataset.cash, 10);
-        if (confirm(t('silstore.exch.confirm', { sil: sil, cash: cash.toLocaleString('en-US') }))) { _handleExchange(sil, cash); }
+        var pkgId = exBtn.dataset.pkg;
+        if (confirm(t('silstore.exch.confirm', { sil: sil, cash: cash.toLocaleString('en-US') }))) { _handleExchange(pkgId, sil); }
         return;
     }
 
