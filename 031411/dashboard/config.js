@@ -11,7 +11,10 @@ export const CFG = {
     profiles: 'admin_get_all_profiles',
     pendingPayments: 'get_pending_payments',
     approvePayment: 'admin_approve_payment',   // args: { p_order_id }
-    setSilicon: 'admin_set_silicon'            // args: { p_user_id, p_amount }
+    setSilicon: 'admin_set_silicon',           // args: { p_user_id, p_amount }
+    sendMessage: 'admin_send_message',         // args: { p_user_id, p_title, p_body }
+    broadcast: 'admin_broadcast_message',      // args: { p_title, p_body }
+    listMessages: 'admin_list_messages'        // args: { p_limit }
   },
   tables: { wallets: 'silicon_wallets', ledger: 'silicon_ledger' },
   quickTables: ['profiles', 'silicon_wallets', 'silicon_ledger'],

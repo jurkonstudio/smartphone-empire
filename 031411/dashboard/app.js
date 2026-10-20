@@ -46,10 +46,10 @@ function pickCols(rows, pref) {
 /* ---------- tabs ---------- */
 function setTab(t) {
   S.tab = t;
-  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.tab ? b.dataset.tab === t : ['tb', 'rpc', 'con', 'inf'].includes(t)));
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.tab ? b.dataset.tab === t : ['tb', 'rpc', 'con', 'inf', 'msg'].includes(t)));
   const pb = $('#pb'); pb.textContent = S.pays.length; pb.classList.toggle('hide', !S.pays.length);
   $('main').scrollTop = 0;
-  ['ov', 'pl', 'pay', 'led', 'con', 'tb', 'rpc', 'inf'].forEach(k => $('#t-' + k).classList.toggle('hide', k !== t));
+  ['ov', 'pl', 'pay', 'led', 'con', 'tb', 'rpc', 'inf', 'msg'].forEach(k => $('#t-' + k).classList.toggle('hide', k !== t));
   if (t === 'ov') renderOv();
   if (t === 'pl') renderPl();
   if (t === 'pay') renderPay();
@@ -58,6 +58,7 @@ function setTab(t) {
   if (t === 'tb') renderTb();
   if (t === 'rpc') renderRpc();
   if (t === 'inf') renderInf();
+  if (t === 'msg') renderMsg();
 }
 
 /* ---------- data ---------- */
@@ -119,14 +120,14 @@ function renderSheet(p) {
     '<div class="body">' + kv(top) + '<div class="dim">Tambah / kurangi SIL</div><div class="chips">' +
     [-1000, -100, 100, 1000, 10000].map(d => '<button class="btn sm" data-a="adj" data-i="' + d + '">' + (d > 0 ? '+' : '') + d.toLocaleString('en-US') + '</button>').join('') +
     '</div><details><summary>Semua field (' + rest.length + ')</summary>' + kv(rest) + '</details></div>' +
-    '<div class="act"><button class="btn pri" data-a="setsil">Set SIL…</button><button class="btn" data-a="wallet">Ledger</button><button class="btn" data-a="copyid">Salin ID</button></div>';
+    '<div class="act"><button class="btn pri" data-a="setsil">Set SIL…</button><button class="btn" data-a="wallet">Ledger</button><button class="btn" data-a="copyid">Salin ID</button><button class="btn" data-a="msgto">Pesan</button></div>';
 }
 function pushSheet() { if (!(history.state && history.state.s)) history.pushState({ s: 1 }, ''); $('#sheet').classList.remove('hide'); }
 function openSheet(p) { renderSheet(p); pushSheet(); }
 function hideSheet() { $('#sheet').classList.add('hide'); }
 function closeSheet() { if (history.state && history.state.s) history.back(); else hideSheet(); }
 function openMenu() {
-  const it = [['tb', '▤', 'Tables'], ['rpc', 'ƒ', 'RPC'], ['con', '>_', 'Console'], ['inf', 'ⓘ', 'Info']];
+  const it = [['msg', '✉', 'Pesan'], ['tb', '▤', 'Tables'], ['rpc', 'ƒ', 'RPC'], ['con', '>_', 'Console'], ['inf', 'ⓘ', 'Info']];
   $('#sin').innerHTML = '<div class="sh"><b style="color:var(--ac)">Menu</b><button class="btn sm" data-a="close">✕ Tutup</button></div><div class="body">' +
     it.map(x => '<button class="btn mi" data-a="goto" data-t="' + x[0] + '"><i>' + x[1] + '</i>' + x[2] + '</button>').join('') +
     '<button class="btn mi dng" data-a="logout"><i>⏻</i>Keluar</button></div>';
@@ -229,6 +230,56 @@ async function renderInf() {
     '<div class="row"><button class="btn sm" data-a="refsess">Segarkan sesi</button><button class="btn sm dng" data-a="logout">Keluar</button></div>';
 }
 
+/* ---------- pesan ke pemain ---------- */
+const plabel = p => (p.display_name || p.company_name || 'pemain') + ' · ' + (p.company_name || '-') + ' · ' + (p.public_id || String(idOf(p)).slice(0, 8));
+function findPlayer(v) {
+  v = String(v || '').trim(); if (!v) return null;
+  const l = v.toLowerCase();
+  return S.players.find(p => plabel(p) === v) || S.players.find(p => String(idOf(p)).toLowerCase() === l || String(p.public_id || '') === v) || null;
+}
+function renderMsg(out) {
+  const to = S.msgTo ? plabel(S.msgTo) : (S.msgToText || '');
+  $('#t-msg').innerHTML =
+    '<label for="mm" style="margin-top:0">Tujuan</label>' +
+    '<select id="mm" style="width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:9px 10px;color:var(--tx);font:inherit"><option value="one"' + (S.msgMode === 'all' ? '' : ' selected') + '>Satu pemain</option><option value="all"' + (S.msgMode === 'all' ? ' selected' : '') + '>Semua pemain (broadcast)</option></select>' +
+    '<div id="mone"' + (S.msgMode === 'all' ? ' class="hide"' : '') + '><label for="mp">Pemain (nama / ID)</label>' +
+    '<input id="mp" list="pl-list" placeholder="Ketik nama, ID 8 digit, atau UUID" value="' + esc(to) + '" autocomplete="off">' +
+    '<datalist id="pl-list">' + S.players.slice(0, 500).map(p => '<option value="' + esc(plabel(p)) + '"></option>').join('') + '</datalist></div>' +
+    '<label for="mt">Judul <span class="dim" id="mtc">0/80</span></label><input id="mt" maxlength="80" placeholder="mis. Pemberitahuan dari admin" value="' + esc(S.msgT || '') + '">' +
+    '<label for="mb">Isi pesan <span class="dim" id="mbc">0/1000</span></label><textarea id="mb" maxlength="1000" placeholder="Tulis pesan untuk pemain…">' + esc(S.msgB || '') + '</textarea>' +
+    '<div class="row" style="margin-top:10px"><button class="btn pri" style="flex:1" data-a="sendmsg">Kirim pesan</button></div>' +
+    '<div class="dim" style="margin-bottom:6px">Notifikasi SIL masuk (top-up, tambah saldo dari admin, transfer) dikirim otomatis oleh server.</div>' +
+    (out || '') + '<h2>Riwayat pesan terakhir</h2><div id="mhist"><div class="dim">Memuat…</div></div>';
+  msgCount(); loadMsgHist();
+}
+function msgCount() { const t = $('#mt'), b = $('#mb'); if (t) $('#mtc').textContent = t.value.length + '/80'; if (b) $('#mbc').textContent = b.value.length + '/1000'; }
+async function loadMsgHist() {
+  try {
+    const rows = rowsOf(await rpc(CFG.rpc.listMessages, { p_limit: 40 }));
+    rows.forEach(r => { r.dibaca = r.read_at ? 'ya' : '-'; r.pemain = r.company_name || r.email; });
+    const el = $('#mhist'); if (el) el.innerHTML = table(rows, ['created_at', 'kind', 'pemain', 'title', 'dibaca'], null).replace(/data-a="player"/g, '');
+  } catch (e) { const el = $('#mhist'); if (el) el.innerHTML = '<div class="ln er">' + esc(e.message || e) + ' (jalankan supabase/09-pesan-inbox.sql)</div>'; }
+}
+async function sendMsg() {
+  S.msgMode = $('#mm').value; S.msgT = $('#mt').value.trim(); S.msgB = $('#mb').value.trim();
+  if (!S.msgT || !S.msgB) { renderMsg('<div class="ln er">Judul dan isi wajib diisi.</div>'); return; }
+  try {
+    if (S.msgMode === 'all') {
+      if (!confirm('Kirim ke SEMUA pemain (' + S.players.length + ')?\n\n' + S.msgT)) return;
+      const r = await rpc(CFG.rpc.broadcast, { p_title: S.msgT, p_body: S.msgB });
+      log('wn', 'BROADCAST "' + S.msgT + '" → ' + (r && r.sent));
+      S.msgT = S.msgB = ''; renderMsg('<div class="ln ok">Terkirim ke ' + esc(r && r.sent) + ' pemain.</div>');
+    } else {
+      const p = findPlayer($('#mp').value);
+      if (!p) { S.msgToText = $('#mp').value; renderMsg('<div class="ln er">Pemain tidak ditemukan. Pilih dari daftar.</div>'); return; }
+      if (!confirm('Kirim pesan ke ' + plabel(p) + '?\n\n' + S.msgT)) return;
+      await rpc(CFG.rpc.sendMessage, { p_user_id: idOf(p), p_title: S.msgT, p_body: S.msgB });
+      log('wn', 'PESAN → ' + idOf(p) + ': ' + S.msgT);
+      S.msgT = S.msgB = ''; S.msgTo = p; renderMsg('<div class="ln ok">Terkirim ke ' + esc(plabel(p)) + '.</div>');
+    }
+  } catch (e) { renderMsg('<div class="ln er">' + esc(e.message || e) + '</div>'); }
+}
+
 /* ---------- auth ---------- */
 function showLogin(msg) {
   idleOn = false;
@@ -292,6 +343,8 @@ document.addEventListener('click', async e => {
   else if (a === 'loadled') { const id = ($('#lid').value || '').trim(); if (id) loadLedger(id); }
   else if (a === 'goto') { closeSheet(); setTab(t.dataset.t); }
   else if (a === 'adj') adjSil(i);
+  else if (a === 'msgto') { S.msgTo = S.sel; S.msgMode = 'one'; closeSheet(); setTab('msg'); }
+  else if (a === 'sendmsg') sendMsg();
   else if (a === 'sort') { const c = t.dataset.c; S.sort = S.sort && S.sort.c === c ? { c, d: -S.sort.d } : { c, d: 1 }; S.page = 0; renderPl(); }
   else if (a === 'pg') { S.page = (S.page || 0) + i; renderPl(); }
   else if (a === 'csv') exportCsv();
@@ -303,6 +356,8 @@ document.addEventListener('click', async e => {
   else if (a === 'clearlog') { S.logs = []; renderCon(); }
 });
 document.addEventListener('input', e => {
+  if (e.target.id === 'mt' || e.target.id === 'mb') msgCount();
+  if (e.target.id === 'mp') S.msgTo = null;
   if (e.target.id === 'q') { S.filter = e.target.value; S.page = 0; const pos = e.target.selectionStart; renderPl(); const q = $('#q'); q.focus(); q.setSelectionRange(pos, pos); }
 });
 
@@ -318,4 +373,5 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) idle
 addEventListener('popstate', hideSheet);
 addEventListener('error', e => log('er', e.message));
 addEventListener('unhandledrejection', e => log('er', 'Promise: ' + ((e.reason && e.reason.message) || e.reason)));
+document.addEventListener('change', e => { if (e.target.id === 'mm') { S.msgMode = e.target.value; $('#mone').classList.toggle('hide', S.msgMode === 'all'); } });
 boot();
