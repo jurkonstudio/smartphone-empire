@@ -26,6 +26,12 @@ let _unsubRealtime = null;
 let _unsubWallet = null;
 let _walletTimer = null;
 let _siliconSyncing = false;
+// [FIX SIL BALIK] Potongan SIL lokal yang belum dikonfirmasi server + penanda perubahan lokal.
+// Sinkronisasi saldo (poll/realtime) TIDAK boleh menimpa saldo lokal saat ada potongan tertunda,
+// atau bila saldo lokal berubah selagi permintaan baca saldo masih berjalan (hasilnya basi).
+let _pendingDebits = 0;
+let _localEpoch = 0;
+let _debitChain = Promise.resolve();
 let _silPollTimer = null;
 const SIL_POLL_MS = 30000;
 let _reloadOnVisible = false;
@@ -151,16 +157,24 @@ function _onVisibilityChange() {
 async function syncSiliconOnLogin() {
     if (!_state || !_isConnected()) return;
     if (_siliconSyncing) return;
-    
+    // Ada potongan SIL yang belum dikonfirmasi server -> jangan baca saldo basi; ulangi setelahnya.
+    if (_pendingDebits > 0) { _debouncedSyncSilicon(); return; }
+
     _siliconSyncing = true;
+    var epochAtStart = _localEpoch;
     try {
-        // 1. Ambil saldo server murni. Jika adapter memvalidasi (null/invalid), ini akan throw error.
         var res = await _withTimeout(CloudService.getSiliconBalance(), 4000, { ok: false });
-        
+
+        // Saldo lokal berubah (belanja/refund) selama permintaan berjalan -> hasil server basi, buang.
+        if (_pendingDebits > 0 || epochAtStart !== _localEpoch) {
+            _debouncedSyncSilicon();
+            return;
+        }
+
         if (res.ok && typeof res.balance === 'number') {
             var serverBal = Math.floor(res.balance);
             var localBal = SiliconService.getBalance();
-            
+
             if (serverBal !== localBal) {
                 console.info('[CloudSync] Sync Server (' + serverBal + ') -> Lokal (' + localBal + ')');
                 SiliconService.applyServerBalance(serverBal);
@@ -181,29 +195,34 @@ function _debouncedSyncSilicon() {
 }
 
 // [DEBIT] Pemain membelanjakan SIL: Potong langsung ke server.
+// Permintaan diserialkan (satu per satu) agar respons tidak saling menimpa tak berurutan.
 function _onLocalDebit(delta) {
     if (!_state || !CloudService.getUserId()) return;
     var amount = Math.abs(delta);
     if (amount <= 0) return;
 
-    var currentLocal = SiliconService.getBalance();
-    if (currentLocal < amount) return; 
-
+    _localEpoch++;
+    _pendingDebits++;
     var reqId = 'sp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-    
-    // Tembak server
-    CloudService.spendSiliconServer(amount, reqId).then(function(res) {
-        if (!res.ok) {
-            // Gagal, kembalikan uang
-            SiliconService.applyServerBalance(currentLocal);
-            ToastService.error('Gagal memotong SIL: ' + (res.reason || 'Server error'));
-        } else {
-            // Sukses, pastikan saldo sama persis dengan server
-            SiliconService.applyServerBalance(res.balance);
-        }
-    }).catch(function() {
-        SiliconService.applyServerBalance(currentLocal);
-        ToastService.error('Koneksi gagal, SIL dikembalikan.');
+
+    _debitChain = _debitChain.then(function () {
+        return CloudService.spendSiliconServer(amount, reqId).then(function (res) {
+            if (!res.ok) {
+                // Gagal di server: kembalikan HANYA jumlah ini (bukan snapshot lama).
+                SiliconService._refund(amount, 'server-rejected');
+                ToastService.error('Gagal memotong SIL: ' + (res.reason || 'Server error'));
+            } else if (_pendingDebits <= 1 && typeof res.balance === 'number') {
+                // Potongan terakhir: saldo server sudah final, samakan.
+                SiliconService.applyServerBalance(res.balance);
+            }
+        }).catch(function () {
+            SiliconService._refund(amount, 'network-error');
+            ToastService.error('Koneksi gagal, SIL dikembalikan.');
+        }).then(function () {
+            _pendingDebits = Math.max(0, _pendingDebits - 1);
+            _localEpoch++;
+            if (_pendingDebits === 0) _debouncedSyncSilicon();
+        });
     });
 }
 
