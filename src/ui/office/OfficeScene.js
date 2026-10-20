@@ -747,14 +747,39 @@ export function createOfficeScene(THREE, container, gameState) {
     wallSeg('wall', FLOOR.x0 - 0.12, FLOOR.x0 + 0.12, FLOOR.z0, FLOOR.z1, 2.4, 0.24);
     wallSeg('wallTop', FLOOR.x0 - 0.12, FLOOR.x1 + 0.12, FLOOR.z1 - 0.1, FLOOR.z1 + 0.12, 0.35, 0.22);
     wallSeg('wallTop', FLOOR.x1 - 0.1, FLOOR.x1 + 0.12, FLOOR.z0, FLOOR.z1, 0.35, 0.22);
-    // jendela di dinding belakang & kiri
+    // Jendela di dinding belakang & kiri: kaca dengan bingkai, ambang, dan mullion.
+    // Detail memakai geometri sederhana (tanpa tekstur/aset eksternal) agar tetap ringan di HP.
     var i0;
+    function backWindowFrame(x) {
+        var z = FLOOR.z0 + 0.19, y = 1.55;
+        var frame = 'metal';
+        box(shell, frame, 1.23, 0.055, 0.085, x, y + 0.425, z);
+        box(shell, frame, 1.23, 0.055, 0.085, x, y - 0.425, z);
+        box(shell, frame, 0.055, 0.85, 0.085, x - 0.59, y, z);
+        box(shell, frame, 0.055, 0.85, 0.085, x + 0.59, y, z);
+        box(shell, frame, 0.025, 0.76, 0.09, x, y, z + 0.008);
+        box(shell, 'white', 1.08, 0.018, 0.012, x, y + 0.19, z + 0.052);
+    }
+    function leftWindowFrame(z) {
+        var x = FLOOR.x0 + 0.19, y = 1.55;
+        var frame = 'metal';
+        box(shell, frame, 0.085, 0.055, 1.23, x, y + 0.425, z);
+        box(shell, frame, 0.085, 0.055, 1.23, x, y - 0.425, z);
+        box(shell, frame, 0.085, 0.85, 0.055, x, y, z - 0.59);
+        box(shell, frame, 0.085, 0.85, 0.055, x, y, z + 0.59);
+        box(shell, frame, 0.09, 0.76, 0.025, x - 0.008, y, z);
+        box(shell, 'white', 0.012, 0.018, 1.08, x - 0.052, y + 0.19, z);
+    }
     for (i0 = 0; i0 < 11; i0++) {
-        box(shell, 'win', 1.15, 0.8, 0.06, -8.2 + i0 * 1.64, 1.55, FLOOR.z0 + 0.13);
+        var wx = -8.2 + i0 * 1.64;
+        box(shell, 'win', 1.15, 0.8, 0.06, wx, 1.55, FLOOR.z0 + 0.13);
+        backWindowFrame(wx);
     }
     for (i0 = 0; i0 < 7; i0++) {
         if (i0 === 4 || i0 === 5) continue;     // ruang untuk papan nama perusahaan (BUILD.work)
-        box(shell, 'win', 0.06, 0.8, 1.15, FLOOR.x0 + 0.13, 1.55, -5.1 + i0 * 1.7);
+        var wz = -5.1 + i0 * 1.7;
+        box(shell, 'win', 0.06, 0.8, 1.15, FLOOR.x0 + 0.13, 1.55, wz);
+        leftWindowFrame(wz);
     }
     // jam dinding (jarum mengikuti jam game)
     var clockG = new THREE.Group();
