@@ -283,7 +283,7 @@ function _build() {
     return '<div class="modal-title g-ico-title">' + gIcon('sil', 20) + '<span>' + _tf('silstore.title', 'Silicon Store') + '</span></div>' +
         '<div class="sil-balance sil-balance-compact">' +
             '<div class="sil-balance-label">' + _tf('silicon.balance', 'SALDO') + '</div>' +
-            '<div class="sil-balance-value">' + SiliconService.getBalance() + ' <span>SIL</span></div>' +
+            '<div class="sil-balance-value">' + SiliconService.getDisplayBalance() + ' <span>SIL</span></div>' +
         '</div>' +
         
         '<div style="display:flex; gap:6px; margin-bottom:16px;">' +
@@ -394,6 +394,7 @@ export function openSiliconStoreModal(defaultTab) {
     Modal.open(MODAL_ID, _build());
     var root = document.querySelector('[data-modal-id="' + MODAL_ID + '"]');
     if (root) root.addEventListener('click', _onClick);
+    try { var cs = window.__game && window.__game.cloudSync; if (cs && cs.syncSilicon) cs.syncSilicon(); } catch (e) {}   // tarik saldo asli
 }
 
 bus.on('silicon:changed', function () { _render(); });
