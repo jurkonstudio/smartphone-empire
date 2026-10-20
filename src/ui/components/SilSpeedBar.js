@@ -112,7 +112,15 @@ function _refreshLive() {
         if (def) fins[f].classList.toggle('is-short', bal < def.cost);
     }
     var balEls = document.querySelectorAll('[data-sil-speed-balance]');
-    for (var q = 0; q < balEls.length; q++) balEls[q].textContent = bal;
+    for (var q = 0; q < balEls.length; q++) balEls[q].textContent = SiliconService.getDisplayBalance();
+}
+
+// Saat modal dibuka: tarik saldo asli dari server (tampil '…' sampai selesai).
+function _pullBalance() {
+    try {
+        var cs = window.__game && window.__game.cloudSync;
+        if (cs && typeof cs.syncSilicon === 'function') cs.syncSilicon();
+    } catch (e) {}
 }
 
 // ---------- AKSI ----------
@@ -159,10 +167,11 @@ export function openSpeedModal() {
         '<div class="modal-title g-ico-title">' + gIcon('bolt', 20) + '<span>' + _tf('sil.speed.title', 'Percepat Waktu') + '</span></div>' +
         '<div class="modal-sub">' + _tf('sil.speed.modal_sub', 'Setiap pembelian punya batas waktu. Setelah habis, game kembali ke 1x.') + '</div>' +
         renderSilSpeedBar({ speed: true }) +
-        '<div class="sil-inline-bal">' + _tf('sil.speed.balance', 'Saldo: {n} SIL', { n: '<b data-sil-speed-balance>' + SiliconService.getBalance() + '</b>' }) +
+        '<div class="sil-inline-bal">' + _tf('sil.speed.balance', 'Saldo: {n} SIL', { n: '<b data-sil-speed-balance>' + SiliconService.getDisplayBalance() + '</b>' }) +
             ' <button type="button" class="slot-boost" data-sil-open-store>' + gIcon('plus', 12) + ' ' + _tf('silicon.topup', 'Top Up') + '</button></div>' +
         '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">' + _tf('common.close', 'Tutup') + '</button>';
     Modal.open('speed-quick', html);
+    _pullBalance();
 }
 
 // ---------- INIT (sekali) ----------
