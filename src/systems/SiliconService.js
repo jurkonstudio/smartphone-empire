@@ -60,6 +60,40 @@ var _epoch = 0;
 // [FIX SALDO BALIK KE 10] Saldo server HARUS ikut tersimpan ke save lokal segera. Dulu save lokal hanya
 // diperbarui autosave 30 dtk (dan dilewati saat tab di latar belakang), sehingga saat tab dimuat ulang
 // Chrome Android memakai save lama (saldo lama / default 10) dan Tab Tukar membaca angka itu.
+// [DIAGNOSTIK SEMENTARA] Catat SETIAP perubahan state.data.silicon beserta penyebabnya (stack).
+// Ditampilkan di bawah tab Exchange pada Silicon Store. Hapus setelah bug ditemukan.
+var _TRACE_KEY = 'smartphone-empire:sil-trace';
+function _trace(kind, from, to) {
+    try {
+        var arr = JSON.parse(localStorage.getItem(_TRACE_KEY) || '[]');
+        var st = String(new Error().stack || '').split('\n').slice(2, 8)
+            .map(function (s) { return s.trim().replace(/^at /, '').replace(/https?:\/\/[^/]+/g, '').replace(/\?[^\s):]*/g, ''); }).join(' < ');
+        arr.unshift({ t: new Date().toISOString().slice(11, 19), k: kind, a: from, b: to, s: st });
+        localStorage.setItem(_TRACE_KEY, JSON.stringify(arr.slice(0, 25)));
+    } catch (e) {}
+}
+var _lastSil = state.data ? state.data.silicon : undefined;
+function _watchSilicon() {
+    var d = state.data;
+    if (!d || Object.prototype.hasOwnProperty.call(d, '__silWatched')) return;
+    var v = d.silicon;
+    try {
+        Object.defineProperty(d, 'silicon', {
+            configurable: true, enumerable: true,
+            get: function () { return v; },
+            set: function (n) { if (n !== v) _trace('set', v, n); v = n; _lastSil = n; }
+        });
+        Object.defineProperty(d, '__silWatched', { value: true, enumerable: false });
+    } catch (e) {}
+}
+_watchSilicon();
+// hydrate() mengganti seluruh state.data -> pasang ulang pengawas & catat bila saldo berubah karenanya.
+bus.on('state:hydrated', function () {
+    var now = state.data ? state.data.silicon : undefined;
+    if (now !== _lastSil) _trace('hydrate', _lastSil, now);
+    _watchSilicon();
+    _lastSil = state.data ? state.data.silicon : undefined;
+});
 var _persistTimer = null;
 function _persistSoon() {
     if (_persistTimer) clearTimeout(_persistTimer);
@@ -126,6 +160,10 @@ export var SiliconService = {
     isServerConfirmed() { return _serverConfirmed; },
 
     getEpoch() { return _epoch; },
+
+    getTrace() {
+        try { return JSON.parse(localStorage.getItem(_TRACE_KEY) || '[]'); } catch (e) { return []; }
+    },
 
     // true bila saldo yang tampil BOLEH dipercaya untuk keputusan UI (aktif/nonaktif tombol).
     // Mode cloud: hanya setelah saldo server terbaca pada sesi ini. DEV/offline: selalu true.
