@@ -33,7 +33,7 @@ export function renderPublicOpinionPanel(params) {
     var opinionSystem = params.opinionSystem;
     const sentiment = Math.round(Number(opinionSystem.getSentiment()) || 0);
     const aspects = opinionSystem.getAspectSentiment();
-    const feed = opinionSystem.getFeed(20);
+    const feed = opinionSystem.getFeed(60);
     const viral = opinionSystem.getActiveViral();
     const suggestions = opinionSystem.getSuggestions();
     const perProduct = opinionSystem.getPerProductSatisfaction();
@@ -151,12 +151,10 @@ export function renderPublicOpinionPanel(params) {
     ` : '';
 
     // ---- Feed ulasan ----
-    const feedHtml = feed.length ? `
-        <div class="card">
-            <div class="card-title">${t('opinion.feed.title', { n: feed.length })}</div>
-            ${feed.slice(0, 15).map(function (r) {
-                const col = r.score >= 7 ? 'var(--accent)' : r.score >= 5 ? 'var(--info)' : r.score >= 3 ? 'var(--warn)' : 'var(--danger)';
-                return `
+    // v2028.41 — 15 terbaru tampil langsung, sisanya (maks. 60) dilipat di <details> (tanpa JS).
+    const reviewRow = function (r) {
+        const col = r.score >= 7 ? 'var(--accent)' : r.score >= 5 ? 'var(--info)' : r.score >= 3 ? 'var(--warn)' : 'var(--danger)';
+        return `
                     <div style="padding:10px 0;border-bottom:1px dashed var(--border);">
                         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
                             <div style="font-size:11.5px;color:var(--text-mute);">${escapeHtml(r.source)} • ${r.day}/${r.month}/${r.year}</div>
@@ -166,7 +164,18 @@ export function renderPublicOpinionPanel(params) {
                         ${r.productName ? '<div style="font-size:10.5px;color:var(--text-mute);margin-top:3px;">→ ' + escapeHtml(r.productName) + '</div>' : ''}
                     </div>
                 `;
-            }).join('')}
+    };
+    const FEED_SHOWN = 15;
+    const feedMore = feed.length > FEED_SHOWN ? `
+            <details style="margin-top:4px;">
+                <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--accent);padding:8px 0;">${t('opinion.feed.more', { n: feed.length - FEED_SHOWN })}</summary>
+                ${feed.slice(FEED_SHOWN).map(reviewRow).join('')}
+            </details>` : '';
+    const feedHtml = feed.length ? `
+        <div class="card">
+            <div class="card-title">${t('opinion.feed.title', { n: feed.length })}</div>
+            ${feed.slice(0, FEED_SHOWN).map(reviewRow).join('')}
+            ${feedMore}
         </div>
     ` : `
         <div class="empty">
