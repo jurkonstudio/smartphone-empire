@@ -47,7 +47,9 @@ function pickCols(rows, pref) {
 /* ---------- tabs ---------- */
 function setTab(t) {
   S.tab = t;
-  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.tab ? b.dataset.tab === t : ['tb', 'rpc', 'con', 'inf'].includes(t)));
+  const pb = $('#pb'); pb.textContent = S.pays.length; pb.classList.toggle('hide', !S.pays.length);
+  $('main').scrollTop = 0;
   ['ov', 'pl', 'pay', 'led', 'con', 'tb', 'rpc', 'inf'].forEach(k => $('#t-' + k).classList.toggle('hide', k !== t));
   if (t === 'ov') renderOv();
   if (t === 'pl') renderPl();
@@ -75,9 +77,9 @@ function renderOv() {
   const newToday = S.players.filter(p => String(p.created_at || '').startsWith(today)).length;
   $('#t-ov').innerHTML =
     '<div class="grid">' +
-    '<div class="stat"><small>Total pemain</small><b>' + S.players.length.toLocaleString('en-US') + '</b></div>' +
+    '<div class="stat" data-a="goto" data-t="pl"><small>Total pemain</small><b>' + S.players.length.toLocaleString('en-US') + '</b></div>' +
     '<div class="stat"><small>Pemain baru hari ini</small><b>' + newToday + '</b></div>' +
-    '<div class="stat"><small>Pembayaran tertunda</small><b>' + S.pays.length + '</b></div>' +
+    '<div class="stat" data-a="goto" data-t="pay"><small>Pembayaran tertunda</small><b>' + S.pays.length + '</b></div>' +
     '<div class="stat"><small>Server</small><b style="font-size:12px">' + esc((S.cfgUrl || '').replace('https://', '')) + '</b></div>' +
     '</div><div class="row"><button class="btn sm" data-a="reload">Muat ulang data</button></div>';
 }
@@ -95,7 +97,7 @@ function renderPl() {
   const view = rows.slice(S.page * PS, S.page * PS + PS); S.view = view;
   const th = cols.map(c => '<th data-a="sort" data-c="' + esc(c) + '">' + esc(c) + (S.sort && S.sort.c === c ? (S.sort.d > 0 ? ' ▲' : ' ▼') : '') + '</th>').join('');
   const body = view.map((r, i) => '<tr data-a="player" data-i="' + i + '">' + cols.map(c => '<td>' + esc(fmt(r[c])) + '</td>').join('') + '</tr>').join('');
-  $('#t-pl').innerHTML = '<div class="row"><input id="q" placeholder="Cari nama / ID / email…" value="' + esc(S.filter) + '"><button class="btn sm" data-a="reload">Muat ulang</button><button class="btn sm" data-a="csv">CSV</button></div>' +
+  $('#t-pl').innerHTML = '<div class="row stk"><input id="q" placeholder="Cari nama / ID / email…" value="' + esc(S.filter) + '"><button class="btn sm" data-a="reload">Muat ulang</button><button class="btn sm" data-a="csv">CSV</button></div>' +
     '<div class="dim" style="margin-bottom:6px">' + rows.length + ' dari ' + S.players.length + ' pemain · ketuk baris untuk detail · ketuk header untuk urut</div>' +
     (view.length ? '<div class="tw"><table><thead><tr>' + th + '</tr></thead><tbody>' + body + '</tbody></table></div>' : '<div class="dim" style="padding:8px">(kosong)</div>') +
     '<div class="row" style="margin-top:8px;justify-content:center"><button class="btn sm" data-a="pg" data-i="-1">‹</button><span class="dim">' + (S.page + 1) + ' / ' + pages + '</span><button class="btn sm" data-a="pg" data-i="1">›</button></div>';
@@ -109,15 +111,37 @@ function exportCsv() {
   a.download = 'players-' + new Date().toISOString().slice(0, 10) + '.csv'; a.click(); log('ok', 'Export CSV ' + rows.length + ' baris');
 }
 
-function openSheet(p) {
+const KEYP = ['public_id', 'display_name', 'company_name', 'email', 'silicon_balance', 'silicon', 'spent_idr', 'stat_cash', 'stat_revenue', 'orders_count', 'created_at', 'last_sign_in_at'];
+function renderSheet(p) {
   S.sel = p;
-  const kv = Object.keys(p).map(k => '<span>' + esc(k) + '</span><span>' + esc(fmt(p[k])) + '</span>').join('');
-  $('#sin').innerHTML = '<div class="row" style="justify-content:space-between"><b style="color:var(--ac)">Detail pemain</b><button class="btn sm" data-a="close">Tutup</button></div>' +
-    '<div class="kv">' + kv + '</div>' +
-    '<div class="row"><button class="btn pri" data-a="setsil">Set saldo SIL…</button><button class="btn" data-a="wallet">Dompet &amp; ledger</button><button class="btn" data-a="copyid">Salin ID</button></div>';
-  $('#sheet').classList.remove('hide');
+  const top = KEYP.filter(k => k in p), rest = Object.keys(p).filter(k => !top.includes(k));
+  const kv = ks => '<div class="kv">' + ks.map(k => '<span>' + esc(k) + '</span><span>' + esc(fmt(p[k])) + '</span>').join('') + '</div>';
+  $('#sin').innerHTML = '<div class="sh"><b style="color:var(--ac)">' + esc(p.display_name || p.company_name || 'Pemain') + '</b><button class="btn sm" data-a="close">✕ Tutup</button></div>' +
+    '<div class="body">' + kv(top) + '<div class="dim">Tambah / kurangi SIL</div><div class="chips">' +
+    [-1000, -100, 100, 1000, 10000].map(d => '<button class="btn sm" data-a="adj" data-i="' + d + '">' + (d > 0 ? '+' : '') + d.toLocaleString('en-US') + '</button>').join('') +
+    '</div><details><summary>Semua field (' + rest.length + ')</summary>' + kv(rest) + '</details></div>' +
+    '<div class="act"><button class="btn pri" data-a="setsil">Set SIL…</button><button class="btn" data-a="wallet">Ledger</button><button class="btn" data-a="copyid">Salin ID</button></div>';
 }
-function closeSheet() { $('#sheet').classList.add('hide'); }
+function pushSheet() { if (!(history.state && history.state.s)) history.pushState({ s: 1 }, ''); $('#sheet').classList.remove('hide'); }
+function openSheet(p) { renderSheet(p); pushSheet(); }
+function hideSheet() { $('#sheet').classList.add('hide'); }
+function closeSheet() { if (history.state && history.state.s) history.back(); else hideSheet(); }
+function openMenu() {
+  const it = [['tb', '▤', 'Tables'], ['rpc', 'ƒ', 'RPC'], ['con', '>_', 'Console'], ['inf', 'ⓘ', 'Info']];
+  $('#sin').innerHTML = '<div class="sh"><b style="color:var(--ac)">Menu</b><button class="btn sm" data-a="close">✕ Tutup</button></div><div class="body">' +
+    it.map(x => '<button class="btn mi" data-a="goto" data-t="' + x[0] + '"><i>' + x[1] + '</i>' + x[2] + '</button>').join('') +
+    '<button class="btn mi dng" data-a="logout"><i>⏻</i>Keluar</button></div>';
+  pushSheet();
+}
+async function adjSil(d) {
+  const p = S.sel; if (!p) return; const id = idOf(p);
+  const cur = Number(p.silicon_balance != null ? p.silicon_balance : p.silicon) || 0, n = Math.max(0, cur + d);
+  if (!confirm('SIL ' + (p.display_name || id) + ': ' + cur.toLocaleString('en-US') + ' → ' + n.toLocaleString('en-US') + '?')) return;
+  try {
+    await rpc(CFG.rpc.setSilicon, { p_user_id: id, p_amount: n }); log('wn', 'ADJ SIL ' + id + ' ' + d + ' → ' + n);
+    await loadPlayers(); const np = S.players.find(x => idOf(x) === id); if (np) renderSheet(np); if (S.tab === 'pl') renderPl();
+  } catch (e) { alert('Gagal: ' + (e.message || e)); }
+}
 
 async function setSil() {
   const p = S.sel; if (!p) return;
@@ -130,7 +154,7 @@ async function setSil() {
   try {
     await rpc(CFG.rpc.setSilicon, { p_user_id: id, p_amount: n });
     log('wn', 'SET SIL ' + id + ' → ' + n);
-    closeSheet(); await loadPlayers(); renderPl();
+    await loadPlayers(); const np = S.players.find(x => idOf(x) === id); if (np) renderSheet(np); if (S.tab === 'pl') renderPl();
   } catch (e) { alert('Gagal: ' + (e.message || e)); }
 }
 
@@ -138,7 +162,9 @@ async function setSil() {
 function renderPay() {
   const cols = pickCols(S.pays, CFG.paymentCols);
   $('#t-pay').innerHTML = '<div class="row"><button class="btn sm" data-a="reloadpay">Muat ulang</button><span class="dim">' + S.pays.length + ' tertunda</span></div>' +
-    table(S.pays, cols, (r, i) => '<button class="btn sm pri" data-a="approve" data-i="' + i + '">Setujui</button>');
+    (S.pays.map((r, i) => '<div class="pc"><div class="kv">' + cols.map(c => '<span>' + esc(c) + '</span><span>' + esc(fmt(r[c])) + '</span>').join('') +
+      '</div><button class="btn pri" style="width:100%" data-a="approve" data-i="' + i + '">Setujui</button></div>').join('') || '<div class="dim" style="padding:8px">(kosong)</div>');
+  const pb = $('#pb'); pb.textContent = S.pays.length; pb.classList.toggle('hide', !S.pays.length);
 }
 async function approve(i) {
   const r = S.pays[i]; if (!r) return;
@@ -248,10 +274,10 @@ $('#f').addEventListener('submit', async ev => {
 
 /* ---------- events ---------- */
 document.addEventListener('click', async e => {
-  const nb = e.target.closest('#nav button'); if (nb) { setTab(nb.dataset.tab); return; }
+  const nb = e.target.closest('#nav button'); if (nb) { if (nb.dataset.tab) setTab(nb.dataset.tab); else openMenu(); return; }
   const t = e.target.closest('[data-a]'); if (!t) { if (e.target.id === 'sheet') closeSheet(); return; }
   const a = t.dataset.a, i = +t.dataset.i;
-  if (a === 'logout') { await S.sb.auth.signOut(); showLogin(); }
+  if (a === 'logout') { hideSheet(); await S.sb.auth.signOut(); showLogin(); }
   else if (a === 'player') { const p = (S.view || [])[i]; if (p) openSheet(p); }
   else if (a === 'close') closeSheet();
   else if (a === 'setsil') setSil();
@@ -260,6 +286,8 @@ document.addEventListener('click', async e => {
   else if (a === 'reloadpay') { await loadPays(); renderPay(); }
   else if (a === 'approve') approve(i);
   else if (a === 'loadled') { const id = ($('#lid').value || '').trim(); if (id) loadLedger(id); }
+  else if (a === 'goto') { closeSheet(); setTab(t.dataset.t); }
+  else if (a === 'adj') adjSil(i);
   else if (a === 'sort') { const c = t.dataset.c; S.sort = S.sort && S.sort.c === c ? { c, d: -S.sort.d } : { c, d: 1 }; S.page = 0; renderPl(); }
   else if (a === 'pg') { S.page = (S.page || 0) + i; renderPl(); }
   else if (a === 'csv') exportCsv();
@@ -274,6 +302,7 @@ document.addEventListener('input', e => {
   if (e.target.id === 'q') { S.filter = e.target.value; S.page = 0; const pos = e.target.selectionStart; renderPl(); const q = $('#q'); q.focus(); q.setSelectionRange(pos, pos); }
 });
 
+addEventListener('popstate', hideSheet);
 addEventListener('error', e => log('er', e.message));
 addEventListener('unhandledrejection', e => log('er', 'Promise: ' + ((e.reason && e.reason.message) || e.reason)));
 boot();
