@@ -7,6 +7,8 @@
 // v2028.3  — Menambahkan dukungan percepatan OS (kind === 'os').
 // v2029.3  — [AUDIT] boost OS tidak lagi ditagih harga 'selesai'; guard Infinity/NaN; buySpeed aman bila
 //            aktivasi gagal (SIL dikembalikan); refund memberi tahu CloudSync (refund server).
+// v2029.4  — [CLOUD-ONLY] SIL hanya aktif saat login cloud (dapat, belanja, dan bayar). Offline: saldo
+//            hanya tampil, tidak bisa dipakai/ditambah. Hadiah yang terlewat diklaim server saat login.
 // v2028.41 — [FIX SIL HILANG]
 //   • Mode bayar 'auto' tanpa persetujuan eksplisit pemain dianggap 'strict' (SIL tidak lagi
 //     terpotong diam-diam untuk menutup biaya uang; notifikasi default MATI sehingga tak terlihat).
@@ -21,6 +23,7 @@ import { LOG_TYPES } from '../config/constants.js';
 import { t } from '../core/LanguageService.js';
 import { SILICON_COSTS } from '../data/silicon.data.js';
 import { DEV_BUILD } from '../config/dev.config.js';
+import { CloudService } from '../services/CloudService.js';
 import { WALLET, getCashPerSil } from '../data/silicon.data.js';
 
 // [HARDENING] Kredit SIL hanya sah dari sumber ini (produksi). 'cheat' & lainnya ditolak.
@@ -29,6 +32,15 @@ import { getNodeById } from '../data/research.data.js';
 import { getChipResearchById } from '../data/chip-research.data.js';
 
 var MAX_HISTORY = 20;
+
+// [CLOUD-ONLY] SIL hanya sah saat akun cloud tersambung (server = sumber kebenaran saldo).
+// DEV_BUILD dikecualikan agar sandbox tetap bisa diuji tanpa server.
+var CLOUD_ONLY = true;
+var CLOUD_REQUIRED = { ok: false, cloudRequired: true, reason: 'Login ke Cloud dulu untuk memakai Silicon.' };
+function _cloudOn() {
+    if (!CLOUD_ONLY || DEV_BUILD) return true;
+    try { return CloudService.getStatus() === 'connected' && !!CloudService.getUserId(); } catch (e) { return false; }
+}
 
 // [FIX] true = SIL hanya boleh menutup biaya uang bila pemain MEMILIH mode bayar sendiri
 // (Setelan -> Keuangan). Set false untuk mengembalikan perilaku lama ('auto' aktif otomatis).
@@ -78,8 +90,12 @@ export var SiliconService = {
         return state.data.silicon || 0;
     },
 
+    // true bila SIL boleh dipakai/ditambah (login cloud aktif).
+    isActive() { return _cloudOn(); },
+
     // ---------- Dompet Universal: biaya berupa SIL boleh ditutup uang ($) ----------
     _payMode() {
+        if (!_cloudOn()) return 'strict';   // offline: uang & SIL dipisah total
         var s = state.data.settings || {};
         var m = WALLET.modes.indexOf(s.payMode) >= 0 ? s.payMode : WALLET.defaultMode;
         // 'auto' bawaan (belum pernah dipilih pemain) = 'strict': SIL tidak terpakai tanpa persetujuan.
@@ -93,6 +109,7 @@ export var SiliconService = {
         cost = Math.floor(cost);
         var plan = { ok: false, cost: cost, sil: 0, units: 0, cash: 0 };
         if (!(cost > 0) || !isFinite(cost)) return plan;
+        if (!_cloudOn()) { plan.cloudRequired = true; return plan; }
         var bal = state.data.silicon || 0, mode = this._payMode(), rate = this.cashPerSil();
         var cashUnits = Math.floor(Math.max(0, state.data.cash || 0) / rate);
         if (mode === 'strict') {
@@ -111,7 +128,7 @@ export var SiliconService = {
         return plan;
     },
 
-    canAffordRaw(cost) { return (state.data.silicon || 0) >= cost; },
+    canAffordRaw(cost) { return _cloudOn() && (state.data.silicon || 0) >= cost; },
 
     // Mampu bayar `cost` SIL, termasuk lewat uang ($) sesuai mode dompet.
     canAfford(cost) { return this.quote(cost).ok; },
@@ -119,6 +136,7 @@ export var SiliconService = {
     // Daya beli total dalam satuan SIL (SIL + uang / kurs).
     getPurchasingPowerSil() {
         var bal = state.data.silicon || 0;
+        if (!_cloudOn()) return 0;
         if (this._payMode() === 'strict') return bal;
         return bal + Math.floor(Math.max(0, state.data.cash || 0) / this.cashPerSil());
     },
@@ -127,6 +145,7 @@ export var SiliconService = {
         amount = Math.floor(amount);
         if (!amount || amount <= 0 || !isFinite(amount)) return { ok: false, reason: 'Jumlah tidak valid.' };
         if (!DEV_BUILD && !ALLOWED_CREDIT.test(String(reason || ''))) return { ok: false, reason: 'Sumber kredit tidak sah.' };
+        if (!_cloudOn()) return CLOUD_REQUIRED;
         state.data.silicon = (state.data.silicon || 0) + amount;
         _pushHistory('earn', amount, reason || 'reward');
         bus.emit('silicon:changed', { balance: state.data.silicon, delta: amount, reason: String(reason || 'reward') });
@@ -138,6 +157,7 @@ export var SiliconService = {
     spendRaw(amount, reason) {
         amount = Math.floor(amount);
         if (!amount || amount <= 0 || !isFinite(amount)) return { ok: false, reason: 'Jumlah tidak valid.' };
+        if (!_cloudOn()) return CLOUD_REQUIRED;
         if (!this.canAffordRaw(amount)) return { ok: false, reason: 'Silicon tidak cukup.' };
         state.data.silicon = (state.data.silicon || 0) - amount;
         _pushHistory('spend', -amount, reason || 'spend');
@@ -151,6 +171,7 @@ export var SiliconService = {
     spend(amount, reason) {
         amount = Math.floor(amount);
         if (!amount || amount <= 0 || !isFinite(amount)) return { ok: false, reason: 'Jumlah tidak valid.' };
+        if (!_cloudOn()) return CLOUD_REQUIRED;
         var plan = this.quote(amount);
         if (!plan.ok) return { ok: false, reason: 'Silicon & uang tidak cukup.' };
         if (plan.sil > 0) {
@@ -365,6 +386,7 @@ export var SiliconService = {
     },
 
     claimDailyLogin() {
+        if (!_cloudOn()) return { ok: false, reason: 'cloud_required' };   // server mengklaim saat login
         var d = state.data;
         if (!d.dailyLogin || typeof d.dailyLogin !== 'object') {
             d.dailyLogin = { lastClaimDate: null, streak: 0 };
