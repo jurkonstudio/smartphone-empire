@@ -1,5 +1,7 @@
 // FILE: src/systems/PublicOpinionSystem.js
 // v2028.6 — [LOGIC] Reaksi konsumen sekarang sangat sensitif terhadap Harga vs Kualitas (Value for Money).
+// v2028.41 — Ulasan lebih banyak & beragam dari tahun ke tahun: volume naik mengikuti tahun/popularitas,
+//             teks dipilih per era TAHUN (bukan data.era), variasi harga/bug/topik era, anti-duplikat.
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { BALANCE } from '../data/balance.data.js';
@@ -8,9 +10,9 @@ import { TIME_CONFIG } from '../config/time.config.js';
 import { ToastService } from '../core/ToastService.js';
 import { LOG_TYPES } from '../config/constants.js';
 import {
-    FEEDBACK_SOURCES,
-    REVIEW_TEMPLATES,
-    STAT_LABELS,
+    FEED_LIMITS,
+    reviewSourceForYear,
+    buildReviewText,
     VIRAL_EVENTS,
     CUSTOMER_SUGGESTIONS,
     VIRAL_RESPONSES
@@ -18,18 +20,6 @@ import {
 import { WalletService } from './WalletService.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
-
-function sourcesForEra(era) {
-    return FEEDBACK_SOURCES[era] || FEEDBACK_SOURCES.feature_phone;
-}
-
-function templateCategory(score) {
-    if (score >= 8) return 'excellent';
-    if (score >= 6) return 'good';
-    if (score >= 4) return 'mixed';
-    if (score >= 2) return 'poor';
-    return 'bad';
-}
 
 function clamp(n) { return Math.max(0, Math.min(100, Math.round(n))); }
 
@@ -272,18 +262,32 @@ export class PublicOpinionSystem {
 
         const perDayChance = BALANCE.reviews.perDayChance || 0.15;
         const multiplier = 1 + (100 - data.feedback.sentiment) / 200;
-        if (Math.random() < (perDayChance * multiplier)) {
-            const p = active[Math.floor(Math.random() * active.length)];
-            const rv = this._generateReviewForProduct(p, false);
-            this._pushToFeed(rv);
-        }
+        const year = data.time.currentYear || 2000;
+        const now = data.time.elapsedGameMinutes || 0;
+        // Pasar makin ramai dari tahun ke tahun (2000 = ×1, 2026 ≈ ×4).
+        const growth = 1 + Math.max(0, year - 2000) * FEED_LIMITS.growthPerYear;
+
+        let total = 0;
+        active.forEach(p => {
+            if (total >= FEED_LIMITS.maxPerDay) return;
+            // Produk laris lebih sering diulas; minggu peluncuran ramai.
+            const popularity = 1 + Math.min(1.5, Math.log10(1 + (p.totalSold || 0) / 300));
+            const sinceRelease = p.releaseGameMinute ? (now - p.releaseGameMinute) / MINUTES_PER_DAY : 999;
+            const buzz = sinceRelease <= (BALANCE.reviews.initialWaveDays || 7) ? FEED_LIMITS.launchBuzzMult : 1;
+            const expected = perDayChance * multiplier * growth * popularity * buzz;
+            let n = Math.floor(expected) + (Math.random() < (expected - Math.floor(expected)) ? 1 : 0);
+            n = Math.min(n, FEED_LIMITS.maxPerProductPerDay, FEED_LIMITS.maxPerDay - total);
+            for (let k = 0; k < n; k++) {
+                this._pushToFeed(this._generateReviewForProduct(p, false));
+                total++;
+            }
+        });
     }
 
     _generateReviewForProduct(product, isInitial) {
         const data = this.state.data;
-        const era = data.era || 'feature_phone';
-        const sources = sourcesForEra(era);
-        const source = sources[Math.floor(Math.random() * sources.length)];
+        const year = data.time.currentYear || 2000;
+        const source = reviewSourceForYear(year);
         
         const q = product.stats.qualityScore || 50;
         const bugHit = (data.os.bugs || []).filter(b => b.status === 'active').length * 2;
@@ -301,20 +305,20 @@ export class PublicOpinionSystem {
         const expectedPrice = this._getExpectedPrice(q, data);
         const priceRatio = product.price / expectedPrice;
         let pricePenalty = 0;
-        let forcedText = null;
-        
+        let priceTier = null;
+
         if (priceRatio > 1.5) {
             pricePenalty = -6; // Penalti sangat besar
-            forcedText = `Gila, ${product.name} dijual $${product.price}?! Kualitas pas-pasan tapi harga selangit. Bukan beli!`;
+            priceTier = 'very_high';
         } else if (priceRatio > 1.2) {
             pricePenalty = -3;
-            forcedText = `${product.name} terlalu mahal untuk spesifikasi segini. Mending beli merk lain.`;
+            priceTier = 'high';
         } else if (priceRatio < 0.5) {
             pricePenalty = +3; // Bonus
-            forcedText = `Murah banget! ${product.name} cuma $${product.price} tapi lumayan buat sehari-hari. Worth it!`;
+            priceTier = 'very_low';
         } else if (priceRatio < 0.8) {
             pricePenalty = +1.5;
-            forcedText = `${product.name} harganya sangat bersahabat untuk kantong. Rekomendasi!`;
+            priceTier = 'low';
         }
 
         base += pricePenalty;
@@ -329,19 +333,19 @@ export class PublicOpinionSystem {
             if ((product.stats[k] || 0) > (product.stats[best] || 0)) best = k;
             if ((product.stats[k] || 0) < (product.stats[worst] || 0)) worst = k;
         });
-        const strongLabel = (STAT_LABELS[best] || {}).strong || 'berkualitas';
-        const weakLabel   = (STAT_LABELS[worst] || {}).weak   || 'ada kekurangan';
-        
-        let text;
-        if (forcedText) {
-            text = forcedText;
-        } else {
-            const templates = REVIEW_TEMPLATES[templateCategory(score)] || REVIEW_TEMPLATES.mixed;
-            text = templates[Math.floor(Math.random() * templates.length)]
-                .replace(/{name}/g, product.name)
-                .replace(/{strong}/g, strongLabel)
-                .replace(/{weak}/g, weakLabel);
-        }
+        const recent = (data.feedback.feed || []).slice(0, 12).map(r => r.text);
+        const text = buildReviewText({
+            name: product.name,
+            price: product.price,
+            score: score,
+            best: best,
+            worst: worst,
+            year: year,
+            priceTier: priceTier,
+            hasBugs: bugHit > 0,
+            popular: (product.totalSold || 0) >= 3000,
+            recent: recent
+        });
 
         return {
             id: 'rv_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
@@ -359,7 +363,8 @@ export class PublicOpinionSystem {
     _pushToFeed(rv) {
         const fb = this.state.data.feedback;
         fb.feed.unshift(rv);
-        if (fb.feed.length > BALANCE.reviews.maxReviewsInFeed) fb.feed.length = BALANCE.reviews.maxReviewsInFeed;
+        const maxFeed = Math.max(BALANCE.reviews.maxReviewsInFeed || 30, FEED_LIMITS.max);
+        if (fb.feed.length > maxFeed) fb.feed.length = maxFeed;
         bus.emit('feedback:review-received', { review: rv });
     }
 
@@ -439,7 +444,7 @@ export class PublicOpinionSystem {
 
     getSentiment()           { return this.state.data.feedback.sentiment || 50; }
     getAspectSentiment()     { return this.state.data.feedback.aspectSentiment || {}; }
-    getFeed(limit)           { return (this.state.data.feedback.feed || []).slice(0, limit || 30); }
+    getFeed(limit)           { return (this.state.data.feedback.feed || []).slice(0, limit || FEED_LIMITS.show); }
     getActiveViral()         { return this.state.data.feedback.activeViral || []; }
     getSuggestions()         { return this.state.data.feedback.suggestions || []; }
     getPerProductSatisfaction() { return this.state.data.feedback.perProductSatisfaction || {}; }
