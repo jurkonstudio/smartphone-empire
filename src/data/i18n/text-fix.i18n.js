@@ -83,7 +83,24 @@ export const TEXT_FIX_I18N = {
         'office.card.expand': 'Perluas kartu',
         'office.card.collapse': 'Ciutkan kartu',
         // ---- Riset: sub-tab ----
-        'research.subtab.manufacture': 'Manufaktur'
+        'research.subtab.manufacture': 'Manufaktur',
+        // ---- Manufaktur, Silicon Store, Cloud ----
+        'mf.title': 'Riset Manufaktur Chip',
+        'mf.sub_open': 'Buka lebih awal node fabrikasi yang masih terkunci memakai uang perusahaan. Setelah dibuka, riset di sub-tab Chip.',
+        'mf.sub_closed': 'Pembelian akses manufaktur baru tersedia tahun {y}.',
+        'mf.stat.locked': 'Terkunci',
+        'mf.stat.bought': 'Dibuka',
+        'mf.stat.cash': 'Kas',
+        'mf.hidden': 'Teknologi manufaktur belum terlihat.',
+        'mf.reason.year': 'Normalnya tersedia {y}',
+        'mf.reason.prereq': 'Butuh: {n}',
+        'mf.research_cost': 'Biaya riset',
+        'mf.buy': 'Buka',
+        'mf.empty': 'Semua node manufaktur sudah terbuka.',
+        'silstore.title': 'Silicon Store',
+        'silstore.tab.transfer': 'Kirim',
+        'silstore.transfer.intro': 'Kirim SIL ke pemain lain dengan memasukkan ID Pemain (8 digit) mereka.',
+        'cloud.signout.unsaved': 'Progres terakhir belum tersimpan ke cloud. Jika keluar sekarang, progres di perangkat ini akan hilang. Tetap keluar?'
     },
     en: {
         'silstore.tab.buy': 'Buy',
@@ -153,6 +170,23 @@ export const TEXT_FIX_I18N = {
         'office.card.expand': 'Expand card',
         'office.card.collapse': 'Collapse card',
         // ---- Research: sub-tab ----
-        'research.subtab.manufacture': 'Manufacturing'
+        'research.subtab.manufacture': 'Manufacturing',
+        // ---- Manufacturing, Silicon Store, Cloud ----
+        'mf.title': 'Chip Manufacturing Research',
+        'mf.sub_open': 'Unlock locked fabrication nodes early using company money. Once unlocked, research them in the Chip sub-tab.',
+        'mf.sub_closed': 'Buying new manufacturing access becomes available in {y}.',
+        'mf.stat.locked': 'Locked',
+        'mf.stat.bought': 'Unlocked',
+        'mf.stat.cash': 'Cash',
+        'mf.hidden': 'Manufacturing technology is not visible yet.',
+        'mf.reason.year': 'Normally available in {y}',
+        'mf.reason.prereq': 'Requires: {n}',
+        'mf.research_cost': 'Research cost',
+        'mf.buy': 'Unlock',
+        'mf.empty': 'All manufacturing nodes are already unlocked.',
+        'silstore.title': 'Silicon Store',
+        'silstore.tab.transfer': 'Send',
+        'silstore.transfer.intro': 'Send SIL to another player by entering their Player ID (8 digits).',
+        'cloud.signout.unsaved': 'Your latest progress could not be saved to the cloud. If you sign out now, progress on this device will be lost. Sign out anyway?'
     }
 };
