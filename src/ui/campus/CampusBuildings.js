@@ -1,12 +1,4 @@
 // FILE: src/ui/campus/CampusBuildings.js
-// v2027.61 — GAME-AWARE: peta kini bereaksi pada isi game, bukan hanya jumlah level.
-//   • HQ memajang nama perusahaan; lampu peringatan merah saat kas negatif.
-//   • Lab R&D: cincin atom berputar saat riset/chip research berjalan.
-//   • Pabrik Chip: wafer di atap (berputar saat Fab produksi) + jalur produksi menyala.
-//   • Pusat OS: LED server merah bila ada bug aktif; hologram berputar saat OS dikembangkan.
-//   • Toko / Arena / Billboard: memajang model ponsel PRODUK TERBARU (bentuk sesuai form factor,
-//     warna sesuai warna bodi, layar sesuai era). Arena menyala saat produk sedang disiapkan.
-//   Logika level (RULES), SLOTS, koordinat, ID bangunan TIDAK diubah.
 // v2027.60 — PREMIUM LOOK: material PBR (MeshStandardMaterial) + env map, bayangan nyata
 // (shadow map statis, tier adaptif) + contact-AO, varian fasad/atap per bangunan, vertex-color AO
 // pada fasad, pohon & semak instanced (1 draw call per bagian, bukan per pohon), tekstur rumput,
@@ -50,6 +42,8 @@ export const PALETTES = {
         grass2: 0xaed99f, soil: 0x806b56, curb: 0xd2d9e5, water: 0x55b9e5,
         leaf2: 0x91cf87, gold: 0xf0bd4e, shade: 0x000000,
         flowerA: 0xf472b6, flowerB: 0xfacc15,
+        ocean: 0x3fa9dc, shallow: 0x86d8e8, foam: 0xf4fbff,
+        sand: 0xf1dfae, sandWet: 0xd9c795, rock: 0x98a0aa,
         lamp: 0xfff1c4, beacon: 0xff4d4d, halo: 0xffd98a,
         hemiSky: 0xf0f6ff, hemiGround: 0xb8c8bb, hemiI: 1.05, dirI: 0.9,
         sunCol: 0xfff1da, night: 0
@@ -61,6 +55,8 @@ export const PALETTES = {
         grass2: 0x2b503b, soil: 0x332a26, curb: 0x515d72, water: 0x176d9f,
         leaf2: 0x4c9b68, gold: 0xe3b348, shade: 0x000000,
         flowerA: 0xd9558f, flowerB: 0xd1a914,
+        ocean: 0x0d4a78, shallow: 0x1a7a98, foam: 0x9cc4d8,
+        sand: 0x7a6f58, sandWet: 0x5e5543, rock: 0x555d68,
         lamp: 0xfff1c4, beacon: 0xff4d4d, halo: 0xffd98a,
         hemiSky: 0x9fb0d0, hemiGround: 0x20242d, hemiI: 0.7, dirI: 0.55,
         sunCol: 0xaebfe8, night: 1
@@ -78,15 +74,74 @@ export const ERA_WINDOWS = [
     { light: 0xc6a3ff, dark: 0x7a4fd0 }   // foldable (ungu)
 ];
 
-// Pohon: 8 lama + 21 baru di area perluasan. Tata letak sudah dicek tidak
-// menabrak slot, jalan, teluk, jalur monorail, maupun blok kota.
-export const TREE_SPOTS = [
-    [-7, -6], [-5.5, -7.5], [-8, 5], [-1.4, -6.6], [2.5, -5.6], [-3, -5.5],
-    [4.4, -4.4], [-9.2, 8.8], [-8.0, 2.8], [-9.2, -3.2], [6.4, -8.0], [-2.0, -8.0],
-    [12.4, -12.8], [13.6, 4.0], [10.0, -2.0], [5.2, -12.8], [-12.8, 11.2], [-12.8, 13.6],
-    [13.6, -9.2], [-12.8, -3.2], [8.8, -12.8], [2.8, -12.8], [-2.0, -12.8], [11.2, 2.8],
-    [0.4, -12.8], [-3.2, 13.6], [-11.6, 2.8], [-10.4, 7.6], [-12.8, 7.6]
-];
+// ============================================================
+// PULAU: garis pantai organik (superellipse + gelombang halus). Inti kampus (±15) selalu di dalam.
+// ============================================================
+export var ISLAND_R = 22;
+export function islandRadius(th, scale) {
+    var c = Math.abs(Math.cos(th)), sn = Math.abs(Math.sin(th)), n = 3.2;
+    var sup = Math.pow(Math.pow(c, n) + Math.pow(sn, n), -1 / n);
+    var wob = 1 + 0.045 * Math.sin(3 * th + 0.8) + 0.03 * Math.sin(5 * th + 2.1) + 0.02 * Math.sin(9 * th + 0.3);
+    return ISLAND_R * sup * wob * (scale || 1);
+}
+
+function _rng(seed) {
+    return function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+}
+// Zona inti yang tidak boleh dimasuki dekorasi luar (jalan, teluk, gerbang, monorail, kincir angin).
+function _inCore(x, z) { return Math.abs(x) < 16.3 && Math.abs(z) < 16.3; }
+function _inland(x, z, margin) { return Math.hypot(x, z) < islandRadius(Math.atan2(z, x)) - margin; }
+
+// Bukit rendah di pinggiran pulau (setengah bola pipih) -> kedalaman visual, bukan gedung.
+export var HILLS = (function () {
+    var rnd = _rng(4242), out = [], tries = 0;
+    while (out.length < 10 && tries++ < 800) {
+        var th = rnd() * Math.PI * 2;
+        var r = 17.5 + rnd() * 6.5;
+        var x = Math.cos(th) * r, z = Math.sin(th) * r;
+        var rad = 1.8 + rnd() * 1.6;
+        if (_inCore(x, z) || !_inland(x, z, rad + 2.6)) continue;
+        var ok = true;
+        for (var i = 0; i < out.length; i++) { if (Math.hypot(out[i][0] - x, out[i][1] - z) < out[i][2] + rad + 1.5) { ok = false; break; } }
+        if (ok) out.push([x, z, rad, 0.22 + rnd() * 0.2]);
+    }
+    return out;
+})();
+
+// Pohon: 29 di inti kampus + hutan berkelompok di pinggiran pulau (di luar zona inti & bukit).
+export const TREE_SPOTS = (function () {
+    var base = [
+        [-7, -6], [-5.5, -7.5], [-8, 5], [-1.4, -6.6], [2.5, -5.6], [-3, -5.5],
+        [4.4, -4.4], [-9.2, 8.8], [-8.0, 2.8], [-9.2, -3.2], [6.4, -8.0], [-2.0, -8.0],
+        [12.4, -12.8], [13.6, 4.0], [10.0, -2.0], [5.2, -12.8], [-12.8, 11.2], [-12.8, 13.6],
+        [13.6, -9.2], [-12.8, -3.2], [8.8, -12.8], [2.8, -12.8], [-2.0, -12.8], [11.2, 2.8],
+        [0.4, -12.8], [-3.2, 13.6], [-11.6, 2.8], [-10.4, 7.6], [-12.8, 7.6]
+    ];
+    var rnd = _rng(9917), out = base.slice(), outer = [];
+    function free(x, z) {
+        for (var i = 0; i < HILLS.length; i++) {
+            if (Math.hypot(HILLS[i][0] - x, HILLS[i][1] - z) < HILLS[i][2] * 0.95 + 0.4) return false;
+        }
+        for (var j = 0; j < outer.length; j++) {
+            if (Math.hypot(outer[j][0] - x, outer[j][1] - z) < 1.15) return false;
+        }
+        return true;
+    }
+    var N = 15;
+    for (var i = 0; i < N; i++) {
+        var th = (i / N) * Math.PI * 2 + (rnd() - 0.5) * 0.3;
+        var cr = islandRadius(th) - 4.6;
+        var cx = Math.cos(th) * cr, cz = Math.sin(th) * cr;
+        var cnt = 5 + Math.floor(rnd() * 5);
+        for (var k = 0; k < cnt * 3 && cnt > 0; k++) {
+            var x = cx + (rnd() + rnd() - 1) * 3.4, z = cz + (rnd() + rnd() - 1) * 3.4;
+            if (_inCore(x, z) || !_inland(x, z, 2.4) || !free(x, z)) continue;
+            outer.push([Math.round(x * 10) / 10, Math.round(z * 10) / 10]);
+            if (--cnt === 0) break;
+        }
+    }
+    return out.concat(outer);
+})();
 
 // Kolam kecil di utara plaza (dipakai juga oleh CampusLife untuk riak air).
 export var POND = { x: 0.5, z: -6, r: 1.4 };
@@ -114,9 +169,9 @@ export var WIND_SPOTS = [[-11.5, -13.2], [-8.2, -13.2], [-4.8, -13.2]];
 export var RAIL = { z: -10.2, x0: -13, x1: 13, y: 1.5, stationX: 7.5 };
 
 // Kawasan kota di pinggir peta. Muncul bertahap: 1 + 1 blok per era (maks 6).
-export var SPRAWL_SPOTS = [
-    [5.4, 9.2], [-9.8, 3.5], [13.0, 1.6], [5.4, -6.0], [-7.9, 7.3], [11.1, -0.3]
-];
+// DINONAKTIFKAN: blok kota filler merusak pemandangan & tidak punya fungsi game.
+// Dikosongkan (bukan dihapus) agar CampusScene/computePlan tetap kompatibel.
+export var SPRAWL_SPOTS = [];
 
 // ============================================================
 // i18n helper — t() dengan fallback (Indonesia) bila key belum ada.
@@ -219,75 +274,9 @@ export function computePlan(data) {
     var sprawl = Math.min(SPRAWL_SPOTS.length, 1 + Math.round(eraIdx * 1));
     var rail = eraIdx >= RAIL_MIN_ERA;
     var wind = eraIdx >= WIND_MIN_ERA;
-    var flavor = flavorOf(data);
     var sig = eraIdx + '|' + RULE_KEYS.map(function (k) { return levels[k]; }).join(',') + '|' + sprawl +
-        '|' + (rail ? 1 : 0) + (wind ? 1 : 0) + '|' + flavor.sig;
-    return { eraIdx: eraIdx, era: era, levels: levels, sprawl: sprawl, rail: rail, wind: wind, flavor: flavor, sig: sig };
-}
-
-// ============================================================
-// FLAVOR — sinyal "isi game" selain level (murni, tanpa THREE).
-// Semua nilai dikuantisasi supaya plan.sig hanya berubah pada kejadian nyata.
-// ============================================================
-var FF_KIND = {
-    ff_candybar: 'bar_old', ff_slider: 'slider', ff_touch_slider: 'slider', ff_flip: 'flip',
-    ff_flip_fold: 'flip2', ff_communicator: 'keys', ff_pda: 'keys', ff_qwerty: 'keys', ff_swivel: 'keys',
-    ff_dual: 'fold', ff_fold: 'fold', ff_tri_fold: 'fold'
-};
-var BODY_HEX = {
-    color_black: 0x1a1a1a, color_white: 0xf5f5f5, color_silver: 0xc0c0c0, color_blue: 0x2196f3,
-    color_red: 0xe53935, color_gold: 0xffd700, color_green: 0x43a047, color_titanium: 0x8a8a8a
-};
-function shortBrand(name) {
-    var n = (typeof name === 'string' ? name : '').replace(/\s+/g, ' ').trim();
-    if (!n) return 'My Tech Co';
-    return n.length > 18 ? n.slice(0, 17) + '\u2026' : n;
-}
-export function flavorOf(d) {
-    d = d || {};
-    var cat = d.products && d.products.catalog;
-    var hero = null, i;
-    if (Array.isArray(cat) && cat.length) {
-        for (i = cat.length - 1; i >= 0; i--) { if (cat[i] && cat[i].status === 'selling') { hero = cat[i]; break; } }
-        if (!hero) hero = cat[cat.length - 1];
-    }
-    var cfg = (hero && hero.config) || {};
-    var heroInfo = hero ? {
-        name: String(hero.name || ''),
-        kind: FF_KIND[cfg.formFactorId] || 'bar',
-        color: BODY_HEX[cfg.bodyColorId] !== undefined ? BODY_HEX[cfg.bodyColorId] : 0x1a1a1a
-    } : null;
-    var bugs = 0, ob = d.os && d.os.bugs;
-    if (Array.isArray(ob)) for (i = 0; i < ob.length; i++) if (ob[i] && ob[i].status === 'active') bugs++;
-    var f = {
-        brand: shortBrand(d.companyName),
-        hero: heroInfo,
-        research: len(d.research && d.research.active) + len(d.chipResearch && d.chipResearch.active) > 0,
-        fabBusy: !!(d.fab && d.fab.built && d.fab.producing),
-        osBusy: !!(d.os && d.os.developing),
-        osBugs: bugs,
-        launch: !!(d.products && (d.products.designing || d.products.development)),
-        warn: !!(d.finance && (d.finance.negativeMonths || 0) > 0)
-    };
-    f.heroKey = heroInfo ? (heroInfo.kind + '.' + heroInfo.color.toString(16)) : '-';
-    f.sig = [f.brand, f.heroKey, f.research ? 1 : 0, f.fabBusy ? 1 : 0, f.osBusy ? 1 : 0,
-        Math.min(f.osBugs, 9), f.launch ? 1 : 0, f.warn ? 1 : 0].join('~');
-    return f;
-}
-
-// Potongan flavor yang relevan per bangunan -> hanya bangunan itu yang dibangun ulang saat berubah.
-export function flavorKeyFor(id, f) {
-    if (!f) return '';
-    switch (id) {
-        case 'hq': return f.brand + '|' + (f.warn ? 1 : 0);
-        case 'lab': return f.research ? '1' : '0';
-        case 'factory': return f.fabBusy ? '1' : '0';
-        case 'store': return f.heroKey;
-        case 'os': return (f.osBusy ? 1 : 0) + ',' + (f.osBugs > 0 ? 1 : 0);
-        case 'arena': return f.heroKey + '|' + (f.launch ? 1 : 0);
-        case 'billboard': return f.heroKey;
-        default: return '';
-    }
+        '|' + (rail ? 1 : 0) + (wind ? 1 : 0);
+    return { eraIdx: eraIdx, era: era, levels: levels, sprawl: sprawl, rail: rail, wind: wind, sig: sig };
 }
 
 // Simpan puncak level (hanya kalau NEVER_DOWNGRADE). Tidak memicu event.
@@ -350,7 +339,8 @@ export function describeBuilding(id, plan, data) {
 var COLOR_ROLES = [
     'grass', 'plaza', 'road', 'wall', 'window', 'trunk', 'leaf', 'solar', 'metal', 'glow',
     'grass2', 'soil', 'curb', 'water', 'leaf2', 'gold', 'shade', 'flowerA', 'flowerB',
-    'lamp', 'beacon', 'halo', 'roofAlt'
+    'lamp', 'beacon', 'halo', 'roofAlt',
+    'ocean', 'shallow', 'foam', 'sand', 'sandWet', 'rock'
 ];
 
 // Opsi material khusus per role (transparan dsb).
@@ -371,6 +361,8 @@ var MAT_PROPS = {
     metal: { r: 0.38, m: 0.75, e: 1.0 }, gold: { r: 0.3, m: 0.9, e: 1.1 },
     trunk: { r: 0.95, m: 0, e: 0.3 }, leaf: { r: 0.9, m: 0, e: 0.35 }, leaf2: { r: 0.9, m: 0, e: 0.35 },
     glow: { r: 0.35, m: 0, e: 0.5 }, water: { r: 0.06, m: 0, e: 1.4 },
+    ocean: { r: 0.42, m: 0, e: 0.7 }, shallow: { r: 0.4, m: 0, e: 0.7 }, foam: { r: 0.9, m: 0, e: 0.3 },
+    sand: { r: 0.95, m: 0, e: 0.35 }, sandWet: { r: 0.9, m: 0, e: 0.35 }, rock: { r: 0.9, m: 0, e: 0.3 },
     flowerA: { r: 0.7, m: 0, e: 0.3 }, flowerB: { r: 0.7, m: 0, e: 0.3 }, lamp: { r: 0.4, m: 0, e: 0.3 }, beacon: { r: 0.4, m: 0, e: 0.3 }
 };
 // 3 varian fasad (tekstur sama, tint beda) + seed per bangunan -> gedung tidak tampak seperti salinan.
@@ -526,57 +518,15 @@ export function createAssets(THREE, opts) {
         if (!geos.has(key)) geos.set(key, make());
         return geos.get(key);
     }
-    // Material warna bebas (warna bodi produk) & papan nama perusahaan — di-cache, dibuang di dispose().
-    var colorMats = new Map();
-    var signMats = new Map();
-    function makeSign(text) {
-        var W = 512, H = 96, c = document.createElement('canvas');
-        c.width = W; c.height = H;
-        var g = c.getContext('2d');
-        var px = 54;
-        g.textAlign = 'center'; g.textBaseline = 'middle';
-        do { g.font = '700 ' + px + 'px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'; px -= 3; }
-        while (g.measureText(text).width > W - 40 && px > 20);
-        g.lineJoin = 'round'; g.lineWidth = 7; g.strokeStyle = 'rgba(8,16,32,0.85)';
-        g.strokeText(text, W / 2, H / 2 + 2);
-        g.fillStyle = '#ffffff';
-        g.fillText(text, W / 2, H / 2 + 2);
-        var tx = new THREE.CanvasTexture(c);
-        tx.colorSpace = THREE.SRGBColorSpace;
-        tx.anisotropy = 4;
-        var m = new THREE.MeshBasicMaterial({ map: tx, transparent: true, depthWrite: false });
-        m.userData.tex = tx;
-        return m;
-    }
     return {
         THREE: THREE,
-        flavor: null,            // sinyal isi-game (plan.flavor), diisi CampusScene sebelum membangun
-        // Bidang tegak (papan nama / layar).
-        vplane: function (w, h) { return cached('v' + w + '_' + h, function () { return new THREE.PlaneGeometry(w, h); }); },
-        colorMat: function (hex) {
-            if (!colorMats.has(hex)) {
-                var m = new THREE.MeshStandardMaterial({ color: hex, roughness: 0.38, metalness: 0.35 });
-                m.envMapIntensity = 0.9; m.userData.envBase = 0.9;
-                colorMats.set(hex, m);
-                extraMats.push(m);
-            }
-            return colorMats.get(hex);
-        },
-        signMat: function (text) {
-            if (!signMats.has(text)) {
-                if (signMats.size > 12) {   // batasi cache (nama bisa diganti pemain)
-                    signMats.forEach(function (m) { m.userData.tex.dispose(); m.dispose(); });
-                    signMats.clear();
-                }
-                signMats.set(text, makeSign(text));
-            }
-            return signMats.get(text);
-        },
         realShadows: !!opts.shadows,
         facadeKeys: FACADE_KEYS,
         variantSeed: 0,          // diatur builder tiap bangunan -> varian fasad deterministik
         roofAlt: false,
         facadeRole: function () { return FACADE_KEYS[Math.abs(this.variantSeed | 0) % FACADE_KEYS.length]; },
+        // Geometri kustom (pulau, bukit, batu) ikut di-dispose bersama cache.
+        custom: function (key, make) { return cached('x' + key, make); },
         box: function (w, h, d) { return cached('b' + w + '_' + h + '_' + d, function () { return new THREE.BoxGeometry(w, h, d); }); },
         // Bidang datar (untuk contact-AO), menghadap atas.
         plane: function (w, d) {
@@ -667,11 +617,9 @@ export function createAssets(THREE, opts) {
         dispose: function () {
             geos.forEach(function (g) { g.dispose(); });
             mats.forEach(function (m) { m.dispose(); });
-            colorMats.forEach(function (m) { m.dispose(); });
-            signMats.forEach(function (m) { m.userData.tex.dispose(); m.dispose(); });
             facade.dispose();
             noiseTex.dispose(); patchTex.dispose(); aoTex.dispose();
-            geos.clear(); mats.clear(); colorMats.clear(); signMats.clear(); extraMats.length = 0;
+            geos.clear(); mats.clear(); extraMats.length = 0;
         }
     };
 }
@@ -739,12 +687,90 @@ function addGate(g, A, THREE, x, z, rot) {
     g.add(a);
 }
 
-// Tanah dasar (pulau bertebing 30x30), plaza, jalan + trotoar + marka, kolam, teluk, taman, lampu.
+// Lempengan berbentuk pulau (outline organik). Atas di y = top, tebal = depth.
+// UV cap dipetakan ke 100x100 unit dunia -> kepadatan tekstur rumput sama seperti sebelumnya.
+function islandSlab(A, THREE, scale, top, depth, mat) {
+    var geo = A.custom('isl' + scale + '_' + depth, function () {
+        var sh = new THREE.Shape(), N = 120, i;
+        for (i = 0; i < N; i++) {
+            var th = (i / N) * Math.PI * 2, r = islandRadius(th, scale);
+            var px = Math.cos(th) * r, pz = Math.sin(th) * r;
+            if (i === 0) sh.moveTo(px, -pz); else sh.lineTo(px, -pz);
+        }
+        sh.closePath();
+        var g = new THREE.ExtrudeGeometry(sh, { depth: depth, bevelEnabled: false, curveSegments: 1 });
+        g.rotateX(-Math.PI / 2);
+        var pos = g.attributes.position, uv = g.attributes.uv;
+        for (i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / 100 + 0.5, pos.getZ(i) / 100 + 0.5);
+        uv.needsUpdate = true;
+        return g;
+    });
+    var m = new THREE.Mesh(geo, mat);
+    m.position.y = top - depth;
+    return m;
+}
+
+// Pulau + laut berlapis: rumput -> pasir -> pasir basah -> busa -> perairan dangkal -> laut dalam.
+function addIsland(g, A, THREE) {
+    var sea = mesh(A, THREE, A.box(500, 1, 500), 'ocean', 0, -1.0, 0);          // permukaan laut y = -0.5
+    g.add(sea);
+    g.add(islandSlab(A, THREE, 1.30, -0.47, 0.2, A.mat('shallow')));
+    g.add(islandSlab(A, THREE, 1.115, -0.455, 0.2, A.mat('foam')));
+    g.add(islandSlab(A, THREE, 1.08, -0.26, 0.5, A.mat('sandWet')));
+    g.add(islandSlab(A, THREE, 1.05, -0.03, 0.7, A.mat('sand')));
+    g.add(islandSlab(A, THREE, 1.0, 0, 0.7, [A.mat('grass'), A.mat('soil')]));
+}
+
+// Pemandangan alami: bukit, batu pantai, riak ombak, bercak rumput. TANPA gedung dekoratif.
+function addScenery(g, A, THREE) {
+    var i, rnd = _rng(1357);
+
+    // bukit rendah
+    if (HILLS.length) {
+        var hg = A.custom('hill', function () { return new THREE.SphereGeometry(1, 14, 8); });
+        var hs = HILLS.map(function (h) { return [h[0], 0, h[1], h[2], h[3], h[2] * (0.9 + rnd() * 0.2), rnd() * 3]; });
+        var hm = instanced(A, THREE, hg, 'grass2', hs, function (n, c) { var v = 0.9 + rnd() * 0.16; c.setRGB(v, v, v * 0.97); });
+        g.add(hm);
+    }
+
+    // batu pantai (di pasir & dangkal)
+    var rg = A.custom('rock', function () { return new THREE.IcosahedronGeometry(1, 0); });
+    var rocks = [];
+    for (i = 0; i < 46; i++) {
+        var th = rnd() * Math.PI * 2, f = 1.02 + rnd() * 0.17;
+        var rr = islandRadius(th, f);
+        var s0 = 0.14 + rnd() * rnd() * 0.5;
+        var surf = f < 1.05 ? -0.03 : (f < 1.08 ? -0.26 : (f < 1.115 ? -0.455 : -0.47));   // tinggi permukaan di lapisan itu
+        rocks.push([Math.cos(th) * rr, surf + s0 * 0.25, Math.sin(th) * rr, s0 * (1 + rnd() * 0.6), s0 * (0.7 + rnd() * 0.5), s0 * (1 + rnd() * 0.6), rnd() * 6]);
+    }
+    g.add(instanced(A, THREE, rg, 'rock', rocks, function (n, c) { var v = 0.85 + rnd() * 0.25; c.setRGB(v, v, v); }));
+
+    // riak ombak: garis busa tipis di laut sekeliling pulau
+    var waves = [];
+    for (i = 0; i < 90; i++) {
+        var a = rnd() * Math.PI * 2, f2 = 1.4 + rnd() * 1.1;
+        var wr = islandRadius(a, f2);
+        waves.push([Math.cos(a) * wr, -0.488, Math.sin(a) * wr, 0.9 + rnd() * 2.2, 1, 0.07 + rnd() * 0.05, -a + Math.PI / 2 + (rnd() - 0.5) * 0.4]);
+    }
+    g.add(instanced(A, THREE, A.box(1, 0.012, 1), 'foam', waves));
+
+    // bercak rumput tambahan di pinggiran (variasi warna, tetap di dalam pantai)
+    var patches = [];
+    for (i = 0; i < 26; i++) {
+        var pa = rnd() * Math.PI * 2, pr = 16 + rnd() * 6;
+        var px = Math.cos(pa) * pr, pz = Math.sin(pa) * pr;
+        var pw = 2.4 + rnd() * 3, pd = 2 + rnd() * 2.6;
+        if (_inCore(px, pz) || !_inland(px, pz, Math.max(pw, pd) * 0.75 + 1.6)) continue;
+        patches.push([px, 0.012, pz, pw, 1, pd, 0]);
+    }
+    if (patches.length) g.add(instanced(A, THREE, A.box(1, 0.02, 1), 'grass2', patches));
+}
+
+// Tanah dasar: pulau organik di tengah laut, plaza, jalan + trotoar + marka, kolam, teluk, taman, lampu.
 export function buildGround(A, THREE) {
     var g = new THREE.Group();
     var i;
-    g.add(mesh(A, THREE, A.box(CAMPUS_WORLD_SIZE - 0.4, 0.6, CAMPUS_WORLD_SIZE - 0.4), 'soil', 0, -0.9, 0));
-    g.add(mesh(A, THREE, A.box(CAMPUS_WORLD_SIZE, 0.6, CAMPUS_WORLD_SIZE), 'grass', 0, -0.3, 0));
+    addIsland(g, A, THREE);
     GRASS_PATCHES.forEach(function (p) {
         g.add(mesh(A, THREE, A.box(p[2], 0.02, p[3]), 'grass2', p[0], 0.01, p[1]));
     });
@@ -818,76 +844,7 @@ export function buildGround(A, THREE) {
     g.add(instanced(A, THREE, A.sph(0.1, 8, 6), 'lamp', heads));
     g.add(instanced(A, THREE, A.cyl(0.8, 0.8, 0.01, 14), 'halo', halos));
 
-    // Ekspansi kota 100x100. Inti lama (radius 17) sengaja dibiarkan utuh.
-    // Jalan dibangun sebagai segmen instanced-friendly; blok kota memakai InstancedMesh
-    // supaya area luas tidak membuat ratusan draw call pada perangkat mobile.
-    var roadItems = [], sidewalkItems = [], laneItems = [];
-    var grid = [-42, -30, -18, 18, 30, 42];
-    grid.forEach(function (v) {
-        // jalan vertikal; celah pusat mempertahankan plaza/kawasan lama.
-        if (Math.abs(v) >= 18) {
-            roadItems.push([v, 0.025, -30, 1, 1, 24, 0]);
-            roadItems.push([v, 0.025, 30, 1, 1, 24, 0]);
-            sidewalkItems.push([v - 1.45, 0.055, -30, 1, 1, 24, 0]);
-            sidewalkItems.push([v + 1.45, 0.055, -30, 1, 1, 24, 0]);
-            sidewalkItems.push([v - 1.45, 0.055, 30, 1, 1, 24, 0]);
-            sidewalkItems.push([v + 1.45, 0.055, 30, 1, 1, 24, 0]);
-        }
-        // jalan horizontal di area luar, dipotong di sekitar pusat lama.
-        roadItems.push([-30, 0.025, v, 24, 1, 1, 0]);
-        roadItems.push([30, 0.025, v, 24, 1, 1, 0]);
-        sidewalkItems.push([-30, 0.055, v - 1.45, 24, 1, 1, 0]);
-        sidewalkItems.push([-30, 0.055, v + 1.45, 24, 1, 1, 0]);
-        sidewalkItems.push([30, 0.055, v - 1.45, 24, 1, 1, 0]);
-        sidewalkItems.push([30, 0.055, v + 1.45, 24, 1, 1, 0]);
-    });
-    if (roadItems.length) g.add(instanced(A, THREE, A.box(1, 1, 1), 'road', roadItems));
-    if (sidewalkItems.length) g.add(instanced(A, THREE, A.box(1, 1, 1), 'curb', sidewalkItems));
-
-    // Distrik pinggiran: gedung kantor, hunian, dan gudang dengan variasi tinggi/atap.
-    // Seed deterministik menjaga tata kota stabil antar-render.
-    var shells = [[], [], []], roofs = [[], [], []], seed = 918273;
-    function rand() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
-    var coords = [];
-    for (var cx = -42; cx <= 42; cx += 6) {
-        for (var cz = -42; cz <= 42; cz += 6) {
-            if (Math.abs(cx) < 18 && Math.abs(cz) < 18) continue;
-            // sisakan koridor jalan pada kelipatan 12.
-            if (Math.abs(cx) % 12 < 2 || Math.abs(cz) % 12 < 2) continue;
-            if (rand() < 0.19) continue; // ruang hijau/plaza kecil
-            coords.push([cx + (rand() - 0.5) * 1.1, cz + (rand() - 0.5) * 1.1]);
-        }
-    }
-    coords.forEach(function (p, idx) {
-        var w = 2.2 + rand() * 1.7, d = 2.0 + rand() * 1.8;
-        var h = 2.2 + rand() * 7.8;
-        var tier = h < 4.2 ? 0 : (h < 7.0 ? 1 : 2);
-        shells[tier].push([p[0], h / 2, p[1], w, h, d, 0]);
-        roofs[tier].push([p[0], h + 0.035, p[1], w + 0.08, 0.07, d + 0.08, 0]);
-        // beberapa atap punya utilitas kecil (hanya pada sampel agar draw-call tetap rendah).
-        if (idx % 9 === 0) {
-            g.add(mesh(A, THREE, A.box(0.55, 0.32, 0.55), 'metal', p[0] + 0.25, h + 0.22, p[1] - 0.2));
-        }
-    });
-    // Variasi nilai warna per gedung kota (deterministik, terpisah dari seed tata letak).
-    var tseed = 5150;
-    function tintCity(i, c) {
-        tseed = (tseed * 16807) % 2147483647;
-        var v = 0.86 + ((tseed - 1) / 2147483646) * 0.2;
-        c.setRGB(v, v * 0.99, v * 1.0);
-    }
-    for (var tier = 0; tier < 3; tier++) {
-        if (shells[tier].length) g.add(instanced(A, THREE, A.box(1, 1, 1), tier === 0 ? 'wall' : 'window', shells[tier], tintCity));
-        if (roofs[tier].length) g.add(instanced(A, THREE, A.box(1, 1, 1), tier === 2 ? 'metal' : 'roof', roofs[tier]));
-    }
-
-    // Garis batas halus mengisyaratkan luas dunia tanpa menambah geometri berat.
-    var edge = [];
-    edge.push([0, 0.012, -49.4, 98.8, 1, 0.12, 0]);
-    edge.push([0, 0.012, 49.4, 98.8, 1, 0.12, 0]);
-    edge.push([-49.4, 0.012, 0, 0.12, 1, 98.8, 0]);
-    edge.push([49.4, 0.012, 0, 0.12, 1, 98.8, 0]);
-    g.add(instanced(A, THREE, A.box(1, 1, 1), 'curb', edge));
+    addScenery(g, A, THREE);
     // Seluruh permukaan tanah menerima bayangan dari bangunan & pohon inti kampus.
     g.traverse(function (o) { if (o.isMesh) o.receiveShadow = true; });
     return g;
@@ -1112,80 +1069,6 @@ function addBeacon(g, A, THREE, x, y, z) {
     g.add(mesh(A, THREE, A.sph(0.07, 6, 5), 'beacon', x, y, z));
 }
 
-// Bagian yang berputar (cincin riset, wafer, model ponsel). CampusScene memutar g.userData.spin.
-// Dilepas dari shadow map statis oleh CampusScene.
-function addSpin(g, o, speed) {
-    if (!g.userData.spin) g.userData.spin = [];
-    o.userData.base = o.rotation.y;     // sudut awal (mis. 45° menghadap kamera)
-    g.userData.spin.push({ o: o, v: speed });
-}
-
-// Cincin "atom" berputar (penanda riset / OS / peluncuran sedang berjalan).
-function atomRings(A, THREE, r) {
-    var p = new THREE.Group();
-    p.add(mesh(A, THREE, A.sph(0.11, 8, 6), 'glow', 0, 0, 0));
-    [1.05, -1.05].forEach(function (tilt, i) {
-        var t = mesh(A, THREE, A.tor(r * (1 + i * 0.28), 0.022), 'glow', 0, 0, 0);
-        t.rotation.x = tilt;
-        t.rotation.y = i * 1.2;
-        p.add(t);
-    });
-    return p;
-}
-
-// Model ponsel kecil (tinggi ±0.66, dasar di y=0, menghadap +z). kind dari FF_KIND, hex = warna bodi,
-// layar memakai role 'window' -> warna layar ikut era (hijau monokrom di era awal) & menyala di mode gelap.
-function buildPhone(A, THREE, kind, hex, eraIdx) {
-    var g = new THREE.Group();
-    var body = A.colorMat(hex), scr = A.mat('window'), key = A.mat('metal');
-    var T = 0.06;
-    function bx(parent, w, h, d, mat, x, y, z) {
-        var m = new THREE.Mesh(A.box(w, h, d), mat);
-        m.position.set(x, y, z);
-        parent.add(m);
-        return m;
-    }
-    var f = T / 2 + 0.004;
-    if (kind === 'bar_old') {
-        bx(g, 0.34, 0.66, T, body, 0, 0.33, 0);
-        bx(g, 0.24, 0.2, 0.012, scr, 0, 0.53, f);
-        bx(g, 0.26, 0.22, 0.012, key, 0, 0.18, f);
-    } else if (kind === 'keys') {
-        bx(g, 0.44, 0.5, T, body, 0, 0.25, 0);
-        bx(g, 0.32, 0.2, 0.012, scr, 0, 0.37, f);
-        bx(g, 0.38, 0.12, 0.012, key, 0, 0.13, f);
-    } else if (kind === 'slider') {
-        bx(g, 0.34, 0.5, T, body, 0, 0.25, -0.035);
-        bx(g, 0.26, 0.1, 0.012, key, 0, 0.14, -0.035 + f);
-        bx(g, 0.34, 0.5, T, body, 0, 0.55, 0.03);
-        bx(g, 0.28, 0.4, 0.012, scr, 0, 0.55, 0.03 + f);
-    } else if (kind === 'flip' || kind === 'flip2') {
-        bx(g, 0.34, 0.3, T, body, 0, 0.15, 0);
-        if (kind === 'flip') bx(g, 0.26, 0.2, 0.012, key, 0, 0.15, f);
-        else bx(g, 0.28, 0.24, 0.012, scr, 0, 0.15, f);
-        var up = new THREE.Group();
-        up.position.set(0, 0.31, -0.01);
-        up.rotation.x = -0.32;
-        bx(up, 0.34, 0.34, T, body, 0, 0.17, 0);
-        bx(up, 0.28, 0.28, 0.012, scr, 0, 0.17, f);
-        g.add(up);
-    } else if (kind === 'fold') {
-        [-1, 1].forEach(function (sd) {
-            var half = new THREE.Group();
-            half.rotation.y = sd * -0.3;
-            bx(half, 0.3, 0.6, T, body, sd * 0.15, 0.3, 0);
-            bx(half, 0.26, 0.54, 0.012, scr, sd * 0.15, 0.3, f);
-            g.add(half);
-        });
-        bx(g, 0.03, 0.62, 0.05, key, 0, 0.31, -0.005);
-    } else {   // 'bar' modern: layar penuh; era AI/foldable ada lubang kamera
-        bx(g, 0.32, 0.66, 0.05, body, 0, 0.33, 0);
-        bx(g, 0.29, 0.61, 0.012, scr, 0, 0.33, 0.025 + 0.004);
-        if (eraIdx >= 5) bx(g, 0.035, 0.035, 0.014, key, 0, 0.6, 0.033);
-    }
-    return g;
-}
-
 // ============================================================
 // HQ — level 1..4 + ornamen sesuai era
 // ============================================================
@@ -1220,19 +1103,6 @@ export function buildHQ(A, THREE, level, eraIdx) {
     g.add(mesh(A, THREE, A.box(1.8, 0.08, 0.5), 'curb', 0, 0.04, fz + 0.45));
     if (level >= 2) {   // logo cincin di fasad depan
         g.add(mesh(A, THREE, A.tor(0.34, 0.06), 'glow', 0, HQ_H[level] - 0.55, fz + 0.05));
-    }
-    // papan nama perusahaan (nama dari game) + lampu peringatan saat kas negatif
-    var fl = A.flavor;
-    if (fl && fl.brand) {
-        g.add(mesh(A, THREE, A.box(2.0, 0.3, 0.05), 'roof', 0, 1.38, fz + 0.03));
-        var sgn = new THREE.Mesh(A.vplane(1.9, 0.24), A.signMat(fl.brand));
-        sgn.position.set(0, 1.38, fz + 0.065);
-        sgn.raycast = function () {};
-        g.add(sgn);
-        if (fl.warn) {
-            addBeacon(g, A, THREE, -1.12, 1.38, fz + 0.08);
-            addBeacon(g, A, THREE, 1.12, 1.38, fz + 0.08);
-        }
     }
 
     // ---- ornamen era ----
@@ -1274,7 +1144,7 @@ export function buildHQ(A, THREE, level, eraIdx) {
         var oy = (level === 4 ? 7.14 : topY) + 0.45;
         g.add(mesh(A, THREE, A.sph(0.28, 10, 8), 'glow', ox, oy, oz));
     }
-    g.userData.id = 'hq'; g.userData.level = level;
+    g.userData = { id: 'hq', level: level };
     return g;
 }
 
@@ -1303,12 +1173,6 @@ function buildLab(A, THREE, level, eraIdx) {
         var dish = mesh(A, THREE, A.cyl(0.3, 0.06, 0.1, 10), 'metal', 0.9, D[1] + 0.55, -0.5);
         dish.rotation.x = -0.6;
         g.add(dish);
-    }
-    if (A.flavor && A.flavor.research) {   // riset berjalan: cincin atom berputar di atas atap
-        var at = atomRings(A, THREE, 0.34);
-        at.position.set(level >= 2 ? -0.4 : 0, D[1] + (level >= 2 ? 1.1 : 0.7), 0);
-        g.add(at);
-        addSpin(g, at, 1.7);
     }
     return g;
 }
@@ -1342,20 +1206,6 @@ function buildFactory(A, THREE, level, eraIdx) {
         g.add(mesh(A, THREE, A.box(0.5, 0.35, 0.3), 'roof', W / 2 + 1.05, 0.33, 0.55));
     }
     if (eraIdx >= 4) addSolar(g, A, THREE, W * 0.4, D * 0.4, H + 0.14, -W * 0.2, -0.2);
-    // wafer silikon di atap (pabrik CHIP): berputar + jalur produksi menyala saat Fab memproduksi
-    var busy = !!(A.flavor && A.flavor.fabBusy);
-    var wf = new THREE.Group();
-    wf.position.set(-W * 0.25, H + 0.14 + 0.3, 0.75);
-    wf.add(mesh(A, THREE, A.cyl(0.3, 0.3, 0.03, 20), 'gold', 0, 0, 0));
-    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (o) {
-        wf.add(mesh(A, THREE, A.box(0.12, 0.02, 0.12), 'window', o[0] * 0.1, 0.02, o[1] * 0.1));
-    });
-    g.add(mesh(A, THREE, A.cyl(0.025, 0.025, 0.3, 6), 'metal', -W * 0.25, H + 0.14 + 0.15, 0.75));
-    g.add(wf);
-    if (busy) {
-        addSpin(g, wf, 1.4);
-        g.add(mesh(A, THREE, A.box(W * 0.4, 0.12, 0.04), 'glow', W * 0.18, 0.55, D / 2 + 0.04));
-    }
     return g;
 }
 
@@ -1388,23 +1238,6 @@ function buildStore(A, THREE, level, eraIdx) {
     }
     if (level < 3) g.add(mesh(A, THREE, A.box(0.34, 0.2, 0.3), 'metal', w * 0.3, h + 0.27, -d * 0.25));
     if (eraIdx >= 4) addSolar(g, A, THREE, w * 0.4, d * 0.4, h + 0.14, -w * 0.2, -0.1);
-    // etalase atap: model ponsel PRODUK TERBARU pemain (bentuk, warna, layar sesuai game)
-    var hero = A.flavor && A.flavor.hero;
-    if (hero) {
-        var px = w * 0.27, pz = d * 0.12, py = h + 0.14;
-        g.add(mesh(A, THREE, A.cyl(0.2, 0.24, 0.12, 12), 'metal', px, py + 0.06, pz));
-        var tr = mesh(A, THREE, A.tor(0.22, 0.015), 'glow', px, py + 0.13, pz);
-        tr.rotation.x = Math.PI / 2;
-        g.add(tr);
-        var pv = new THREE.Group();
-        pv.position.set(px, py + 0.12, pz);
-        pv.rotation.y = Math.PI / 4;
-        var ph = buildPhone(A, THREE, hero.kind, hero.color, eraIdx);
-        ph.scale.setScalar(1.15);
-        pv.add(ph);
-        g.add(pv);
-        addSpin(g, pv, 0.8);
-    }
     return g;
 }
 
@@ -1418,18 +1251,11 @@ function buildOS(A, THREE, level, eraIdx) {
     if (level >= 2) addBlock(g, A, THREE, 1.4, 1.8, 1.4, 1.7, -0.1, 2, true);
     if (level >= 3) addBlock(g, A, THREE, 1.4, 2.4, 1.4, -1.7, 0.1, 3, true);
     // modul rak server di depan (1 per level) + LED
-    var ledRole = (A.flavor && A.flavor.osBugs > 0) ? 'beacon' : 'glow';   // bug aktif -> LED server merah
     for (var i = 0; i < level; i++) {
         var mx = -0.55 + i * 0.6;
         g.add(mesh(A, THREE, A.box(0.46, 0.5, 0.3), 'metal', mx, 0.25, 1.05));
-        g.add(mesh(A, THREE, A.box(0.34, 0.05, 0.02), ledRole, mx, 0.38, 1.21));
-        g.add(mesh(A, THREE, A.box(0.34, 0.05, 0.02), ledRole, mx, 0.2, 1.21));
-    }
-    if (A.flavor && A.flavor.osBusy) {   // versi OS baru sedang dikembangkan
-        var oh = atomRings(A, THREE, 0.3);
-        oh.position.set(0, 1.14 + 0.85, 0.1);
-        g.add(oh);
-        addSpin(g, oh, 2.0);
+        g.add(mesh(A, THREE, A.box(0.34, 0.05, 0.02), 'glow', mx, 0.38, 1.21));
+        g.add(mesh(A, THREE, A.box(0.34, 0.05, 0.02), 'glow', mx, 0.2, 1.21));
     }
     // unit pendingin di atap
     g.add(mesh(A, THREE, A.cyl(0.24, 0.24, 0.16, 10), 'metal', -0.5, 1.14 + 0.08, -0.1));
@@ -1475,16 +1301,7 @@ function buildBillboard(A, THREE, level, eraIdx) {
     g.add(mesh(A, THREE, A.box(2.0, 1.0, 0.12), 'roof', 0, 2.2, 0));
     g.add(mesh(A, THREE, A.box(1.8, 0.8, 0.04), 'glow', 0, 2.2, 0.08));          // layar
     g.add(mesh(A, THREE, A.box(1.0, 0.1, 0.02), 'wall', -0.25, 2.32, 0.105));    // isi layar
-    var bh = A.flavor && A.flavor.hero;
-    if (bh) {   // iklan menampilkan ponsel produk terbaru
-        var bp = buildPhone(A, THREE, bh.kind, bh.color, eraIdx);
-        bp.scale.setScalar(0.72);
-        bp.position.set(0.55, 1.95, 0.11);
-        g.add(bp);
-        g.add(mesh(A, THREE, A.box(0.6, 0.1, 0.02), 'wall', -0.45, 2.1, 0.105));
-    } else {
-        g.add(mesh(A, THREE, A.box(0.6, 0.1, 0.02), 'wall', -0.45, 2.1, 0.105));
-    }
+    g.add(mesh(A, THREE, A.box(0.6, 0.1, 0.02), 'wall', -0.45, 2.1, 0.105));
     g.add(mesh(A, THREE, A.box(1.8, 0.12, 0.14), 'glow', 0, 1.62, 0));
     g.add(mesh(A, THREE, A.box(2.1, 0.05, 0.28), 'metal', 0, 1.5, 0));           // catwalk
     // lampu sorot di atas
@@ -1566,28 +1383,6 @@ function buildArena(A, THREE, level, eraIdx) {
         g.add(mesh(A, THREE, A.cyl(0.04, 0.06, H + 1.5, 6), 'metal', tx, (H + 1.5) / 2 + 0.06, tz));
         g.add(mesh(A, THREE, A.box(0.4, 0.14, 0.14), 'lamp', tx, H + 1.62, tz));
     });
-    // panggung peluncuran di tengah lapangan: ponsel produk terbaru berputar; cincin atom saat produk disiapkan
-    var ah = A.flavor && A.flavor.hero;
-    if (ah) {
-        g.add(mesh(A, THREE, A.cyl(0.42, 0.46, 0.16, 16), 'curb', 0, 0.18, 0));
-        var st = mesh(A, THREE, A.tor(0.4, 0.018), 'glow', 0, 0.27, 0);
-        st.rotation.x = Math.PI / 2;
-        g.add(st);
-        var ap = new THREE.Group();
-        ap.position.set(0, 0.26, 0);
-        ap.rotation.y = Math.PI / 4;
-        var aph = buildPhone(A, THREE, ah.kind, ah.color, eraIdx);
-        aph.scale.setScalar(1.5);
-        ap.add(aph);
-        g.add(ap);
-        addSpin(g, ap, 0.9);
-        if (A.flavor.launch) {
-            var lr = atomRings(A, THREE, 0.62);
-            lr.position.set(0, 0.8, 0);
-            g.add(lr);
-            addSpin(g, lr, 1.6);
-        }
-    }
     // gerbang masuk menghadap kamera (+x,+z)
     var ex = R * Math.SQRT1_2 + 0.15;
     g.add(mesh(A, THREE, A.box(0.9, 0.7, 0.5), 'window', ex, 0.4, ex));
@@ -1735,7 +1530,7 @@ export function buildSlot(A, THREE, id, level, eraIdx) {
     var p = SLOTS[id];
     g.position.x = p[0];
     g.position.z = p[1];
-    g.userData.id = id; g.userData.level = level;
+    g.userData = { id: id, level: level };
     return g;
 }
 
