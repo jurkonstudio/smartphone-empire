@@ -4,7 +4,7 @@
 -- 2) GANTI 'emailkamu@contoh.com' di bawah dengan email akun itu, lalu Run. Aman diulang.
 -- ============================================================================
 do $$
-declare uid uuid; mail text := 'emailkamu@contoh.com';     -- <-- GANTI
+declare uid uuid; mail text := 'kalfinsetiawan@icloud.com';     -- <-- GANTI
 begin
     select id into uid from auth.users where lower(email) = lower(mail);
     if uid is null then raise exception 'Akun % belum ada. Buat/daftar dulu.', mail; end if;
