@@ -116,7 +116,9 @@ export const TEXT_FIX_I18N = {
         'mock.pack.charger_w': 'Charger {w}W',
         'mock.pack.no_charger': 'Tanpa charger',
         'mock.pack.earphone': 'Earphone berkabel',
-        'mock.pack.hint_usbc': 'Riset USB Tipe-C untuk kabel modern.'
+        'mock.pack.hint_usbc': 'Riset USB Tipe-C untuk kabel modern.',
+        // ---- Publik: feed ulasan ----
+        'opinion.feed.more': 'Lihat {n} ulasan lainnya'
     },
     en: {
         'silstore.tab.buy': 'Buy',
@@ -219,6 +221,8 @@ export const TEXT_FIX_I18N = {
         'mock.pack.charger_w': 'Charger {w}W',
         'mock.pack.no_charger': 'No charger',
         'mock.pack.earphone': 'Wired earphones',
-        'mock.pack.hint_usbc': 'Research USB Type-C for the modern cable.'
+        'mock.pack.hint_usbc': 'Research USB Type-C for the modern cable.',
+        // ---- Public: review feed ----
+        'opinion.feed.more': 'Show {n} more reviews'
     }
 };
