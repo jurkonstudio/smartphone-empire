@@ -12,6 +12,10 @@ export const SILICON_COSTS = {
     // Beli lagi saat boost aktif = waktu ditambah (nilai sisa dikonversi bila ganti kecepatan).
     // maxSeconds = batas total waktu boost yang boleh ditimbun.
     speed: {
+        // [FREE BOOST] Jatah percepatan gratis: `freePerWindow` kali per `freeWindowHours` jam (waktu NYATA).
+        // Hitungan mulai dari pemakaian gratis pertama; setelah window lewat, jatah kembali penuh.
+        freePerWindow: 2,
+        freeWindowHours: 24,
         cost: 10,
         maxSeconds: 1800,
         packs: {
