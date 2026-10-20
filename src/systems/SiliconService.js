@@ -24,6 +24,7 @@ import { t } from '../core/LanguageService.js';
 import { SILICON_COSTS } from '../data/silicon.data.js';
 import { DEV_BUILD } from '../config/dev.config.js';
 import { CloudService } from '../services/CloudService.js';
+import { SaveService } from '../core/SaveService.js';
 import { WALLET, getCashPerSil } from '../data/silicon.data.js';
 
 // [HARDENING] Kredit SIL hanya sah dari sumber ini (produksi). 'cheat' & lainnya ditolak.
@@ -51,6 +52,22 @@ var WALLET_REQUIRE_CONSENT = true;
 // _serverFailed    = true bila pembacaan server gagal/timeout (jatuh ke saldo lokal agar tidak '…' selamanya).
 var _serverConfirmed = false;
 var _serverFailed = false;
+
+// [FIX SALDO BALIK KE 10] Penghitung perubahan saldo. CloudSync membandingkannya sebelum/sesudah menarik
+// saldo dari server: bila berubah di tengah jalan (belanja/penukaran), hasil tarikan dianggap basi & dibuang.
+var _epoch = 0;
+
+// [FIX SALDO BALIK KE 10] Saldo server HARUS ikut tersimpan ke save lokal segera. Dulu save lokal hanya
+// diperbarui autosave 30 dtk (dan dilewati saat tab di latar belakang), sehingga saat tab dimuat ulang
+// Chrome Android memakai save lama (saldo lama / default 10) dan Tab Tukar membaca angka itu.
+var _persistTimer = null;
+function _persistSoon() {
+    if (_persistTimer) clearTimeout(_persistTimer);
+    _persistTimer = setTimeout(function () {
+        _persistTimer = null;
+        try { SaveService.save(state, { silent: true }); } catch (e) {}
+    }, 400);
+}
 
 export var SILICON_ACTIONS = [
     { id: 'research', group: 'research',     cost: 20, icon: '🔬', ready: true },
@@ -107,6 +124,16 @@ export var SiliconService = {
     },
 
     isServerConfirmed() { return _serverConfirmed; },
+
+    getEpoch() { return _epoch; },
+
+    // true bila saldo yang tampil BOLEH dipercaya untuk keputusan UI (aktif/nonaktif tombol).
+    // Mode cloud: hanya setelah saldo server terbaca pada sesi ini. DEV/offline: selalu true.
+    isReady() {
+        if (DEV_BUILD || !CLOUD_ONLY) return true;
+        if (!_cloudOn()) return true;
+        return _serverConfirmed;
+    },
 
     // Dipanggil CloudSync: true = saldo server sudah dibaca, false = gagal membaca.
     markServerSync(ok) {
@@ -175,6 +202,7 @@ export var SiliconService = {
         if (!amount || amount <= 0 || !isFinite(amount)) return { ok: false, reason: 'Jumlah tidak valid.' };
         if (!DEV_BUILD && !ALLOWED_CREDIT.test(String(reason || ''))) return { ok: false, reason: 'Sumber kredit tidak sah.' };
         if (!_cloudOn()) return CLOUD_REQUIRED;
+        _epoch++;
         state.data.silicon = (state.data.silicon || 0) + amount;
         _pushHistory('earn', amount, reason || 'reward');
         bus.emit('silicon:changed', { balance: state.data.silicon, delta: amount, reason: String(reason || 'reward') });
@@ -188,11 +216,44 @@ export var SiliconService = {
         if (!amount || amount <= 0 || !isFinite(amount)) return { ok: false, reason: 'Jumlah tidak valid.' };
         if (!_cloudOn()) return CLOUD_REQUIRED;
         if (!this.canAffordRaw(amount)) return { ok: false, reason: 'Silicon tidak cukup.' };
+        _epoch++;
         state.data.silicon = (state.data.silicon || 0) - amount;
         _pushHistory('spend', -amount, reason || 'spend');
         bus.emit('silicon:changed', { balance: state.data.silicon, delta: -amount, reason: String(reason || 'spend') });
         bus.emit('state:changed', state.data);
         return { ok: true, balance: state.data.silicon };
+    },
+
+    // [FIX TUKAR SIL] Potong SIL SERVER-DULU (tanpa potong optimistis lokal).
+    // Hadiah (mis. uang tunai) hanya boleh diberikan SETELAH fungsi ini mengembalikan ok:true.
+    // Tidak ada potong-lokal -> tidak ada refund -> saldo tidak naik-turun, dan uang tidak bisa dobel.
+    // request_id yang sama dipakai ulang saat retry (server idempoten: tidak memotong dua kali).
+    async spendServer(amount, reason) {
+        amount = Math.floor(amount);
+        if (!amount || amount <= 0 || !isFinite(amount)) return { ok: false, reason: 'Jumlah tidak valid.' };
+        if (!_cloudOn()) return CLOUD_REQUIRED;
+        var BUSINESS = /insufficient_silicon|invalid_amount|invalid_request|not_authenticated|not_signed_in/i;
+        var reqId = 'sp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        _epoch++;
+        try {
+            var res = null;
+            for (var i = 0; i < 3; i++) {
+                try { res = await CloudService.spendSiliconServer(amount, reqId, reason || 'spend'); }
+                catch (e) { res = { ok: false, reason: (e && e.message) || 'network' }; }
+                if (res && res.ok) break;
+                if (res && BUSINESS.test(String(res.reason || '') + ' ' + String(res.code || ''))) break;
+                await new Promise(function (r) { setTimeout(r, 700 * (i + 1)); });
+            }
+            if (!res || !res.ok) {
+                var msg = String((res && res.reason) || '');
+                if (/insufficient_silicon/i.test(msg)) return { ok: false, reason: 'Silicon tidak cukup.' };
+                return { ok: false, reason: 'Koneksi ke server gagal. SIL tidak dipotong, coba lagi.' };
+            }
+            if (typeof res.balance === 'number') this.applyServerBalance(res.balance);
+            return { ok: true, balance: state.data.silicon || 0, spent: amount };
+        } finally {
+            _epoch++;
+        }
     },
 
     // Bayar biaya `amount` SIL. Sesuai mode dompet, sebagian/semua boleh dibayar dengan uang ($).
@@ -223,10 +284,13 @@ export var SiliconService = {
         _serverConfirmed = true; _serverFailed = false;
         if (old === newBalance) {
             if (firstConfirm) { bus.emit('silicon:changed', { balance: newBalance, delta: 0, fromServer: true }); }
+            _persistSoon();
             return { ok: true, balance: newBalance, changed: false };
         }
         var delta = newBalance - old;
+        _epoch++;
         state.data.silicon = newBalance;
+        _persistSoon();
         _pushHistory('sync', delta, 'server-sync');
         bus.emit('silicon:changed', { balance: newBalance, delta: delta, fromServer: true });
         bus.emit('state:changed', state.data);
@@ -363,6 +427,7 @@ export var SiliconService = {
     },
 
     _refund(amount, reason) {
+        _epoch++;
         state.data.silicon = (state.data.silicon || 0) + amount;
         _pushHistory('earn', amount, 'refund:' + reason);
         // [FIX] refund:true -> CloudSync membatalkan belanja yang belum terkirim ke server.
