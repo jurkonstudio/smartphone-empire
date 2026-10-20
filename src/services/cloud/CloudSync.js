@@ -181,9 +181,15 @@ async function syncSiliconOnLogin() {
             if (serverBal !== localBal) {
                 console.info('[CloudSync] Sync Server (' + serverBal + ') -> Lokal (' + localBal + ')');
                 SiliconService.applyServerBalance(serverBal);
+            } else {
+                SiliconService.markServerSync(true);
+                bus.emit('silicon:changed', { balance: serverBal, delta: 0, fromServer: true });
             }
+        } else {
+            SiliconService.markServerSync(false);
         }
     } catch (e) {
+        try { SiliconService.markServerSync(false); } catch (_) {}
         console.warn('[CloudSync] Gagal sinkronisasi saldo, mempertahankan saldo lokal:', e);
     } finally {
         _siliconSyncing = false;
