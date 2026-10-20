@@ -972,6 +972,7 @@ function bindStateEvents() {
 
     bus.on('lang:changed', function () { renderAll(); updateTitle(); });
     bus.on('silicon:changed', function () { renderHeaderOnly(); });
+    bus.on('silicon:display', function () { renderHeaderOnly(); });
 
     // Dompet Universal: beri tahu pemain saat SIL/uang dipakai lintas mata uang.
     (function () {
