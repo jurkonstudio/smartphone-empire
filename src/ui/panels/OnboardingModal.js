@@ -343,7 +343,12 @@ export function showOnboarding() {
             var row = (list.rows || []).find(function (r) { return r.slot === slot; }) || null;
 
             ToastService.success(t('cloud.auth.signed_in'));
-            if (row) { foundRow = row; render('found'); }
+            if (row) {
+                // [FIX] Akun sudah punya progres cloud -> langsung muat & masuk game (tanpa klik lagi).
+                // Bila gagal memuat, layar 'found' tetap ada dengan pesan error + tombol coba lagi.
+                foundRow = row; render('found');
+                doContinue();
+            }
             else { render('start'); }
         }
 
@@ -511,6 +516,13 @@ export function showOnboarding() {
         });
 
         render('start');
+
+        // [FIX] Sudah login saat layar ini dibuka (sesi tersimpan / baru login): cek progres cloud sekarang.
+        // Dulu hanya dicek pada alur login manual atau pemulihan sesi, sehingga form "perusahaan baru" muncul
+        // meski akun sudah punya save.
+        if (cloudOk && _isSignedIn()) {
+            afterSignedIn().catch(function () { if (!finished && current === 'checking') render('start'); });
+        }
 
         if (cloudOk && !_isSignedIn() && typeof SupabaseAdapter.hasStoredSession === 'function' && SupabaseAdapter.hasStoredSession()) {
             CloudService.restoreSession().then(function (r) {
