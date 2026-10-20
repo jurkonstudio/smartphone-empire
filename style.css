@@ -3258,6 +3258,15 @@ body {
     touch-action: none;           /* drag & pinch milik peta */
 }
 .home-map canvas { display: block; touch-action: none; }
+/* Vignette lembut: fokus ke tengah peta, tepi tampak rapi (tidak menangkap sentuhan) */
+.home-map:not(.office-map)::after {
+    content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 45%, transparent 58%, rgba(15, 23, 42, .16) 100%);
+}
+html[data-theme="dark"] .home-map:not(.office-map)::after {
+    background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0, 0, 0, .34) 100%);
+}
+html[data-perf="lite"] .home-map:not(.office-map)::after { display: none; }
 
 /* ---------- DOCK ---------- */
 .home-dock {
