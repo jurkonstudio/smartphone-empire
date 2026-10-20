@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/notifications/NotificationRenderer.js  (REPLACE)
 // v3.2 — [DEEP GLASSMORPHISM] Menyesuaikan warna, blur, dan border agar persis seperti iCloud.
 import { t } from '../../core/LanguageService.js';
@@ -30,11 +31,6 @@ var TYPES = {
     news: { rgb: '168,85,247', icon: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 12.5h8M8 16h5"/>' }
 };
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 function normalizeType(type) {
     if (type === 'danger') return 'error';
