@@ -1,4 +1,9 @@
 // FILE: src/systems/NewsSystem.js
+// ============================================================
+// NewsSystem — generator artikel media internasional.
+// Trigger: product:released, milestone penjualan,
+//          time:day-changed (headline bulanan mulai hari ke-2).
+// ============================================================
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import { TIME_CONFIG } from '../config/time.config.js';
@@ -18,14 +23,16 @@ import { getCompetitorReleasesForMonth, getReleaseDay } from '../data/news-compe
 import '../data/news-competitor-releases.s1.data.js';
 // [Sesi 2] Berita rilis kompetitor 2009-2017.
 import '../data/news-competitor-releases.s2.data.js';
-// [Sesi 3] Berita industri 2018-2026 (Monthly Headlines).
+
+// [TAMBAHAN BARU] Import data 2018-2026
 import { MONTHLY_HEADLINES_2018_2026 } from '../data/news-headlines-2018-2026.data.js';
+
 // [Sesi 1] Estimasi reaksi bursa, disesuaikan ke rezim indeks pasar.
 import { estimateNewsMarketReaction } from './MarketIndexAdjuster.js';
 import { getActiveCompetitors, getCompetitorById } from '../data/competitors.data.js';
 
-var MAX_ARTICLES = 60;
-var MAX_COMPETITOR_NEWS_PER_DAY = 2;
+var MAX_ARTICLES = 60; // naik dari 30: berita rilis kompetitor menambah volume
+var MAX_COMPETITOR_NEWS_PER_DAY = 2; // batas toast per pergantian hari
 var _articleSeq = 1;
 
 // ============================================================
@@ -42,8 +49,8 @@ function _currentLang() {
 
 function _getLocalizedHeadline(year, month) {
     var key = year + '-' + month;
-
-    // 1. Cek data baru (2018-2026)
+    
+    // [PERUBAHAN BARU] Prioritaskan data 2018-2026
     var newData = MONTHLY_HEADLINES_2018_2026[key];
     if (newData) {
         var isEn = _currentLang() === 'en';
@@ -58,7 +65,7 @@ function _getLocalizedHeadline(year, month) {
         };
     }
 
-    // 2. Fallback ke data lama (2000-2017)
+    // Fallback ke data lama (2000-2017)
     var base = getHeadlineForMonth(year, month);
     if (!base) return null;
     if (_currentLang() !== 'en') return base;
@@ -86,7 +93,6 @@ function _getLocalizedPrehistory() {
         });
     });
 }
-
 function _toneFromScore(score, reputation) {
     var repBonus = (reputation - 50) / 100;
     var adjusted = score + repBonus * 1.5;
@@ -192,12 +198,19 @@ function _generateArticle(options) {
     };
 }
 
+// ============================================================
+// [V7a-3] _toneToScore — mapping tone headline → skor numerik
+// ============================================================
 function _toneToScore(tone) {
     if (tone === 'positive') return 7.5;
     if (tone === 'negative') return 3.5;
     return 5.5;
 }
 
+// ============================================================
+// [V7a-3] _makeHeadlineArticle — bangun artikel dari headline
+// historis. Struktur kompatibel NewsListPanel + NewsArticleModal.
+// ============================================================
 function _makeHeadlineArticle(h) {
     if (!h) return null;
     var data = state.get();
@@ -208,7 +221,7 @@ function _makeHeadlineArticle(h) {
         for (var i = 0; i < outlets.length; i++) {
             if (outlets[i].id === h.sourceId) { outlet = outlets[i]; break; }
         }
-    } catch (e) { }
+    } catch (e) { /* diamkan */ }
 
     var byline = 'Redaksi ' + (h.source || 'Media');
     var dateline = 'Global';
@@ -220,11 +233,11 @@ function _makeHeadlineArticle(h) {
         try {
             var j = getJournalistForCountry(outlet.country);
             if (j) byline = j;
-        } catch (e) { }
+        } catch (e) { /* diamkan */ }
         try {
             var city = getDatelineForRegion(outlet.region);
             if (city) dateline = city;
-        } catch (e) { }
+        } catch (e) { /* diamkan */ }
         sourceCountry = outlet.country || null;
         sourceRegion = outlet.region || null;
         sourceType = outlet.type || sourceType;
@@ -262,6 +275,9 @@ function _makeHeadlineArticle(h) {
     };
 }
 
+// ============================================================
+// [V7a-3] _makeRecapArticle — artikel arsip pra-2000.
+// ============================================================
 function _makeRecapArticle(h) {
     if (!h) return null;
     var day = h.day || 1;
@@ -298,6 +314,11 @@ function _makeRecapArticle(h) {
     };
 }
 
+// ============================================================
+// [V8] _makeCompetitorReleaseArticle — berita rilis produk /
+// peristiwa kompetitor dunia nyata (news-competitor-releases).
+// Outlet dipilih stabil (hash id) dari outlet yang aktif di tahun itu.
+// ============================================================
 function _hashStr(str) {
     var h = 0;
     for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 100003;
@@ -315,12 +336,14 @@ function _makeCompetitorReleaseArticle(e, day) {
     var byline = 'Redaksi ' + (outlet ? outlet.name : 'Media');
     var dateline = 'Global';
     if (outlet) {
-        try { var j = getJournalistForCountry(outlet.country); if (j) byline = j; } catch (err) { }
-        try { var c = getDatelineForRegion(outlet.region); if (c) dateline = c; } catch (err2) { }
+        try { var j = getJournalistForCountry(outlet.country); if (j) byline = j; } catch (err) { /* diamkan */ }
+        try { var c = getDatelineForRegion(outlet.region); if (c) dateline = c; } catch (err2) { /* diamkan */ }
     }
     var text = en ? e.t_en : e.t;
     if (e.speculative) text += ' ' + t('news.unconfirmed');
 
+    // [Sesi 1] Reaksi pasar saham kompetitor (info untuk UI; harga
+    // sebenarnya diubah StockSystem lewat event news:published).
     var marketImpact = null;
     try {
         marketImpact = estimateNewsMarketReaction(e, e.cid, e.year, e.month);
@@ -362,6 +385,10 @@ function _makeCompetitorReleaseArticle(e, day) {
     };
 }
 
+// ============================================================
+// [V7a-4] _trimArticles — buang artikel non-recap terlama.
+// Arsip (isRecap: true) selalu dipertahankan.
+// ============================================================
 function _trimArticles(articles, max) {
     if (!Array.isArray(articles) || articles.length <= max) return;
     var safety = 0;
@@ -375,7 +402,7 @@ function _trimArticles(articles, max) {
                 break;
             }
         }
-        if (!removed) break;
+        if (!removed) break; // semua sisa adalah recap — biarkan
     }
 }
 
@@ -387,22 +414,30 @@ export var NewsSystem = {
         bus.on('product:milestone-sales', function (payload) {
             NewsSystem._onMilestoneSales(payload);
         });
+        // [V7a-4] Headline bulanan dicek setiap pergantian hari.
+        // Muncul mulai hari ke-2 bulan berjalan.
         bus.on('time:day-changed', function (snapshot) {
             NewsSystem._onMonthlyHeadline(snapshot);
+            // [V8] Berita rilis produk kompetitor dunia nyata.
             NewsSystem._onCompetitorReleases(snapshot);
         });
+        // Re-seed arsip pra-2000 saat bahasa berubah
         bus.on('lang:changed', function () {
             try {
                 var data = state.get();
                 if (data.news) {
                     data.news.recapSeeded = false;
+                    // Hapus recap lama agar di-rebuild dengan bahasa baru
                     data.news.articles = (data.news.articles || []).filter(function (a) { return !a.isRecap; });
                 }
                 NewsSystem.seedPreHistory();
             } catch (err) { console.warn('[NewsSystem] lang reload error:', err); }
         });
 
+        // [V7a-5] Seed arsip pra-2000 saat boot. Idempotent — kalau
+        // recapSeeded sudah true (save lama), fungsi ini langsung return.
         NewsSystem.seedPreHistory();
+
         console.info('[NewsSystem] siap.');
     },
 
@@ -509,6 +544,8 @@ export var NewsSystem = {
         }
     },
 
+    // [V7a-4] Handler headline bulanan. Trigger tiap pergantian hari;
+    // hanya benar-benar menambahkan artikel saat hari >= 2 dan belum ada.
     _onMonthlyHeadline: function (snapshot) {
         try {
             var data = state.get();
@@ -519,6 +556,7 @@ export var NewsSystem = {
             var month = (snapshot && snapshot.currentMonth) || data.time.currentMonth;
             var day = (snapshot && snapshot.currentDay) || data.time.currentDay;
 
+            // Headline muncul mulai hari ke-2 bulan berjalan.
             if (day < 2) return;
 
             var h = _getLocalizedHeadline(year, month);
@@ -527,6 +565,8 @@ export var NewsSystem = {
             var key = year + '-' + month;
             if (data.news.headlineHistory.indexOf(key) !== -1) return;
 
+            // Guard defensif: save lama mungkin sudah punya artikel headline
+            // bulan ini tanpa tercatat di history.
             for (var i = 0; i < data.news.articles.length; i++) {
                 var a = data.news.articles[i];
                 if (a.articleType === 'monthly_headline' &&
@@ -551,6 +591,9 @@ export var NewsSystem = {
         }
     },
 
+    // [V8] Handler berita rilis kompetitor. Dipicu tiap pergantian hari;
+    // artikel muncul pada hari yang ditentukan data (getReleaseDay),
+    // hanya untuk kompetitor yang sedang aktif di tahun game.
     _onCompetitorReleases: function (snapshot) {
         try {
             var data = state.get();
@@ -594,6 +637,8 @@ export var NewsSystem = {
         }
     },
 
+    // [V7a-3] Seed arsip pra-2000. Idempotent via recapSeeded.
+    // Push ke belakang array agar di bawah headline bulanan.
     seedPreHistory: function () {
         try {
             var data = state.get();
