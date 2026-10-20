@@ -493,6 +493,7 @@ function initAdvisorChat() {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 var parent = e.target.parentElement;
+                if (!parent) return;
                 var sendBtn = parent.querySelector('button');
                 if(sendBtn) sendBtn.click();
             }
@@ -504,6 +505,8 @@ function initAdvisorChat() {
         var sendBtn = e.target.closest('button');
         if (sendBtn) {
             var parent = sendBtn.parentElement;
+            // Tombol bisa sudah terlepas dari DOM (dirender ulang oleh handler lain)
+            if (!parent) return;
             var input = parent.querySelector('input[placeholder*="Tanya apa saja"], input[placeholder*="Tanya"]');
             if (input) {
                 e.preventDefault();
@@ -528,7 +531,7 @@ function initAdvisorChat() {
             
             var chipText = chip.innerText.trim();
             var input = document.querySelector('input[placeholder*="Tanya apa saja"]');
-            var parent = chip.parentElement.parentElement; 
+            var parent = chip.parentElement ? chip.parentElement.parentElement : null;
             var chatContainer = document.querySelector('.chat-messages') || parent;
             
             sendChatMessage(chipText, input, chatContainer);
