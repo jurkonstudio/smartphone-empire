@@ -1,7 +1,7 @@
 // Satu-satunya file yang perlu disesuaikan dengan game + Supabase kamu.
 export const CFG = {
   base: '/031411',
-  adminEmail: 'kalfinsetiawan@icloud.com',          // hanya UI; keamanan sebenarnya di RPC/RLS
+  adminCheckRpc: 'is_admin',                        // fungsi SQL di Supabase; admin diverifikasi server, bukan email di kode
   supabaseConfig: '/src/services/cloud/supabase.config.js', // exports: SUPABASE_URL, SUPABASE_KEY, SUPABASE_LIB_URLS
   authStorageKey: 'se-admin-auth',
   pageSize: 50,

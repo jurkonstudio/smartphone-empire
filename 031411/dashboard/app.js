@@ -1,5 +1,4 @@
 import { CFG } from '/031411/dashboard/config.js';
-const ADMIN_EMAIL = CFG.adminEmail;
 const $ = (s, r) => (r || document).querySelector(s);
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { sb: null, players: [], pays: [], sel: null, filter: '', tab: 'ov', logs: [] };
@@ -236,8 +235,12 @@ function showLogin(msg) {
   const m = $('#lm'); if (msg) { m.textContent = msg; m.className = 'msg er'; } else m.className = 'msg';
 }
 async function enter(user) {
-  if (!user || String(user.email || '').toLowerCase() !== ADMIN_EMAIL) {
-    await S.sb.auth.signOut(); showLogin('Akun ini tidak punya akses admin.'); return;
+  if (!user) { showLogin(); return; }
+  let ok = false, why = '';
+  try { const r = await S.sb.rpc(CFG.adminCheckRpc); if (r.error) why = r.error.message; else ok = r.data === true; } catch (e) { why = e.message || String(e); }
+  if (!ok) {
+    await S.sb.auth.signOut();
+    showLogin(why ? 'Verifikasi admin gagal: ' + why + ' (pastikan fungsi ' + CFG.adminCheckRpc + ' sudah dibuat di Supabase)' : 'Akun ini tidak punya akses admin.'); return;
   }
   $('#who').textContent = user.email;
   $('#login').classList.add('hide'); $('#app').classList.remove('hide');
