@@ -172,11 +172,16 @@ async function syncSiliconOnLogin() {
     }
 
     _siliconSyncing = true;
+    var _epoch0 = SiliconService.getEpoch();
+    var _again = false;
     try {
         var res = await _withTimeout(CloudService.getSiliconBalance(), 8000, { ok: false });
         
         // Jika selama menunggu ada potongan baru, batalkan update.
         if (_pendingDebits > 0) return;
+        // [FIX] Saldo berubah (belanja/tukar/kredit) selama permintaan berjalan -> hasil tarikan ini basi
+        // (dulu menimpa saldo baru dengan saldo lama = "SIL naik-turun / balik ke angka lama").
+        if (SiliconService.getEpoch() !== _epoch0) { _again = true; return; }
 
         if (res.ok && typeof res.balance === 'number') {
             var serverBal = Math.floor(res.balance);
@@ -194,6 +199,7 @@ async function syncSiliconOnLogin() {
         console.warn('[CloudSync] Gagal sinkronisasi saldo:', e);
     } finally {
         _siliconSyncing = false;
+        if (_again) _debouncedSyncSilicon();
     }
 }
 
@@ -325,6 +331,7 @@ async function checkOnConnect() {
         if (dec.action === 'upload') {
             _ready = true;
             await uploadNow({ auto: true });
+            syncSiliconOnLogin();   // [FIX] jalur ini dulu tidak pernah menarik saldo server
         } else if (dec.action === 'cloud' || (_hasSynced(slot) && dec.action === 'prompt')) {
             await _autoResolve(slot, local, cloud, dec.reason);
         } else if (dec.action === 'same') {
