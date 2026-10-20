@@ -194,6 +194,24 @@ function _debouncedSyncSilicon() {
     }, 800); 
 }
 
+// Kirim potongan; bila gagal karena jaringan/timeout, ulangi dengan request_id YANG SAMA.
+// Server idempoten (silicon_requests), jadi retry tidak pernah memotong dua kali. Penolakan bisnis
+// (saldo kurang, jumlah/login tidak valid) tidak diulang.
+function _spendWithRetry(amount, reqId) {
+    var BUSINESS = /insufficient_silicon|invalid_amount|invalid_request|not_authenticated/i;
+    function attempt(n) {
+        return CloudService.spendSiliconServer(amount, reqId).then(function (res) {
+            if (res && res.ok) return res;
+            if (n >= 2 || BUSINESS.test(String((res && res.reason) || ''))) return res;
+            return new Promise(function (r) { setTimeout(r, 800 * (n + 1)); }).then(function () { return attempt(n + 1); });
+        }, function (err) {
+            if (n >= 2) throw err;
+            return new Promise(function (r) { setTimeout(r, 800 * (n + 1)); }).then(function () { return attempt(n + 1); });
+        });
+    }
+    return attempt(0);
+}
+
 // [DEBIT] Pemain membelanjakan SIL: Potong langsung ke server.
 // Permintaan diserialkan (satu per satu) agar respons tidak saling menimpa tak berurutan.
 function _onLocalDebit(delta) {
@@ -206,7 +224,7 @@ function _onLocalDebit(delta) {
     var reqId = 'sp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
     _debitChain = _debitChain.then(function () {
-        return CloudService.spendSiliconServer(amount, reqId).then(function (res) {
+        return _spendWithRetry(amount, reqId).then(function (res) {
             if (!res.ok) {
                 // Gagal di server: kembalikan HANYA jumlah ini (bukan snapshot lama).
                 SiliconService._refund(amount, 'server-rejected');
