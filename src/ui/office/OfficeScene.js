@@ -67,15 +67,15 @@ var PHASES = ['design', 'prototype', 'production', 'released'];
 var FLOOR = { x0: -9, x1: 9, z0: -6, z1: 6 };
 
 var ROOM_DEFS = [
-    { id: 'ceo', pat: 'wood',       x0: -9,   x1: -5.5, z0: -6,   z1: -1.5, tone: 0xe9d8c4, go: { nav: 'profile' } },
-    { id: 'lab', pat: 'tile',       x0: -5.5, x1: -1,   z0: -6,   z1: -1.5, tone: 0xd6e8f5, go: { nav: 'research', subtab: 'tech' } },
-    { id: 'design', pat: 'dots',    x0: -1,   x1: 3,    z0: -6,   z1: -1.5, tone: 0xe6dcf5, go: { nav: 'products', subtab: 'design' } },
-    { id: 'server', pat: 'grid',    x0: 3,    x1: 6.5,  z0: -6,   z1: -1.5, tone: 0xd5ecea, go: { nav: 'research', subtab: 'os' } },
-    { id: 'chip', pat: 'grid',      x0: 6.5,  x1: 9,    z0: -6,   z1: -1.5, tone: 0xf3e3cf, go: { nav: 'products', subtab: 'chip' } },
-    { id: 'work', pat: 'carpet',      x0: -9,   x1: 3,    z0: -1.5, z1: 6,    tone: 0xe8ecf2, go: { nav: 'team', subtab: 'team' } },
-    { id: 'showroom', pat: 'tile',  x0: 3,    x1: 9,    z0: -1.5, z1: 1.8,  tone: 0xf5e6e6, go: { nav: 'products', subtab: 'catalog' } },
-    { id: 'marketing', pat: 'carpet', x0: 3,    x1: 6,    z0: 1.8,  z1: 6,    tone: 0xdff3e3, go: { nav: 'market', subtab: 'promo' } },
-    { id: 'finance', pat: 'diag',   x0: 6,    x1: 9,    z0: 1.8,  z1: 6,    tone: 0xf6efcf, go: { nav: 'team', subtab: 'bank' },
+    { id: 'ceo', pat: 'wood',       x0: -9,   x1: -5.5, z0: -6,   z1: -1.5, tone: 0xd9c3a4, go: { nav: 'profile' } },
+    { id: 'lab', pat: 'tile',       x0: -5.5, x1: -1,   z0: -6,   z1: -1.5, tone: 0xc0e5f3, go: { nav: 'research', subtab: 'tech' } },
+    { id: 'design', pat: 'dots',    x0: -1,   x1: 3,    z0: -6,   z1: -1.5, tone: 0xd8cdf5, go: { nav: 'products', subtab: 'design' } },
+    { id: 'server', pat: 'grid',    x0: 3,    x1: 6.5,  z0: -6,   z1: -1.5, tone: 0xbfe6df, go: { nav: 'research', subtab: 'os' } },
+    { id: 'chip', pat: 'grid',      x0: 6.5,  x1: 9,    z0: -6,   z1: -1.5, tone: 0xf0d5ae, go: { nav: 'products', subtab: 'chip' } },
+    { id: 'work', pat: 'carpet',      x0: -9,   x1: 3,    z0: -1.5, z1: 6,    tone: 0xd9e3f1, go: { nav: 'team', subtab: 'team' } },
+    { id: 'showroom', pat: 'tile',  x0: 3,    x1: 9,    z0: -1.5, z1: 1.8,  tone: 0xf1d5e5, go: { nav: 'products', subtab: 'catalog' } },
+    { id: 'marketing', pat: 'carpet', x0: 3,    x1: 6,    z0: 1.8,  z1: 6,    tone: 0xccebd9, go: { nav: 'market', subtab: 'promo' } },
+    { id: 'finance', pat: 'diag',   x0: 6,    x1: 9,    z0: 1.8,  z1: 6,    tone: 0xeee1ad, go: { nav: 'team', subtab: 'bank' },
                        go2: { nav: 'team', subtab: 'exchange', labelKey: 'office.btn.exchange' } }
 ];
 
@@ -674,7 +674,7 @@ export function createOfficeScene(THREE, container, gameState) {
         var w = Math.ceil(ctx.measureText(text).width) + 36, h = 52;
         c.width = w; c.height = h;
         ctx.font = font;
-        ctx.fillStyle = dark ? 'rgba(20,24,32,0.88)' : 'rgba(255,255,255,0.92)';
+        ctx.fillStyle = 'rgba(17, 25, 41, 0.91)';
         ctx.strokeStyle = hexCss(accentHex);
         ctx.lineWidth = 3;
         var r = 18;
@@ -684,7 +684,7 @@ export function createOfficeScene(THREE, container, gameState) {
         ctx.lineTo(r, h - 2); ctx.quadraticCurveTo(2, h - 2, 2, h - r);
         ctx.lineTo(2, r); ctx.quadraticCurveTo(2, 2, r, 2);
         ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = dark ? '#e8ecf4' : '#1b2230';
+        ctx.fillStyle = '#f7faff';
         ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
         ctx.fillText(text, w / 2, h / 2 + 1);
         var tex = new THREE.CanvasTexture(c);
@@ -702,6 +702,9 @@ export function createOfficeScene(THREE, container, gameState) {
     var dark = false, accentHex = 0x2563eb, eraIdx = 0, winHex = 0x8fb4e8;
     var rooms = {};           // id -> room obj
     var roomList = [];
+    // Material aksen arsitektur premium: garis LED tipis di tepi tiap departemen.
+    // Dibuat sekali per ruangan dan dilepas saat scene dispose agar tidak membocorkan GPU memory.
+    var architectureMats = [];
     var staffObjs = {};       // staffId -> group (untuk highlight / info)
     var lastData = null, lastPlan = null;
     var selected = null;      // { room, staffId }
@@ -737,6 +740,12 @@ export function createOfficeScene(THREE, container, gameState) {
     // Layered plinth gives the dollhouse a premium architectural presentation.
     box(shell, 'metal', 18.72, 0.055, 12.72, 0, -0.235, 0);
     box(shell, 'wallTop', 18.55, 0.035, 12.55, 0, -0.255, 0);
+    // Two understated luminous strokes on the front plinth give the dollhouse a deliberate product-render finish.
+    var plinthCyan = new THREE.MeshBasicMaterial({ color: 0x31d8f4, transparent: true, opacity: 0.88, depthWrite: false });
+    var plinthBlue = new THREE.MeshBasicMaterial({ color: 0x557cff, transparent: true, opacity: 0.72, depthWrite: false });
+    architectureMats.push(plinthCyan, plinthBlue);
+    box(shell, plinthCyan, 15.8, 0.018, 0.025, 0, -0.185, 6.22);
+    box(shell, plinthBlue, 13.8, 0.012, 0.018, 0, -0.153, 6.22);
 
     function wallSeg(mat, x0, x1, z0, z1, h, th) {
         var w = Math.abs(x1 - x0) || th, d = Math.abs(z1 - z0) || th;
@@ -843,7 +852,7 @@ export function createOfficeScene(THREE, container, gameState) {
         var ov = mesh(g, G.plane, ovMat, w - 0.2, d - 0.2, 1, 0, 0.025, 0);
         ov.rotation.x = -Math.PI / 2;
         ov.visible = false;
-        var patMat = new THREE.MeshBasicMaterial({ map: makePatternTexture(def.pat, w, d), color: 0x000000, transparent: true, opacity: 0.1, depthWrite: false });
+        var patMat = new THREE.MeshBasicMaterial({ map: makePatternTexture(def.pat, w, d), color: 0x000000, transparent: true, opacity: 0.16, depthWrite: false });
         var pat = mesh(g, G.plane, patMat, w - 0.2, d - 0.2, 1, 0, 0.022, 0);
         pat.rotation.x = -Math.PI / 2;
         var pool = mesh(g, G.circle, 'pool', Math.min(w, d) * 0.44, Math.min(w, d) * 0.44, 1, 0, 0.03, 0);
@@ -865,7 +874,39 @@ export function createOfficeScene(THREE, container, gameState) {
         box(g, railMat, railT, railH, Math.max(0.1, d - 0.18), -(w / 2) + 0.09, railY, 0);
         box(g, railMat, railT, railH, Math.max(0.1, d - 0.18), (w / 2) - 0.09, railY, 0);
         r.railMat = railMat;
+
+        // Architectural signature: thin, color-coded LED inlays along the inside perimeter.
+        // The palette is restrained in work/CEO spaces and more vivid in R&D, chip and showroom zones.
+        var ledColors = {
+            ceo: 0xd8ad58, lab: 0x38d9f4, design: 0xa78bfa, server: 0x42e0c1,
+            chip: 0xffb454, work: 0x5b9cff, showroom: 0xf08acb, marketing: 0x65d99a, finance: 0xe9c86a
+        };
+        var ledMat = new THREE.MeshBasicMaterial({
+            color: ledColors[def.id] || 0x5b9cff,
+            transparent: true,
+            opacity: (def.id === 'work' || def.id === 'ceo') ? 0.42 : 0.72,
+            depthWrite: false
+        });
+        architectureMats.push(ledMat);
+        var ledY = 0.052, ledH = 0.018, ledT = 0.026;
+        var ledW = Math.max(0.15, w - 0.34), ledD = Math.max(0.15, d - 0.34);
+        box(g, ledMat, ledW, ledH, ledT, 0, ledY, -(d / 2) + 0.17);
+        box(g, ledMat, ledW, ledH, ledT, 0, ledY, (d / 2) - 0.17);
+        box(g, ledMat, ledT, ledH, ledD, -(w / 2) + 0.17, ledY, 0);
+        box(g, ledMat, ledT, ledH, ledD, (w / 2) - 0.17, ledY, 0);
+
     });
+
+    // Real doorway markers in the main work room, aligned with the existing north-wall openings.
+    // These make circulation readable without inventing extra doors in other departments.
+    var workRoom = rooms.work;
+    if (workRoom) {
+        var workDoorMat = new THREE.MeshBasicMaterial({ color: 0x39d7f2, transparent: true, opacity: 0.9, depthWrite: false });
+        architectureMats.push(workDoorMat);
+        [-4.25, -0.25, 4.0].forEach(function (x) {
+            box(workRoom.group, workDoorMat, 0.9, 0.024, 0.09, x, 0.065, -(workRoom.d / 2) + 0.12);
+        });
+    }
 
     // ---------- bangunan perabot ----------
     function monitor(p, x, y, z, on) {
@@ -1273,10 +1314,15 @@ export function createOfficeScene(THREE, container, gameState) {
         cyl(f, 'glass', 0.15, 0.5, -5.7, 0.4, 3.3);
         shadowBox(f, 0.5, 0.45, 5.72, 0.2);
         box(f, 'white', 0.3, 0.7, 0.4, 5.72, 0.35, 0.2);                  // printer
-        // papan nama perusahaan di dinding kiri
+        // Papan nama perusahaan: backplate metal, garis aksen, lalu panel digital di depan.
+        // Tetap menggunakan nama perusahaan dari data game; tidak menambah teks statis yang salah.
+        box(f, 'dark', 0.12, 0.76, 2.58, -5.88, 1.55, 0.3);
+        box(f, 'glow', 0.025, 0.035, 2.42, -5.80, 1.93, 0.3);
+        box(f, 'metal', 0.035, 0.68, 0.045, -5.79, 1.55, -0.91);
+        box(f, 'metal', 0.035, 0.68, 0.045, -5.79, 1.55, 1.51);
         var tex = signTexture(d.companyName);
         var sm = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
-        var sign = mesh(f, G.plane, sm, 2.3, 0.575, 1, -5.84, 1.55, 0.3);
+        var sign = mesh(f, G.plane, sm, 2.3, 0.575, 1, -5.77, 1.55, 0.3);
         sign.rotation.y = Math.PI / 2;
         sign.userData.own = 1; sign.userData.tex = tex;
     };
@@ -2318,6 +2364,7 @@ export function createOfficeScene(THREE, container, gameState) {
             skinMat.forEach(function (m) { m.dispose(); });
             moraleMat.forEach(function (m) { m.dispose(); });
             Object.keys(hueMats).forEach(function (k) { hueMats[k].dispose(); });
+            architectureMats.forEach(function (m) { if (m && m.dispose) m.dispose(); });
             renderer.dispose();
             try { renderer.forceContextLoss(); } catch (e) {}
             [chipBar, card, hint, legendBtn, legend, canvas].forEach(function (el) { if (el.parentNode) el.parentNode.removeChild(el); });
