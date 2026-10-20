@@ -56,7 +56,7 @@ import { WalletService } from '../../systems/WalletService.js';
 import { FAB_LEVELS } from '../../systems/FabSystem.js';
 
 var BASE_VIEW = 17;
-var MAX_DPR = 1.75; // visual clarity on modern displays; adaptive quality still protects weaker phones
+var MAX_DPR = 1.65; // crisp on desktop without overspending fill-rate on high-DPI displays
 var FRAME_MS = 33;
 var MIN_RESIZE_DELTA = 2;
 var MAX_DESKS = 30;
@@ -525,7 +525,15 @@ export function describeStaff(s) {
 export function createOfficeScene(THREE, container, gameState) {
     var PERF = window.__PERF || {};
     var renderer = new THREE.WebGLRenderer({ antialias: PERF.antialias !== false, alpha: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
+    // Device-aware starting quality: adaptive FPS fallback remains active, but low-memory/mobile
+    // devices start at a sensible DPR instead of rendering several million unnecessary pixels.
+    var screenWidth = Math.max(1, window.innerWidth || container.clientWidth || 1);
+    var deviceMemory = Number(navigator.deviceMemory || 0);
+    var configuredDpr = Number(PERF.maxDpr || 0);
+    var dprCap = configuredDpr > 0 ? Math.min(MAX_DPR, configuredDpr) : MAX_DPR;
+    if (screenWidth <= 700) dprCap = Math.min(dprCap, 1.25);
+    if (deviceMemory > 0 && deviceMemory <= 4) dprCap = Math.min(dprCap, 1.2);
+    renderer.setPixelRatio(Math.max(1, Math.min(window.devicePixelRatio || 1, dprCap)));
     renderer.setClearColor(0x000000, 0);
     // Rendering pipeline: richer color, restrained highlights, and crisp isometric edges.
     if ('outputColorSpace' in renderer && THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -539,7 +547,7 @@ export function createOfficeScene(THREE, container, gameState) {
     container.style.position = 'relative';
     container.style.isolation = 'isolate';
     container.style.overflow = 'hidden';
-    container.style.background = 'radial-gradient(ellipse at 50% 24%, rgba(96,165,250,.17) 0%, rgba(148,163,184,.09) 38%, transparent 72%), radial-gradient(ellipse at 50% 100%, rgba(15,23,42,.07), transparent 52%), linear-gradient(145deg, var(--bg-2, #f9fbff), var(--bg-1, #e7edf6))';
+    container.style.background = 'radial-gradient(ellipse at 50% 18%, rgba(96,165,250,.20) 0%, rgba(148,163,184,.08) 36%, transparent 70%), radial-gradient(ellipse at 50% 100%, rgba(15,23,42,.09), transparent 55%), linear-gradient(145deg, var(--bg-2, #fbfcff), var(--bg-1, #e6edf7))';
     container.appendChild(canvas);
 
     var scene = new THREE.Scene();
