@@ -2,7 +2,7 @@
 // ============================================================
 // InboxService — pesan masuk pemain: notifikasi SIL terisi + pesan dari admin.
 // Sumber: tabel server `inbox_messages` (supabase/09-pesan-inbox.sql).
-// Pesan baru diterima via Realtime (+ polling cadangan), lalu tampil sebagai toast
+// Pesan baru diterima via Realtime (+ polling cadangan 5 menit, hanya mengambil pesan yang lebih baru), lalu tampil sebagai toast
 // (melewati saklar notifikasi pemain, karena ini info penting) dan masuk Inbox.
 // Event bus: 'inbox:changed' {unread,total}, 'inbox:open' (minta buka panel).
 // ============================================================
@@ -10,7 +10,7 @@ import { bus } from '../core/EventBus.js';
 import { CloudService } from './CloudService.js';
 import { SupabaseAdapter } from './cloud/SupabaseAdapter.js';
 
-var POLL_MS = 90000;
+var POLL_MS = 300000;      // cadangan saja; pesan utama datang lewat Realtime
 var LIMIT = 60;
 
 var _items = [];
@@ -61,7 +61,8 @@ function _incoming(m, quiet) {
 
 async function _load(first) {
     var rows;
-    try { rows = await SupabaseAdapter.inboxList(LIMIT); }
+    var since = (!first && _items.length) ? _items[0].id : null;   // _items terurut menurun
+    try { rows = await SupabaseAdapter.inboxList(LIMIT, since); }
     catch (e) { return false; }                      // tabel belum dibuat / offline: diam saja
     var fresh = [];
     for (var i = 0; i < rows.length; i++) {
@@ -106,6 +107,21 @@ async function _start() {
     _timer = setInterval(function () { if (!document.hidden) _load(false); }, POLL_MS);
 }
 
+var REASONS = {
+    rate_limited: 'Terlalu banyak pesan. Tunggu sebentar lalu coba lagi.',
+    invalid_body: 'Pesan harus 1–500 karakter.',
+    receiver_not_found: 'ID pemain tidak ditemukan.',
+    cannot_message_self: 'Tidak bisa mengirim pesan ke diri sendiri.',
+    no_profile: 'Profil kamu belum siap. Coba lagi nanti.',
+    message_not_found: 'Pesan tidak ditemukan.'
+};
+function _reason(e) {
+    var m = String((e && (e.message || (e.raw && e.raw.message))) || '');
+    for (var k in REASONS) if (m.indexOf(k) >= 0) return REASONS[k];
+    if (e && (e.code === 'network')) return 'Tidak ada koneksi. Coba lagi.';
+    return 'Fitur pesan antar pemain belum aktif di server.';
+}
+
 export var InboxService = {
     init: function () {
         bus.on('cloud:status-changed', function (e) {
@@ -141,6 +157,28 @@ export var InboxService = {
         _changed();
         SupabaseAdapter.inboxDelete([id]).catch(function () {});
     },
+    // ---------- Pesan antar pemain ----------
+    send: async function (publicId, body) {
+        try { await SupabaseAdapter.rpcSendPlayerMessage(publicId, body); return { ok: true }; }
+        catch (e) { return { ok: false, reason: _reason(e) }; }
+    },
+    lookup: async function (publicId) {
+        try { var r = await SupabaseAdapter.rpcGetPlayerById(publicId); return r || { ok: false, error: 'player_not_found' }; }
+        catch (e) { return { ok: false, error: 'network' }; }
+    },
+    block: async function (publicId) {
+        try { await SupabaseAdapter.rpcInboxBlock(publicId); return { ok: true }; } catch (e) { return { ok: false, reason: _reason(e) }; }
+    },
+    unblock: async function (publicId) {
+        try { await SupabaseAdapter.rpcInboxUnblock(publicId); return { ok: true }; } catch (e) { return { ok: false, reason: _reason(e) }; }
+    },
+    blocks: async function () {
+        try { return await SupabaseAdapter.rpcInboxBlocks(); } catch (e) { return []; }
+    },
+    report: async function (messageId, reason) {
+        try { await SupabaseAdapter.rpcInboxReport(messageId, reason); return { ok: true }; } catch (e) { return { ok: false, reason: _reason(e) }; }
+    },
+
     clear: function () {
         _items = [];
         _changed();
