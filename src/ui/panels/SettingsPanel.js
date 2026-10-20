@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/SettingsPanel.js  (REPLACE — i18n)
 // v2027.45 — profil dipisah dari pengaturan: kartu profil (hero) jadi blok sendiri, lalu judul "Pengaturan" + tab.
 //            Baris "Profil Pemain" (duplikat hero) dan "ID Pemain" dipindah ke Profil > tab Pemain.
@@ -72,11 +73,6 @@ const TABS = [
     { id: 'debug',    label: 'Debug',                 icon: 'settings' }
 ];
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 // Render ulang Settings TANPA reset scroll (toggle/pilihan tidak boleh melempar layar ke atas).
 function _refresh() {

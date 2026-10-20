@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/FabPanel.js
 // ============================================================
 // FabPanel — panel Fab (pabrik chip) dalam bentuk modal.
@@ -15,11 +16,6 @@ import { FAB_LEVELS } from '../../systems/FabSystem.js';
 import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
 import { WalletService } from '../../systems/WalletService.js';
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 // t() dengan fallback bila key belum ada di dictionary.
 function _tf(key, fb, vars) {

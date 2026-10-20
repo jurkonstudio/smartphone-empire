@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/LogPanel.js
 // v2027.13a — i18n.
 import { t } from '../../core/LanguageService.js';
@@ -17,7 +18,7 @@ export function renderLogPanel(state, options) {
             return `
                 <div class="log-entry">
                     <span class="log-time">${e.day}/${e.month}/${e.year}</span>
-                    <span class="log-text" style="color:${TYPE_COLOR[e.type] || 'var(--text)'}">${e.text}</span>
+                    <span class="log-text" style="color:${TYPE_COLOR[e.type] || 'var(--text)'}">${escapeHtml(e.text)}</span>
                 </div>`;
         }).join('')
         : '<div class="log-empty">' + t('log.empty') + '</div>';

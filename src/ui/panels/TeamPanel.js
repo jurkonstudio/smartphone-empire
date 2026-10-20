@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/TeamPanel.js
 // v2027.10a — i18n: pakai t() untuk semua string UI.
 // v2027.10b — i18n penuh (Fase 2): label role/tier/trait via key (fallback ke data),
@@ -43,11 +44,6 @@ function _traitDesc(trait) {
     return _tf('team.trait.' + trait.id + '.desc', trait.description);
 }
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 function safe(fn, fallback) {
     try { return fn(); }

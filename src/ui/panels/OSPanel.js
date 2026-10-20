@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/OSPanel.js
 // ============================================================
 // Sub-tab OS dalam tab Riset.
@@ -14,11 +15,6 @@ import { t } from '../../core/LanguageService.js';
 import { renderSilSlotBoost } from '../components/SilResearchBlock.js';
 import { SiliconService } from '../../systems/SiliconService.js';
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 var STAT_ORDER = ['stability', 'speed', 'features', 'security', 'design'];
 var STAT_SHORT_KEYS = { stability: 'os.stat.stab_short', speed: 'os.stat.cepat_short', features: 'os.stat.fitur_short', security: 'os.stat.aman_short', design: 'os.stat.desain_short' };

@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/ProductPanel.js
 // Versi LENGKAP — V6c-2 gate chip berbasis chipResearch + grandfather rule.
 // v2027.13c — i18n.
@@ -15,11 +16,6 @@ import { t } from '../../core/LanguageService.js';
 import { bus } from '../../core/EventBus.js';
 import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 function safe(fn, fallback) {
     try { return fn(); }

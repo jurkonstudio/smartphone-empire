@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/MarketPanel.js
 // v2027.15b — audit grafik pangsa: urut kronologis, label sumbu X, sumbu Y sejajar grid,
 // warna legend konsisten, tombol zoom, redraw saat resize, pct adaptif untuk kompetitor.
@@ -6,11 +7,6 @@ import { t, LanguageService } from '../../core/LanguageService.js';
 import { renderPromotionPanel } from './PromotionPanel.js';
 import '../charts/ChartZoomModal.js'; // side-effect: pasang listener [data-chart-zoom]
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 function _personalityLabel(p) {
     var map = {

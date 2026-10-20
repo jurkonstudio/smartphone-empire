@@ -1,13 +1,9 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/NewsListPanel.js
 // v2027.13a — i18n.
 import { openNewsArticleModal } from './NewsArticleModal.js';
 import { t } from '../../core/LanguageService.js';
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 function _shortHeadline(text) {
     if (!text) return '';

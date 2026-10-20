@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/GameOverScreen.js
 // v2027.13c — i18n.
 import { bus } from '../../core/EventBus.js';
@@ -14,7 +15,7 @@ function _show(reason, negativeMonths) {
     const html = `
         <div class="gameover-root">
             <div class="gameover-title">${t('gameover.title')}</div>
-            <div class="gameover-sub">${t('gameover.sub', { company: d.companyName })}</div>
+            <div class="gameover-sub">${t('gameover.sub', { company: escapeHtml(d.companyName) })}</div>
             <div class="gameover-fact">
                 <div>${t('gameover.reason', { n: negativeMonths })}</div>
                 <div>${t('gameover.end_year', { year: d.time.currentYear, month: d.time.currentMonth })}</div>

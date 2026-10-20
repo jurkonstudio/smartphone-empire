@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/DesignWizard.js  (REPLACE — Final & Synced)
 import { Modal } from '../modal.js';
 import { bus } from '../../core/EventBus.js';
@@ -304,11 +305,6 @@ function _injectStyles() {
     document.head.appendChild(el);
 }
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 function defaultState() {
     return {

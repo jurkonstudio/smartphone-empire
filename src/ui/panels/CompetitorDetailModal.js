@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/CompetitorDetailModal.js
 // v2027.14b — biografi transparan: factuality badge, milestones
 // dengan penanda verified, trivia, sumber.
@@ -7,11 +8,6 @@ import { Modal } from '../modal.js';
 import { t } from '../../core/LanguageService.js';
 import { bus } from '../../core/EventBus.js';
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 function _personalityLabel(p) {
     var map = {

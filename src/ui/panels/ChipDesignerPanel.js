@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/ChipDesignerPanel.js
 // v2027.4a — Tambah tombol CTA "Buka Riset Chip" saat arsitektur kosong.
 // v2027.13c — i18n.
@@ -45,11 +46,6 @@ function _tf(key, fbId, fbEn, vars) {
     return s;
 }
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 function defaultState() {
     return {

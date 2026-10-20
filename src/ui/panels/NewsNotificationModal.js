@@ -1,14 +1,10 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/NewsArticleModal.js
 // ============================================================
 // Modal untuk membaca artikel berita lengkap.
 // ============================================================
 import { Modal } from '../modal.js';
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 var MONTH_NAMES = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 

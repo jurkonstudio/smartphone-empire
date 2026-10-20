@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/TransferSiliconModal.js
 import { Modal } from '../modal.js';
 import { t } from '../../core/LanguageService.js';
@@ -112,7 +113,7 @@ function _renderForm(root, balance) {
                 if (res.ok && res.data && res.data.ok) {
                     infoBox.style.background = 'rgba(76, 175, 80, 0.1)';
                     infoBox.style.color = 'var(--success)';
-                    infoBox.innerHTML = `✅ Penerima: <b>${res.data.company_name || res.data.player_name || 'Tanpa Nama'}</b>`;
+                    infoBox.innerHTML = `✅ Penerima: <b>${escapeHtml(res.data.company_name || res.data.player_name || 'Tanpa Nama')}</b>`;
                     btnSubmit.disabled = false;
                 } else {
                     infoBox.style.background = 'rgba(244, 67, 54, 0.1)';
@@ -159,7 +160,7 @@ function _renderForm(root, balance) {
                 if (errMsg.includes('cannot_transfer_to_self')) errMsg = 'Anda tidak bisa mengirim ke diri sendiri.';
                 
                 errorBox.style.display = 'block';
-                errorBox.innerHTML = `❌ <b>Gagal:</b> ${errMsg}`;
+                errorBox.innerHTML = `❌ <b>Gagal:</b> ${escapeHtml(errMsg)}`;
             }
         });
     });

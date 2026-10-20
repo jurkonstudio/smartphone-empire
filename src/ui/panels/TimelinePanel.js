@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/TimelinePanel.js
 // v2026.2 — header compact, marker garis, no emoji.
 // v2027.13a — i18n.
@@ -13,11 +14,6 @@ import { t } from '../../core/LanguageService.js';
 
 let _filter = 'all'; // 'all' | 'phone' | 'os'
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 export function getTimelineFilter() { return _filter; }
 export function setTimelineFilter(f) { _filter = f; }

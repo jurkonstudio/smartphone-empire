@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/ExchangePanel.js  (REPLACE — i18n)
 // v2027.4a — Exchange "Rich & Alive":
 //   • Market Pulse (sentimen, breadth, indeks + sparkline, top gainers/losers)
@@ -66,11 +67,6 @@ var RANGES = [
 // ============================================================
 // HELPER UMUM
 // ============================================================
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 function _isEn() {
     try { return LanguageService.getLang() === 'en'; } catch (e) { return false; }

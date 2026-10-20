@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/ChipResearchPanel.js
 // Sub-tab "Chip" dalam tab Riset.
 // v2026.2 — Row-based, section-grouped (konsisten dengan Tech panel).
@@ -14,11 +15,6 @@ import { renderSilResearchBlock, renderSilSlotBoost } from '../components/SilRes
 import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
 import { SiliconService } from '../../systems/SiliconService.js';
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 let _filterCategory = 'all';
 export function getChipResearchFilter() { return _filterCategory; }

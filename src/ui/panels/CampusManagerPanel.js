@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/CampusManagerPanel.js
 // v2027.16a — Building Manager panel untuk HQ → Campus.
 // Baca data dari campus-buildings.data.js, tampilkan per kategori.
@@ -8,11 +9,6 @@ import {
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 // Urutan kategori yang ditampilkan
 const CATEGORY_ORDER = ['core', 'innovation', 'marketing', 'industry', 'support'];

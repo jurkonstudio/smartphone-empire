@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/ResearchPanel.js  (REPLACE)
 import { RESEARCH_CATEGORIES, getNodeById, RESEARCH_NODES } from '../../data/research.data.js';
 import { getComponentById } from '../../data/components.data.js';
@@ -18,11 +19,6 @@ import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
 import { SiliconService } from '../../systems/SiliconService.js';
 import { WalletService } from '../../systems/WalletService.js';
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 function _tf(key, fallback, vars) {
     var v = t(key, vars);
     return (v && v !== key) ? v : fallback;

@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/DashboardPanel.js
 // v2026.1 — 7 kartu hierarkis.
 // v2027.13a — i18n.
@@ -9,11 +10,6 @@ import { renderTimelinePanel } from './TimelinePanel.js';
 import { renderCashChart } from './CashChart.js';
 import { t } from '../../core/LanguageService.js';
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 // ---------------- BAGIAN 3 — LIVE FEED (3 log terbaru) ----------------
 var _FEED_TONE = {

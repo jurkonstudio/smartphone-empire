@@ -1,12 +1,8 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/ProgressPanel.js
 // v2027.13a — i18n.
 import { t } from '../../core/LanguageService.js';
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 export function renderProgressPanel(state, researchSystem) {
     var activeResearch = [];

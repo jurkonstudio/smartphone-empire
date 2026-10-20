@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/NewsArticleModal.js
 // v2027.13d — i18n penuh (Fase 2).
 // Sesi 1: kotak "Reaksi Bursa" untuk berita rilis kompetitor.
@@ -17,11 +18,6 @@ function _tf(key, fbId, fbEn) {
     return (lang === 'en' && fbEn !== undefined) ? fbEn : fbId;
 }
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 function _formatDate(createdAt) {
     if (!createdAt) return '-';

@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/StaffDetailModal.js
 // v2027.13c — i18n.
 // Modal detail staff: info lengkap + tombol Fire + Training.
@@ -8,11 +9,6 @@ import { generateAvatar } from '../avatars/AvatarGenerator.js';
 import { t } from '../../core/LanguageService.js';
 import { WalletService } from '../../systems/WalletService.js';
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
 
 function renderSkillTier(skill) {
     const tier = getSkillTier(skill);
