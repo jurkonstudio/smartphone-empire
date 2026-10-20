@@ -1,7 +1,8 @@
 // FILE: src/data/i18n/text-fix.i18n.js  (BARU)
 // Kamus perbaikan "key mentah" (mis. silstore.tab.buy tampil apa adanya di layar).
 // Isi: Top Up Silicon (tab, tukar, QRIS), Office (aktivitas staf, fab, legenda), EmptyState,
-//      ID Pemain, judul Setelan, dan teks profil publik (lama bermain, terakhir aktif).
+//      ID Pemain, judul Setelan, dan teks profil publik (lama bermain, terakhir aktif),
+//      sub-tab Riset "Manufaktur".
 // Digabung PALING AKHIR di src/data/i18n/index.js (hanya menambah key yang belum ada).
 export const TEXT_FIX_I18N = {
     id: {
@@ -80,7 +81,9 @@ export const TEXT_FIX_I18N = {
         // ---- Office: legenda & kartu ----
         'office.legend.bubble': 'Gelembung = aktivitas staf',
         'office.card.expand': 'Perluas kartu',
-        'office.card.collapse': 'Ciutkan kartu'
+        'office.card.collapse': 'Ciutkan kartu',
+        // ---- Riset: sub-tab ----
+        'research.subtab.manufacture': 'Manufaktur'
     },
     en: {
         'silstore.tab.buy': 'Buy',
@@ -148,6 +151,8 @@ export const TEXT_FIX_I18N = {
         'office.act.at.water': 'Grabbing some water',
         'office.legend.bubble': 'Bubble = staff activity',
         'office.card.expand': 'Expand card',
-        'office.card.collapse': 'Collapse card'
+        'office.card.collapse': 'Collapse card',
+        // ---- Research: sub-tab ----
+        'research.subtab.manufacture': 'Manufacturing'
     }
 };
