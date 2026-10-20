@@ -122,65 +122,6 @@
 </script>
 
 <!-- ============================================================
-     ERUDA SECRET TAP (DINAMIS + KEAMANAN EMAIL)
-     ============================================================ -->
-<script>
-    (function() {
-        var tapCount = 0;
-        var tapTimer;
-        var ADMIN_EMAIL = 'jurkon@yahoo.com';
-
-        document.addEventListener('click', function(e) {
-            if (e.clientY < 100 && e.clientX < 200) {
-                tapCount++;
-                clearTimeout(tapTimer);
-                tapTimer = setTimeout(function() { tapCount = 0; }, 1000);
-
-                if (tapCount >= 5) {
-                    tapCount = 0;
-                    var currentEmail = '';
-                    try {
-                        var cloudEmail = localStorage.getItem('smartphone-empire:admin-email');
-                        if (cloudEmail) currentEmail = cloudEmail.toLowerCase();
-                    } catch(err) {}
-
-                    if (currentEmail !== ADMIN_EMAIL.toLowerCase()) {
-                        var toast = document.createElement('div');
-                        toast.textContent = '⚠️ Akses Ditolak: Fitur ini khusus Admin.';
-                        toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#d32f2f;color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;z-index:999999;';
-                        document.body.appendChild(toast);
-                        setTimeout(function() { toast.remove(); }, 3000);
-                        return;
-                    }
-
-                    if (typeof eruda === 'undefined') {
-                        var script = document.createElement('script');
-                        script.src = 'https://cdn.jsdelivr.net/npm/eruda';
-                        script.onload = function() {
-                            eruda.init();
-                            eruda.show();
-                            _showAdminToast();
-                        };
-                        document.head.appendChild(script);
-                    } else {
-                        eruda.show();
-                        _showAdminToast();
-                    }
-                }
-            }
-        });
-
-        function _showAdminToast() {
-            var toast = document.createElement('div');
-            toast.textContent = '🛠️ Debug Mode Aktif (Admin)';
-            toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;z-index:999999;';
-            document.body.appendChild(toast);
-            setTimeout(function() { toast.remove(); }, 3000);
-        }
-    })();
-</script>
-
-<!-- ============================================================
      VERSION CHECK
      ============================================================ -->
 <script>
