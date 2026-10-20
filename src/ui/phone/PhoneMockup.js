@@ -21,7 +21,7 @@ import { escapeHtml } from '../../utils/html.js';
 // oleh handler 'lang:changed' di main.js.
 // ============================================================
 import { getComponentById, getBodyColorById } from '../../data/components.data.js';
-import { getDesignEraForYear } from '../../data/era-design.data.js';
+import { getDesignEraForYear, getDesignEraById } from '../../data/era-design.data.js';
 import { state } from '../../core/GameState.js';
 import { resolveSpec } from '../../data/phone-specs.data.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
@@ -41,6 +41,12 @@ function _scr(key, fbId, fbEn) {
 }
 function _esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Era yang dipakai layar: eraId dari spesifikasi yang terbuka; fallback ke era tahun.
+function eraForSpec(spec, year) {
+    const byId = spec && spec.eraId ? getDesignEraById(spec.eraId) : null;
+    return byId || getDesignEraForYear(year);
 }
 
 function safeGetState() {
@@ -342,8 +348,9 @@ function screenFlat(r, uid, brand) {
     for (let rr = 0; rr < rows; rr++) for (let c = 0; c < 4; c++) {
         grid += appIcon(x0 + 1.5 + c * cell + 1.3, y0 + h * 0.36 + rr * cell, s, ICON_COLORS[(rr * 4 + c + 2) % ICON_COLORS.length], false);
     }
-    let dock = '';
-    for (let c = 0; c < 4; c++) dock += appIcon(x0 + 1.5 + c * cell + 1.3, y0 + h - 8.6, s, ICON_COLORS[(c + 7) % ICON_COLORS.length], false);
+    const dockColors = [0, 1, 2, 3].map(function (c) { return ICON_COLORS[(c + 7) % ICON_COLORS.length]; });
+    const dock = renderDock(x0, y0, w, h, dockColors);
+    const dotsY = y0 + dockPillTop(w, h, dockColors.length).y - 2.4;
     return `
         <defs>
             <linearGradient id="fl_${uid}" x1="0" y1="0" x2="1" y2="1">
@@ -360,17 +367,42 @@ function screenFlat(r, uid, brand) {
         <text x="${cx}" y="${y0 + h * 0.2 + 3.4}" text-anchor="middle" font-size="1.9" font-family="sans-serif" fill="#fff" opacity="0.85">${_scr('phone.mock.date_weather', 'Senin, 12 Oktober', 'Monday, October 12')}  24°C</text>
         ${grid}
         ${dock}
-        <circle cx="${cx - 1.6}" cy="${y0 + h - 10.6}" r="0.5" fill="#fff"/>
-        <circle cx="${cx}" cy="${y0 + h - 10.6}" r="0.45" fill="#fff" opacity="0.45"/>
-        <circle cx="${cx + 1.6}" cy="${y0 + h - 10.6}" r="0.45" fill="#fff" opacity="0.45"/>
+        <circle cx="${cx - 1.6}" cy="${dotsY}" r="0.5" fill="#fff"/>
+        <circle cx="${cx}" cy="${dotsY}" r="0.45" fill="#fff" opacity="0.45"/>
+        <circle cx="${cx + 1.6}" cy="${dotsY}" r="0.45" fill="#fff" opacity="0.45"/>
     `;
 }
 
+// Geometri dok: pill semi-transparan yang diangkat di atas indikator home.
+// Sebelumnya ikon menempel di dasar layar sehingga terpotong oleh sudut layar lengkung.
+function dockPillTop(w, h, n) {
+    const slot = (w * 0.8) / n;
+    const pillH = slot * 0.7 + 3;
+    return { y: h - 7 - pillH, h: pillH };
+}
+
+function renderDock(x0, y0, w, h, colors) {
+    const pad = w * 0.1;
+    const slot = (w - pad * 2) / colors.length;
+    const sz = slot * 0.7;
+    const pos = dockPillTop(w, h, colors.length);
+    const pillY = y0 + pos.y, pillH = pos.h;
+    let icons = '';
+    colors.forEach(function (c, i) {
+        const ix = x0 + pad + slot * i + (slot - sz) / 2;
+        const iy = pillY + (pillH - sz) / 2;
+        icons += '<rect x="' + ix + '" y="' + iy + '" width="' + sz + '" height="' + sz + '" rx="' + (sz * 0.28) + '" fill="' + c + '" opacity="0.92"/>';
+    });
+    return '<rect x="' + (x0 + pad * 0.6) + '" y="' + pillY + '" width="' + (w - pad * 1.2) + '" height="' + pillH +
+        '" rx="' + (pillH / 2) + '" fill="#ffffff" opacity="0.12"/>' + icons;
+}
+
 // 2015+ : AMOLED / HDR / Flexible (dipertahankan dari versi sebelumnya)
-function screenModern(screenStyle, rect) {
+function screenModern(screenStyle, rect, uid) {
     const x0 = rect.x, y0 = rect.y, w = rect.w, h = rect.h;
     const cx = x0 + w / 2;
     const cy = y0 + h / 2;
+    const idSuffix = uid || 'm'; // ID gradient/filter diturunkan dari uid render utama
     // ============================================================
     // ERA 2015-2018: AMOLED Premium — Always-On Display
     // ============================================================
@@ -403,9 +435,8 @@ function screenModern(screenStyle, rect) {
     // ERA 2019-2022: HDR / AI — Jam Besar + Notif + Dock
     // ============================================================
     if (screenStyle === 'hdr') {
-        const gradId = 'hdrMesh_' + Math.random().toString(36).slice(2, 6);
+        const gradId = 'hdrMesh_' + idSuffix;
         const notifY = cy + 2;
-        const dockY = y0 + h - 12;
         const dockColors = ['#00d4ff', '#a855f7', '#ec4899', '#10b981'];
         return `
             <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#080c14"/>
@@ -429,16 +460,7 @@ function screenModern(screenStyle, rect) {
             <rect x="${x0 + 8.5}" y="${notifY + 4.5}" width="${w * 0.55}" height="0.6" rx="0.3" fill="#ffffff" opacity="0.75"/>
             <rect x="${x0 + 8.5}" y="${notifY + 6}" width="${w * 0.38}" height="0.5" rx="0.25" fill="#00d4ff" opacity="0.55"/>
 
-            <g opacity="0.92">
-                ${Array.from({length: 4}, (_, i) => {
-                    const ix = x0 + 4 + i * ((w - 8) / 4);
-                    const sz = (w - 8) / 4 - 2;
-                    return `
-                        <rect x="${ix}" y="${dockY}" width="${sz}" height="${sz}" rx="2" fill="${dockColors[i]}" opacity="0.85"/>
-                        <rect x="${ix + 1}" y="${dockY + 1}" width="${sz - 2}" height="${sz - 2}" rx="1.5" fill="#0f1420" opacity="0.35"/>
-                    `;
-                }).join('')}
-            </g>
+            ${renderDock(x0, y0, w, h, dockColors)}
 
             <circle cx="${cx - 3}" cy="${y0 + h - 2.8}" r="0.6" fill="#ffffff" opacity="0.9"/>
             <circle cx="${cx}" cy="${y0 + h - 2.8}" r="0.5" fill="#ffffff" opacity="0.5"/>
@@ -450,17 +472,16 @@ function screenModern(screenStyle, rect) {
     // ERA 2023+: FLEXIBLE / FUTURE — Aurora + App Grid + Dock
     // ============================================================
     if (screenStyle === 'flexible') {
-        const gradId = 'auroraGrad_' + Math.random().toString(36).slice(2, 6);
-        const blurId = 'auroraBlur_' + Math.random().toString(36).slice(2, 6);
+        const gradId = 'auroraGrad_' + idSuffix;
+        const blurId = 'auroraBlur_' + idSuffix;
         const appColors = ['#a855f7', '#06b6d4', '#ec4899', '#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#14b8a6'];
         const dockColors = ['#ffffff', '#a855f7', '#06b6d4', '#ec4899'];
         const cols = 4, rows = 2;
         const gridTop = cy + 5;
-        const gridH = h - (gridTop - y0) - 18;
+        const gridH = h - (gridTop - y0) - 22;
         const cellW = (w - 8) / cols;
         const cellH = gridH / rows;
         const iconSize = Math.min(cellW, cellH) - 2.5;
-        const dockY = y0 + h - 12;
 
         return `
             <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#04040a"/>
@@ -495,15 +516,7 @@ function screenModern(screenStyle, rect) {
                 }).join('')}
             </g>
 
-            <g opacity="0.85">
-                ${Array.from({length: 4}, (_, i) => {
-                    const ix = x0 + 4 + i * ((w - 8) / 4);
-                    const sz = (w - 8) / 4 - 2;
-                    return `
-                        <rect x="${ix}" y="${dockY}" width="${sz}" height="${sz}" rx="${sz * 0.28}" fill="${dockColors[i]}" opacity="0.9"/>
-                    `;
-                }).join('')}
-            </g>
+            ${renderDock(x0, y0, w, h, dockColors)}
 
             <circle cx="${cx - 3}" cy="${y0 + h - 2.8}" r="0.6" fill="#ffffff" opacity="0.95"/>
             <circle cx="${cx}" cy="${y0 + h - 2.8}" r="0.5" fill="#ffffff" opacity="0.5"/>
@@ -523,7 +536,7 @@ function screenContent(screenStyle, rect, uid, brand, displayId) {
     if (screenStyle === 'color_tft') return screenTft(rect, uid, b);
     if (screenStyle === 'glossy') return screenGlossy(rect, uid, b);
     if (screenStyle === 'flat') return screenFlat(rect, uid, b);
-    return screenModern(screenStyle, rect);
+    return screenModern(screenStyle, rect, uid);
 }
 
 // ============================================================
@@ -1262,8 +1275,8 @@ export function renderPhoneMockup(config, opts) {
     const companyName = (st.companyName || '').trim();
     const brand = escapeHtml(companyName ? companyName.toUpperCase().slice(0, 10) : 'SMARTEL');
 
-    const era = getDesignEraForYear(year);
     const spec = resolveSpec(year, completed);
+    const era = eraForSpec(spec, year);
 
     const formFactor = (config && config.formFactorId) || 'ff_candybar';
     const bodyColorId = (config && config.bodyColorId) || 'color_black';
@@ -1357,8 +1370,13 @@ export function renderPhoneThumbnail(config, size) {
     return renderPhoneMockup(config, { size: size || 60, showBrand: false, isStatic: true });
 }
 
+// Era layar mengikuti spesifikasi yang benar-benar terbuka (riset), bukan tahun mentah.
+// Contoh: 2007 tanpa riset touchscreen tetap tampil layar TFT, bukan glossy.
 export function getMockupEra() {
-    return getDesignEraForYear(safeGetYear());
+    const st = safeGetState();
+    const year = safeGetYear();
+    const completed = (st.research && st.research.completed) || [];
+    return eraForSpec(resolveSpec(year, completed), year);
 }
 
 export function getMockupSpec() {

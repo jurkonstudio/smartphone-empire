@@ -50,6 +50,26 @@ function getOsMode(year) {
     return 'ai_modern';                         // iOS 17+, Android 14+
 }
 
+// Mode tampilan berbasis sentuh (UI kapasitif/iOS/Material).
+const TOUCH_MODES = ['early_ios', 'skeuomorphic', 'flat_material', 'grouped_modern', 'material_you', 'ai_modern'];
+
+// Mode layar mengikuti tahun, tetapi UI sentuh hanya tampil jika layar sentuh sudah diriset.
+// Tanpa riset sentuh, ponsel masih berupa keypad: pakai tampilan Symbian grid.
+function resolveOsMode(year, completed) {
+    const mode = getOsMode(year);
+    const hasTouch = (completed || []).indexOf('layar_touch_res') !== -1 ||
+        (completed || []).indexOf('layar_touch_cap') !== -1;
+    if (!hasTouch && TOUCH_MODES.indexOf(mode) !== -1) return 'symbian_grid';
+    return mode;
+}
+
+// Riset jaringan (net_*) adalah perangkat keras, tapi baris pengaturan OS membacanya dari daftar fitur.
+// Gabungkan di sini supaya 5G/4G/3G tampil sesuai riset yang sudah selesai.
+function withNetworkResearch(featureIds, completed) {
+    const nets = (completed || []).filter(function (id) { return id.indexOf('net_') === 0; });
+    return featureIds.concat(nets);
+}
+
 // ============================================================
 // MENU DATA — diperkaya, dikelompokkan
 // ============================================================
@@ -72,7 +92,7 @@ function buildMenuData(featureIds, osState) {
             { title: T('osm.sec.connections'), items: [
                 { icon: 'wifi',   label: 'Wi-Fi',           value: has('fw_browser_mobile') || has('fw_wap_browser') ? T('osm.active') : '—', detail: null },
                 { icon: 'signal', label: T('osm.cellular_network'), value: netGen, detail: null },
-                { icon: 'cloud',  label: 'Bluetooth',        value: has('fw_ecosystem') ? T('osm.active') : T('osm.inactive'), detail: null },
+                { icon: 'cloud',  label: 'Bluetooth',        value: has('fw_bt_basic') ? T('osm.active') : T('osm.inactive'), detail: null },
                 { icon: 'globe',  label: T('osm.cellular_data'),     value: has('net_gprs') ? T('osm.active') : '—', detail: null }
             ]},
             { title: T('osm.sec.display_sound'), items: [
@@ -343,7 +363,7 @@ function renderWindowsMobile(featureIds, osState, w, h, size) {
     // List items (Windows Mobile list)
     const items = [
         { label: T('osm.phone'),            value: '—' },
-        { label: 'Bluetooth',          value: has('fw_ecosystem') ? T('osm.active') : T('osm.inactive') },
+        { label: 'Bluetooth',          value: has('fw_bt_basic') ? T('osm.active') : T('osm.inactive') },
         { label: T('osm.connection'),          value: has('net_gprs') ? 'GPRS' : '—' },
         { label: T('osm.messages'),              value: has('fw_sms') ? T('osm.active') : '—' },
         { label: T('osm.camera'),             value: has('cam_vga') ? 'VGA' : '—' },
@@ -496,7 +516,7 @@ function renderSkeuomorphic(featureIds, osState, w, h, size) {
     const groups = [
         { title: T('osm.sec.connections'), rows: [
             { label: 'Wi-Fi', value: has('fw_browser_mobile') ? 'Home-Net' : T('osm.inactive') },
-            { label: 'Bluetooth', value: has('fw_ecosystem') ? T('osm.active') : T('osm.inactive') },
+            { label: 'Bluetooth', value: has('fw_bt_basic') ? T('osm.active') : T('osm.inactive') },
             { label: T('osm.cellular_data'), value: has('net_3g') ? T('osm.net_3g_on') : has('net_gprs') ? 'GPRS' : T('osm.inactive') }
         ]},
         { title: T('osm.sec.system'), rows: [
@@ -594,7 +614,7 @@ function renderFlatMaterial(featureIds, osState, w, h, size) {
     const group1 = [
         { icon: 'wifi',   label: 'Wi-Fi',           value: has('fw_browser_mobile') ? 'Home-Net' : T('osm.inactive') },
         { icon: 'signal', label: T('osm.cellular_data'),    value: has('net_3g') ? T('osm.net_3g_on') : T('osm.inactive') },
-        { icon: 'cloud',  label: 'Bluetooth',       value: has('fw_ecosystem') ? T('osm.active') : T('osm.inactive') }
+        { icon: 'cloud',  label: 'Bluetooth',       value: has('fw_bt_basic') ? T('osm.active') : T('osm.inactive') }
     ];
 
     svg += '<rect x="8" y="' + curY + '" width="' + (w - 16) + '" height="' + (group1.length * 18 + 2) + '" rx="4" fill="' + surface + '"/>';
@@ -689,7 +709,7 @@ function renderGroupedModern(featureIds, osState, w, h, size) {
     const sections = [
         { items: [
             { icon: 'wifi',   label: 'Wi-Fi',           value: has('fw_browser_mobile') ? 'Home-Net' : T('osm.inactive'),    bg: '#007aff' },
-            { icon: 'cloud',  label: 'Bluetooth',       value: has('fw_ecosystem') ? T('osm.active') : T('osm.inactive'),            bg: '#007aff' },
+            { icon: 'cloud',  label: 'Bluetooth',       value: has('fw_bt_basic') ? T('osm.active') : T('osm.inactive'),            bg: '#007aff' },
             { icon: 'signal', label: T('osm.cellular_data'),    value: has('net_4g') ? '4G' : has('net_3g') ? '3G' : T('osm.inactive'), bg: '#34c759' },
             { icon: 'globe',  label: T('osm.hotspot'), value: T('osm.inactive'),                                             bg: '#34c759' }
         ]},
@@ -781,7 +801,7 @@ function renderMaterialYou(featureIds, osState, w, h, size) {
     const sections = [
         [
             { icon: 'wifi',   label: 'Wi-Fi',              value: has('fw_browser_mobile') ? 'Home-Net' : T('osm.inactive'),   bg: '#007aff' },
-            { icon: 'cloud',  label: 'Bluetooth',          value: has('fw_ecosystem') ? T('osm.active') : T('osm.inactive'),           bg: '#007aff' },
+            { icon: 'cloud',  label: 'Bluetooth',          value: has('fw_bt_basic') ? T('osm.active') : T('osm.inactive'),           bg: '#007aff' },
             { icon: 'signal', label: T('osm.cellular_network'),   value: has('net_5g') ? '5G' : has('net_4g') ? 'LTE' : '—', bg: '#34c759' }
         ],
         [
@@ -936,12 +956,12 @@ export function renderOsScreenMockup(opts) {
     const spec = resolveSpec(year, completed);
 
     const osState = st.os || {};
-    const featureIds = getCurrentFeatures(osState);
+    const featureIds = withNetworkResearch(getCurrentFeatures(osState), completed);
 
     const size = opts.size || 120;
     const w = 200;
     const h = 400;
-    const mode = getOsMode(year);
+    const mode = resolveOsMode(year, completed);
 
     let svgInner = '';
     if (mode === 'mono')              svgInner = renderMono(featureIds, osState, w, h, size);
@@ -965,10 +985,10 @@ export function getOsMockupInfo() {
     const st = safeGetState();
     const year = (st.time && st.time.currentYear) || 2000;
     const completed = (st.research && st.research.completed) || [];
-    const featureIds = getCurrentFeatures(st.os || {});
+    const featureIds = withNetworkResearch(getCurrentFeatures(st.os || {}), completed);
     return {
         year: year,
-        mode: getOsMode(year),
+        mode: resolveOsMode(year, completed),
         specId: resolveSpec(year, completed).id,
         featureCount: featureIds.length
     };
