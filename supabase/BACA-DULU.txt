@@ -1,6 +1,0 @@
-Jalankan file SATU PER SATU, berurutan (01, 02, 03, ...), di Supabase > SQL Editor > New query > tempel > Run.
-Tiap file kecil (maks ~7 KB). Hasil "Success" = lanjut ke file berikutnya.
-
-PROJECT BARU  : jalankan 01 sampai selesai.
-PROJECT LAMA (game sudah jalan, hanya tambah fitur admin) : mulai dari file "admin-bagian1" sampai selesai.
-Jika file ke-N error: kirim teks error-nya, jangan lanjut ke file berikutnya.
