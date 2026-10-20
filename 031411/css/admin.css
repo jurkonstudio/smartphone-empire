@@ -59,3 +59,24 @@ th[data-a=sort]{cursor:pointer}
 .kv{display:grid;grid-template-columns:130px 1fr;gap:2px 8px;margin:8px 0 12px}
 .kv span:nth-child(odd){color:var(--dim)}
 .kv span:nth-child(even){word-break:break-all}
+
+/* mobile: bottom nav + sheet */
+header{padding-top:calc(8px + env(safe-area-inset-top,0px))}
+nav{overflow:visible;border-bottom:0;border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 2px 7px;font-size:10px;border-bottom:0;border-top:2px solid transparent;position:relative;min-height:54px}
+nav button i{font-style:normal;font-size:17px;line-height:1.1}
+nav button.on{color:var(--ac);border-top-color:var(--ac)}
+nav em{position:absolute;top:3px;left:56%;background:var(--wn);color:#000;font-style:normal;border-radius:8px;padding:0 5px;font-size:10px}
+.btn{min-height:38px}.btn.sm{min-height:34px}
+td{padding:10px 8px}
+.stat[data-a]{cursor:pointer}.stat[data-a]:active{background:var(--bg3)}
+.stk{position:sticky;top:-10px;z-index:2;background:var(--bg);padding:10px 0;margin:-10px 0 4px}
+#sheet .in{padding:0;border-radius:10px 10px 0 0;max-height:88%}
+.sh{position:sticky;top:0;z-index:1;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;background:var(--bg);border-bottom:1px solid var(--bd)}
+.body{padding:4px 12px}
+.act{position:sticky;bottom:0;display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--bd)}
+.act .btn{flex:1;min-height:42px;padding:7px 4px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}.chips .btn{flex:1}
+.mi{display:flex;width:100%;gap:10px;align-items:center;margin:8px 0;min-height:46px;font-size:13px}
+.mi i{width:24px;text-align:center;font-style:normal}
+.pc{background:var(--bg2);border:1px solid var(--bd);border-radius:3px;padding:10px;margin-bottom:8px}
