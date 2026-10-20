@@ -25,6 +25,7 @@ import { getDesignEraForYear, getDesignEraById } from '../../data/era-design.dat
 import { state } from '../../core/GameState.js';
 import { resolveSpec } from '../../data/phone-specs.data.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
+import { resolveConfigForResearch, resolveSensorVisuals, resolveNetworkLabel } from './research-gating.js';
 
 // _tf(key, fallbackId, fallbackEn): terjemahan jika key ada, kalau belum pakai fallback sesuai bahasa aktif.
 function _tf(key, fbId, fbEn) {
@@ -984,7 +985,43 @@ function renderRearCamera(T, n, yr, hex, spec) {
         (flash ? flashSvg(L + size + 3.4, Tp + 3.4, 1.3) + `<circle cx="${L + size + 3.4}" cy="${Tp + 8}" r="0.7" fill="#111"/>` : '');
 }
 
-function renderBackView(g, spec, ids, hex, brand, n) {
+// Sensor belakang (sidik jari di bawah modul kamera, LiDAR di modul).
+// Hanya digambar bila riset sensornya sudah selesai (lihat resolveSensorVisuals).
+function renderRearSensors(T, yr, n, sensors) {
+    if (!sensors) return '';
+    let out = '';
+    if (sensors.fpRear) {
+        const cx = T.x + T.w / 2, cy = T.y + T.h * 0.74, r = T.w * 0.1;
+        out += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#000" fill-opacity="0.16" stroke="#000" stroke-opacity="0.35" stroke-width="0.4"/>
+            <circle cx="${cx}" cy="${cy}" r="${r * 0.62}" fill="none" stroke="#000" stroke-opacity="0.22" stroke-width="0.3"/>`;
+    }
+    if (sensors.lidar) {
+        let cx, cy;
+        if (yr >= 2019) {
+            // modul kamera modern: LiDAR di bawah modul, sejajar sisi kiri
+            const L = T.x + 7, Tp = T.y + 7;
+            const scale = ({ 1: 0.30, 2: 0.36, 3: 0.42, 4: 0.44 })[Math.max(1, n)] * (yr >= 2023 ? 1.05 : 1);
+            const size = T.w * scale;
+            cx = L + size * 0.5;
+            cy = Tp + size + 5;
+        } else {
+            cx = T.x + T.w / 2;
+            cy = T.y + 22;
+        }
+        out += `<circle cx="${cx}" cy="${cy}" r="2" fill="#0b0b0f" stroke="#666" stroke-width="0.35"/>
+            <circle cx="${cx}" cy="${cy}" r="0.8" fill="#1d2a44"/>`;
+    }
+    return out;
+}
+
+// Sidik jari dalam layar: cincin samar di bawah tengah layar (tampak depan).
+function renderInDisplayFingerprint(scr, sensors) {
+    if (!sensors || !sensors.fpInDisplay) return '';
+    const cx = scr.x + scr.w / 2, cy = scr.y + scr.h * 0.955, r = scr.w * 0.07;
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.35" stroke-width="0.35"/>`;
+}
+
+function renderBackView(g, spec, ids, hex, brand, n, sensors) {
     const T = { x: g.x, y: g.ty, w: g.w, h: g.th, rx: g.rx };
     const mat = g.material, yr = g.yr;
     const light = lum(hex) > 140;
@@ -1018,6 +1055,7 @@ function renderBackView(g, spec, ids, hex, brand, n) {
             <text x="${T.x + T.w - 11}" y="${T.y + 13}" text-anchor="middle" font-size="3.4" font-family="sans-serif" font-weight="700" fill="#cfe3ff">12:30</text>`;
     }
     out += renderRearCamera(T, n, yr, hex, spec);
+    out += renderRearSensors(T, yr, n, sensors);
     if (brand) {
         const fs = yr < 2007 ? 2.6 : 4.2;
         const by = yr < 2007 ? T.y + T.h * 0.42 : T.y + T.h * 0.58;
@@ -1049,7 +1087,14 @@ function getBounds(g) {
 }
 
 // Layar depan: satu layar, dua layar (dual), atau layar lebar (communicator).
-function renderScreens(g, scr, era, uid, brand, displayId) {
+// Label generasi jaringan di status bar (mis. 4G, 5G), tepat di kanan ikon sinyal.
+// Hanya digambar bila riset jaringan sudah selesai (lihat resolveNetworkLabel).
+function renderNetworkLabel(scr, label) {
+    if (!label) return '';
+    return `<text x="${scr.x + 10.5}" y="${scr.y + 4.6}" font-size="3" font-family="sans-serif" font-weight="700" fill="#ffffff" fill-opacity="0.85">${_esc(label)}</text>`;
+}
+
+function renderScreens(g, scr, era, uid, brand, displayId, netLabel) {
     if (g.kind === 'dual') {
         const gap = 6.2, hw = (scr.w - gap) / 2;
         return [0, 1].map(function (i) {
@@ -1072,6 +1117,7 @@ function renderScreens(g, scr, era, uid, brand, displayId) {
             ${content}
             ${renderCrease(g, scr)}
         </g>
+        ${renderNetworkLabel(scr, netLabel)}
         ${renderReflectionLayer(scr, uid, g.yr)}`;
 }
 
@@ -1275,6 +1321,11 @@ export function renderPhoneMockup(config, opts) {
     const companyName = (st.companyName || '').trim();
     const brand = escapeHtml(companyName ? companyName.toUpperCase().slice(0, 10) : 'SMARTEL');
 
+    // Komponen yang belum diriset turun ke alternatif yang sudah terbuka.
+    config = resolveConfigForResearch(config, completed);
+    const sensors = resolveSensorVisuals(completed);
+    const netLabel = resolveNetworkLabel(completed);
+
     const spec = resolveSpec(year, completed);
     const era = eraForSpec(spec, year);
 
@@ -1299,7 +1350,7 @@ export function renderPhoneMockup(config, opts) {
     if (view === 'box') {
         layers = renderPackagingLayers({ year: year, hex: bodyHex, brand: brand, uid: uid, label: spec.label, contents: pack });
     } else if (view === 'back') {
-        layers = renderBackView(g, spec, ids, bodyHex, brand, n);
+        layers = renderBackView(g, spec, ids, bodyHex, brand, n, sensors);
     } else if (g.kind === 'swivel') {
         layers = renderSwivelFront(g, scr, spec, bodyHex, brand, ids, era, uid, displayId);
     } else {
@@ -1309,7 +1360,8 @@ export function renderPhoneMockup(config, opts) {
             ${renderBodyLayer(g, ids, bodyHex)}
             ${renderFace(g, scr, spec, bodyHex, brand)}
             ${renderKeysForKind(g, scr, bodyHex, spec)}
-            ${renderScreens(g, scr, era, uid, brand, displayId)}
+            ${renderScreens(g, scr, era, uid, brand, displayId, netLabel)}
+            ${renderInDisplayFingerprint(scr, sensors)}
             ${renderEdgeLayer(g, scr, uid)}
             ${renderNotchLayer(spec, scr, g)}
             ${renderHomeLayer(spec, g, scr)}
@@ -1363,7 +1415,8 @@ export function renderPackagingCaption(config, opts) {
     const year = opts.year || (st.time && st.time.currentYear) || 2000;
     const completed = (st.research && st.research.completed) || [];
     const spec = resolveSpec(year, completed);
-    return packCaption(packContents(spec, year, completed, config), opts.width || 240);
+    const gated = resolveConfigForResearch(config, completed);
+    return packCaption(packContents(spec, year, completed, gated), opts.width || 240);
 }
 
 export function renderPhoneThumbnail(config, size) {
