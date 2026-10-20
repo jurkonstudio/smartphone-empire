@@ -15,17 +15,17 @@
 // OfficeScene), supaya tampilan Office tidak ikut berubah.
 export var CAMPUS_LOOK = {
     light: {
-        hemiSky: 0xe8f1ff, hemiGround: 0xb9c7b4, hemiI: 1.15,
-        sunCol: 0xffecd0, sunI: 2.7,
-        fillCol: 0xcfe0ff, fillI: 0.55,
-        rimCol: 0xe3ecff, rimI: 0.5,
-        envI: 0.55, exposure: 1.0,
-        aoOpacity: 0.34,
+        hemiSky: 0xeaf2ff, hemiGround: 0xc2cfb8, hemiI: 1.05,
+        sunCol: 0xffe6c2, sunI: 3.0,
+        fillCol: 0xcfe0ff, fillI: 0.6,
+        rimCol: 0xe3ecff, rimI: 0.6,
+        envI: 0.55, exposure: 1.04,
+        aoOpacity: 0.38,
         colors: { roofAlt: 0xa3adbb }
     },
     dark: {
-        hemiSky: 0x7f93bd, hemiGround: 0x1d2430, hemiI: 0.85,
-        sunCol: 0xa9bde8, sunI: 1.5,
+        hemiSky: 0x7f93bd, hemiGround: 0x1d2430, hemiI: 0.9,
+        sunCol: 0xa9bde8, sunI: 1.7,
         fillCol: 0x6f8fd0, fillI: 0.35,
         rimCol: 0x8fb0ff, rimI: 0.55,
         envI: 0.22, exposure: 0.95,
@@ -133,8 +133,9 @@ export function createLookRig(THREE, renderer, scene, quality) {
         sc.left = -24; sc.right = 24; sc.top = 24; sc.bottom = -24;
         sc.near = 1; sc.far = 60;
         sc.updateProjectionMatrix();
-        sun.shadow.bias = -0.0005;
-        sun.shadow.normalBias = 0.04;
+        sun.shadow.bias = -0.0004;
+        sun.shadow.normalBias = 0.03;
+        sun.shadow.radius = 2;
     }
 
     var envRT = null, envOn = false;

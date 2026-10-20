@@ -105,11 +105,9 @@ export var SLOT_ORDER = ['lab', 'factory', 'store', 'os', 'billboard', 'monument
 export var WIND_SPOTS = [[-11.5, -13.2], [-8.2, -13.2], [-4.8, -13.2]];
 export var RAIL = { z: -10.2, x0: -13, x1: 13, y: 1.5, stationX: 7.5 };
 
-// Kawasan kota di pinggir peta. Muncul bertahap: 2 + ~2.7 blok per era.
+// Kawasan kota di pinggir peta. Muncul bertahap: 1 + 1 blok per era (maks 6).
 export var SPRAWL_SPOTS = [
-    [5.4, 9.2], [-4.1, 7.3], [5.4, -6.0], [3.5, 11.1], [-9.8, 3.5], [3.5, -7.9],
-    [13.0, 1.6], [-7.9, 7.3], [11.1, -0.3], [5.4, 13.0], [-6.0, 9.2], [13.0, -2.2],
-    [-4.1, 11.1], [-11.7, 5.4], [-7.9, 11.1], [-6.0, 13.0], [-11.7, 9.2], [-9.8, 13.0]
+    [5.4, 9.2], [-9.8, 3.5], [13.0, 1.6], [5.4, -6.0], [-7.9, 7.3], [11.1, -0.3]
 ];
 
 // ============================================================
@@ -210,7 +208,7 @@ export function computePlan(data) {
         levels[k] = lv;
     });
 
-    var sprawl = Math.min(SPRAWL_SPOTS.length, 2 + Math.round(eraIdx * 2.7));
+    var sprawl = Math.min(SPRAWL_SPOTS.length, 1 + Math.round(eraIdx * 1));
     var rail = eraIdx >= RAIL_MIN_ERA;
     var wind = eraIdx >= WIND_MIN_ERA;
     var sig = eraIdx + '|' + RULE_KEYS.map(function (k) { return levels[k]; }).join(',') + '|' + sprawl +
