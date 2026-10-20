@@ -1,5 +1,5 @@
 // FILE: src/main.js
-// v2028.54 — [UPDATE] Integrasi AdvisorNLP (Chat Asisten Bisnis)
+// v2028.55 — [UPDATE] Integrasi AdvisorNLP Chat & Optimasi Keyboard (Quick Reply)
 import { APP_CONFIG } from './config/app.config.js';
 import { VIEW_TITLES } from './config/constants.js';
 import { bus } from './core/EventBus.js';
@@ -447,7 +447,47 @@ function _refreshProductUi(productId) {
 
 // ============ ADVISOR CHAT INTEGRATION ============
 function initAdvisorChat() {
-    // 1. Handle "Enter" di keyboard
+    function sendChatMessage(text, inputElement, chatContainer) {
+        if (!text) return;
+        
+        // PAKSA KEYBOARD TURUN: Lepas fokus dari input seketika itu juga
+        if (inputElement) {
+            inputElement.blur(); 
+            setTimeout(function() { inputElement.blur(); }, 50); 
+        } else if (document.activeElement) {
+            document.activeElement.blur();
+        }
+
+        var s = state.get();
+        var gs = {
+            year: s.time.currentYear,
+            funds: s.cash,
+            sales: s.stats && s.stats.salesToday ? s.stats.salesToday : 0,
+            researchLevel: s.research && s.research.completed ? s.research.completed.length : 0,
+            activeProducts: s.products && s.products.catalog ? s.products.catalog.filter(function(p){return p.status === 'active';}).length : 0
+        };
+
+        var userDiv = document.createElement('div');
+        userDiv.className = 'chat-bubble-user';
+        userDiv.style.cssText = 'align-self:flex-end;background:#007AFF;color:white;padding:8px 12px;border-radius:12px;margin:5px 0;max-width:80%;margin-left:auto;font-size:14px;';
+        userDiv.innerText = text;
+        if (chatContainer) chatContainer.appendChild(userDiv);
+
+        setTimeout(function() {
+            var aiResponse = advisorNLP.chat(text, gs);
+            var aiDiv = document.createElement('div');
+            aiDiv.className = 'chat-bubble-ai';
+            aiDiv.style.cssText = 'align-self:flex-start;background:#2C2C2E;color:white;padding:8px 12px;border-radius:12px;margin:5px 0;max-width:80%;font-size:14px;';
+            aiDiv.innerText = aiResponse;
+            if (chatContainer) {
+                chatContainer.appendChild(aiDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            vibrate(10);
+        }, 600);
+    }
+
+    // Handle "Enter" di keyboard
     document.body.addEventListener('keydown', function(e) {
         if (e.target.matches('input[placeholder*="Tanya apa saja"], input[placeholder*="Tanya"]')) {
             if (e.key === 'Enter') {
@@ -459,7 +499,7 @@ function initAdvisorChat() {
         }
     });
 
-    // 2. Handle klik tombol Send (Panah biru)
+    // Handle klik tombol Send (Panah biru)
     document.body.addEventListener('click', function(e) {
         var sendBtn = e.target.closest('button');
         if (sendBtn) {
@@ -471,41 +511,29 @@ function initAdvisorChat() {
                 var text = input.value.trim();
                 if (!text) return;
                 input.value = '';
-
-                // Ambil state game saat ini
-                var s = state.get();
-                var gs = {
-                    year: s.time.currentYear,
-                    funds: s.cash,
-                    sales: s.stats && s.stats.salesToday ? s.stats.salesToday : 0,
-                    researchLevel: s.research && s.research.completed ? s.research.completed.length : 0,
-                    activeProducts: s.products && s.products.catalog ? s.products.catalog.filter(function(p){return p.status === 'active';}).length : 0
-                };
-
-                // Cari container chat (sesuaikan class dengan UI Anda)
                 var chatContainer = document.querySelector('.chat-messages') || parent.parentElement;
-                
-                // Tampilkan chat user
-                var userDiv = document.createElement('div');
-                userDiv.className = 'chat-bubble-user';
-                userDiv.style.cssText = 'align-self:flex-end;background:#007AFF;color:white;padding:8px 12px;border-radius:12px;margin:5px 0;max-width:80%;margin-left:auto;font-size:14px;';
-                userDiv.innerText = text;
-                chatContainer.appendChild(userDiv);
-
-                // Tampilkan loading / respons AI
-                setTimeout(function() {
-                    var aiResponse = advisorNLP.chat(text, gs);
-                    var aiDiv = document.createElement('div');
-                    aiDiv.className = 'chat-bubble-ai';
-                    aiDiv.style.cssText = 'align-self:flex-start;background:#2C2C2E;color:white;padding:8px 12px;border-radius:12px;margin:5px 0;max-width:80%;font-size:14px;';
-                    aiDiv.innerText = aiResponse;
-                    chatContainer.appendChild(aiDiv);
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                    vibrate(10);
-                }, 600);
+                sendChatMessage(text, input, chatContainer);
             }
         }
     });
+
+    // Handle klik pada Chip Pertanyaan Cepat (Quick Reply)
+    // Menggunakan 'true' di akhir (Capture Phase) agar mencegah keyboard muncul
+    document.body.addEventListener('click', function(e) {
+        var chip = e.target.closest('.chip, .chip-small, [data-quick-reply]');
+        if (chip) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation(); 
+            
+            var chipText = chip.innerText.trim();
+            var input = document.querySelector('input[placeholder*="Tanya apa saja"]');
+            var parent = chip.parentElement.parentElement; 
+            var chatContainer = document.querySelector('.chat-messages') || parent;
+            
+            sendChatMessage(chipText, input, chatContainer);
+        }
+    }, true);
 }
 
 // ============ CLICKS ============
