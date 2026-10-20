@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/layout/Header.js
 // v2027.18a — wallet: cash + silicon button.
 // v2027.41 — chip countdown boost percepatan (data-time-boost).
@@ -47,7 +48,7 @@ export function renderHeader({ state, timeSnapshot, warning }) {
             <div class="header-row">
                 <button class="header-company-btn" data-notif-toggle type="button" aria-haspopup="dialog" aria-expanded="${notifOpen}" aria-label="${t('header.notif_aria')}">
                     ${generateLogo(state.companyName, { size: 26 })}
-                    <span class="header-company">${state.companyName}</span>
+                    <span class="header-company">${escapeHtml(state.companyName)}</span>
                     <span class="header-notif-badge" data-notif-badge ${unread > 0 ? '' : 'hidden'}>${unread > 0 ? unreadTxt : ''}</span>
                     <span class="header-chevron" aria-hidden="true">›</span>
                 </button>
