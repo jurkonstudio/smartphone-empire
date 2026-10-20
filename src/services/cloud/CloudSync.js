@@ -157,26 +157,56 @@ function _onVisibilityChange() {
 // ============================================================
 // SILICON — STRICT SERVER AUTHORITATIVE (NO LOCAL PENDING QUEUE)
 // ============================================================
+// [FIX TOP-UP TIDAK MASUK] Penyebab: pembacaan saldo server dibatasi 4 dtk lalu HASILNYA DIBUANG.
+// Di jaringan seluler yang lambat (4G/Supabase dingin) get_silicon sering > 4 dtk, sehingga saldo hasil
+// top-up (mis. 853 di server) tidak pernah diterapkan dan game terus menampilkan saldo lokal (10).
+// Perbaikan:
+//  • batas "lunak" (SIL_SOFT_MS) hanya melepas tampilan '…' -> saldo lokal; permintaan TETAP ditunggu
+//    sampai batas keras (SIL_HARD_MS) dan hasilnya diterapkan bila masih segar;
+//  • panggilan yang datang saat sinkron berjalan tidak lagi dibuang: dijadwalkan ulang (_silAgain);
+//  • gagal/timeout -> coba lagi dengan backoff (bukan menunggu poll 30 dtk).
+const SIL_SOFT_MS = 4000;
+const SIL_HARD_MS = 20000;
+const SIL_RETRY_MS = [2000, 5000, 10000, 20000];
+let _silAgain = false;
+let _silRetryN = 0;
+let _silRetryTimer = null;
+
+function _scheduleSilRetry() {
+    if (_silRetryTimer) return;
+    const wait = SIL_RETRY_MS[Math.min(_silRetryN, SIL_RETRY_MS.length - 1)];
+    _silRetryN++;
+    _silRetryTimer = setTimeout(function () { _silRetryTimer = null; syncSiliconOnLogin(); }, wait);
+}
+
 async function syncSiliconOnLogin() {
     if (!_state || !_isConnected()) return;
-    if (_siliconSyncing) return;
+    if (_siliconSyncing) { _silAgain = true; return; }   // jangan buang: baca ulang setelah yang berjalan selesai
     // Ada potongan SIL yang belum dikonfirmasi server -> jangan baca saldo basi; ulangi setelahnya.
     if (_pendingDebits > 0) { _debouncedSyncSilicon(); return; }
 
     _siliconSyncing = true;
+    _silAgain = false;
     var epochAtStart = _localEpoch;
+    var settled = false;
+    // Batas lunak: hanya melepas '…' agar UI tidak menggantung; hasil server tetap ditunggu.
+    var softTimer = setTimeout(function () {
+        if (!settled) { try { SiliconService.markServerSync(false); } catch (_) {} }
+    }, SIL_SOFT_MS);
+    var needRetry = false;
     try {
-        var res = await _withTimeout(CloudService.getSiliconBalance(), 4000, { ok: false });
+        var res = await _withTimeout(CloudService.getSiliconBalance(), SIL_HARD_MS, { ok: false, timeout: true });
 
         // Saldo lokal berubah (belanja/refund) selama permintaan berjalan -> hasil server basi, buang.
         if (_pendingDebits > 0 || epochAtStart !== _localEpoch) {
-            _debouncedSyncSilicon();
+            _silAgain = true;
             return;
         }
 
         if (res.ok && typeof res.balance === 'number') {
             var serverBal = Math.floor(res.balance);
             var localBal = SiliconService.getBalance();
+            _silRetryN = 0;
 
             if (serverBal !== localBal) {
                 console.info('[CloudSync] Sync Server (' + serverBal + ') -> Lokal (' + localBal + ')');
@@ -187,12 +217,18 @@ async function syncSiliconOnLogin() {
             }
         } else {
             SiliconService.markServerSync(false);
+            needRetry = true;
         }
     } catch (e) {
         try { SiliconService.markServerSync(false); } catch (_) {}
+        needRetry = true;
         console.warn('[CloudSync] Gagal sinkronisasi saldo, mempertahankan saldo lokal:', e);
     } finally {
+        settled = true;
+        clearTimeout(softTimer);
         _siliconSyncing = false;
+        if (_silAgain) { _silAgain = false; _debouncedSyncSilicon(); }
+        else if (needRetry) _scheduleSilRetry();
     }
 }
 
@@ -479,12 +515,35 @@ async function _startRealtime() {
     });
 }
 
+// [FIX TOP-UP] Ada pesanan top-up yang masih 'pending' di perangkat ini?
+function _hasPendingOrders() {
+    try {
+        var o = _state && _state.get().paymentOrders;
+        return Array.isArray(o) && o.some(function (x) { return x && (x.status === 'pending' || x.status === 'created'); });
+    } catch (e) { return false; }
+}
+
+// Tanyakan status pesanan ke server; bila admin sudah menyetujui, PaymentService menandai 'paid' dan menarik saldo.
+function _refreshPendingOrders() {
+    import('../../systems/PaymentService.js').then(function (m) {
+        var list = m.PaymentService.getOrders().filter(function (o) { return o.status === 'pending'; });
+        list.forEach(function (o) { m.PaymentService.refresh(o.id); });
+    }).catch(function () {});
+}
+
 function _startSilPoll() {
     _stopSilPoll();
+    var tick = 0;
+    // Tiap 10 dtk bila ada pesanan menunggu (top-up baru diajukan), selain itu tiap SIL_POLL_MS.
     _silPollTimer = setInterval(function () {
-        if (document.visibilityState !== 'visible' || !_isConnected() || _siliconSyncing) return;
-        _debouncedSyncSilicon(); 
-    }, SIL_POLL_MS);
+        if (document.visibilityState !== 'visible' || !_isConnected()) return;
+        tick += 10000;
+        var pending = _hasPendingOrders();
+        if (!pending && tick < SIL_POLL_MS) return;
+        tick = 0;
+        if (pending) _refreshPendingOrders();
+        _debouncedSyncSilicon();
+    }, 10000);
 }
 
 function _stopSilPoll() {
@@ -494,6 +553,7 @@ function _stopSilPoll() {
 function _stopRealtime() {
     clearTimeout(_walletTimer);
     clearTimeout(_syncDebounceTimer);
+    clearTimeout(_silRetryTimer); _silRetryTimer = null; _silRetryN = 0; _silAgain = false;
     _stopSilPoll();
     if (_unsubWallet) { try { _unsubWallet(); } catch (e) {} _unsubWallet = null; }
     if (_unsubRealtime) { try { _unsubRealtime(); } catch (e) {} _unsubRealtime = null; }
