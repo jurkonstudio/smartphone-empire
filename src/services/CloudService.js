@@ -333,11 +333,19 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
-    async spendSiliconServer(amount, requestId) {
+    async spendSiliconServer(amount, requestId, reason) {
         if (!_adapter) return NOT_CONFIGURED;
         if (!_userId) return NOT_SIGNED_IN;
         if (typeof _adapter.rpcSpendSilicon !== 'function') return NOT_CONFIGURED;
-        try { return { ok: true, balance: await _adapter.rpcSpendSilicon(amount, requestId) }; }
+        try { return { ok: true, balance: await _adapter.rpcSpendSilicon(amount, requestId, reason) }; }
+        catch (err) { return _fail(err); }
+    },
+
+    async refundSiliconServer(requestId) {
+        if (!_adapter) return NOT_CONFIGURED;
+        if (!_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.rpcRefundSilicon !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, balance: await _adapter.rpcRefundSilicon(requestId) }; }
         catch (err) { return _fail(err); }
     },
 
