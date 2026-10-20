@@ -9,7 +9,7 @@ import { escapeHtml } from '../../utils/html.js';
 import { state } from '../../core/GameState.js';
 import { getDesignEraForYear } from '../../data/era-design.data.js';
 import { resolveSpec } from '../../data/phone-specs.data.js';
-import { t as _tr } from '../../core/LanguageService.js';
+import { t as _tr, LanguageService } from '../../core/LanguageService.js';
 
 
 // [i18n] Teks SVG diterjemahkan saat render (bukan saat import) dan di-escape untuk SVG/HTML.
@@ -68,6 +68,23 @@ function resolveOsMode(year, completed) {
 function withNetworkResearch(featureIds, completed) {
     const nets = (completed || []).filter(function (id) { return id.indexOf('net_') === 0; });
     return featureIds.concat(nets);
+}
+
+// Riset yang sudah selesai pada render terakhir (dipakai buildMenuData; render bersifat sinkron).
+let _osCompleted = [];
+
+// Baris pengaturan yang butuh riset tertentu: bila belum ada satu pun riset itu, baris
+// tampil "Terkunci" (tidak hilang). Teks dipilih sesuai bahasa aktif.
+function lockText() {
+    var en = false;
+    try { en = LanguageService.getLang() === 'en'; } catch (e) {}
+    return en ? 'Locked' : 'Terkunci';
+}
+
+// Nilai baris: tampilkan `value` bila salah satu riset di `researchIds` sudah selesai, selain itu "Terkunci".
+function rv(researchIds, value) {
+    const done = researchIds.some(function (id) { return _osCompleted.indexOf(id) !== -1; });
+    return done ? value : lockText();
 }
 
 // ============================================================
@@ -363,7 +380,7 @@ function renderWindowsMobile(featureIds, osState, w, h, size) {
     // List items (Windows Mobile list)
     const items = [
         { label: T('osm.phone'),            value: '—' },
-        { label: 'Bluetooth',          value: has('fw_bt_basic') ? T('osm.active') : T('osm.inactive') },
+        { label: 'Bluetooth',          value: rv(['audio_bt'], has('fw_bt_basic') ? T('osm.active') : T('osm.inactive')) },
         { label: T('osm.connection'),          value: has('net_gprs') ? 'GPRS' : '—' },
         { label: T('osm.messages'),              value: has('fw_sms') ? T('osm.active') : '—' },
         { label: T('osm.camera'),             value: has('cam_vga') ? 'VGA' : '—' },
@@ -516,8 +533,8 @@ function renderSkeuomorphic(featureIds, osState, w, h, size) {
     const groups = [
         { title: T('osm.sec.connections'), rows: [
             { label: 'Wi-Fi', value: has('fw_browser_mobile') ? 'Home-Net' : T('osm.inactive') },
-            { label: 'Bluetooth', value: has('fw_bt_basic') ? T('osm.active') : T('osm.inactive') },
-            { label: T('osm.cellular_data'), value: has('net_3g') ? T('osm.net_3g_on') : has('net_gprs') ? 'GPRS' : T('osm.inactive') }
+            { label: 'Bluetooth', value: rv(['audio_bt'], has('fw_bt_basic') ? T('osm.active') : T('osm.inactive')) },
+            { label: T('osm.cellular_data'), value: rv(['net_gprs', 'net_3g'], has('net_3g') ? T('osm.net_3g_on') : has('net_gprs') ? 'GPRS' : T('osm.inactive')) }
         ]},
         { title: T('osm.sec.system'), rows: [
             { label: T('osm.general'), value: '›' },
@@ -613,8 +630,8 @@ function renderFlatMaterial(featureIds, osState, w, h, size) {
 
     const group1 = [
         { icon: 'wifi',   label: 'Wi-Fi',           value: has('fw_browser_mobile') ? 'Home-Net' : T('osm.inactive') },
-        { icon: 'signal', label: T('osm.cellular_data'),    value: has('net_3g') ? T('osm.net_3g_on') : T('osm.inactive') },
-        { icon: 'cloud',  label: 'Bluetooth',       value: has('fw_bt_basic') ? T('osm.active') : T('osm.inactive') }
+        { icon: 'signal', label: T('osm.cellular_data'),    value: rv(['net_gprs', 'net_3g'], has('net_3g') ? T('osm.net_3g_on') : T('osm.inactive')) },
+        { icon: 'cloud',  label: 'Bluetooth',       value: rv(['audio_bt'], has('fw_bt_basic') ? T('osm.active') : T('osm.inactive')) }
     ];
 
     svg += '<rect x="8" y="' + curY + '" width="' + (w - 16) + '" height="' + (group1.length * 18 + 2) + '" rx="4" fill="' + surface + '"/>';
@@ -709,8 +726,8 @@ function renderGroupedModern(featureIds, osState, w, h, size) {
     const sections = [
         { items: [
             { icon: 'wifi',   label: 'Wi-Fi',           value: has('fw_browser_mobile') ? 'Home-Net' : T('osm.inactive'),    bg: '#007aff' },
-            { icon: 'cloud',  label: 'Bluetooth',       value: has('fw_bt_basic') ? T('osm.active') : T('osm.inactive'),            bg: '#007aff' },
-            { icon: 'signal', label: T('osm.cellular_data'),    value: has('net_4g') ? '4G' : has('net_3g') ? '3G' : T('osm.inactive'), bg: '#34c759' },
+            { icon: 'cloud',  label: 'Bluetooth',       value: rv(['audio_bt'], has('fw_bt_basic') ? T('osm.active') : T('osm.inactive')),            bg: '#007aff' },
+            { icon: 'signal', label: T('osm.cellular_data'),    value: rv(['net_4g', 'net_3g'], has('net_4g') ? '4G' : has('net_3g') ? '3G' : T('osm.inactive')), bg: '#34c759' },
             { icon: 'globe',  label: T('osm.hotspot'), value: T('osm.inactive'),                                             bg: '#34c759' }
         ]},
         { items: [
@@ -720,7 +737,7 @@ function renderGroupedModern(featureIds, osState, w, h, size) {
             { icon: 'display', label: T('osm.screen_time'),           value: has('fw_digital_wellbeing') ? T('osm.active') : '—', bg: '#5856d6' }
         ]},
         { items: [
-            { icon: 'lock',   label: T('osm.faceid_passcode'), value: has('fw_biometric') ? T('osm.active') : '—', bg: '#34c759' },
+            { icon: 'lock',   label: T('osm.faceid_passcode'), value: rv(['sensor_fp_rear', 'sensor_face3d', 'sensor_indisplay'], has('fw_biometric') ? T('osm.active') : '—'), bg: '#34c759' },
             { icon: 'shield', label: T('osm.privacy'),              value: null, toggle: has('fw_privacy'), bg: '#007aff' },
             { icon: 'battery',label: T('osm.battery'),              value: '87%', bg: '#34c759' },
             { icon: 'info',   label: T('osm.general'),                 value: getCurrentVersionString(osState) || '—', bg: '#8e8e93' }
@@ -801,7 +818,7 @@ function renderMaterialYou(featureIds, osState, w, h, size) {
     const sections = [
         [
             { icon: 'wifi',   label: 'Wi-Fi',              value: has('fw_browser_mobile') ? 'Home-Net' : T('osm.inactive'),   bg: '#007aff' },
-            { icon: 'cloud',  label: 'Bluetooth',          value: has('fw_bt_basic') ? T('osm.active') : T('osm.inactive'),           bg: '#007aff' },
+            { icon: 'cloud',  label: 'Bluetooth',          value: rv(['audio_bt'], has('fw_bt_basic') ? T('osm.active') : T('osm.inactive')),           bg: '#007aff' },
             { icon: 'signal', label: T('osm.cellular_network'),   value: has('net_5g') ? '5G' : has('net_4g') ? 'LTE' : '—', bg: '#34c759' }
         ],
         [
@@ -810,7 +827,7 @@ function renderMaterialYou(featureIds, osState, w, h, size) {
             { icon: 'display', label: T('osm.display_brightness'), value: isDark ? T('osm.dark') : T('osm.light'), bg: '#5856d6' }
         ],
         [
-            { icon: 'lock',    label: T('osm.faceid_passcode'), value: has('fw_biometric') ? T('osm.active') : '—', bg: '#34c759' },
+            { icon: 'lock',    label: T('osm.faceid_passcode'), value: rv(['sensor_fp_rear', 'sensor_face3d', 'sensor_indisplay'], has('fw_biometric') ? T('osm.active') : '—'), bg: '#34c759' },
             { icon: 'shield',  label: T('osm.privacy_security'), value: has('fw_privacy') ? T('osm.protected') : T('osm.standard'), bg: '#007aff' },
             { icon: 'battery', label: T('osm.battery'),             value: '87%', bg: '#34c759' },
             { icon: 'info',    label: T('osm.general'),                value: getCurrentVersionString(osState) || '—', bg: '#8e8e93' }
@@ -906,7 +923,7 @@ function renderAiModern(featureIds, osState, w, h, size) {
             { icon: 'display', label: T('osm.display'),          value: isDark ? T('osm.dark') : T('osm.light'), bg: pal.accent }
         ],
         [
-            { icon: 'lock',    label: T('osm.biometrics'),         value: has('fw_biometric') ? T('osm.active') : '—', bg: '#34c759' },
+            { icon: 'lock',    label: T('osm.biometrics'),         value: rv(['sensor_fp_rear', 'sensor_face3d', 'sensor_indisplay'], has('fw_biometric') ? T('osm.active') : '—'), bg: '#34c759' },
             { icon: 'shield',  label: T('osm.local_privacy'),     value: has('fw_privacy') ? T('osm.protected') : T('osm.standard'), bg: '#34c759' },
             { icon: 'battery', label: T('osm.adaptive_battery'),   value: '87%', bg: '#34c759' },
             { icon: 'sparkles',label: 'AI On-Device',      value: has('fw_ai_on_device') ? T('osm.active') : '—', bg: pal.accent },
@@ -956,6 +973,7 @@ export function renderOsScreenMockup(opts) {
     const spec = resolveSpec(year, completed);
 
     const osState = st.os || {};
+    _osCompleted = completed;
     const featureIds = withNetworkResearch(getCurrentFeatures(osState), completed);
 
     const size = opts.size || 120;
