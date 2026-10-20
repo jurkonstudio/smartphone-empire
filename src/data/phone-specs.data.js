@@ -19,6 +19,8 @@
 // murni gated tahun.
 // ============================================================
 
+import { RESEARCH_NODES } from './research.data.js';
+
 // Skema screen: inset dalam unit viewBox "0 0 100 200" (dari PhoneMockup).
 // Body diasumsikan 20-80 (lebar 60) x 8-188 (tinggi 180).
 export const PHONE_SPECS = [
@@ -217,7 +219,7 @@ export const PHONE_SPECS = [
         ports: ['charging_usb_c'],
         sideButtons: ['power_side', 'volume_side'],
         material: 'glass',
-        unlockResearch: 'fw_biometric'
+        unlockResearch: 'sensor_face3d'
     },
 
     // ---------- 2018: Teardrop Notch ----------
@@ -312,7 +314,7 @@ export const PHONE_SPECS = [
     {
         id: 'ms_dynamic_island',
         fromYear: 2022, toYear: 2022,
-        eraId: 'era_foldable',
+        eraId: 'era_ai_era',
         label: 'Dynamic Island',
         screen: {
             insetTop: 5, insetBottom: 8, insetSide: 2,
@@ -327,7 +329,7 @@ export const PHONE_SPECS = [
         ports: ['charging_usb_c'],
         sideButtons: ['power_side', 'volume_side'],
         material: 'titanium',
-        unlockResearch: 'fw_dynamic_island'
+        unlockResearch: 'chip_5nm'
     },
 
     // ---------- 2023: Refined AI ----------
@@ -415,15 +417,18 @@ export function getSpecById(id) {
     return PHONE_SPECS.find(function (s) { return s.id === id; }) || null;
 }
 
-// Cek apakah spec bisa muncul: tahun cocok DAN (unlockResearch null ATAU sudah selesai).
+// Riset untuk spec sudah selesai? (unlockResearch null = selalu terbuka)
+export function isResearchUnlocked(spec, completedResearch) {
+    if (!spec) return false;
+    if (!spec.unlockResearch) return true;
+    return (completedResearch || []).indexOf(spec.unlockResearch) !== -1;
+}
+
+// Cek apakah spec bisa muncul: tahun cocok DAN riset terpenuhi.
 export function isSpecAvailable(spec, year, completedResearch) {
     if (!spec) return false;
     if (year < spec.fromYear || year > spec.toYear) return false;
-    if (spec.unlockResearch) {
-        var completed = completedResearch || [];
-        if (completed.indexOf(spec.unlockResearch) === -1) return false;
-    }
-    return true;
+    return isResearchUnlocked(spec, completedResearch);
 }
 
 // Cari spec yang paling cocok: yang paling baru tersedia (dari tahun ke belakang).
@@ -438,8 +443,9 @@ export function resolveSpec(year, completedResearch) {
     if (candidates.length) return candidates[candidates.length - 1];
 
     // Prioritas 2: milestone sebelum tahun ini yang researchnya terpenuhi.
+    // (Hanya cek riset: rentang tahunnya memang sudah lewat, jadi isSpecAvailable akan selalu false.)
     var past = PHONE_SPECS.filter(function (s) {
-        return s.toYear < year && isSpecAvailable(s, year, completed);
+        return s.toYear < year && isResearchUnlocked(s, completed);
     });
     if (past.length) return past[past.length - 1];
 
@@ -483,6 +489,14 @@ export function validatePhoneSpecs() {
             }
         }
     }
+
+    // Cek unlockResearch harus merujuk ke ID riset yang ada (dulu 2 spec merujuk ID fitur OS dan tidak pernah terbuka).
+    var researchIds = new Set(RESEARCH_NODES.map(function (n) { return n.id; }));
+    PHONE_SPECS.forEach(function (s) {
+        if (s.unlockResearch && !researchIds.has(s.unlockResearch)) {
+            issues.push('Spec ' + s.id + ' unlockResearch tidak dikenal: ' + s.unlockResearch);
+        }
+    });
 
     if (issues.length) {
         console.warn('[phone-specs.data] Ditemukan ' + issues.length + ' masalah:');
