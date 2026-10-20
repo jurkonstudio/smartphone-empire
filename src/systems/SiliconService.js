@@ -257,6 +257,42 @@ export var SiliconService = {
         }
     },
 
+    // [EXCHANGE SERVER] Tukar SIL -> uang, dihitung SERVER (exchange_silicon). Klien hanya kirim ID paket
+    // ('small'|'big'|'suitcase'|'truck') + tahun game; jumlah SIL & uang datang dari server.
+    // Uang diberikan oleh pemanggil HANYA bila ok:true, sekali per panggilan.
+    // Hasil: { ok, balance, cash, spent } | { ok:false, reason }.
+    async exchangeServer(pkgId) {
+        if (!pkgId) return { ok: false, reason: 'Paket tidak valid.' };
+        if (!_cloudOn()) return CLOUD_REQUIRED;
+        var BUSINESS = /insufficient_silicon|invalid_amount|invalid_request|invalid_package|not_authenticated|not_signed_in/i;
+        var year = (state.data.time && state.data.time.currentYear) || 2000;
+        var reqId = 'ex_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        _epoch++;
+        try {
+            var res = null;
+            for (var i = 0; i < 3; i++) {
+                try { res = await CloudService.exchangeSiliconServer(pkgId, year, reqId); }
+                catch (e) { res = { ok: false, reason: (e && e.message) || 'network' }; }
+                if (res && res.ok) break;
+                if (res && BUSINESS.test(String(res.reason || '') + ' ' + String(res.code || ''))) break;
+                await new Promise(function (r) { setTimeout(r, 700 * (i + 1)); });
+            }
+            if (!res || !res.ok) {
+                var msg = String((res && res.reason) || '');
+                if (/insufficient_silicon/i.test(msg)) return { ok: false, reason: 'Silicon tidak cukup.' };
+                if (/invalid_package/i.test(msg)) return { ok: false, reason: 'Paket tidak valid.' };
+                return { ok: false, reason: 'Koneksi ke server gagal. SIL tidak dipotong, coba lagi.' };
+            }
+            var d = res.data || {};
+            var cash = Number(d.cash);
+            if (!isFinite(cash) || cash <= 0) return { ok: false, reason: 'Respons server tidak valid.' };
+            if (typeof d.balance === 'number') this.applyServerBalance(d.balance);
+            return { ok: true, balance: state.data.silicon || 0, cash: Math.floor(cash), spent: Number(d.sil) || 0 };
+        } finally {
+            _epoch++;
+        }
+    },
+
     // Bayar biaya `amount` SIL. Sesuai mode dompet, sebagian/semua boleh dibayar dengan uang ($).
     // Hasil: { ok, balance, silSpent, cashSpent }.
     spend(amount, reason) {
