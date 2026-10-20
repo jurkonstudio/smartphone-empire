@@ -1,3 +1,4 @@
+import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/phone/PhoneMockup.js
 // ============================================================
 // PhoneMockup V3 — SVG ponsel realistis 2000-2026.
@@ -1366,7 +1367,3 @@ export function getMockupSpec() {
     return resolveSpec(st.time.currentYear || 2000, completed);
 }
 
-function escapeHtml(s) {
-    if (typeof s !== 'string') return '';
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
