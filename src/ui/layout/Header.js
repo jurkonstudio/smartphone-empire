@@ -6,6 +6,7 @@ import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 ensureIconStyles();
 import { generateLogo } from '../avatars/AvatarGenerator.js';
 import { t } from '../../core/LanguageService.js';
+import { SiliconService } from '../../systems/SiliconService.js';
 import { formatCurrency } from '../../utils/format.js';
 import { getUnreadCount, isNotificationPanelOpen } from '../notifications/NotificationRenderer.js';
 
@@ -28,7 +29,7 @@ export function renderHeader({ state, timeSnapshot, warning }) {
     const unreadTxt = unread > 99 ? '99+' : String(unread);
     const notifOpen = isNotificationPanelOpen();
 
-    const silicon = state.silicon != null ? state.silicon : 0;
+    const silicon = SiliconService.getDisplayBalance();   // '…' sampai saldo server terkonfirmasi
 
     const sb = state.speedBoost;
     const boostOn = sb && sb.remainingSec > 0 && sb.speed > 1;
