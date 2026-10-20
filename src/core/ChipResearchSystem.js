@@ -21,9 +21,13 @@ import { WalletService } from '../systems/WalletService.js';
 
 // Panel "Manufaktur": node riset fabrikasi yang masih terkunci bisa dibeli
 // (dibuka lebih awal) dengan uang game mulai tahun ini.
-export const FAB_UNLOCK_YEAR = 2023;
+export const FAB_UNLOCK_YEAR = 2003;
 export const FAB_UNLOCK_CATEGORIES = ['process', 'business'];
 export const FAB_UNLOCK_PRICE_MULT = 1.5;
+// Anti-eksploitasi: karena akses dibuka sejak 2003, node masa depan tidak
+// boleh dibeli terlalu awal, dan harga naik tiap tahun "lebih awal".
+export const FAB_MAX_EARLY_YEARS = 5;        // maks. selisih tahun dari minYear
+export const FAB_EARLY_SURCHARGE_PER_YEAR = 0.15; // +15% per tahun lebih awal
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -348,9 +352,24 @@ export class ChipResearchSystem {
         return this.state.data.time.currentYear >= FAB_UNLOCK_YEAR;
     }
 
+    // Berapa tahun node ini dibuka lebih awal dari jadwal normalnya (>= 0).
+    getEarlyYears(nodeId) {
+        const node = getChipResearchById(nodeId);
+        if (!node) return 0;
+        return Math.max(0, (node.minYear || 0) - this.state.data.time.currentYear);
+    }
+
+    // Node masih dalam jendela pembelian (tidak terlalu jauh di masa depan).
+    isWithinEarlyWindow(nodeId) {
+        return this.getEarlyYears(nodeId) <= FAB_MAX_EARLY_YEARS;
+    }
+
+    // Harga = biaya riset x 1.5, plus 15% per tahun lebih awal dari jadwal.
     getUnlockPrice(nodeId) {
         const node = getChipResearchById(nodeId);
-        return node ? Math.round(node.cost * FAB_UNLOCK_PRICE_MULT) : 0;
+        if (!node) return 0;
+        const mult = FAB_UNLOCK_PRICE_MULT + this.getEarlyYears(nodeId) * FAB_EARLY_SURCHARGE_PER_YEAR;
+        return Math.round(node.cost * mult);
     }
 
     // Node manufaktur yang belum selesai/berjalan dan masih terkunci oleh
@@ -377,6 +396,8 @@ export class ChipResearchSystem {
         if (!node || FAB_UNLOCK_CATEGORIES.indexOf(node.category) === -1) return { ok: false, reason: 'Node tidak ditemukan.' };
         if (!this.isFabUnlockOpen()) return { ok: false, reason: 'Pembukaan manufaktur baru tersedia tahun ' + FAB_UNLOCK_YEAR + '.' };
         if (!this.isGateLocked(nodeId)) return { ok: false, reason: 'Node ini tidak perlu dibuka.' };
+        if (!this.isWithinEarlyWindow(nodeId)) return { ok: false, reason: 'Terlalu jauh di masa depan. Tersedia untuk dibuka mulai tahun ' + (node.minYear - FAB_MAX_EARLY_YEARS) + '.' };
+        if (!data.chipResearch.unlocked) data.chipResearch.unlocked = [];
         const price = this.getUnlockPrice(nodeId);
         // Khusus uang game (bukan Silicon).
         if ((data.cash || 0) < price) return { ok: false, reason: 'Uang tidak cukup ($' + price.toLocaleString('en-US') + ')' };
