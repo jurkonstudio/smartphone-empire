@@ -23,17 +23,7 @@
 </div>
 
 <div id="app" class="hide">
-  <header><div><b>Admin</b> <span id="who"></span></div><button class="btn sm" data-a="logout">Keluar</button></header>
-  <nav id="nav">
-    <button data-tab="ov" class="on">Overview</button>
-    <button data-tab="pl">Players</button>
-    <button data-tab="pay">Payments</button>
-    <button data-tab="led">Ledger</button>
-    <button data-tab="tb">Tables</button>
-    <button data-tab="rpc">RPC</button>
-    <button data-tab="con">Console</button>
-    <button data-tab="inf">Info</button>
-  </nav>
+  <header><div><b>Admin</b> <span id="who"></span></div><button class="btn sm" data-a="reload">⟳ Muat ulang</button></header>
   <main>
     <section id="t-ov"></section>
     <section id="t-pl" class="hide"></section>
@@ -44,6 +34,13 @@
     <section id="t-rpc" class="hide"></section>
     <section id="t-inf" class="hide"></section>
   </main>
+  <nav id="nav">
+    <button data-tab="ov" class="on"><i>▦</i>Overview</button>
+    <button data-tab="pl"><i>☺</i>Players</button>
+    <button data-tab="pay"><i>$</i>Payments<em id="pb" class="hide"></em></button>
+    <button data-tab="led"><i>≡</i>Ledger</button>
+    <button data-a="menu"><i>⋯</i>Menu</button>
+  </nav>
 </div>
 
 <div id="sheet" class="hide"><div class="in" id="sin"></div></div>
