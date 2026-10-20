@@ -341,6 +341,14 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
+    async exchangeSiliconServer(pkg, year, requestId) {
+        if (!_adapter) return NOT_CONFIGURED;
+        if (!_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.rpcExchangeSilicon !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, data: await _adapter.rpcExchangeSilicon(pkg, year, requestId) }; }
+        catch (err) { return _fail(err); }
+    },
+
     async refundSiliconServer(requestId) {
         if (!_adapter) return NOT_CONFIGURED;
         if (!_userId) return NOT_SIGNED_IN;
