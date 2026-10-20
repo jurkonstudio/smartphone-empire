@@ -47,6 +47,7 @@ export function renderSilSpeedBar(opts) {
     var showSpeed = opts.speed !== false;
     var boost = SiliconService.getSpeedBoost();
     var bal = SiliconService.getBalance();
+    var free = SiliconService.getFreeSpeedInfo();
     var html = '<div class="sil-inline" data-sil-inline>';
 
     if (showSpeed) {
@@ -57,13 +58,15 @@ export function renderSilSpeedBar(opts) {
         html += '<div class="sil-speed-row">' + SPEEDS.map(function (sp) {
             var pack = SiliconService.speedPack(sp);
             var active = boost && boost.speed === sp;
-            var short = bal < pack.cost;
-            return '<button type="button" class="sil-speed-btn' + (active ? ' is-active' : '') + (short ? ' is-short' : '') + '" ' +
+            var isFree = free.left > 0;
+            var short = !isFree && bal < pack.cost;
+            return '<button type="button" class="sil-speed-btn' + (active ? ' is-active' : '') + (short ? ' is-short' : '') + (isFree ? ' is-free' : '') + '" ' +
                 'data-sil-speed="' + sp + '">' +
                 '<b>' + sp + 'x</b>' +
-                '<small>💎 ' + pack.cost + ' · ' + _fmtMin(pack.seconds) + '</small>' +
+                '<small>' + (isFree ? '🎁 ' + _tf('sil.speed.free', 'GRATIS') : '💎 ' + pack.cost) + ' · ' + _fmtMin(pack.seconds) + '</small>' +
             '</button>';
         }).join('') + '</div>';
+        html += '<div class="sil-inline-note sil-free-note" data-sil-free-note>' + _freeNoteText(free) + '</div>';
         html += '<div class="sil-inline-note">' + _tf('sil.speed.note', 'Waktu boost hanya berkurang saat game berjalan (tidak saat pause).') + '</div>';
     }
 
@@ -78,6 +81,19 @@ export function renderSilSpeedBar(opts) {
         }
     }
     return html + '</div>';
+}
+
+function _fmtReset(ms) {
+    var m = Math.ceil(ms / 60000), h = Math.floor(m / 60);
+    return h > 0 ? h + _tf('sil.speed.h_short', 'j') + ' ' + (m % 60) + _tf('sil.speed.m_short', 'm') : m + _tf('sil.speed.m_short', 'm');
+}
+function _freeNoteText(free) {
+    if (!free || !free.max) return '';
+    var t = _tf('sil.speed.free_left', 'Gratis: {left}/{max} tersisa hari ini', { left: free.left, max: free.max });
+    if (free.left < free.max && free.resetInMs > 0) {
+        t += ' · ' + _tf('sil.speed.free_reset', 'reset dalam {time}', { time: _fmtReset(free.resetInMs) });
+    }
+    return t;
 }
 
 function _labelText(boost) {
@@ -99,12 +115,22 @@ function _refreshLive() {
         else { chips[c].style.display = 'none'; chips[c].textContent = ''; }
     }
 
+    var free = SiliconService.getFreeSpeedInfo();
+    var fnotes = document.querySelectorAll('[data-sil-free-note]');
+    for (var n = 0; n < fnotes.length; n++) fnotes[n].textContent = _freeNoteText(free);
     var btns = document.querySelectorAll('[data-sil-speed]');
     for (var b = 0; b < btns.length; b++) {
         var sp = parseInt(btns[b].dataset.silSpeed, 10);
         var pack = SiliconService.speedPack(sp);
+        var isFree = free.left > 0;
         btns[b].classList.toggle('is-active', !!(boost && boost.speed === sp));
-        btns[b].classList.toggle('is-short', !!(pack && bal < pack.cost));
+        btns[b].classList.toggle('is-short', !!(pack && !isFree && bal < pack.cost));
+        var was = btns[b].classList.contains('is-free');
+        btns[b].classList.toggle('is-free', isFree);
+        var sm = btns[b].querySelector('small');
+        if (sm && pack && was !== isFree) {
+            sm.textContent = (isFree ? '🎁 ' + _tf('sil.speed.free', 'GRATIS') : '💎 ' + pack.cost) + ' · ' + _fmtMin(pack.seconds);
+        }
     }
     var fins = document.querySelectorAll('[data-sil-finish]');
     for (var f = 0; f < fins.length; f++) {
@@ -134,6 +160,13 @@ function _onSpeedClick(btn) {
             ToastService.warning(_reasonText(res, 'silicon.short', 'Silicon tidak cukup.'));
             if (res.need) openSiliconStoreModal();
         }
+        return;
+    }
+    if (res.free) {
+        ToastService.success(_tf('sil.speed.msg.ok_free', 'Boost {speed}x aktif · sisa {time} (gratis, sisa jatah {left})', {
+            speed: res.speed, time: _fmtClock(res.remainingSec), left: res.freeLeft
+        }));
+        _refreshLive();
         return;
     }
     ToastService.success(_tf('sil.speed.msg.ok', 'Boost {speed}x aktif · sisa {time} (-{cost} SIL)', {
@@ -191,6 +224,8 @@ function _injectStyle() {
 '.sil-speed-btn:hover{border-color:var(--accent,#8b5cf6);}' +
 '.sil-speed-btn:active{transform:scale(.96);}' +
 '.sil-speed-btn.is-active{border-color:var(--success,#22c55e);background:rgba(34,197,94,.12);}' +
+'.sil-speed-btn.is-free{border-color:rgba(34,197,94,.55);}' +
+'.sil-speed-btn.is-free small{color:var(--success,#22c55e);font-weight:700;}' +
 '.sil-speed-btn.is-short small{color:var(--danger,#ef4444);}' +
 '.sil-inline-note{margin-top:6px;font-size:10.5px;color:var(--text-tertiary,#94a3b8);line-height:1.4;}' +
 '.sil-finish-btn{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;margin-top:8px;padding:11px 12px;border-radius:10px;border:1px solid var(--accent,#8b5cf6);background:var(--accent-soft,rgba(139,92,246,.14));color:inherit;font:inherit;font-size:13px;font-weight:700;cursor:pointer;}' +
