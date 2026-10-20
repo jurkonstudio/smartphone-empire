@@ -1,1 +1,53 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Admin · Smartphone Empire</title>
+<link rel="stylesheet" href="/031411/css/admin.css">
+</head>
+<body>
 
+<div id="login" class="hide">
+  <form class="card" id="f">
+    <h1>⚙ Admin · Smartphone Empire</h1>
+    <p>Akses terbatas. Login dengan akun admin.</p>
+    <label for="em">Email</label>
+    <input id="em" type="email" autocomplete="username" value="kalfinsetiawan@icloud.com" required>
+    <label for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="current-password" required>
+    <div style="margin-top:14px"><button class="btn pri" id="go" style="width:100%">Masuk</button></div>
+    <div class="msg" id="lm"></div>
+  </form>
+</div>
+
+<div id="app" class="hide">
+  <header><div><b>Admin</b> <span id="who"></span></div><button class="btn sm" data-a="logout">Keluar</button></header>
+  <nav id="nav">
+    <button data-tab="ov" class="on">Overview</button>
+    <button data-tab="pl">Players</button>
+    <button data-tab="pay">Payments</button>
+    <button data-tab="led">Ledger</button>
+    <button data-tab="tb">Tables</button>
+    <button data-tab="rpc">RPC</button>
+    <button data-tab="con">Console</button>
+    <button data-tab="inf">Info</button>
+  </nav>
+  <main>
+    <section id="t-ov"></section>
+    <section id="t-pl" class="hide"></section>
+    <section id="t-pay" class="hide"></section>
+    <section id="t-led" class="hide"></section>
+    <section id="t-con" class="hide"></section>
+    <section id="t-tb" class="hide"></section>
+    <section id="t-rpc" class="hide"></section>
+    <section id="t-inf" class="hide"></section>
+  </main>
+</div>
+
+<div id="sheet" class="hide"><div class="in" id="sin"></div></div>
+
+<script type="module" src="/031411/dashboard/app.js"></script>
+</body>
+</html>
