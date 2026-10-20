@@ -33,6 +33,8 @@ var CSS = [
     '.cmp-bar i{display:block;height:100%;width:0;border-radius:inherit;background:var(--accent,#2563eb);transition:width .35s ease;}',
     '.cmp-card.max .cmp-bar i{background:linear-gradient(90deg,#e0b445,#f5d77a);}',
     '.cmp-hint{font-size:12px;color:var(--text-secondary,#4a5260);}',
+    '.cmp-status{font-size:12px;font-weight:600;color:var(--accent,#2563eb);margin-top:4px;white-space:pre-line;}',
+    '.cmp-card.compact .cmp-status{display:none;}',
     '.cmp-desc{font-size:11px;color:var(--text-tertiary,#7a8494);margin-top:2px;}',
     '.cmp-go{margin-top:8px;width:100%;min-height:40px;border:0;border-radius:10px;background:var(--accent,#2563eb);',
     'color:#fff;font-weight:600;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;}',
@@ -89,10 +91,11 @@ export function createCampusOverlay(container, cfg) {
     var pips = el('div', 'cmp-pips');
     var bar = el('div', 'cmp-bar'); var fill = el('i'); bar.appendChild(fill);
     var hint = el('div', 'cmp-hint');
+    var status = el('div', 'cmp-status');
     var desc = el('div', 'cmp-desc');
     var go = el('button', 'cmp-go'); go.type = 'button';
     card.appendChild(head); card.appendChild(pips); card.appendChild(bar);
-    card.appendChild(hint); card.appendChild(desc); card.appendChild(go);
+    card.appendChild(hint); card.appendChild(status); card.appendChild(desc); card.appendChild(go);
 
     // ---------- tombol peta ----------
     var ctl = el('div', 'cmp-ctl');
@@ -138,6 +141,8 @@ export function createCampusOverlay(container, cfg) {
         name.textContent = info.name;
         sub.textContent = info.levelText;
         hint.textContent = info.hint;
+        status.textContent = info.status || '';
+        status.style.display = info.status ? '' : 'none';
         desc.textContent = info.desc;
         card.classList.toggle('max', !!info.maxed);
         pips.style.display = info.hasLevels ? '' : 'none';

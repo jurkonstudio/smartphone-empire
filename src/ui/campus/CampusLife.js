@@ -26,6 +26,7 @@ export function createCampusLife(THREE, A, scene, trees) {
     var dark = false;
     var windowHex = 0x8fb4e8;
     var chimneys = [];
+    var factoryBusy = false;     // Fab sedang produksi -> asap penuh; idle -> asap tipis
     var droneOn = false;
     var portLvl = 0, railOn = false, heliOn = false, windRotors = null;
 
@@ -263,13 +264,13 @@ export function createCampusLife(THREE, A, scene, trees) {
         var n = chimneys.length;
         for (i = 0; i < puffs.length; i++) {
             var pf = puffs[i];
-            if (!n) { pf.m.visible = false; continue; }
+            if (!n || (!factoryBusy && (i & 1))) { pf.m.visible = false; continue; }
             var life = (t * 0.45 + pf.off) % 1;
             var ch = chimneys[i % n];
             pf.m.visible = true;
             pf.m.position.set(ch[0] + life * 0.9, ch[1] + life * 1.5, ch[2] - life * 0.4);
             pf.m.scale.setScalar(0.5 + life * 1.3);
-            pf.mat.opacity = (1 - life) * (dark ? 0.35 : 0.5);
+            pf.mat.opacity = (1 - life) * (dark ? 0.35 : 0.5) * (factoryBusy ? 1 : 0.55);
         }
 
         // riak kolam
@@ -394,6 +395,9 @@ export function createCampusLife(THREE, A, scene, trees) {
         },
         setWind: function (rotors) {
             windRotors = (rotors && rotors.length) ? rotors : null;
+        },
+        setFactoryBusy: function (on) {
+            factoryBusy = !!on;
         },
         setFactory: function (level) {
             chimneys = [];

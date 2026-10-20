@@ -1,6 +1,4 @@
 // FILE: src/ui/campus/CampusScene.js
-// v2027.61 — CAMPUS CLEANUP: hilangkan blok kota generik yang tidak fungsional,
-// framing kamera lebih lega, pertahankan fasilitas kampus dan logika gameplay.
 // v2027.60 — PREMIUM LOOK: tone mapping ACES + sRGB, rig cahaya (matahari/fill/rim/hemi) + environment
 // map prosedural, shadow map statis (hanya dihitung ulang saat bangunan berubah) dengan tier adaptif,
 // hutan & semak instanced, label gedung terproyeksi, hover ring (mouse), seleksi fade halus,
@@ -15,9 +13,9 @@
 // animasi tumbuh singkat, tap bangunan untuk info. Tetap render-on-demand.
 // Upgrade detail: cahaya hangat/dingin per tema, zoom lebih dalam, kontrol inertia.
 import {
-    createAssets, buildGround, buildForest, buildShrubs, buildHQ, buildSlot,
-    computePlan, rememberPeak, buildWind, buildRail, applyShadowFlags, disposeObject,
-    PALETTES, TREE_SPOTS, ERA_WINDOWS, SLOT_ORDER
+    createAssets, buildGround, buildForest, buildShrubs, buildHQ, buildSlot, buildSprawl,
+    computePlan, rememberPeak, buildWind, buildRail, applyShadowFlags, disposeObject, flavorKeyFor,
+    PALETTES, TREE_SPOTS, ERA_WINDOWS, SLOT_ORDER, SPRAWL_SPOTS
 } from './CampusBuildings.js';
 import { detectQuality, createLookRig } from './CampusLook.js';
 import { createCampusLabels } from './CampusLabels.js';
@@ -27,7 +25,7 @@ import { createCampusFx } from './CampusFx.js';
 import { createCampusOverlay } from './CampusOverlay.js';
 import { getBuildingInfo, getBuildingName, getUiStrings, hasCelebration } from './CampusInfo.js';
 
-var BASE_VIEW = 30; // framing lebih lega untuk seluruh area kampus inti
+var BASE_VIEW = 22;
 // DPR maksimum sekarang adaptif per tier kualitas (lihat detectQuality di CampusLook.js).
 var MIN_RESIZE_DELTA = 2;       // piksel — skip resize kalau perubahan < 2px
 var GROW_MS = 650;              // durasi animasi bangunan tumbuh
@@ -131,6 +129,15 @@ export function createCampusScene(THREE, container, gameState) {
         renderer.render(scene, camera);
     }
 
+    // Putar bagian bangunan yang bergerak (hanya saat loop ambient jalan; reduced-motion = diam).
+    function spinParts(t) {
+        for (var k in dyn) {
+            var sp = dyn[k].group.userData.spin;
+            if (!sp) continue;
+            for (var i = 0; i < sp.length; i++) sp[i].o.rotation.y = (sp[i].o.userData.base || 0) + t * sp[i].v;
+        }
+    }
+
     function startLoop() {
         if (!ambient || loopRaf || loopTimer || disposed || document.hidden || !inView) return;
         loopRaf = requestAnimationFrame(frame);
@@ -156,6 +163,7 @@ export function createCampusScene(THREE, container, gameState) {
         if (animList.length) stepGrow(now);
         fx.update(now);
         life.update(now / 1000);
+        spinParts(now / 1000);
         if ((swayTick++ & 1) === 0) forest.flush();      // sway pohon cukup ~15fps
         draw();
     }
@@ -199,13 +207,14 @@ export function createCampusScene(THREE, container, gameState) {
     }
 
     // ---------- kelola bangunan dinamis ----------
-    function setBuilding(key, level, make, animate) {
+    function setBuilding(key, level, make, animate, fsig) {
         var cur = dyn[key];
+        fsig = fsig || '';
         if (!level) {
             if (cur) { scene.remove(cur.group); disposeObject(cur.group); delete dyn[key]; shadowDirty = true; }
             return;
         }
-        if (cur && cur.level === level && cur.era === eraIdx) return;
+        if (cur && cur.level === level && cur.era === eraIdx && cur.fl === fsig) return;
         var g = make();
         if (!g) return;
         var isUpgrade = !cur || level > cur.level;
@@ -214,9 +223,12 @@ export function createCampusScene(THREE, container, gameState) {
         if (key === 'wind' && g.userData.rotors) {       // rotor berputar -> jangan masuk shadow map statis
             g.userData.rotors.forEach(function (h) { h.traverse(function (o) { o.castShadow = false; }); });
         }
+        if (g.userData.spin) {                           // bagian berputar (cincin riset, wafer, ponsel) juga
+            g.userData.spin.forEach(function (sp) { sp.o.traverse(function (o) { o.castShadow = false; }); });
+        }
         shadowDirty = true;
         scene.add(g);
-        dyn[key] = { group: g, level: level, era: eraIdx };
+        dyn[key] = { group: g, level: level, era: eraIdx, fl: fsig };
         if (animate && isUpgrade) grow(g);
         // Banner naik level tetap muncul walau reduced-motion (efek partikel yang dilewati).
         if (hasApplied && isUpgrade && hasCelebration(key)) pendingCele.push({ key: key, level: level, born: !cur });
@@ -224,30 +236,28 @@ export function createCampusScene(THREE, container, gameState) {
 
     function syncBuildings(plan, animate) {
         var lv = plan.levels;
+        A.flavor = plan.flavor;                          // sinyal isi-game dibaca builder lewat A.flavor
+        var fl = plan.flavor;
         if (life) {
+            life.setFactoryBusy(!!(fl && fl.fabBusy));
             life.setFactory(lv.factory);
             life.setPort(lv.port);
             life.setHq(lv.hq);
             life.setRail(plan.rail);
         }
-        setBuilding('hq', lv.hq, function () { return buildHQ(A, THREE, lv.hq, eraIdx); }, animate);
+        setBuilding('hq', lv.hq, function () { return buildHQ(A, THREE, lv.hq, eraIdx); }, animate, flavorKeyFor('hq', fl));
         SLOT_ORDER.forEach(function (id) {
-            setBuilding(id, lv[id], function () { return buildSlot(A, THREE, id, lv[id], eraIdx); }, animate);
+            setBuilding(id, lv[id], function () { return buildSlot(A, THREE, id, lv[id], eraIdx); }, animate, flavorKeyFor(id, fl));
         });
         setBuilding('rail', plan.rail ? 1 : 0, function () { return buildRail(A, THREE); }, animate);
         setBuilding('wind', plan.wind ? 1 : 0, function () { return buildWind(A, THREE); }, animate);
         if (life) life.setWind(dyn.wind ? dyn.wind.group.userData.rotors : null);
-        // Bangunan sprawl generik sengaja tidak dirender: fokus pada fasilitas kampus
-        // yang benar-benar punya fungsi gameplay (HQ, R&D, pabrik, toko, OS, dll).
-        // Hapus sisa blok dekoratif dari scene lama bila ada.
-        Object.keys(dyn).forEach(function (key) {
-            if (key.indexOf('blk') === 0) {
-                scene.remove(dyn[key].group);
-                disposeObject(dyn[key].group);
-                delete dyn[key];
-                shadowDirty = true;
-            }
-        });
+        for (var i = 0; i < SPRAWL_SPOTS.length; i++) {
+            (function (idx) {
+                setBuilding('blk' + idx, idx < plan.sprawl ? 1 : 0,
+                    function () { return buildSprawl(A, THREE, idx, eraIdx); }, animate);
+            })(i);
+        }
         afterSync();
     }
 
@@ -411,7 +421,8 @@ export function createCampusScene(THREE, container, gameState) {
             if (!info) continue;
             var m = measure(dyn[key].group);
             list.push({
-                key: key, id: key, name: getBuildingName(key),
+                key: key, id: key,
+                name: (key === 'hq' && lastPlan.flavor && lastPlan.flavor.brand) ? lastPlan.flavor.brand : getBuildingName(key),
                 level: info.level, max: info.max,
                 x: m.cx, y: m.top + 0.45, z: m.cz,
                 prio: LABEL_PRIO[key] !== undefined ? LABEL_PRIO[key] : 2
