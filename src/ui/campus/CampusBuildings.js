@@ -1,4 +1,9 @@
 // FILE: src/ui/campus/CampusBuildings.js
+// v2027.60 — PREMIUM LOOK: material PBR (MeshStandardMaterial) + env map, bayangan nyata
+// (shadow map statis, tier adaptif) + contact-AO, varian fasad/atap per bangunan, vertex-color AO
+// pada fasad, pohon & semak instanced (1 draw call per bagian, bukan per pohon), tekstur rumput,
+// variasi warna instance pada kawasan kota, pembersihan InstancedMesh saat bangunan diganti.
+// Logika level (RULES/computePlan), SLOTS, koordinat, ID, dan userData TIDAK diubah.
 // v2027.50 — i18n: teks tooltip describeBuilding() memakai t()/_tf; nama bangunan
 // memakai ulang key campus.info.name.*. Geometri & logika level TIDAK diubah.
 // v2027.38 — PETA DIPERLUAS: pulau 20x20 -> 30x30. Tambahan: Akademi Inovasi,
@@ -17,6 +22,7 @@
 import { DESIGN_ERAS, getDesignEraForYear } from '../../data/era-design.data.js';
 import { BALANCE } from '../../data/balance.data.js';
 import { t } from '../../core/LanguageService.js';
+import { SHADE_DIR } from './CampusLook.js';
 
 // Ukuran dunia visual; koordinat inti lama tetap di tengah agar integrasi tidak bergeser.
 export const CAMPUS_WORLD_SIZE = 100;
@@ -272,15 +278,34 @@ export function describeBuilding(id, plan, data) {
 var COLOR_ROLES = [
     'grass', 'plaza', 'road', 'wall', 'window', 'trunk', 'leaf', 'solar', 'metal', 'glow',
     'grass2', 'soil', 'curb', 'water', 'leaf2', 'gold', 'shade', 'flowerA', 'flowerB',
-    'lamp', 'beacon', 'halo'
+    'lamp', 'beacon', 'halo', 'roofAlt'
 ];
 
 // Opsi material khusus per role (transparan dsb).
 var MAT_OPTS = {
     shade: { transparent: true, opacity: 0.2, depthWrite: false },
     halo:  { transparent: true, opacity: 0, depthWrite: false },
-    water: { transparent: true, opacity: 0.9 }
+    water: { transparent: true, opacity: 0.88 },
+    ao:    { transparent: true, opacity: 0.34, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }
 };
+// Role tanpa pencahayaan (bayangan palsu, halo lampu, contact-AO).
+var BASIC_ROLES = { shade: 1, halo: 1, ao: 1 };
+// PBR per role: r = roughness, m = metalness, e = skala envMapIntensity (di tema terang).
+var MAT_PROPS = {
+    grass: { r: 0.97, m: 0, e: 0.35 }, grass2: { r: 0.97, m: 0, e: 0.35 }, soil: { r: 1, m: 0, e: 0.2 },
+    plaza: { r: 0.82, m: 0, e: 0.45 }, road: { r: 0.94, m: 0, e: 0.25 }, curb: { r: 0.86, m: 0, e: 0.4 },
+    wall: { r: 0.62, m: 0, e: 0.6 }, roof: { r: 0.46, m: 0.15, e: 0.8 }, roofAlt: { r: 0.72, m: 0.05, e: 0.55 },
+    window: { r: 0.14, m: 0.3, e: 1.5 }, solar: { r: 0.28, m: 0.55, e: 1.3 },
+    metal: { r: 0.38, m: 0.75, e: 1.0 }, gold: { r: 0.3, m: 0.9, e: 1.1 },
+    trunk: { r: 0.95, m: 0, e: 0.3 }, leaf: { r: 0.9, m: 0, e: 0.35 }, leaf2: { r: 0.9, m: 0, e: 0.35 },
+    glow: { r: 0.35, m: 0, e: 0.5 }, water: { r: 0.06, m: 0, e: 1.4 },
+    flowerA: { r: 0.7, m: 0, e: 0.3 }, flowerB: { r: 0.7, m: 0, e: 0.3 }, lamp: { r: 0.4, m: 0, e: 0.3 }, beacon: { r: 0.4, m: 0, e: 0.3 }
+};
+// 3 varian fasad (tekstur sama, tint beda) + seed per bangunan -> gedung tidak tampak seperti salinan.
+var FACADE_KEYS = ['facade', 'facadeB', 'facadeC'];
+var FACADE_TINT = [0xffffff, 0xf2e8d6, 0xdde7f3];
+var VARIANT_SEED = { hq: 0, lab: 1, factory: 2, store: 3, os: 4, monument: 0, billboard: 0, academy: 5, arena: 6, port: 7 };
+var ROOF_ALT = { factory: true, port: true };
 
 function hexCss(n) { return '#' + ('000000' + (n >>> 0).toString(16)).slice(-6); }
 function tint(n, f) {   // f: -1 (gelap) .. 1 (terang)
@@ -348,22 +373,105 @@ function makeFacade(THREE) {
     return { map: tMap, emi: tEmi, draw: draw, dispose: function () { tMap.dispose(); tEmi.dispose(); } };
 }
 
-export function createAssets(THREE) {
+// Tekstur noise rumput (tile 128px, seamless): bintik terang/gelap lembut, dikalikan warna palet.
+function makeNoiseTex(THREE) {
+    var S = 128, c = document.createElement('canvas');
+    c.width = c.height = S;
+    var g = c.getContext('2d');
+    g.fillStyle = '#f7f7f7'; g.fillRect(0, 0, S, S);
+    var seed = 424242;
+    function rnd() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+    for (var i = 0; i < 240; i++) {
+        var x = rnd() * S, y = rnd() * S, r = 3 + rnd() * 11;
+        g.fillStyle = rnd() < 0.55 ? 'rgba(48,84,36,0.07)' : 'rgba(255,255,255,0.55)';
+        for (var ox = -S; ox <= S; ox += S) {
+            for (var oy = -S; oy <= S; oy += S) { g.beginPath(); g.arc(x + ox, y + oy, r, 0, 6.2832); g.fill(); }
+        }
+    }
+    var tx = new THREE.CanvasTexture(c);
+    tx.wrapS = tx.wrapT = THREE.RepeatWrapping;
+    tx.colorSpace = THREE.SRGBColorSpace;
+    tx.anisotropy = 4;
+    return tx;
+}
+
+// Tekstur contact-AO: persegi hitam dengan tepi lembut (inti tertutup bangunan, yang terlihat hanya tepi).
+function makeAoTex(THREE) {
+    var S = 128, c = document.createElement('canvas');
+    c.width = c.height = S;
+    var g = c.getContext('2d');
+    g.shadowColor = 'rgba(0,0,0,1)';
+    g.shadowBlur = 20;
+    g.fillStyle = '#000';
+    g.fillRect(S * 0.18, S * 0.18, S * 0.64, S * 0.64);
+    var tx = new THREE.CanvasTexture(c);
+    tx.colorSpace = THREE.SRGBColorSpace;
+    return tx;
+}
+
+// opts: { shadows: bool (shadow map nyata aktif), env: bool (environment map aktif) }
+export function createAssets(THREE, opts) {
+    opts = opts || {};
+    var envOn = opts.env !== false;
     var geos = new Map();
     var mats = new Map();
+    var extraMats = [];          // material milik modul lain (CampusLife) yang ikut skala env
     var facade = makeFacade(THREE);
-    mats.set('facade', new THREE.MeshLambertMaterial({
-        map: facade.map, emissive: 0xffffff, emissiveMap: facade.emi,
-        emissiveIntensity: 0, flatShading: true
-    }));
+    var noiseTex = makeNoiseTex(THREE);
+    var patchTex = noiseTex.clone();
+    patchTex.repeat.set(1.5, 1);
+    patchTex.needsUpdate = true;
+    noiseTex.repeat.set(36, 36);
+    var aoTex = makeAoTex(THREE);
+
+    FACADE_KEYS.forEach(function (k, i) {
+        var fm = new THREE.MeshStandardMaterial({
+            map: facade.map, emissive: 0xffffff, emissiveMap: facade.emi, emissiveIntensity: 0,
+            roughness: 0.72, metalness: 0.04, vertexColors: true, color: FACADE_TINT[i]
+        });
+        fm.envMapIntensity = 0.5;
+        fm.userData.envBase = 0.5;
+        mats.set(k, fm);
+    });
+
+    function makeMat(role) {
+        var o = MAT_OPTS[role] || {};
+        var m;
+        if (BASIC_ROLES[role]) {
+            m = new THREE.MeshBasicMaterial(Object.assign({}, o));
+            if (role === 'ao') m.map = aoTex;
+        } else {
+            var p = MAT_PROPS[role] || { r: 0.7, m: 0, e: 0.5 };
+            m = new THREE.MeshStandardMaterial(Object.assign({ roughness: p.r, metalness: envOn ? p.m : p.m * 0.3 }, o));
+            m.envMapIntensity = p.e;
+            m.userData.envBase = p.e;
+            if (role === 'grass') m.map = noiseTex;
+            else if (role === 'grass2') m.map = patchTex;
+        }
+        return m;
+    }
     function cached(key, make) {
         if (!geos.has(key)) geos.set(key, make());
         return geos.get(key);
     }
     return {
         THREE: THREE,
+        realShadows: !!opts.shadows,
+        facadeKeys: FACADE_KEYS,
+        variantSeed: 0,          // diatur builder tiap bangunan -> varian fasad deterministik
+        roofAlt: false,
+        facadeRole: function () { return FACADE_KEYS[Math.abs(this.variantSeed | 0) % FACADE_KEYS.length]; },
         box: function (w, h, d) { return cached('b' + w + '_' + h + '_' + d, function () { return new THREE.BoxGeometry(w, h, d); }); },
+        // Bidang datar (untuk contact-AO), menghadap atas.
+        plane: function (w, d) {
+            return cached('p' + w + '_' + d, function () {
+                var g = new THREE.PlaneGeometry(w, d);
+                g.rotateX(-Math.PI / 2);
+                return g;
+            });
+        },
         // Box dengan UV fasad: jumlah jendela mengikuti lebar & jumlah lantai.
+        // + vertex color: gelap di dasar, terang di atas (AO palsu yang murah, tanpa tekstur tambahan).
         fbox: function (w, h, d, floors) {
             return cached('f' + w + '_' + h + '_' + d + '_' + floors, function () {
                 var g = new THREE.BoxGeometry(w, h, d);
@@ -380,6 +488,14 @@ export function createAssets(THREE) {
                     }
                 }
                 uv.needsUpdate = true;
+                var pos = g.attributes.position;
+                var col = new Float32Array(pos.count * 3);
+                for (var k = 0; k < pos.count; k++) {
+                    var ty = (pos.getY(k) + h / 2) / h;
+                    var sh = 0.7 + 0.3 * Math.pow(Math.max(0, Math.min(1, ty)), 0.55);
+                    col[k * 3] = col[k * 3 + 1] = col[k * 3 + 2] = sh;
+                }
+                g.setAttribute('color', new THREE.BufferAttribute(col, 3));
                 return g;
             });
         },
@@ -388,10 +504,25 @@ export function createAssets(THREE) {
         sph: function (r, ws, hs) { return cached('s' + r + '_' + ws + '_' + hs, function () { return new THREE.SphereGeometry(r, ws, hs); }); },
         tor: function (r, t) { return cached('t' + r + '_' + t, function () { return new THREE.TorusGeometry(r, t, 6, 40); }); },
         mat: function (role) {
-            if (!mats.has(role)) {
-                mats.set(role, new THREE.MeshLambertMaterial(Object.assign({ flatShading: true }, MAT_OPTS[role] || {})));
-            }
+            if (!mats.has(role)) mats.set(role, makeMat(role));
             return mats.get(role);
+        },
+        // Daftarkan material modul lain agar ikut skala environment per tema.
+        track: function (m, base) {
+            if (!m) return m;
+            m.userData = m.userData || {};
+            m.userData.envBase = base;
+            extraMats.push(m);
+            return m;
+        },
+        // k = envI tema / 0.55 (tema terang = 1).
+        setEnvIntensity: function (envI) {
+            var k = envI / 0.55;
+            var apply = function (m) {
+                if (m.userData && m.userData.envBase !== undefined) m.envMapIntensity = m.userData.envBase * k;
+            };
+            mats.forEach(apply);
+            extraMats.forEach(apply);
         },
         applyPalette: function (p, accent) {
             var self = this;
@@ -402,7 +533,7 @@ export function createAssets(THREE) {
 
             var night = p.night ? 1 : 0;
             facade.draw(p.wall, p.window !== undefined ? p.window : 0x8fb4e8);
-            self.mat('facade').emissiveIntensity = night ? 0.9 : 0;
+            FACADE_KEYS.forEach(function (k) { self.mat(k).emissiveIntensity = night ? 0.9 : 0; });
             var lamp = self.mat('lamp');
             lamp.emissive.setHex(0xffd98a);
             lamp.emissiveIntensity = night ? 1.1 : 0.15;
@@ -415,12 +546,14 @@ export function createAssets(THREE) {
             var wt = self.mat('water');
             wt.emissive.setHex(0x2a6f95);
             wt.emissiveIntensity = night ? 0.25 : 0.12;
+            if (p.aoOpacity !== undefined) self.mat('ao').opacity = self.realShadows ? p.aoOpacity * 0.8 : p.aoOpacity;
         },
         dispose: function () {
             geos.forEach(function (g) { g.dispose(); });
             mats.forEach(function (m) { m.dispose(); });
             facade.dispose();
-            geos.clear(); mats.clear();
+            noiseTex.dispose(); patchTex.dispose(); aoTex.dispose();
+            geos.clear(); mats.clear(); extraMats.length = 0;
         }
     };
 }
@@ -432,7 +565,8 @@ function mesh(A, THREE, geo, role, x, y, z) {
 }
 
 // Banyak salinan satu geometri dalam 1 draw call. item = [x,y,z, sx,sy,sz, rotY].
-function instanced(A, THREE, geo, role, items) {
+// tintFn(i, color) opsional: isi warna pengali per-instance (variasi halus tanpa material baru).
+function instanced(A, THREE, geo, role, items, tintFn) {
     var im = new THREE.InstancedMesh(geo, A.mat(role), items.length);
     var m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
     var p = new THREE.Vector3(), s = new THREE.Vector3();
@@ -446,6 +580,11 @@ function instanced(A, THREE, geo, role, items) {
         im.setMatrixAt(i, m);
     }
     im.instanceMatrix.needsUpdate = true;
+    if (tintFn) {
+        var tc = new THREE.Color();
+        for (var j = 0; j < items.length; j++) { tintFn(j, tc); im.setColorAt(j, tc); }
+        im.instanceColor.needsUpdate = true;
+    }
     im.frustumCulled = false;
     return im;
 }
@@ -612,8 +751,15 @@ export function buildGround(A, THREE) {
             g.add(mesh(A, THREE, A.box(0.55, 0.32, 0.55), 'metal', p[0] + 0.25, h + 0.22, p[1] - 0.2));
         }
     });
+    // Variasi nilai warna per gedung kota (deterministik, terpisah dari seed tata letak).
+    var tseed = 5150;
+    function tintCity(i, c) {
+        tseed = (tseed * 16807) % 2147483647;
+        var v = 0.86 + ((tseed - 1) / 2147483646) * 0.2;
+        c.setRGB(v, v * 0.99, v * 1.0);
+    }
     for (var tier = 0; tier < 3; tier++) {
-        if (shells[tier].length) g.add(instanced(A, THREE, A.box(1, 1, 1), tier === 0 ? 'wall' : 'window', shells[tier]));
+        if (shells[tier].length) g.add(instanced(A, THREE, A.box(1, 1, 1), tier === 0 ? 'wall' : 'window', shells[tier], tintCity));
         if (roofs[tier].length) g.add(instanced(A, THREE, A.box(1, 1, 1), tier === 2 ? 'metal' : 'roof', roofs[tier]));
     }
 
@@ -624,6 +770,8 @@ export function buildGround(A, THREE) {
     edge.push([-49.4, 0.012, 0, 0.12, 1, 98.8, 0]);
     edge.push([49.4, 0.012, 0, 0.12, 1, 98.8, 0]);
     g.add(instanced(A, THREE, A.box(1, 1, 1), 'curb', edge));
+    // Seluruh permukaan tanah menerima bayangan dari bangunan & pohon inti kampus.
+    g.traverse(function (o) { if (o.isMesh) o.receiveShadow = true; });
     return g;
 }
 
@@ -650,12 +798,156 @@ export function buildTree(A, THREE, x, z) {
     return g;
 }
 
+// ------------------------------------------------------------
+// HUTAN INSTANCED: jumlah draw call tidak lagi bergantung jumlah pohon.
+// Setiap spesies = beberapa InstancedMesh (batang, tajuk, ...). Variasi skala, putaran, dan warna
+// per pohon. `nodes[i].rotation.{x,z}` ditulis CampusLife (pohon bergoyang); panggil flush() setelahnya.
+// ------------------------------------------------------------
+// [geometri, argumen, role, x, y, z, tint?]
+var TREE_PARTS = [
+    [   // 0: pinus bertingkat
+        ['cyl', [0.12, 0.16, 0.6, 6], 'trunk', 0, 0.3, 0, 0],
+        ['cone', [0.78, 0.95, 7], 'leaf', 0, 0.95, 0, 1],
+        ['cone', [0.6, 0.9, 7], 'leaf', 0, 1.5, 0, 1],
+        ['cone', [0.4, 0.8, 7], 'leaf2', 0, 2.03, 0, 1]
+    ],
+    [   // 1: bulat rindang
+        ['cyl', [0.14, 0.18, 0.85, 6], 'trunk', 0, 0.42, 0, 0],
+        ['sph', [0.68, 10, 8], 'leaf', 0, 1.3, 0, 1],
+        ['sph', [0.45, 9, 7], 'leaf2', 0.4, 1.05, 0.12, 1],
+        ['sph', [0.4, 9, 7], 'leaf2', -0.3, 1.7, -0.1, 1]
+    ],
+    [   // 2: cemara ramping + buah kuning
+        ['cyl', [0.1, 0.14, 0.7, 6], 'trunk', 0, 0.35, 0, 0],
+        ['cone', [0.5, 1.7, 6], 'leaf', 0, 1.5, 0, 1],
+        ['sph', [0.14, 6, 5], 'flowerB', 0.28, 1.0, 0.25, 0]
+    ]
+];
+
+export function buildForest(A, THREE, spots) {
+    var group = new THREE.Group();
+    group.name = 'campus-forest';
+    var seed = 31337;
+    function rnd() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+    var nodes = [], bySp = [[], [], []];
+    spots.forEach(function (p) {
+        var k = Math.abs(Math.round(p[0] * 7 + p[1] * 13)) % 3;   // spesies sama dengan buildTree()
+        var node = {
+            x: p[0], z: p[1], yaw: rnd() * Math.PI * 2, s: 0.86 + rnd() * 0.34,
+            tint: [0.88 + rnd() * 0.2, 0.92 + rnd() * 0.16, 0.82 + rnd() * 0.2],
+            rotation: { x: 0, z: 0 }
+        };
+        nodes.push(node);
+        bySp[k].push(node);
+    });
+    var entries = [];
+    var tc = new THREE.Color();
+    bySp.forEach(function (list, k) {
+        if (!list.length) return;
+        TREE_PARTS[k].forEach(function (part) {
+            var geo = A[part[0]].apply(A, part[1]);
+            var im = new THREE.InstancedMesh(geo, A.mat(part[2]), list.length);
+            im.frustumCulled = false;
+            im.castShadow = true;
+            im.receiveShadow = true;
+            if (part[7]) {
+                for (var i = 0; i < list.length; i++) { tc.setRGB(list[i].tint[0], list[i].tint[1], list[i].tint[2]); im.setColorAt(i, tc); }
+                im.instanceColor.needsUpdate = true;
+            }
+            group.add(im);
+            entries.push({ im: im, list: list, part: part });
+        });
+    });
+    var mt = new THREE.Matrix4(), mp = new THREE.Matrix4(), mm = new THREE.Matrix4();
+    var q = new THREE.Quaternion(), e = new THREE.Euler(), pv = new THREE.Vector3(), sv = new THREE.Vector3();
+    function flush() {
+        for (var n = 0; n < entries.length; n++) {
+            var en = entries[n], part = en.part, list = en.list;
+            mp.makeTranslation(part[3], part[4], part[5]);
+            for (var i = 0; i < list.length; i++) {
+                var nd = list[i];
+                e.set(nd.rotation.x, nd.yaw, nd.rotation.z);
+                q.setFromEuler(e);
+                pv.set(nd.x, 0, nd.z);
+                sv.set(nd.s, nd.s, nd.s);
+                mt.compose(pv, q, sv);
+                mm.multiplyMatrices(mt, mp);
+                en.im.setMatrixAt(i, mm);
+            }
+            en.im.instanceMatrix.needsUpdate = true;
+        }
+    }
+    flush();
+    return {
+        group: group,
+        nodes: nodes,
+        flush: flush,
+        dispose: function () {
+            entries.forEach(function (en) { en.im.dispose(); });
+            if (group.parent) group.parent.remove(group);
+        }
+    };
+}
+
+// Semak rapi di tepi jalan (instanced, 1 draw call). Sengaja menjauhi trotoar, lampu, billboard,
+// dan pintu lab agar tidak menutupi jalan, pintu masuk, atau bangunan.
+export var SHRUB_SPOTS = (function () {
+    var out = [], i;
+    var zs = [5.2, 6.8, 8.4, 10.0, 11.6, 13.2];
+    for (i = 0; i < zs.length; i++) {
+        out.push([-2.05, zs[i]]);
+        if (zs[i] < 7.2 || zs[i] > 10.0) out.push([2.05, zs[i]]);   // lewati sisi billboard (2.6, 8.6)
+    }
+    var xs = [-5.2, -6.8, -8.4, -10.0, -11.6, -13.2];
+    for (i = 0; i < xs.length; i++) out.push([xs[i], 2.05]);
+    [-9.6, -11.2, -12.8].forEach(function (x) { out.push([x, -2.05]); });
+    return out;
+})();
+
+export function buildShrubs(A, THREE) {
+    var g = new THREE.Group();
+    g.name = 'campus-shrubs';
+    var seed = 777;
+    function rnd() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+    var items = SHRUB_SPOTS.map(function (p) {
+        var s = 0.8 + rnd() * 0.5;
+        return [p[0], 0.2 * s, p[1], s, s * (0.75 + rnd() * 0.25), s, rnd() * 3];
+    });
+    var im = instanced(A, THREE, A.sph(0.3, 8, 6), 'leaf2', items, function (i, c) {
+        c.setRGB(0.82 + rnd() * 0.2, 0.9 + rnd() * 0.16, 0.8 + rnd() * 0.18);
+    });
+    im.castShadow = true;
+    im.receiveShadow = true;
+    g.add(im);
+    return g;
+}
+
+// Aktifkan cast/receive shadow pada semua mesh opak sebuah bangunan.
+export function applyShadowFlags(group, on) {
+    if (!on || !group) return;
+    group.traverse(function (o) {
+        if (!o.isMesh) return;
+        var m = o.material;
+        if (m && m.transparent) return;           // kaca-air, bayangan palsu, AO, halo
+        o.castShadow = true;
+        o.receiveShadow = true;
+    });
+}
+
+// InstancedMesh tidak otomatis melepas buffer GPU saat dibuang dari scene -> panggil ini.
+export function disposeObject(obj) {
+    if (!obj) return;
+    obj.traverse(function (o) { if (o.isInstancedMesh) o.dispose(); });
+}
+
 // ============================================================
 // BLOK GEDUNG
 // ============================================================
-// Bayangan palsu (tanpa shadow map): bidang gelap transparan, miring menjauhi matahari.
+// Bayangan palsu (hanya tier tanpa shadow map): bidang gelap transparan, miring menjauhi matahari.
+// Arah ikut SHADE_DIR (CampusLook) supaya konsisten dengan posisi matahari.
 function addShadow(group, A, THREE, w, h, d, x, z) {
-    var sx = -Math.min(1.4, h * 0.22), sz = -Math.min(1.0, h * 0.16);
+    if (A.realShadows) return;
+    var sx = SHADE_DIR[0] * Math.min(1.4, h * 0.22), sz = SHADE_DIR[1] * Math.min(1.0, h * 0.16);
     var bw = Math.round((w + 0.3 + Math.abs(sx)) * 100) / 100;
     var bd = Math.round((d + 0.3 + Math.abs(sz)) * 100) / 100;
     var s = mesh(A, THREE, A.box(bw, 0.01, bd), 'shade', x + sx / 2, 0.02, z + sz / 2);
@@ -663,13 +955,22 @@ function addShadow(group, A, THREE, w, h, d, x, z) {
     group.add(s);
 }
 
-// Satu blok gedung: fasad bertekstur + plinth + atap aksen + inset atap.
-// noShadow = true untuk blok sekunder (supaya bayangan tidak menumpuk).
+// Contact-AO: gradien gelap lembut di sekeliling dasar bangunan (menggantikan SSAO yang mahal).
+function addContactAO(group, A, THREE, w, d, x, z) {
+    var bw = Math.round((w + 1.2) * 100) / 100, bd = Math.round((d + 1.2) * 100) / 100;
+    var s = mesh(A, THREE, A.plane(bw, bd), 'ao', x, 0.07, z);
+    s.renderOrder = 1;
+    s.raycast = function () {};
+    group.add(s);
+}
+
+// Satu blok gedung: fasad bertekstur (varian per bangunan) + plinth + atap + inset atap + contact-AO.
+// noShadow = true untuk blok sekunder (supaya bayangan/AO tidak menumpuk).
 function addBlock(group, A, THREE, w, h, d, x, z, floors, noShadow) {
-    if (!noShadow) addShadow(group, A, THREE, w, h, d, x, z);
-    group.add(mesh(A, THREE, A.fbox(w, h, d, floors), 'facade', x, h / 2, z));
+    if (!noShadow) { addShadow(group, A, THREE, w, h, d, x, z); addContactAO(group, A, THREE, w, d, x, z); }
+    group.add(mesh(A, THREE, A.fbox(w, h, d, floors), A.facadeRole(), x, h / 2, z));
     group.add(mesh(A, THREE, A.box(w + 0.1, 0.12, d + 0.1), 'curb', x, 0.06, z));
-    group.add(mesh(A, THREE, A.box(w + 0.2, 0.14, d + 0.2), 'roof', x, h + 0.07, z));
+    group.add(mesh(A, THREE, A.box(w + 0.2, 0.14, d + 0.2), A.roofAlt ? 'roofAlt' : 'roof', x, h + 0.07, z));
     group.add(mesh(A, THREE, A.box(w - 0.1, 0.03, d - 0.1), 'plaza', x, h + 0.155, z));
 }
 
@@ -702,6 +1003,7 @@ var HQ_D = [0, 2.6, 3.0, 3.2, 3.4];
 
 export function buildHQ(A, THREE, level, eraIdx) {
     eraIdx = eraIdx || 0;
+    A.variantSeed = VARIANT_SEED.hq; A.roofAlt = false;
     var g = new THREE.Group();
     g.position.y = 0.08; // di atas plaza
     if (level === 1) {
@@ -1147,6 +1449,8 @@ var SLOT_BUILDERS = {
 export function buildSlot(A, THREE, id, level, eraIdx) {
     var fn = SLOT_BUILDERS[id];
     if (!fn || !level) return null;
+    A.variantSeed = VARIANT_SEED[id] || 0;
+    A.roofAlt = !!ROOF_ALT[id];
     var g = fn(A, THREE, level, eraIdx || 0);
     var p = SLOTS[id];
     g.position.x = p[0];
@@ -1157,6 +1461,7 @@ export function buildSlot(A, THREE, id, level, eraIdx) {
 
 // Blok kawasan kota; makin tinggi di era akhir. 3 varian atap + kanopi toko.
 export function buildSprawl(A, THREE, i, eraIdx) {
+    A.variantSeed = i; A.roofAlt = (i % 3) === 1;
     var g = new THREE.Group();
     var w = 1.1 + (i % 3) * 0.2;
     var d = 1.0 + ((i + 1) % 3) * 0.2;

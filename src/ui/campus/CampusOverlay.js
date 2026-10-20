@@ -1,4 +1,6 @@
 // FILE: src/ui/campus/CampusOverlay.js
+// v2027.60 — panel glass konsisten dengan tampilan 3D (blur + bayangan lembut, mati di mode hemat),
+// vinyet halus untuk kedalaman, ikon kartu dengan gradien aksen. API publik TIDAK berubah.
 // v2027.44 (Tahap 4) — Lapisan UI di atas peta kampus (DOM murni, tanpa framework):
 //  - kartu info bangunan (level, progres, petunjuk, tombol "Buka ..." lewat data-nav)
 //  - tombol peta: zoom +, zoom -, reset tampilan
@@ -6,14 +8,19 @@
 // CSS disuntik sekali dari sini, jadi style.css tidak perlu diubah.
 var STYLE_ID = 'campus-overlay-style';
 var CSS = [
+    '.cmp-vig{position:absolute;inset:0;z-index:1;pointer-events:none;',
+    'background:radial-gradient(ellipse at 50% 46%,transparent 58%,rgba(15,23,42,.10) 100%);}',
+    'html[data-theme="dark"] .cmp-vig{background:radial-gradient(ellipse at 50% 46%,transparent 52%,rgba(0,0,0,.30) 100%);}',
     '.cmp-card{position:absolute;left:8px;right:8px;bottom:8px;max-width:420px;margin:0 auto;z-index:3;',
-    'padding:10px 12px 12px;border-radius:14px;background:var(--bg-2,#fff);color:var(--text-primary,#111);',
-    'border:1px solid var(--border,rgba(0,0,0,.12));box-shadow:0 8px 24px rgba(0,0,0,.18);font-size:13px;line-height:1.35;',
+    'padding:10px 12px 12px;border-radius:16px;background:var(--surface-glass,var(--bg-2,#fff));color:var(--text-primary,#111);',
+    '-webkit-backdrop-filter:blur(14px) saturate(1.25);backdrop-filter:blur(14px) saturate(1.25);',
+    'border:1px solid var(--border,rgba(0,0,0,.12));box-shadow:0 10px 30px rgba(15,23,42,.20),0 1px 0 rgba(255,255,255,.35) inset;font-size:13px;line-height:1.35;',
     'opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .2s ease,transform .2s ease;}',
     '.cmp-card.on{opacity:1;transform:none;pointer-events:auto;}',
     '.cmp-head{display:flex;align-items:center;gap:10px;}',
-    '.cmp-ico{flex:0 0 auto;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;',
-    'font-size:20px;background:var(--accent-soft,rgba(37,99,235,.14));}',
+    '.cmp-ico{flex:0 0 auto;width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;',
+    'font-size:20px;background:linear-gradient(145deg,var(--accent-soft,rgba(37,99,235,.14)),var(--bg-3,rgba(127,127,127,.10)));',
+    'border:1px solid var(--border-subtle,rgba(0,0,0,.08));}',
     '.cmp-titles{flex:1 1 auto;min-width:0;}',
     '.cmp-name{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
     '.cmp-sub{font-size:11px;color:var(--text-tertiary,#7a8494);}',
@@ -33,9 +40,12 @@ var CSS = [
     '.cmp-card.compact .cmp-pips,.cmp-card.compact .cmp-desc{display:none;}',
     '.cmp-card.compact .cmp-ico{width:30px;height:30px;font-size:16px;}',
     '.cmp-ctl{position:absolute;top:8px;right:8px;z-index:3;display:flex;flex-direction:column;gap:6px;}',
-    '.cmp-ctl button{width:36px;height:36px;border-radius:10px;border:1px solid var(--border,rgba(0,0,0,.12));',
-    'background:var(--bg-2,#fff);color:var(--text-primary,#111);font-size:17px;line-height:1;cursor:pointer;',
-    'box-shadow:var(--shadow-sm,0 1px 2px rgba(0,0,0,.1));opacity:.92;-webkit-tap-highlight-color:transparent;}',
+    '.cmp-ctl button{width:36px;height:36px;border-radius:11px;border:1px solid var(--border,rgba(0,0,0,.12));',
+    'background:var(--surface-glass,var(--bg-2,#fff));color:var(--text-primary,#111);font-size:17px;line-height:1;cursor:pointer;',
+    '-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);',
+    'box-shadow:var(--shadow-sm,0 2px 8px rgba(15,23,42,.12));opacity:.95;-webkit-tap-highlight-color:transparent;',
+    'transition:transform .12s ease,opacity .12s ease;}',
+    '.cmp-ctl button:hover{opacity:1;}',
     '.cmp-ctl button:active{transform:scale(.94);}',
     '.cmp-banner{position:absolute;left:50%;top:10px;z-index:4;max-width:calc(100% - 64px);padding:8px 14px;border-radius:12px;',
     'text-align:center;background:var(--bg-2,#fff);color:var(--text-primary,#111);border:1px solid var(--accent,#2563eb);',
@@ -44,7 +54,8 @@ var CSS = [
     '.cmp-banner.on{opacity:1;transform:translate(-50%,0);}',
     '.cmp-banner b{display:block;font-size:13px;}',
     '.cmp-banner span{display:block;font-size:11px;color:var(--text-tertiary,#7a8494);}',
-    '@media (prefers-reduced-motion:reduce){.cmp-card,.cmp-banner,.cmp-bar i{transition:none;}}'
+    'html[data-perf="lite"] .cmp-card,html[data-perf="lite"] .cmp-ctl button{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--bg-2,#fff);}',
+    '@media (prefers-reduced-motion:reduce){.cmp-card,.cmp-banner,.cmp-bar i,.cmp-ctl button{transition:none;}}'
 ].join('');
 
 function ensureStyle() {
@@ -94,6 +105,9 @@ export function createCampusOverlay(container, cfg) {
     banner.appendChild(bTitle); banner.appendChild(bSub);
     banner.setAttribute('role', 'status');
 
+    var vig = el('div', 'cmp-vig');
+    vig.setAttribute('aria-hidden', 'true');
+    container.appendChild(vig);
     container.appendChild(ctl);
     container.appendChild(card);
     container.appendChild(banner);
@@ -190,7 +204,7 @@ export function createCampusOverlay(container, cfg) {
         dispose: function () {
             document.removeEventListener('keydown', onKey);
             if (bannerTimer) clearTimeout(bannerTimer);
-            [ctl, card, banner].forEach(function (n) { if (n.parentNode) n.parentNode.removeChild(n); });
+            [vig, ctl, card, banner].forEach(function (n) { if (n.parentNode) n.parentNode.removeChild(n); });
         }
     };
 }

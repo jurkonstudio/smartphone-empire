@@ -1,4 +1,5 @@
 // FILE: src/ui/campus/CampusLife.js
+// v2027.60 — material PBR (Standard) + ikut skala env tema lewat A.track; varian fasad 3 jenis.
 // v2027.38 — + kapal kargo di teluk, monorail, kincir angin, helikopter HQ, jalan lebih panjang.
 // v2027.37a — "Kampus hidup": animasi ambient ringan (mobil + bus, pejalan kaki di
 // trotoar, awan + bayangan, asap pabrik, drone era modern, pohon bergoyang, jendela
@@ -29,7 +30,8 @@ export function createCampusLife(THREE, A, scene, trees) {
     var portLvl = 0, railOn = false, heliOn = false, windRotors = null;
 
     function mk(color, opts) {
-        var m = new THREE.MeshLambertMaterial(Object.assign({ color: color, flatShading: true }, opts || {}));
+        var m = new THREE.MeshStandardMaterial(Object.assign({ color: color, roughness: 0.62, metalness: 0.08 }, opts || {}));
+        if (A.track) A.track(m, 0.5);
         mats.push(m);
         return m;
     }
@@ -44,7 +46,7 @@ export function createCampusLife(THREE, A, scene, trees) {
     var cars = [];
     function makeCar(color, kind) {
         var g = new THREE.Group();
-        var body = mk(color);
+        var body = mk(color, { roughness: 0.38, metalness: 0.35 });   // cat mobil mengilap
         if (kind === 'bus') {
             g.add(put(A.box(1.25, 0.3, 0.42), body, 0, 0.2, 0));
             g.add(put(A.box(1.12, 0.1, 0.44), carDark, 0, 0.27, 0));
@@ -155,7 +157,7 @@ export function createCampusLife(THREE, A, scene, trees) {
     // ---------- kunang-kunang (malam) ----------
     var flies = [];
     for (i = 0; i < FLY_BASE.length; i++) {
-        var fm = mk(0xfff59d, { transparent: true, opacity: 0, depthWrite: false });
+        var fm = mk(0xfff59d, { transparent: true, opacity: 0, depthWrite: false, emissive: 0xfff59d, emissiveIntensity: 1.2 });
         var fl = put(A.sph(0.05, 5, 4), fm, 0, 0.6, 0);
         fl.visible = false;
         root.add(fl);
@@ -355,8 +357,8 @@ export function createCampusLife(THREE, A, scene, trees) {
         gm.emissiveIntensity = 0.6 + Math.sin(t * 2.2) * 0.22;
         var wm = A.mat('window');
         wm.emissiveIntensity = dark ? 0.42 + Math.sin(t * 0.8) * 0.07 : 0;
-        var fm = A.mat('facade');
-        fm.emissiveIntensity = dark ? 0.88 + Math.sin(t * 0.8) * 0.06 : 0;
+        var fe = dark ? 0.88 + Math.sin(t * 0.8) * 0.06 : 0;
+        for (var fk = 0; fk < A.facadeKeys.length; fk++) A.mat(A.facadeKeys[fk]).emissiveIntensity = fe;
         A.mat('beacon').emissiveIntensity = (Math.sin(t * 3.2) > 0.55) ? 1.5 : 0.12;
     }
 

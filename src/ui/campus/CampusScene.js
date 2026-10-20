@@ -1,4 +1,9 @@
 // FILE: src/ui/campus/CampusScene.js
+// v2027.60 — PREMIUM LOOK: tone mapping ACES + sRGB, rig cahaya (matahari/fill/rim/hemi) + environment
+// map prosedural, shadow map statis (hanya dihitung ulang saat bangunan berubah) dengan tier adaptif,
+// hutan & semak instanced, label gedung terproyeksi, hover ring (mouse), seleksi fade halus,
+// pembersihan InstancedMesh saat bangunan diganti. Kontrol kamera, tap, kartu info, naik-level,
+// ID/koordinat bangunan dan data TIDAK diubah.
 // v2027.44 — TAHAP 4: peta interaktif. Tap bangunan = kartu info (level, progres, tombol
 // "Buka panel"), cincin seleksi berdenyut, kamera terbang halus ke bangunan, efek + banner
 // saat bangunan naik level, tombol zoom/reset, kartu ringkas di layar kecil, dua bahasa.
@@ -8,10 +13,12 @@
 // animasi tumbuh singkat, tap bangunan untuk info. Tetap render-on-demand.
 // Upgrade detail: cahaya hangat/dingin per tema, zoom lebih dalam, kontrol inertia.
 import {
-    createAssets, buildGround, buildTree, buildHQ, buildSlot, buildSprawl,
-    computePlan, rememberPeak, buildWind, buildRail,
+    createAssets, buildGround, buildForest, buildShrubs, buildHQ, buildSlot, buildSprawl,
+    computePlan, rememberPeak, buildWind, buildRail, applyShadowFlags, disposeObject,
     PALETTES, TREE_SPOTS, ERA_WINDOWS, SLOT_ORDER, SPRAWL_SPOTS
 } from './CampusBuildings.js';
+import { detectQuality, createLookRig } from './CampusLook.js';
+import { createCampusLabels } from './CampusLabels.js';
 import { createCampusControls } from './CampusControls.js';
 import { createCampusLife } from './CampusLife.js';
 import { createCampusFx } from './CampusFx.js';
@@ -19,7 +26,7 @@ import { createCampusOverlay } from './CampusOverlay.js';
 import { getBuildingInfo, getBuildingName, getUiStrings, hasCelebration } from './CampusInfo.js';
 
 var BASE_VIEW = 22;
-var MAX_DPR = 1.5;              // hemat GPU di HP DPR 3+
+// DPR maksimum sekarang adaptif per tier kualitas (lihat detectQuality di CampusLook.js).
 var MIN_RESIZE_DELTA = 2;       // piksel — skip resize kalau perubahan < 2px
 var GROW_MS = 650;              // durasi animasi bangunan tumbuh
 var COMPACT_H = 300;            // tinggi peta (px) di bawah ini -> kartu info mode ringkas
@@ -47,17 +54,21 @@ function prefersReducedMotion() {
 
 export function createCampusScene(THREE, container, gameState) {
     var PERF = window.__PERF || {};
+    var quality = detectQuality(PERF);
     var renderer = new THREE.WebGLRenderer({
         antialias: PERF.antialias !== false,
         alpha: true,
-        powerPreference: 'low-power'
+        powerPreference: quality.tier === 'high' ? 'default' : 'low-power'
     });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality.maxDpr));
     renderer.setClearColor(0x000000, 0);
     var canvas = renderer.domElement;
     canvas.style.cssText = 'width:100%;height:100%;display:block;';
     container.innerHTML = '';
     container.appendChild(canvas);
+
+    // Label gedung dibuat sebelum overlay agar urutan DOM: canvas < label < tombol/kartu.
+    var labels = createCampusLabels(THREE, container);
 
     // Lapisan UI: kartu info, tombol zoom/reset, banner naik level.
     var overlay = createCampusOverlay(container, {
@@ -69,23 +80,26 @@ export function createCampusScene(THREE, container, gameState) {
 
     var scene = new THREE.Scene();
     var camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
-    var hemi = new THREE.HemisphereLight(0xffffff, 0xcccccc, 1);
-    var sun = new THREE.DirectionalLight(0xfff1da, 0.8);
-    sun.position.set(8, 10, 5);
-    scene.add(hemi, sun);
+    var rig = createLookRig(THREE, renderer, scene, quality);   // cahaya + tone mapping + shadow + env
     var fx = createCampusFx(THREE);
     scene.add(fx.group);
     var selected = null;          // { id, key, cx, cz, r, top, ring }
+    var hoverKey = null, hoverRaf = 0, hoverPt = null;   // hover mouse (desktop)
     var pendingCele = [];         // bangunan yang baru naik level pada sinkronisasi ini
 
-    var A = createAssets(THREE);
+    var A = createAssets(THREE, { shadows: rig.shadowsOn, env: rig.envOn });
     scene.add(buildGround(A, THREE));
-    var trees = [];
-    TREE_SPOTS.forEach(function (p) { var tr = buildTree(A, THREE, p[0], p[1]); trees.push(tr); scene.add(tr); });
+    var forest = buildForest(A, THREE, TREE_SPOTS);     // pohon instanced; nodes[i].rotation dipakai CampusLife
+    scene.add(forest.group);
+    var shrubs = buildShrubs(A, THREE);
+    scene.add(shrubs);
+    var shadowDirty = true;       // shadow map statis: hitung ulang hanya saat geometri berubah
     // Animasi ambient (mobil, awan, asap, drone, dll). Dimatikan bila pengguna memilih reduced-motion.
-    var life = prefersReducedMotion() ? null : createCampusLife(THREE, A, scene, trees);
+    var life = prefersReducedMotion() ? null : createCampusLife(THREE, A, scene, forest.nodes);
     var ambient = !!life;
+    fx.setImmediate(!ambient);
     var loopRaf = 0, loopTimer = 0, lastFrame = 0, inView = true;
+    var swayTick = 0;
 
     var dyn = {};                 // key -> { group, level, era }
     var eraIdx = -1;              // era desain yang sedang dipakai
@@ -106,6 +120,13 @@ export function createCampusScene(THREE, container, gameState) {
         camera.position.set(v.x + 20, 20, v.z + 20);
         camera.lookAt(v.x, 0, v.z);
         camera.updateProjectionMatrix();
+        labels.update(camera, lastW || container.clientWidth, lastH || container.clientHeight, v.zoom);
+    }
+
+    // Semua render lewat sini: shadow map diperbarui hanya bila ditandai kotor.
+    function draw() {
+        if (shadowDirty) { rig.requestShadowUpdate(); shadowDirty = false; }
+        renderer.render(scene, camera);
     }
 
     function startLoop() {
@@ -133,7 +154,8 @@ export function createCampusScene(THREE, container, gameState) {
         if (animList.length) stepGrow(now);
         fx.update(now);
         life.update(now / 1000);
-        renderer.render(scene, camera);
+        if ((swayTick++ & 1) === 0) forest.flush();      // sway pohon cukup ~15fps
+        draw();
     }
 
     function requestRender() {
@@ -142,12 +164,13 @@ export function createCampusScene(THREE, container, gameState) {
         raf = requestAnimationFrame(function () {
             raf = 0;
             if (disposed || document.hidden) return;
-            renderer.render(scene, camera);
+            draw();
         });
     }
 
     // ---------- animasi tumbuh (hanya jalan selama ada yang beranimasi) ----------
     function stepGrow(now) {
+        shadowDirty = true;           // bangunan sedang tumbuh -> bayangan ikut bergerak
         var live = [];
         for (var i = 0; i < animList.length; i++) {
             var a = animList[i];
@@ -162,7 +185,7 @@ export function createCampusScene(THREE, container, gameState) {
         animRaf = 0;
         if (disposed) return;
         stepGrow(now);
-        if (!document.hidden) renderer.render(scene, camera);
+        if (!document.hidden) draw();
         if (animList.length) animRaf = requestAnimationFrame(tick);
     }
 
@@ -177,14 +200,19 @@ export function createCampusScene(THREE, container, gameState) {
     function setBuilding(key, level, make, animate) {
         var cur = dyn[key];
         if (!level) {
-            if (cur) { scene.remove(cur.group); delete dyn[key]; }
+            if (cur) { scene.remove(cur.group); disposeObject(cur.group); delete dyn[key]; shadowDirty = true; }
             return;
         }
         if (cur && cur.level === level && cur.era === eraIdx) return;
         var g = make();
         if (!g) return;
         var isUpgrade = !cur || level > cur.level;
-        if (cur) scene.remove(cur.group);
+        if (cur) { scene.remove(cur.group); disposeObject(cur.group); }   // lepas buffer InstancedMesh lama
+        applyShadowFlags(g, rig.shadowsOn);
+        if (key === 'wind' && g.userData.rotors) {       // rotor berputar -> jangan masuk shadow map statis
+            g.userData.rotors.forEach(function (h) { h.traverse(function (o) { o.castShadow = false; }); });
+        }
+        shadowDirty = true;
         scene.add(g);
         dyn[key] = { group: g, level: level, era: eraIdx };
         if (animate && isUpgrade) grow(g);
@@ -279,6 +307,7 @@ export function createCampusScene(THREE, container, gameState) {
         selected = null;
         fx.clearSelection();
         overlay.hideCard();
+        labels.setState(null, hoverKey);
         requestRender();
     }
 
@@ -290,6 +319,8 @@ export function createCampusScene(THREE, container, gameState) {
         var ring = id !== 'rail' && id !== 'wind';      // dekorasi panjang tidak diberi cincin
         selected = { id: id, key: key, cx: m.cx, cz: m.cz, r: m.r, top: m.top, ring: ring };
         if (ring) fx.select(m.cx, m.cz, m.r); else fx.clearSelection();
+        if (hoverKey === key) { hoverKey = null; fx.clearHover(); canvas.style.cursor = ''; }
+        labels.setState(key, hoverKey);
         if (flyCam && id !== 'rail') focusOn(m.cx, m.cz);
         refreshCard(true);
         requestRender();
@@ -303,24 +334,83 @@ export function createCampusScene(THREE, container, gameState) {
         controls.flyTo(cx + k, cz + k, zoom);
     }
 
-    function handleTap(cx, cy) {
-        if (disposed || !lastPlan) return;
+    // Ray-pick bangunan di titik layar (cx, cy) -> { id, key } atau null.
+    function pick(cx, cy) {
         var rect = canvas.getBoundingClientRect();
-        if (!rect.width || !rect.height) return;
+        if (!rect.width || !rect.height) return null;
         ndc.set(((cx - rect.left) / rect.width) * 2 - 1, -((cy - rect.top) / rect.height) * 2 + 1);
         scene.updateMatrixWorld(true);
         camera.updateMatrixWorld(true);
         raycaster.setFromCamera(ndc, camera);
         var groups = Object.keys(dyn).map(function (k) { return dyn[k].group; });
         var hits = raycaster.intersectObjects(groups, true);
-        if (!hits.length) { deselect(); return; }
+        if (!hits.length) return null;
         var o = hits[0].object;
         while (o && !(o.userData && o.userData.id)) o = o.parent;
-        if (!o) { deselect(); return; }
-        var key = null;
-        for (var k in dyn) { if (dyn[k].group === o) { key = k; break; } }
-        if (!key) { deselect(); return; }
-        placeSelection(o.userData.id, key, true);
+        if (!o) return null;
+        for (var k in dyn) { if (dyn[k].group === o) return { id: o.userData.id, key: k }; }
+        return null;
+    }
+
+    function handleTap(cx, cy) {
+        if (disposed || !lastPlan) return;
+        var hit = pick(cx, cy);
+        if (!hit) { deselect(); return; }
+        placeSelection(hit.id, hit.key, true);
+    }
+
+    // ---------- hover (hanya mouse; sentuhan tidak punya hover) ----------
+    function clearHover() {
+        if (hoverKey === null) return;
+        hoverKey = null;
+        fx.clearHover();
+        canvas.style.cursor = '';
+        labels.setState(selected ? selected.key : null, null);
+        requestRender();
+    }
+    function runHover() {
+        hoverRaf = 0;
+        if (disposed || !hoverPt || !lastPlan) return;
+        var hit = pick(hoverPt.x, hoverPt.y);
+        var k = (hit && hit.id !== 'rail' && hit.id !== 'wind' && hit.id !== 'sprawl') ? hit.key : null;
+        if (k === hoverKey) return;
+        hoverKey = k;
+        if (k && !(selected && selected.key === k)) {
+            var m = measure(dyn[k].group);
+            fx.hover(m.cx, m.cz, m.r);
+        } else {
+            fx.clearHover();
+        }
+        canvas.style.cursor = k ? 'pointer' : '';
+        labels.setState(selected ? selected.key : null, k);
+        requestRender();
+    }
+    function onHoverMove(e) {
+        if (e.pointerType !== 'mouse' || e.buttons) { clearHover(); return; }
+        hoverPt = { x: e.clientX, y: e.clientY };
+        if (!hoverRaf) hoverRaf = requestAnimationFrame(runHover);
+    }
+    canvas.addEventListener('pointermove', onHoverMove);
+    canvas.addEventListener('pointerleave', clearHover);
+
+    // ---------- label gedung (diproyeksikan dari atap tiap bangunan) ----------
+    var LABEL_PRIO = { hq: 0, monument: 3, billboard: 3 };
+    function syncLabels() {
+        if (!lastPlan) return;
+        var list = [];
+        for (var key in dyn) {
+            if (!hasCelebration(key)) continue;               // hanya bangunan ber-level (bukan dekorasi)
+            var info = getBuildingInfo(key, lastPlan, lastData);
+            if (!info) continue;
+            var m = measure(dyn[key].group);
+            list.push({
+                key: key, id: key, name: getBuildingName(key),
+                level: info.level, max: info.max,
+                x: m.cx, y: m.top + 0.45, z: m.cz,
+                prio: LABEL_PRIO[key] !== undefined ? LABEL_PRIO[key] : 2
+            });
+        }
+        labels.setItems(list);
     }
 
     var controls = createCampusControls(canvas, {
@@ -355,18 +445,15 @@ export function createCampusScene(THREE, container, gameState) {
 
     function applyTheme() {
         var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        var look = rig.applyTheme(dark);                  // cahaya, exposure, env (CampusLook.js)
         var base = dark ? PALETTES.dark : PALETTES.light;
-        var p = Object.assign({}, base);
+        var p = Object.assign({}, base, look.colors, { aoOpacity: look.aoOpacity });
         var w = ERA_WINDOWS[Math.max(0, eraIdx)];
         if (w) p.window = dark ? w.dark : w.light;     // warna jendela ikut era
         A.applyPalette(p, readAccent());
+        A.setEnvIntensity(look.envI);
         fx.setAccent(readAccent(), dark);
         if (life) life.setTheme(dark, p.window);
-        hemi.color.setHex(p.hemiSky);
-        hemi.groundColor.setHex(p.hemiGround);
-        hemi.intensity = p.hemiI;
-        sun.intensity = p.dirI;
-        if (p.sunCol !== undefined) sun.color.setHex(p.sunCol);   // hangat siang, kebiruan malam
     }
 
     // Dipanggil sering (setiap state:changed) — murah: keluar cepat kalau plan sama.
@@ -387,6 +474,7 @@ export function createCampusScene(THREE, container, gameState) {
         appliedSig = plan.sig;
         hasApplied = true;
         lastPlan = plan;
+        syncLabels();
         if (selected) refreshCard(false);
         requestRender();
     }
@@ -417,7 +505,7 @@ export function createCampusScene(THREE, container, gameState) {
     return {
         update: update,
         refreshTheme: function () { applyTheme(); requestRender(); },
-        refreshLang: function () { overlay.setLabels(getUiStrings()); refreshCard(true); },
+        refreshLang: function () { overlay.setLabels(getUiStrings()); syncLabels(); refreshCard(true); },
         dispose: function () {
             disposed = true;
             if (raf) cancelAnimationFrame(raf);
@@ -426,11 +514,19 @@ export function createCampusScene(THREE, container, gameState) {
             if (io) io.disconnect();
             if (life) life.dispose();
             if (animRaf) cancelAnimationFrame(animRaf);
+            if (hoverRaf) cancelAnimationFrame(hoverRaf);
+            canvas.removeEventListener('pointermove', onHoverMove);
+            canvas.removeEventListener('pointerleave', clearHover);
+            labels.dispose();
             overlay.dispose();
             fx.dispose();
             if (ro) ro.disconnect(); else window.removeEventListener('resize', resize);
             document.removeEventListener('visibilitychange', onVis);
             controls.dispose();
+            for (var dk in dyn) disposeObject(dyn[dk].group);   // buffer InstancedMesh bangunan
+            forest.dispose();
+            disposeObject(shrubs);
+            rig.dispose();
             A.dispose();
             renderer.dispose();
             try { renderer.forceContextLoss(); } catch (e) {}
