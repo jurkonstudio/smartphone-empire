@@ -186,6 +186,9 @@ export var PaymentService = {
         
         _save(order);
         bus.emit('payment:fulfilled', { orderId: order.id, sil: order.sil });
+        // [FIX] Listener di SiliconStorePanel menunggu event ini (sebelumnya tidak pernah dipancarkan)
+        // untuk menutup modal QR & menarik saldo seketika setelah admin menyetujui.
+        bus.emit('payment:approved', order.id);
         return { ok: true, order: order, sil: order.sil };
     }
 };
