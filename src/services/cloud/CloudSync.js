@@ -32,6 +32,11 @@ let _siliconSyncing = false;
 let _pendingDebits = 0;
 let _localEpoch = 0;
 let _debitChain = Promise.resolve();
+// [FIX SIL LOKAL MENUTUPI SERVER] Bila antrean potongan macet (request menggantung / handler melempar error),
+// _pendingDebits tidak pernah turun ke 0 -> sinkron saldo server ditunda selamanya & saldo lokal basi tampil.
+let _pendingSince = 0;
+const PENDING_STUCK_MS = 45000;
+const SPEND_TIMEOUT_MS = 25000;
 let _silPollTimer = null;
 // [AUDIT] Catatan potongan terbaru agar refund aksi-gagal bisa dibatalkan / dikembalikan di server.
 let _debitLog = [];
@@ -183,6 +188,10 @@ async function syncSiliconOnLogin() {
     if (!_state || !_isConnected()) return;
     if (_siliconSyncing) { _silAgain = true; return; }   // jangan buang: baca ulang setelah yang berjalan selesai
     // Ada potongan SIL yang belum dikonfirmasi server -> jangan baca saldo basi; ulangi setelahnya.
+    if (_pendingDebits > 0 && _pendingSince && Date.now() - _pendingSince > PENDING_STUCK_MS) {
+        console.warn('[CloudSync] Antrean potongan SIL macet >' + PENDING_STUCK_MS + 'ms, direset agar saldo server bisa diterapkan.');
+        _pendingDebits = 0; _pendingSince = 0; _debitChain = Promise.resolve();
+    }
     if (_pendingDebits > 0) { _debouncedSyncSilicon(); return; }
 
     _siliconSyncing = true;
@@ -265,6 +274,7 @@ function _onLocalDebit(delta, reason) {
     if (amount <= 0) return;
 
     _localEpoch++;
+    if (_pendingDebits === 0) _pendingSince = Date.now();
     _pendingDebits++;
     var reqId = 'sp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     var entry = { amount: amount, reqId: reqId, started: false, cancelled: false, done: false, failed: false, refunded: false };
@@ -275,7 +285,7 @@ function _onLocalDebit(delta, reason) {
         // Dibatalkan (aksi gagal & di-refund sebelum potongan sempat dikirim) -> tidak ada yang dikirim.
         if (entry.cancelled) return;
         entry.started = true;
-        return _spendWithRetry(amount, reqId, reason).then(function (res) {
+        return _withTimeout(_spendWithRetry(amount, reqId, reason), SPEND_TIMEOUT_MS, { ok: false, reason: 'Koneksi timeout' }).then(function (res) {
             if (!res.ok) {
                 entry.failed = true;
                 // Gagal di server: kembalikan HANYA jumlah ini (bukan snapshot lama).
@@ -293,8 +303,11 @@ function _onLocalDebit(delta, reason) {
             SiliconService._refund(amount, 'network-error');
             ToastService.error('Koneksi gagal, SIL dikembalikan.');
         });
+    }).catch(function (e) {
+        console.warn('[CloudSync] antrean potongan SIL error:', e);
     }).then(function () {
         _pendingDebits = Math.max(0, _pendingDebits - 1);
+        if (_pendingDebits === 0) _pendingSince = 0;
         _localEpoch++;
         if (_pendingDebits === 0) _debouncedSyncSilicon();
     });
@@ -316,17 +329,21 @@ function _onLocalRefund(amount) {
     _localEpoch++;
     if (!entry.started) { entry.cancelled = true; return; }   // belum dikirim: batalkan saja
 
+    if (_pendingDebits === 0) _pendingSince = Date.now();
     _pendingDebits++;                  // tahan sinkron saldo sampai refund server selesai
     _debitChain = _debitChain.then(function () {
-        return CloudService.refundSiliconServer(entry.reqId).then(function (res) {
+        return _withTimeout(CloudService.refundSiliconServer(entry.reqId), SPEND_TIMEOUT_MS, { ok: false, reason: 'timeout' }).then(function (res) {
             if (!res.ok) {
                 ToastService.error('Refund SIL gagal di server: ' + (res.reason || 'error'));
             }
         }).catch(function () {
             ToastService.error('Refund SIL gagal (koneksi).');
         });
+    }).catch(function (e) {
+        console.warn('[CloudSync] antrean refund SIL error:', e);
     }).then(function () {
         _pendingDebits = Math.max(0, _pendingDebits - 1);
+        if (_pendingDebits === 0) _pendingSince = 0;
         _localEpoch++;
         _debouncedSyncSilicon();       // server = sumber kebenaran
     });
@@ -653,7 +670,7 @@ export const CloudSync = {
                 _state.data.silicon = localSil;
             }
 
-            var silRes = await _withTimeout(CloudService.getSiliconBalance(), 4000, { ok: false });
+            var silRes = await _withTimeout(CloudService.getSiliconBalance(), SIL_HARD_MS, { ok: false });
             if (silRes.ok) {
                 SiliconService.applyServerBalance(Math.floor(silRes.balance || 0));
             }
