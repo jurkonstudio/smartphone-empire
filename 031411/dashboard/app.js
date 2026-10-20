@@ -231,6 +231,7 @@ async function renderInf() {
 
 /* ---------- auth ---------- */
 function showLogin(msg) {
+  idleOn = false;
   $('#app').classList.add('hide'); $('#login').classList.remove('hide');
   const m = $('#lm'); if (msg) { m.textContent = msg; m.className = 'msg er'; } else m.className = 'msg';
 }
@@ -242,7 +243,7 @@ async function enter(user) {
     await S.sb.auth.signOut();
     showLogin(why ? 'Verifikasi admin gagal: ' + why + ' (pastikan fungsi ' + CFG.adminCheckRpc + ' sudah dibuat di Supabase)' : 'Akun ini tidak punya akses admin.'); return;
   }
-  $('#who').textContent = user.email;
+  $('#who').textContent = user.email; touch(); idleOn = true;
   $('#login').classList.add('hide'); $('#app').classList.remove('hide');
   log('ok', 'Masuk sebagai ' + user.email);
   await Promise.all([loadPlayers(), loadPays()]);
@@ -256,7 +257,7 @@ async function boot() {
     let mk = null;
     for (const u of cfg.SUPABASE_LIB_URLS) { try { const m = await import(u); if (m && m.createClient) { mk = m.createClient; break; } } catch (e) {} }
     if (!mk) throw new Error('Gagal memuat library Supabase.');
-    S.sb = mk(cfg.SUPABASE_URL, cfg.SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: CFG.authStorageKey } });
+    S.sb = mk(cfg.SUPABASE_URL, cfg.SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: CFG.authStorageKey, storage: CFG.keepLogin ? localStorage : sessionStorage } });
     S.sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') showLogin(); });
     const { data } = await S.sb.auth.getSession();
     if (data && data.session) await enter(data.session.user); else showLogin();
@@ -305,6 +306,15 @@ document.addEventListener('input', e => {
   if (e.target.id === 'q') { S.filter = e.target.value; S.page = 0; const pos = e.target.selectionStart; renderPl(); const q = $('#q'); q.focus(); q.setSelectionRange(pos, pos); }
 });
 
+let lastAct = Date.now(), idleOn = false;
+function touch() { lastAct = Date.now(); }
+async function idleCheck() {
+  if (!idleOn || !CFG.idleMinutes || Date.now() - lastAct < CFG.idleMinutes * 60000) return;
+  idleOn = false; hideSheet(); await S.sb.auth.signOut(); showLogin('Sesi berakhir karena tidak aktif.');
+}
+['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach(ev => addEventListener(ev, touch, { passive: true, capture: true }));
+setInterval(idleCheck, 15000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) idleCheck(); });
 addEventListener('popstate', hideSheet);
 addEventListener('error', e => log('er', e.message));
 addEventListener('unhandledrejection', e => log('er', 'Promise: ' + ((e.reason && e.reason.message) || e.reason)));

@@ -4,6 +4,8 @@ export const CFG = {
   adminCheckRpc: 'is_admin',                        // fungsi SQL di Supabase; admin diverifikasi server, bukan email di kode
   supabaseConfig: '/src/services/cloud/supabase.config.js', // exports: SUPABASE_URL, SUPABASE_KEY, SUPABASE_LIB_URLS
   authStorageKey: 'se-admin-auth',
+  idleMinutes: 15,    // keluar otomatis bila tidak ada aktivitas (0 = nonaktif)
+  keepLogin: false,   // false: sesi hilang saat tab/browser ditutup
   pageSize: 50,
   rpc: {
     profiles: 'admin_get_all_profiles',
