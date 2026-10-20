@@ -349,7 +349,25 @@ export function showOnboarding() {
                 foundRow = row; render('found');
                 doContinue();
             }
-            else { render('start'); }
+            else {
+                // [FIX] Daftar save (save_heads) bisa kosong/telat/terblokir RLS padahal save di game_saves ada.
+                // Cek langsung ke tabel save sebelum menganggap akun ini baru.
+                var direct = await _withTimeout(CloudService.downloadSave(slot), 8000);
+                if (finished) return;
+                var dd = direct && direct.ok && direct.payload && direct.payload.data;
+                if (dd && typeof dd === 'object') {
+                    var tm = dd.time || {};
+                    foundRow = {
+                        slot: slot, company_name: dd.companyName || '',
+                        game_year: tm.currentYear || null, game_month: tm.currentMonth || null,
+                        updated_at: direct.payload.updatedAt || null
+                    };
+                    render('found');
+                    doContinue();
+                } else {
+                    render('start');
+                }
+            }
         }
 
         var _loadingCloud = false;
