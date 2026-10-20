@@ -168,11 +168,14 @@ export var PaymentService = {
         order.status = 'paid';
         order.fulfilledAt = Date.now();
         
-        // [FIX] OPTIMISTIC UPDATE: Tambahkan SIL secara lokal seketika
-        SiliconService.add(order.sil, 'topup:' + order.packageId);
-        
-        // Tarik saldo dari server untuk memastikan (CloudSync akan mencegah penimpaan)
-        if (CloudService.getStatus() === 'connected') {
+        // [AUDIT FIX] Saat terhubung cloud, SIL top-up sudah dikreditkan SERVER (admin_approve_payment) dan
+        // saldo ditarik dari server. Menambah lokal lagi membuat saldo tampil ganda & sempat bisa dibelanjakan.
+        // Tambah lokal HANYA bila tidak terhubung (mode dev/sandbox).
+        var _online = CloudService.getStatus() === 'connected';
+        if (!_online) SiliconService.add(order.sil, 'topup:' + order.packageId);
+
+        // Tarik saldo dari server (sumber kebenaran).
+        if (_online) {
             import('../services/cloud/CloudSync.js').then(function(cs) {
                 var sync = cs.CloudSync && cs.CloudSync.syncSilicon;
                 if (typeof sync === 'function') return sync();

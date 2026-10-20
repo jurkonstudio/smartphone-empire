@@ -5,6 +5,8 @@
 // v2027.40 — unlock riset & boost riset pakai SIL (tech + chip), fix boost dev.
 // v2027.41 — percepatan waktu 2x/5x/10x berbayar SIL (batas waktu per 10 SIL); hapus skip7/skip30.
 // v2028.3  — Menambahkan dukungan percepatan OS (kind === 'os').
+// v2029.3  — [AUDIT] boost OS tidak lagi ditagih harga 'selesai'; guard Infinity/NaN; buySpeed aman bila
+//            aktivasi gagal (SIL dikembalikan); refund memberi tahu CloudSync (refund server).
 // v2028.41 — [FIX SIL HILANG]
 //   • Mode bayar 'auto' tanpa persetujuan eksplisit pemain dianggap 'strict' (SIL tidak lagi
 //     terpotong diam-diam untuk menutup biaya uang; notifikasi default MATI sehingga tak terlihat).
@@ -90,7 +92,7 @@ export var SiliconService = {
     quote(cost) {
         cost = Math.floor(cost);
         var plan = { ok: false, cost: cost, sil: 0, units: 0, cash: 0 };
-        if (!(cost > 0)) return plan;
+        if (!(cost > 0) || !isFinite(cost)) return plan;
         var bal = state.data.silicon || 0, mode = this._payMode(), rate = this.cashPerSil();
         var cashUnits = Math.floor(Math.max(0, state.data.cash || 0) / rate);
         if (mode === 'strict') {
@@ -123,7 +125,7 @@ export var SiliconService = {
 
     add(amount, reason) {
         amount = Math.floor(amount);
-        if (!amount || amount <= 0) return { ok: false, reason: 'Jumlah tidak valid.' };
+        if (!amount || amount <= 0 || !isFinite(amount)) return { ok: false, reason: 'Jumlah tidak valid.' };
         if (!DEV_BUILD && !ALLOWED_CREDIT.test(String(reason || ''))) return { ok: false, reason: 'Sumber kredit tidak sah.' };
         state.data.silicon = (state.data.silicon || 0) + amount;
         _pushHistory('earn', amount, reason || 'reward');
@@ -135,7 +137,7 @@ export var SiliconService = {
     // Potong SIL murni (tanpa uang). Dipakai Dompet Universal & penukaran SIL->uang.
     spendRaw(amount, reason) {
         amount = Math.floor(amount);
-        if (!amount || amount <= 0) return { ok: false, reason: 'Jumlah tidak valid.' };
+        if (!amount || amount <= 0 || !isFinite(amount)) return { ok: false, reason: 'Jumlah tidak valid.' };
         if (!this.canAffordRaw(amount)) return { ok: false, reason: 'Silicon tidak cukup.' };
         state.data.silicon = (state.data.silicon || 0) - amount;
         _pushHistory('spend', -amount, reason || 'spend');
@@ -148,7 +150,7 @@ export var SiliconService = {
     // Hasil: { ok, balance, silSpent, cashSpent }.
     spend(amount, reason) {
         amount = Math.floor(amount);
-        if (!amount || amount <= 0) return { ok: false, reason: 'Jumlah tidak valid.' };
+        if (!amount || amount <= 0 || !isFinite(amount)) return { ok: false, reason: 'Jumlah tidak valid.' };
         var plan = this.quote(amount);
         if (!plan.ok) return { ok: false, reason: 'Silicon & uang tidak cukup.' };
         if (plan.sil > 0) {
@@ -261,11 +263,14 @@ export var SiliconService = {
             var d = state.data.os.developing;
             if (!d || d.versionString !== nodeId) return { ok: false, reason: 'Pengembangan OS tidak ditemukan.' };
             
-            var finish = (mode === 'finish') || (mode === 'instant');
-            var cost = this.researchFinishCost(d);
-            
+            // [FIX] Sama dengan riset tech/chip: 'boost' hanya ditagih harga satu paket boost; harga
+            // 'selesai' hanya bila diminta atau sisa waktu <= satu paket boost.
+            var osRemaining = Math.max(0, (d.durationDays || 0) - (d.progressDays || 0));
+            var finish = (mode === 'finish') || (mode === 'instant') || osRemaining <= SILICON_COSTS.research.boostDays;
+            var cost = finish ? this.researchFinishCost(d) : this.researchBoostCost();
+
             if (!this.canAfford(cost)) return { ok: false, reason: 'Silicon tidak cukup (' + cost + ' SIL).', need: cost };
-            
+
             var sp = this.spend(cost, (finish ? 'finish-os:' : 'boost-os:') + nodeId);
             if (!sp.ok) return sp;
             
@@ -306,7 +311,7 @@ export var SiliconService = {
         state.data.silicon = (state.data.silicon || 0) + amount;
         _pushHistory('earn', amount, 'refund:' + reason);
         // [FIX] refund:true -> CloudSync membatalkan belanja yang belum terkirim ke server.
-        bus.emit('silicon:changed', { balance: state.data.silicon, delta: amount, reason: 'refund:' + reason, refund: true });
+        bus.emit('silicon:changed', { balance: state.data.silicon, delta: amount, reason: 'refund:' + reason, refund: true, amount: amount });
         bus.emit('state:changed', state.data);
     },
 
@@ -344,7 +349,13 @@ export var SiliconService = {
         var sp = this.spend(pack.cost, 'speed:' + speed + 'x');
         if (!sp.ok) return sp;
 
-        g.timeSystem.activateBoost(speed, total);
+        try {
+            g.timeSystem.activateBoost(speed, total);
+        } catch (err) {
+            console.error('[SiliconService] activateBoost gagal:', err);
+            this._refundPay(sp, 'speed:' + speed + 'x');
+            return { ok: false, reason: 'Boost gagal diaktifkan, pembayaran dikembalikan.' };
+        }
         bus.emit('silicon:action-done', { id: 'speed', cost: pack.cost });
         return { ok: true, spent: pack.cost, speed: speed, remainingSec: total };
     },
