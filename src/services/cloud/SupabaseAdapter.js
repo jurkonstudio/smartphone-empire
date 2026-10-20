@@ -10,6 +10,7 @@ var PUB_COLS = 'id, display_name, avatar_path, company_name, founded_year, found
 function _pubCols() { return PUB_COLS + (_pubIdOk ? ', public_id' : ''); }
 function _isPubIdMissing(err) { return !!err && String(err.message || '').toLowerCase().indexOf('public_id') >= 0; }
 var _idemOk = true;
+var _inboxExt = true;
 var _reasonOk = true;
 
 function classify(err) {
@@ -216,11 +217,16 @@ export const SupabaseAdapter = {
     },
 
     // ---------- Inbox (pesan admin + notifikasi SIL) ----------
-    inboxList: async function (limit) {
+    inboxList: async function (limit, sinceId) {
         var c = await getClient();
-        var res = await c.from('inbox_messages')
-            .select('id, kind, title, body, amount, created_at, read_at')
-            .order('id', { ascending: false }).limit(limit || 60);
+        var cols = 'id, kind, title, body, amount, created_at, read_at' + (_inboxExt ? ', sender_name, sender_public_id' : '');
+        var q = c.from('inbox_messages').select(cols);
+        if (sinceId) q = q.gt('id', sinceId);          // polling hemat: hanya pesan yang lebih baru
+        var res = await q.order('id', { ascending: false }).limit(limit || 60);
+        if (res.error && _inboxExt && String(res.error.message || '').indexOf('sender_') >= 0) {
+            _inboxExt = false;                         // SQL 10 belum dijalankan: pakai kolom dasar
+            return this.inboxList(limit, sinceId);
+        }
         if (res.error) throw mk(res.error);
         return res.data || [];
     },
@@ -236,6 +242,38 @@ export const SupabaseAdapter = {
         if (res.error) throw mk(res.error);
         return res.data || 0;
     },
+    // ---------- Pesan antar pemain ----------
+    rpcSendPlayerMessage: async function (publicId, body) {
+        var c = await getClient();
+        var res = await c.rpc('send_player_message', { p_receiver_public_id: publicId, p_body: body });
+        if (res.error) throw mk(res.error);
+        return res.data;
+    },
+    rpcInboxBlock: async function (publicId) {
+        var c = await getClient();
+        var res = await c.rpc('inbox_block', { p_public_id: publicId });
+        if (res.error) throw mk(res.error);
+        return res.data;
+    },
+    rpcInboxUnblock: async function (publicId) {
+        var c = await getClient();
+        var res = await c.rpc('inbox_unblock', { p_public_id: publicId });
+        if (res.error) throw mk(res.error);
+        return res.data;
+    },
+    rpcInboxBlocks: async function () {
+        var c = await getClient();
+        var res = await c.rpc('inbox_list_blocks');
+        if (res.error) throw mk(res.error);
+        return res.data || [];
+    },
+    rpcInboxReport: async function (messageId, reason) {
+        var c = await getClient();
+        var res = await c.rpc('inbox_report', { p_message_id: messageId, p_reason: reason || null });
+        if (res.error) throw mk(res.error);
+        return res.data;
+    },
+
     subscribeInbox: async function (userId, cb) {
         var c = await getClient();
         var ch = c.channel('inbox:' + userId).on('postgres_changes',
