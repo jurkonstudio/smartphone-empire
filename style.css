@@ -4718,4 +4718,5 @@ html[data-perf="lite"] body { background-attachment: scroll !important; }
 .mf-buy { flex: 0 0 auto; }
 .mf-buy-btn { padding: 8px 10px; font-size: 12px; white-space: nowrap; }
 .mf-buy-btn[disabled] { opacity: .45; }
+.mf-short { font-size: 10.5px; color: var(--text-mute); margin-top: 3px; text-align: right; }
 .mf-year { font-weight: 700; color: var(--text-mute); }
