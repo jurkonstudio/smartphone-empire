@@ -1,4 +1,6 @@
 // FILE: src/ui/campus/CampusScene.js
+// v2027.61 — CAMPUS CLEANUP: hilangkan blok kota generik yang tidak fungsional,
+// framing kamera lebih lega, pertahankan fasilitas kampus dan logika gameplay.
 // v2027.60 — PREMIUM LOOK: tone mapping ACES + sRGB, rig cahaya (matahari/fill/rim/hemi) + environment
 // map prosedural, shadow map statis (hanya dihitung ulang saat bangunan berubah) dengan tier adaptif,
 // hutan & semak instanced, label gedung terproyeksi, hover ring (mouse), seleksi fade halus,
@@ -13,9 +15,9 @@
 // animasi tumbuh singkat, tap bangunan untuk info. Tetap render-on-demand.
 // Upgrade detail: cahaya hangat/dingin per tema, zoom lebih dalam, kontrol inertia.
 import {
-    createAssets, buildGround, buildForest, buildShrubs, buildHQ, buildSlot, buildSprawl,
+    createAssets, buildGround, buildForest, buildShrubs, buildHQ, buildSlot,
     computePlan, rememberPeak, buildWind, buildRail, applyShadowFlags, disposeObject,
-    PALETTES, TREE_SPOTS, ERA_WINDOWS, SLOT_ORDER, SPRAWL_SPOTS
+    PALETTES, TREE_SPOTS, ERA_WINDOWS, SLOT_ORDER
 } from './CampusBuildings.js';
 import { detectQuality, createLookRig } from './CampusLook.js';
 import { createCampusLabels } from './CampusLabels.js';
@@ -25,7 +27,7 @@ import { createCampusFx } from './CampusFx.js';
 import { createCampusOverlay } from './CampusOverlay.js';
 import { getBuildingInfo, getBuildingName, getUiStrings, hasCelebration } from './CampusInfo.js';
 
-var BASE_VIEW = 22;
+var BASE_VIEW = 30; // framing lebih lega untuk seluruh area kampus inti
 // DPR maksimum sekarang adaptif per tier kualitas (lihat detectQuality di CampusLook.js).
 var MIN_RESIZE_DELTA = 2;       // piksel — skip resize kalau perubahan < 2px
 var GROW_MS = 650;              // durasi animasi bangunan tumbuh
@@ -235,12 +237,17 @@ export function createCampusScene(THREE, container, gameState) {
         setBuilding('rail', plan.rail ? 1 : 0, function () { return buildRail(A, THREE); }, animate);
         setBuilding('wind', plan.wind ? 1 : 0, function () { return buildWind(A, THREE); }, animate);
         if (life) life.setWind(dyn.wind ? dyn.wind.group.userData.rotors : null);
-        for (var i = 0; i < SPRAWL_SPOTS.length; i++) {
-            (function (idx) {
-                setBuilding('blk' + idx, idx < plan.sprawl ? 1 : 0,
-                    function () { return buildSprawl(A, THREE, idx, eraIdx); }, animate);
-            })(i);
-        }
+        // Bangunan sprawl generik sengaja tidak dirender: fokus pada fasilitas kampus
+        // yang benar-benar punya fungsi gameplay (HQ, R&D, pabrik, toko, OS, dll).
+        // Hapus sisa blok dekoratif dari scene lama bila ada.
+        Object.keys(dyn).forEach(function (key) {
+            if (key.indexOf('blk') === 0) {
+                scene.remove(dyn[key].group);
+                disposeObject(dyn[key].group);
+                delete dyn[key];
+                shadowDirty = true;
+            }
+        });
         afterSync();
     }
 

@@ -12,6 +12,7 @@
 // jalan lebih panjang, 18 blok kawasan kota, 29 pohon. Logika level lama
 // (hq/lab/factory/store/os/monument/billboard) TIDAK diubah.
 // v2027.52 — visual polish: palet lebih kaya, fasad berlapis, detail jendela dan jalan.
+// v2027.61 — campus cleanup: blok kota dekoratif generik dinonaktifkan agar fokus ke fasilitas gameplay.
 // v2027.51 — visual semi-realistic + ekspansi dunia 100x100, district instancing,
 // tetap mempertahankan RULES, computePlan, DESIGN_ERAS, i18n, slot, dan level.
 // v2027.37a — fasad jendela bertekstur, bayangan palsu, trotoar, lampu jalan,
@@ -105,7 +106,7 @@ export var SLOT_ORDER = ['lab', 'factory', 'store', 'os', 'billboard', 'monument
 export var WIND_SPOTS = [[-11.5, -13.2], [-8.2, -13.2], [-4.8, -13.2]];
 export var RAIL = { z: -10.2, x0: -13, x1: 13, y: 1.5, stationX: 7.5 };
 
-// Kawasan kota di pinggir peta. Muncul bertahap: 1 + 1 blok per era (maks 6).
+// Titik kawasan kota lama dipertahankan untuk kompatibilitas, tetapi blok generik tidak lagi dirender.
 export var SPRAWL_SPOTS = [
     [5.4, 9.2], [-9.8, 3.5], [13.0, 1.6], [5.4, -6.0], [-7.9, 7.3], [11.1, -0.3]
 ];
@@ -208,7 +209,7 @@ export function computePlan(data) {
         levels[k] = lv;
     });
 
-    var sprawl = Math.min(SPRAWL_SPOTS.length, 1 + Math.round(eraIdx * 1));
+    var sprawl = 0; // blok kota dekoratif dinonaktifkan agar kampus tidak penuh gedung generik
     var rail = eraIdx >= RAIL_MIN_ERA;
     var wind = eraIdx >= WIND_MIN_ERA;
     var sig = eraIdx + '|' + RULE_KEYS.map(function (k) { return levels[k]; }).join(',') + '|' + sprawl +
