@@ -1,0 +1,19 @@
+// Satu-satunya file yang perlu disesuaikan dengan game + Supabase kamu.
+export const CFG = {
+  base: '/031411',
+  adminEmail: 'kalfinsetiawan@icloud.com',          // hanya UI; keamanan sebenarnya di RPC/RLS
+  supabaseConfig: '/src/services/cloud/supabase.config.js', // exports: SUPABASE_URL, SUPABASE_KEY, SUPABASE_LIB_URLS
+  authStorageKey: 'se-admin-auth',
+  pageSize: 50,
+  rpc: {
+    profiles: 'admin_get_all_profiles',
+    pendingPayments: 'get_pending_payments',
+    approvePayment: 'admin_approve_payment',   // args: { p_order_id }
+    setSilicon: 'admin_set_silicon'            // args: { p_user_id, p_amount }
+  },
+  tables: { wallets: 'silicon_wallets', ledger: 'silicon_ledger' },
+  quickTables: ['profiles', 'silicon_wallets', 'silicon_ledger'],
+  playerCols: ['public_id', 'display_name', 'company_name', 'email', 'silicon', 'silicon_balance', 'stat_revenue', 'created_at'],
+  paymentCols: ['order_id', 'id', 'user_id', 'package_id', 'amount', 'sil_amount', 'status', 'created_at'],
+  ledgerCols: ['created_at', 'delta', 'reason', 'balance']
+};
