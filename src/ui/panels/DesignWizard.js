@@ -8,7 +8,7 @@ import {
     COMPONENTS, COMPONENT_CATEGORIES, BODY_COLORS,
     getComponentById, getComponentsByCategory, getBodyColorById
 } from '../../data/components.data.js';
-import { renderPhoneMockup } from '../phone/PhoneMockup.js';
+import { renderPhoneMockup, renderPackagingCaption } from '../phone/PhoneMockup.js';
 import { getDesignEraForYear, isFormFactorSelectable } from '../../data/era-design.data.js';
 import { resolveSpec } from '../../data/phone-specs.data.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
@@ -250,8 +250,9 @@ const WZ_CSS = `
 .wz-kv { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--text-tertiary); }
 .wz-kv b { color: var(--text-primary); font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wz-warn { font-size: 11px; line-height: 1.35; color: var(--warn); }
-.wz-tools { display: flex; align-items: center; gap: 6px; }
-.wz-tools .wiz-view-toggle button { font-size: 11px; padding: 4px 10px; min-height: 28px; }
+.wz-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.wz-tools .wiz-view-toggle button { font-size: 11px; padding: 4px 8px; min-height: 28px; }
+.wz-live [data-wiz-pack-cap] .phone-pack-cap { text-align: left !important; margin-top: 0 !important; }
 .wz-tools .btn-secondary { font-size: 11px; min-height: 28px; padding: 4px 10px; margin-left: auto; }
 [data-modal-id="design-wizard"] .wiz-nav { position: sticky; bottom: 0; z-index: 5; margin: 14px -18px 0; padding: 10px 18px calc(10px + env(safe-area-inset-bottom)); background: var(--bg-2); border-top: 1px solid var(--border); }
 .wz-step-title { font-size: 12px; color: var(--text-tertiary); margin: 0 0 10px; }
@@ -517,6 +518,7 @@ function _render() {
 
     const lblFront = _tf('wiz.view.front', _pick('Depan', 'Front'));
     const lblBack  = _tf('wiz.view.back', _pick('Belakang', 'Back'));
+    const lblBox   = _tf('wiz.view.box', _pick('Kemasan', 'Box'));
 
     const stepper = [1, 2, 3, 4].map(function (i) {
         const cls = i === s.step ? 'active' : (i < s.step ? 'done' : '');
@@ -532,10 +534,12 @@ function _render() {
                 <div class="wz-live">
                     <div class="wz-era"><b>${year}</b> · ${escapeHtml(_eraLabel(era))}</div>
                     <div data-wiz-spec-strip></div>
+                    <div data-wiz-pack-cap></div>
                     <div class="wz-tools">
                         <div class="wiz-view-toggle">
                             <button type="button" data-wiz-view="front" aria-pressed="${_wizardView === 'front'}" class="${_wizardView === 'front' ? 'active' : ''}">${lblFront}</button>
                             <button type="button" data-wiz-view="back" aria-pressed="${_wizardView === 'back'}" class="${_wizardView === 'back' ? 'active' : ''}">${lblBack}</button>
+                            <button type="button" data-wiz-view="box" aria-pressed="${_wizardView === 'box'}" class="${_wizardView === 'box' ? 'active' : ''}">${lblBox}</button>
                         </div>
                         <button class="btn-secondary" data-wiz-detail>${t('wiz.detail.btn_show')}</button>
                     </div>
@@ -619,9 +623,10 @@ function _bindStep() {
 
     root.querySelectorAll('[data-wiz-view]').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            _wizardView = btn.dataset.wizView === 'back' ? 'back' : 'front';
+            _wizardView = (btn.dataset.wizView === 'back' || btn.dataset.wizView === 'box') ? btn.dataset.wizView : 'front';
             root.querySelectorAll('[data-wiz-view]').forEach(function (b) {
                 b.classList.toggle('active', b.dataset.wizView === _wizardView);
+                b.setAttribute('aria-pressed', b.dataset.wizView === _wizardView ? 'true' : 'false');
             });
             _refreshPreview();
         });
@@ -1071,13 +1076,20 @@ function _refreshPreview() {
                 size: size,
                 view: _wizardView,
                 isStatic: _phoneShown,
-                showBrand: false
+                showBrand: false,
+                packCaption: false
             });
             _phoneShown = true;
         } catch (e) {
             console.error('[DesignWizard] Mockup error:', e);
             mockupContainer.innerHTML = '';
         }
+    }
+
+    const packCap = root.querySelector('[data-wiz-pack-cap]');
+    if (packCap) {
+        try { packCap.innerHTML = _wizardView === 'box' ? renderPackagingCaption(_wizardState, { year: DesignEraService.getCurrentYear() }) : ''; }
+        catch (e) { packCap.innerHTML = ''; }
     }
 
     const specStrip = root.querySelector('[data-wiz-spec-strip]');
@@ -1210,7 +1222,7 @@ function _openDetailModal() {
     const spec = resolveSpec(year, completed);
 
     let mockupHtml = '';
-    try { mockupHtml = '<div style="display:flex;gap:10px;justify-content:center;align-items:flex-end;">' + renderPhoneMockup(s, { size: 200, view: 'front', isStatic: true }) + renderPhoneMockup(s, { size: 200, view: 'back', isStatic: true, showBrand: false }) + '</div>'; }
+    try { mockupHtml = '<div style="display:flex;gap:10px;justify-content:center;align-items:flex-end;flex-wrap:wrap;">' + renderPhoneMockup(s, { size: 200, view: 'front', isStatic: true }) + renderPhoneMockup(s, { size: 200, view: 'back', isStatic: true, showBrand: false }) + '<div style="display:flex;flex-direction:column;align-items:center;">' + renderPhoneMockup(s, { size: 200, view: 'box', isStatic: true }) + '</div></div>'; }
     catch (e) { mockupHtml = '<div style="color:var(--danger);font-size:12px;">' + escapeHtml(_tf('wiz.mockup_error', 'Mockup gagal dimuat')) + '</div>'; }
 
     const compInfo = [
