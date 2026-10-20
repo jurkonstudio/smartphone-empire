@@ -1119,6 +1119,9 @@ body {
     z-index: 10002; opacity: 0; transition: opacity 0.22s;
 }
 .tut-root.visible { opacity: 1; pointer-events: auto; }
+/* [FIX UX] Tutorial (z 10002) menutup & memblokir toko Silicon (z 9999): pemain baru tak bisa top-up. Sembunyikan selama toko terbuka. */
+body:has([data-modal-id="silicon-store"]) .tut-root,
+body:has([data-modal-id="payment-qr"]) .tut-root { visibility: hidden; pointer-events: none; }
 .tut-dim { position: absolute; inset: 0; background: rgba(0,0,0,0.78); }
 .tut-hole {
     position: absolute; border-radius: var(--r);
