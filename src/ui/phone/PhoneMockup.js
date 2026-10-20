@@ -13,6 +13,8 @@
 // API publik tetap: renderPhoneMockup, renderPhoneThumbnail,
 // getMockupEra, getMockupSpec. Opsi baru: view ('front'|'back'),
 // isStatic, label.
+// v2028.40 — view 'box' (kemasan retail): kotak era-aware + isi kotak (kabel/charger/earphone).
+//   Kabel USB Tipe-C baru muncul di kotak setelah riset 'bat_usbc' selesai (era 2015+).
 // v2027.13d — i18n (Fase 2): teks dekoratif di layar ponsel (Menu, Nama, tanggal,
 // "Baru") lewat _tf(). Render murni fungsi — ikut berganti bahasa saat UI di-render ulang
 // oleh handler 'lang:changed' di main.js.
@@ -1075,6 +1077,178 @@ function renderSwivelFront(g, scr, spec, hex, brand, ids, era, uid, displayId) {
 //       isStatic, label (teks kecil di bawah ponsel),
 //       fit {w,h} — crop viewBox ke bodi & muat ke kotak (kartu pilihan bentuk)
 // ============================================================
+// ============================================================
+// KEMASAN (view 'box') — kotak retail + isi kotak
+// ============================================================
+// Jenis kabel mengikuti port milestone; USB Tipe-C hanya tampil bila riset 'bat_usbc' selesai
+// (kalau belum, kotak masih memakai kabel Micro-USB).
+function packContents(spec, year, completed, config) {
+    var ports = (spec && spec.ports) || [];
+    var ch = '';
+    for (var i = 0; i < ports.length; i++) { if (/^charging_/.test(ports[i])) { ch = ports[i]; break; } }
+    var wantsUsbC = /^charging_usb_c/.test(ch);
+    var hasUsbC = completed.indexOf('bat_usbc') !== -1;
+    var cable = 'micro';
+    if (ch === 'charging_barrel') cable = 'barrel';
+    else if (ch === 'charging_dock') cable = 'dock';
+    else if (wantsUsbC && hasUsbC) cable = 'usbc';
+    var watt = 0;
+    try {
+        var bat = config && config.batteryId ? getComponentById(config.batteryId) : null;
+        if (bat && bat.specs && bat.specs.chargingW) watt = bat.specs.chargingW;
+    } catch (e) {}
+    return {
+        cable: cable,
+        wireless: /wireless/.test(ch),
+        jack: ports.some(function (x) { return /^audio_jack/.test(x); }),
+        adapter: year < 2020 && cable !== 'dock',
+        noAdapter: year >= 2020,
+        watt: watt,
+        needsResearchHint: wantsUsbC && !hasUsbC
+    };
+}
+
+function packStyle(year, hex) {
+    var accent = lum(hex) < 55 ? '#9aa0ab' : hex;
+    if (year <= 2004) return { kind: 'kraft', front: '#c8a46a', side: '#a9884f', top: '#d8b97f', ink: '#3b2a12', accent: accent, gloss: false };
+    if (year <= 2013) return { kind: 'gloss', front: '#f3f3f1', side: '#d5d5d2', top: '#ffffff', ink: '#1d1d1f', accent: accent, gloss: true };
+    if (year <= 2019) return { kind: 'dark', front: '#17181c', side: '#0d0e11', top: '#26282e', ink: '#e8e9ec', accent: accent, gloss: true };
+    return { kind: 'eco', front: '#e8e3d6', side: '#cfc9ba', top: '#f1ede2', ink: '#2a2a26', accent: accent, gloss: false };
+}
+
+function packPhoneArt(year, hex, uid, cx) {
+    var edge = shadeHex(hex, -35);
+    if (year < 2007) {
+        var x = cx - 10;
+        var keys = '';
+        for (var r = 0; r < 3; r++) for (var c = 0; c < 3; c++) {
+            keys += '<rect x="' + (x + 3.2 + c * 5.2) + '" y="' + (106 + r * 5) + '" width="4" height="3" rx="1" fill="' + shadeHex(hex, 22) + '" stroke="' + edge + '" stroke-width="0.25"/>';
+        }
+        return '<rect x="' + x + '" y="76" width="20" height="50" rx="4.5" fill="' + hex + '" stroke="' + edge + '" stroke-width="0.5"/>' +
+            '<rect x="' + (x + 3) + '" y="80" width="14" height="12" rx="1.2" fill="' + (year <= 2001 ? '#a7bfa0' : '#1d2a3a') + '" stroke="#000" stroke-opacity=".35" stroke-width="0.3"/>' +
+            '<rect x="' + (x + 7) + '" y="94" width="6" height="2" rx="1" fill="' + edge + '"/>' + keys;
+    }
+    var xs = cx - 11;
+    var hole = year >= 2018 ? '<circle cx="' + cx + '" cy="79.5" r="0.9" fill="#000"/>' : '';
+    var dots = '';
+    for (var i = 0; i < 8; i++) {
+        dots += '<rect x="' + (xs + 3.4 + (i % 4) * 4.4) + '" y="' + (92 + Math.floor(i / 4) * 5.4) + '" width="3" height="3" rx="0.9" fill="' + ICON_COLORS[i] + '" opacity="0.85"/>';
+    }
+    return '<rect x="' + xs + '" y="74" width="22" height="54" rx="4.6" fill="' + hex + '" stroke="' + edge + '" stroke-width="0.5"/>' +
+        '<rect x="' + (xs + 1.4) + '" y="75.6" width="19.2" height="50.8" rx="3.4" fill="url(#pkscr_' + uid + ')"/>' +
+        hole + dots;
+}
+
+function packCableEnd(type, x, y) {
+    // x,y = ujung bawah konektor (tempat kabel masuk), konektor menghadap ke atas
+    var housing = '<rect x="' + (x - 2.5) + '" y="' + (y - 5) + '" width="5" height="5.2" rx="1.1" fill="#2b2f36"/>';
+    if (type === 'usbc') {
+        return housing +
+            '<rect x="' + (x - 1.9) + '" y="' + (y - 10.4) + '" width="3.8" height="5.6" rx="1.9" fill="#cfd4dc" stroke="#7d8490" stroke-width="0.25"/>' +
+            '<rect x="' + (x - 0.9) + '" y="' + (y - 8.3) + '" width="1.8" height="1.3" rx="0.6" fill="#4a4f58"/>';
+    }
+    if (type === 'barrel') {
+        return '<circle cx="' + x + '" cy="' + (y - 2.4) + '" r="2.5" fill="#2b2f36"/>' +
+            '<rect x="' + (x - 0.8) + '" y="' + (y - 9) + '" width="1.6" height="5" rx="0.6" fill="#cfd4dc" stroke="#7d8490" stroke-width="0.2"/>';
+    }
+    return housing +
+        '<polygon points="' + (x - 1.9) + ',' + (y - 5) + ' ' + (x + 1.9) + ',' + (y - 5) + ' ' + (x + 1.9) + ',' + (y - 7.6) + ' ' + (x + 0.9) + ',' + (y - 9.6) + ' ' + (x - 0.9) + ',' + (y - 9.6) + ' ' + (x - 1.9) + ',' + (y - 7.6) + '" fill="#cfd4dc" stroke="#7d8490" stroke-width="0.25"/>';
+}
+
+function renderPackagingLayers(o) {
+    var st = packStyle(o.year, o.hex);
+    var pc = o.contents;
+    var ink = st.ink;
+    var font = 'font-family="system-ui,-apple-system,Segoe UI,Arial,sans-serif"';
+    var cx = 31;
+    var svg = '';
+
+    svg += '<defs>' +
+        '<linearGradient id="pkscr_' + o.uid + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0d1626"/><stop offset="100%" stop-color="#26406b"/></linearGradient>' +
+        '<linearGradient id="pkgl_' + o.uid + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#fff" stop-opacity="0.35"/><stop offset="45%" stop-color="#fff" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.12"/></linearGradient>' +
+        '</defs>';
+
+    // Kotak: atas, samping, depan
+    svg += '<polygon points="6,50 17,44 67,44 56,50" fill="' + st.top + '" stroke="#000" stroke-opacity=".18" stroke-width="0.3"/>';
+    svg += '<polygon points="56,50 67,44 67,158 56,164" fill="' + st.side + '" stroke="#000" stroke-opacity=".18" stroke-width="0.3"/>';
+    svg += '<rect x="6" y="50" width="50" height="114" fill="' + st.front + '" stroke="#000" stroke-opacity=".18" stroke-width="0.3"/>';
+    if (st.gloss) svg += '<rect x="6" y="50" width="50" height="114" fill="url(#pkgl_' + o.uid + ')"/>';
+
+    // Tutup/pita pembuka
+    svg += '<rect x="6" y="50" width="50" height="1.2" fill="#000" opacity="0.12"/>';
+    if (st.kind === 'kraft') svg += '<rect x="26" y="50" width="10" height="114" fill="#000" opacity="0.05"/>';
+
+    // Merek + garis aksen
+    svg += '<text x="' + cx + '" y="61" text-anchor="middle" font-size="6" font-weight="800" letter-spacing="0.7" fill="' + ink + '" ' + font + '>' + o.brand + '</text>';
+    svg += '<rect x="6" y="65" width="50" height="1.4" fill="' + st.accent + '"/>';
+
+    // Ilustrasi ponsel
+    svg += packPhoneArt(o.year, o.hex, o.uid, cx);
+
+    // Stiker
+    svg += '<circle cx="49" cy="76" r="5" fill="' + st.accent + '"/>' +
+        '<text x="49" y="77.1" text-anchor="middle" font-size="2.8" font-weight="800" fill="' + (lum(st.accent) > 150 ? '#111' : '#fff') + '" ' + font + '>' + _scr('mock.pack.new', 'BARU', 'NEW') + '</text>';
+
+    // Label model
+    var label = String(o.label || '').slice(0, 24);
+    svg += '<text x="' + cx + '" y="141" text-anchor="middle" font-size="3.6" font-weight="600" fill="' + ink + '" opacity="0.85" ' + font + '>' + _esc(label) + '</text>';
+    svg += '<text x="' + cx + '" y="151" text-anchor="middle" font-size="6.5" font-weight="800" fill="' + (st.kind === 'kraft' ? ink : st.accent) + '" ' + font + '>' + o.year + '</text>';
+    svg += '<rect x="6" y="157" width="50" height="7" fill="' + st.accent + '" opacity="0.9"/>';
+    if (st.kind === 'eco') svg += '<text x="' + cx + '" y="161.9" text-anchor="middle" font-size="2.8" font-weight="700" fill="#fff" ' + font + '>' + _scr('mock.pack.eco', 'KEMASAN DAUR ULANG', 'RECYCLED PACKAGING') + '</text>';
+
+    // ---------- Isi kotak ----------
+    // Earphone berkabel (jika masih ada jack audio)
+    if (pc.jack) {
+        svg += '<path d="M83 96 L78 112 M83 96 L88 112" stroke="#f0f0f0" stroke-width="0.9" fill="none" stroke-linecap="round"/>' +
+            '<circle cx="78" cy="113.6" r="2.1" fill="#f4f4f4" stroke="#aaa" stroke-width="0.3"/>' +
+            '<circle cx="88" cy="113.6" r="2.1" fill="#f4f4f4" stroke="#aaa" stroke-width="0.3"/>' +
+            '<rect x="82.3" y="90" width="1.4" height="6" rx="0.5" fill="#cfd4dc" stroke="#7d8490" stroke-width="0.2"/>';
+    }
+
+    // Sumber daya: dok / pad Qi / charger
+    if (pc.cable === 'dock') {
+        svg += '<polygon points="70,164 98,164 95,156 73,156" fill="#2b2f36"/>' +
+            '<rect x="80" y="141" width="10" height="16" rx="2" fill="#3a3f48"/>' +
+            '<rect x="82" y="144" width="6" height="2" rx="1" fill="#4f5560"/>';
+    } else {
+        if (pc.wireless) {
+            svg += '<ellipse cx="80" cy="161" rx="11" ry="3.3" fill="#2b2f36"/>' +
+                '<ellipse cx="80" cy="160.6" rx="7.5" ry="1.8" fill="none" stroke="' + st.accent + '" stroke-width="0.4"/>';
+        } else if (pc.adapter) {
+            svg += '<rect x="71" y="154" width="14" height="9" rx="1.6" fill="#f2f2f2" stroke="#c4c4c4" stroke-width="0.3"/>' +
+                '<rect x="68.8" y="156" width="2.2" height="1.4" fill="#b9bcc2"/>' +
+                '<rect x="68.8" y="159.6" width="2.2" height="1.4" fill="#b9bcc2"/>';
+        }
+        var sx = (pc.wireless || pc.adapter) ? 85 : 76;
+        svg += '<path d="M' + sx + ' 158 C 95 158, 97 150, 92 144 S 84 137, 90 131" stroke="#000" stroke-opacity=".25" stroke-width="1.9" fill="none" stroke-linecap="round"/>' +
+            '<path d="M' + sx + ' 158 C 95 158, 97 150, 92 144 S 84 137, 90 131" stroke="#f0f0f0" stroke-width="1.2" fill="none" stroke-linecap="round"/>';
+        svg += packCableEnd(pc.cable, 90, 131);
+    }
+    return svg;
+}
+
+function packCaption(pc, width) {
+    var cableName = {
+        usbc: _tf('mock.pack.cable_usbc', 'Kabel USB Tipe-C', 'USB Type-C cable'),
+        micro: _tf('mock.pack.cable_micro', 'Kabel Micro-USB', 'Micro-USB cable'),
+        barrel: _tf('mock.pack.cable_barrel', 'Kabel colokan bulat', 'Barrel-plug cable'),
+        dock: _tf('mock.pack.cable_dock', 'Dok pengisi daya', 'Charging dock')
+    }[pc.cable];
+    var parts = [_tf('mock.pack.phone', 'Ponsel', 'Phone'), cableName];
+    if (pc.wireless) parts.push(_tf('mock.pack.qi', 'Pad Qi', 'Qi pad'));
+    if (pc.adapter && !pc.wireless) {
+        parts.push(pc.watt ? _tf('mock.pack.charger_w', 'Charger {w}W', 'Charger {w}W').replace('{w}', pc.watt) : _tf('mock.pack.charger', 'Charger', 'Charger'));
+    }
+    if (pc.noAdapter) parts.push(_tf('mock.pack.no_charger', 'Tanpa charger', 'No charger'));
+    if (pc.jack) parts.push(_tf('mock.pack.earphone', 'Earphone berkabel', 'Wired earphones'));
+    var hint = pc.needsResearchHint
+        ? '<div style="margin-top:2px;color:var(--accent);">' + _esc(_tf('mock.pack.hint_usbc', 'Riset USB Tipe-C untuk kabel modern.', 'Research USB Type-C for the modern cable.')) + '</div>'
+        : '';
+    return '<div class="phone-pack-cap" style="font-size:10.5px;line-height:1.45;text-align:center;color:var(--text-tertiary);margin-top:6px;max-width:' + Math.max(width, 150) + 'px;">' +
+        '<div style="font-weight:600;">' + _esc(_tf('mock.pack.contents', 'Isi kotak', 'In the box')) + '</div>' +
+        '<div>' + _esc(parts.join(' · ')) + '</div>' + hint + '</div>';
+}
+
 export function renderPhoneMockup(config, opts) {
     opts = opts || {};
     const size = opts.size || 220;
@@ -1094,7 +1268,7 @@ export function renderPhoneMockup(config, opts) {
     const bodyColorId = (config && config.bodyColorId) || 'color_black';
     const cameraId = (config && config.cameraId) || 'cam_vga';
     const displayId = (config && config.displayId) || '';
-    const view = opts.view === 'back' ? 'back' : 'front';
+    const view = opts.view === 'back' ? 'back' : (opts.view === 'box' ? 'box' : 'front');
 
     const bodyColor = getBodyColorById(bodyColorId);
     const bodyHex = bodyColor ? bodyColor.hex : '#1a1a1a';
@@ -1107,7 +1281,10 @@ export function renderPhoneMockup(config, opts) {
     const n = resolveLensCount(cameraId, spec);
 
     let layers;
-    if (view === 'back') {
+    const pack = view === 'box' ? packContents(spec, year, completed, config) : null;
+    if (view === 'box') {
+        layers = renderPackagingLayers({ year: year, hex: bodyHex, brand: brand, uid: uid, label: spec.label, contents: pack });
+    } else if (view === 'back') {
         layers = renderBackView(g, spec, ids, bodyHex, brand, n);
     } else if (g.kind === 'swivel') {
         layers = renderSwivelFront(g, scr, spec, bodyHex, brand, ids, era, uid, displayId);
@@ -1126,7 +1303,7 @@ export function renderPhoneMockup(config, opts) {
     }
 
     let viewBox = '0 0 100 180';
-    if (opts.fit && opts.fit.w && opts.fit.h) {
+    if (view !== 'box' && opts.fit && opts.fit.w && opts.fit.h) {
         const bb = getBounds(g);
         const bw = bb[2] - bb[0], bh = bb[3] - bb[1];
         const sc = Math.min(opts.fit.w / bw, opts.fit.h / bh);
@@ -1156,12 +1333,23 @@ export function renderPhoneMockup(config, opts) {
         </svg>
     `;
 
-    const brandHtml = (opts.showBrand === false || view === 'back' || opts.fit) ? '' :
+    const brandHtml = (opts.showBrand === false || view !== 'front' || opts.fit) ? '' :
         (companyName ? `<div class="phone-brand">${escapeHtml(companyName)}</div>` : '');
-    const capHtml = opts.label ? `<div class="phone-cap">${escapeHtml(opts.label)}</div>` : '';
+    const capHtml = (opts.label ? `<div class="phone-cap">${escapeHtml(opts.label)}</div>` : '') +
+        ((view === 'box' && opts.packCaption !== false && !opts.fit) ? packCaption(pack, width) : '');
     const cls = 'phone-mockup-wrap phone-era-' + era.id + ' phone-spec-' + spec.id + (opts.isStatic ? ' phone-static' : '');
 
     return `<div class="${cls}" style="width:${width}px;height:${height + (brandHtml ? 18 : 0)}px;">${svg}${brandHtml}</div>${capHtml}`;
+}
+
+// Teks "Isi kotak" terpisah dari SVG (dipakai wizard di kolom samping, karena kolom ponsel sempit).
+export function renderPackagingCaption(config, opts) {
+    opts = opts || {};
+    const st = safeGetState();
+    const year = opts.year || (st.time && st.time.currentYear) || 2000;
+    const completed = (st.research && st.research.completed) || [];
+    const spec = resolveSpec(year, completed);
+    return packCaption(packContents(spec, year, completed, config), opts.width || 240);
 }
 
 export function renderPhoneThumbnail(config, size) {
