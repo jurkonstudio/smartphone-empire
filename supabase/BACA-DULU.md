@@ -14,6 +14,7 @@ Hasil "Success" → lanjut ke file berikutnya. Jika error: berhenti, jangan lanj
 | 06 | `06-admin-data-pemain.sql` | Panel /fsociety: dashboard & data pemain | Opsional (panel admin) |
 | 07 | `07-admin-aksi-sistem.sql` | Panel /fsociety: blokir, hapus save, info sistem, audit SIL | Opsional (panel admin) |
 | 08 | `08-jadikan-admin.sql` | Jadikan akunmu admin (**ganti email dulu**) | **Wajib** (sekali) |
+| 09 | `09-pesan-inbox.sql` | Pesan pemain: notifikasi SIL masuk otomatis + pesan/broadcast dari panel admin | Opsional (fitur Pesan) |
 
 Minimum agar game tidak crash + pembayaran jalan: **01 → 05, lalu 08**. File 06–07 melengkapi panel admin.
 
