@@ -384,6 +384,24 @@ export var SiliconService = {
         return (g && g.timeSystem) ? g.timeSystem.getBoost() : null;
     },
 
+    // [FREE BOOST] Info jatah gratis. Window 24 jam NYATA dimulai dari pemakaian gratis pertama.
+    // Bila jam perangkat dimundurkan (windowStart di masa depan), window dianggap baru mulai sekarang.
+    getFreeSpeedInfo() {
+        var cfg = SILICON_COSTS.speed;
+        var max = cfg.freePerWindow || 0;
+        var winMs = (cfg.freeWindowHours || 24) * 3600 * 1000;
+        var d = state.data;
+        if (!d.freeSpeed || typeof d.freeSpeed !== 'object') d.freeSpeed = { used: 0, windowStart: 0 };
+        var fs = d.freeSpeed, now = Date.now();
+        if (fs.windowStart > now) fs.windowStart = now;
+        if (fs.used > 0 && now - fs.windowStart >= winMs) { fs.used = 0; fs.windowStart = 0; }
+        var used = Math.max(0, Math.min(max, fs.used | 0));
+        return {
+            max: max, used: used, left: Math.max(0, max - used),
+            resetInMs: (used > 0 && fs.windowStart) ? Math.max(0, fs.windowStart + winMs - now) : 0
+        };
+    },
+
     // Beli / perpanjang boost. Kecepatan beda → sisa waktu dikonversi (nilai hari-game tetap).
     buySpeed(speed) {
         var cfg = SILICON_COSTS.speed;
@@ -398,6 +416,24 @@ export var SiliconService = {
         if (total > cfg.maxSeconds) {
             return { ok: false, reason: 'limit', maxSeconds: cfg.maxSeconds };
         }
+
+        // [FREE BOOST] Pakai jatah gratis dulu; bila habis baru bayar SIL.
+        var free = this.getFreeSpeedInfo();
+        if (free.left > 0) {
+            try {
+                g.timeSystem.activateBoost(speed, total);
+            } catch (err) {
+                console.error('[SiliconService] activateBoost gagal:', err);
+                return { ok: false, reason: 'Boost gagal diaktifkan.' };
+            }
+            var fs = state.data.freeSpeed;
+            if (!fs.used) fs.windowStart = Date.now();
+            fs.used = (fs.used | 0) + 1;
+            bus.emit('silicon:action-done', { id: 'speed', cost: 0, free: true });
+            bus.emit('state:changed', state.data);
+            return { ok: true, free: true, spent: 0, speed: speed, remainingSec: total, freeLeft: free.left - 1 };
+        }
+
         if (!this.canAfford(pack.cost)) {
             return { ok: false, reason: 'Silicon tidak cukup (' + pack.cost + ' SIL).', need: pack.cost };
         }
