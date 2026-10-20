@@ -75,6 +75,8 @@ import { setExchangeCategory, setExchangeStock, drawExchangeChart, openBuyModal,
 import { buildReport, formatReportText } from './diagnostics/DiagnosticReport.js';
 import { openDiagnosticModal } from './diagnostics/DiagnosticUI.js';
 import { CloudService } from './services/CloudService.js';
+import { InboxService } from './services/InboxService.js';
+import { openInboxPanel } from './ui/panels/InboxPanel.js';
 import { SupabaseAdapter } from './services/cloud/SupabaseAdapter.js';
 import { CloudSync } from './services/cloud/CloudSync.js';
 import { bindCloudUI } from './services/cloud/CloudUI.js';
@@ -528,6 +530,9 @@ function bindGlobalClicks() {
         }
 
         if (handleNewsListClick(e)) return;
+
+        var inboxBtn = e.target.closest('[data-inbox-open]');
+        if (inboxBtn) { e.preventDefault(); vibrate(8); openInboxPanel(); return; }
 
         var notifBtn = e.target.closest('[data-notif-toggle]');
         if (notifBtn) { e.preventDefault(); vibrate(8); toggleNotificationPanel(); return; }
@@ -1135,6 +1140,7 @@ async function boot() {
         try {
             CloudService.registerAdapter(SupabaseAdapter);
             CloudSync.init(state);
+            InboxService.init();
             bindCloudUI();
             
             // [FIX] Sinkronisasi instan 1 detik setelah boot untuk mencegah bug rollback SIL
