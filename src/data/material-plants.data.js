@@ -1,4 +1,4 @@
-// FILE: src/data/material-plants.data.js  (BARU — Tahap 1: Fondasi Pabrik Komponen)
+// FILE: src/data/material-plants.data.js  (Tahap 1 + Tahap 1b: efek & biaya perawatan pabrik)
 // ============================================================
 // Pabrik komponen internal: perusahaan membuat bahan baku ponsel sendiri
 // (baterai, layar) alih-alih membelinya dari pemasok.
@@ -11,6 +11,12 @@
 // Harga internal = costPerUnit (harga pasar) x (1 - diskon level pabrik).
 // Diskon inilah yang dipakai Desain ponsel saat pabrik sudah dibangun
 // (lihat resolveComponentCost di bawah dan ProductSystem.computeUnitCost).
+//
+// Tahap 1b menambahkan:
+//   - effects: bonus spesifikasi yang dibawa pabrik ke produk (lihat
+//     getBuiltPlantEffect). Nilai dalam persen (0.06 = +6%).
+//   - maintenanceMonthly: biaya perawatan per bulan selama pabrik berdiri.
+//     Besarnya 0,5% dari biaya bangun per bulan (dihitung per level).
 // ============================================================
 
 export const PLANT_MIN_ORDER = 1000;          // minimal unit per order produksi
@@ -27,12 +33,18 @@ export const PLANT_TYPES = [
         category: 'battery',
         unlockYear: 2002,
         requiresFab: false,
-        description: 'Sel Li-Ion dan Li-Po buatan sendiri. Mengurangi biaya baterai setiap ponsel yang kamu desain.',
+        description: 'Sel Li-Ion dan Li-Po buatan sendiri. Mengurangi biaya baterai dan menambah daya tahan setiap ponsel yang kamu desain.',
+        // Efek yang dibawa ke produk. Key harus cocok dengan pemakai di ProductSystem.
+        effectKeys: ['batteryLife'],
         levels: [
-            { level: 1, name: 'Lini Pilot',         cost: 8000000,   durationDays: 120, capacityMonthly: 50000,   discount: 0.10 },
-            { level: 2, name: 'Lini Produksi',      cost: 25000000,  durationDays: 180, capacityMonthly: 300000,  discount: 0.20 },
-            { level: 3, name: 'Gigafactory Kecil',  cost: 90000000,  durationDays: 270, capacityMonthly: 1500000, discount: 0.30 },
-            { level: 4, name: 'Gigafactory',        cost: 300000000, durationDays: 360, capacityMonthly: 6000000, discount: 0.38 }
+            { level: 1, name: 'Lini Pilot',        cost: 8000000,   durationDays: 120, capacityMonthly: 50000,   discount: 0.10,
+              maintenanceMonthly: 40000,   effects: { batteryLife: 0.03 } },
+            { level: 2, name: 'Lini Produksi',     cost: 25000000,  durationDays: 180, capacityMonthly: 300000,  discount: 0.20,
+              maintenanceMonthly: 125000,  effects: { batteryLife: 0.06 } },
+            { level: 3, name: 'Gigafactory Kecil', cost: 90000000,  durationDays: 270, capacityMonthly: 1500000, discount: 0.30,
+              maintenanceMonthly: 450000,  effects: { batteryLife: 0.10 } },
+            { level: 4, name: 'Gigafactory',       cost: 300000000, durationDays: 360, capacityMonthly: 6000000, discount: 0.38,
+              maintenanceMonthly: 1500000, effects: { batteryLife: 0.14 } }
         ]
     },
     {
@@ -42,12 +54,17 @@ export const PLANT_TYPES = [
         category: 'display',
         unlockYear: 2003,
         requiresFab: true,   // panel LCD/AMOLED butuh fab chip sebagai fondasi proses
-        description: 'Panel LCD, TFT, dan AMOLED buatan sendiri. Butuh fab chip yang sudah berdiri.',
+        description: 'Panel LCD, TFT, dan AMOLED buatan sendiri. Butuh fab chip yang sudah berdiri. Menaikkan kualitas layar produk.',
+        effectKeys: ['displayQuality'],
         levels: [
-            { level: 1, name: 'Lini Pilot',         cost: 15000000,  durationDays: 150, capacityMonthly: 20000,   discount: 0.08 },
-            { level: 2, name: 'Lini Produksi',      cost: 50000000,  durationDays: 210, capacityMonthly: 150000,  discount: 0.16 },
-            { level: 3, name: 'Fab Layar Besar',    cost: 180000000, durationDays: 300, capacityMonthly: 800000,  discount: 0.25 },
-            { level: 4, name: 'Fab Layar Industri', cost: 500000000, durationDays: 360, capacityMonthly: 3000000, discount: 0.33 }
+            { level: 1, name: 'Lini Pilot',         cost: 15000000,  durationDays: 150, capacityMonthly: 20000,   discount: 0.08,
+              maintenanceMonthly: 75000,   effects: { displayQuality: 0.03 } },
+            { level: 2, name: 'Lini Produksi',      cost: 50000000,  durationDays: 210, capacityMonthly: 150000,  discount: 0.16,
+              maintenanceMonthly: 250000,  effects: { displayQuality: 0.06 } },
+            { level: 3, name: 'Fab Layar Besar',    cost: 180000000, durationDays: 300, capacityMonthly: 800000,  discount: 0.25,
+              maintenanceMonthly: 900000,  effects: { displayQuality: 0.10 } },
+            { level: 4, name: 'Fab Layar Industri', cost: 500000000, durationDays: 360, capacityMonthly: 3000000, discount: 0.33,
+              maintenanceMonthly: 2500000, effects: { displayQuality: 0.14 } }
         ]
     }
 ];
@@ -76,6 +93,28 @@ export function getPlantYield(level) {
 export function getPlantDiscount(typeId, level) {
     var info = getPlantLevelInfo(typeId, level);
     return info ? info.discount : 0;
+}
+
+// Efek spesifikasi per level, mis. { batteryLife: 0.06 }. Kosong jika level tidak ada.
+export function getPlantEffects(typeId, level) {
+    var info = getPlantLevelInfo(typeId, level);
+    return info && info.effects ? info.effects : {};
+}
+
+// Biaya perawatan per bulan untuk level tertentu (0 jika level tidak ada).
+export function getPlantMaintenance(typeId, level) {
+    var info = getPlantLevelInfo(typeId, level);
+    return info ? (info.maintenanceMonthly || 0) : 0;
+}
+
+// Nilai efek satu key dari pabrik yang SUDAH dibangun dan tidak sedang upgrade
+// (pabrik yang sedang dibangun belum memberi efek). Dipakai ProductSystem
+// dan PublicOpinionSystem, misalnya getBuiltPlantEffect(data, 'battery', 'batteryLife').
+export function getBuiltPlantEffect(data, typeId, key) {
+    var cp = data && data.componentPlants;
+    var ps = cp && cp.plants ? cp.plants[typeId] : null;
+    if (!ps || !ps.built || !ps.level || ps.upgrade) return 0;
+    return getPlantEffects(typeId, ps.level)[key] || 0;
 }
 
 // ============================================================
