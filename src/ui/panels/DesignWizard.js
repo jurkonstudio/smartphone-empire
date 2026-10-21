@@ -15,6 +15,7 @@ import { resolveSpec } from '../../data/phone-specs.data.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
 import { WalletService } from '../../systems/WalletService.js';
+import { resolveComponentCost } from '../../data/material-plants.data.js';
 
 let _wizardState = null;
 let _wizardView = 'front';
@@ -899,9 +900,11 @@ function _step2(s) {
         const isOptional = OPTIONAL_CATEGORIES.indexOf(catId) !== -1;
 
         let options = list.map(function (c) {
+            const unitNow = resolveComponentCost(state.get(), c);
+            const inHouse = unitNow < c.costPerUnit;
             return '<button class="wiz-option ' + (selected === c.id ? 'selected' : '') + '" data-wiz-pick="' + stateKey + ':' + c.id + '">' +
                 '<div class="wiz-opt-name">' + escapeHtml(c.name) + '</div>' +
-                '<div class="wiz-opt-meta">' + _perUnit(c.costPerUnit) + (_statTag(c) ? ' · <span class="wiz-opt-tag">' + escapeHtml(_statTag(c)) + '</span>' : '') + '</div>' +
+                '<div class="wiz-opt-meta">' + _perUnit(unitNow) + (inHouse ? ' · <span class="wiz-opt-tag">' + escapeHtml(_tf('wiz.step2.in_house', 'Internal')) + '</span>' : '') + (_statTag(c) ? ' · <span class="wiz-opt-tag">' + escapeHtml(_statTag(c)) + '</span>' : '') + '</div>' +
                 '</button>';
         }).join('');
 

@@ -1,13 +1,19 @@
-// FILE: src/ui/panels/ManufacturePanel.js
-// Sub-tab "Manufaktur" dalam tab Riset (menggantikan "Sejarah").
-// Menampilkan node riset chip manufaktur (Fabrikasi + Fab & Bisnis) yang masih
-// TERKUNCI. Sebelum tahun FAB_UNLOCK_YEAR (2003) isinya disamarkan; mulai 2003
-// tiap node bisa dibuka dengan uang game (harga naik per tahun lebih awal,
-// maks. FAB_MAX_EARLY_YEARS), lalu diriset di sub-tab Chip.
+// FILE: src/ui/panels/ManufacturePanel.js  (REPLACE — Tahap 1)
+// Sub-tab "Manufaktur" dalam tab Riset.
+//
+// Bagian 1 — Pabrik Komponen (BARU): bangun, upgrade, dan jalankan produksi
+//   bahan baku ponsel sendiri (baterai, layar). Harga internal di sini
+//   otomatis dipakai oleh Desain ponsel setelah pabrik dibangun.
+// Bagian 2 — Riset Manufaktur Chip (tidak berubah): node fabrikasi yang
+//   bisa dibuka dengan uang game mulai FAB_UNLOCK_YEAR.
 import { CHIP_RESEARCH_CATEGORIES, CHIP_RESEARCH_NODES } from '../../data/chip-research.data.js';
 import { FAB_UNLOCK_YEAR, FAB_UNLOCK_CATEGORIES, FAB_MAX_EARLY_YEARS } from '../../core/ChipResearchSystem.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
+import { PLANT_MIN_ORDER } from '../../data/material-plants.data.js';
+
+// Ukuran batch default untuk tombol "Produksi" (dibatasi kapasitas pabrik).
+var DEFAULT_BATCH = 50000;
 
 function esc(s) {
     if (typeof s !== 'string') return '';
@@ -16,8 +22,119 @@ function esc(s) {
 }
 function _tf(key, fb, vars) { var v = t(key, vars); return (v && v !== key) ? v : fb; }
 function _money(n) { return '$' + Math.round(n || 0).toLocaleString('en-US'); }
+function _num(n) { return Math.round(n || 0).toLocaleString('en-US'); }
 
 export function renderManufacturePanel(params) {
+    var plantHtml = params.componentPlantSystem ? _renderPlantSection(params.componentPlantSystem) : '';
+    return plantHtml + _renderChipManufacture(params);
+}
+
+// ============================================================
+// BAGIAN 1 — PABRIK KOMPONEN
+// ============================================================
+function _renderPlantSection(sys) {
+    var data = window.__game.state.get();
+    var cash = data.cash || 0;
+
+    var head = '<div class="mf-hero">' +
+        '<div class="mf-hero-title">' + esc(_tf('mf.plant.title', 'Pabrik Komponen')) + '</div>' +
+        '<div class="mf-hero-sub">' + esc(_tf('mf.plant.sub',
+            'Buat bahan baku ponsel sendiri. Setelah pabrik dibangun, harga internal otomatis dipakai di Desain ponsel.')) + '</div>' +
+        '<div class="mf-hero-stats">' +
+            '<span>' + esc(_tf('mf.stat.cash', 'Kas')) + ' <b>' + _money(cash) + '</b></span>' +
+            '<span>' + esc(_tf('mf.plant.total_made', 'Total dibuat')) + ' <b>' + _num((data.componentPlants && data.componentPlants.totalProduced) || 0) + '</b></span>' +
+        '</div></div>';
+
+    var cards = sys.getSummary().map(function (s) { return _renderPlantCard(sys, s, cash); }).join('');
+    return head + cards;
+}
+
+function _renderPlantCard(sys, s, cash) {
+    var pt = s.type;
+    var id = esc(pt.id);
+    var rows = [];
+
+    // --- Status & aksi bangun / upgrade ---
+    var status = '';
+    var action = '';
+    if (s.upgrade) {
+        var pct = Math.round(Math.min(1, s.upgrade.progressDays / s.upgrade.durationDays) * 100);
+        status = (s.upgrade.isBuild ? _tf('mf.plant.building', 'Sedang dibangun') : _tf('mf.plant.upgrading', 'Sedang di-upgrade')) + ' · ' + pct + '%';
+        action = '<button class="btn-secondary mf-buy-btn" data-mf-action="cancel-upgrade" data-mf-plant="' + id + '">' +
+            esc(_tf('mf.plant.cancel', 'Batalkan')) + '</button>';
+    } else if (!s.built) {
+        if (!s.unlock.ok) {
+            status = s.unlock.reason;
+        } else {
+            status = _tf('mf.plant.not_built', 'Belum dibangun') + ' · ' + _money(s.nextInfo.cost) + ' · ' + s.nextInfo.durationDays + ' ' + _tf('mf.plant.days', 'hari');
+            var canBuild = cash >= s.nextInfo.cost;
+            action = '<button class="btn-primary mf-buy-btn" data-mf-action="build" data-mf-plant="' + id + '"' + (canBuild ? '' : ' disabled') + '>' +
+                esc(_tf('mf.plant.build', 'Bangun')) + ' ' + _money(s.nextInfo.cost) + '</button>';
+            if (!canBuild) action += '<div class="mf-short">' + esc(_tf('mf.reason.need_more', 'Kurang {m}', { m: _money(s.nextInfo.cost - cash) })) + '</div>';
+        }
+    } else {
+        var li = s.levelInfo;
+        status = 'Level ' + s.level + ' · ' + li.name + ' · ' + _tf('mf.plant.capacity', 'Kapasitas') + ' ' + _num(li.capacityMonthly) + '/' + _tf('mf.plant.month', 'bulan') +
+            ' · ' + _tf('mf.plant.discount', 'Diskon') + ' ' + Math.round(li.discount * 100) + '%';
+        if (s.nextInfo) {
+            var canUp = cash >= s.nextInfo.cost && !s.upgrade;
+            action = '<button class="btn-primary mf-buy-btn" data-mf-action="upgrade" data-mf-plant="' + id + '"' + (canUp ? '' : ' disabled') + '>' +
+                esc(_tf('mf.plant.upgrade', 'Upgrade')) + ' ' + _money(s.nextInfo.cost) + '</button>';
+        }
+    }
+
+    rows.push('<div class="mf-row"><div class="mf-ico">' + renderIcon(pt.icon || 'settings', 18) + '</div>' +
+        '<div class="mf-main"><div class="mf-name">' + esc(pt.name) + '</div>' +
+        '<div class="mf-desc">' + esc(pt.description) + '</div>' +
+        '<div class="mf-reason">' + esc(status) + '</div></div>' +
+        (action ? '<div class="mf-buy">' + action + '</div>' : '') + '</div>');
+
+    // --- Produksi (hanya saat pabrik sudah berdiri) ---
+    if (s.built) {
+        if (s.producing) {
+            var p = s.producing;
+            var pp = p.totalUnits ? Math.round((p.progressUnits / p.totalUnits) * 100) : 100;
+            rows.push('<div class="mf-row"><div class="mf-ico">⚙️</div>' +
+                '<div class="mf-main"><div class="mf-name">' + esc(_tf('mf.plant.producing', 'Produksi berjalan')) + ': ' + esc(p.componentName) + '</div>' +
+                '<div class="mf-desc">' + _num(p.totalUnits) + ' unit · ' + pp + '%</div></div>' +
+                '<div class="mf-buy"><button class="btn-secondary mf-buy-btn" data-mf-action="cancel-prod" data-mf-plant="' + id + '">' +
+                esc(_tf('mf.plant.cancel', 'Batalkan')) + '</button></div></div>');
+        }
+
+        var batch = Math.max(PLANT_MIN_ORDER, Math.min(s.levelInfo.capacityMonthly, DEFAULT_BATCH));
+        var comps = sys.getEligibleComponents(pt.id);
+        if (!comps.length) {
+            rows.push('<div class="mf-row mf-row-mystery"><div class="mf-main"><div class="mf-desc">' +
+                esc(_tf('mf.plant.none', 'Belum ada komponen yang bisa diproduksi. Selesaikan riset komponen dulu.')) + '</div></div></div>');
+        }
+        comps.forEach(function (c) {
+            var unit = sys.getUnitCost(c.id);
+            var total = Math.round(unit * batch);
+            var can = !s.producing && !s.upgrade && cash >= total;
+            var inv = sys.getInventory(c.id);
+            var priceTag = unit < c.costPerUnit
+                ? _money(unit) + ' <s>' + _money(c.costPerUnit) + '</s>'
+                : _money(unit);
+            rows.push('<div class="mf-row"><div class="mf-main">' +
+                '<div class="mf-name">' + esc(c.name) + '</div>' +
+                '<div class="mf-reason">' + _tf('mf.plant.unit_cost', 'Biaya internal') + ' ' + priceTag + '/unit' +
+                ' · ' + _tf('mf.plant.stock', 'Stok') + ' <b>' + _num(inv) + '</b></div></div>' +
+                '<div class="mf-buy"><button class="btn-primary mf-buy-btn" data-mf-action="order" data-mf-plant="' + id +
+                '" data-mf-comp="' + esc(c.id) + '" data-mf-qty="' + batch + '"' + (can ? '' : ' disabled') + '>' +
+                esc(_tf('mf.plant.produce', 'Produksi')) + ' ' + _num(batch) + '</button>' +
+                (can ? '' : '<div class="mf-short">' + esc(_tf('mf.reason.need_more', 'Kurang {m}', { m: _money(total - cash) })) + '</div>') +
+                '</div></div>');
+        });
+    }
+
+    return '<div class="section-label"><span class="section-label-text">' + esc(pt.name) + '</span><span class="section-label-line"></span></div>' +
+        '<div class="mf-list">' + rows.join('') + '</div>';
+}
+
+// ============================================================
+// BAGIAN 2 — RISET MANUFAKTUR CHIP (tidak berubah dari versi sebelumnya)
+// ============================================================
+function _renderChipManufacture(params) {
     var sys = params.chipResearchSystem;
     var data = window.__game.state.get();
     var year = data.time.currentYear;

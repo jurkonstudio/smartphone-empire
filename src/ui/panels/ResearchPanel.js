@@ -47,6 +47,7 @@ export function renderResearchPanel(params) {
     var researchSystem = params.researchSystem;
     var osSystem = params.osSystem;
     var chipResearchSystem = params.chipResearchSystem;
+    var componentPlantSystem = params.componentPlantSystem;
 
     const chipTabVisible = _isChipTabVisible();
 
@@ -63,7 +64,7 @@ export function renderResearchPanel(params) {
     if (subtab === 'os') {
         body = renderOSPanel({ osSystem, researchSystem });
     } else if (subtab === 'manufaktur' && chipResearchSystem) {
-        body = renderManufacturePanel({ chipResearchSystem });
+        body = renderManufacturePanel({ chipResearchSystem, componentPlantSystem });
     } else if (subtab === 'chip' && chipTabVisible && chipResearchSystem) {
         body = renderChipResearchPanel({ chipResearchSystem });
     } else {
