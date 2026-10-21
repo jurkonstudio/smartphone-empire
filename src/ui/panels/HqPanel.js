@@ -5,6 +5,13 @@ import { renderTeamPanel } from './TeamPanel.js';
 import { renderExchangePanel } from './ExchangePanel.js';
 import { renderBankPanel } from './BankPanel.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
+import { renderCompanyHistoryPanel } from './CompanyHistoryPanel.js';
+
+// Label tab HQ; jika kunci i18n belum ada, pakai fallback.
+function _tabLabel(tab) {
+    var v = t(tab.key);
+    return (v && v !== tab.key) ? v : (tab.fallback || tab.key);
+}
 import { t } from '../../core/LanguageService.js';
 import { renderOfficeLoading } from '../office/OfficeMap.js';
 
@@ -13,7 +20,8 @@ const HQ_TABS = [
     { id: 'overview', key: 'hq.tab.overview', icon: 'activity' },
     { id: 'team',     key: 'hq.tab.team',     icon: 'users' },
     { id: 'exchange', key: 'hq.tab.exchange', icon: 'trending-up' },
-    { id: 'bank',     key: 'hq.tab.bank',     icon: 'coin' }
+    { id: 'bank',     key: 'hq.tab.bank',     icon: 'coin' },
+    { id: 'history',  key: 'hq.tab.history',  icon: 'library', fallback: 'Riwayat' }
 ];
 
 export function renderHqPanel({ subtab, state, timeSnapshot, researchSystem, teamSystem, stockSystem }) {
@@ -22,7 +30,7 @@ export function renderHqPanel({ subtab, state, timeSnapshot, researchSystem, tea
             var cls = 'subtab-btn' + (subtab === tab.id ? ' active' : '');
             return '<button class="' + cls + '" data-hq-subtab="' + tab.id + '">' +
                 renderIcon(tab.icon, 13) +
-                '<span style="margin-left:4px;">' + t(tab.key) + '</span>' +
+                '<span style="margin-left:4px;">' + _tabLabel(tab) + '</span>' +
                 '</button>';
         }).join('') +
         '</div>';
@@ -36,6 +44,8 @@ export function renderHqPanel({ subtab, state, timeSnapshot, researchSystem, tea
         body = renderExchangePanel({ stockSystem: stockSystem });
     } else if (subtab === 'bank') {
         body = renderBankPanel();
+    } else if (subtab === 'history') {
+        body = renderCompanyHistoryPanel();
     } else {
         body = renderDashboard(state, timeSnapshot, researchSystem, teamSystem);
     }

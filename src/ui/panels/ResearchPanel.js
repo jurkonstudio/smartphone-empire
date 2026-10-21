@@ -7,6 +7,7 @@ import { BALANCE } from '../../data/balance.data.js';
 import { renderOSPanel, openOsWizardModal, openCreateOsModal, openFeatureDetailModal } from './OSPanel.js';
 import { getTimelineFilter, setTimelineFilter } from './TimelinePanel.js';
 import { renderManufacturePanel } from './ManufacturePanel.js';
+import { renderFuturePanel, renderFutureTabLabel } from './FuturePanel.js';
 import { renderChipResearchPanel, getChipResearchFilter, setChipResearchFilter, openChipNodeModal } from './ChipResearchPanel.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { renderTechNodeRow, statLabel, renderRndOverview, renderRndRow, ensureRndStyles } from '../components/TechNodeCard.js';
@@ -56,6 +57,7 @@ export function renderResearchPanel(params) {
             <button class="subtab-btn ${subtab === 'tech'    ? 'active' : ''}" data-subtab="tech">${t('research.subtab.tech')}</button>
             <button class="subtab-btn ${subtab === 'os'      ? 'active' : ''}" data-subtab="os">${t('research.subtab.os')}</button>
             <button class="subtab-btn ${subtab === 'manufaktur' ? 'active' : ''}" data-subtab="manufaktur">${t('research.subtab.manufacture')}</button>
+            <button class="subtab-btn ${subtab === 'future' ? 'active' : ''}" data-subtab="future">${renderFutureTabLabel()}</button>
             ${chipTabVisible ? `<button class="subtab-btn ${subtab === 'chip' ? 'active' : ''}" data-subtab="chip">${t('research.subtab.chip')}</button>` : ''}
         </div>
     `;
@@ -63,6 +65,8 @@ export function renderResearchPanel(params) {
     let body = '';
     if (subtab === 'os') {
         body = renderOSPanel({ osSystem, researchSystem });
+    } else if (subtab === 'future') {
+        body = renderFuturePanel();
     } else if (subtab === 'manufaktur' && chipResearchSystem) {
         body = renderManufacturePanel({ chipResearchSystem, componentPlantSystem });
     } else if (subtab === 'chip' && chipTabVisible && chipResearchSystem) {
