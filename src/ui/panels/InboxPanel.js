@@ -9,6 +9,7 @@ import { bus } from '../../core/EventBus.js';
 import { InboxService } from '../../services/InboxService.js';
 import { CloudService } from '../../services/CloudService.js';
 import { ToastService } from '../../core/ToastService.js';
+import { formatCurrency } from '../../utils/format.js';
 
 var MODAL_ID = 'inbox-modal';
 var _open = {};                                   // id pesan yang sedang dibuka
@@ -34,7 +35,8 @@ var KIND = {
     sil:    { rgb: '52,199,89',  label: 'SIL',    ico: '<circle cx="12" cy="12" r="8"/><path d="M12 8v8M9 10.5c0-1 1.3-1.7 3-1.7s3 .7 3 1.7-1.3 1.5-3 1.8-3 .8-3 1.8 1.3 1.7 3 1.7 3-.7 3-1.7"/>' },
     admin:  { rgb: '10,132,255', label: 'Admin',  ico: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>' },
     system: { rgb: '255,159,10', label: 'Sistem', ico: '<path d="M12 4l9 16H3z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/>' },
-    player: { rgb: '168,85,247', label: 'Pemain', ico: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>' }
+    player: { rgb: '168,85,247', label: 'Pemain', ico: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>' },
+    reward: { rgb: '255,204,0', label: 'Hadiah', ico: '<path d="M12 3l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.5 6.8 19l1-5.8-4.2-4.1 5.8-.8z"/>' }
 };
 
 function ensureStyle() {
@@ -78,7 +80,9 @@ function ensureStyle() {
         'padding:10px 12px;color:inherit;font:inherit;font-size:14px;outline:none}.ib-in:focus{border-color:var(--accent,#0a84ff)}',
         'textarea.ib-in{resize:none;min-height:110px}',
         '.ib-who{min-height:18px;margin-top:6px;font-size:12px}.ib-who.ok{color:#34c759}.ib-who.er{color:#ff453a}',
-        '.ib-err{margin-top:8px;font-size:12px;color:#ff453a}'
+        '.ib-err{margin-top:8px;font-size:12px;color:#ff453a}',
+        '.ib-reward{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding:8px 10px;border-radius:12px;background:rgba(255,204,0,.14);font-weight:700;color:#ffcc00}',
+        '.ib-claimed{margin-top:8px;font-size:12px;color:#34c759}'
     ].join('');
     var el = document.createElement('style');
     el.id = 'ib-style';
@@ -90,6 +94,12 @@ ensureStyle();
 function root() { return document.querySelector('[data-modal-id="' + MODAL_ID + '"]'); }
 
 // ---------------------------------------------------------------- tampilan
+function rewardHtml(m) {
+    if (m.reward_claimed_at) return '<div class="ib-claimed">✓ Hadiah sudah diklaim</div>';
+    return '<div class="ib-reward"><span>+' + esc(formatCurrency(m.reward_cash)) + '</span>' +
+        '<button type="button" class="ib-btn ib-pri" data-ib-claim="' + m.id + '">Klaim</button></div>';
+}
+
 function itemsHtml() {
     var items = InboxService.getItems();
     if (!items.length) {
@@ -105,12 +115,13 @@ function itemsHtml() {
             '<div class="ib-m">' + esc(m.body) + '</div>' +
             '<div class="ib-meta"><b>' + k.label + '</b><span>·</span><span>' + esc(ago(m.created_at)) + '</span>' +
             (m.kind === 'player' && m.sender_public_id ? '<span>·</span><span>ID ' + esc(m.sender_public_id) + '</span>' : '') + '</div>' +
+            (m.reward_cash ? rewardHtml(m) : '') +
             (canAct ? '<div class="ib-acts">' +
                 '<button type="button" class="ib-btn" data-ib-reply="' + esc(m.sender_public_id) + '" data-name="' + esc(m.sender_name || m.title) + '">Balas</button>' +
                 '<button type="button" class="ib-btn ib-dng" data-ib-block="' + esc(m.sender_public_id) + '" data-name="' + esc(m.sender_name || m.title) + '">Blokir</button>' +
                 '<button type="button" class="ib-btn ib-dng" data-ib-report="' + m.id + '">Laporkan</button></div>' : '') +
             '</div>' +
-            '<button type="button" class="ib-x" data-ib-del="' + m.id + '" aria-label="Hapus">×</button></div>';
+            (m.reward_cash && !m.reward_claimed_at ? '' : '<button type="button" class="ib-x" data-ib-del="' + m.id + '" aria-label="Hapus">×</button>') + '</div>';
     }
     return h;
 }
@@ -262,6 +273,14 @@ function onClick(e) {
         if (b.dataset.sure === '1') { InboxService.clear(); return; }
         b.dataset.sure = '1'; b.textContent = 'Ketuk lagi untuk hapus';
         setTimeout(function () { if (b.isConnected) { b.dataset.sure = ''; b.textContent = 'Hapus semua'; } }, 3000);
+        return;
+    }
+    if ((b = q('[data-ib-claim]'))) {
+        b.disabled = true; b.textContent = 'Mengklaim…';
+        InboxService.claimReward(Number(b.getAttribute('data-ib-claim'))).then(function (r) {
+            _note = r.ok ? 'Hadiah masuk ke kas perusahaan.' : (r.reason || 'Gagal mengklaim.');
+            if (root()) render();
+        });
         return;
     }
     if ((b = q('[data-ib-del]'))) { InboxService.remove(Number(b.getAttribute('data-ib-del'))); return; }
