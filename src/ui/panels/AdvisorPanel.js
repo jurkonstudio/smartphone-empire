@@ -236,8 +236,16 @@ export function openAdvisor(advisor) {
     function scroll() { if (log) log.scrollTop = log.scrollHeight; }
     scroll();
 
+    // Tekan chip tidak boleh memindahkan fokus: kalau input sedang fokus, keyboard tetap
+    // seperti semula (tidak tertutup lalu terbuka lagi, yang membuat layar naik-turun).
+    chipsEl.addEventListener('pointerdown', function (e) {
+        if (e.target.closest('[data-adv-chip]')) e.preventDefault();
+    });
+
     var busy = false;
-    async function send(text) {
+    // opts.fromInput: true hanya jika pesan diketik/dikirim lewat kolom input.
+    // Keyboard hanya dibuka lagi untuk kasus itu, bukan saat pesan cepat ditekan.
+    async function send(text, opts) {
         text = String(text || '').trim();
         if (!text || busy) return;
         busy = true;
@@ -263,7 +271,7 @@ export function openAdvisor(advisor) {
         }
         scroll();
         busy = false;
-        if (input) input.focus();
+        if (opts && opts.fromInput && input) input.focus();
     }
 
     node.addEventListener('click', function (e) {
@@ -311,11 +319,11 @@ export function openAdvisor(advisor) {
         }
         var chip = e.target.closest('[data-adv-chip]');
         if (chip) { send(chip.dataset.advChip); return; }
-        if (e.target.closest('[data-adv-send]')) send(input.value);
+        if (e.target.closest('[data-adv-send]')) send(input.value, { fromInput: true });
     });
 
     input.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); send(input.value); }
+        if (e.key === 'Enter') { e.preventDefault(); send(input.value, { fromInput: true }); }
     });
 }
 
