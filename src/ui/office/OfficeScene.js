@@ -49,6 +49,7 @@
 // Denah lantai: x -9..9, z -6..6 (kamera isometrik melihat dari +x,+z).
 // Warna tema sendiri (selain warna dari PALETTES kampus). [terang, gelap]
 
+import { frameGapMs, getRenderFps } from '../../core/RenderFps.js';
 import { ROLES, SKILL_TIERS, TRAITS } from '../../data/staff.data.js';
 import { ToastService } from '../../core/ToastService.js';
 import { bus } from '../../core/EventBus.js';
@@ -1436,7 +1437,8 @@ export function createOfficeScene(THREE, container, gameState) {
     }
     // turunkan kualitas otomatis bila perangkat tidak sanggup menjaga ~30fps
     function watchQuality(now) {
-        if (quality.lowered || !lastRendered) { lastRendered = now; return; }
+        // Pemain memilih 60 FPS sendiri: jangan turunkan kualitas diam-diam.
+        if (quality.lowered || !lastRendered || getRenderFps() > 30) { lastRendered = now; return; }
         var gap = now - lastRendered;
         lastRendered = now;
         if (gap > quality.frameMs * 2) quality.slow++; else if (quality.slow > 0) quality.slow -= 0.25;
@@ -1449,7 +1451,7 @@ export function createOfficeScene(THREE, container, gameState) {
     }
     // PERF: antar frame, tidur dengan setTimeout lalu minta rAF sekali — tidak bangun di tiap vsync (60-120 Hz).
     function scheduleNext() {
-        var fm = Math.max(quality.frameMs, PERF.frameMs || 0);
+        var fm = frameGapMs(PERF.frameMs, quality.frameMs);
         var wait = fm - (performance.now() - lastFrame) - 5;
         if (wait > 4) {
             loopTimer = setTimeout(function () { loopTimer = 0; loopRaf = requestAnimationFrame(frame); }, wait);
@@ -1460,7 +1462,7 @@ export function createOfficeScene(THREE, container, gameState) {
     function frame(now) {
         loopRaf = 0;
         if (disposed || document.hidden || !inView) { lastRendered = 0; return; }
-        if (now - lastFrame < Math.max(quality.frameMs, PERF.frameMs || 0) - 2) { scheduleNext(); return; }
+        if (now - lastFrame < frameGapMs(PERF.frameMs, quality.frameMs) - 2) { scheduleNext(); return; }
         lastFrame = now;
         scheduleNext();
         if (ctxLost) return;
