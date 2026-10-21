@@ -16,6 +16,7 @@ import { renderIcon } from '../icons/FeatureIcons.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
 import { WalletService } from '../../systems/WalletService.js';
 import { resolveComponentCost } from '../../data/material-plants.data.js';
+import { BALANCE } from '../../data/balance.data.js';
 
 let _wizardState = null;
 let _wizardView = 'front';
@@ -186,9 +187,10 @@ function _generateBrandedName(companyName, year, ffId, avoid) {
 
 function _affordInfo(s) {
     const ps = window.__game && window.__game.products;
-    let unitCost = 0;
-    try { unitCost = ps && ps.computeUnitCost ? ps.computeUnitCost(s) : 0; } catch (e) {}
-    const cost = unitCost * (s.productionQty || 0) + 2000; // Setup cost default
+    // Sama dengan ProductSystem.confirmDesign: baterai & layar tidak ditagih saat desain.
+    let designUnitCost = 0;
+    try { designUnitCost = ps && ps.computeUnitCost ? ps.computeUnitCost(s, true) : 0; } catch (e) {}
+    const cost = designUnitCost * (s.productionQty || 0) + BALANCE.products.productionSetupCost;
     let cash = 0;
     try { cash = state.get().cash || 0; } catch (e) {}
     let power = cash;
@@ -1179,7 +1181,9 @@ function _previewHtml(s) {
     try {
         const stats = _computeStats(s);
         const unitCost = ps.computeUnitCost ? ps.computeUnitCost(s) : 0;
-        const totalCost = unitCost * (s.productionQty || 0) + 2000;
+        // Tagihan desain: tanpa baterai & layar (sama dengan confirmDesign).
+        const designUnitCost = ps.computeUnitCost ? ps.computeUnitCost(s, true) : 0;
+        const totalCost = designUnitCost * (s.productionQty || 0) + BALANCE.products.productionSetupCost;
         const demand = ps.estimateDemand ? ps.estimateDemand(s) : 0;
         const margin = (s.price || 0) - unitCost;
         const marginPct = s.price > 0 ? Math.round((margin / s.price) * 100) : 0;
