@@ -70,6 +70,7 @@ import { openSiliconModal } from './ui/panels/SiliconPanel.js';
 import { openSiliconStoreModal } from './ui/panels/SiliconStorePanel.js';
 import { PaymentService } from './systems/PaymentService.js';
 import { t as tr } from './core/LanguageService.js';
+import { runOsActionWithLoading } from './ui/panels/OSPanel.js';
 import { handleNewsListClick } from './ui/panels/NewsListPanel.js';
 import { renderChipMockup } from './ui/phone/ChipMockup.js';
 import { renderChipRadarChart } from './ui/charts/ChipRadarChart.js';
@@ -883,11 +884,11 @@ function bindGlobalClicks() {
             var oa = osAction.dataset.osAction;
             if (oa === 'create') { openCreateOsModal({ osSystem: os }); return; }
             if (oa === 'wizard') { openOsWizardModal({ osSystem: os }); return; }
-            if (oa === 'cancel-deving') { var res = os.cancelVersion(); if (res.ok) { ToastService.info(tr('main.toast.cancelled')); renderAll(); } else ToastService.error(res.reason); return; }
-            if (oa === 'patch-bug') { var r = os.patchBug(osAction.dataset.bugId); if (r.ok) { ToastService.success(tr('main.toast.patch_started')); renderAll(); } else ToastService.error(r.reason); return; }
-            if (oa === 'ignore-bug') { var r = os.ignoreBug(osAction.dataset.bugId); if (r.ok) { ToastService.warning(tr('main.toast.ignored')); renderAll(); } else ToastService.error(r.reason); return; }
-            if (oa === 'start-app') { var r = os.startApp(osAction.dataset.appId); if (r.ok) { ToastService.success(tr('main.toast.app_released')); renderAll(); } else ToastService.error(r.reason); return; }
-            if (oa === 'invite-devs') { var r = os.inviteDevelopers(); if (r.ok) { ToastService.success(tr('main.toast.devs_invited', { n: r.bonus })); renderAll(); } else ToastService.error(r.reason); return; }
+            if (oa === 'cancel-deving') { runOsActionWithLoading(osAction, tr('os.action.loading'), 350, function () { var res = os.cancelVersion(); if (res.ok) { ToastService.info(tr('main.toast.cancelled')); renderAll(); return true; } ToastService.error(res.reason); return false; }); return; }
+            if (oa === 'patch-bug') { var pbId = osAction.dataset.bugId; runOsActionWithLoading(osAction, tr('os.action.loading'), 700, function () { var r = os.patchBug(pbId); if (r.ok) { ToastService.success(tr('main.toast.patch_started')); renderAll(); return true; } ToastService.error(r.reason); return false; }); return; }
+            if (oa === 'ignore-bug') { var ibId = osAction.dataset.bugId; runOsActionWithLoading(osAction, tr('os.action.loading'), 350, function () { var r = os.ignoreBug(ibId); if (r.ok) { ToastService.warning(tr('main.toast.ignored')); renderAll(); return true; } ToastService.error(r.reason); return false; }); return; }
+            if (oa === 'start-app') { var saId = osAction.dataset.appId; runOsActionWithLoading(osAction, tr('os.action.loading'), 600, function () { var r = os.startApp(saId); if (r.ok) { ToastService.success(tr('main.toast.app_released')); renderAll(); return true; } ToastService.error(r.reason); return false; }); return; }
+            if (oa === 'invite-devs') { runOsActionWithLoading(osAction, tr('os.action.loading'), 600, function () { var r = os.inviteDevelopers(); if (r.ok) { ToastService.success(tr('main.toast.devs_invited', { n: r.bonus })); renderAll(); return true; } ToastService.error(r.reason); return false; }); return; }
             if (oa === 'feature-detail') { openFeatureDetailModal({ osSystem: os, featureId: osAction.dataset.featureId }); return; }
         }
 
