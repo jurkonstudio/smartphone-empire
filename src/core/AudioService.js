@@ -36,12 +36,17 @@ export const AudioService = {
             var silentAudio = new Audio('data:audio/mp3;base64,//MkxAAHiAICWABElBeKPL+RZhYXBwbA==');
             silentAudio.play().catch(function () {});
 
-            // Putar semua audio dalam keadaan mute sesaat untuk "memanaskan" browser
+            // Pemanasan browser: putar semua audio dalam keadaan MUTE, lalu pause.
+            // Tanpa muted, setiap suara sempat berbunyi saat sentuhan pertama walaupun
+            // Efek Suara sedang mati (bug: "ada bunyi saat app baru dibuka").
             for (var k in _cache) {
-                _cache[k].play().then(function(a) {
-                    a.pause();
-                    a.currentTime = 0;
-                }).catch(function () {});
+                (function (a) {
+                    a.muted = true;
+                    var pr = a.play();
+                    var done = function () { a.pause(); a.currentTime = 0; a.muted = false; };
+                    if (pr && pr.then) pr.then(done).catch(function () { a.muted = false; });
+                    else done();
+                })(_cache[k]);
             }
 
             console.info('[AudioService] Audio berhasil dibuka (Unlocked)');
@@ -69,6 +74,7 @@ export const AudioService = {
 
         var audio = _cache[id];
         if (!audio) return;
+        audio.muted = false; // pemanasan mungkin belum selesai; pastikan suara sungguhan terdengar
 
         try {
             // Reset waktu agar bisa diputar berulang kali dengan cepat
