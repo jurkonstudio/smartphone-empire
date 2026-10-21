@@ -19,6 +19,7 @@ import {
     getBuiltinAppById
 } from '../data/os.data.js';
 import { WalletService } from './WalletService.js';
+import { computeOsAdoption, getEcosystemAppBonus, ADOPTION_CONFIG } from './OsAdoptionModel.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -54,6 +55,8 @@ export class OSSystem {
         if (!Array.isArray(data.os.apps.builtin)) data.os.apps.builtin = [];
         if (typeof data.os.apps.thirdParty !== 'number') data.os.apps.thirdParty = 0;
         if (typeof data.os.appsAccumulator !== 'number') data.os.appsAccumulator = 0;
+        if (!data.os.adoption || typeof data.os.adoption !== 'object') data.os.adoption = { history: [] };
+        if (!Array.isArray(data.os.adoption.history)) data.os.adoption.history = [];
         if (typeof data.os.licenseChoice === 'undefined') data.os.licenseChoice = null;
         this._ensurePlatform();
         if (data.os.developing) {
@@ -242,21 +245,43 @@ export class OSSystem {
         }
     }
 
-    _onMonthChanged(_snap) {
+    _onMonthChanged(snap) {
         const data = this.state.data;
+        this._recordAdoptionSnapshot(snap);
         if (!this.hasFeature('fw_appstore')) return;
 
         const rep = data.market.reputation || 0;
         const cs = this.getCurrentStats();
         const stability = cs ? cs.stability : 50;
 
-        const growth = Math.floor(DEV_TEMPLATES.baseGrowthPerMonth + rep * DEV_TEMPLATES.perReputationBonus + stability * DEV_TEMPLATES.perStabilityBonus);
+        // Pengguna aktif OS ikut menambah ekosistem aplikasi pihak ketiga.
+        const adoption = computeOsAdoption(data);
+        const ecoBonus = getEcosystemAppBonus(adoption.activeUsers);
+        const growth = Math.floor(DEV_TEMPLATES.baseGrowthPerMonth + rep * DEV_TEMPLATES.perReputationBonus + stability * DEV_TEMPLATES.perStabilityBonus) + ecoBonus;
         const capped = Math.min(DEV_TEMPLATES.maxApps - data.os.apps.thirdParty, growth);
         if (capped > 0) {
             data.os.apps.thirdParty += capped;
             if (capped >= 5) this.state.addLog(capped + ' aplikasi pihak ketiga baru ditambahkan.', LOG_TYPES.info);
         }
         bus.emit('state:changed', data);
+    }
+
+    // ============================================================
+    // ADOPSI / PENGGUNA OS
+    // ============================================================
+    getAdoption() {
+        return computeOsAdoption(this.state.data);
+    }
+
+    _recordAdoptionSnapshot(snap) {
+        const data = this.state.data;
+        const h = data.os.adoption.history;
+        const adoption = computeOsAdoption(data);
+        if (!adoption.hasOs) return;
+        const year = snap ? snap.currentYear : data.time.currentYear;
+        const month = snap ? snap.currentMonth : data.time.currentMonth;
+        h.push({ year: year, month: month, active: adoption.activeUsers, shipped: adoption.shippedUnits });
+        if (h.length > ADOPTION_CONFIG.historyMax) h.splice(0, h.length - ADOPTION_CONFIG.historyMax);
     }
 
     _calculateStats(featureIds) {
