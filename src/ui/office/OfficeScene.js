@@ -1646,7 +1646,7 @@ export function createOfficeScene(THREE, container, gameState) {
 
     function goTo(g) {
         if (!g) return;
-        bus.emit('advisor:go', { nav: g.nav, subtab: g.subtab });
+        bus.emit('advisor:go', { nav: g.nav, subtab: g.subtab, staffId: g.staffId || null, mode: g.mode || null });
     }
 
     // ---- aksi langsung dari peta (bangun/upgrade Fab, latih staf) — memakai sistem game yang sama dengan panel
