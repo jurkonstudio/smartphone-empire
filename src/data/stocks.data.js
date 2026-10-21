@@ -337,9 +337,9 @@ export const STOCKS = [
     // ---- Ponsel & perangkat keras (v2027.4b) ----
     { id: 'lenovo', ticker: 'LENO', realTicker: '0992.HK', name: 'Lenovo Group',
       competitorId: 'lenovo', category: 'phone', country: 'Tiongkok',
-      listedFrom: 2005, listedTo: null, currency: 'HKD', confidence: 'trend',
+      listedFrom: 1999, listedTo: null, currency: 'HKD', confidence: 'trend',
       priceByYear: {
-          2005: 3.50, 2008: 4.00, 2010: 4.80, 2013: 5.50,
+          1999: 2.00, 2002: 2.50, 2005: 3.50, 2008: 4.00, 2010: 4.80, 2013: 5.50,
           2015: 6.50, 2017: 4.80, 2019: 4.70, 2020: 6.00,
           2021: 9.00, 2022: 4.00, 2023: 3.80, 2024: 8.00, 2026: 9.50
       } },
