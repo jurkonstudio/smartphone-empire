@@ -471,17 +471,17 @@ export class ResearchSystem {
         const days = Math.min(cfg.maxDays, Math.round(cfg.baseDays * Math.pow(cfg.daysGrowth, level)));
 
         const running = data.research.refining.find(e => e.categoryId === catId) || null;
-        let status = 'available', reason = null, blocker = null;
+        let status = 'available', reason = null, blocker = null, reasonKey = null, reasonVars = null;
         if (running) { status = 'running'; }
-        else if (doneInCat < 1) { status = 'locked'; blocker = 'node'; reason = 'Selesaikan riset dasar kategori ini dulu'; }
-        else if (level >= cfg.maxLevel) { status = 'maxed'; reason = 'Level maksimum'; }
+        else if (doneInCat < 1) { status = 'locked'; blocker = 'node'; reason = 'Selesaikan riset dasar kategori ini dulu'; reasonKey = 'rs.rnd.reason.base'; }
+        else if (level >= cfg.maxLevel) { status = 'maxed'; reason = 'Level maksimum'; reasonKey = 'rs.rnd.reason.max'; }
         else if (level >= cap) {
             status = 'capped';
-            if (level >= capNodes && capNodes <= capYear) { blocker = 'node'; reason = 'Selesaikan riset dasar baru untuk membuka level lebih tinggi'; }
-            else { blocker = 'year'; reason = 'Tunggu kemajuan zaman untuk level berikutnya'; }
+            if (level >= capNodes && capNodes <= capYear) { blocker = 'node'; reason = 'Selesaikan riset dasar baru untuk membuka level lebih tinggi'; reasonKey = 'rs.rnd.reason.node'; }
+            else { blocker = 'year'; reason = 'Tunggu kemajuan zaman untuk level berikutnya'; reasonKey = 'rs.rnd.reason.year'; }
         }
-        else if (data.research.refining.length >= this.getRefineSlots()) { status = 'locked'; blocker = 'slots'; reason = 'Slot R&D penuh (' + data.research.refining.length + '/' + this.getRefineSlots() + ')'; }
-        else if (!WalletService.canAfford(cost)) { status = 'locked'; blocker = 'cash'; reason = 'Uang tidak cukup ($' + cost.toLocaleString('en-US') + ')'; }
+        else if (data.research.refining.length >= this.getRefineSlots()) { status = 'locked'; blocker = 'slots'; reason = 'Slot R&D penuh (' + data.research.refining.length + '/' + this.getRefineSlots() + ')'; reasonKey = 'rs.rnd.reason.slots'; reasonVars = { n: data.research.refining.length, m: this.getRefineSlots() }; }
+        else if (!WalletService.canAfford(cost)) { status = 'locked'; blocker = 'cash'; reason = 'Uang tidak cukup ($' + cost.toLocaleString('en-US') + ')'; reasonKey = 'rs.rnd.reason.cash'; reasonVars = { cost: cost.toLocaleString('en-US') }; }
 
         return {
             id: catId, name: track ? track.name : catId, hint: track ? track.hint : '',
@@ -489,7 +489,7 @@ export class ResearchSystem {
             statBonus: Math.min(cfg.statCap, level * cfg.statPerLevel),
             nextStatBonus: Math.min(cfg.statCap, (level + 1) * cfg.statPerLevel),
             benchmark: this.getBenchmark(),
-            status, reason, blocker, running
+            status, reason, reasonKey, reasonVars, blocker, running
         };
     }
 

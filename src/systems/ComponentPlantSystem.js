@@ -88,13 +88,13 @@ export class ComponentPlantSystem {
 
     isUnlocked(typeId) {
         const pt = getPlantTypeById(typeId);
-        if (!pt) return { ok: false, reason: 'Tipe pabrik tidak dikenal.' };
+        if (!pt) return { ok: false, reason: 'Tipe pabrik tidak dikenal.', reasonKey: 'pl.unlock.unknown' };
         const data = this.state.data;
         if ((data.time.currentYear || 0) < pt.unlockYear) {
-            return { ok: false, reason: 'Pabrik ini tersedia mulai ' + pt.unlockYear + '.' };
+            return { ok: false, reason: 'Pabrik ini tersedia mulai ' + pt.unlockYear + '.', reasonKey: 'pl.unlock.year', reasonVars: { y: pt.unlockYear } };
         }
         if (pt.requiresFab && !(data.fab && data.fab.built)) {
-            return { ok: false, reason: 'Butuh fab chip yang sudah berdiri.' };
+            return { ok: false, reason: 'Butuh fab chip yang sudah berdiri.', reasonKey: 'pl.unlock.fab' };
         }
         return { ok: true };
     }
