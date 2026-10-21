@@ -179,7 +179,16 @@ export const SupabaseAdapter = {
             client_saved_at: payload.savedAt || Date.now(),
             data: payload.data
         };
-        var res = await c.from(CLOUD.tables.saves).upsert(row, { onConflict: 'user_id,slot' }).select('updated_at').single();
+        var doUpsert = function () {
+            return c.from(CLOUD.tables.saves).upsert(row, { onConflict: 'user_id,slot' }).select('updated_at').single();
+        };
+        var res = await doUpsert();
+        // [FIX] "Akses ditolak" saat sinkron sering berarti token sesi sudah basi (auth.uid() kosong
+        // di server). Segarkan sesi lalu coba sekali lagi. Aturan RLS tidak diubah.
+        if (res.error && classify(res.error) === 'permission') {
+            try { await c.auth.refreshSession(); } catch (e) {}
+            res = await doUpsert();
+        }
         if (res.error) throw mk(res.error);
         return { uploadedAt: res.data.updated_at };
     },
