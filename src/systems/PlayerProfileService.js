@@ -12,6 +12,7 @@ import { CloudService } from '../services/CloudService.js';
 import { SiliconService } from './SiliconService.js';
 import { validateCompanyName } from '../data/name-blocklist.data.js';
 import { TIME_CONFIG } from '../config/time.config.js';
+import { PlayerProgression, readComponents } from './PlayerProgression.js';
 
 export var NAME_RULES = { free: 2, silCost: 150, min: 2, max: 24 };
 var AVATAR = { size: 256, quality: 0.82, maxBytes: 8 * 1024 * 1024 };
@@ -223,6 +224,7 @@ export async function pushToCloud(opts) {
     try {
         var s = getStatsSnapshot();
         var p = _p();
+        var comp = readComponents();   // komponen mentah; server yang menghitung kredibilitas, level & hadiah
         var res = await CloudService.syncPlayerProfile({
             p_player_name: p.displayName || null,
             p_company_name: cleanName(state.data.companyName),
@@ -234,7 +236,11 @@ export async function pushToCloud(opts) {
             p_share: s.share,
             p_cash: s.cash,
             p_products: s.products,
-            p_name_changes: p.nameChanges
+            p_name_changes: p.nameChanges,
+            p_credit_score: comp.creditScore,
+            p_missed: comp.missed,
+            p_sentiment: comp.sentiment,
+            p_game_minutes: comp.gameMinutes
         });
         if (res && res.ok) _lastPush = Date.now();
         else if (res && res.code === 'db_setup' && !_warnedDb) {
@@ -308,6 +314,7 @@ export const PlayerProfileService = {
     getAvatar: getAvatar,
     getNameChangeInfo: getNameChangeInfo,
     getStatsSnapshot: getStatsSnapshot,
+    getProgression: function () { return PlayerProgression.compute(); },
     pushToCloud: pushToCloud
 };
 
