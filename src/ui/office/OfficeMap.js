@@ -9,6 +9,7 @@ var THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.j
 var _threePromise = null;
 var _active = null;
 var _token = 0;
+var _pendingFocus = null;   // staf yang diminta difokuskan sebelum scene siap
 
 function loadThree() {
     if (!_threePromise) {
@@ -32,6 +33,14 @@ export function renderOfficeFallback() {
 
 export function isOfficeMounted() { return !!_active; }
 
+// Fokuskan kamera & kartu ke satu staf (dipanggil dari panel Team). Jika peta belum tampil, ditunda.
+export function focusOfficeStaff(staffId) {
+    if (!staffId) return false;
+    if (_active) return _active.scene.selectStaff(staffId);
+    _pendingFocus = staffId;
+    return false;
+}
+
 export async function mountOfficeMap(containerEl, gameState) {
     unmountOfficeMap();
     var token = ++_token;
@@ -40,6 +49,7 @@ export async function mountOfficeMap(containerEl, gameState) {
         // Batal kalau sudah pindah tab / container sudah dibuang saat menunggu.
         if (token !== _token || !containerEl.isConnected) return;
         var scene = createOfficeScene(THREE, containerEl, gameState);
+        if (_pendingFocus) { var pf = _pendingFocus; _pendingFocus = null; scene.selectStaff(pf); }
         function currentData() {
             var g = window.__game;
             return (g && g.state && g.state.get()) || gameState;

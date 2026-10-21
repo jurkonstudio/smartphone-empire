@@ -326,7 +326,7 @@ export function describeStaff(s) {
         lines: lines,
         actions: actions,
         staffId: s.id,
-        go: { nav: 'team', subtab: 'team', label: t('office.btn.team') }
+        go: { nav: 'team', subtab: 'team', staffId: s.id, label: t('office.btn.team') }
     };
 }
 
