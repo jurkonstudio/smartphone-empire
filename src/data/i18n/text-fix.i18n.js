@@ -6,6 +6,11 @@
 // Digabung PALING AKHIR di src/data/i18n/index.js (hanya menambah key yang belum ada).
 export const TEXT_FIX_I18N = {
     id: {
+        // ---- Tab HQ & tombol Kantor (sebelumnya key mentah / campur bahasa) ----
+        'hq.tab.overview': 'Ringkasan',
+        'hq.tab.team': 'Tim',
+        'hq.tab.history': 'Riwayat',
+        'office.btn.recruit': 'Rekrut',
         // ---- Top Up Silicon: tab & tukar uang ----
         'silstore.tab.buy': 'Beli',
         'silstore.tab.exchange': 'Tukar',
@@ -125,6 +130,9 @@ export const TEXT_FIX_I18N = {
         'opinion.feed.more': 'Lihat {n} ulasan lainnya'
     },
     en: {
+        // ---- HQ tabs & Office button (previously raw key / mixed language) ----
+        'hq.tab.history': 'History',
+        'office.btn.recruit': 'Recruit',
         'silstore.tab.buy': 'Buy',
         'silstore.tab.exchange': 'Exchange',
         'silstore.exch.intro': 'Exchange Silicon (SIL) for cash to fund your company.',
