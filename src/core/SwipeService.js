@@ -38,6 +38,7 @@ var BLACKLIST_SELECTORS = [
     '.home-slide',
     '.home-dots',
     '.home-map',
+    '.uc-row',
     'canvas',
     'input',
     'textarea',
@@ -81,6 +82,15 @@ function _isModalOpen() {
     return false;
 }
 
+// v2028.39: baris/kontainer yang bisa digeser horizontal (overflow-x auto/scroll
+// dan kontennya memang lebih lebar) tidak boleh memicu pindah sub-tab.
+function _isHorizontalScroller(el) {
+    var ov = '';
+    try { ov = window.getComputedStyle(el).overflowX; } catch (e) { return false; }
+    if (ov !== 'auto' && ov !== 'scroll') return false;
+    return el.scrollWidth > el.clientWidth + 2;
+}
+
 function _isBlacklisted(target) {
     if (!target) return true;
     for (var i = 0; i < BLACKLIST_SELECTORS.length; i++) {
@@ -88,6 +98,20 @@ function _isBlacklisted(target) {
             if (target.closest(BLACKLIST_SELECTORS[i])) return true;
         } catch (e) {}
     }
+    for (var el = target; el && el !== document.body && el.nodeType === 1; el = el.parentElement) {
+        if (_isHorizontalScroller(el)) return true;
+    }
+    return false;
+}
+
+function _isChipTabVisibleForSwipe() {
+    try {
+        var g = window.__game; if (!g || !g.state || !g.state.get) return false;
+        var d = g.state.get();
+        if (d.time && d.time.currentYear >= 2003) return true;
+        if (d.chipResearch && d.chipResearch.completed && d.chipResearch.completed.length > 0) return true;
+        if (d.chips && d.chips.catalog && d.chips.catalog.length > 0) return true;
+    } catch (e) {}
     return false;
 }
 
@@ -106,8 +130,10 @@ function _getSubtabsForView(view) {
     var chipUnlocked = completed.indexOf('chip_design_tool') !== -1;
 
     if (view === 'research') {
-        var rtabs = ['tech', 'os', 'sejarah'];
-        if (chipUnlocked) rtabs.push('chip');
+        // Urutan & kemunculan HARUS sama dengan subtab-bar di ResearchPanel.js
+        // (tech, os, manufaktur, future, lalu chip bila terlihat).
+        var rtabs = ['tech', 'os', 'manufaktur', 'future'];
+        if (_isChipTabVisibleForSwipe()) rtabs.push('chip');
         return rtabs;
     }
 
