@@ -384,6 +384,7 @@ export const id = {
     'os.bug.patch':         'Patch',
     'os.bug.ignore':        'Abaikan',
     'os.bug.patching':      'DIPATCH',
+    'os.action.loading':    'Memproses…',
     'os.features.section_available': 'Tersedia',
     'os.features.section_deving':    'Dikembangkan',
     'os.features.section_owned':     'Dimiliki',

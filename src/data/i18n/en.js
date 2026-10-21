@@ -383,6 +383,7 @@ export const en = {
     'os.bug.patch':         'Patch',
     'os.bug.ignore':        'Ignore',
     'os.bug.patching':      'PATCHING',
+    'os.action.loading':    'Processing…',
     'os.features.section_available': 'Available',
     'os.features.section_deving':    'In Development',
     'os.features.section_owned':     'Owned',
