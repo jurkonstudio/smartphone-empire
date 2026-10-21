@@ -574,6 +574,8 @@ export const en = {
     'prod.order.cost_unit':  'Cost per unit',
     'prod.order.setup':      'Setup cost',
     'prod.order.total':      'Estimated total',
+    'prod.order.lead':       'Production time',
+    'prod.order.days':       'days',
     'prod.order.submit':     'Order',
     'prod.order.cancel':     'Cancel',
 
