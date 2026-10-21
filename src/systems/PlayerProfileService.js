@@ -50,6 +50,7 @@ export function nameErrorKey(reason) {
         case 'too_long':   return 'settings.edit_name.error_long';
         case 'competitor': return 'settings.edit_name.error_competitor';
         case 'brand':      return 'settings.edit_name.error_brand';
+        case 'public_figure': return 'settings.edit_name.error_public_figure';
         default:           return 'settings.edit_name.error_profanity';
     }
 }
