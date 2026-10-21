@@ -198,6 +198,8 @@ export const BALANCE = {
         },
         warehouseCostPerUnitPerDay: 0.02,
         productionSetupCost: 2000,
+        // Jeda hari produksi manual: baseDays + floor(qty / unitsPerExtraDay), maks maxDays
+        manualRestock: { baseDays: 2, unitsPerExtraDay: 2500, maxDays: 10 },
         dailyNoise: 0.09,
         discontinueDiscountPercent: 0.6,
         reviewThresholds: { excellent: 85, good: 70, average: 50, poor: 30, bad: 0 },
