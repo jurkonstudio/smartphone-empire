@@ -86,6 +86,7 @@ function _reasonToKey(reason) {
         case 'too_long':   return 'onb.name.error_too_long';
         case 'competitor': return 'onb.name.error_competitor';
         case 'brand':      return 'onb.name.error_brand';
+        case 'public_figure': return 'onb.name.error_public_figure';
         case 'profanity':  return 'onb.name.error_profanity';
         default:           return 'onb.name.error_profanity';
     }
