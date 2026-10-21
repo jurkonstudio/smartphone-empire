@@ -64,18 +64,18 @@ export function getFuturePanelById(id) {
 // Mengembalikan { unlocked, reason } untuk satu panel.
 // data = state.data (berisi time.currentYear dan research.completed).
 export function getFutureUnlockState(panel, data) {
-    if (!panel) return { unlocked: false, reason: 'Panel tidak dikenal.' };
+    if (!panel) return { unlocked: false, reason: 'Panel tidak dikenal.', reasonKey: 'future.reason.unknown' };
     var u = panel.unlock || {};
-    if (!u.enabled) return { unlocked: false, reason: 'Segera hadir. Belum terhubung ke sistem game.' };
+    if (!u.enabled) return { unlocked: false, reason: 'Segera hadir. Belum terhubung ke sistem game.', reasonKey: 'future.reason.soon' };
 
     var year = (data && data.time && data.time.currentYear) || 0;
     if (typeof u.year === 'number' && year < u.year) {
-        return { unlocked: false, reason: 'Tersedia mulai ' + u.year + '.' };
+        return { unlocked: false, reason: 'Tersedia mulai ' + u.year + '.', reasonKey: 'future.reason.year', reasonVars: { y: u.year } };
     }
     if (u.research) {
         var done = (data && data.research && data.research.completed) || [];
         if (done.indexOf(u.research) === -1) {
-            return { unlocked: false, reason: 'Butuh riset: ' + u.research + '.' };
+            return { unlocked: false, reason: 'Butuh riset: ' + u.research + '.', reasonKey: 'future.reason.research', reasonVars: { id: u.research } };
         }
     }
     return { unlocked: true, reason: '' };
