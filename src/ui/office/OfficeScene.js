@@ -56,7 +56,7 @@ import { computePlan, rememberPeak, PALETTES, ERA_WINDOWS } from '../campus/Camp
 import { createLookRig, detectQuality } from '../campus/CampusLook.js';
 import { createCampusControls } from '../campus/CampusControls.js';
 import { t } from '../../core/LanguageService.js';
-import { BASE_VIEW, COLORS, COLS, ROWS, CORRIDORS, DEST_BY_ROLE, DEST_DEFAULT, DEST_EMOJI, DEST_ROOM, DOOR_EAST, DOOR_NORTH, FLOOR, FRAME_MS, HAIR, MAX_DESKS, MAX_DPR, MIN_RESIZE_DELTA, MORALE_HEX, NARROW_PX, PHASES, ROOM_DEFS, SHADOW_OPACITY, SKIN, WALKERS_MAX, clamp, deskCapacity, hash, hexCss, len, moraleTier, prefersReducedMotion, readAccent, roleCount, sortedStaff, tint } from './OfficeConfig.js';
+import { BASE_VIEW, COLORS, COLS, ROWS, CORRIDORS, nearPlinth, officeCoastR, onIsland, DEST_BY_ROLE, DEST_DEFAULT, DEST_EMOJI, DEST_ROOM, DOOR_EAST, DOOR_NORTH, FLOOR, FRAME_MS, HAIR, MAX_DESKS, MAX_DPR, MIN_RESIZE_DELTA, MORALE_HEX, NARROW_PX, PHASES, ROOM_DEFS, SHADOW_OPACITY, SKIN, WALKERS_MAX, clamp, deskCapacity, hash, hexCss, len, moraleTier, prefersReducedMotion, readAccent, roleCount, sortedStaff, tint } from './OfficeConfig.js';
 import { describeRoom, describeStaff, fabProgress, roomAlert, totalStock, trophyCount, ROOM_LOGIC } from './OfficeLogic.js';
 
 // ============================================================
@@ -96,7 +96,8 @@ export function createOfficeScene(THREE, container, gameState) {
         plane: new THREE.PlaneGeometry(1, 1),
         circle: new THREE.CircleGeometry(1, 28),
         arc: new THREE.TorusGeometry(1, 0.07, 6, 18, Math.PI),
-        ring: new THREE.RingGeometry(0.78, 1, 36)
+        ring: new THREE.RingGeometry(0.78, 1, 36),
+        ico: new THREE.IcosahedronGeometry(1, 0)
     };
 
     // ---------- material bersama ----------
@@ -104,7 +105,9 @@ export function createOfficeScene(THREE, container, gameState) {
     // Material PBR ringan (MeshStandard) supaya menangkap env map & bayangan seperti bangunan kampus.
     var PBR = {                  // [roughness, metalness]
         ground: [0.95, 0], base: [0.8, 0], metal: [0.35, 0.35], glass: [0.12, 0.1],
-        gold: [0.3, 0.6], leaf: [0.7, 0], trunk: [0.9, 0]
+        gold: [0.3, 0.6], leaf: [0.7, 0], trunk: [0.9, 0],
+        grass2: [0.97, 0], leaf2: [0.9, 0], soil: [1, 0], ocean: [0.42, 0], shallow: [0.4, 0],
+        foam: [0.9, 0], sand: [0.95, 0], sandWet: [0.9, 0], rock: [0.9, 0]
     };
     function pbr(color, key) {
         var p = PBR[key] || [0.7, 0];
@@ -273,17 +276,137 @@ export function createOfficeScene(THREE, container, gameState) {
     // ---------- shell statis (lantai dasar, dinding, partisi) ----------
     var shell = new THREE.Group();
     scene.add(shell);
-    var ground = mesh(shell, G.plane, 'ground', 40, 40, 1, 0, -0.22, 0);
-    ground.rotation.x = -Math.PI / 2;
+    // ---------- lingkungan pulau: pinggir peta kantor dibuat seperti Peta Kampus ----------
+    // Lantai kantor tetap di y = 0. Rumput pulau di y = GY (sama dengan alas lama). Laut, pantai pasir,
+    // busa ombak, bukit, batu, semak dan pepohonan hanya ditaruh di daratan pulau & di luar denah kantor.
+    var GY = -0.22;
+    var isleSeed = 1357;
+    function isleRnd() { isleSeed = (isleSeed * 16807) % 2147483647; return (isleSeed - 1) / 2147483646; }
+    var islePlaced = [];      // [x, z, radius] objek yang sudah ditaruh, supaya tidak saling bertumpuk
+    function isleClear(x, z, r) {
+        if (nearPlinth(x, z, r + 0.4) || !onIsland(x, z, r + 0.5)) return false;
+        for (var i = 0; i < islePlaced.length; i++) {
+            if (Math.hypot(islePlaced[i][0] - x, islePlaced[i][1] - z) < islePlaced[i][2] + r + 0.3) return false;
+        }
+        return true;
+    }
+    function isleSpot(minF, maxF, r) {          // titik acak di daratan, f = proporsi dari garis pantai
+        for (var k = 0; k < 80; k++) {
+            var th = isleRnd() * Math.PI * 2, f = minF + isleRnd() * (maxF - minF);
+            var rr = officeCoastR(th) * f;
+            var x = Math.cos(th) * rr, z = Math.sin(th) * rr;
+            if (isleClear(x, z, r)) return [x, z];
+        }
+        return null;
+    }
+    // Lempengan pulau berbentuk garis pantai (pola sama dengan Peta Kampus). Atas di y = top.
+    function islandGeo(scale, depth) {
+        var key = 'isl' + scale + '_' + depth;
+        if (G[key]) return G[key];
+        var sh = new THREE.Shape(), N = 120, i;
+        for (i = 0; i < N; i++) {
+            var th = (i / N) * Math.PI * 2, r = officeCoastR(th) * scale;
+            var px = Math.cos(th) * r, pz = Math.sin(th) * r;
+            if (i === 0) sh.moveTo(px, -pz); else sh.lineTo(px, -pz);
+        }
+        sh.closePath();
+        var g = new THREE.ExtrudeGeometry(sh, { depth: depth, bevelEnabled: false, curveSegments: 1 });
+        g.rotateX(-Math.PI / 2);
+        var pos = g.attributes.position, uv = g.attributes.uv;
+        for (i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / 100 + 0.5, pos.getZ(i) / 100 + 0.5);
+        uv.needsUpdate = true;
+        G[key] = g;               // ikut dibuang saat dispose()
+        return g;
+    }
+    function islandSlab(scale, top, depth, mat) {
+        var m = new THREE.Mesh(islandGeo(scale, depth), mat);
+        m.position.y = top - depth;
+        m.receiveShadow = !!look.shadows;
+        shell.add(m);
+        return m;
+    }
+    function terrain(geo, mat, sx, sy, sz, x, y, z) {    // objek alam: menerima bayangan, tidak melempar
+        var m = mesh(shell, geo, mat, sx, sy, sz, x, y, z);
+        m.castShadow = false;
+        return m;
+    }
+    function tree(x, z, s) {
+        mesh(shell, G.cyl, 'trunk', 0.11 * s, 0.6 * s, 0.11 * s, x, GY + 0.3 * s, z);
+        mesh(shell, G.sph, isleRnd() < 0.5 ? 'leaf' : 'leaf2', 0.5 * s, 0.5 * s, 0.5 * s, x, GY + 0.9 * s, z);
+        mesh(shell, G.sph, 'leaf2', 0.32 * s, 0.32 * s, 0.32 * s, x + 0.1 * s, GY + 1.32 * s, z - 0.08 * s);
+    }
+
+    // laut (permukaan y = GY - 0.5) dan pulau berlapis: laut dalam -> perairan dangkal -> busa -> pasir basah -> pasir -> rumput
+    terrain(G.box, 'ocean', 320, 1, 320, 0, GY - 1.0, 0);
+    islandSlab(1.22, GY - 0.47, 0.2, M.shallow);
+    islandSlab(1.115, GY - 0.455, 0.2, M.foam);
+    islandSlab(1.08, GY - 0.26, 0.5, M.sandWet);
+    islandSlab(1.05, GY - 0.03, 0.7, M.sand);
+    islandSlab(1.0, GY, 0.7, [M.ground, M.soil]);
+
+    // pohon di sudut halaman (seperti sebelumnya, kini duduk di rumput pulau)
+    [[-11.2, -7.4], [11.3, -7.2], [-11.4, 7.1], [11.4, 7.3]].forEach(function (c) {
+        cyl(shell, 'trunk', 0.14, 0.9, c[0], GY + 0.45, c[1]);
+        sph(shell, 'leaf', 0.8, c[0], GY + 1.35, c[1]);
+        islePlaced.push([c[0], c[1], 0.9]);
+    });
+    // bukit rendah di pinggiran (setengah bola pipih)
+    for (var hi = 0; hi < 6; hi++) {
+        var hr = 1.3 + isleRnd() * 1.0;
+        var hp = isleSpot(0.6, 0.92, hr + 0.3);
+        if (!hp) continue;
+        islePlaced.push([hp[0], hp[1], hr]);
+        terrain(G.sph, 'grass2', hr, hr * 0.42, hr, hp[0], GY, hp[1]);
+    }
+    // hutan berkelompok di sekeliling pulau
+    for (var fi = 0; fi < 4; fi++) {
+        var fc = isleSpot(0.78, 0.92, 1.4);
+        if (!fc) continue;
+        var nT = 4 + Math.floor(isleRnd() * 3), done = 0;
+        for (var fk = 0; fk < 40 && done < nT; fk++) {
+            var ta = isleRnd() * Math.PI * 2, td = 0.45 + isleRnd() * 1.5;
+            var tx = fc[0] + Math.cos(ta) * td, tz = fc[1] + Math.sin(ta) * td;
+            var ts = 0.8 + isleRnd() * 0.4;
+            if (!isleClear(tx, tz, 0.5 * ts)) continue;
+            islePlaced.push([tx, tz, 0.5 * ts]);
+            tree(tx, tz, ts);
+            done++;
+        }
+    }
+    // semak kecil dan bercak rumput
+    for (var si = 0; si < 14; si++) {
+        var sp = isleSpot(0.45, 0.9, 0.35);
+        if (!sp) continue;
+        var sr = 0.22 + isleRnd() * 0.18;
+        islePlaced.push([sp[0], sp[1], sr]);
+        terrain(G.sph, isleRnd() < 0.5 ? 'leaf2' : 'leaf', sr, sr * 0.8, sr, sp[0], GY + sr * 0.6, sp[1]);
+    }
+    for (var gi = 0; gi < 10; gi++) {
+        var gp = isleSpot(0.5, 0.95, 1.5);
+        if (!gp) continue;
+        islePlaced.push([gp[0], gp[1], 1.5]);
+        var gm = terrain(G.box, 'grass2', 2.2 + isleRnd() * 2.5, 0.03, 1.6 + isleRnd() * 2.0, gp[0], GY + 0.012, gp[1]);
+        gm.rotation.y = isleRnd() * Math.PI;
+    }
+    // batu pantai di atas pasir
+    for (var ri = 0; ri < 16; ri++) {
+        var rth = isleRnd() * Math.PI * 2, rf = 0.97 + isleRnd() * 0.07;
+        var rr = officeCoastR(rth) * rf;
+        var rs = 0.12 + isleRnd() * isleRnd() * 0.35;
+        terrain(G.ico, 'rock', rs * (1 + isleRnd() * 0.5), rs * 0.7, rs * (1 + isleRnd() * 0.5),
+            Math.cos(rth) * rr, GY - 0.25 + rs * 0.2, Math.sin(rth) * rr);
+    }
+    // riak ombak: garis busa tipis di laut sekeliling pulau (di luar rak perairan dangkal)
+    for (var wi = 0; wi < 40; wi++) {
+        var wa = isleRnd() * Math.PI * 2, wf = 1.25 + isleRnd() * 0.45;
+        var wr = officeCoastR(wa) * wf;
+        var wm = terrain(G.box, 'foam', 0.9 + isleRnd() * 2.2, 0.012, 0.07 + isleRnd() * 0.05, Math.cos(wa) * wr, GY - 0.488, Math.sin(wa) * wr);
+        wm.rotation.y = wa + Math.PI / 2;
+    }
     box(shell, 'base', 18.5, 0.22, 12.5, 0, -0.11, 0);
     // Layered plinth gives the dollhouse a premium architectural presentation.
     box(shell, 'metal', 18.72, 0.055, 12.72, 0, -0.235, 0);
     box(shell, 'wallTop', 18.55, 0.035, 12.55, 0, -0.255, 0);
-    // Pepohonan bulat di sudut halaman, seperti taman di Peta Kampus.
-    [[-11.2, -7.4], [11.3, -7.2], [-11.4, 7.1], [11.4, 7.3]].forEach(function (c) {
-        cyl(shell, 'trunk', 0.14, 0.9, c[0], 0.45, c[1]);
-        sph(shell, 'leaf', 0.8, c[0], 1.35, c[1]);
-    });
 
     function wallSeg(mat, x0, x1, z0, z1, h, th) {
         var w = Math.abs(x1 - x0) || th, d = Math.abs(z1 - z0) || th;
@@ -1811,33 +1934,4 @@ export function createOfficeScene(THREE, container, gameState) {
             if (focusRaf) cancelAnimationFrame(focusRaf);
             if (io) io.disconnect();
             if (ro) ro.disconnect(); else window.removeEventListener('resize', resize);
-            document.removeEventListener('visibilitychange', onVis);
-            canvas.removeEventListener('webglcontextlost', onCtxLost);
-            canvas.removeEventListener('webglcontextrestored', onCtxRestored);
-            controls.dispose();
-            roomList.forEach(function (r) {
-                clearFurn(r);
-                if (r.label && r.label.material) r.label.material.dispose();
-                if (r.alertSp && r.alertSp.material) r.alertSp.material.dispose();
-                r.floorMat.dispose(); r.ovMat.dispose(); r.patMat.dispose(); if (r.railMat) r.railMat.dispose();
-            });
-            labelTex.forEach(function (tx) { tx.dispose(); });
-            ownTex.forEach(function (tx) { tx.dispose(); });
-            Object.keys(alertTex).forEach(function (k) { alertTex[k].dispose(); });
-            Object.keys(bubbleTex).forEach(function (k) { bubbleTex[k].dispose(); });
-            hairMat.forEach(function (m) { m.dispose(); });
-            Object.keys(tierMat).forEach(function (k) { tierMat[k].dispose(); });
-            Object.keys(G).forEach(function (k) { G[k].dispose(); });
-            Object.keys(M).forEach(function (k) { M[k].dispose(); });
-            Object.keys(roleMat).forEach(function (k) { roleMat[k].dispose(); });
-            skinMat.forEach(function (m) { m.dispose(); });
-            moraleMat.forEach(function (m) { m.dispose(); });
-            Object.keys(hueMats).forEach(function (k) { hueMats[k].dispose(); });
-            rig.dispose();
-            renderer.dispose();
-            try { renderer.forceContextLoss(); } catch (e) {}
-            [chipBar, card, hint, legendBtn, legend, canvas].forEach(function (el) { if (el.parentNode) el.parentNode.removeChild(el); });
-        }
-    };
-}
-
+            document.removeEventListener('visi
