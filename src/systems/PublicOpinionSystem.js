@@ -18,6 +18,7 @@ import {
     VIRAL_RESPONSES
 } from '../data/feedback.data.js';
 import { WalletService } from './WalletService.js';
+import { attachBugReactions } from './PublicOpinionBugReactions.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -34,6 +35,7 @@ export class PublicOpinionSystem {
         this._unsubs.push(bus.on('time:month-changed', () => this._onMonthChanged()));
         this._unsubs.push(bus.on('state:hydrated',     () => this._onHydrated()));
         this._unsubs.push(bus.on('product:released',   (p) => this._onProductReleased(p)));
+        this._unsubs.push(...attachBugReactions(this));
         this._recomputeSentiment();
         console.info('[PublicOpinionSystem] siap.');
     }
