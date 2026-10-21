@@ -6,12 +6,13 @@ var _client = null;
 var _loading = null;
 var _injected = null;
 var _pubIdOk = true; 
-var PUB_COLS = 'id, display_name, avatar_path, company_name, founded_year, founded_month, game_minutes, created_at, updated_at, stat_revenue, stat_sold, stat_reputation, stat_share';
+var PUB_COLS = 'id, display_name, avatar_path, company_name, founded_year, founded_month, game_minutes, created_at, updated_at, stat_revenue, stat_sold, stat_reputation, stat_share, stat_level, stat_xp, stat_credibility, stat_score';
 function _pubCols() { return PUB_COLS + (_pubIdOk ? ', public_id' : ''); }
 function _isPubIdMissing(err) { return !!err && String(err.message || '').toLowerCase().indexOf('public_id') >= 0; }
 var _idemOk = true;
 var _inboxExt = true;
 var _reasonOk = true;
+var _rewardOk = true;
 
 function classify(err) {
     if (!err) return 'unknown';
@@ -219,10 +220,14 @@ export const SupabaseAdapter = {
     // ---------- Inbox (pesan admin + notifikasi SIL) ----------
     inboxList: async function (limit, sinceId) {
         var c = await getClient();
-        var cols = 'id, kind, title, body, amount, created_at, read_at' + (_inboxExt ? ', sender_name, sender_public_id' : '');
+        var cols = 'id, kind, title, body, amount, created_at, read_at' + (_inboxExt ? ', sender_name, sender_public_id' : '') + (_rewardOk ? ', reward_cash, reward_kind, reward_claimed_at' : '');
         var q = c.from('inbox_messages').select(cols);
         if (sinceId) q = q.gt('id', sinceId);          // polling hemat: hanya pesan yang lebih baru
         var res = await q.order('id', { ascending: false }).limit(limit || 60);
+        if (res.error && _rewardOk && String(res.error.message || '').indexOf('reward_') >= 0) {
+            _rewardOk = false;                         // SQL 12 belum dijalankan: tanpa kolom hadiah
+            return this.inboxList(limit, sinceId);
+        }
         if (res.error && _inboxExt && String(res.error.message || '').indexOf('sender_') >= 0) {
             _inboxExt = false;                         // SQL 10 belum dijalankan: pakai kolom dasar
             return this.inboxList(limit, sinceId);
@@ -322,7 +327,8 @@ export const SupabaseAdapter = {
     },
 
     listProfiles: async function (orderBy) {
-        var cols = { revenue: 'stat_revenue', sold: 'stat_sold', reputation: 'stat_reputation', share: 'stat_share', recent: 'updated_at' };
+        var cols = { revenue: 'stat_revenue', sold: 'stat_sold', reputation: 'stat_reputation', share: 'stat_share', recent: 'updated_at',
+                     score: 'stat_score', level: 'stat_xp', credibility: 'stat_credibility' };   // level diurutkan lewat XP
         var col = cols[orderBy] || cols.revenue;
         var c = await getClient();
         var res = await c.from('public_profiles').select(_pubCols())
@@ -408,6 +414,22 @@ export const SupabaseAdapter = {
             throw invalid;
         }
         return balance;
+    },
+
+    // [LEVEL/HADIAH] Klaim hadiah di Pesan. Aman di-retry: token sama = nominal sama, tidak dikredit dua kali di server.
+    rpcClaimInboxReward: async function (messageId, token) {
+        var c = await getClient();
+        var res = await c.rpc('claim_inbox_reward', { p_message_id: messageId, p_token: String(token).slice(0, 64) });
+        if (res.error) throw mk(res.error);
+        return res.data;
+    },
+
+    // [LEVEL] Peringkat pemain sendiri (tidak dibatasi 100 teratas).
+    rpcLeaderboardMyRank: async function (sort) {
+        var c = await getClient();
+        var res = await c.rpc('leaderboard_my_rank', { p_sort: sort || 'score' });
+        if (res.error) throw mk(res.error);
+        return res.data;
     },
 
     rpcGetMyPublicId: async function () {
