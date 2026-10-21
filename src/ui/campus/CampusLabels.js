@@ -1,15 +1,18 @@
 // FILE: src/ui/campus/CampusLabels.js
+// v2027.61 — label lebih besar & mudah dibaca di HP; teks level ikut bahasa (sebelumnya 'Lv' hardcoded).
 // v2027.60 — Label gedung di atas peta (DOM murni, tanpa library): pill kecil berisi nama + level,
 // diproyeksikan dari titik 3D di atas atap tiap bangunan.
 //  - Tidak menangkap sentuhan (pointer-events:none) -> kontrol peta & tap bangunan tetap persis sama.
 //  - Penghindaran tumpang tindih: prioritas (terpilih > hover > HQ > lainnya), label yang bentrok disembunyikan.
 //  - LOD menurut zoom: zoom jauh hanya HQ/terpilih; zoom sedang nama; zoom dekat nama + level.
 //  - Hanya diperbarui saat kamera/daftar berubah (bukan tiap frame), posisi lewat transform (tanpa reflow).
+import { t } from '../../core/LanguageService.js';
+
 var STYLE_ID = 'campus-labels-style';
 var CSS = [
     '.cmp-labels{position:absolute;inset:0;z-index:2;overflow:hidden;pointer-events:none;}',
-    '.cmp-lbl{position:absolute;left:0;top:0;display:flex;align-items:center;gap:5px;height:20px;padding:0 8px;',
-    'border-radius:10px;white-space:nowrap;font-size:10.5px;font-weight:600;letter-spacing:.01em;line-height:1;',
+    '.cmp-lbl{position:absolute;left:0;top:0;display:flex;align-items:center;gap:5px;height:22px;padding:0 9px;',
+    'border-radius:10px;white-space:nowrap;font-size:11.5px;font-weight:600;letter-spacing:.01em;line-height:1;',
     'color:var(--text-primary,#111);background:var(--surface-glass,rgba(255,255,255,.82));',
     'border:1px solid var(--border-subtle,rgba(0,0,0,.10));box-shadow:0 3px 10px rgba(15,23,42,.16),0 1px 2px rgba(15,23,42,.10);',
     '-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);',
@@ -20,8 +23,8 @@ var CSS = [
     'background:inherit;border-right:1px solid var(--border-subtle,rgba(0,0,0,.10));border-bottom:1px solid var(--border-subtle,rgba(0,0,0,.10));',
     'transform:rotate(45deg);border-bottom-right-radius:2px;}',
     '.cmp-lbl.sel::after{border-color:var(--accent,#2563eb);}',
-    '.cmp-lbl .n{overflow:hidden;text-overflow:ellipsis;}',
-    '.cmp-lbl .l{font-weight:700;font-size:9.5px;padding:2px 5px;border-radius:7px;color:var(--accent,#2563eb);',
+    '.cmp-lbl .n{overflow:hidden;text-overflow:ellipsis;min-width:0;}',
+    '.cmp-lbl .l{font-weight:700;font-size:10.5px;padding:2px 6px;border-radius:7px;color:var(--accent,#2563eb);',
     'background:var(--accent-soft,rgba(37,99,235,.14));}',
     '.cmp-lbl.max .l{color:#8a6a10;background:rgba(224,180,69,.26);}',
     '.cmp-lbl.hov{border-color:var(--accent,#2563eb);}',
@@ -46,7 +49,7 @@ function ensureStyle() {
     document.head.appendChild(st);
 }
 
-var LBL_H = 20;
+var LBL_H = 22;
 var PAD = 4;
 var ZOOM_ALL = 0.8;        // di bawah ini hanya HQ + terpilih
 var ZOOM_LEVEL = 1.35;     // di atas ini tampilkan level juga
@@ -84,7 +87,8 @@ export function createCampusLabels(THREE, container) {
             }
             cur.id = it.id; cur.x = it.x; cur.y = it.y; cur.z = it.z; cur.prio = it.prio; cur.max = it.max;
             if (cur.name !== it.name) { cur.name = it.name; cur.nEl.textContent = it.name; }
-            if (cur.level !== it.level) { cur.level = it.level; cur.lEl.textContent = 'Lv ' + it.level; }
+            var lvTxt = t('office.status.level', { n: it.level });
+            if (cur.level !== it.level || cur.lvTxt !== lvTxt) { cur.level = it.level; cur.lvTxt = lvTxt; cur.lEl.textContent = lvTxt; }
             cur.node.classList.toggle('max', !!it.max && it.level >= it.max);
             cur.hasLevel = !!it.max;
             cur.alert = it.alert || '';
@@ -109,7 +113,7 @@ export function createCampusLabels(THREE, container) {
 
     function estWidth(it, showLevel) {
         // Estimasi lebar tanpa mengukur DOM (hindari layout thrash): ~5.9px per huruf + padding.
-        var w = it.name.length * 5.9 + 18 + (showLevel && it.hasLevel ? 30 : 0) + (it.alert ? 13 : 0);
+        var w = it.name.length * 6.6 + 20 + (showLevel && it.hasLevel ? 38 : 0) + (it.alert ? 13 : 0);
         return Math.min(160, w);
     }
 
