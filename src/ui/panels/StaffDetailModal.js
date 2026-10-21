@@ -92,6 +92,8 @@ export function openStaffDetailModal(params) {
             </button>
         ` : ''}
 
+        <button class="btn-secondary" data-staff-office="${s.id}" style="width:100%;margin-top:8px;">Lihat di kantor</button>
+
         <button class="btn-danger" data-staff-action="fire" data-staff-id="${s.id}" style="width:100%;margin-top:8px;">
             ${t('staff.detail.fire_btn', { severance: severance.toLocaleString('en-US') })}
         </button>
