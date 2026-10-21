@@ -40,6 +40,13 @@ let _reloadOnVisible = false;
 let _laterChosen = false;
 let _syncDebounceTimer = null;
 
+// [FIX] Penjadwalan ulang: upload tertunda (throttle/busy) dan cek ulang saat koneksi gagal.
+let _deferTimer = null;
+let _recheckTimer = null;
+let _recheckTries = 0;
+let _rtGen = 0;
+const RECHECK_MAX = 6;
+
 function _withTimeout(promise, ms, fallback) {
     return Promise.race([promise, new Promise(function (r) { setTimeout(function () { r(fallback); }, ms); })]);
 }
@@ -313,12 +320,32 @@ async function uploadNow(opts) {
     }
 }
 
+// [FIX] Jangan membuang perubahan yang jatuh dalam jendela throttle: jadwalkan upload tertunda.
+function _scheduleDeferredUpload(ms) {
+    clearTimeout(_deferTimer);
+    _deferTimer = setTimeout(function () { _deferTimer = null; _onLocalSaved(); }, Math.max(500, ms));
+}
+
 function _onLocalSaved() {
-    if (!_ready || _busy || _checking || _conflictOpen || !_isConnected() || !_state) return;
+    if (!_ready || !_isConnected() || !_state) return;
+    if (_conflictOpen) return;                       // menunggu keputusan pemain: jangan dijadwal ulang terus
+    if (_busy || _checking) { _scheduleDeferredUpload(3000); return; }
     const info = localInfo(_state);
     if (info.minutes === _lastUploadMinutes) return;
-    if (Date.now() - _lastUploadAt < CLOUD.autoUploadMinMs) return;
-    uploadNow({ auto: true });
+    const wait = CLOUD.autoUploadMinMs - (Date.now() - _lastUploadAt);
+    if (wait > 0) { _scheduleDeferredUpload(wait); return; }
+    uploadNow({ auto: true }).then(function (r) {
+        if (r && (r.code === 'busy' || r.code === 'conflict')) _scheduleDeferredUpload(3000);
+    });
+}
+
+// [FIX] Coba lagi dengan backoff bila daftar save gagal (mis. jaringan putus), bukan diam selamanya.
+function _scheduleRecheck(code) {
+    if (code === 'not_signed_in' || code === 'not_configured') return;
+    if (_recheckTries >= RECHECK_MAX) { console.warn('[CloudSync] Cek ulang cloud gagal berkali-kali.'); return; }
+    _recheckTries++;
+    clearTimeout(_recheckTimer);
+    _recheckTimer = setTimeout(function () { checkOnConnect(); }, Math.min(30000, 2000 * Math.pow(2, _recheckTries - 1)));
 }
 
 async function checkOnConnect() {
@@ -327,7 +354,8 @@ async function checkOnConnect() {
     try {
         _ready = false;
         const list = await CloudService.listSavesStrict();
-        if (!list.ok) return;
+        if (!list.ok) { _scheduleRecheck(list.code); return; }
+        _recheckTries = 0;
         const slot = CloudService.getSlot();
         const cloud = (list.rows || []).find(function (r) { return r.slot === slot; }) || null;
         const local = localInfo(_state);
@@ -391,12 +419,16 @@ async function applyCloud(slot, opts) {
 
 async function _startRealtime() {
     _stopRealtime();
-    _startSilPoll(); 
-    _unsubWallet = await CloudService.subscribeWallet(function () {
+    const gen = ++_rtGen;
+    _startSilPoll();
+    const unsubW = await CloudService.subscribeWallet(function () {
         clearTimeout(_walletTimer);
         _walletTimer = setTimeout(_debouncedSyncSilicon, 400);
     });
-    _unsubRealtime = await CloudService.subscribeSaves(function (row) {
+    // [FIX] Status berubah saat menunggu: buang langganan yang sudah usang (cegah kebocoran).
+    if (gen !== _rtGen) { try { unsubW(); } catch (e) {} return; }
+    _unsubWallet = unsubW;
+    const unsubS = await CloudService.subscribeSaves(function (row) {
         if (!row || row.device_id === getDeviceId()) return;
         if (row.slot !== CloudService.getSlot()) return;
         const local = localInfo(_state);
@@ -406,6 +438,8 @@ async function _startRealtime() {
             }
         }
     });
+    if (gen !== _rtGen) { try { unsubS(); } catch (e) {} return; }
+    _unsubRealtime = unsubS;
 }
 
 function _startSilPoll() {
@@ -421,8 +455,11 @@ function _stopSilPoll() {
 }
 
 function _stopRealtime() {
+    _rtGen++;
     clearTimeout(_walletTimer);
     clearTimeout(_syncDebounceTimer);
+    clearTimeout(_deferTimer); _deferTimer = null;
+    clearTimeout(_recheckTimer); _recheckTimer = null; _recheckTries = 0;
     _stopSilPoll();
     if (_unsubWallet) { try { _unsubWallet(); } catch (e) {} _unsubWallet = null; }
     if (_unsubRealtime) { try { _unsubRealtime(); } catch (e) {} _unsubRealtime = null; }
