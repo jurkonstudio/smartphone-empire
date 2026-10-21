@@ -99,8 +99,41 @@ export var COLORS = {
     green:   [0x43c07a, 0x38a468],
     glass:   [0x9cc7ee, 0x4f77b8],
     win:     [0x8fb4e8, 0x4f77b8],
-    mat:     [0x8a97b3, 0x3a4560]
+    mat:     [0x8a97b3, 0x3a4560],
+    // Lingkungan pulau (sama dengan Peta Kampus): laut, pantai, busa ombak, bukit & hutan di pinggiran.
+    grass2:  [0xaed99f, 0x2b503b],
+    leaf2:   [0x91cf87, 0x4c9b68],
+    soil:    [0x806b56, 0x332a26],
+    ocean:   [0x3fa9dc, 0x0d4a78],
+    shallow: [0x86d8e8, 0x1a7a98],
+    foam:    [0xf4fbff, 0x9cc4d8],
+    sand:    [0xf1dfae, 0x7a6f58],
+    sandWet: [0xd9c795, 0x5e5543],
+    rock:    [0x98a0aa, 0x555d68]
 };
+
+// ============================================================
+// PULAU KANTOR: garis pantai superellips (sama bentuknya dengan pulau kampus, tetapi memanjang
+// mengikuti denah kantor 18 x 12). Dipakai untuk lapisan pasir/laut dan penempatan pepohonan.
+// ============================================================
+export var ISLAND = { rx: 16, rz: 12, n: 3.2, plinthX: 9.4, plinthZ: 6.4 };
+export function officeCoastR(th) {
+    // koordinat kutub superellips |x/rx|^n + |z/rz|^n = 1 (jarak dari pusat pada sudut th), lalu gelombang halus
+    var n = ISLAND.n;
+    var c = Math.abs(Math.cos(th)) / ISLAND.rx, s = Math.abs(Math.sin(th)) / ISLAND.rz;
+    var r = Math.pow(Math.pow(c, n) + Math.pow(s, n), -1 / n);
+    var wob = 1 + 0.045 * Math.sin(3 * th + 0.8) + 0.03 * Math.sin(5 * th + 2.1);
+    return r * wob;
+}
+// true jika titik (x,z) berada di daratan pulau (dengan margin dari pantai)
+export function onIsland(x, z, margin) {
+    return Math.hypot(x, z) < officeCoastR(Math.atan2(z, x)) - (margin || 0);
+}
+// true jika titik berada di atas/dekat denah kantor (tidak boleh ditaruh pohon/batu)
+export function nearPlinth(x, z, margin) {
+    var m = margin || 0;
+    return Math.abs(x) < ISLAND.plinthX + m && Math.abs(z) < ISLAND.plinthZ + m;
+}
 
 export var SKIN = [0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0xffdbac];
 export var HAIR = [0x1b1b1f, 0x3b2a1e, 0x6b4a2b, 0xb98b4a, 0xc7c7cc, 0x8c3b2a];
