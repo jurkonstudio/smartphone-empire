@@ -12,6 +12,7 @@ import {
     getComponentById, getComponentsByCategory, getBodyColorById
 } from '../data/components.data.js';
 import { getCampaignById, MARKETING_CAMPAIGNS } from '../data/marketing.data.js';
+import { resolveComponentCost } from '../data/material-plants.data.js';
 import { getLicenseById, getLicenseStatsAtYear } from '../data/os.data.js';
 import { computeTechEdge, getMasteryStatBonus, RND_TRACKS } from '../data/research.data.js';
 import { getMacro, reviewBaseScore } from '../core/MacroModel.js';
@@ -137,9 +138,11 @@ export class ProductSystem {
         var cost = 0;
         var ids = [config.displayId, config.cameraId, config.batteryId,
                    config.chipId, config.networkId, config.bodyId, config.formFactorId];
+        var self = this;
         ids.forEach(function (id) {
             var c = getComponentById(id);
-            if (c) cost += c.costPerUnit;
+            // Harga internal jika pabrik komponen (baterai/layar) sudah dibangun.
+            if (c) cost += resolveComponentCost(self.state.data, c);
         });
         return Math.round(cost);
     }
