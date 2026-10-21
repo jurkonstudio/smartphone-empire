@@ -1,6 +1,11 @@
 // FILE: src/services/cloud/SupabaseAdapter.js
-// v2028.44 — [TRANSFER] Menambahkan rpcGetPlayerById & rpcTransferSilicon.
+// v2028.45 — [AUTH] sesi dipisah per project, token diverifikasi saat init, error JWT -> minta masuk ulang.
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_LIB_URLS, CLOUD } from './supabase.config.js';
+
+// Hapus sesi dari project Supabase lama (kunci storage tanpa ref project).
+function _dropLegacySession() {
+    try { if (CLOUD.legacyAuthStorageKey) localStorage.removeItem(CLOUD.legacyAuthStorageKey); } catch (e) {}
+}
 
 var _client = null;
 var _loading = null;
@@ -30,7 +35,11 @@ function classify(err) {
         msg.indexOf('load failed') >= 0 || msg.indexOf('network request failed') >= 0) return 'network';
     if (code === '42p01' || code === 'pgrst205' || msg.indexOf('does not exist') >= 0 ||
         msg.indexOf('could not find the table') >= 0) return 'db_setup';
-    if (code === '42501' || status === 401 || status === 403 || msg.indexOf('row-level security') >= 0) return 'permission';
+    // Token tidak valid/kedaluwarsa (mis. sesi dari project lama): minta masuk ulang,
+    // bukan "Akses ditolak" yang membingungkan.
+    if (status === 401 || msg.indexOf('jwt') >= 0 || msg.indexOf('invalid claim') >= 0 ||
+        msg.indexOf('not authenticated') >= 0 || code === 'pgrst301') return 'not_signed_in';
+    if (code === '42501' || status === 403 || msg.indexOf('row-level security') >= 0) return 'permission';
     if (err.code === 'no_save') return 'no_save';
     return 'unknown';
 }
@@ -60,6 +69,7 @@ async function getClient() {
     _loading = (async function () {
         try {
             var createClient = _injected || await loadLib();
+            _dropLegacySession();
             _client = createClient(SUPABASE_URL, SUPABASE_KEY, {
                 auth: {
                     persistSession: true,
@@ -96,7 +106,16 @@ export const SupabaseAdapter = {
         var c = await getClient();
         var res = await c.auth.getSession();
         if (res.error) throw mk(res.error);
-        return userOf(res.data && res.data.session && res.data.session.user);
+        var session = res.data && res.data.session;
+        if (!session) return null;
+        // Verifikasi token ke server: sesi yang sudah tidak sah dibersihkan agar
+        // tidak terus dipakai (penyebab "Akses ditolak" berulang saat sinkron).
+        var check = await c.auth.getUser();
+        if (check.error || !check.data || !check.data.user) {
+            try { await c.auth.signOut({ scope: 'local' }); } catch (e) {}
+            return null;
+        }
+        return userOf(check.data.user);
     },
 
     onAuthChange: function (cb) {
