@@ -376,6 +376,13 @@ export function showOnboarding() {
                     };
                     render('found');
                     doContinue();
+                } else if (direct && !direct.ok && direct.code !== 'no_save') {
+                    // [FIX] Gagal mengecek save (timeout/jaringan/izin), BUKAN berarti akun baru.
+                    // Jangan langsung ke "Mulai Bermain": nama baru akan menimpa save cloud yang sebenarnya ada.
+                    console.warn('[Onboarding] cek save cloud gagal:', direct.code);
+                    ToastService.error(t('onb.cloud.load_fail'));
+                    render('auth');
+                    _msg(t('onb.cloud.load_fail'), 'err');
                 } else {
                     render('start');
                 }
