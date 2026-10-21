@@ -12,6 +12,7 @@
 // v2027.37a — kampus tumbuh: bangunan muncul/naik level otomatis, gaya ikut era,
 // animasi tumbuh singkat, tap bangunan untuk info. Tetap render-on-demand.
 // Upgrade detail: cahaya hangat/dingin per tema, zoom lebih dalam, kontrol inertia.
+import { frameGapMs } from '../../core/RenderFps.js';
 import {
     createAssets, buildGround, buildForest, buildShrubs, buildHQ, buildSlot, buildSprawl,
     computePlan, rememberPeak, buildWind, buildRail, applyShadowFlags, disposeObject,
@@ -142,7 +143,7 @@ export function createCampusScene(THREE, container, gameState) {
 
     // PERF: antar frame tidur dengan setTimeout (tidak bangun di tiap vsync). Berhenti total
     // saat tab tersembunyi / peta di luar layar.
-    function frameGap() { return Math.max(FRAME_MS, PERF.frameMs || 0); }
+    function frameGap() { return frameGapMs(PERF.frameMs, FRAME_MS); }
     function scheduleNext() {
         var wait = frameGap() - (performance.now() - lastFrame) - 5;
         if (wait > 4) {
