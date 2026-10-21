@@ -289,7 +289,7 @@ export function describeRoom(id, data, plan) {
         badge: st.open ? t('office.status.level', { n: st.level }) : t('office.status.locked'),
         lines: lines,
         go: st.open ? { nav: def.go.nav, subtab: def.go.subtab, label: t('office.go.' + id) } : null,
-        go2: (st.open && def.go2) ? { nav: def.go2.nav, subtab: def.go2.subtab, label: t(def.go2.labelKey) } : null
+        go2: (st.open && def.go2) ? { nav: def.go2.nav, subtab: def.go2.subtab, mode: def.go2.mode || null, label: t(def.go2.labelKey) } : null
     };
 }
 
