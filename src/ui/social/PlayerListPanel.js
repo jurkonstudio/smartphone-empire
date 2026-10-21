@@ -6,12 +6,16 @@
 import { Modal } from '../modal.js';
 import { ToastService } from '../../core/ToastService.js';
 import { CloudService } from '../../services/CloudService.js';
+import { SupabaseAdapter } from '../../services/cloud/SupabaseAdapter.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
 import { bus } from '../../core/EventBus.js';
 import { openPlayerProfileModal, compactNumber } from './PlayerProfileModal.js';
 import { avatarHtml, resolveAvatarUrls, esc } from './AvatarView.js';
 
 var SORTS = [
+    { id: 'score',       field: 'stat_score',       fmt: function (v) { return Number(v || 0).toFixed(1); } },
+    { id: 'level',       field: 'stat_level',       fmt: function (v) { return 'Lv ' + (Number(v) || 1); } },
+    { id: 'credibility', field: 'stat_credibility', fmt: function (v) { return Number(v || 0).toFixed(1); } },
     { id: 'revenue',    field: 'stat_revenue',    fmt: function (v) { return '$' + compactNumber(v); } },
     { id: 'sold',       field: 'stat_sold',       fmt: function (v) { return compactNumber(v); } },
     { id: 'reputation', field: 'stat_reputation', fmt: function (v) { return Number(v || 0).toFixed(1); } },
@@ -23,7 +27,12 @@ var _unsubPresence = null;
 var _onlineIds = {};
 var _rows = [];
 var _avatars = {};
-var _sort = 'revenue';
+var _sort = 'score';
+var _myRank = null;     // peringkat sendiri dari server (di luar 100 teratas juga tampil)
+var _SORT_FB = { score: ['Skor', 'Score'], level: ['Level', 'Level'], credibility: ['Kredibilitas', 'Credibility'],
+    revenue: ['Pendapatan', 'Revenue'], sold: ['Terjual', 'Sold'], reputation: ['Reputasi', 'Reputation'],
+    share: ['Pangsa', 'Share'], recent: ['Terbaru', 'Recent'] };
+function _sortLabel(id) { var f = _SORT_FB[id] || [id, id]; return _tf('pp.lb.sort.' + id, f[0], f[1]); }
 var _seq = 0;
 var _unsubLang = null;
 var _msgFn = null;   // pembuat HTML pesan status (loading/error/kosong) saat ini — agar bisa diterjemahkan ulang
@@ -79,6 +88,7 @@ function _rowHtml(p, i, myId) {
     var sub = [];
     
     if (p.display_name) sub.push(p.display_name);
+    if (p.stat_level) sub.push('Lv ' + p.stat_level);
     
     // PERUBAHAN 1: Menghilangkan emoji 🟢
     if (p.updated_at) {
@@ -128,8 +138,10 @@ function _renderList(root) {
     if (meEl) {
         var idx = -1;
         _rows.forEach(function (r, i) { if (r.id === myId) idx = i; });
-        if (idx >= 0 && _sort !== 'recent') {
-            meEl.textContent = t('pp.lb.my_rank', { n: idx + 1, total: _rows.length });
+        if (_sort !== 'recent' && (idx >= 0 || _myRank)) {
+            var rk = _myRank ? _myRank.rank : idx + 1;
+            var tot = _myRank ? _myRank.total : _rows.length;
+            meEl.textContent = t('pp.lb.my_rank', { n: rk, total: tot });
             meEl.style.display = 'block';
         } else {
             meEl.style.display = 'none';
@@ -154,6 +166,8 @@ async function _load(root) {
         return;
     }
     _rows = res.rows || [];
+    _myRank = null;
+    try { var mr = await SupabaseAdapter.rpcLeaderboardMyRank(_sort); _myRank = (mr && mr.rank) ? mr : null; } catch (e) { _myRank = null; }
     try { _avatars = await resolveAvatarUrls(_rows); } catch (e) { _avatars = {}; }
     if (seq !== _seq) return;
     _renderList(root);
@@ -164,11 +178,12 @@ export async function openPlayerListModal(initialSort) {
     _onlineIds = {};
     _rows = [];
     _avatars = {};
+    _myRank = null;
     if (initialSort && SORTS.some(function (s) { return s.id === initialSort; })) _sort = initialSort;
 
     var chips = SORTS.map(function (s) {
         return '<button type="button" class="pf-chip' + (s.id === _sort ? ' active' : '') + '" data-lb-sort="' + s.id + '">' +
-            esc(t('pp.lb.sort.' + s.id)) + '</button>';
+            esc(_sortLabel(s.id)) + '</button>';
     }).join('');
 
     _msgFn = function () { return _stateMsg(t('pp.lb.loading')); };
@@ -192,7 +207,7 @@ export async function openPlayerListModal(initialSort) {
         if (!root.isConnected || !Modal.isOpen('player-list')) { _cleanup(); return; }
         var titleEl = root.querySelector('[data-lb-title]');
         if (titleEl) titleEl.textContent = '🏆 ' + t('pp.lb.title');
-        root.querySelectorAll('[data-lb-sort]').forEach(function (c) { c.textContent = t('pp.lb.sort.' + c.dataset.lbSort); });
+        root.querySelectorAll('[data-lb-sort]').forEach(function (c) { c.textContent = _sortLabel(c.dataset.lbSort); });
         var closeEl = root.querySelector('[data-lb-close]');
         if (closeEl) closeEl.textContent = t('common.tutup');
         var listEl2 = root.querySelector('[data-lb-list]');

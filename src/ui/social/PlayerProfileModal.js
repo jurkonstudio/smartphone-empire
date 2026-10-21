@@ -7,6 +7,7 @@ import { avatarHtml, resolveAvatarUrls, esc } from './AvatarView.js';
 import { pidTf, copyPublicId } from './PlayerIdView.js';
 import { CloudService } from '../../services/CloudService.js';
 import { openInboxCompose } from '../panels/InboxPanel.js';
+import { credTier, tierName } from '../../systems/PlayerProgression.js';
 // v2.4 — teks waktu/umur akun & label tidak lagi hardcoded Indonesia (ikut bahasa aktif).
 
 var MONTHS = {
@@ -98,6 +99,9 @@ export async function openPlayerProfileModal(profile) {
             _stat(t('pp.stats.sold'), compactNumber(profile.stat_sold)) +
             _stat(t('pp.stats.reputation'), Number(profile.stat_reputation || 0).toFixed(1)) +
             _stat(t('pp.stats.share'), Number(profile.stat_share || 0).toFixed(1) + '%') +
+            _stat(pidTf('pp.lv.label', 'Level'), 'Lv ' + (profile.stat_level || 1)) +
+            _stat(pidTf('pp.cred.label', 'Kredibilitas'), tierName(credTier(Math.round(Number(profile.stat_credibility || 0) * 10)), _lang()) + ' · ' + Number(profile.stat_credibility || 0).toFixed(1)) +
+            _stat(pidTf('pp.score.label', 'Skor'), Number(profile.stat_score || 0).toFixed(1)) +
         '</div>' +
         '<div class="sum-row"><span>⏳ ' + esc(pidTf('pp.view.playtime', _lang() === 'en' ? 'Time Playing' : 'Lama Bermain')) + '</span><b style="color:var(--accent);">' + esc(age) + '</b></div>' +
         '<div class="sum-row"><span>🟢 ' + esc(pidTf('pp.view.last_seen', _lang() === 'en' ? 'Last Active' : 'Terakhir Aktif')) + '</span><b>' + esc(lastSeen) + '</b></div>' +
