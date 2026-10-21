@@ -65,6 +65,7 @@ export class ProductSystem {
             if (!p.status) p.status = 'selling';
             if (typeof p.baseCapacity !== 'number') p.baseCapacity = (p.config && p.config.productionQty) || 5000;
             if (!p.milestonesHit || typeof p.milestonesHit !== 'object') p.milestonesHit = {};
+            if (!Array.isArray(p.pendingProduction)) p.pendingProduction = [];
 
             if (!p.autoRestock || typeof p.autoRestock !== 'object') {
                 p.autoRestock = { enabled: false, thresholdPercent: defThreshold, lastAutoOrderMinute: 0, lastWarnMinute: 0 };
@@ -361,6 +362,7 @@ export class ProductSystem {
         this._chargeWarehouse();
         this._maybeAddRandomReviews();
         this._tickAutoRestock();
+        this._tickPendingProduction();
     }
 
     _tickDevelopment() {
@@ -430,6 +432,7 @@ export class ProductSystem {
             dailySales: [],
             competitorPressure: 0.2,
             milestonesHit: {},
+            pendingProduction: [],
             autoRestock: {
                 enabled: false,
                 thresholdPercent: (BALANCE.products.autoRestock && BALANCE.products.autoRestock.defaultThresholdPercent) || 20,
@@ -718,22 +721,68 @@ export class ProductSystem {
     // ============================================================
     // STOK & PRODUKSI
     // ============================================================
+    // Jeda hari produksi manual (makin banyak unit, makin lama).
+    getManualRestockDays(qty) {
+        var c = (BALANCE.products.manualRestock) || { baseDays: 2, unitsPerExtraDay: 2500, maxDays: 10 };
+        var days = c.baseDays + Math.floor((qty || 0) / c.unitsPerExtraDay);
+        return Math.max(1, Math.min(c.maxDays, days));
+    }
+
     orderProduction(productId, qty) {
         var data = this.state.data;
         var p = data.products.catalog.find(function (x) { return x.id === productId; });
         if (!p) return { ok: false, reason: 'Produk tidak ditemukan.' };
+        if (p.status !== 'selling') return { ok: false, reason: 'Produk sudah tidak dijual.' };
         if (qty < 100) return { ok: false, reason: 'Minimal 100 unit.' };
         var totalCost = p.unitCost * qty + BALANCE.products.productionSetupCost;
         if (!WalletService.canAfford(totalCost)) return { ok: false, reason: 'Uang tidak cukup.' };
 
         WalletService.pay(totalCost, 'restock');
-        p.stock += qty;
-        p.totalProduced += qty;
 
-        this.state.addLog('Produksi tambahan: ' + qty + ' unit "' + p.name + '".', LOG_TYPES.info);
-        ToastService.success('+' + qty + ' unit ' + p.name);
+        var days = this.getManualRestockDays(qty);
+        if (!Array.isArray(p.pendingProduction)) p.pendingProduction = [];
+        p.pendingProduction.push({
+            id: 'po_' + Date.now() + '_' + p.pendingProduction.length,
+            qty: qty,
+            cost: totalCost,
+            days: days,
+            orderedAtMinute: data.time.elapsedGameMinutes,
+            readyAtMinute: data.time.elapsedGameMinutes + days * MINUTES_PER_DAY
+        });
+
+        this.state.addLog('Produksi tambahan dipesan: ' + qty.toLocaleString('en-US') + ' unit "' + p.name + '" (siap ' + days + ' hari lagi).', LOG_TYPES.info);
+        ToastService.success('Produksi ' + p.name + ' selesai dalam ' + days + ' hari.');
+        bus.emit('product:production-ordered', { productId: p.id, name: p.name, qty: qty, days: days });
         bus.emit('state:changed', data);
-        return { ok: true, totalCost: totalCost };
+        return { ok: true, totalCost: totalCost, days: days };
+    }
+
+    // Pesanan manual yang sudah lewat jedanya masuk ke stok.
+    _tickPendingProduction() {
+        var data = this.state.data;
+        var now = data.time.elapsedGameMinutes;
+        var changed = false;
+        for (var i = 0; i < data.products.catalog.length; i++) {
+            var p = data.products.catalog[i];
+            if (!Array.isArray(p.pendingProduction) || p.pendingProduction.length === 0) continue;
+            var still = [];
+            for (var j = 0; j < p.pendingProduction.length; j++) {
+                var o = p.pendingProduction[j];
+                if (o.readyAtMinute <= now) {
+                    p.stock += o.qty;
+                    p.totalProduced += o.qty;
+                    changed = true;
+                    var msg = 'Produksi tambahan "' + p.name + '" tiba: +' + o.qty.toLocaleString('en-US') + ' unit.';
+                    this.state.addLog(msg, LOG_TYPES.success);
+                    ToastService.success(msg);
+                    bus.emit('product:production-arrived', { productId: p.id, name: p.name, qty: o.qty });
+                } else {
+                    still.push(o);
+                }
+            }
+            p.pendingProduction = still;
+        }
+        if (changed) bus.emit('state:changed', data);
     }
 
     _chargeWarehouse() {
@@ -758,6 +807,7 @@ export class ProductSystem {
         p.status = 'discontinued';
         if (fireSale > 0) this.state.addCash(fireSale);
         p.stock = 0;
+        p.pendingProduction = [];
 
         this.state.addLog('"' + p.name + '" dihentikan. Sisa stok dijual $' + fireSale.toLocaleString('en-US') + '.', LOG_TYPES.warning);
         ToastService.info(p.name + ' dihentikan.');
