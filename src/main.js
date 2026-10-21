@@ -61,7 +61,7 @@ import { openCandidateDetailModal, setRecruitFilter, setTeamMode } from './ui/pa
 import { renderHqPanel } from './ui/panels/HqPanel.js';
 import { renderHomePanel, initHomeTabs, refreshHomeSlides } from './ui/panels/HomePanel.js';
 import { mountCampusMap, unmountCampusMap } from './ui/campus/CampusMap.js';
-import { mountOfficeMap, unmountOfficeMap, isOfficeMounted } from './ui/office/OfficeMap.js';
+import { mountOfficeMap, unmountOfficeMap, isOfficeMounted, focusOfficeStaff } from './ui/office/OfficeMap.js';
 import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
 import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
@@ -817,6 +817,8 @@ function bindGlobalClicks() {
 
         var staffCard = e.target.closest('[data-staff-detail]');
         if (staffCard && !e.target.closest('[data-staff-action]')) { e.preventDefault(); openStaffDetailModal({ staffId: staffCard.dataset.staffDetail }); return; }
+        var staffOffice = e.target.closest('[data-staff-office]');
+        if (staffOffice) { e.preventDefault(); bus.emit('advisor:go', { nav: 'team', subtab: 'office', staffId: staffOffice.dataset.staffOffice }); return; }
         var staffAction = e.target.closest('[data-staff-action]');
         if (staffAction) {
             e.preventDefault();
@@ -1156,7 +1158,13 @@ function bindStateEvents() {
             else if (p.nav === 'market') activeMarketSubtab = p.subtab;
             else if (p.nav === 'team') activeHqSubtab = p.subtab;
         }
+        if (p.nav === 'team' && p.mode === 'recruit') setTeamMode('recruit');
         if (p.nav === activeView) renderView(); else navigate(p.nav);
+        // Integrasi peta kantor <-> panel Team
+        if (p.nav === 'team' && p.staffId) {
+            if (p.subtab === 'office') focusOfficeStaff(p.staffId);
+            else if (p.subtab === 'team') openStaffDetailModal({ staffId: p.staffId });
+        }
     });
 
     bus.on('news:published', function (data) {
