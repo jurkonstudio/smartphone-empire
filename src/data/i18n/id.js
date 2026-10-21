@@ -575,6 +575,8 @@ export const id = {
     'prod.order.cost_unit':  'Biaya per unit',
     'prod.order.setup':      'Setup cost',
     'prod.order.total':      'Total estimasi',
+    'prod.order.lead':       'Waktu produksi',
+    'prod.order.days':       'hari',
     'prod.order.submit':     'Pesan',
     'prod.order.cancel':     'Batal',
 
