@@ -46,7 +46,7 @@ export function renderOSPanel(params) {
     const subtabsHtml = `
         <div class="os-subtabs">
             <button class="os-subtab-btn ${_osActiveTab === 'status' ? 'active' : ''}" data-os-tab="status">Status & R&D</button>
-            <button class="os-subtab-btn ${_osActiveTab === 'rancang' ? 'active' : ''}" data-os-tab="rancang">Rancang Update</button>
+            <button class="os-subtab-btn ${_osActiveTab === 'rancang' ? 'active' : ''}" data-os-tab="rancang">${t('osuc.subtab')}</button>
             <button class="os-subtab-btn ${_osActiveTab === 'pengguna' ? 'active' : ''}" data-os-tab="pengguna">Pengguna</button>
             <button class="os-subtab-btn ${_osActiveTab === 'fitur' ? 'active' : ''}" data-os-tab="fitur">Fitur</button>
             <button class="os-subtab-btn ${_osActiveTab === 'bug' ? 'active' : ''}" data-os-tab="bug">Bug</button>
