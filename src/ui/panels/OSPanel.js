@@ -3,6 +3,7 @@ import { escapeHtml } from '../../utils/html.js';
 // ============================================================
 // Sub-tab OS dalam tab Riset.
 // v2028.38 — Tabbed UI (Status, Fitur, Bug, Apps) untuk mengurangi scroll.
+// v2028.39 — Ringkasan Status & R&D di atas tab Status; lencana status di hero ponsel; sub-tab ikut bahasa.
 // ============================================================
 import { renderOsStatBar } from './OsStatBar.js';
 import { OS_FEATURES, OS_LICENSES, BUILTIN_APPS, OS_ERAS, OS_PLATFORM_TRACKS, getOsFeatureById, getLicenseStatsAtYear } from '../../data/os.data.js';
@@ -48,7 +49,7 @@ export function renderOSPanel(params) {
     // --- RENDER SUB-TABS OS ---
     const subtabsHtml = `
         <div class="os-subtabs">
-            <button class="os-subtab-btn ${_osActiveTab === 'status' ? 'active' : ''}" data-os-tab="status">Status & R&D</button>
+            <button class="os-subtab-btn ${_osActiveTab === 'status' ? 'active' : ''}" data-os-tab="status">${t('osrd.tab.status')}</button>
             <button class="os-subtab-btn ${_osActiveTab === 'rancang' ? 'active' : ''}" data-os-tab="rancang">${t('osuc.subtab')}</button>
             <button class="os-subtab-btn ${_osActiveTab === 'pengguna' ? 'active' : ''}" data-os-tab="pengguna">Pengguna</button>
             <button class="os-subtab-btn ${_osActiveTab === 'fitur' ? 'active' : ''}" data-os-tab="fitur">Fitur</button>
@@ -64,7 +65,8 @@ export function renderOSPanel(params) {
         const devStrip = developing ? _renderDevStrip(developing) : '';
         const platformHtml = _renderPlatformSection(osSystem, data);
         const history = _renderVersionHistory(os, currentVersion, osSystem.getAdoption());
-        bodyHtml = renderOsKpiRow(osSystem, data) + hero + devStrip + platformHtml + history;
+        _ensureSumStyles();
+        bodyHtml = _renderRdSummary(osSystem, data) + renderOsKpiRow(osSystem, data) + hero + devStrip + platformHtml + history;
     } 
     else if (_osActiveTab === 'rancang') {
         bodyHtml = renderUpdateCardsTab(osSystem, data);
@@ -180,6 +182,63 @@ function _ensureOsPlatformHandlers(osSystem) {
     });
 }
 
+// ============================================================
+// RINGKASAN STATUS & R&D (v2028.39) — paling atas tab Status
+// ============================================================
+var _sumStyled = false;
+function _ensureSumStyles() {
+    if (_sumStyled || typeof document === 'undefined') return;
+    _sumStyled = true;
+    var st = document.createElement('style');
+    st.id = 'os-rd-sum-style';
+    st.textContent = [
+        '.os-rd-sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 12px;}',
+        '.os-rd-cell{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;padding:10px;min-width:0;}',
+        '.os-rd-cell.accent{border-color:var(--accent);}',
+        '.os-rd-lbl{font-size:10.5px;color:var(--text-tertiary);font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+        '.os-rd-val{font-size:16px;font-weight:800;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+        '.os-rd-cell.up .os-rd-val{color:#43c07a;}.os-rd-cell.down .os-rd-val{color:#ef5350;}',
+        '.os-rd-sub{font-size:11px;color:var(--text-tertiary);margin-top:2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+        '.os-hero-badge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;vertical-align:middle;background:var(--accent-soft);color:var(--accent);}',
+        '.os-hero-badge-dev{background:rgba(245,158,11,.16);color:#d97706;}'
+    ].join('');
+    document.head.appendChild(st);
+}
+
+function _renderRdSummary(osSystem, data) {
+    var os = data.os;
+    if (!os.versions || !os.versions.length) return '';
+    var dev = os.developing;
+    var cs = osSystem.getCurrentStats ? osSystem.getCurrentStats() : null;
+    var own = cs ? (cs.stability + cs.speed + cs.features + cs.security + cs.design) / 5 : 0;
+    var bestLic = 0;
+    OS_LICENSES.forEach(function (l) {
+        if (data.time.currentYear < l.availableFromYear) return;
+        var ls = getLicenseStatsAtYear(l, data.time.currentYear);
+        var a = (ls.stability + ls.speed + ls.features + ls.security + ls.design) / 5;
+        if (a > bestLic) bestLic = a;
+    });
+    var diff = Math.round(own - bestLic);
+    var levels = osSystem.getPlatformLevels ? osSystem.getPlatformLevels() : {};
+    var sum = 0, n = 0;
+    OS_PLATFORM_TRACKS.forEach(function (tr) { sum += levels[tr.id] || 0; n++; });
+    var avg = n ? sum / n : 0;
+    var platBusy = !!(os.platform && os.platform.developing);
+
+    var cells = [
+        { cls: dev ? 'accent' : '', lbl: t('osrd.dev'), val: dev ? escapeHtml(dev.versionString) : t('osrd.idle'),
+          sub: dev ? t('os.dev.features_count', { n: dev.features.length }) : t('osrd.dev_idle_sub') },
+        { cls: platBusy ? 'accent' : '', lbl: t('osrd.platform'), val: (platBusy ? '1' : '0') + '/1',
+          sub: t('osrd.platform_sub', { n: avg.toFixed(1) }) },
+        { cls: diff > 0 ? 'up' : (diff < 0 ? 'down' : ''), lbl: t('osrd.vs_license'), val: (diff > 0 ? '+' : '') + diff,
+          sub: diff >= 0 ? t('osrd.ahead') : t('osrd.behind') }
+    ];
+    return '<div class="os-rd-sum">' + cells.map(function (c) {
+        return '<div class="os-rd-cell ' + c.cls + '"><div class="os-rd-lbl">' + escapeHtml(c.lbl) + '</div>' +
+            '<div class="os-rd-val">' + c.val + '</div><div class="os-rd-sub">' + escapeHtml(c.sub) + '</div></div>';
+    }).join('') + '</div>';
+}
+
 function _renderEmptyState() {
     return '<div class="empty"><div class="empty-ico" style="font-size:0;line-height:0;">' + renderIcon('disc', 48) + '</div>' +
         '<div class="empty-title">' + t('os.empty.title') + '</div>' +
@@ -191,10 +250,13 @@ function _renderHero(os, currentVersion, osSystem) {
     let mockupHtml = '';
     try { mockupHtml = renderOsScreenMockup({ size: 100 }); } catch (e) { console.error('[OSPanel] mockup error:', e); }
     const verLabel = currentVersion ? t('os.hero.version', { v: escapeHtml(currentVersion.versionString) }) : t('os.hero.no_version');
+    const heroBadge = os.developing
+        ? '<span class="os-hero-badge os-hero-badge-dev">' + t('osrd.badge_dev') + '</span>'
+        : (currentVersion ? '<span class="os-hero-badge">' + t('osrd.badge_live') + '</span>' : '');
     const statHtml = currentVersion ? renderOsStatBar(osSystem.getCurrentStats() || currentVersion.stats) : '<div class="os-hero-empty-stat">' + t('os.hero.dev_empty') + '</div>';
     return '<div class="card os-hero"><div class="os-hero-top"><div class="os-hero-screen">' + mockupHtml + '</div>' +
         '<div class="os-hero-info"><div class="os-hero-name">' + escapeHtml(os.name) + '</div>' +
-        '<div class="os-hero-version">' + verLabel + '</div>' +
+        '<div class="os-hero-version">' + verLabel + heroBadge + '</div>' +
         '<button class="btn-primary os-hero-cta" data-os-action="wizard"><span style="font-size:15px;line-height:1;margin-right:4px;">+</span>' + t('os.hero.dev_new') + '</button></div></div>' +
         '<div class="os-hero-stats">' + statHtml + '</div></div>';
 }
