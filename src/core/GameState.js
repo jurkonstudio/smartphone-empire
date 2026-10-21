@@ -73,7 +73,9 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             appsAccumulator: 0,
             licenseChoice: null,
             // R&D Platform OS (v2028.36)
-            platform: { levels: { stability: 0, speed: 0, features: 0, security: 0, design: 0 }, developing: null, totalUpgrades: 0 }
+            platform: { levels: { stability: 0, speed: 0, features: 0, security: 0, design: 0 }, developing: null, totalUpgrades: 0 },
+            // Riwayat adopsi OS per bulan (pengguna aktif & unit terjual)
+            adoption: { history: [] }
         },
 
         products: {
@@ -433,6 +435,7 @@ class GameState {
 
             os: {
                 ...base.os, ...(incoming.os || {}),
+                adoption: { history: Array.isArray(incoming.os && incoming.os.adoption && incoming.os.adoption.history) ? incoming.os.adoption.history : [] },
                 apps: { ...base.os.apps, ...((incoming.os && incoming.os.apps) || {}) },
                 platform: {
                     ...base.os.platform, ...((incoming.os && incoming.os.platform) || {}),
