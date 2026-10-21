@@ -14,6 +14,8 @@ import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
 import { renderSilSlotBoost } from '../components/SilResearchBlock.js';
 import { SiliconService } from '../../systems/SiliconService.js';
+import { renderOsKpiRow, renderOsUsersTab } from './OsUsersPanel.js';
+import { formatUsers } from '../../systems/OsAdoptionModel.js';
 
 
 var STAT_ORDER = ['stability', 'speed', 'features', 'security', 'design'];
@@ -43,6 +45,7 @@ export function renderOSPanel(params) {
     const subtabsHtml = `
         <div class="os-subtabs">
             <button class="os-subtab-btn ${_osActiveTab === 'status' ? 'active' : ''}" data-os-tab="status">Status & R&D</button>
+            <button class="os-subtab-btn ${_osActiveTab === 'pengguna' ? 'active' : ''}" data-os-tab="pengguna">Pengguna</button>
             <button class="os-subtab-btn ${_osActiveTab === 'fitur' ? 'active' : ''}" data-os-tab="fitur">Fitur</button>
             <button class="os-subtab-btn ${_osActiveTab === 'bug' ? 'active' : ''}" data-os-tab="bug">Bug</button>
             <button class="os-subtab-btn ${_osActiveTab === 'apps' ? 'active' : ''}" data-os-tab="apps">Apps & Lisensi</button>
@@ -55,9 +58,12 @@ export function renderOSPanel(params) {
         const hero = _renderHero(os, currentVersion, osSystem);
         const devStrip = developing ? _renderDevStrip(developing) : '';
         const platformHtml = _renderPlatformSection(osSystem, data);
-        const history = _renderVersionHistory(os, currentVersion);
-        bodyHtml = hero + devStrip + platformHtml + history;
+        const history = _renderVersionHistory(os, currentVersion, osSystem.getAdoption());
+        bodyHtml = renderOsKpiRow(osSystem, data) + hero + devStrip + platformHtml + history;
     } 
+    else if (_osActiveTab === 'pengguna') {
+        bodyHtml = renderOsUsersTab(osSystem, data);
+    }
     else if (_osActiveTab === 'fitur') {
         bodyHtml = _renderFeaturesSection(osSystem);
     } 
@@ -185,8 +191,12 @@ function _renderHero(os, currentVersion, osSystem) {
         '<div class="os-hero-stats">' + statHtml + '</div></div>';
 }
 
-function _renderVersionHistory(os, currentVersion) {
+function _renderVersionHistory(os, currentVersion, adoption) {
     if (!os.versions || !os.versions.length) return '';
+    const usersOf = function (vid) {
+        const row = adoption && adoption.versions ? adoption.versions.find(x => x.id === vid) : null;
+        return row ? row.active : 0;
+    };
     const versions = [...os.versions].reverse();
     const rows = versions.map(v => {
         const isCurrent = currentVersion && v.id === currentVersion.id;
@@ -195,7 +205,7 @@ function _renderVersionHistory(os, currentVersion) {
         const moreCount = v.features.length - 3;
         const featureText = featureNames.join(', ') + (moreCount > 0 ? ` +${moreCount} lainnya` : '');
         return `<div class="os-row" style="align-items: flex-start; ${isCurrent ? 'background: var(--accent-soft);' : ''}">
-            <div class="os-row-main"><div class="os-row-title" style="display:flex; justify-content:space-between;"><span>${escapeHtml(v.versionString)}</span><span style="font-size:10px; color:var(--text-tertiary); font-weight:normal;">${dateStr}</span></div>
+            <div class="os-row-main"><div class="os-row-title" style="display:flex; justify-content:space-between;"><span>${escapeHtml(v.versionString)}</span><span style="font-size:10px; color:var(--text-tertiary); font-weight:normal;">${dateStr}${' · ' + formatUsers(usersOf(v.id)) + ' pengguna'}</span></div>
             <div class="os-row-meta" style="margin-top:4px; line-height:1.4;">${escapeHtml(featureText)}</div></div>
             <div class="os-row-actions">${isCurrent ? '<span class="os-status-badge os-status-owned">Aktif</span>' : '<span class="os-status-badge os-status-locked">Usang</span>'}</div></div>`;
     }).join('');
@@ -270,7 +280,7 @@ function _renderAppsSection(osSystem, os) {
         return '<div class="os-row os-app-row"><div class="os-row-main"><div class="os-row-title">' + escapeHtml(a.name) + '</div><div class="os-row-meta"><span>$' + a.devCost.toLocaleString('en-US') + '</span><span class="os-row-dot">·</span><span>' + t('os.apps.appeal_bonus', { n: a.appealBonus }) + '</span></div></div><div class="os-row-actions">' + statusHtml + '</div></div>';
     }).join('');
     return '<div class="section-label"><span class="section-label-text">' + t('os.apps.section', { owned: owned.length, total: total }) + '</span><span class="section-label-line"></span></div>' +
-        '<div class="os-apps-summary"><span>' + t('os.apps.third_party', { n: thirdParty }) + '</span></div><div class="os-list">' + rows + '</div>' +
+        '<div class="os-apps-summary"><span>' + t('os.apps.third_party', { n: thirdParty }) + '</span><span> · +' + osSystem.getAdoption().appBonusPerMonth + ' dari pengguna OS / bulan</span></div><div class="os-list">' + rows + '</div>' +
         '<button class="btn-secondary os-apps-invite" data-os-action="invite-devs">' + t('os.apps.invite') + '</button>';
 }
 
