@@ -17,6 +17,9 @@ import { SiliconService } from '../../systems/SiliconService.js';
 import { renderOsKpiRow, renderOsUsersTab } from './OsUsersPanel.js';
 import { formatUsers } from '../../systems/OsAdoptionModel.js';
 import { renderUpdateCardsTab, resetUpdateDraft } from './OsUpdateCards.js';
+import { TIME_CONFIG } from '../../config/time.config.js';
+
+const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
 
 var STAT_ORDER = ['stability', 'speed', 'features', 'security', 'design'];
@@ -73,7 +76,7 @@ export function renderOSPanel(params) {
         bodyHtml = _renderFeaturesSection(osSystem);
     } 
     else if (_osActiveTab === 'bug') {
-        bodyHtml = _renderBugsSection(os.bugs) || '<div class="empty"><div class="empty-title">Tidak ada bug aktif saat ini.</div></div>';
+        bodyHtml = _renderBugsSection(os.bugs, data.time.elapsedGameMinutes) || '<div class="empty"><div class="empty-title">Tidak ada bug aktif saat ini.</div></div>';
     } 
     else if (_osActiveTab === 'apps') {
         bodyHtml = _renderAppsSection(osSystem, os) + _renderLicensesSection(data);
@@ -227,16 +230,33 @@ function _renderDevStrip(developing) {
         '<button class="btn-danger os-dev-cancel" data-os-action="cancel-deving" style="margin-top: 8px;">' + t('os.dev.cancel') + '</button></div>';
 }
 
-function _renderBugsSection(bugs) {
+function _renderBugsSection(bugs, nowMinute) {
     const active = (bugs || []).filter(b => b.status === 'active' || b.status === 'patching');
     if (!active.length) return '';
     const rows = active.map(function (b) {
         const isPatching = b.status === 'patching';
+        const pct = isPatching ? _patchPercent(b, nowMinute) : 0;
+        const actions = isPatching
+            ? '<span class="os-status-badge os-status-running"><span class="os-spin" aria-hidden="true"></span>' + t('os.bug.patching') + '</span>'
+            : '<button class="os-mini-btn" data-os-action="patch-bug" data-bug-id="' + b.id + '">' + t('os.bug.patch') + '</button>' +
+              '<button class="os-mini-btn os-mini-btn-ghost" data-os-action="ignore-bug" data-bug-id="' + b.id + '">' + t('os.bug.ignore') + '</button>';
+        const bar = isPatching
+            ? '<div class="os-patch-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '"><span style="width:' + pct + '%"></span></div>'
+            : '';
         return '<div class="os-row os-bug-row"><div class="os-row-main"><div class="os-row-title"><span class="os-bug-dot" aria-hidden="true"></span>' + escapeHtml(b.name) + '</div>' +
-            '<div class="os-row-meta"><span class="os-bug-sev">' + t('os.bug.severity', { n: b.severity }) + '</span><span class="os-row-dot">·</span><span>$' + b.patchCost.toLocaleString('en-US') + '</span><span class="os-row-dot">·</span><span>' + b.patchDays + ' </span></div></div>' +
-            '<div class="os-row-actions">' + (isPatching ? '<span class="os-status-badge os-status-running">' + t('os.bug.patching') + '</span>' : '<button class="os-mini-btn" data-os-action="patch-bug" data-bug-id="' + b.id + '">' + t('os.bug.patch') + '</button><button class="os-mini-btn os-mini-btn-ghost" data-os-action="ignore-bug" data-bug-id="' + b.id + '">' + t('os.bug.ignore') + '</button>') + '</div></div>';
+            '<div class="os-row-meta"><span class="os-bug-sev">' + t('os.bug.severity', { n: b.severity }) + '</span><span class="os-row-dot">·</span><span>$' + b.patchCost.toLocaleString('en-US') + '</span><span class="os-row-dot">·</span><span>' + b.patchDays + ' </span></div>' +
+            bar + '</div>' +
+            '<div class="os-row-actions">' + actions + '</div></div>';
     }).join('');
     return '<div class="section-label"><span class="section-label-text">' + t('os.bug.title', { n: active.length }) + '</span><span class="section-label-line"></span></div><div class="os-list">' + rows + '</div>';
+}
+
+// Persentase progres patch (0-100) berdasarkan waktu game yang sudah berjalan.
+function _patchPercent(b, nowMinute) {
+    const total = (b.patchDays || 0) * MINUTES_PER_DAY;
+    if (total <= 0 || typeof b.patchCompleteAtMinute !== 'number' || typeof nowMinute !== 'number') return 0;
+    const left = Math.max(0, b.patchCompleteAtMinute - nowMinute);
+    return Math.max(0, Math.min(100, Math.round((1 - left / total) * 100)));
 }
 
 function _renderFeaturesSection(osSystem) {
@@ -350,3 +370,52 @@ function _statusLabel(st) {
     if (st.status === 'available') return t('os.feature_detail.status_available');
     return st.reason || t('os.feature.badge_locked');
             }
+
+// ============================================================
+// LOADING STATE UNTUK AKSI OS (patch, abaikan, buat app, dll.)
+// Tombol tampil spinner + teks "Memproses…" dulu, baru aksi dijalankan
+// setelah jeda singkat, sehingga perubahan tidak terjadi secara tiba-tiba.
+// ============================================================
+let _osLoadingStylesInjected = false;
+function _ensureOsLoadingStyles() {
+    if (_osLoadingStylesInjected || typeof document === 'undefined') return;
+    _osLoadingStylesInjected = true;
+    const el = document.createElement('style');
+    el.id = 'os-loading-styles';
+    el.textContent = [
+        '.os-spin{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:-1px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:osSpin .7s linear infinite;}',
+        '@keyframes osSpin{to{transform:rotate(360deg);}}',
+        '.os-mini-btn.is-loading{opacity:.8;cursor:progress;pointer-events:none;}',
+        '.os-patch-bar{height:4px;margin-top:6px;border-radius:999px;background:var(--bg-4);overflow:hidden;}',
+        '.os-patch-bar>span{display:block;height:100%;border-radius:inherit;background:var(--warn);transition:width .5s ease;position:relative;overflow:hidden;}',
+        '.os-patch-bar>span::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);animation:osBarShine 1.4s linear infinite;}',
+        '@keyframes osBarShine{from{transform:translateX(-100%);}to{transform:translateX(100%);}}'
+    ].join('\n');
+    document.head.appendChild(el);
+}
+
+// Jalankan `action` setelah `delayMs` sambil menampilkan loading di `btn`.
+// `action` mengembalikan false bila gagal; tombol lalu dikembalikan ke keadaan semula.
+export function runOsActionWithLoading(btn, loadingText, delayMs, action) {
+    if (!btn || btn.getAttribute('data-busy') === '1') return;
+    _ensureOsLoadingStyles();
+    const original = btn.innerHTML;
+    btn.setAttribute('data-busy', '1');
+    btn.setAttribute('aria-busy', 'true');
+    btn.classList.add('is-loading');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="os-spin" aria-hidden="true"></span>' + escapeHtml(loadingText);
+
+    setTimeout(function () {
+        let ok = false;
+        try { ok = action() !== false; } catch (e) { ok = false; console.error(e); }
+        if (btn.isConnected) {
+            btn.removeAttribute('data-busy');
+            btn.removeAttribute('aria-busy');
+            btn.classList.remove('is-loading');
+            btn.disabled = false;
+            if (!ok) btn.innerHTML = original;
+        }
+    }, Math.max(0, delayMs | 0));
+}
+
