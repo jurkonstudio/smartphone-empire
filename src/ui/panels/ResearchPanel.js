@@ -15,6 +15,7 @@ import { RND_TRACKS } from '../../data/research.data.js';
 import { ToastService } from '../../core/ToastService.js';
 import { bus } from '../../core/EventBus.js';
 import { t } from '../../core/LanguageService.js';
+import { nodeName, nodeDesc, nodeNameById, catName } from '../../data/i18n/research-localize.js';
 import { renderSilResearchBlock, renderSilSlotBoost } from '../components/SilResearchBlock.js';
 import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
 import { SiliconService } from '../../systems/SiliconService.js';
@@ -187,7 +188,7 @@ function _renderSlotBar(active, maxSlots, emptyMessage) {
 
     var rows = active.map(function (e) {
         return '<div class="slot-strip-item">' +
-            '<div class="slot-strip-item-head"><span class="slot-strip-item-name">' + escapeHtml(e.name) + '</span><span class="slot-strip-item-pct" data-research-pct="' + escapeHtml(e.nodeId) + '">' + _pctOf(e) + '%</span></div>' +
+            '<div class="slot-strip-item-head"><span class="slot-strip-item-name">' + escapeHtml(nodeNameById(e.nodeId, e.name)) + '</span><span class="slot-strip-item-pct" data-research-pct="' + escapeHtml(e.nodeId) + '">' + _pctOf(e) + '%</span></div>' +
             '<div class="progress slot-strip-item-progress"><div class="progress-bar" data-research-bar="' + escapeHtml(e.nodeId) + '" style="width:' + _pctOf(e) + '%;"></div></div>' +
             '<div class="slot-strip-item-eta" data-research-eta="' + escapeHtml(e.nodeId) + '">' + _etaOf(e) + '</div>' +
             '<div class="slot-strip-item-boost">' + renderSilSlotBoost('tech', e.nodeId, SiliconService.researchFinishCost(e)) + '</div></div>';
@@ -207,7 +208,7 @@ function _renderCategoryBar(sys) {
     var chips = RESEARCH_CATEGORIES.map(function (c) {
         var b = sum.byCategory[c.id] || { done: 0, total: 0 };
         var cls = 'chip ' + (_filterCategory === c.id ? 'active' : '');
-        return '<button class="' + cls + '" data-filter-cat="' + c.id + '">' + renderIcon(c.icon, 12) + ' ' + escapeHtml(c.name) + ' <span class="rs-chip-count">' + b.done + '/' + b.total + '</span></button>';
+        return '<button class="' + cls + '" data-filter-cat="' + c.id + '">' + renderIcon(c.icon, 12) + ' ' + escapeHtml(catName(c)) + ' <span class="rs-chip-count">' + b.done + '/' + b.total + '</span></button>';
     }).join('');
 
     return '<div class="chip-bar"><button class="chip ' + (_filterCategory === 'all' ? 'active' : '') + '" data-filter-cat="all">' + t('timeline.filter.all') + ' <span class="rs-chip-count">' + sum.completed + '/' + sum.total + '</span></button>' + chips + '</div>';
@@ -234,7 +235,7 @@ function _renderToolbar() {
 function _norm(s) { return String(s || '').toLowerCase(); }
 function _searchText(node, cat) {
     var eff = node.effects || {};
-    var parts = [node.name, node.description, cat ? cat.name : '', node.id];
+    var parts = [node.name, node.description, nodeName(node), nodeDesc(node), cat ? catName(cat) : '', node.id];
     (eff.unlocksComponents || []).forEach(function (id) { var c = getComponentById(id); parts.push(c ? c.name : id); });
     (eff.unlocksOsFeatures || []).forEach(function (id) { var f = getOsFeatureById(id); parts.push(f ? f.name : id); });
     Object.keys(eff.statBonuses || {}).forEach(function (k) { parts.push(statLabel(k)); });
@@ -307,7 +308,7 @@ function _renderRecommended(rec, ctx) {
     var n = rec.node; var cat = RESEARCH_CATEGORIES.find(function (c) { return c.id === n.category; }); var eta = ctx.sys.getEtaDays(n);
     var why = rec.dependents > 0 ? _tf('rs.rec.opens', 'Membuka ' + rec.dependents + ' riset lanjutan', { n: rec.dependents }) : _tf('rs.rec.cheap', 'Biaya terjangkau, cepat selesai');
     var note = ''; if (rec.blocker === 'slots') note = '<div class="rs-rec-note">' + escapeHtml(_tf('rs.rec.blocked_slots', 'Slot penuh.')) + '</div>'; else if (rec.blocker === 'cash') note = '<div class="rs-rec-note">' + escapeHtml(_tf('rs.rec.blocked_cash', 'Kas belum cukup.')) + '</div>';
-    return '<div class="rs-rec"><div class="rs-rec-ico" data-node-detail="' + escapeHtml(n.id) + '">' + (cat ? renderIcon(cat.icon, 18) : '') + '</div><div class="rs-rec-main" data-node-detail="' + escapeHtml(n.id) + '"><div class="rs-rec-kicker">' + escapeHtml(_tf('rs.rec.title', 'Rekomendasi')) + '</div><div class="rs-rec-name">' + escapeHtml(n.name) + '</div><div class="rs-rec-why">' + escapeHtml(why) + ' · ' + _money(n.cost) + ' · ~' + escapeHtml(_tf('rs.row.days', eta + ' hari', { n: eta })) + '</div>' + note + '</div><button type="button" class="rs-rec-btn' + (rec.blocker ? ' is-held' : '') + '" data-research-action="start" data-node-id="' + escapeHtml(n.id) + '">' + escapeHtml(_tf('rs.rec.start', 'Mulai')) + '</button></div>';
+    return '<div class="rs-rec"><div class="rs-rec-ico" data-node-detail="' + escapeHtml(n.id) + '">' + (cat ? renderIcon(cat.icon, 18) : '') + '</div><div class="rs-rec-main" data-node-detail="' + escapeHtml(n.id) + '"><div class="rs-rec-kicker">' + escapeHtml(_tf('rs.rec.title', 'Rekomendasi')) + '</div><div class="rs-rec-name">' + escapeHtml(nodeName(n)) + '</div><div class="rs-rec-why">' + escapeHtml(why) + ' · ' + _money(n.cost) + ' · ~' + escapeHtml(_tf('rs.row.days', eta + ' hari', { n: eta })) + '</div>' + note + '</div><button type="button" class="rs-rec-btn' + (rec.blocker ? ' is-held' : '') + '" data-research-action="start" data-node-id="' + escapeHtml(n.id) + '">' + escapeHtml(_tf('rs.rec.start', 'Mulai')) + '</button></div>';
 }
 
 function _renderNodeGroup(label, items, ctx) {
@@ -328,7 +329,7 @@ function _renderRow(it, ctx) {
     var pct = null, eta = null;
     if (it.status === 'running') { var entry = (ctx.active || []).find(function (e) { return e.nodeId === n.id; }); if (entry) { pct = _pctOf(entry); eta = _etaOf(entry); } }
     var durLabel = null; if (ctx.speed > 1.05) durLabel = _tf('rs.row.days_eta', n.durationDays + ' hari (~' + Math.ceil(n.durationDays / ctx.speed) + ' hari efektif)', { n: n.durationDays, eta: Math.ceil(n.durationDays / ctx.speed) });
-    return renderTechNodeRow({ node: n, status: it.status, categoryInfo: cat, detailAttr: 'data-node-detail', actionAttr: 'data-research-action', progressPct: pct, progressEta: eta, reason: it.reason, blocker: it.blocker, affordable: WalletService.canAfford(n.cost), recommended: ctx.recId === n.id && (it.status === 'available' || it.blocker === 'slots' || it.blocker === 'cash'), description: (it.status === 'done' || it.status === 'running') ? '' : n.description, durationLabel: durLabel });
+    return renderTechNodeRow({ node: n, status: it.status, categoryInfo: cat, detailAttr: 'data-node-detail', actionAttr: 'data-research-action', progressPct: pct, progressEta: eta, reason: it.reason, blocker: it.blocker, affordable: WalletService.canAfford(n.cost), recommended: ctx.recId === n.id && (it.status === 'available' || it.blocker === 'slots' || it.blocker === 'cash'), description: (it.status === 'done' || it.status === 'running') ? '' : nodeDesc(n), durationLabel: durLabel });
 }
 
 let _handlersBound = false;
@@ -411,14 +412,14 @@ export function openNodeDetailModal(params) {
     (eff.unlocksOsFeatures || []).forEach(function (id) { const f = getOsFeatureById(id); chips.push('<span class="rs-tag rs-tag-os">' + escapeHtml(f ? f.name : id) + '</span>'); });
     const unlocksHtml = chips.length ? '<div class="rs-block"><div class="rs-block-title">' + escapeHtml(_tf('rs.detail.unlocks', 'Membuka akses')) + '</div><div class="rs-tags">' + chips.join('') + '</div></div>' : '';
     const prereqs = node.prerequisites || [];
-    const prereqHtml = '<div class="rs-block"><div class="rs-block-title">' + t('research.node.prereq') + '</div>' + (prereqs.length ? prereqs.map(function (p) { const pn = getNodeById(p); const ok = done.includes(p); return '<div class="rs-link ' + (ok ? 'is-ok' : 'is-todo') + '"><i>' + (ok ? '✓' : '○') + '</i><span>' + escapeHtml(pn ? pn.name : p) + '</span>' + (pn ? '<em>' + pn.minYear + '</em>' : '') + '</div>'; }).join('') : '<div class="rs-muted">' + t('research.node.prereq_none') + '</div>') + '</div>';
+    const prereqHtml = '<div class="rs-block"><div class="rs-block-title">' + t('research.node.prereq') + '</div>' + (prereqs.length ? prereqs.map(function (p) { const pn = getNodeById(p); const ok = done.includes(p); return '<div class="rs-link ' + (ok ? 'is-ok' : 'is-todo') + '"><i>' + (ok ? '✓' : '○') + '</i><span>' + escapeHtml(pn ? nodeName(pn) : p) + '</span>' + (pn ? '<em>' + pn.minYear + '</em>' : '') + '</div>'; }).join('') : '<div class="rs-muted">' + t('research.node.prereq_none') + '</div>') + '</div>';
     const deps = researchSystem.getDependents(nodeId);
-    const depHtml = '<div class="rs-block"><div class="rs-block-title">' + escapeHtml(_tf('rs.detail.opens', 'Membuka riset')) + '</div>' + (deps.length ? deps.map(function (d) { return '<div class="rs-link is-next"><i>→</i><span>' + escapeHtml(d.name) + '</span><em>' + d.minYear + '</em></div>'; }).join('') : '<div class="rs-muted">' + escapeHtml(_tf('rs.detail.opens_none', 'Ujung jalur.')) + '</div>') + '</div>';
+    const depHtml = '<div class="rs-block"><div class="rs-block-title">' + escapeHtml(_tf('rs.detail.opens', 'Membuka riset')) + '</div>' + (deps.length ? deps.map(function (d) { return '<div class="rs-link is-next"><i>→</i><span>' + escapeHtml(nodeName(d)) + '</span><em>' + d.minYear + '</em></div>'; }).join('') : '<div class="rs-muted">' + escapeHtml(_tf('rs.detail.opens_none', 'Ujung jalur.')) + '</div>') + '</div>';
     const canStart = st.status === 'available'; const held = st.status === 'locked' && (st.blocker === 'slots' || st.blocker === 'cash');
     const actionBtn = canStart ? `<button class="btn-primary" data-research-action="start" data-node-id="${escapeHtml(nodeId)}" style="width:100%;margin-top:12px;">${t('research.node.start')}</button>` : st.status === 'running' ? `<button class="btn-danger" data-research-action="cancel" data-node-id="${escapeHtml(nodeId)}" style="width:100%;margin-top:12px;">${t('research.node.cancel')}</button>` : held ? `<button class="btn-secondary" data-research-action="start" data-node-id="${escapeHtml(nodeId)}" style="width:100%;margin-top:12px;opacity:0.7;">${escapeHtml(st.reason || '')}</button>` : `<button class="btn-secondary" disabled style="width:100%;margin-top:12px;opacity:0.5;">${escapeHtml(st.status === 'done' ? _tf('rs.status.done', 'Selesai') : (st.reason || t('research.node.not_available')))}</button>`;
     const html = `
-        <div class="rs-modal-head"><span class="rs-modal-ico">${cat ? renderIcon(cat.icon, 20) : ''}</span><div class="rs-modal-titles"><div class="modal-title" style="margin:0;">${escapeHtml(node.name)}</div><div class="rs-muted">${cat ? escapeHtml(cat.name) : escapeHtml(node.category)} · T${node.tier}</div></div>${pill}</div>
-        <div class="modal-sub">${escapeHtml(node.description)}</div>${kv}${finance}${progressHtml}${bonusHtml}${unlocksHtml}${prereqHtml}${depHtml}
+        <div class="rs-modal-head"><span class="rs-modal-ico">${cat ? renderIcon(cat.icon, 20) : ''}</span><div class="rs-modal-titles"><div class="modal-title" style="margin:0;">${escapeHtml(nodeName(node))}</div><div class="rs-muted">${cat ? escapeHtml(cat.name) : escapeHtml(node.category)} · T${node.tier}</div></div>${pill}</div>
+        <div class="modal-sub">${escapeHtml(nodeDesc(node))}</div>${kv}${finance}${progressHtml}${bonusHtml}${unlocksHtml}${prereqHtml}${depHtml}
         ${st.reason && !held ? '<div class="sum-row" style="margin-top:8px;"><span>' + t('research.node.status') + '</span><b>' + escapeHtml(st.reason) + '</b></div>' : ''}
         ${renderSilResearchBlock('tech', nodeId)}${actionBtn}<button class="btn-secondary" data-modal-close style="width:100%;margin-top:8px;">${t('common.close')}</button>
     `;

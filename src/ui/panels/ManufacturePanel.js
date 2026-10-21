@@ -10,6 +10,7 @@ import { CHIP_RESEARCH_CATEGORIES, CHIP_RESEARCH_NODES } from '../../data/chip-r
 import { FAB_UNLOCK_YEAR, FAB_UNLOCK_CATEGORIES, FAB_MAX_EARLY_YEARS } from '../../core/ChipResearchSystem.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
+import { plantName, plantDesc, plantLevelName } from '../../data/i18n/research-localize.js';
 import { PLANT_MIN_ORDER } from '../../data/material-plants.data.js';
 
 // Ukuran batch default untuk tombol "Produksi" (dibatasi kapasitas pabrik).
@@ -64,7 +65,7 @@ function _renderPlantCard(sys, s, cash) {
             esc(_tf('mf.plant.cancel', 'Batalkan')) + '</button>';
     } else if (!s.built) {
         if (!s.unlock.ok) {
-            status = s.unlock.reason;
+            status = s.unlock.reasonKey ? t(s.unlock.reasonKey, s.unlock.reasonVars) : s.unlock.reason;
         } else {
             status = _tf('mf.plant.not_built', 'Belum dibangun') + ' · ' + _money(s.nextInfo.cost) + ' · ' + s.nextInfo.durationDays + ' ' + _tf('mf.plant.days', 'hari');
             var canBuild = cash >= s.nextInfo.cost;
@@ -74,7 +75,7 @@ function _renderPlantCard(sys, s, cash) {
         }
     } else {
         var li = s.levelInfo;
-        status = 'Level ' + s.level + ' · ' + li.name + ' · ' + _tf('mf.plant.capacity', 'Kapasitas') + ' ' + _num(li.capacityMonthly) + '/' + _tf('mf.plant.month', 'bulan') +
+        status = 'Level ' + s.level + ' · ' + plantLevelName(pt, s.level, li.name) + ' · ' + _tf('mf.plant.capacity', 'Kapasitas') + ' ' + _num(li.capacityMonthly) + '/' + _tf('mf.plant.month', 'bulan') +
             ' · ' + _tf('mf.plant.discount', 'Diskon') + ' ' + Math.round(li.discount * 100) + '%';
         if (s.nextInfo) {
             var canUp = cash >= s.nextInfo.cost && !s.upgrade;
@@ -84,8 +85,8 @@ function _renderPlantCard(sys, s, cash) {
     }
 
     rows.push('<div class="mf-row"><div class="mf-ico">' + renderIcon(pt.icon || 'settings', 18) + '</div>' +
-        '<div class="mf-main"><div class="mf-name">' + esc(pt.name) + '</div>' +
-        '<div class="mf-desc">' + esc(pt.description) + '</div>' +
+        '<div class="mf-main"><div class="mf-name">' + esc(plantName(pt)) + '</div>' +
+        '<div class="mf-desc">' + esc(plantDesc(pt)) + '</div>' +
         '<div class="mf-reason">' + esc(status) + '</div></div>' +
         (action ? '<div class="mf-buy">' + action + '</div>' : '') + '</div>');
 
@@ -127,7 +128,7 @@ function _renderPlantCard(sys, s, cash) {
         });
     }
 
-    return '<div class="section-label"><span class="section-label-text">' + esc(pt.name) + '</span><span class="section-label-line"></span></div>' +
+    return '<div class="section-label"><span class="section-label-text">' + esc(plantName(pt)) + '</span><span class="section-label-line"></span></div>' +
         '<div class="mf-list">' + rows.join('') + '</div>';
 }
 
