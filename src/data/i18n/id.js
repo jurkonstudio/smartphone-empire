@@ -113,6 +113,7 @@ export const id = {
     'settings.edit_name.error_too_short': 'Nama minimal 2 karakter.',
     'settings.edit_name.error_competitor':'Nama ini sudah dipakai kompetitor. Pilih nama lain.',
     'settings.edit_name.error_brand':     'Nama ini mirip merek terkenal. Pilih nama lain.',
+    'settings.edit_name.error_public_figure': 'Nama ini mirip tokoh publik atau politik terkenal. Pilih nama lain.',
     'settings.edit_name.error_profanity': 'Nama mengandung kata yang tidak pantas. Pilih nama lain.',
     'settings.edit_name.success':  'Nama diperbarui.',
 
@@ -815,6 +816,7 @@ export const id = {
     'onb.name.error_too_long':  'Nama maksimal 24 karakter.',
     'onb.name.error_competitor':'Nama ini sudah dipakai kompetitor. Pilih nama lain.',
     'onb.name.error_brand':     'Nama ini mirip merek terkenal. Pilih nama lain.',
+    'onb.name.error_public_figure': 'Nama ini mirip tokoh publik atau politik terkenal. Pilih nama lain.',
     'onb.name.error_taken':     'Nama perusahaan ini sudah dipakai pemain lain. Pilih nama lain.',
     'onb.name.checking':        'Memeriksa nama...',
     'onb.name.error_profanity': 'Nama mengandung kata yang tidak pantas. Pilih nama lain.',
