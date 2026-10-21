@@ -1,25 +1,28 @@
 // FILE: src/systems/StockSystem.js
 // ============================================================
 // StockSystem — mesin harga saham + trading.
-// v2027.2b — fix: totalUSD & proceedsUSD dibulatkan (no pecahan sen).
+// v2027.4b — bursa yang hidup:
+//   - Aksi beli/jual pemain MENGGERAKKAN harga emiten (dampak pasar).
+//     Eksekusi memakai slippage, jadi beli-lalu-jual langsung rugi
+//     sedikit (tidak bisa jadi celah manipulasi).
+//   - Dampak itu meluruh per bulan lewat sistem impuls yang sama
+//     dengan berita kompetitor.
+//   - Fluktuasi bulanan deterministik per emiten (noise seeded dari
+//     id+tahun+bulan), besarnya ditentukan tier ukuran dan rezim pasar.
+//     Save yang sama selalu menghasilkan harga yang sama.
+//   - Indeks dunia ikut bergerak kecil tiap bulan.
+//   - getSeries() memakai noise yang sama, titik terakhir = harga aktual.
 //
 // Semua nilai disimpan dalam USD. Harga lokal dikonversi
 // memakai getCurrencyRateToUSD(currency, year).
 //
 // AI hook siap: _projectFuturePrice() bisa diganti panggilan AI.
-//
-// v2027.4 (sesi 1) — Penyesuaian ke indeks bursa:
-//   Berita rilis kompetitor ('news:published', articleType
-//   'competitor_release') menghasilkan impuls harga untuk saham
-//   kompetitor itu. Besarnya dihitung MarketIndexAdjuster
-//   (rezim pasar + beta terhadap indeks), meluruh tiap bulan.
-//   Harga akhir = harga dasar historis x (1 + overlay).
 // ============================================================
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
 import {
     STOCKS, MARKET_INDICES, getStocksForYear,
-    getStockById, getCurrencyRateToUSD
+    getStockById, getCurrencyRateToUSD, getStockTier
 } from '../data/stocks.data.js';
 import {
     computeNewsImpact, findStocksForCompetitor, getOverlay,
@@ -30,6 +33,51 @@ import { WalletService } from './WalletService.js';
 var MAX_HISTORY = 60;
 var MAX_TRANSACTIONS = 20;
 var MAX_NEWS_REACTIONS = 20;
+
+// Dampak satu transaksi: impact = k x liq(tier) x sqrt(nilai / ref)
+var TRADE_CFG = {
+    k: 0.0015,
+    refUSD: 10000,
+    maxImpact: 0.03          // satu transaksi maksimal menggeser 3%
+};
+
+// Volatilitas bulanan per tier (fraksi) dan likuiditas (pengali dampak).
+var TIER_CFG = {
+    mega:  { vol: 0.020, liq: 1.0 },
+    large: { vol: 0.030, liq: 1.6 },
+    mid:   { vol: 0.045, liq: 2.8 },
+    small: { vol: 0.060, liq: 4.5 }
+};
+
+// Pengali volatilitas per rezim pasar: krisis lebih liar.
+var REGIME_VOL = { euphoria: 1.3, bull: 1.1, neutral: 1.0, bear: 1.4, crash: 2.0 };
+
+var INDEX_VOL = 0.008;
+
+// ------------------------------------------------------------
+// Helper deterministik (tanpa Math.random agar save konsisten)
+// ------------------------------------------------------------
+function _hash(str) {
+    var h = 2166136261;
+    for (var i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+}
+
+// Nilai pseudo-acak stabil dalam rentang [-1, 1] untuk satu seed.
+function _noise(seed) {
+    var h = _hash(seed);
+    h ^= h >>> 13;
+    h = Math.imul(h, 0x5bd1e995);
+    h ^= h >>> 15;
+    return ((h >>> 0) / 4294967295) * 2 - 1;
+}
+
+function _tierCfg(stockId) {
+    return TIER_CFG[getStockTier(stockId)] || TIER_CFG.large;
+}
 
 export class StockSystem {
     constructor(gameState) {
@@ -93,7 +141,7 @@ export class StockSystem {
     }
 
     // ============================================================
-    // PROYEKSI setelah 2026 (hook AI)
+    // PROYEKSI setelah tahun data terakhir (hook AI)
     // ============================================================
     _projectFuturePrice(stock, year, month) {
         var key = stock.id + ':' + year + ':' + month;
@@ -154,12 +202,24 @@ export class StockSystem {
     }
 
     // ============================================================
+    // NOISE / VOLATILITAS HIDUP
+    // ============================================================
+    _applyNoise(stock, price, year, month, regimeId) {
+        var cfg = _tierCfg(stock.id);
+        var vol = cfg.vol * (REGIME_VOL[regimeId] || 1);
+        var n = _noise('px:' + stock.id + ':' + year + ':' + month);
+        return price * (1 + n * vol);
+    }
+
+    // ============================================================
     // REKALKULASI BULANAN
     // ============================================================
-    // Hitung harga bulan ini: harga dasar historis x (1 + overlay berita).
+    // Harga bulan ini: harga dasar historis x (1 + overlay berita & pemain)
+    // x (1 + noise bulanan).
     _computePrices(year, month) {
         var d = this.state.data;
         var impulses = d.stocks.newsImpulses;
+        var regimeId = getMarketRegime(year, month).id;
         var out = {};
         STOCKS.forEach(function (s) {
             if (s.isPlayer) return;
@@ -179,10 +239,27 @@ export class StockSystem {
             if (price == null) return;
 
             var overlay = getOverlay(impulses, s.id, year, month);
-            if (overlay) price = Math.round(price * (1 + overlay) * 100) / 100;
-            out[s.id] = price;
+            if (overlay) price = price * (1 + overlay);
+
+            price = this._applyNoise(s, price, year, month, regimeId);
+            out[s.id] = Math.round(price * 100) / 100;
         }.bind(this));
         return out;
+    }
+
+    // Hitung ulang harga bulan berjalan dan sinkronkan riwayat bulan ini.
+    _refreshPrices() {
+        var d = this.state.data;
+        var year = d.time.currentYear;
+        var month = d.time.currentMonth;
+        var prices = this._computePrices(year, month);
+        d.stocks.prices = prices;
+        var h0 = d.stocks.history[0];
+        if (h0 && h0.year === year && h0.month === month) {
+            h0.prices = Object.assign({}, prices);
+        }
+        bus.emit('stocks:updated', { prices: prices, indices: d.stocks.indices });
+        return prices;
     }
 
     _recompute() {
@@ -193,17 +270,22 @@ export class StockSystem {
         // Buang impuls yang sudah meluruh sebelum menghitung harga.
         d.stocks.newsImpulses = pruneImpulses(d.stocks.newsImpulses, year, month);
 
+        var regime = getMarketRegime(year, month);
         var newPrices = this._computePrices(year, month);
 
         var newIndices = {};
         MARKET_INDICES.forEach(function (idx) {
             var price = this._interpolate(idx.valueByYear, year, month);
-            if (price != null) newIndices[idx.id] = price;
+            if (price != null) {
+                var n = _noise('ix:' + idx.id + ':' + year + ':' + month);
+                var mult = REGIME_VOL[regime.id] || 1;
+                newIndices[idx.id] = Math.round(price * (1 + n * INDEX_VOL * mult) * 100) / 100;
+            }
         }.bind(this));
 
         d.stocks.prices = newPrices;
         d.stocks.indices = newIndices;
-        d.stocks.regime = getMarketRegime(year, month);
+        d.stocks.regime = regime;
 
         d.stocks.history.unshift({
             year: year,
@@ -262,14 +344,7 @@ export class StockSystem {
                 d.stocks.newsReactions.length = MAX_NEWS_REACTIONS;
             }
 
-            // Perbarui harga bulan berjalan segera (tanpa menambah riwayat baru).
-            var prices = this._computePrices(year, month);
-            d.stocks.prices = prices;
-            var h0 = d.stocks.history[0];
-            if (h0 && h0.year === year && h0.month === month) {
-                h0.prices = Object.assign({}, prices);
-            }
-            bus.emit('stocks:updated', { prices: prices, indices: d.stocks.indices });
+            this._refreshPrices();
         } catch (err) {
             console.warn('[StockSystem] _onNewsPublished error:', err);
         }
@@ -289,6 +364,42 @@ export class StockSystem {
     getBeta(stockId) {
         var stock = getStockById(stockId);
         return getStockBeta(stock, this.state.data.time.currentYear);
+    }
+
+    // ============================================================
+    // DAMPAK AKSI PEMAIN
+    // ============================================================
+    // Dampak (fraksi) satu transaksi senilai notionalUSD.
+    _tradeImpact(stockId, notionalUSD) {
+        var cfg = _tierCfg(stockId);
+        var raw = TRADE_CFG.k * cfg.liq * Math.sqrt(Math.max(0, notionalUSD) / TRADE_CFG.refUSD);
+        raw = Math.min(TRADE_CFG.maxImpact, raw);
+        return Math.round(raw * 100000) / 100000;
+    }
+
+    // Pratinjau dampak untuk UI sebelum pemain menekan beli/jual.
+    previewTradeImpact(stockId, shares, side) {
+        var stock = getStockById(stockId);
+        if (!stock) return 0;
+        var priceUSD = this.getPriceUSD(stockId);
+        if (priceUSD <= 0) return 0;
+        var impact = this._tradeImpact(stockId, priceUSD * Math.max(0, Math.floor(shares)));
+        return side === 'sell' ? -impact : impact;
+    }
+
+    // Catat dampak transaksi sebagai impuls yang meluruh, lalu hitung ulang harga.
+    _applyTradeImpact(stockId, signedPct) {
+        if (!signedPct) return;
+        var d = this.state.data;
+        d.stocks.newsImpulses.push({
+            key: 'trade:' + stockId + ':' + Date.now() + ':' + Math.floor(Math.random() * 100000),
+            stockId: stockId,
+            y: d.time.currentYear,
+            m: d.time.currentMonth,
+            pct: signedPct
+        });
+        this._refreshPrices();
+        bus.emit('stocks:trade', { stockId: stockId, pct: signedPct });
     }
 
     // ============================================================
@@ -335,9 +446,15 @@ export class StockSystem {
             var mLimit = (y === endY) ? endM : 12;
             for (var m = 1; m <= mLimit; m++) {
                 var v = this._interpolate(stock.priceByYear, y, m);
-                if (v != null) out.push({ year: y, month: m, value: v });
+                if (v == null) continue;
+                // Noise tanpa rezim (netral) agar grafik historis tetap konsisten.
+                v = this._applyNoise(stock, v, y, m, 'neutral');
+                out.push({ year: y, month: m, value: Math.round(v * 100) / 100 });
             }
         }
+        // Titik terakhir = harga aktual (sudah termasuk berita & aksi pemain).
+        var cur = this.getPrice(stockId);
+        if (out.length && cur) out[out.length - 1].value = cur;
         return out;
     }
 
@@ -353,6 +470,7 @@ export class StockSystem {
     // ============================================================
     // TRADING — beli/jual
     // ============================================================
+    // Eksekusi dengan slippage: beli di atas harga pasar, jual di bawahnya.
 
     getPriceUSD(stockId) {
         var stock = getStockById(stockId);
@@ -383,9 +501,10 @@ export class StockSystem {
         if (!localPrice) return { ok: false, reason: 'Harga tidak tersedia.' };
 
         var rate = getCurrencyRateToUSD(stock.currency, year);
-        var priceUSD = localPrice * rate;
-        // [v2027.2b] Bulatkan supaya cash tetap integer.
-        var totalUSD = Math.round(priceUSD * shares);
+        var marketUSD = localPrice * rate;
+        var impact = this._tradeImpact(stockId, marketUSD * shares);
+        var execUSD = marketUSD * (1 + impact);
+        var totalUSD = Math.round(execUSD * shares);
 
         if (!WalletService.canAfford(totalUSD)) {
             return { ok: false, reason: 'Uang tidak cukup. Butuh $' + totalUSD.toLocaleString('en-US') + '.' };
@@ -411,7 +530,7 @@ export class StockSystem {
             d.stocks.portfolio.push({
                 stockId: stockId,
                 shares: shares,
-                avgBuyPriceUSD: priceUSD,
+                avgBuyPriceUSD: execUSD,
                 totalCostUSD: totalUSD,
                 firstBuyDate: { y: year, m: d.time.currentMonth, d: d.time.currentDay }
             });
@@ -423,15 +542,20 @@ export class StockSystem {
             ticker: stock.ticker,
             shares: shares,
             priceLocal: localPrice,
-            priceUSD: priceUSD,
+            priceUSD: execUSD,
+            marketPriceUSD: marketUSD,
+            impactPct: impact,
             totalUSD: totalUSD,
             currency: stock.currency,
             year: year, month: d.time.currentMonth, day: d.time.currentDay
         });
 
+        // Aksi beli mendorong harga naik.
+        this._applyTradeImpact(stockId, impact);
+
         bus.emit('stocks:updated', { prices: d.stocks.prices });
         bus.emit('state:changed', d);
-        return { ok: true, shares: shares, totalUSD: totalUSD };
+        return { ok: true, shares: shares, totalUSD: totalUSD, impactPct: impact };
     }
 
     sellStock(stockId, shares) {
@@ -458,17 +582,18 @@ export class StockSystem {
         if (!localPrice) return { ok: false, reason: 'Harga tidak tersedia.' };
 
         var rate = getCurrencyRateToUSD(stock.currency, year);
-        var priceUSD = localPrice * rate;
-        // [v2027.2b] Bulatkan supaya cash tetap integer.
-        var proceedsUSD = Math.round(priceUSD * shares);
+        var marketUSD = localPrice * rate;
+        var impact = this._tradeImpact(stockId, marketUSD * shares);
+        var execUSD = marketUSD * (1 - impact);
+        var proceedsUSD = Math.round(execUSD * shares);
 
         this.state.addCash(proceedsUSD);
 
+        var costPerShare = entry.totalCostUSD / entry.shares;
         entry.shares -= shares;
         if (entry.shares <= 0) {
             d.stocks.portfolio.splice(idx, 1);
         } else {
-            var costPerShare = entry.totalCostUSD / (entry.shares + shares);
             entry.totalCostUSD = costPerShare * entry.shares;
             entry.avgBuyPriceUSD = costPerShare;
         }
@@ -479,15 +604,20 @@ export class StockSystem {
             ticker: stock.ticker,
             shares: shares,
             priceLocal: localPrice,
-            priceUSD: priceUSD,
+            priceUSD: execUSD,
+            marketPriceUSD: marketUSD,
+            impactPct: -impact,
             totalUSD: proceedsUSD,
             currency: stock.currency,
             year: year, month: d.time.currentMonth, day: d.time.currentDay
         });
 
+        // Aksi jual menekan harga turun.
+        this._applyTradeImpact(stockId, -impact);
+
         bus.emit('stocks:updated', { prices: d.stocks.prices });
         bus.emit('state:changed', d);
-        return { ok: true, shares: shares, totalUSD: proceedsUSD };
+        return { ok: true, shares: shares, totalUSD: proceedsUSD, impactPct: -impact };
     }
 
     _pushTransaction(tx) {
