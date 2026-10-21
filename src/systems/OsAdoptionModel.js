@@ -1,11 +1,17 @@
-// FILE: src/systems/OsAdoptionModel.js  (BARU)
+// FILE: src/systems/OsAdoptionModel.js  (REPLACE — v2: retensi berbasis waktu)
 // ============================================================
 // Model adopsi OS — berapa banyak pengguna yang memakai OS kita.
 //
 // Sumber data: produk yang memakai OS sendiri (config.osOptionId = 'own:<versionId>').
 //   - shipped = unit terjual (product.totalSold) dari produk ber-OS sendiri.
-//   - active  = shipped x retensi versi. Versi terbaru paling banyak dipakai,
-//               versi lama ditinggalkan pengguna.
+//   - active  = shipped x retensi tier x faktor umur.
+//       · Retensi tier: versi terbaru paling banyak dipakai, versi lama ditinggalkan.
+//       · Faktor umur (BARU): pengguna juga menyusut seiring waktu sejak versi rilis.
+//         Setiap `halfLifeYears` tahun, sisa pengguna menjadi separuhnya,
+//         dengan batas bawah `ageFloor` agar tidak pernah nol mendadak.
+//
+// Dengan faktor umur, angka pengguna tidak lagi menumpuk selamanya.
+// Versi dari awal permainan hanya menyisakan sebagian kecil di akhir permainan.
 //
 // Integrasi ke sistem game:
 //   - OSSystem menambah aplikasi pihak ketiga tiap bulan sebanding dengan
@@ -21,6 +27,10 @@ export const ADOPTION_CONFIG = {
         current: 0.92,              // versi terbaru
         previous: 0.60,             // satu versi sebelumnya
         older: 0.30                 // versi lebih lama
+    },
+    decay: {
+        halfLifeYears: 6,           // setiap 6 tahun sejak rilis, sisa pengguna separuh
+        ageFloor: 0.05              // batas bawah faktor umur
     },
     appsUsersPerBonus: 100000,      // setiap 100 rb pengguna aktif...
     appsBonusMax: 20                // ...menambah 1 aplikasi/bulan, maks. +20
@@ -38,6 +48,14 @@ export function getVersionTier(versions, currentVersionId, versionId) {
     return 'older';
 }
 
+// Faktor umur versi: 1.0 saat baru rilis, turun setengah tiap halfLifeYears.
+export function getAgeFactor(releaseYear, nowYear) {
+    if (!releaseYear || !nowYear) return 1;
+    var age = Math.max(0, nowYear - releaseYear);
+    var f = Math.pow(0.5, age / ADOPTION_CONFIG.decay.halfLifeYears);
+    return Math.max(ADOPTION_CONFIG.decay.ageFloor, f);
+}
+
 export function getEcosystemAppBonus(activeUsers) {
     var n = Math.floor((activeUsers || 0) / ADOPTION_CONFIG.appsUsersPerBonus);
     return Math.min(ADOPTION_CONFIG.appsBonusMax, Math.max(0, n));
@@ -46,16 +64,22 @@ export function getEcosystemAppBonus(activeUsers) {
 // Menghitung adopsi dari state game. Tidak mengubah data.
 export function computeOsAdoption(data) {
     var os = (data && data.os) || {};
+    var nowYear = (data && data.time && data.time.currentYear) || null;
     var versions = Array.isArray(os.versions) ? os.versions : [];
     var currentId = os.currentVersionId || (versions.length ? versions[versions.length - 1].id : null);
     var products = (data && data.products && Array.isArray(data.products.catalog)) ? data.products.catalog : [];
 
     var byVersion = {};
     versions.forEach(function (v) {
+        // Versi tanpa tanggal rilis dianggap rilis tahun ini (faktor umur 1).
+        var relYear = (v.releasedAt && v.releasedAt.year) || nowYear;
+        var age = getAgeFactor(relYear, nowYear);
         byVersion[v.id] = {
             id: v.id,
             versionString: v.versionString,
+            releaseYear: relYear,
             tier: getVersionTier(versions, currentId, v.id),
+            ageFactor: age,
             shipped: 0,
             active: 0
         };
@@ -71,7 +95,8 @@ export function computeOsAdoption(data) {
             var vid = opt.slice(4);
             var entry = byVersion[vid];
             var tier = entry ? entry.tier : 'older';
-            var act = Math.round(sold * ADOPTION_CONFIG.retention[tier]);
+            var factor = entry ? entry.ageFactor : getAgeFactor(nowYear, nowYear);
+            var act = Math.round(sold * ADOPTION_CONFIG.retention[tier] * factor);
             if (entry) { entry.shipped += sold; entry.active += act; }
             shipped += sold;
             active += act;
@@ -92,7 +117,9 @@ export function computeOsAdoption(data) {
         return {
             id: e.id,
             versionString: e.versionString,
+            releaseYear: e.releaseYear,
             tier: e.tier,
+            ageFactor: e.ageFactor,
             shipped: e.shipped,
             active: e.active,
             share: active > 0 ? e.active / active : 0
