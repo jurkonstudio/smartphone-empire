@@ -117,6 +117,7 @@ var bank              = new BankSystem(state);
 
 market.setCompetitorSystem(competitors);
 products.setPromotionSystem(promotion);
+products.setComponentPlantSystem(componentPlants);
 bank.setPromotionSystem(promotion);
 economy.setBank(bank);
 
