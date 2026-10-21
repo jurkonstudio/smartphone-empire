@@ -78,7 +78,7 @@ export function openCloudPanel() {
 
 export async function syncNow() {
     if (!(CloudService.isAvailable() && CloudService.getStatus() === 'connected')) { openCloudPanel(); return; }
-    var r = await CloudSync.uploadNow({ manual: true });
+    var r = (await CloudSync.uploadNow({ manual: true })) || { ok: false, code: 'unknown' };
     // [FIX] "Sinkron Sekarang" juga menarik saldo SIL dari server (dulu hanya mengunggah save).
     try { await CloudSync.syncSilicon(); } catch (e) {}
     if (r.ok) ToastService.success(t('cloud.upload_ok', { n: r.slot || CloudService.getSlot() }));
@@ -247,7 +247,7 @@ function openAccount() {
 
     async function doUpload(n) {
         CloudService.setSlot(n);
-        var r = await CloudSync.uploadNow({ manual: true });
+        var r = (await CloudSync.uploadNow({ manual: true })) || { ok: false, code: 'unknown' };
         if (r.ok) ToastService.success(t('cloud.upload_ok', { n: n })); else ToastService.error(errText(r.code));
         if (Modal.isOpen('cloud-account')) reload();
     }
@@ -298,7 +298,7 @@ function openAccount() {
             var soBtn = e.target.closest('[data-ca-signout]');
             soBtn.disabled = true;
             // 1. Simpan progres terakhir ke cloud sebelum keluar.
-            var last = await CloudSync.uploadNow({ manual: true });
+            var last = (await CloudSync.uploadNow({ manual: true })) || { ok: false, code: 'unknown' };
             if (!last.ok && !window.confirm(tf('cloud.signout.unsaved',
                 'Progres terakhir belum tersimpan ke cloud. Jika keluar sekarang, progres di perangkat ini akan hilang. Tetap keluar?',
                 'Your latest progress could not be saved to the cloud. If you sign out now, progress on this device will be lost. Sign out anyway?'))) {
