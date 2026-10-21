@@ -101,6 +101,13 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             lastYieldRate: 1.0
         },
 
+        componentPlants: {
+            plants: {},
+            inventory: {},
+            history: [],
+            totalProduced: 0
+        },
+
         marketing: { activeCampaigns: [] },
         reviews: { feed: [] },
 
@@ -443,6 +450,12 @@ class GameState {
             fab: {
                 ...base.fab, ...(incoming.fab || {}),
                 history: Array.isArray(incoming.fab && incoming.fab.history) ? incoming.fab.history : []
+            },
+            componentPlants: {
+                ...base.componentPlants, ...(incoming.componentPlants || {}),
+                plants: { ...((incoming.componentPlants && incoming.componentPlants.plants) || {}) },
+                inventory: { ...((incoming.componentPlants && incoming.componentPlants.inventory) || {}) },
+                history: Array.isArray(incoming.componentPlants && incoming.componentPlants.history) ? incoming.componentPlants.history : []
             },
             marketing: {
                 ...base.marketing, ...(incoming.marketing || {}),
