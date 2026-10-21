@@ -9,6 +9,8 @@
 import { bus } from '../core/EventBus.js';
 import { CloudService } from './CloudService.js';
 import { SupabaseAdapter } from './cloud/SupabaseAdapter.js';
+import { state } from '../core/GameState.js';
+import { formatCurrency } from '../utils/format.js';
 
 var POLL_MS = 300000;      // cadangan saja; pesan utama datang lewat Realtime
 var LIMIT = 60;
@@ -17,6 +19,7 @@ var _items = [];
 var _unsub = null;
 var _timer = null;
 var _running = false;
+var _credited = {};   // id hadiah yang sudah dikreditkan ke kas di sesi ini
 var _hello = false;      // ringkasan "pesan belum dibaca" cukup sekali per sesi
 
 function _unread() {
@@ -41,7 +44,7 @@ function _has(id) {
 }
 
 function _toast(m) {
-    var type = m.kind === 'sil' ? 'success' : (m.kind === 'system' ? 'warning' : 'info');
+    var type = (m.kind === 'sil' || m.kind === 'reward') ? 'success' : (m.kind === 'system' ? 'warning' : 'info');
     var text = String(m.title || '') + (m.body ? ' — ' + m.body : '');
     // Langsung ke bus: pesan admin & SIL masuk tidak boleh tersembunyi oleh saklar notifikasi.
     bus.emit('toast:show', {
@@ -179,8 +182,53 @@ export var InboxService = {
         try { await SupabaseAdapter.rpcInboxReport(messageId, reason); return { ok: true }; } catch (e) { return { ok: false, reason: _reason(e) }; }
     },
 
+    // ---------- Hadiah cash (kind 'reward') ----------
+    // Server membuat hadiah; klien hanya mengklaim. Token dibuat sekali per klaim dan dipakai ulang saat retry.
+    claimReward: async function (id) {
+        var it = null;
+        for (var i = 0; i < _items.length; i++) if (_items[i].id === id) it = _items[i];
+        if (!it || !it.reward_cash) return { ok: false, reason: 'Hadiah tidak ditemukan.' };
+        if (it.reward_claimed_at) return { ok: false, reason: 'Hadiah ini sudah diklaim.' };
+        if (it._claiming) return { ok: false, reason: 'Sedang memproses klaim…' };
+        var token = 'rw_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
+        it._claiming = true;
+        var res = null;
+        try {
+            for (var k = 0; k < 3; k++) {
+                try { res = await SupabaseAdapter.rpcClaimInboxReward(id, token); break; }
+                catch (e) {
+                    var msg = String((e && e.message) || '');
+                    if (/already_claimed|reward_not_found|invalid_token/.test(msg)) throw e;
+                    if (k === 2) throw e;
+                    await new Promise(function (r) { setTimeout(r, 800 * (k + 1)); });
+                }
+            }
+        } catch (e) {
+            it._claiming = false;
+            var m2 = String((e && e.message) || '');
+            if (/already_claimed/.test(m2)) {
+                it.reward_claimed_at = it.reward_claimed_at || new Date().toISOString();
+                _changed();
+                return { ok: false, reason: 'Hadiah ini sudah pernah diklaim.' };
+            }
+            return { ok: false, reason: 'Koneksi gagal. Coba klaim lagi.' };
+        }
+        it._claiming = false;
+        var cash = Number(res && res.cash) || 0;
+        if (!res || !res.ok || cash <= 0) return { ok: false, reason: 'Respons server tidak valid.' };
+        it.reward_claimed_at = it.reward_claimed_at || new Date().toISOString();
+        it.read_at = it.read_at || it.reward_claimed_at;
+        // Kredit sekali per id di sesi ini (retry yang sama akan mengembalikan replay, tidak dikredit ulang).
+        if (!_credited[id]) { _credited[id] = true; state.addCash(cash); }
+        _changed();
+        try { bus.emit('toast:show', { id: 'reward-' + id, type: 'success', durationMs: 4000,
+            message: 'Hadiah ' + formatCurrency(cash) + ' masuk ke kas perusahaan.' }); } catch (e) {}
+        return { ok: true, cash: cash };
+    },
+
     clear: function () {
-        _items = [];
+        // Hadiah yang belum diklaim tidak ikut dihapus (server juga menolaknya).
+        _items = _items.filter(function (m) { return m.reward_cash && !m.reward_claimed_at; });
         _changed();
         SupabaseAdapter.inboxDelete(null).catch(function () {});
     }
