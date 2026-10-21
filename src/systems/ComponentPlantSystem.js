@@ -1,4 +1,4 @@
-// FILE: src/systems/ComponentPlantSystem.js  (BARU — Tahap 1)
+// FILE: src/systems/ComponentPlantSystem.js  (Tahap 1 + Tahap 1b + Tahap 2)
 // ============================================================
 // ComponentPlantSystem — bangun & kelola pabrik komponen internal.
 //
@@ -7,13 +7,17 @@
 //   2. Upgrade level (2..4)     -> tunggu durationDays.
 //   3. Pesan produksi komponen  -> bayar unit x harga internal,
 //      hasil = qty x yield, masuk ke inventory setelah durasi selesai.
+//   4. Perawatan harian         -> pabrik yang sudah berdiri memotong biaya
+//      perawatan bulanan (dibagi per hari). Jika uang kurang, tagihan
+//      menumpuk sebagai hutang dan ditagih saat uang cukup.
+//   5. Pemakaian stok (Tahap 2) -> consumeForProduct() dipanggil saat produk
+//      diluncurkan. Stok pabrik dipakai dulu; sisanya dibeli dengan harga pasar.
 //
 // Kapasitas per bulan membatasi satu order. Satu pabrik hanya menjalankan
 // satu order produksi sekaligus (sama seperti Fab).
 //
-// Tahap 1 berhenti di: pabrik membuat stok, dan harga internal sudah
-// dipakai Desain ponsel. Pemakaian stok saat produk diluncurkan
-// (konsumsi inventory) menjadi Tahap 2.
+// Pabrik yang menganggur (tidak berproduksi) terus dihitung. Setelah
+// PLANT_IDLE_WARN_DAYS hari, pemain diberi peringatan.
 // ============================================================
 import { bus } from '../core/EventBus.js';
 import { TIME_CONFIG } from '../config/time.config.js';
@@ -23,18 +27,20 @@ import { WalletService } from './WalletService.js';
 import { COMPONENTS, getComponentById } from '../data/components.data.js';
 import {
     PLANT_TYPES, PLANT_MIN_ORDER, PLANT_CYCLE_DAYS,
-    getPlantTypeById, getPlantLevelInfo, getPlantYield, resolveComponentCost
+    getPlantTypeById, getPlantLevelInfo, getPlantYield, resolveComponentCost,
+    getPlantMaintenance
 } from '../data/material-plants.data.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 const REFUND_UPGRADE = 0.4;
 const REFUND_PRODUCTION = 0.5;
 const HISTORY_LIMIT = 20;
+const PLANT_IDLE_WARN_DAYS = 60;   // peringatan jika pabrik menganggur selama ini
 
 function _money(n) { return '$' + Math.round(n || 0).toLocaleString('en-US'); }
 
 function _emptyPlant() {
-    return { built: false, level: 0, upgrade: null, producing: null };
+    return { built: false, level: 0, upgrade: null, producing: null, idleDays: 0, unpaid: 0 };
 }
 
 export class ComponentPlantSystem {
@@ -64,6 +70,8 @@ export class ComponentPlantSystem {
         if (!cp.inventory || typeof cp.inventory !== 'object') cp.inventory = {};
         if (!Array.isArray(cp.history)) cp.history = [];
         if (typeof cp.totalProduced !== 'number') cp.totalProduced = 0;
+        if (typeof cp.totalConsumed !== 'number') cp.totalConsumed = 0;
+        if (typeof cp.maintenancePaid !== 'number') cp.maintenancePaid = 0;
 
         PLANT_TYPES.forEach(pt => {
             const ps = cp.plants[pt.id];
@@ -75,6 +83,8 @@ export class ComponentPlantSystem {
             if (typeof ps.built !== 'boolean') ps.built = ps.level > 0;
             if (ps.upgrade === undefined) ps.upgrade = null;
             if (ps.producing === undefined) ps.producing = null;
+            if (typeof ps.idleDays !== 'number') ps.idleDays = 0;
+            if (typeof ps.unpaid !== 'number') ps.unpaid = 0;
         });
     }
 
@@ -281,6 +291,35 @@ export class ComponentPlantSystem {
     }
 
     // ============================================================
+    // PEMAKAIAN STOK (Tahap 2)
+    // Dipanggil saat produk diluncurkan. Stok pabrik dipakai dulu.
+    // Kekurangannya dibeli dengan harga pasar; biaya itu dikembalikan
+    // ke pemanggil (marketCost) supaya pemanggil yang membayarnya.
+    // ============================================================
+    consumeForProduct(componentId, qty) {
+        const cp = this.state.data.componentPlants;
+        const comp = getComponentById(componentId);
+        qty = Math.max(0, Math.floor(qty || 0));
+        if (!comp || !cp) return { fromStock: 0, shortfall: qty, marketCost: (comp ? comp.costPerUnit || 0 : 0) * qty };
+
+        const have = this.getInventory(componentId);
+        const used = Math.min(have, qty);
+        const shortfall = qty - used;
+
+        if (used > 0) {
+            cp.inventory[componentId] = have - used;
+            cp.totalConsumed = (cp.totalConsumed || 0) + used;
+            bus.emit('state:changed', this.state.data);
+        }
+
+        return {
+            fromStock: used,
+            shortfall: shortfall,
+            marketCost: Math.round((comp.costPerUnit || 0) * shortfall * 100) / 100
+        };
+    }
+
+    // ============================================================
     // TICK HARIAN
     // ============================================================
     _tickDaily() {
@@ -291,7 +330,45 @@ export class ComponentPlantSystem {
             if (!ps) return;
             if (ps.upgrade) this._tickBuildUpgrade(pt.id);
             if (ps.producing) this._tickProduction(pt.id);
+            this._tickMaintenance(pt.id);
+            this._tickIdle(pt.id);
         });
+    }
+
+    _tickMaintenance(typeId) {
+        const cp = this.state.data.componentPlants;
+        const ps = this._getPlantState(typeId);
+        if (!ps || !ps.built || !ps.level) return;
+
+        const daily = Math.round(getPlantMaintenance(typeId, ps.level) / PLANT_CYCLE_DAYS);
+        if (daily <= 0) return;
+        ps.unpaid = (ps.unpaid || 0) + daily;
+
+        if (WalletService.canAfford(ps.unpaid)) {
+            WalletService.pay(ps.unpaid, 'plant-maintenance');
+            cp.maintenancePaid = (cp.maintenancePaid || 0) + ps.unpaid;
+            ps.unpaid = 0;
+        } else {
+            const pt = getPlantTypeById(typeId);
+            ToastService.warning('Perawatan ' + pt.name + ' belum terbayar (' + _money(ps.unpaid) + ').');
+        }
+    }
+
+    _tickIdle(typeId) {
+        const ps = this._getPlantState(typeId);
+        if (!ps || !ps.built) return;
+
+        if (ps.producing || ps.upgrade) {
+            ps.idleDays = 0;
+            return;
+        }
+        ps.idleDays = (ps.idleDays || 0) + 1;
+        if (ps.idleDays === PLANT_IDLE_WARN_DAYS) {
+            const pt = getPlantTypeById(typeId);
+            this.state.addLog(pt.name + ' menganggur ' + PLANT_IDLE_WARN_DAYS + ' hari. Biaya perawatan tetap berjalan.', LOG_TYPES.info);
+            ToastService.info(pt.name + ' menganggur. Mulai produksi agar kapasitasnya terpakai.');
+            bus.emit('plant:idle', { typeId: typeId, days: ps.idleDays });
+        }
     }
 
     _tickBuildUpgrade(typeId) {
@@ -332,7 +409,8 @@ export class ComponentPlantSystem {
     _tickProduction(typeId) {
         const data = this.state.data;
         const cp = data.componentPlants;
-        const p = this._getPlantState(typeId).producing;
+        const ps = this._getPlantState(typeId);
+        const p = ps.producing;
         const currentMinute = data.time.elapsedGameMinutes;
         const last = p.lastProcessedMinute || p.startedAtMinute;
         const deltaMinutes = currentMinute - last;
@@ -366,7 +444,7 @@ export class ComponentPlantSystem {
             ToastService.success('🏭 Produksi selesai: ' + p.totalUnits.toLocaleString('en-US') + ' unit ' + p.componentName);
             this.state.addLog('Produksi ' + p.componentName + ' selesai: ' + p.totalUnits.toLocaleString('en-US') + ' unit.', LOG_TYPES.success);
             bus.emit('plant:production-completed', { typeId: typeId, componentId: p.componentId, qty: p.totalUnits });
-            this._getPlantState(typeId).producing = null;
+            ps.producing = null;
             bus.emit('state:changed', data);
         }
     }
@@ -386,7 +464,10 @@ export class ComponentPlantSystem {
                 nextInfo: getPlantLevelInfo(pt.id, (ps.level || 0) + 1),
                 upgrade: ps.upgrade,
                 producing: ps.producing,
-                unlock: this.isUnlocked(pt.id)
+                unlock: this.isUnlocked(pt.id),
+                maintenanceMonthly: ps.level ? getPlantMaintenance(pt.id, ps.level) : 0,
+                unpaid: ps.unpaid || 0,
+                idleDays: ps.idleDays || 0
             };
         });
     }

@@ -12,7 +12,7 @@ import {
     getComponentById, getComponentsByCategory, getBodyColorById
 } from '../data/components.data.js';
 import { getCampaignById, MARKETING_CAMPAIGNS } from '../data/marketing.data.js';
-import { resolveComponentCost } from '../data/material-plants.data.js';
+import { resolveComponentCost, getBuiltPlantEffect, getPlantTypeForCategory } from '../data/material-plants.data.js';
 import { getLicenseById, getLicenseStatsAtYear } from '../data/os.data.js';
 import { computeTechEdge, getMasteryStatBonus, RND_TRACKS } from '../data/research.data.js';
 import { getMacro, reviewBaseScore } from '../core/MacroModel.js';
@@ -32,10 +32,14 @@ export class ProductSystem {
         this.state = gameState;
         this._unsubs = [];
         this._promotion = null;
+        this._componentPlants = null;
     }
 
     // Promosi regional (PromotionSystem) menambah lift ke faktor pemasaran.
     setPromotionSystem(ps) { this._promotion = ps; }
+
+    // Pabrik komponen internal: stok baterai & layar diambil dari sini saat rilis dan restok.
+    setComponentPlantSystem(cps) { this._componentPlants = cps; }
 
     start() {
         var self = this;
@@ -117,6 +121,12 @@ export class ProductSystem {
             if (stats[ps] !== undefined) stats[ps] += getMasteryStatBonus(mastery[cat] || 0);
         });
 
+        // [Pabrik] Bonus spesifikasi dari pabrik sendiri (baterai & layar).
+        var plantBat = getBuiltPlantEffect(this.state.data, 'battery', 'batteryLife');
+        var plantDisp = getBuiltPlantEffect(this.state.data, 'display', 'displayQuality');
+        stats.battery = stats.battery * (1 + plantBat);
+        stats.display = stats.display * (1 + plantDisp);
+
         ['display','camera','battery','performance','connectivity','quality','design','usability'].forEach(function (k) {
             stats[k] = Math.max(0, Math.min(100, Math.round(stats[k])));
         });
@@ -135,13 +145,15 @@ export class ProductSystem {
         return stats;
     }
 
-    computeUnitCost(config) {
+    // excludePlantParts=true: hanya komponen non-pabrik (baterai & layar ditangani stok pabrik).
+    computeUnitCost(config, excludePlantParts) {
         var cost = 0;
         var ids = [config.displayId, config.cameraId, config.batteryId,
                    config.chipId, config.networkId, config.bodyId, config.formFactorId];
         var self = this;
         ids.forEach(function (id) {
             var c = getComponentById(id);
+            if (excludePlantParts && c && getPlantTypeForCategory(c.category)) return;
             // Harga internal jika pabrik komponen (baterai/layar) sudah dibangun.
             if (c) cost += resolveComponentCost(self.state.data, c);
         });
@@ -290,7 +302,8 @@ export class ProductSystem {
         }
 
         var setupCost = BALANCE.products.productionSetupCost;
-        var totalCost = unitCost * config.productionQty + setupCost;
+        // Baterai & layar tidak ditagih di sini: diambil dari stok pabrik atau dibeli harga pasar saat rilis.
+        var totalCost = this.computeUnitCost(config, true) * config.productionQty + setupCost;
 
         if (!WalletService.canAfford(totalCost)) return { ok: false, reason: 'Uang tidak cukup. Butuh $' + totalCost.toLocaleString('en-US') + '.' };
 
@@ -404,6 +417,37 @@ export class ProductSystem {
         }
     }
 
+    // [Pabrik] Baterai & layar: stok pabrik dipakai dulu. Kekurangan dibeli harga pasar.
+    // _quoteComponents hanya menghitung (tanpa mengurangi stok); _settleComponents
+    // mengurangi stok dan mengembalikan tagihan. Penagihan dilakukan pemanggil.
+    _quoteComponents(cfg, qty) {
+        var cps = this._componentPlants;
+        var bill = 0;
+        [cfg.batteryId, cfg.displayId].forEach(function (id) {
+            var comp = getComponentById(id);
+            if (!comp) return;
+            var have = cps ? cps.getInventory(id) : 0;
+            bill += Math.max(0, qty - have) * (comp.costPerUnit || 0);
+        });
+        return Math.round(bill);
+    }
+
+    _settleComponents(cfg, qty) {
+        var cps = this._componentPlants;
+        if (!cps) return 0;
+        var self = this, bill = 0;
+        [cfg.batteryId, cfg.displayId].forEach(function (id) {
+            var comp = getComponentById(id);
+            if (!comp) return;
+            var r = cps.consumeForProduct(id, qty);
+            bill += r.marketCost || 0;
+            if (r.fromStock > 0) {
+                self.state.addLog('Stok pabrik ' + comp.name + ': ' + r.fromStock.toLocaleString('en-US') + ' unit dipakai.', LOG_TYPES.info);
+            }
+        });
+        return Math.round(bill);
+    }
+
     _releaseProduct(d) {
         var data = this.state.data;
         var cfg = d.config;
@@ -451,6 +495,12 @@ export class ProductSystem {
 
         var repDelta = this._reviewReputationDelta(rv.score, 1);
         if (repDelta !== 0) this.state.addReputation(repDelta);
+
+        var partsBill = this._settleComponents(cfg, cfg.productionQty);
+        if (partsBill > 0) {
+            this.state.addCash(-partsBill);
+            this.state.addLog('Komponen "' + product.name + '" dibeli harga pasar: $' + partsBill.toLocaleString('en-US') + '.', LOG_TYPES.info);
+        }
 
         data.products.catalog.push(product);
         data.products.development = null;
@@ -623,7 +673,7 @@ export class ProductSystem {
             if (p.stock + neededQty > maxStock) neededQty = maxStock - p.stock;
             if (neededQty <= 0) continue;
 
-            var totalCost = p.unitCost * neededQty + BALANCE.products.productionSetupCost;
+            var totalCost = Math.round(this.computeUnitCost(p.config, true) * neededQty + this._quoteComponents(p.config, neededQty) + BALANCE.products.productionSetupCost);
 
             if (data.cash < totalCost) {
                 if ((now - (ar.lastWarnMinute || 0)) >= warnInterval) {
@@ -636,6 +686,7 @@ export class ProductSystem {
             }
 
             this.state.setCash(data.cash - totalCost);
+            this._settleComponents(p.config, neededQty);
             p.stock += neededQty;
             p.totalProduced += neededQty;
             ar.lastAutoOrderMinute = now;
@@ -734,10 +785,11 @@ export class ProductSystem {
         if (!p) return { ok: false, reason: 'Produk tidak ditemukan.' };
         if (p.status !== 'selling') return { ok: false, reason: 'Produk sudah tidak dijual.' };
         if (qty < 100) return { ok: false, reason: 'Minimal 100 unit.' };
-        var totalCost = p.unitCost * qty + BALANCE.products.productionSetupCost;
+        var totalCost = Math.round(this.computeUnitCost(p.config, true) * qty + this._quoteComponents(p.config, qty) + BALANCE.products.productionSetupCost);
         if (!WalletService.canAfford(totalCost)) return { ok: false, reason: 'Uang tidak cukup.' };
 
         WalletService.pay(totalCost, 'restock');
+        this._settleComponents(p.config, qty);
 
         var days = this.getManualRestockDays(qty);
         if (!Array.isArray(p.pendingProduction)) p.pendingProduction = [];
