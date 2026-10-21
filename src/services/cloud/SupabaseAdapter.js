@@ -19,6 +19,12 @@ var _inboxExt = true;
 var _reasonOk = true;
 var _rewardOk = true;
 
+// [FIX] Hanya error autentikasi (token tidak sah) yang boleh menghapus sesi lokal.
+// Error jaringan/server sementara tidak boleh membuat pemain terlempar keluar.
+function _isAuthError(err) {
+    return classify(err) === 'not_signed_in';
+}
+
 function classify(err) {
     if (!err) return 'unknown';
     if (err.code === 'LIB_LOAD_FAILED') return 'lib';
@@ -111,6 +117,10 @@ export const SupabaseAdapter = {
         // Verifikasi token ke server: sesi yang sudah tidak sah dibersihkan agar
         // tidak terus dipakai (penyebab "Akses ditolak" berulang saat sinkron).
         var check = await c.auth.getUser();
+        if (check.error && !_isAuthError(check.error)) {
+            // [FIX] Gangguan jaringan sementara: percayai sesi lokal, jangan sign-out.
+            return userOf(session.user);
+        }
         if (check.error || !check.data || !check.data.user) {
             try { await c.auth.signOut({ scope: 'local' }); } catch (e) {}
             return null;
