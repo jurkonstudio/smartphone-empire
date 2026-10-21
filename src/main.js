@@ -26,6 +26,7 @@ import { EraSystem } from './systems/EraSystem.js';
 import { TeamSystem } from './systems/TeamSystem.js';
 import { ChipSystem } from './systems/ChipSystem.js';
 import { FabSystem } from './systems/FabSystem.js';
+import { ComponentPlantSystem } from './systems/ComponentPlantSystem.js';
 import { NewsSystem } from './systems/NewsSystem.js';
 import { AdvisorSystem } from './systems/AdvisorSystem.js';
 import { StockSystem } from './systems/StockSystem.js';
@@ -105,6 +106,7 @@ var eraSystem         = new EraSystem(state);
 var teamSystem        = new TeamSystem(state);
 var chipSystem        = new ChipSystem(state);
 var fabSystem         = new FabSystem(state);
+var componentPlants   = new ComponentPlantSystem(state);
 var advisor           = new AdvisorSystem(state, { research: research });
 var stockSystem       = new StockSystem(state);
 var promotion         = new PromotionSystem(state);
@@ -257,7 +259,7 @@ function renderView(opts) {
         if (activeView === 'dashboard') html = renderHomePanel();
         else if (activeView === 'profile') html = renderCompanyProfilePanel({ teamSystem: teamSystem, marketSystem: market, competitors: competitors, opinionSystem: opinion });
         else if (activeView === 'team') html = renderHqPanel({ subtab: activeHqSubtab, state: state.get(), timeSnapshot: getTime(), researchSystem: research, teamSystem: teamSystem, stockSystem: stockSystem });
-        else if (activeView === 'research') html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os, chipResearchSystem: chipResearch });
+        else if (activeView === 'research') html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os, chipResearchSystem: chipResearch, componentPlantSystem: componentPlants });
         else if (activeView === 'products') html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os });
         else if (activeView === 'market') html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion });
         else if (activeView === 'settings') html = renderSettingsPanel();
@@ -824,6 +826,20 @@ function bindGlobalClicks() {
         var timelineFilter = e.target.closest('[data-timeline-filter]');
         if (timelineFilter) { e.preventDefault(); setTimelineFilter(timelineFilter.dataset.timelineFilter); renderView(); return; }
 
+        var mfAction = e.target.closest('[data-mf-action]');
+        if (mfAction) {
+            e.preventDefault(); vibrate(8);
+            var mfA = mfAction.dataset.mfAction, mfP = mfAction.dataset.mfPlant, mfR = null;
+            if (mfA === 'build') mfR = componentPlants.buildPlant(mfP);
+            else if (mfA === 'upgrade') mfR = componentPlants.upgradePlant(mfP);
+            else if (mfA === 'cancel-upgrade') mfR = componentPlants.cancelUpgrade(mfP);
+            else if (mfA === 'order') mfR = componentPlants.orderProduction(mfP, mfAction.dataset.mfComp, parseInt(mfAction.dataset.mfQty, 10) || 0);
+            else if (mfA === 'cancel-prod') mfR = componentPlants.cancelProduction(mfP);
+            if (mfR && !mfR.ok) ToastService.error(mfR.reason);
+            else if (mfR) renderAll();
+            return;
+        }
+
         var fabBuy = e.target.closest('[data-chip-fab-buy]');
         if (fabBuy) {
             e.preventDefault();
@@ -1244,6 +1260,7 @@ async function boot() {
         opinion.start();
         chipSystem.start();
         fabSystem.start();
+        componentPlants.start();
         NewsSystem.start();
         advisor.start();
         stockSystem.start();
@@ -1294,7 +1311,7 @@ async function boot() {
             forcePull: function() { return CloudSync.forcePull(); },
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
-            chips: chipSystem, fab: fabSystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
+            chips: chipSystem, fab: fabSystem, plants: componentPlants, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
             silicon: SiliconService, promotion: promotion, bank: bank, payment: PaymentService,
             openSiliconStore: openSiliconStoreModal, LanguageService: LanguageService,
             SaveService: SaveService, ToastService: ToastService, Modal: Modal, navigate: navigate, render: renderAll, renderSoft: renderSoft,
