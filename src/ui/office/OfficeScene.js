@@ -1,4 +1,5 @@
 // FILE: src/ui/office/OfficeScene.js  (REPLACE)
+// v2027.52b — label ruangan & chip dirender 2x (lebih tajam di HP).
 // v2027.52a — Office 3D Map: interior kantor isometrik (dollhouse) yang terhubung ke data game.
 //
 // Peningkatan v2027.52a (tahap 3):
@@ -219,7 +220,10 @@ export function createOfficeScene(THREE, container, gameState) {
         var font = '700 26px system-ui, -apple-system, "Segoe UI", sans-serif';
         ctx.font = font;
         var w = Math.ceil(ctx.measureText(text).width) + 36, h = 52;
-        c.width = w; c.height = h;
+        // Render 2x supaya teks tajam di layar HP (ukuran sprite di dunia tetap sama).
+        var SS = 2;
+        c.width = w * SS; c.height = h * SS;
+        ctx.setTransform(SS, 0, 0, SS, 0, 0);
         ctx.font = font;
         ctx.fillStyle = dark ? 'rgba(20,24,32,0.88)' : 'rgba(255,255,255,0.92)';
         ctx.strokeStyle = hexCss(accentHex);
