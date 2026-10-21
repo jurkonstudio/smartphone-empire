@@ -252,6 +252,8 @@ function _renderCatalog() {
         var stockNote = !isSelling ? '' : (p.stock <= 0
             ? '<span class="cat-warn">' + tx('prod.catalog.out', 'Stok habis') + '</span>'
             : (pct < 20 ? '<span class="cat-warn">' + tx('prod.catalog.low', 'Stok menipis') + '</span>' : ''));
+        var pendQty = (p.pendingProduction || []).reduce(function (n, o) { return n + (o.qty || 0); }, 0);
+        if (isSelling && pendQty > 0) stockNote += '<span style="color:var(--accent);font-size:11px;">+' + pendQty.toLocaleString('en-US') + ' ' + tx('prod.catalog.in_production', 'dalam produksi') + '</span>';
         var toggle = isSelling
             ? '<div class="cat-auto"><span>' + tx('prod.catalog.auto_short', 'Auto-restock') + '</span>' +
               '<button class="toggle-switch ' + (autoActive ? 'on' : '') + '" data-auto-toggle data-prod-id="' + p.id + '" aria-pressed="' + autoActive + '" aria-label="' + tx('prod.catalog.auto_short', 'Auto-restock') + '"><span class="toggle-thumb"></span></button></div>'
@@ -564,6 +566,7 @@ export function openOrderProductionModal(params) {
             '<div class="sum-row" style="margin-top:8px;"><span>' + t('prod.order.cost_unit') + '</span><b>$' + p.unitCost + '</b></div>' +
             '<div class="sum-row"><span>' + t('prod.order.setup') + '</span><b>$2,000</b></div>' +
             '<div class="sum-row"><span>' + t('prod.order.total') + '</span><b data-order-total>$0</b></div>' +
+            '<div class="sum-row"><span>' + t('prod.order.lead') + '</span><b data-order-lead>-</b></div>' +
             '<button class="btn-primary" data-order-confirm data-prod-id="' + productId + '" style="width:100%;margin-top:12px;">' + t('prod.order.submit') + '</button>' +
             '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:6px;">' + t('prod.order.cancel') + '</button>';
 
@@ -574,9 +577,12 @@ export function openOrderProductionModal(params) {
         if (!root) return;
         var qtyInput = root.querySelector('[data-order-qty]');
         var totalEl = root.querySelector('[data-order-total]');
+        var leadEl = root.querySelector('[data-order-lead]');
         function refresh() {
             var q = parseInt(qtyInput.value, 10) || 0;
             totalEl.textContent = '$' + ((q * p.unitCost) + 2000).toLocaleString('en-US');
+            var days = Math.max(1, Math.min(10, 2 + Math.floor(q / 2500))); // sinkron dgn BALANCE.products.manualRestock
+            leadEl.textContent = days + ' ' + t('prod.order.days');
         }
         qtyInput.addEventListener('input', refresh);
         refresh();
