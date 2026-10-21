@@ -1,24 +1,26 @@
 import { escapeHtml } from '../../utils/html.js';
-// FILE: src/ui/panels/OsUpdateCards.js  (NEW)
+// FILE: src/ui/panels/OsUpdateCards.js  (REPLACE v2)
 // ============================================================
 // Tab "Rancang Update" di panel Riset > OS.
-// Pemain memilih KARTU fitur per jalur (Antarmuka, Pesan, Kamera, dst),
-// lalu merakit satu build. Build dikenakan biaya pengembangan fitur
-// + biaya rilis per build. Kartu yang belum sesuai era/riset dikunci.
+// Pemain memilih KARTU fitur per jalur, lalu merakit satu build.
+// Biaya = biaya pengembangan fitur + biaya rilis per build.
 // Logika tetap di OSSystem (startVersion / previewUpdate).
+// Semua teks lewat t() (kamus: src/data/i18n/os-update-cards.i18n.js).
 // ============================================================
 import { OS_ERAS, getOsFeatureById } from '../../data/os.data.js';
 import { OS_UPDATE_TRACKS, getOsEraIndexForYear, findUnmappedOsFeatures } from '../../data/os-update-cards.data.js';
+import { getNodeById } from '../../data/research.data.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { ToastService } from '../../core/ToastService.js';
 import { WalletService } from '../../systems/WalletService.js';
+import { t } from '../../core/LanguageService.js';
 
 var STAT_CHIPS = [
-    { k: 'stability', label: 'Stab' },
-    { k: 'speed', label: 'Cepat' },
-    { k: 'features', label: 'Fitur' },
-    { k: 'security', label: 'Aman' },
-    { k: 'design', label: 'Desain' }
+    { k: 'stability', key: 'osuc.stat.stability' },
+    { k: 'speed', key: 'osuc.stat.speed' },
+    { k: 'features', key: 'osuc.stat.features' },
+    { k: 'security', key: 'osuc.stat.security' },
+    { k: 'design', key: 'osuc.stat.design' }
 ];
 
 var _draft = [];      // id kartu yang dipilih untuk build berikutnya
@@ -27,10 +29,43 @@ var _bound = false;
 var _styled = false;
 var _warned = false;
 
+// Terjemahan dengan fallback ke teks asli bila kunci belum ada.
+function _tx(key, fallback, vars) {
+    var v = t(key, vars);
+    return (v && v !== key) ? v : fallback;
+}
 function _money(n) { return '$' + Math.round(n || 0).toLocaleString('en-US'); }
 function _rerender() { if (window.__game && window.__game.renderSoft) window.__game.renderSoft(); }
+function _featName(id) { var f = getOsFeatureById(id); return _tx('osuc.feat.' + id + '.name', f ? f.name : id); }
+function _featDesc(id) { var f = getOsFeatureById(id); return _tx('osuc.feat.' + id + '.desc', f ? f.description : ''); }
+function _trackName(tr) { return _tx('osuc.track.' + tr.id + '.name', tr.name); }
+function _trackHint(tr) { return _tx('osuc.track.' + tr.id + '.hint', tr.hint); }
+function _eraName(eraId) {
+    var era = OS_ERAS.find(function (e) { return e.id === eraId; });
+    return _tx('osuc.era.' + eraId, era ? era.name : eraId);
+}
 
 export function resetUpdateDraft() { _draft = []; }
+
+// ============================================================
+// ALASAN KUNCI (diterjemahkan di UI, bukan dari string OSSystem)
+// ============================================================
+function _lockReason(id, st) {
+    var f = getOsFeatureById(id);
+    if (!f) return _tx('osuc.lock.generic', 'Locked');
+    var year = window.__game.state.get().time.currentYear;
+    if (year < f.minYear) return _tx('osuc.lock.year', 'Available in ' + f.minYear, { year: f.minYear });
+    var missF = (f.requiresFeatures || []).filter(function (rf) { return !_sys.hasFeature(rf); });
+    if (missF.length) {
+        var fn = missF.map(_featName).join(', ');
+        return _tx('osuc.lock.feature', 'Requires feature: ' + fn, { names: fn });
+    }
+    if (st.missingResearch && st.missingResearch.length) {
+        var rn = st.missingResearch.map(function (rId) { var n = getNodeById(rId); return n ? n.name : rId; }).join(', ');
+        return _tx('osuc.lock.research', 'Requires research: ' + rn, { names: rn });
+    }
+    return _tx('osuc.lock.generic', 'Locked');
+}
 
 // ============================================================
 // RENDER
@@ -46,7 +81,7 @@ export function renderUpdateCardsTab(osSys, data) {
     }
 
     var year = data.time.currentYear;
-    var era = OS_ERAS[getOsEraIndexForYear(year)];
+    var eraId = OS_ERAS[getOsEraIndexForYear(year)].id;
     var maxSlots = osSys._getMaxFeatureSlots();
     var dev = data.os.developing;
     var nextVer = osSys._nextVersionString();
@@ -57,16 +92,17 @@ export function renderUpdateCardsTab(osSys, data) {
 
     var head = '<div class="uc-head">' +
         '<div class="uc-head-top"><div>' +
-            '<div class="uc-kicker">Rancang Update</div>' +
+            '<div class="uc-kicker">' + escapeHtml(_tx('osuc.kicker', 'Rancang Update')) + '</div>' +
             '<div class="uc-title">' + escapeHtml(nextVer) + '</div>' +
-        '</div><div class="uc-slots' + (_draft.length >= maxSlots ? ' uc-slots-full' : '') + '">Kartu <b>' + _draft.length + '/' + maxSlots + '</b></div></div>' +
-        '<div class="uc-era">Era sekarang: <b>' + escapeHtml(era ? era.name : '-') + '</b> · ' + year + '</div>' +
-        '<div class="uc-hint">Pilih kartu dari jalur mana pun. Kartu di luar era atau belum diriset dikunci. Setiap build dikenakan biaya rilis.</div>' +
+        '</div><div class="uc-slots' + (_draft.length >= maxSlots ? ' uc-slots-full' : '') + '">' +
+            escapeHtml(_tx('osuc.cards', 'Cards')) + ' <b>' + _draft.length + '/' + maxSlots + '</b></div></div>' +
+        '<div class="uc-era">' + escapeHtml(_tx('osuc.era_now', 'Current era: {era} · {year}', { era: _eraName(eraId), year: year })) + '</div>' +
+        '<div class="uc-hint">' + escapeHtml(_tx('osuc.hint', '')) + '</div>' +
     '</div>';
 
     if (dev) {
         return head +
-            '<div class="uc-notice">Versi ' + escapeHtml(dev.versionString) + ' sedang dikembangkan. Build baru bisa dirakit setelah versi ini rilis atau dibatalkan di tab Status.</div>' +
+            '<div class="uc-notice">' + escapeHtml(_tx('osuc.notice_dev', 'Version {v} is in development.', { v: dev.versionString })) + '</div>' +
             _renderTracks(osSys, true);
     }
     return head + _renderTracks(osSys, false) + _renderTray(osSys);
@@ -79,8 +115,8 @@ function _renderTracks(osSys, frozen) {
         return '<div class="uc-track">' +
             '<div class="uc-track-head">' +
                 '<span class="uc-track-ico">' + renderIcon(tr.icon, 16) + '</span>' +
-                '<div class="uc-track-txt"><div class="uc-track-name">' + escapeHtml(tr.name) + '</div>' +
-                '<div class="uc-track-hint">' + escapeHtml(tr.hint) + '</div></div>' +
+                '<div class="uc-track-txt"><div class="uc-track-name">' + escapeHtml(_trackName(tr)) + '</div>' +
+                '<div class="uc-track-hint">' + escapeHtml(_trackHint(tr)) + '</div></div>' +
                 '<span class="uc-track-count">' + owned + '/' + tr.features.length + '</span>' +
             '</div>' +
             '<div class="uc-row">' + cards + '</div>' +
@@ -94,54 +130,53 @@ function _renderCard(osSys, id, frozen) {
     var st = osSys.getFeatureStatus(id);
     var state = st.status;                       // owned | developing | available | locked
     var selected = _draft.indexOf(id) !== -1;
-    var era = OS_ERAS.find(function (e) { return e.id === f.era; });
 
     var badge;
-    if (state === 'owned') badge = 'Dimiliki';
-    else if (state === 'developing') badge = 'Dikembangkan';
-    else if (state === 'available') badge = selected ? '✓ Dipilih' : 'Tersedia';
-    else badge = st.reason || 'Terkunci';
+    if (state === 'owned') badge = _tx('osuc.badge.owned', 'Owned');
+    else if (state === 'developing') badge = _tx('osuc.badge.developing', 'In development');
+    else if (state === 'available') badge = selected ? _tx('osuc.badge.selected', '✓ Selected') : _tx('osuc.badge.available', 'Available');
+    else badge = _lockReason(id, st);
 
     var chips = STAT_CHIPS.map(function (c) {
         var v = (f.statEffects || {})[c.k] || 0;
-        return v > 0 ? '<span class="uc-chip">+' + v + ' ' + c.label + '</span>' : '';
+        return v > 0 ? '<span class="uc-chip">+' + v + ' ' + escapeHtml(_tx(c.key, c.k)) + '</span>' : '';
     }).join('');
 
     var attrs = '';
     if (state === 'available') attrs = ' data-uc-action="toggle" data-uc-id="' + id + '" role="button" aria-pressed="' + (selected ? 'true' : 'false') + '"';
     else if (state === 'locked') attrs = ' data-uc-action="why" data-uc-id="' + id + '" role="button"';
 
-    var cost = state === 'owned' ? 'Gratis' : _money(f.devCost);
-    var days = f.devDays > 0 ? f.devDays + ' hari' : '—';
+    var cost = state === 'owned' ? _tx('osuc.free', 'Free') : _money(f.devCost);
+    var days = f.devDays > 0 ? _tx('osuc.days', '{n} days', { n: f.devDays }) : '—';
 
     return '<div class="uc-card uc-s-' + state + (selected ? ' is-selected' : '') + '"' + attrs + '>' +
-        '<div class="uc-card-top"><span class="uc-era-tag">' + escapeHtml(era ? era.name : f.era) + '</span>' +
+        '<div class="uc-card-top"><span class="uc-era-tag">' + escapeHtml(_eraName(f.era)) + '</span>' +
         '<span class="uc-year">' + f.minYear + '</span></div>' +
-        '<div class="uc-name">' + escapeHtml(f.name) + '</div>' +
-        '<div class="uc-desc">' + escapeHtml(f.description) + '</div>' +
+        '<div class="uc-name">' + escapeHtml(_featName(id)) + '</div>' +
+        '<div class="uc-desc">' + escapeHtml(_featDesc(id)) + '</div>' +
         '<div class="uc-chips">' + chips + '</div>' +
-        '<div class="uc-foot"><span class="uc-cost">' + cost + '</span><span class="uc-dur">' + days + '</span></div>' +
+        '<div class="uc-foot"><span class="uc-cost">' + escapeHtml(cost) + '</span><span class="uc-dur">' + escapeHtml(days) + '</span></div>' +
         '<div class="uc-badge uc-badge-' + state + '">' + escapeHtml(badge) + '</div>' +
     '</div>';
 }
 
 function _renderTray(osSys) {
     var n = _draft.length;
-    if (!n) return '<div class="uc-tray uc-tray-empty">Pilih minimal 1 kartu untuk merakit build.</div>';
+    if (!n) return '<div class="uc-tray uc-tray-empty">' + escapeHtml(_tx('osuc.tray.empty', 'Select at least 1 card to assemble a build.')) + '</div>';
     var p = osSys.previewUpdate(_draft);
     var can = WalletService.canAfford(p.total);
     return '<div class="uc-tray">' +
-        '<div class="uc-tray-row"><span>Biaya pengembangan (' + n + ' kartu)</span><b>' + _money(p.featureCost) + '</b></div>' +
-        '<div class="uc-tray-row"><span>Biaya rilis build</span><b>' + _money(p.buildFee) + '</b></div>' +
-        '<div class="uc-tray-row uc-tray-total"><span>Total</span><b class="' + (can ? '' : 'uc-neg') + '">' + _money(p.total) + '</b></div>' +
-        '<div class="uc-tray-row"><span>Durasi pengembangan</span><b>' + p.days + ' hari</b></div>' +
+        '<div class="uc-tray-row"><span>' + escapeHtml(_tx('osuc.tray.dev_cost', 'Development cost ({n} cards)', { n: n })) + '</span><b>' + _money(p.featureCost) + '</b></div>' +
+        '<div class="uc-tray-row"><span>' + escapeHtml(_tx('osuc.tray.build_fee', 'Build release fee')) + '</span><b>' + _money(p.buildFee) + '</b></div>' +
+        '<div class="uc-tray-row uc-tray-total"><span>' + escapeHtml(_tx('osuc.tray.total', 'Total')) + '</span><b class="' + (can ? '' : 'uc-neg') + '">' + _money(p.total) + '</b></div>' +
+        '<div class="uc-tray-row"><span>' + escapeHtml(_tx('osuc.tray.duration', 'Development time')) + '</span><b>' + escapeHtml(_tx('osuc.days', '{n} days', { n: p.days })) + '</b></div>' +
         '<div class="uc-tray-stats">' + STAT_CHIPS.map(function (c) {
-            return '<span class="uc-stat-pill">' + c.label + ' <b>' + Math.round((p.stats || {})[c.k] || 0) + '</b></span>';
+            return '<span class="uc-stat-pill">' + escapeHtml(_tx(c.key, c.k)) + ' <b>' + Math.round((p.stats || {})[c.k] || 0) + '</b></span>';
         }).join('') + '</div>' +
         '<div class="uc-tray-actions">' +
-            '<button type="button" class="uc-btn-ghost" data-uc-action="clear">Kosongkan</button>' +
+            '<button type="button" class="uc-btn-ghost" data-uc-action="clear">' + escapeHtml(_tx('osuc.btn.clear', 'Clear')) + '</button>' +
             '<button type="button" class="uc-btn-primary" data-uc-action="build"' + (can ? '' : ' disabled') + '>' +
-                (can ? 'Rakit & Kembangkan' : 'Uang tidak cukup') +
+                escapeHtml(can ? _tx('osuc.btn.build', 'Assemble & Develop') : _tx('osuc.btn.nomoney', 'Not enough cash')) +
             '</button>' +
         '</div>' +
     '</div>';
@@ -154,14 +189,17 @@ function _onCard(act, id) {
     var f = getOsFeatureById(id);
     if (!f || !_sys) return;
     var data = window.__game.state.get();
-    if (data.os.developing) { ToastService.warning('Versi sedang dikembangkan. Tunggu atau batalkan dulu.'); return; }
+    if (data.os.developing) { ToastService.warning(_tx('osuc.warn.developing', 'A version is in development.')); return; }
     var st = _sys.getFeatureStatus(id);
-    if (st.status !== 'available') { ToastService.warning(f.name + ': ' + (st.reason || 'belum tersedia')); return; }
+    if (st.status !== 'available') {
+        ToastService.warning(_tx('osuc.warn.item', '{name}: {reason}', { name: _featName(id), reason: _lockReason(id, st) }));
+        return;
+    }
 
     var i = _draft.indexOf(id);
     if (i !== -1) { _draft.splice(i, 1); _rerender(); return; }
     var max = _sys._getMaxFeatureSlots();
-    if (_draft.length >= max) { ToastService.warning('Maks ' + max + ' kartu per build.'); return; }
+    if (_draft.length >= max) { ToastService.warning(_tx('osuc.warn.max', 'Max {n} cards per build.', { n: max })); return; }
     _draft.push(id);
     _rerender();
 }
@@ -177,9 +215,15 @@ function _ensureHandlers() {
         if (act === 'toggle' || act === 'why') { _onCard(act, b.getAttribute('data-uc-id')); return; }
         if (act === 'clear') { _draft = []; _rerender(); return; }
         if (act === 'build') {
+            if (!_draft.length) { ToastService.warning(_tx('osuc.err.none', 'Select at least 1 card.')); return; }
+            var p = _sys.previewUpdate(_draft);
+            if (!WalletService.canAfford(p.total)) {
+                ToastService.error(_tx('osuc.warn.cash', 'Not enough cash. Need {amount}.', { amount: _money(p.total) }));
+                return;
+            }
             var res = _sys.startVersion(_draft.slice());
             if (!res.ok) { ToastService.error(res.reason); _rerender(); return; }
-            ToastService.success('Build ' + res.versionString + ' dimulai · ' + _money(res.cost));
+            ToastService.success(_tx('osuc.toast.started', 'Build {v} started · {cost}', { v: res.versionString, cost: _money(res.cost) }));
             _draft = [];
             if (window.__game && window.__game.render) window.__game.render(); else _rerender();
         }
@@ -217,7 +261,7 @@ var UC_CSS = `
 .uc-track-name { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--text-primary); }
 .uc-track-hint { font-size: 10.5px; color: var(--text-tertiary); }
 .uc-track-count { font-size: 11px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
-.uc-row { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x proximity; scrollbar-width: thin; }
+.uc-row { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x proximity; scrollbar-width: thin; touch-action: pan-x; overscroll-behavior-x: contain; }
 .uc-card { flex: 0 0 176px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 6px; padding: 11px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-lg); cursor: pointer; user-select: none; min-width: 0; }
 .uc-card:active { transform: scale(0.98); }
 .uc-card.uc-s-owned { cursor: default; opacity: .72; }
