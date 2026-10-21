@@ -103,6 +103,9 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             lastYieldRate: 1.0
         },
 
+        // Riwayat perusahaan per tahun (CompanyHistorySystem)
+        history: { startYear: null, chronicle: [], years: {}, seq: 0, legacyImported: false },
+
         componentPlants: {
             plants: {},
             inventory: {},
@@ -453,6 +456,11 @@ class GameState {
             fab: {
                 ...base.fab, ...(incoming.fab || {}),
                 history: Array.isArray(incoming.fab && incoming.fab.history) ? incoming.fab.history : []
+            },
+            history: {
+                ...base.history, ...(incoming.history || {}),
+                chronicle: Array.isArray(incoming.history && incoming.history.chronicle) ? incoming.history.chronicle : [],
+                years: { ...((incoming.history && incoming.history.years) || {}) }
             },
             componentPlants: {
                 ...base.componentPlants, ...(incoming.componentPlants || {}),
