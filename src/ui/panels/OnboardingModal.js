@@ -102,6 +102,11 @@ function _ensureCloud() {
     }
 }
 
+// [FIX] Payload save valid = ada data objek dari game_saves.
+function _hasCloudData(res) {
+    return !!(res && res.ok && res.payload && res.payload.data && typeof res.payload.data === 'object');
+}
+
 function _isSignedIn() {
     return CloudService.getStatus() === 'connected' && !!CloudService.getUserId();
 }
@@ -337,56 +342,76 @@ export function showOnboarding() {
             }
         }
 
+        function _showFoundFromPayload(payload, slot) {
+            var dd = payload.data;
+            var tm = dd.time || {};
+            foundRow = {
+                slot: slot, company_name: dd.companyName || '',
+                game_year: tm.currentYear || null, game_month: tm.currentMonth || null,
+                updated_at: payload.updatedAt || null
+            };
+            render('found');
+            doContinue();
+        }
+
         async function _afterSignedInInner() {
-            
-            // [FIX] Batasi waktu maksimal 5 detik agar tidak stuck
+            var slot = CloudService.getSlot();
             var list = await _withTimeout(CloudService.listSavesStrict(), 5000);
-            
             if (finished) return;
-            
-            // [FIX] Jika gagal koneksi, kembalikan ke layar login dengan pesan error
+
             if (!list || !list.ok) {
                 ToastService.error(t('cloud.err.network') || 'Koneksi ke server gagal. Coba lagi.');
                 render('auth');
                 return;
             }
 
-            var slot = CloudService.getSlot();
             var row = (list.rows || []).find(function (r) { return r.slot === slot; }) || null;
-
             ToastService.success(t('cloud.auth.signed_in'));
             if (row) {
-                // [FIX] Akun sudah punya progres cloud -> langsung muat & masuk game (tanpa klik lagi).
-                // Bila gagal memuat, layar 'found' tetap ada dengan pesan error + tombol coba lagi.
-                foundRow = row; render('found');
+                // Akun punya progres cloud -> muat & masuk game.
+                foundRow = row;
+                render('found');
                 doContinue();
+                return;
             }
-            else {
-                // [FIX] Daftar save (save_heads) bisa kosong/telat/terblokir RLS padahal save di game_saves ada.
-                // Cek langsung ke tabel save sebelum menganggap akun ini baru.
-                var direct = await _withTimeout(CloudService.downloadSave(slot), 8000);
-                if (finished) return;
-                var dd = direct && direct.ok && direct.payload && direct.payload.data;
-                if (dd && typeof dd === 'object') {
-                    var tm = dd.time || {};
-                    foundRow = {
-                        slot: slot, company_name: dd.companyName || '',
-                        game_year: tm.currentYear || null, game_month: tm.currentMonth || null,
-                        updated_at: direct.payload.updatedAt || null
-                    };
-                    render('found');
-                    doContinue();
-                } else if (direct && !direct.ok && direct.code !== 'no_save') {
-                    // [FIX] Gagal mengecek save (timeout/jaringan/izin), BUKAN berarti akun baru.
-                    // Jangan langsung ke "Mulai Bermain": nama baru akan menimpa save cloud yang sebenarnya ada.
-                    console.warn('[Onboarding] cek save cloud gagal:', direct.code);
-                    ToastService.error(t('onb.cloud.load_fail'));
-                    render('auth');
-                    _msg(t('onb.cloud.load_fail'), 'err');
-                } else {
-                    render('start');
-                }
+
+            // Daftar save (save_heads) kosong/terlambat: cek langsung ke tabel save.
+            var direct = await _withTimeout(CloudService.downloadSave(slot), 8000);
+            if (finished) return;
+            if (_hasCloudData(direct)) { _showFoundFromPayload(direct.payload, slot); return; }
+            if (direct && !direct.ok && direct.code !== 'no_save') {
+                console.warn('[Onboarding] cek save cloud gagal:', direct.code);
+                ToastService.error(t('onb.cloud.load_fail'));
+                render('auth');
+                _msg(t('onb.cloud.load_fail'), 'err');
+                return;
             }
+
+            // [FIX] Tidak ada save terlihat. Token basi membuat RLS diam-diam mengembalikan 0 baris
+            // (tanpa error), sehingga akun lama terlihat seperti akun baru. Verifikasi sesi ke server
+            // lalu coba sekali lagi sebelum menganggap akun ini baru.
+            console.info('[Onboarding] Save tidak terlihat; memverifikasi sesi...');
+            var verified = await _withTimeout(CloudService.restoreSession(), 6000);
+            if (finished) return;
+            if (!(verified && verified.ok)) {
+                console.warn('[Onboarding] Sesi tidak sah di server:', verified && verified.code);
+                render('auth');
+                _msg(_errText('not_signed_in'), 'err');
+                return;
+            }
+
+            var again = await _withTimeout(CloudService.downloadSave(slot), 8000);
+            if (finished) return;
+            if (_hasCloudData(again)) { _showFoundFromPayload(again.payload, slot); return; }
+            if (again && !again.ok && again.code !== 'no_save') {
+                console.warn('[Onboarding] cek ulang save cloud gagal:', again.code);
+                render('auth');
+                _msg(t('onb.cloud.load_fail'), 'err');
+                return;
+            }
+
+            console.info('[Onboarding] Sesi valid, tidak ada save di cloud: akun baru.');
+            render('start');
         }
 
         var _loadingCloud = false;
