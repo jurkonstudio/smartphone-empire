@@ -282,8 +282,11 @@ function _onLocalCredit(delta, reason, payload) {
 
 async function uploadNow(opts) {
     opts = opts || {};
-    if (!_state || !_isConnected() || _busy) return;
-    if ((_conflictOpen) && !opts.manual) return;
+    // [FIX] Selalu kembalikan objek {ok, code} (dulu `undefined` -> "Cannot read properties of undefined (reading 'ok')").
+    if (!_state) return { ok: false, code: 'unknown', reason: 'state belum siap' };
+    if (!_isConnected()) return { ok: false, code: 'not_signed_in', reason: 'belum terhubung ke cloud' };
+    if (_busy) return { ok: false, code: 'busy', reason: 'sinkronisasi sedang berjalan' };
+    if (_conflictOpen && !opts.manual) return { ok: false, code: 'conflict', reason: 'konflik save terbuka' };
 
     _busy = true;
     try {
@@ -302,7 +305,9 @@ async function uploadNow(opts) {
             try { localStorage.setItem(LAST_SYNC_KEY, String(_lastUploadAt)); } catch (e) {}
             res.slot = slot;
         }
-        return res;
+        return res || { ok: false, code: 'unknown' };
+    } catch (e) {
+        return { ok: false, code: 'unknown', reason: String(e && e.message || e) };
     } finally {
         _busy = false;
     }
