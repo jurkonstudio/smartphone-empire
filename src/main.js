@@ -528,6 +528,9 @@ function initAdvisorChat() {
     // Menggunakan 'true' di akhir (Capture Phase) agar mencegah keyboard muncul
     document.body.addEventListener('click', function(e) {
         var chip = e.target.closest('.chip, .chip-small, [data-quick-reply]');
+        // Hanya chip quick reply yang sungguhan (opt-in lewat data-quick-reply, atau di dalam chat).
+        // Chip filter lain (Rekrut, Bursa, Riset) harus dibiarkan ke handler masing-masing.
+        if (chip && !chip.hasAttribute('data-quick-reply') && !chip.closest('[data-modal-id="advisor"], .chat-messages')) chip = null;
         if (chip) {
             e.preventDefault();
             e.stopPropagation();
