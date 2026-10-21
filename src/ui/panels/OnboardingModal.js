@@ -326,6 +326,18 @@ export function showOnboarding() {
 
         async function afterSignedIn() {
             render('checking');
+            try {
+                await _afterSignedInInner();
+            } catch (err) {
+                // [FIX] Jika ada error di tengah jalan, jangan biarkan layar "Memeriksa progres cloud" menggantung.
+                console.error('[Onboarding] afterSignedIn gagal:', err);
+                if (finished) return;
+                ToastService.error(t('cloud.err.unknown'));
+                render('start');
+            }
+        }
+
+        async function _afterSignedInInner() {
             
             // [FIX] Batasi waktu maksimal 5 detik agar tidak stuck
             var list = await _withTimeout(CloudService.listSavesStrict(), 5000);
