@@ -20,6 +20,7 @@ import {
 } from '../data/os.data.js';
 import { WalletService } from './WalletService.js';
 import { computeOsAdoption, getEcosystemAppBonus, ADOPTION_CONFIG } from './OsAdoptionModel.js';
+import { getUpdateBuildFee } from '../data/os-update-cards.data.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -84,7 +85,8 @@ export class OSSystem {
             if (f) { newCost += f.devCost; newDays += f.devDays; }
         });
 
-        const refundedCost = (d.cost || 0) - newCost;
+        const fee = d.buildFee || 0;
+        const refundedCost = (d.cost || 0) - fee - newCost;
         const refund = Math.max(0, Math.floor(refundedCost * (BALANCE.os.refundPercent || 0)));
 
         if (filtered.length === 0) {
@@ -93,7 +95,7 @@ export class OSSystem {
             this.state.addLog('Pengembangan OS dibatalkan: fitur dasar kini dimiliki otomatis. Refund $' + refund.toLocaleString('en-US') + '.', LOG_TYPES.info);
         } else {
             d.features = filtered;
-            d.cost = newCost;
+            d.cost = newCost + fee;
             d.durationDays = newDays;
             if (refund > 0) this.state.addCash(refund);
             this.state.addLog('Fitur dasar kini dimiliki otomatis — dikeluarkan dari pengembangan. Refund $' + refund.toLocaleString('en-US') + '.', LOG_TYPES.info);
@@ -366,27 +368,29 @@ export class OSSystem {
             totalCost += f.devCost;
             totalDays += f.devDays;
         }
-        if (!WalletService.canAfford(totalCost)) {
-            return { ok: false, reason: 'Uang tidak cukup. Butuh $' + totalCost.toLocaleString('en-US') + '.' };
+        const buildFee = getUpdateBuildFee(ids, data.time.currentYear);
+        const grandTotal = totalCost + buildFee;
+        if (!WalletService.canAfford(grandTotal)) {
+            return { ok: false, reason: 'Uang tidak cukup. Butuh $' + grandTotal.toLocaleString('en-US') + '.' };
         }
-        WalletService.pay(totalCost, 'os-dev');
+        WalletService.pay(grandTotal, 'os-dev');
 
         const versionString = this._nextVersionString();
         data.os.developing = {
-            versionString, features: ids, cost: totalCost, durationDays: totalDays,
+            versionString, features: ids, cost: grandTotal, buildFee: buildFee, durationDays: totalDays,
             progressDays: 0, startedAtGameMinute: data.time.elapsedGameMinutes, lastProcessedMinute: data.time.elapsedGameMinutes
         };
-        this.state.addLog('Mulai kembangkan OS ' + versionString + ' (' + ids.length + ' fitur, $' + totalCost.toLocaleString('en-US') + ').', LOG_TYPES.info);
-        bus.emit('os:version-started', { versionString, features: ids, cost: totalCost, durationDays: totalDays });
+        this.state.addLog('Mulai kembangkan OS ' + versionString + ' (' + ids.length + ' fitur, $' + totalCost.toLocaleString('en-US') + ' + biaya rilis $' + buildFee.toLocaleString('en-US') + ').', LOG_TYPES.info);
+        bus.emit('os:version-started', { versionString, features: ids, cost: grandTotal, buildFee: buildFee, durationDays: totalDays });
         bus.emit('state:changed', data);
-        return { ok: true, versionString, cost: totalCost, durationDays: totalDays };
+        return { ok: true, versionString, cost: grandTotal, buildFee: buildFee, durationDays: totalDays };
     }
 
     cancelVersion() {
         const data = this.state.data;
         const d = data.os.developing;
         if (!d) return { ok: false, reason: 'Tidak ada versi yang dikembangkan.' };
-        const refund = Math.floor((d.cost || 0) * (BALANCE.os.refundPercent || 0));
+        const refund = Math.floor(Math.max(0, (d.cost || 0) - (d.buildFee || 0)) * (BALANCE.os.refundPercent || 0));
         if (refund > 0) this.state.addCash(refund);
         data.os.developing = null;
         this.state.addLog('Pengembangan OS dibatalkan (refund $' + refund.toLocaleString('en-US') + ').', LOG_TYPES.warning);
@@ -423,6 +427,15 @@ export class OSSystem {
     previewStats(featureIds) {
         const ids = Array.isArray(featureIds) ? featureIds.slice() : [];
         return this._applyPlatformBonus(this._calculateStats(ids));
+    }
+
+    // Pratinjau biaya build (dipakai panel Rancang Update). Tidak mengubah state.
+    previewUpdate(featureIds) {
+        const ids = Array.isArray(featureIds) ? featureIds.slice() : [];
+        let featureCost = 0, days = 0;
+        ids.forEach(fid => { const f = getOsFeatureById(fid); if (f) { featureCost += f.devCost; days += f.devDays; } });
+        const buildFee = ids.length ? getUpdateBuildFee(ids, this.state.data.time.currentYear) : 0;
+        return { featureCost, buildFee, total: featureCost + buildFee, days, stats: this.previewStats(ids) };
     }
 
     getAvailableFeatures() {
