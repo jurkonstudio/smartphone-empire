@@ -16,6 +16,7 @@ import { renderSilSlotBoost } from '../components/SilResearchBlock.js';
 import { SiliconService } from '../../systems/SiliconService.js';
 import { renderOsKpiRow, renderOsUsersTab } from './OsUsersPanel.js';
 import { formatUsers } from '../../systems/OsAdoptionModel.js';
+import { renderUpdateCardsTab, resetUpdateDraft } from './OsUpdateCards.js';
 
 
 var STAT_ORDER = ['stability', 'speed', 'features', 'security', 'design'];
@@ -45,6 +46,7 @@ export function renderOSPanel(params) {
     const subtabsHtml = `
         <div class="os-subtabs">
             <button class="os-subtab-btn ${_osActiveTab === 'status' ? 'active' : ''}" data-os-tab="status">Status & R&D</button>
+            <button class="os-subtab-btn ${_osActiveTab === 'rancang' ? 'active' : ''}" data-os-tab="rancang">Rancang Update</button>
             <button class="os-subtab-btn ${_osActiveTab === 'pengguna' ? 'active' : ''}" data-os-tab="pengguna">Pengguna</button>
             <button class="os-subtab-btn ${_osActiveTab === 'fitur' ? 'active' : ''}" data-os-tab="fitur">Fitur</button>
             <button class="os-subtab-btn ${_osActiveTab === 'bug' ? 'active' : ''}" data-os-tab="bug">Bug</button>
@@ -61,6 +63,9 @@ export function renderOSPanel(params) {
         const history = _renderVersionHistory(os, currentVersion, osSystem.getAdoption());
         bodyHtml = renderOsKpiRow(osSystem, data) + hero + devStrip + platformHtml + history;
     } 
+    else if (_osActiveTab === 'rancang') {
+        bodyHtml = renderUpdateCardsTab(osSystem, data);
+    }
     else if (_osActiveTab === 'pengguna') {
         bodyHtml = renderOsUsersTab(osSystem, data);
     }
@@ -299,40 +304,10 @@ function _renderLicensesSection(data) {
 // MODAL — WIZARD VERSI BARU (TETAP)
 // ============================================================
 export function openOsWizardModal(params) {
-    var osSystem = params.osSystem;
-    const available = osSystem.getAvailableFeatures();
-    if (!available.length) { window.__game.ToastService.warning('Belum ada fitur yang bisa dipakai.'); return; }
-    const maxSlots = osSystem._getMaxFeatureSlots();
-    const baseStats = osSystem.previewStats([]);
-    const featureHtml = available.map(function (f) {
-        return '<label class="wiz-feature"><input type="checkbox" data-wiz-feature="' + f.id + '"><div style="flex:1;"><div class="wiz-name">' + escapeHtml(f.name) + '</div><div class="wiz-meta">$' + f.devCost.toLocaleString('en-US') + ' • ' + f.devDays + '</div></div></label>';
-    }).join('');
-    const html = `
-        <div class="modal-title">${t('os.wizard.title')}</div><div class="modal-sub">${t('os.wizard.sub', { n: maxSlots })}</div>
-        <div style="max-height:40vh;overflow-y:auto;margin-bottom:12px;" data-wiz-list>${featureHtml}</div>
-        <div class="card-title">${t('os.wizard.preview')}</div><div data-wiz-preview style="margin-bottom:12px;">${renderOsStatBar(baseStats)}</div>
-        <div class="sum-row"><span>${t('os.wizard.total_cost')}</span><b data-wiz-cost>$0</b></div>
-        <div class="sum-row"><span>${t('os.wizard.duration')}</span><b data-wiz-days>0</b></div>
-        <div style="display:flex;gap:8px;margin-top:12px;"><button class="btn-secondary" data-modal-close style="flex:1;">${t('os.wizard.cancel')}</button><button class="btn-primary" data-wiz-confirm style="flex:1;">${t('os.wizard.start')}</button></div>
-    `;
-    window.__game.Modal.open('os-wizard', html);
-    const root = document.querySelector('[data-modal-id="os-wizard"]');
-    const preview = root.querySelector('[data-wiz-preview]'); const costEl = root.querySelector('[data-wiz-cost]'); const daysEl = root.querySelector('[data-wiz-days]'); const checkboxes = root.querySelectorAll('[data-wiz-feature]');
-    function refresh() {
-        const selected = Array.from(checkboxes).filter(c => c.checked);
-        if (selected.length > maxSlots) { selected[selected.length - 1].checked = false; window.__game.ToastService.warning(t('os.wizard.max_features', { n: maxSlots })); return refresh(); }
-        let cost = 0, days = 0; const selectedIds = [];
-        selected.forEach(c => { const f = available.find(x => x.id === c.dataset.wizFeature); if (!f) return; cost += f.devCost; days += f.devDays; selectedIds.push(f.id); });
-        const stats = osSystem.previewStats(selectedIds); preview.innerHTML = renderOsStatBar(stats); costEl.textContent = '$' + cost.toLocaleString('en-US'); daysEl.textContent = days;
-    }
-    checkboxes.forEach(cb => cb.addEventListener('change', refresh));
-    root.querySelector('[data-wiz-confirm]').addEventListener('click', function () {
-        const selected = Array.from(checkboxes).filter(c => c.checked).map(c => c.dataset.wizFeature);
-        if (!selected.length) { window.__game.ToastService.warning(t('os.wizard.select_min')); return; }
-        const res = osSystem.startVersion(selected);
-        if (!res.ok) window.__game.ToastService.error(res.reason || 'Failed.');
-        else { window.__game.ToastService.success('v' + res.versionString); window.__game.Modal.close('os-wizard', true); window.__game.render(); }
-    });
+    // Wizard modal lama digantikan tab "Rancang Update" (kartu per jalur + biaya rilis).
+    _osActiveTab = 'rancang';
+    resetUpdateDraft();
+    if (window.__game && window.__game.renderSoft) window.__game.renderSoft();
 }
 
 export function openCreateOsModal(params) {
