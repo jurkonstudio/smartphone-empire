@@ -14,6 +14,7 @@ import { bus } from '../../core/EventBus.js';
 import { Modal } from '../modal.js';
 import { BALANCE } from '../../data/balance.data.js';
 import { ThemeService } from '../../core/ThemeService.js';
+import { FPS_CHOICES, getRenderFps } from '../../core/RenderFps.js';
 import { LanguageService, t } from '../../core/LanguageService.js';
 import { THEMES, ACCENTS } from '../../data/theme.data.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
@@ -211,6 +212,17 @@ function _tabTampilan() {
         }).join('') +
         '</div>';
 
+    const fpsCur = getRenderFps();
+    const fpsBlock = '<div class="settings-section">' +
+        '<div class="settings-section-head">' + renderIcon('sparkles', 12) + escapeHtml(_pick('Animasi 3D', '3D animation')) + '</div>' +
+        '<div class="settings-picker-block"><div class="settings-segment">' +
+        FPS_CHOICES.map(function (f) {
+            return '<button class="settings-seg-btn' + (fpsCur === f ? ' active' : '') + '" data-fps="' + f + '" type="button"><span>' + f + ' FPS</span></button>';
+        }).join('') +
+        '</div>' +
+        '<div class="settings-picker-hint">' + escapeHtml(_pick('30 FPS lebih hemat baterai. 60 FPS lebih mulus, tapi butuh HP yang lebih kuat. Berlaku untuk Peta Kampus dan Peta Kantor 3D.', '30 FPS saves battery. 60 FPS is smoother but needs a stronger phone. Applies to the Campus and Office 3D maps.')) + '</div>' +
+        '</div></div>';
+
     return '<div class="settings-section">' +
         '<div class="settings-section-head">' + renderIcon('palette', 12) + escapeHtml(t('settings.section.theme')) + '</div>' +
         '<div class="settings-picker-block">' + themeSegment + '</div>' +
@@ -219,7 +231,7 @@ function _tabTampilan() {
             accentPicker +
             '<div class="settings-picker-hint">' + escapeHtml(t('settings.hint.accent')) + '</div>' +
         '</div>' +
-        '</div>';
+        '</div>' + fpsBlock;
 }
 
 function _tabAudio(s) {
@@ -496,6 +508,9 @@ export function bindSettingsActions(root) {
             return;
         }
 
+        var fpsBtn = e.target.closest('[data-fps]');
+        if (fpsBtn) { e.preventDefault(); _setFps(Number(fpsBtn.dataset.fps)); return; }
+
         var themeBtn = e.target.closest('[data-theme-pick]');
         if (themeBtn) {
             e.preventDefault();
@@ -594,6 +609,17 @@ function _openStudioPage() {
     var w = null;
     try { w = window.open(url, '_blank', 'noopener,noreferrer'); } catch (e) { w = null; }
     if (!w) window.location.href = url;
+}
+
+function _setFps(fps) {
+    if (FPS_CHOICES.indexOf(fps) < 0) return;
+    const s = state.get();
+    if (Number(s.settings.fps) === fps) return;
+    s.settings.fps = fps;
+    state.patch({ settings: s.settings });
+    ToastService.info(_pick('Animasi 3D: ', '3D animation: ') + fps + ' FPS');
+    bus.emit('settings:changed', s.settings);
+    _refresh();
 }
 
 function _handleToggle(key) {
