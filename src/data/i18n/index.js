@@ -1,4 +1,5 @@
 // FILE: src/data/i18n/index.js  (REPLACE)
+// v2027.55 — + bahasa Jepang, Prancis, Jerman, Spanyol, Italia, Rusia, Polandia, Hindi (kamus inti).
 // v2027.54 — + bahasa Mandarin (zh) & Korea (ko): kamus inti (zh.js, ko.js), fallback ke Inggris untuk key yang belum diterjemahkan.
 // v2027.53 — + os-screen.i18n.js (mockup f-OS & ringkasan R&D).
 // v2027.52 — + text-fix.i18n.js (perbaikan key mentah: Top Up SIL, Office, ID Pemain, dll).
@@ -7,6 +8,14 @@ import { id as _id } from './id.js';
 import { en as _en } from './en.js';
 import { zh as _zh } from './zh.js';
 import { ko as _ko } from './ko.js';
+import { ja as _ja } from './ja.js';
+import { fr as _fr } from './fr.js';
+import { de as _de } from './de.js';
+import { es as _es } from './es.js';
+import { it as _it } from './it.js';
+import { ru as _ru } from './ru.js';
+import { pl as _pl } from './pl.js';
+import { hi as _hi } from './hi.js';
 import { SILICON_SPEED_I18N } from './silicon-speed.i18n.js';
 import { PLAYER_PROFILE_I18N } from './player-profile.i18n.js';
 import { NOTIFICATION_I18N } from './notification.i18n.js';
@@ -27,14 +36,30 @@ const en = Object.assign({}, _en, SILICON_SPEED_I18N.en, PLAYER_PROFILE_I18N.en,
 // zh & ko: kamus inti saja. Key yang tidak ada akan jatuh ke en lewat LanguageService.t().
 const zh = Object.assign({}, _zh);
 const ko = Object.assign({}, _ko);
+const ja = Object.assign({}, _ja);
+const fr = Object.assign({}, _fr);
+const de = Object.assign({}, _de);
+const es = Object.assign({}, _es);
+const it = Object.assign({}, _it);
+const ru = Object.assign({}, _ru);
+const pl = Object.assign({}, _pl);
+const hi = Object.assign({}, _hi);
 
-export const DICTIONARIES = { id, en, zh, ko };
+export const DICTIONARIES = { id, en, zh, ko, ja, fr, de, es, it, ru, pl, hi };
 
 export const SUPPORTED_LANGS = [
     { id: 'en', label: 'English' },
     { id: 'id', label: 'Bahasa Indonesia' },
     { id: 'zh', label: '中文（简体）' },
-    { id: 'ko', label: '한국어' }
+    { id: 'ko', label: '한국어' },
+    { id: 'ja', label: '日本語' },
+    { id: 'fr', label: 'Français' },
+    { id: 'de', label: 'Deutsch' },
+    { id: 'es', label: 'Español' },
+    { id: 'it', label: 'Italiano' },
+    { id: 'ru', label: 'Русский' },
+    { id: 'pl', label: 'Polski' },
+    { id: 'hi', label: 'हिन्दी' }
 ];
 
 export function isValidLang(langId) {
