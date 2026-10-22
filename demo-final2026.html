@@ -657,7 +657,24 @@ selPkg = 'pkg_l'; renderPkgs();
 
 /* ---------- Supabase ---------- */
 let cfg = null, client = null, user = null, publicId = null, balance = null, cloudErr = null;
+let profile = null, head = null, lastRefresh = 0; // data dari sistem game: profil + ringkasan save cloud
 
+let syncBound = false;
+function bindAuthSync(c) {
+  if (syncBound) return; syncBound = true;
+  // Login/keluar di tab game atau tab lain ikut tercermin di sini (kunci sesi sama dengan game).
+  c.auth.onAuthStateChange((ev, s) => {
+    if (ev === 'SIGNED_OUT') { user = null; balance = null; publicId = null; profile = null; head = null; renderAcct(); return; }
+    if (s && s.user && (ev === 'SIGNED_IN' || ev === 'USER_UPDATED' || ev === 'TOKEN_REFRESHED') && (!user || user.id !== s.user.id)) {
+      user = { id: s.user.id, email: s.user.email || '' }; renderAcct();
+      setTimeout(loadAccount, 0); // jangan memanggil Supabase langsung di dalam callback auth
+    }
+  });
+  // Kembali ke tab ini (mis. dari game): segarkan saldo, pesanan, dan save cloud.
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && user && client && Date.now() - lastRefresh > 15000) loadAccount();
+  });
+}
 async function loadCloud() {
   if (client || cloudErr) return client;
   try {
@@ -671,6 +688,7 @@ async function loadCloud() {
     client = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_KEY, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: cfg.CLOUD.authStorageKey }
     });
+    bindAuthSync(client);
     return client;
   } catch (e) { cloudErr = e; return null; }
 }
@@ -713,15 +731,23 @@ function renderAcct() {
   }
   nav.className = 'acct-chip'; nav.dataset.mode = 'acct';
   nav.innerHTML = `<span>${balance == null ? '💎' : '💎 ' + nf(balance)}</span><span class="av">${initial(user)}</span>`;
-  box.innerHTML = `<div class="acct-row"><div class="av">${initial(user)}</div><div style="min-width:0"><div class="nm"></div><div class="mt">Akun cloud terhubung</div></div></div>
+  box.innerHTML = `<div class="acct-row"><div class="av">${initial(user)}</div><div style="min-width:0"><div class="nm"></div><div class="mt"></div></div></div>
     <div class="acct-kpi"><div class="kpi"><span>Saldo SIL</span><b>💎 ${balance == null ? '…' : nf(balance)}</b></div><div class="kpi"><span>ID Pemain</span><b>${publicId == null ? '—' : publicId}</b></div></div>
-    <div class="acct-act"><a class="btn btn-blue btn-sm" href="./index.html">Lanjut main</a><button class="btn btn-ghost btn-sm" type="button" id="logout">Keluar</button></div>`;
+    <div class="acct-act"><a class="btn btn-blue btn-sm" href="./index.html" id="goPlay"></a><button class="btn btn-ghost btn-sm" type="button" id="logout">Keluar</button></div>`;
   $('.nm', box).textContent = user.email || 'Pemain';
+  const co = profile && profile.company_name;
+  $('.mt', box).textContent = head
+    ? `${co || head.company_name || 'Perusahaanmu'} · Save cloud tahun ${head.game_year == null ? '—' : head.game_year}`
+    : (co ? `${co} · Belum ada save cloud` : 'Akun game terhubung · belum ada save cloud');
+  $('#goPlay').textContent = head ? 'Lanjut main' : 'Mulai main';
 }
 async function loadAccount() {
   if (!client || !user) return;
   try { const r = await client.rpc('get_silicon'); if (!r.error && r.data != null) balance = Number(r.data); } catch (e) {}
   try { const r = await client.rpc('get_my_public_id'); if (!r.error && r.data != null) publicId = r.data; } catch (e) {}
+  try { const r = await client.from('profiles').select('company_name,player_name').eq('id', user.id).maybeSingle(); if (!r.error) profile = r.data || null; } catch (e) {}
+  try { const r = await client.from('save_heads').select('company_name,game_year,game_month,updated_at').eq('user_id', user.id).eq('slot', 1).maybeSingle(); if (!r.error) head = r.data || null; } catch (e) {}
+  lastRefresh = Date.now();
   renderAcct();
   loadOrders();
 }
@@ -838,7 +864,7 @@ async function onSignedIn(u) {
 }
 async function doLogout() {
   try { const c = await loadCloud(); if (c) await c.auth.signOut(); } catch (e) {}
-  user = null; balance = null; publicId = null; renderAcct(); toast('Kamu sudah keluar');
+  user = null; balance = null; publicId = null; profile = null; head = null; renderAcct(); toast('Kamu sudah keluar');
 }
 
 /* ---------- top up ---------- */
@@ -900,9 +926,19 @@ renderAcct();
   const c = await loadCloud(); if (!c) return;
   try {
     const r = await c.auth.getSession();
-    if (r.data && r.data.session) { user = { id: r.data.session.user.id, email: r.data.session.user.email || '' }; renderAcct(); loadAccount(); }
+    if (r.data && r.data.session) {
+      // Verifikasi token ke server (sama seperti game). Hanya error autentikasi yang membersihkan sesi;
+      // gangguan jaringan sementara tidak boleh membuat pemain terlempar keluar.
+      let ok = true;
+      try {
+        const chk = await c.auth.getUser();
+        const m = chk.error ? String(chk.error.message || chk.error.code || '').toLowerCase() : '';
+        if (chk.error && (chk.error.status === 401 || /jwt|invalid claim|not authenticated|session/.test(m))) ok = false;
+      } catch (e) {}
+      if (!ok) { try { await c.auth.signOut({ scope: 'local' }); } catch (e) {} return; }
+      user = { id: r.data.session.user.id, email: r.data.session.user.email || '' }; renderAcct(); loadAccount();
+    }
   } catch (e) {}
-  c.auth.onAuthStateChange((ev, s) => { if (ev === 'SIGNED_OUT') { user = null; balance = null; publicId = null; renderAcct(); } });
 })();
 </script>
 </body>
