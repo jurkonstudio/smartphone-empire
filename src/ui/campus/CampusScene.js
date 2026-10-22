@@ -1,4 +1,6 @@
 // FILE: src/ui/campus/CampusScene.js
+// v2027.62 — prioritas label dari registri; asap pabrik mengikuti status produksi Fab (fab.producing);
+// registri gedung divalidasi saat peta dibuat (peringatan konsol bila ada masalah).
 // v2027.60 — PREMIUM LOOK: tone mapping ACES + sRGB, rig cahaya (matahari/fill/rim/hemi) + environment
 // map prosedural, shadow map statis (hanya dihitung ulang saat bangunan berubah) dengan tier adaptif,
 // hutan & semak instanced, label gedung terproyeksi, hover ring (mouse), seleksi fade halus,
@@ -16,8 +18,9 @@ import { frameGapMs } from '../../core/RenderFps.js';
 import {
     createAssets, buildGround, buildForest, buildShrubs, buildHQ, buildSlot, buildSprawl,
     computePlan, rememberPeak, buildWind, buildRail, applyShadowFlags, disposeObject,
-    PALETTES, TREE_SPOTS, ERA_WINDOWS, SLOT_ORDER, SPRAWL_SPOTS
+    PALETTES, TREE_SPOTS, ERA_WINDOWS, SLOT_ORDER, SPRAWL_SPOTS, BUILDER_IDS
 } from './CampusBuildings.js';
+import { CAMPUS_BY_ID, validateCampusRegistry } from '../../data/campus-buildings.data.js';
 import { detectQuality, createLookRig } from './CampusLook.js';
 import { buildOfficeSilhouette, NEIGHBOR_OFFSET } from './NeighborSilhouette.js';
 import { createCampusLabels } from './CampusLabels.js';
@@ -428,8 +431,7 @@ export function createCampusScene(THREE, container, gameState) {
     }
 
     // ---------- label gedung (diproyeksikan dari atap tiap bangunan) ----------
-    var LABEL_PRIO = { hq: 0, monument: 3, billboard: 3 };
-    function syncLabels() {
+        function syncLabels() {
         if (!lastPlan) return;
         var list = [];
         for (var key in dyn) {
@@ -441,7 +443,7 @@ export function createCampusScene(THREE, container, gameState) {
                 key: key, id: key, name: getBuildingName(key),
                 level: info.level, max: info.max,
                 x: m.cx, y: m.top + 0.45, z: m.cz,
-                prio: LABEL_PRIO[key] !== undefined ? LABEL_PRIO[key] : 2,
+                prio: (CAMPUS_BY_ID[key] && CAMPUS_BY_ID[key].prio !== undefined) ? CAMPUS_BY_ID[key].prio : 2,
                 alert: alerts[key] ? alerts[key].tone : ''
             });
         }
@@ -497,6 +499,8 @@ export function createCampusScene(THREE, container, gameState) {
         if (disposed || !data) return;
         var plan = computePlan(data);
         rememberPeak(data, plan);
+        // Asap pabrik mengikuti produksi Fab yang sedang berjalan (tidak memicu rebuild).
+        if (life) life.setFactoryBusy(!!(data.fab && data.fab.producing));
         lastData = data;
         var aChanged = refreshAlerts(data);
         if (plan.sig === appliedSig) {
@@ -539,6 +543,10 @@ export function createCampusScene(THREE, container, gameState) {
     } else {
         window.addEventListener('resize', resize);
     }
+
+    // Registri gedung harus sehat (lihat validateCampusRegistry). Hanya peringatan konsol.
+    var regErrs = validateCampusRegistry(BUILDER_IDS);
+    if (regErrs.length) console.warn('[CampusScene] registri gedung bermasalah:', regErrs);
 
     applyTheme();
     update(gameState);

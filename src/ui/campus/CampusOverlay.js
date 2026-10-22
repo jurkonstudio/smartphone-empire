@@ -1,4 +1,5 @@
 // FILE: src/ui/campus/CampusOverlay.js
+// v2027.62 — tombol "Buka ..." membawa sub-tab (info.nav.sub), mis. Riset > Manufaktur.
 // v2027.60 — panel glass konsisten dengan tampilan 3D (blur + bayangan lembut, mati di mode hemat),
 // vinyet halus untuk kedalaman, ikon kartu dengan gradien aksen. API publik TIDAK berubah.
 // v2027.44 (Tahap 4) — Lapisan UI di atas peta kampus (DOM murni, tanpa framework):
@@ -199,7 +200,7 @@ export function createCampusOverlay(container, cfg) {
         if (info.nav) {
             go.style.display = '';
             go.className = 'cmp-go' + (al && al.action ? ' sec' : '');
-            setAction(go, info.nav.label, info.nav.view, '', null);
+            setAction(go, info.nav.label, info.nav.view, info.nav.sub || '', null);
         } else {
             go.style.display = 'none';
         }

@@ -1,4 +1,7 @@
 // FILE: src/ui/campus/CampusLife.js
+// v2027.62 — konstanta bersama (kolam, monorail, slot pabrik) diambil dari CampusBuildings (satu sumber);
+// lintasan monorail diperbaiki agar kereta berjalan persis di dalam rel; asap pabrik kini mengikuti
+// status produksi Fab (setFactoryBusy dipanggil dari CampusScene).
 // v2027.60 — material PBR (Standard) + ikut skala env tema lewat A.track; varian fasad 3 jenis.
 // v2027.38 — + kapal kargo di teluk, monorail, kincir angin, helikopter HQ, jalan lebih panjang.
 // v2027.37a — "Kampus hidup": animasi ambient ringan (mobil + bus, pejalan kaki di
@@ -7,14 +10,14 @@
 // kunang-kunang malam). Semua geometri dari cache createAssets, objek sedikit,
 // tanpa shadow map & tanpa alokasi per-frame.
 
+import { POND, RAIL, SLOTS } from './CampusBuildings.js';
+
 var CAR_COLORS = [0xef4444, 0xf59e0b, 0x10b981, 0x6366f1, 0xf8fafc, 0x1f2937, 0xec4899];
 var WALK_COLORS = [0xf97316, 0x3b82f6, 0xa855f7, 0x14b8a6, 0xeab308, 0xef4444];
 var ROAD_Z = { from: 14.6, to: 3.6 };     // jalan selatan: x = lane, z dari tepi ke plaza
 var ROAD_X = { from: -14.6, to: -3.6 };   // jalan barat:   z = lane, x dari tepi ke plaza
-var FACTORY = { x: 6.6, z: 0.6, W: [0, 3.2, 3.4, 3.6], H: [0, 1.3, 1.5, 1.8] }; // sama dgn buildFactory
-var POND = { x: 0.5, z: -6, r: 1.4 };     // sama dgn POND di CampusBuildings
+var FACTORY = { x: SLOTS.factory[0], z: SLOTS.factory[1], W: [0, 3.2, 3.4, 3.6], H: [0, 1.3, 1.5, 1.8] }; // W/H sama dgn buildFactory
 var PORT = { x: 12.5, z: 11.8 };          // kapal bersandar di sisi dermaga (slot port 11.0,6.8 + BAY)
-var RAIL = { z: -10.2, y: 1.5, x0: -11.5, x1: 11.5 };   // sama dgn RAIL di CampusBuildings
 var CURB_Y = 0.09;                        // tinggi trotoar (pejalan berdiri di atasnya)
 var PUFFS = 9;
 var FLY_BASE = [[-1.4, -6.6], [2.5, -5.6], [-3, -5.5], [4.4, -4.4], [-7, -6], [8, -4], [-8, 5], [7.5, 6.5]];
@@ -198,11 +201,11 @@ export function createCampusLife(THREE, A, scene, trees) {
     var train = new THREE.Group();
     var trainM = mk(0xf8fafc);
     for (i = 0; i < 3; i++) {
-        train.add(put(A.box(0.95, 0.34, 0.5), trainM, i * 1.02, 0, 0));
-        train.add(put(A.box(0.85, 0.1, 0.52), carDark, i * 1.02, 0.07, 0));
-        train.add(put(A.box(0.95, 0.05, 0.5), A.mat('roof'), i * 1.02, 0.2, 0));
+        train.add(put(A.box(0.95, 0.34, 0.5), trainM, (i - 1) * 1.02, 0, 0));
+        train.add(put(A.box(0.85, 0.1, 0.52), carDark, (i - 1) * 1.02, 0.07, 0));
+        train.add(put(A.box(0.95, 0.05, 0.5), A.mat('roof'), (i - 1) * 1.02, 0.2, 0));
     }
-    train.add(put(A.box(0.05, 0.08, 0.1), A.mat('glow'), 3.06, 0, 0));
+    train.add(put(A.box(0.05, 0.08, 0.1), A.mat('glow'), 1.5, 0, 0));
     train.visible = false;
     root.add(train);
 
@@ -331,7 +334,8 @@ export function createCampusLife(THREE, A, scene, trees) {
             var ph = (t * 0.045) % 2;
             var sp = ph <= 1 ? ph : 2 - ph;
             var es = sp * sp * (3 - 2 * sp);
-            train.position.set(lerp(RAIL.x0, RAIL.x1, es) - 1.5, RAIL.y + 0.34, RAIL.z);
+            // origin = tengah rangkaian (±1.5 unit), jadi kereta tidak keluar dari rel di kedua ujung
+            train.position.set(lerp(RAIL.x0 + 1.5, RAIL.x1 - 1.5, es), RAIL.y + 0.34, RAIL.z);
         }
 
         // helikopter mengitari HQ

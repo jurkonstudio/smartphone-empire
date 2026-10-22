@@ -1,57 +1,21 @@
-// FILE: src/ui/campus/CampusInfo.js  (REPLACE — i18n)
+// FILE: src/ui/campus/CampusInfo.js  (REPLACE — registri + navigasi sub-tab)
+// v2027.62 — nama, ikon, deskripsi, satuan, dan tujuan tombol "Buka ..." sekarang dibaca dari
+// REGISTRI (campus-buildings.data.js), bukan tabel terpisah. Tombol kini membawa sub-tab
+// (mis. Riset > Manufaktur) sehingga pemain langsung mendarat di tab yang tepat.
 // v2027.44 (Tahap 4) — Data kartu info bangunan: nama, level, progres ke level berikutnya,
 // petunjuk, dan tujuan navigasi. Murni logika (tanpa THREE / DOM) supaya gampang dites.
-// i18n: semua teks dicari lewat t() (key campus.info.*); tabel [id, en] di file ini
-// tetap dipakai sebagai FALLBACK bila key belum ada di kamus. Ganti bahasa ditangani
+// i18n: semua teks dicari lewat t() (key campus.info.*); teks [Indonesia, English] dari registri
+// dipakai sebagai FALLBACK bila key belum ada di kamus. Ganti bahasa ditangani
 // CampusMap (bus 'lang:changed' → scene.refreshLang() → getUiStrings()/getBuildingInfo()).
 import { RULES } from './CampusBuildings.js';
+import { CAMPUS_BY_ID } from '../../data/campus-buildings.data.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
 
-var ICONS = {
-    hq: '🏢', lab: '🔬', factory: '🏭', store: '🏬', os: '🖥️', monument: '🏆',
-    billboard: '📣', academy: '🎓', arena: '🏟️', port: '⚓',
-    wind: '🌬️', rail: '🚆', sprawl: '🏙️'
-};
-
-// [Indonesia, English]
-var NAMES = {
-    hq: ['Kantor Pusat', 'Headquarters'], lab: ['Lab R&D', 'R&D Lab'],
-    factory: ['Pabrik Chip', 'Chip Factory'], store: ['Toko Flagship', 'Flagship Store'],
-    os: ['Pusat OS & Server', 'OS & Server Hub'], monument: ['Monumen Prestasi', 'Achievement Monument'],
-    billboard: ['Billboard Kampanye', 'Campaign Billboard'], academy: ['Akademi Inovasi', 'Innovation Academy'],
-    arena: ['Arena Peluncuran', 'Launch Arena'], port: ['Pelabuhan Logistik', 'Logistics Port'],
-    wind: ['Ladang Angin', 'Wind Farm'], rail: ['Monorail Kota', 'City Monorail'],
-    sprawl: ['Kawasan Kota', 'City District']
-};
-var DESC = {
-    hq: ['Tumbuh seiring jumlah staf Anda.', 'Grows with your headcount.'],
-    lab: ['Tumbuh seiring riset yang selesai.', 'Grows with completed research.'],
-    factory: ['Mencerminkan level Fab chip Anda.', 'Reflects your chip Fab level.'],
-    store: ['Makin megah seiring produk yang dirilis.', 'Grows grander with each product released.'],
-    os: ['Server bertambah seiring versi OS.', 'More servers as you ship OS versions.'],
-    monument: ['Penanda pangsa pasar Anda.', 'A marker of your market share.'],
-    billboard: ['Menyala saat ada kampanye aktif.', 'Lights up while a campaign is active.'],
-    academy: ['Rumah bagi tim yang besar.', 'Home to a large team.'],
-    arena: ['Panggung peluncuran produk.', 'The stage for product launches.'],
-    port: ['Menampung stok barang jadi.', 'Holds your finished-goods stock.'],
-    wind: ['Energi hijau kampus, sejak era Premium.', 'Green energy for the campus, since the Premium era.'],
-    rail: ['Menghubungkan kawasan, sejak era Smartphone Matang.', 'Connects districts, since the Mature Smartphone era.'],
-    sprawl: ['Kota tumbuh seiring era desain.', 'The city grows with each design era.']
-};
-var UNITS = {
-    hq: ['staf', 'staff'], lab: ['riset selesai', 'research done'], factory: ['level Fab', 'Fab level'],
-    store: ['produk rilis', 'products released'], os: ['versi OS', 'OS versions'],
-    monument: ['% pangsa pasar', '% market share'], billboard: ['kampanye aktif', 'active campaigns'],
-    academy: ['staf', 'staff'], arena: ['produk rilis', 'products released'], port: ['unit stok', 'stock units']
-};
-// Tab utama tujuan tombol "Buka ...". (Sub-tab dipilih pemain sendiri di panel tujuan.)
-var NAV = {
-    hq: 'team', lab: 'research', factory: 'research', store: 'products', os: 'research',
-    monument: 'market', billboard: 'products', academy: 'team', arena: 'products', port: 'products'
-};
+// Tampilan tab induk bila gedung tidak menentukan label sendiri.
 var VIEW_LABEL = {
     team: ['HQ', 'HQ'], research: ['Riset', 'Research'], products: ['Produk', 'Products'], market: ['Pasar', 'Market']
 };
+
 var UI = [
     {   // id
         levelOf: 'Level {lv} dari {max}', maxed: 'Level maksimum tercapai ✨',
@@ -86,17 +50,17 @@ function fmt(n) {
 }
 function clamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
 
-// t() dengan fallback dari tabel [id, en] bila key belum ada di kamus.
+// t() dengan fallback dari pasangan [id, en] bila key belum ada di kamus.
 function _tf(key, pair, vars) {
     var v = t(key, vars);
     if (v && v !== key) return v;
     return pair ? fill(pair[langIdx()], vars) : key;
 }
 function _ui(k, vars) { return _tf('campus.info.ui.' + k, [UI[0][k], UI[1][k]], vars); }
-function _name(id) { return _tf('campus.info.name.' + id, NAMES[id]); }
-function _desc(id) { return _tf('campus.info.desc.' + id, DESC[id]); }
-function _unit(id) { return _tf('campus.info.unit.' + id, UNITS[id]); }
-function _view(v) { return _tf('campus.info.view.' + v, VIEW_LABEL[v]); }
+function _name(id) { return _tf('campus.info.name.' + id, CAMPUS_BY_ID[id].name); }
+function _desc(id) { return _tf('campus.info.desc.' + id, CAMPUS_BY_ID[id].desc); }
+function _unit(id) { return _tf('campus.info.unit.' + id, CAMPUS_BY_ID[id].unit); }
+function _view(key, pair) { return _tf('campus.info.view.' + key, pair); }
 
 export function getUiStrings() {
     return {
@@ -108,17 +72,27 @@ export function getUiStrings() {
 }
 
 export function getBuildingName(id) {
-    return NAMES[id] ? _name(id) : String(id);
+    return CAMPUS_BY_ID[id] ? _name(id) : String(id);
 }
 
 export function hasCelebration(id) { return !!RULES[id]; }
 
+// Tujuan tombol "Buka ...": { view, sub, label } dari registri (label sub-tab bila ada).
+function _navOf(entry) {
+    var n = entry.nav;
+    if (!n) return null;
+    var key = n.sub || n.view;
+    var pair = n.label || VIEW_LABEL[n.view] || [n.view, n.view];
+    return { view: n.view, sub: n.sub || '', label: _ui('open', { view: _view(key, pair) }) };
+}
+
 // Mengembalikan struktur siap-render untuk kartu info, atau null bila id tidak dikenal.
 export function getBuildingInfo(id, plan, data, alerts) {
-    if (!plan || !NAMES[id]) return null;
+    var entry = CAMPUS_BY_ID[id];
+    if (!plan || !entry) return null;
     var L = langIdx();
     var info = {
-        id: id, icon: ICONS[id] || '🏗️', name: _name(id), desc: _desc(id),
+        id: id, icon: entry.emoji || '🏗️', name: _name(id), desc: _desc(id),
         level: 0, max: 0, hasLevels: false, pct: 0, maxed: false, hint: '', levelText: '', nav: null,
         alert: null
     };
@@ -150,8 +124,7 @@ export function getBuildingInfo(id, plan, data, alerts) {
                 n: lv + 1, need: fmt(need), unit: _unit(id), now: fmt(shown), left: fmt(left)
             });
         }
-        var view = NAV[id];
-        if (view) info.nav = { view: view, label: _ui('open', { view: _view(view) }) };
+        info.nav = _navOf(entry);
     }
     info.sig = [id, L, info.level, Math.round(info.pct * 100), info.hint, info.alert ? info.alert.tone + info.alert.text : ''].join('|');
     return info;

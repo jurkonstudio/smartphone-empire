@@ -1,4 +1,7 @@
 // FILE: src/ui/campus/CampusBuildings.js
+// v2027.62 — gedung & aturan level dibaca dari REGISTRI (campus-buildings.data.js): satu sumber
+// kebenaran untuk 3D, kartu info, alert, dan panel. + Pabrik Komponen (pcplant) & Pusat Desain
+// Chip (chipdesign) yang terhubung ke sistem game. Logika level lama tidak berubah.
 // v2027.60 — PREMIUM LOOK: material PBR (MeshStandardMaterial) + env map, bayangan nyata
 // (shadow map statis, tier adaptif) + contact-AO, varian fasad/atap per bangunan, vertex-color AO
 // pada fasad, pohon & semak instanced (1 draw call per bagian, bukan per pohon), tekstur rumput,
@@ -23,6 +26,9 @@ import { DESIGN_ERAS, getDesignEraForYear } from '../../data/era-design.data.js'
 import { BALANCE } from '../../data/balance.data.js';
 import { t } from '../../core/LanguageService.js';
 import { SHADE_DIR } from './CampusLook.js';
+import {
+    CAMPUS_RULES, CAMPUS_SLOTS, CAMPUS_SLOT_ORDER, CAMPUS_BY_ID, CAMPUS_RESERVED, campusLevelFor
+} from '../../data/campus-buildings.data.js';
 
 // Ukuran dunia visual; koordinat inti lama tetap di tengah agar integrasi tidak bergeser.
 export const CAMPUS_WORLD_SIZE = 100;
@@ -88,6 +94,14 @@ export function islandRadius(th, scale) {
 function _rng(seed) {
     return function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 }
+// Lahan gedung: pohon/semak/lampu dengan pusat di dalam (+pad) ditiadakan agar tidak menembus bangunan.
+function _onReserved(x, z, pad) {
+    for (var i = 0; i < CAMPUS_RESERVED.length; i++) {
+        var r = CAMPUS_RESERVED[i];
+        if (x > r.x0 - pad && x < r.x1 + pad && z > r.z0 - pad && z < r.z1 + pad) return true;
+    }
+    return false;
+}
 // Zona inti yang tidak boleh dimasuki dekorasi luar (jalan, teluk, gerbang, monorail, kincir angin).
 function _inCore(x, z) { return Math.abs(x) < 16.3 && Math.abs(z) < 16.3; }
 function _inland(x, z, margin) { return Math.hypot(x, z) < islandRadius(Math.atan2(z, x)) - margin; }
@@ -117,6 +131,7 @@ export const TREE_SPOTS = (function () {
         [13.6, -9.2], [-12.8, -3.2], [8.8, -12.8], [2.8, -12.8], [-2.0, -12.8], [11.2, 2.8],
         [0.4, -12.8], [-3.2, 13.6], [-11.6, 2.8], [-10.4, 7.6], [-12.8, 7.6]
     ];
+    base = base.filter(function (p) { return !_onReserved(p[0], p[1], 0.9); });
     var rnd = _rng(9917), out = base.slice(), outer = [];
     function free(x, z) {
         for (var i = 0; i < HILLS.length; i++) {
@@ -149,20 +164,9 @@ export var POND = { x: 0.5, z: -6, r: 1.4 };
 // Teluk di tenggara (tempat Pelabuhan). Dipakai CampusLife untuk kapal.
 export var BAY = { x: 11, z: 11.8, w: 7.4, d: 5.8 };
 
-// Posisi slot bangunan (x, z). Sudah dicek tidak bertabrakan dengan HQ,
-// jalan, pohon, dan satu sama lain.
-export var SLOTS = {
-    lab:       [-6.0, -3.6],
-    factory:   [6.6, 0.6],
-    store:     [-5.4, 4.2],
-    os:        [4.6, 5.0],
-    billboard: [2.6, 8.6],
-    monument:  [-2.9, 2.9],
-    academy:   [-10.5, -6.5],
-    arena:     [10.8, -6.2],
-    port:      [11.0, 6.8]
-};
-export var SLOT_ORDER = ['lab', 'factory', 'store', 'os', 'billboard', 'monument', 'academy', 'arena', 'port'];
+// Posisi slot bangunan (x, z) dan urutannya — dari registri (campus-buildings.data.js).
+export var SLOTS = CAMPUS_SLOTS;
+export var SLOT_ORDER = CAMPUS_SLOT_ORDER;
 
 // Ladang angin (era Premium+) dan jalur monorail (era Smartphone Matang+).
 export var WIND_SPOTS = [[-11.5, -13.2], [-8.2, -13.2], [-4.8, -13.2]];
@@ -191,62 +195,16 @@ function _bName(id, fb) { return _tf('campus.info.name.' + id, fb); }
 function _bUnit(id, fb) { return _tf('campus.info.unit.' + id, fb); }
 
 // ============================================================
-// ATURAN LEVEL — level = base + jumlah "steps" yang sudah terlewati.
-// metric(data) membaca state game.
+// ATURAN LEVEL — dibaca dari registri (campus-buildings.data.js). Ubah angka di sana.
 // ============================================================
-function len(a) { return Array.isArray(a) ? a.length : 0; }
-
-function researchMetric(d) {
-    var starters = len(BALANCE && BALANCE.starterResearch);
-    var done = len(d.research && d.research.completed);
-    var chip = len(d.chipResearch && d.chipResearch.completed);
-    return Math.max(0, done - starters) + chip;
-}
-function stockMetric(d) {
-    var cat = d.products && d.products.catalog;
-    if (!Array.isArray(cat)) return 0;
-    var n = 0;
-    for (var i = 0; i < cat.length; i++) n += (cat[i] && cat[i].stock) || 0;
-    return n;
-}
-function shareMetric(d) {
-    var s = (d.market && typeof d.market.share === 'number') ? d.market.share : 0;
-    return s <= 1 ? s * 100 : s;   // dukung 0..1 maupun 0..100
-}
-
-export var RULES = {
-    hq:        { name: 'Kantor Pusat',      max: 4, base: 1, steps: [5, 15, 30],  unit: 'staf',
-                 metric: function (d) { return len(d.staff); } },
-    lab:       { name: 'Lab R&D',           max: 3, base: 0, steps: [2, 8, 20],   unit: 'riset selesai',
-                 metric: researchMetric },
-    factory:   { name: 'Pabrik Chip',       max: 3, base: 0, steps: [1, 2, 3],    unit: 'level Fab',
-                 metric: function (d) { return (d.fab && d.fab.built) ? Math.max(1, d.fab.level || 1) : 0; } },
-    store:     { name: 'Toko Flagship',     max: 3, base: 0, steps: [1, 3, 6],    unit: 'produk rilis',
-                 metric: function (d) { return len(d.products && d.products.catalog); } },
-    os:        { name: 'Pusat OS & Server', max: 3, base: 0, steps: [1, 3, 6],    unit: 'versi OS',
-                 metric: function (d) { return len(d.os && d.os.versions); } },
-    monument:  { name: 'Monumen Prestasi',  max: 2, base: 0, steps: [2, 8],       unit: '% pangsa pasar',
-                 metric: shareMetric },
-    billboard: { name: 'Billboard Kampanye', max: 1, base: 0, steps: [1],         unit: 'kampanye aktif', live: true,
-                 metric: function (d) { return len(d.marketing && d.marketing.activeCampaigns); } },
-    academy:   { name: 'Akademi Inovasi',   max: 3, base: 0, steps: [8, 20, 40],  unit: 'staf',
-                 metric: function (d) { return len(d.staff); } },
-    arena:     { name: 'Arena Peluncuran',  max: 3, base: 0, steps: [4, 10, 20],  unit: 'produk rilis',
-                 metric: function (d) { return len(d.products && d.products.catalog); } },
-    port:      { name: 'Pelabuhan Logistik', max: 3, base: 0, steps: [1000, 5000, 20000], unit: 'unit stok',
-                 metric: stockMetric }
-};
+export var RULES = CAMPUS_RULES;
 var RULE_KEYS = Object.keys(RULES);
 
 // Era desain minimum untuk dekorasi era (indeks DESIGN_ERAS).
-export var RAIL_MIN_ERA = 3;   // Smartphone Matang
-export var WIND_MIN_ERA = 4;   // Premium
+export var RAIL_MIN_ERA = CAMPUS_BY_ID.rail.minEra;   // Smartphone Matang
+export var WIND_MIN_ERA = CAMPUS_BY_ID.wind.minEra;   // Premium
 
-function levelFor(rule, m) {
-    var lv = rule.base;
-    for (var i = 0; i < rule.steps.length; i++) if (m >= rule.steps[i]) lv = rule.base + i + 1;
-    return Math.min(lv, rule.max);
-}
+function levelFor(rule, m) { return campusLevelFor(rule, m); }
 
 // Level HQ lama (dipertahankan untuk kompatibilitas).
 export function getHqLevel(data) {
@@ -368,8 +326,13 @@ var MAT_PROPS = {
 // 3 varian fasad (tekstur sama, tint beda) + seed per bangunan -> gedung tidak tampak seperti salinan.
 var FACADE_KEYS = ['facade', 'facadeB', 'facadeC'];
 var FACADE_TINT = [0xffffff, 0xf2e8d6, 0xdde7f3];
-var VARIANT_SEED = { hq: 0, lab: 1, factory: 2, store: 3, os: 4, monument: 0, billboard: 0, academy: 5, arena: 6, port: 7 };
-var ROOF_ALT = { factory: true, port: true };
+// Seed varian fasad & atap per gedung, dari registri (variant, roofAlt).
+var VARIANT_SEED = {};
+var ROOF_ALT = {};
+Object.keys(CAMPUS_BY_ID).forEach(function (k) {
+    VARIANT_SEED[k] = CAMPUS_BY_ID[k].variant || 0;
+    ROOF_ALT[k] = !!CAMPUS_BY_ID[k].roofAlt;
+});
 
 function hexCss(n) { return '#' + ('000000' + (n >>> 0).toString(16)).slice(-6); }
 function tint(n, f) {   // f: -1 (gelap) .. 1 (terang)
@@ -665,13 +628,14 @@ var GRASS_PATCHES = [
     [-12.2, -12, 4, 3], [12.4, -13, 3.2, 2], [-12.6, 12.4, 3.4, 3], [3.4, 13.2, 3, 2.2],
     [-10.8, -3.2, 3, 1.6], [13, 3, 2, 3.2], [-1.2, -12.6, 5, 1.6], [8.6, -9.2, 2.4, 1.4]
 ];
-var LAMP_SPOTS = [
+export var LAMP_SPOTS = [
     [-1.55, 4.6], [-1.55, 6.8], [-1.55, 9.0], [1.55, 4.6], [1.55, 6.8],
     [-1.55, 11.2], [-1.55, 13.4], [1.55, 11.2], [1.55, 13.4],
     [-4.6, 1.55], [-6.8, 1.55], [-9.0, 1.55], [-4.6, -1.55], [-6.8, -1.55], [-9.0, -1.55],
     [-11.2, 1.55], [-13.4, 1.55], [-11.2, -1.55], [-13.4, -1.55]
 ];
-var PLANTERS = [[3.1, 3.1], [3.1, -3.1], [-3.1, -3.1]];
+LAMP_SPOTS = LAMP_SPOTS.filter(function (l) { return !_onReserved(l[0], l[1], 0.25); });
+export var PLANTERS = [[3.1, 3.1], [3.1, -3.1], [-3.1, -3.1]];
 
 // Gerbang pintu masuk: dua tiang + balok + papan nama menyala.
 function addGate(g, A, THREE, x, z, rot) {
@@ -976,7 +940,7 @@ export var SHRUB_SPOTS = (function () {
     var xs = [-5.2, -6.8, -8.4, -10.0, -11.6, -13.2];
     for (i = 0; i < xs.length; i++) out.push([xs[i], 2.05]);
     [-9.6, -11.2, -12.8].forEach(function (x) { out.push([x, -2.05]); });
-    return out;
+    return out.filter(function (p) { return !_onReserved(p[0], p[1], 0.6); });
 })();
 
 export function buildShrubs(A, THREE) {
@@ -1514,11 +1478,79 @@ export function buildRail(A, THREE) {
     return g;
 }
 
+// ============================================================
+// GEDUNG BARU (registri v2027.62)
+// ============================================================
+
+// Pabrik Komponen: hall utama + cerobong + roda gigi di fasad. Lv2 hall sayap + silo;
+// Lv3 menara ventilasi di atas hall (+ panel surya era Premium+).
+function buildPcPlant(A, THREE, level, eraIdx) {
+    var g = new THREE.Group();
+    var W = [0, 2.2, 2.5, 2.7][level], H = [0, 1.1, 1.3, 1.5][level], D = [0, 1.8, 1.9, 2.0][level];
+    addBlock(g, A, THREE, W, H, D, 0, 0, level >= 3 ? 2 : 1);
+    addDoor(g, A, THREE, 0, 0, D, -W * 0.22, 0.9);
+    // roda gigi di fasad: identitas "manufaktur"
+    var gear = mesh(A, THREE, A.tor(0.22, 0.05), 'metal', W * 0.25, H * 0.6, D / 2 + 0.06);
+    g.add(gear);
+    // cerobong
+    var chH = 1.0 + level * 0.35;
+    var cx = W / 2 - 0.4, cz = -D * 0.22;
+    g.add(mesh(A, THREE, A.cyl(0.13, 0.17, chH, 8), 'metal', cx, H + 0.14 + chH / 2, cz));
+    g.add(mesh(A, THREE, A.cyl(0.19, 0.19, 0.06, 8), 'roof', cx, H + 0.14 + chH, cz));
+    if (level >= 2) {
+        // hall sayap di kiri + silo bahan baku di kanan belakang
+        addBlock(g, A, THREE, 1.2, 0.8, 1.4, -(W / 2 + 0.55), 0.1, 1, true);
+        g.add(mesh(A, THREE, A.cyl(0.26, 0.26, 1.0, 10), 'wall', W / 2 + 0.1, 0.5, -D * 0.25));
+        g.add(mesh(A, THREE, A.sph(0.26, 8, 6), 'roof', W / 2 + 0.1, 1.0, -D * 0.25));
+    }
+    if (level >= 3) {
+        // menara ventilasi di atas hall utama
+        var up = new THREE.Group();
+        up.position.y = H + 0.14;
+        addBlock(up, A, THREE, 0.9, 1.2, 0.9, -W * 0.25, 0, 2, true);
+        g.add(up);
+    }
+    if (eraIdx >= 4) addSolar(g, A, THREE, W * 0.4, D * 0.4, H + 0.14, -W * 0.2, -0.1);
+    return g;
+}
+
+// Pusat Desain Chip: studio rendah + kubah kaca + antena. Lv2 menara desain 3 lantai;
+// Lv3 menara ramping dengan cincin cahaya dan lampu peringatan (+ panel surya era Premium+).
+function buildChipDesign(A, THREE, level, eraIdx) {
+    var g = new THREE.Group();
+    addBlock(g, A, THREE, 2.2, 0.8, 1.6, 0, 0, 1);
+    addDoor(g, A, THREE, 0, 0, 1.6, -0.6, 0.8);
+    // kubah kaca studio
+    g.add(mesh(A, THREE, A.sph(0.42, 10, 8), 'window', 0.5, 0.92, -0.2));
+    if (level === 1) {
+        g.add(mesh(A, THREE, A.cyl(0.03, 0.03, 0.9, 6), 'metal', -0.8, 1.2, -0.4));
+        addBeacon(g, A, THREE, -0.8, 1.68, -0.4);
+    }
+    if (level >= 2) {
+        // menara desain 3 lantai di belakang studio + pita cahaya
+        addBlock(g, A, THREE, 0.9, 2.4, 0.9, -0.55, -0.2, 3, true);
+        g.add(mesh(A, THREE, A.box(0.92, 0.12, 0.05), 'glow', -0.55, 2.2, 0.28));
+    }
+    if (level >= 3) {
+        // spire + cincin cahaya di menara + lampu peringatan
+        g.add(mesh(A, THREE, A.cyl(0.03, 0.05, 1.0, 6), 'metal', -0.55, 2.47 + 0.5, -0.2));
+        addBeacon(g, A, THREE, -0.55, 3.5, -0.2);
+        var ring = mesh(A, THREE, A.tor(0.5, 0.035), 'glow', -0.55, 1.6, -0.2);
+        ring.rotation.x = Math.PI / 2;
+        g.add(ring);
+    }
+    if (eraIdx >= 4) addSolar(g, A, THREE, 1.0, 0.7, 0.94, 0.5, 0.5);
+    return g;
+}
+
 var SLOT_BUILDERS = {
     lab: buildLab, factory: buildFactory, store: buildStore,
     os: buildOS, monument: buildMonument, billboard: buildBillboard,
-    academy: buildAcademy, arena: buildArena, port: buildPort
+    academy: buildAcademy, arena: buildArena, port: buildPort,
+    pcplant: buildPcPlant, chipdesign: buildChipDesign
 };
+// Id gedung yang punya builder 3D (dipakai validateCampusRegistry).
+export var BUILDER_IDS = Object.keys(SLOT_BUILDERS).concat(['hq']);
 
 // Bangun bangunan slot lengkap dengan posisi & userData.
 export function buildSlot(A, THREE, id, level, eraIdx) {
