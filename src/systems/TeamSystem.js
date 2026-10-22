@@ -15,6 +15,7 @@ import {
     getTraitById,
     getCountryById,
     pickRegionForYear,
+    pickLangRegion,
     generateNameForRegion,
     generateRandomName,
     pickSpecialty,
@@ -24,8 +25,21 @@ import {
     rollTraits
 } from '../data/staff.data.js';
 import { WalletService } from './WalletService.js';
+import { LanguageService } from '../core/LanguageService.js';
 
+const MINUTES_PER_HOUR = TIME_CONFIG.minutesPerHour;
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
+
+// Waktu onboarding sebelum staf benar-benar bergabung (jam game).
+function _onboardingMinutes() {
+    const hours = (BALANCE.team && BALANCE.team.onboardingHours) || 24;
+    return hours * MINUTES_PER_HOUR;
+}
+
+// Bahasa game aktif (dipakai untuk memilih region kandidat & label negara).
+function _gameLang() {
+    try { return LanguageService.getLang() || 'id'; } catch (e) { return 'id'; }
+}
 
 // Pengali kontribusi per staf dari trait (dipakai di bonus statis).
 // productive: output +15%, specialist: +25% di bidangnya (sesuai deskripsi trait di staff.data.js).
@@ -51,6 +65,7 @@ export class TeamSystem {
     start() {
         this._unsubs.push(bus.on('time:day-changed',   () => this._tickDailySkill()));
         this._unsubs.push(bus.on('time:month-changed', () => this._tickMonthly()));
+        this._unsubs.push(bus.on('time:tick',          () => this._processPendingHires()));
         this._unsubs.push(bus.on('state:hydrated',     () => this._onHydrated()));
 
         if (!this.state.data.candidates.length) {
@@ -179,12 +194,16 @@ export class TeamSystem {
             data.candidatePool = { lastRefreshMinute: 0, lastRefreshMonth: null };
         }
         const cfg = BALANCE.team || {};
-        const size = cfg.candidatePoolSize || 6;
+        const size = cfg.candidatePoolSize || 10;
         const year = data.time.currentYear;
+        // Sebagian kandidat selalu dari region yang berbahasa sama dengan game,
+        // sisanya dari seluruh dunia (jangkauan tetap luas).
+        const quotaRatio = cfg.langQuota != null ? cfg.langQuota : 0.4;
+        const langQuota = Math.round(size * quotaRatio);
 
         const list = [];
         for (let i = 0; i < size; i++) {
-            list.push(this._generateCandidate(year, i));
+            list.push(this._generateCandidate(year, i, i < langQuota ? 'lang' : 'global'));
         }
         data.candidates = list;
         data.candidatePool.lastRefreshMinute = data.time.elapsedGameMinutes;
@@ -197,10 +216,12 @@ export class TeamSystem {
         return list;
     }
 
-    _generateCandidate(year, idx) {
+    _generateCandidate(year, idx, mode) {
         // [v2027.7a] Profil lengkap: region, specialty, experience, age, background.
-        const region = pickRegionForYear(year);
-        const countryInfo = getCountryById(region);
+        // [v2027.8a] mode 'lang' = region sesuai bahasa game; 'global' = bobot era + boost bahasa.
+        const lang = _gameLang();
+        const region = mode === 'lang' ? pickLangRegion(lang) : pickRegionForYear(year, lang);
+        const countryInfo = getCountryById(region, lang);
         const name = generateNameForRegion(region);
 
         const role = this._pickRoleForPool();
@@ -289,11 +310,12 @@ export class TeamSystem {
 
         const counts = this.getTeamCounts();
         const cap = (BALANCE.teamCap && BALANCE.teamCap[cand.role]) || 20;
-        const cur = cand.role === 'engineer' ? counts.engineers
+        const pendingOfRole = this.getPendingHires().filter(p => p.staff.role === cand.role).length;
+        const cur = (cand.role === 'engineer' ? counts.engineers
                   : cand.role === 'designer' ? counts.designers
-                  : counts.marketers;
+                  : counts.marketers) + pendingOfRole;
         if (cur >= cap) {
-            return { ok: false, reason: 'Kapasitas ' + cand.role + ' penuh (maks ' + cap + ').' };
+            return { ok: false, reason: 'Kapasitas ' + cand.role + ' penuh (maks ' + cap + ', termasuk yang sedang onboarding).' };
         }
 
         const roleRecruitCost = Math.round(((BALANCE.recruitCost && BALANCE.recruitCost[cand.role]) || 2000) * this._wageScale());
@@ -311,6 +333,8 @@ export class TeamSystem {
 
         WalletService.pay(totalCost, 'hire');
 
+        const now = data.time.elapsedGameMinutes;
+        const joinAtMinute = now + _onboardingMinutes();
         const newStaff = {
             id: 'staff_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
             name: cand.name,
@@ -332,24 +356,67 @@ export class TeamSystem {
                 month: data.time.currentMonth,
                 day: data.time.currentDay
             },
-            hireGameMinute: data.time.elapsedGameMinutes,
+            hireGameMinute: now,
             hireCost: totalCost
         };
 
-        data.staff.push(newStaff);
+        // [v2027.8a] Kandidat yang direkrut masuk antrean onboarding dulu.
+        // Belum masuk data.staff: belum dihitung gaji, bonus, atau kapasitas tim.
+        if (!Array.isArray(data.pendingHires)) data.pendingHires = [];
+        data.pendingHires.push({
+            id: 'hire_' + newStaff.id,
+            staff: newStaff,
+            hiredGameMinute: now,
+            joinAtMinute: joinAtMinute
+        });
         data.candidates = data.candidates.filter(c => c.id !== candidateId);
-        this.state.syncTeamCounters();
 
         const roleLabel = getRoleById(cand.role).label;
-        this.state.addLog(cand.name + ' direkrut sebagai ' + roleLabel + ' ($' + cand.salary.toLocaleString('en-US') + '/bln).', LOG_TYPES.success);
-        ToastService.success('🎉 ' + cand.name + ' bergabung!');
+        const hours = Math.round(_onboardingMinutes() / MINUTES_PER_HOUR);
+        this.state.addLog(cand.name + ' menerima tawaran sebagai ' + roleLabel + ' dan akan bergabung dalam ' + hours + ' jam game.', LOG_TYPES.success);
+        ToastService.success('📝 ' + cand.name + ' menerima tawaran. Bergabung dalam ' + hours + ' jam game.');
         if (data.settings.vibrate) { try { if (navigator.vibrate) navigator.vibrate([20, 40, 20]); } catch (e) {} }
 
-        bus.emit('team:recruited', { staff: newStaff, cost: totalCost });
+        bus.emit('team:recruited', { staff: newStaff, cost: totalCost, joinAtMinute });
         bus.emit('tutorial:action', { id: 'action:recruit' });
         bus.emit('state:changed', data);
 
-        return { ok: true, staff: newStaff, cost: totalCost };
+        return { ok: true, staff: newStaff, cost: totalCost, joinAtMinute };
+    }
+
+    // ============ ONBOARDING (24 jam game) ============
+    getPendingHires() {
+        return Array.isArray(this.state.data.pendingHires) ? this.state.data.pendingHires : [];
+    }
+
+    // Jam game tersisa sampai staf bergabung (0 bila sudah waktunya).
+    pendingHoursLeft(pending) {
+        const now = (this.state.data.time && this.state.data.time.elapsedGameMinutes) || 0;
+        return Math.max(0, Math.ceil((pending.joinAtMinute - now) / MINUTES_PER_HOUR));
+    }
+
+    // Dipanggil tiap tick waktu: pindahkan staf yang sudah lewat masa onboarding ke tim.
+    _processPendingHires() {
+        const data = this.state.data;
+        const list = this.getPendingHires();
+        if (!list.length) return;
+
+        const now = (data.time && data.time.elapsedGameMinutes) || 0;
+        const due = list.filter(p => now >= p.joinAtMinute);
+        if (!due.length) return;
+
+        data.pendingHires = list.filter(p => now < p.joinAtMinute);
+        due.forEach(p => {
+            const s = p.staff;
+            s.joinGameMinute = now;
+            data.staff.push(s);
+            this.state.addLog(s.name + ' resmi bergabung ke tim.', LOG_TYPES.success);
+            ToastService.success('🎉 ' + s.name + ' resmi bergabung!');
+            bus.emit('team:joined', { staff: s });
+        });
+
+        this.state.syncTeamCounters();
+        bus.emit('state:changed', data);
     }
 
     // ============ TAWAR GAJI (kandidat) ============
@@ -641,7 +708,7 @@ export class TeamSystem {
     // ============ CHEAT ============
     addStaffByName(role, skill) {
         const year = this.state.data.time.currentYear;
-        const cand = this._generateCandidate(year, 0);
+        const cand = this._generateCandidate(year, 0, 'global');
         cand.role = role || 'engineer';
         cand.skill = Math.max(1, Math.min(5, skill || 3));
         const skillDef = getSkillTier(cand.skill);
