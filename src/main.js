@@ -49,6 +49,8 @@ import { initTutorialOverlay } from './ui/panels/TutorialOverlay.js';
 import { showOnboarding } from './ui/panels/OnboardingModal.js';
 import { initMonthlySummary } from './ui/panels/MonthlySummaryModal.js';
 import { initGameOverScreen } from './ui/panels/GameOverScreen.js';
+import { initSeasonEndScreen } from './ui/panels/SeasonEndScreen.js';
+import { SeasonEndSystem } from './systems/SeasonEndSystem.js';
 import { Modal } from './ui/modal.js';
 import { mountAdvisorButton } from './ui/panels/AdvisorPanel.js';
 import { renderResearchPanel, setFilterCategory, setTimelineFilter, getChipResearchFilter, setChipResearchFilter, openNodeDetailModal, openOsWizardModal, openCreateOsModal, openFeatureDetailModal, openChipNodeModal } from './ui/panels/ResearchPanel.js';
@@ -108,6 +110,7 @@ var opinion           = new PublicOpinionSystem(state);
 var marketNav         = new MarketNavSystem(state);
 products.setMarketNav(marketNav);
 var eraSystem         = new EraSystem(state);
+var seasonEnd         = new SeasonEndSystem(state);
 var teamSystem        = new TeamSystem(state);
 var chipSystem        = new ChipSystem(state);
 var fabSystem         = new FabSystem(state);
@@ -1105,7 +1108,6 @@ function bindStateEvents() {
     bus.on('era:changed', function () { renderAll(); });
     bus.on('team:changed', function () { if (activeView === 'team') renderView({ soft: true }); });
     bus.on('team:recruited', function () { if (activeView === 'team') renderView({ soft: true }); });
-    bus.on('team:joined',    function () { if (activeView === 'team') renderView({ soft: true }); });
     bus.on('team:fired', function () { if (activeView === 'team') renderView({ soft: true }); });
 
     function refreshRegionalView() {
@@ -1225,6 +1227,7 @@ async function boot() {
         initTutorialOverlay();
         initMonthlySummary();
         initGameOverScreen();
+        initSeasonEndScreen();
         splash(80);
 
         if (SaveService.hasSave()) {
@@ -1264,6 +1267,7 @@ async function boot() {
         }
 
         eraSystem.start();
+        seasonEnd.start();
         economy.start();
         quests.start();
         tutorial.start();
