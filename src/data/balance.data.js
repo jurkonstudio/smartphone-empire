@@ -55,7 +55,9 @@ export const BALANCE = {
     // TEAM
     // ============================================================
     team: {
-        candidatePoolSize: 6,
+        candidatePoolSize: 10,
+        langQuota: 0.4,
+        onboardingHours: 24,
         poolRefreshDays: 30,
 
         skillWeightsByYear: {
