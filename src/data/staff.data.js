@@ -1,6 +1,8 @@
 // FILE: src/data/staff.data.js
-// v2027.7a — Sistem kandidat internasional + profil lengkap.
-// 7 region: US, EU, JP, KR, CN, IN, ID. Distribusi per era.
+// v2027.8a — Kandidat internasional + bahasa game.
+// 9 region: US, EU, JP, KR, CN, IN, ID, RU, LATAM.
+// Region yang berbahasa sama dengan bahasa game mendapat bobot lebih besar
+// (lihat LANG_REGIONS & pickRegionForYear).
 // ============================================================
 
 export const ROLES = [
@@ -32,25 +34,67 @@ export const TRAITS = [
 ];
 
 // ============================================================
-// REGION — 7 grup etnis/nasional
+// REGION — 9 grup etnis/nasional
 // ============================================================
 export const COUNTRIES = {
-    us:  { id: 'us',  label: 'United States', flag: '🇺🇸' },
-    eu:  { id: 'eu',  label: 'Europe',        flag: '🇪🇺' },
-    jp:  { id: 'jp',  label: 'Japan',         flag: '🇯🇵' },
-    kr:  { id: 'kr',  label: 'South Korea',   flag: '🇰🇷' },
-    cn:  { id: 'cn',  label: 'China',         flag: '🇨🇳' },
-    in:  { id: 'in',  label: 'India',         flag: '🇮🇳' },
-    id:  { id: 'id',  label: 'Indonesia',     flag: '🇮🇩' }
+    us:    { id: 'us',    label: 'United States', flag: '🇺🇸' },
+    eu:    { id: 'eu',    label: 'Europe',        flag: '🇪🇺' },
+    jp:    { id: 'jp',    label: 'Japan',         flag: '🇯🇵' },
+    kr:    { id: 'kr',    label: 'South Korea',   flag: '🇰🇷' },
+    cn:    { id: 'cn',    label: 'China',         flag: '🇨🇳' },
+    in:    { id: 'in',    label: 'India',         flag: '🇮🇳' },
+    id:    { id: 'id',    label: 'Indonesia',     flag: '🇮🇩' },
+    ru:    { id: 'ru',    label: 'Russia',        flag: '🇷🇺' },
+    latam: { id: 'latam', label: 'Latin America', flag: '🌎' }
 };
 
-// Distribusi per era (dalam urutan key region).
-// 2000-an dominan US/EU/JP, makin beragam menjelang 2026.
-const REGION_WEIGHTS = {
-    early: { us: 0.35, eu: 0.25, jp: 0.20, kr: 0.10, cn: 0.05, in: 0.03, id: 0.02 },
-    mid:   { us: 0.25, eu: 0.18, jp: 0.18, kr: 0.15, cn: 0.10, in: 0.08, id: 0.06 },
-    late:  { us: 0.20, eu: 0.15, jp: 0.15, kr: 0.18, cn: 0.12, in: 0.12, id: 0.08 }
+// Nama negara sesuai bahasa game (fallback ke label Inggris).
+const COUNTRY_LABELS = {
+    id: {
+        us: 'Amerika Serikat', eu: 'Eropa', jp: 'Jepang', kr: 'Korea Selatan', cn: 'Tiongkok',
+        in: 'India', id: 'Indonesia', ru: 'Rusia', latam: 'Amerika Latin'
+    },
+    es: {
+        us: 'Estados Unidos', eu: 'Europa', jp: 'Japón', kr: 'Corea del Sur', cn: 'China',
+        in: 'India', id: 'Indonesia', ru: 'Rusia', latam: 'Latinoamérica'
+    },
+    ru: {
+        us: 'США', eu: 'Европа', jp: 'Япония', kr: 'Южная Корея', cn: 'Китай',
+        in: 'Индия', id: 'Индонезия', ru: 'Россия', latam: 'Латинская Америка'
+    },
+    zh: {
+        us: '美国', eu: '欧洲', jp: '日本', kr: '韩国', cn: '中国',
+        in: '印度', id: '印度尼西亚', ru: '俄罗斯', latam: '拉丁美洲'
+    }
 };
+
+// Bahasa game → region yang paling sesuai. Kandidat dari region ini
+// dipilih lebih sering agar pemain melihat lebih banyak orang yang
+// bisa berkomunikasi dalam bahasa yang sama.
+export const LANG_REGIONS = {
+    id: ['id'],
+    en: ['us', 'in', 'eu'],
+    es: ['latam', 'eu'],
+    pt: ['latam'],
+    ru: ['ru'],
+    pl: ['eu'],
+    it: ['eu'],
+    de: ['eu'],
+    zh: ['cn'],
+    ko: ['kr'],
+    ja: ['jp'],
+    hi: ['in']
+};
+
+// Bobot dasar per era (urutan key = urutan pengecekan).
+const REGION_WEIGHTS = {
+    early: { us: 0.30, eu: 0.22, jp: 0.18, kr: 0.08, cn: 0.05, in: 0.03, id: 0.02, ru: 0.07, latam: 0.05 },
+    mid:   { us: 0.22, eu: 0.16, jp: 0.15, kr: 0.13, cn: 0.09, in: 0.07, id: 0.05, ru: 0.06, latam: 0.07 },
+    late:  { us: 0.18, eu: 0.13, jp: 0.12, kr: 0.15, cn: 0.10, in: 0.10, id: 0.07, ru: 0.05, latam: 0.10 }
+};
+
+// Pengali bobot untuk region yang cocok dengan bahasa game.
+const LANG_BOOST = 2.5;
 
 // ============================================================
 // NAMA PER REGION
@@ -111,6 +155,22 @@ const NAMES = {
         last:  ['Wijaya','Santoso','Hartono','Kusuma','Pratama','Setiawan','Gunawan','Halim','Firdaus','Purnama',
                 'Maulana','Saputra','Nugroho','Susanto','Wibowo','Hidayat','Firmansyah','Irawan','Siregar','Lestari',
                 'Anggraini','Permata','Maharani','Safitri','Simanjuntak','Nainggolan','Panggabean','Situmorang','Hutapea','Samosir']
+    },
+    ru: {
+        first: ['Ivan','Olga','Dmitri','Natalia','Sergei','Elena','Alexei','Anastasia','Mikhail','Irina',
+                'Andrei','Tatiana','Pavel','Yulia','Nikita','Svetlana','Maksim','Ekaterina','Artem','Daria',
+                'Vladimir','Polina','Roman','Marina','Egor','Anna','Konstantin','Vera','Viktor','Lyudmila'],
+        last:  ['Ivanov','Smirnov','Kuznetsov','Popov','Vasiliev','Petrov','Sokolov','Mikhailov','Novikov','Fedorov',
+                'Morozov','Volkov','Alekseev','Lebedev','Semenov','Egorov','Pavlov','Kozlov','Stepanov','Nikolaev',
+                'Orlov','Andreev','Makarov','Zakharov','Zaitsev','Sokolova','Kovalenko','Bondarenko','Shevchenko','Tkachenko']
+    },
+    latam: {
+        first: ['Mateo','Valentina','Santiago','Camila','Sebastián','Lucía','Diego','Sofía','Andrés','Mariana',
+                'Joaquín','Isabella','Nicolás','Gabriela','Thiago','Antonella','Rafael','Julieta','Gustavo','Beatriz',
+                'Emiliano','Renata','Felipe','Paula','Bruno','Valeria','Alejandro','Fernanda','Lorenzo','Daniela'],
+        last:  ['García','Rodríguez','Martínez','López','González','Hernández','Pérez','Sánchez','Ramírez','Torres',
+                'Flores','Rivera','Gómez','Díaz','Silva','Souza','Oliveira','Costa','Pereira','Almeida',
+                'Morales','Ortiz','Castillo','Mendoza','Vargas','Reyes','Cruz','Ruiz','Herrera','Medina']
     }
 };
 
@@ -157,24 +217,42 @@ export function getTraitById(id) {
     return TRAITS.find(t => t.id === id) || null;
 }
 
-export function getCountryById(id) {
-    return COUNTRIES[id] || COUNTRIES.us;
+// Label negara mengikuti bahasa game; fallback ke bahasa Inggris.
+export function getCountryById(id, lang) {
+    const base = COUNTRIES[id] || COUNTRIES.us;
+    const localized = COUNTRY_LABELS[lang] && COUNTRY_LABELS[lang][base.id];
+    return { ...base, label: localized || base.label };
 }
 
-export function pickRegionForYear(year) {
-    let w;
-    if (year <= 2005) w = REGION_WEIGHTS.early;
-    else if (year <= 2015) w = REGION_WEIGHTS.mid;
-    else w = REGION_WEIGHTS.late;
+// Bobot era + boost bahasa, lalu pilih satu region secara acak.
+export function pickRegionForYear(year, lang) {
+    let base;
+    if (year <= 2005) base = REGION_WEIGHTS.early;
+    else if (year <= 2015) base = REGION_WEIGHTS.mid;
+    else base = REGION_WEIGHTS.late;
 
-    const roll = Math.random();
+    const matched = LANG_REGIONS[lang] || [];
+    const keys = Object.keys(base);
+    const w = {};
+    let total = 0;
+    keys.forEach(k => {
+        w[k] = (base[k] || 0) * (matched.includes(k) ? LANG_BOOST : 1);
+        total += w[k];
+    });
+
+    const roll = Math.random() * total;
     let cum = 0;
-    const keys = ['us', 'eu', 'jp', 'kr', 'cn', 'in', 'id'];
     for (let i = 0; i < keys.length; i++) {
-        cum += w[keys[i]] || 0;
+        cum += w[keys[i]];
         if (roll < cum) return keys[i];
     }
     return 'us';
+}
+
+// Region yang cocok dengan bahasa game (dipakai untuk kuota kandidat).
+export function pickLangRegion(lang) {
+    const list = LANG_REGIONS[lang] || LANG_REGIONS.en;
+    return list[Math.floor(Math.random() * list.length)];
 }
 
 export function generateNameForRegion(regionId) {
