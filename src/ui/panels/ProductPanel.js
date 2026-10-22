@@ -10,7 +10,7 @@ import { renderSalesChart } from './SalesChart.js';
 import { getComponentById } from '../../data/components.data.js';
 import { getLicenseById } from '../../data/os.data.js'; // [FIX] Import data lisensi OS
 import { state } from '../../core/GameState.js';
-import { projectedStock } from '../../systems/LiveProjection.js';
+import { projectedStock, projectedRevenue, projectedTotalRevenue } from '../../systems/LiveProjection.js';
 import { ToastService } from '../../core/ToastService.js';
 import { openChipDesigner } from './ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './FabPanel.js';
@@ -210,11 +210,11 @@ function _renderCatalog() {
 
     var selling = catalog.filter(function (p) { return p.status === 'selling'; });
     var lowStock = selling.filter(function (p) { return p.stock <= 0 || _stockPct(p) < 20; }).length;
-    var totalRev = catalog.reduce(function (s, p) { return s + (p.totalRevenue || 0); }, 0);
+    var totalRev = projectedTotalRevenue(data);
     var summary = '<div class="kpi-grid cat-summary">' +
         '<div class="kpi"><div class="kpi-label">' + tx('prod.catalog.sum_active', 'Dijual') + '</div><div class="kpi-value">' + selling.length + '/' + catalog.length + '</div></div>' +
         '<div class="kpi ' + (lowStock ? 'warn' : 'blue') + '"><div class="kpi-label">' + tx('prod.catalog.sum_low', 'Stok menipis') + '</div><div class="kpi-value">' + lowStock + '</div></div>' +
-        '<div class="kpi"><div class="kpi-label">' + tx('prod.catalog.sum_rev', 'Pendapatan') + '</div><div class="kpi-value" style="font-size:14px;">$' + totalRev.toLocaleString('en-US') + '</div></div>' +
+        '<div class="kpi"><div class="kpi-label">' + tx('prod.catalog.sum_rev', 'Pendapatan') + '</div><div class="kpi-value" style="font-size:14px;">$<span data-live-revenue-total>' + Math.round(totalRev).toLocaleString('en-US') + '</span></div></div>' +
         '</div>';
 
     var filters = [['all', tx('prod.catalog.f_all', 'Semua')], ['selling', t('prod.catalog.status_selling')], ['disc', t('prod.catalog.status_discontinued')]];
@@ -272,7 +272,7 @@ function _renderCatalog() {
             '<div class="prod-badge ' + (isSelling ? 'selling' : 'disc') + '">' + statusLabel + '</div>' +
             '</div>' +
             '<div class="prod-stats-mini"><span class="cat-rate ' + avgCls + '">' + t('prod.catalog.review', { n: avgTxt }) + '</span><span>' + t('prod.catalog.price', { n: p.price }) + '</span><span>' + t('prod.catalog.quality', { n: p.stats.qualityScore }) + '</span></div>' +
-            '<div class="prod-stats-mini"><span>' + t('prod.catalog.sold', { n: p.totalSold.toLocaleString('en-US') }) + '</span><span>' + t('prod.catalog.revenue', { n: p.totalRevenue.toLocaleString('en-US') }) + '</span></div>' +
+            '<div class="prod-stats-mini"><span>' + t('prod.catalog.sold', { n: p.totalSold.toLocaleString('en-US') }) + '</span><span>' + t('prod.catalog.revenue', { n: '<span data-live-revenue="' + escapeHtml(String(p.id)) + '">' + Math.round(projectedRevenue(p, data.time)).toLocaleString('en-US') + '</span>' }) + '</span></div>' +
             '<div class="cat-stock"><div class="cat-stock-head"><span>' + t('prod.catalog.stock', { n: '<span data-live-stock="' + escapeHtml(String(p.id)) + '">' + liveN.toLocaleString('en-US') + '</span>' }) + '</span>' + stockNote + '</div>' +
             '<div class="cat-bar"><div class="cat-bar-fill ' + stockCls + '" data-live-bar="' + escapeHtml(String(p.id)) + '" data-live-cap="' + (p.baseCapacity || p.totalProduced || 0) + '" style="width:' + pct + '%;"></div></div></div>' +
             toggle +
@@ -287,13 +287,13 @@ function _renderCatalog() {
 function _renderSales() {
     var data = state.get();
     var catalog = (data.products && data.products.catalog) ? data.products.catalog : [];
-    var totalRevenue = catalog.reduce(function (s, p) { return s + p.totalRevenue; }, 0);
+    var totalRevenue = projectedTotalRevenue(data);
     var totalSold = catalog.reduce(function (s, p) { return s + p.totalSold; }, 0);
     var activeProducts = catalog.filter(function (p) { return p.status === 'selling'; }).length;
     var topProduct = catalog.slice().sort(function (a, b) { return b.totalSold - a.totalSold; })[0];
 
     var kpiGrid = '<div class="kpi-grid">' +
-        '<div class="kpi"><div class="kpi-label">' + t('prod.sales.total_revenue') + '</div><div class="kpi-value" style="color:var(--accent);font-size:15px;">$' + totalRevenue.toLocaleString('en-US') + '</div></div>' +
+        '<div class="kpi"><div class="kpi-label">' + t('prod.sales.total_revenue') + '</div><div class="kpi-value" style="color:var(--accent);font-size:15px;">$<span data-live-revenue-total>' + Math.round(totalRevenue).toLocaleString('en-US') + '</span></div></div>' +
         '<div class="kpi blue"><div class="kpi-label">' + t('prod.sales.total_sold') + '</div><div class="kpi-value">' + totalSold.toLocaleString('en-US') + '</div></div>' +
         '<div class="kpi warn"><div class="kpi-label">' + t('prod.sales.active_products') + '</div><div class="kpi-value">' + activeProducts + '</div></div>' +
         '<div class="kpi"><div class="kpi-label">' + t('prod.sales.best_seller') + '</div><div class="kpi-value" style="font-size:12px;">' + (topProduct ? escapeHtml(topProduct.name) : '-') + '</div></div>' +
@@ -507,7 +507,7 @@ export function openProductDetailModal(params) {
             '<div class="modal-sub">' + t('prod.detail.release', { day: p.releaseDate.day, month: p.releaseDate.month, year: p.releaseDate.year }) + '</div>' +
             '<div class="card-title">' + t('prod.detail.section_sales') + '</div>' +
             '<div class="sum-row"><span>' + t('prod.detail.total_sold') + '</span><b>' + p.totalSold.toLocaleString('en-US') + ' ' + t('prod.detail.unit') + '</b></div>' +
-            '<div class="sum-row"><span>' + t('prod.detail.revenue') + '</span><b>$' + p.totalRevenue.toLocaleString('en-US') + '</b></div>' +
+            '<div class="sum-row"><span>' + t('prod.detail.revenue') + '</span><b>$<span data-live-revenue="' + escapeHtml(String(p.id)) + '">' + Math.round(projectedRevenue(p, data.time)).toLocaleString('en-US') + '</span></b></div>' +
             '<div class="sum-row"><span>' + t('prod.detail.stock') + '</span><b data-live-stock="' + escapeHtml(String(p.id)) + '">' + Math.round(projectedStock(p, data.time)).toLocaleString('en-US') + '</b></div>' +
             '<div class="sum-row"><span>' + t('prod.detail.review_avg') + '</span><b>' + avg + '/10 (' + p.reviews.length + ')</b></div>' +
             '<div class="card-title" style="margin-top:12px;">' + t('prod.detail.section_spec') + '</div>' +
