@@ -31,7 +31,19 @@ function _p() {
     if (typeof p.avatar !== 'string') p.avatar = '';
     if (typeof p.avatarPath !== 'string') p.avatarPath = '';
     if (typeof p.nameChanges !== 'number' || p.nameChanges < 0) p.nameChanges = 0;
+    if (typeof p.accountCreatedAt !== 'string') p.accountCreatedAt = '';
     return p;
+}
+
+// Tanggal akun dibuat menurut DUNIA NYATA (ISO), bukan tanggal in-game.
+// Save lama yang belum punya cap waktu diberi cap saat pertama kali dibaca.
+export function getAccountCreatedAt() {
+    var p = _p();
+    if (!p.accountCreatedAt || isNaN(new Date(p.accountCreatedAt).getTime())) {
+        p.accountCreatedAt = new Date().toISOString();
+        _saveNow();
+    }
+    return p.accountCreatedAt;
 }
 
 export function cleanName(s) {
@@ -267,6 +279,13 @@ async function _pullFromCloud() {
         var p = _p();
         var changed = false;
 
+        // Tanggal pembuatan akun cloud (dunia nyata) lebih akurat -> pakai bila lebih awal.
+        if (row.created_at) {
+            var cTs = new Date(row.created_at).getTime();
+            var lTs = p.accountCreatedAt ? new Date(p.accountCreatedAt).getTime() : NaN;
+            if (!isNaN(cTs) && (isNaN(lTs) || cTs < lTs)) { p.accountCreatedAt = new Date(cTs).toISOString(); changed = true; }
+        }
+
         if (!p.displayName && row.player_name) { p.displayName = cleanName(row.player_name).slice(0, NAME_RULES.max); changed = true; }
 
         if (!p.avatar && row.avatar_path) {
@@ -312,6 +331,7 @@ export const PlayerProfileService = {
     },
     getPlayer: _p,
     getDisplayName: getDisplayName,
+    getAccountCreatedAt: getAccountCreatedAt,
     getAvatar: getAvatar,
     getNameChangeInfo: getNameChangeInfo,
     getStatsSnapshot: getStatsSnapshot,
