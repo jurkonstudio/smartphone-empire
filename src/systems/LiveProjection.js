@@ -38,6 +38,24 @@ export function projectedStock(p, time) {
     return Math.max(0, stock - rate * dayFraction(time));
 }
 
+// Pendapatan yang ikut berjalan di antara dua tick harian:
+// total pendapatan tersimpan + (laju jual x harga x porsi hari berjalan).
+export function projectedRevenue(p, time) {
+    if (!p) return 0;
+    const base = Number(p.totalRevenue) || 0;
+    const rate = dailySoldRate(p);
+    if (rate <= 0) return base;
+    const sold = Math.min(rate * dayFraction(time), Number(p.stock) || 0);
+    return base + sold * (Number(p.price) || 0);
+}
+
+export function projectedTotalRevenue(data) {
+    const catalog = (data && data.products && Array.isArray(data.products.catalog)) ? data.products.catalog : [];
+    let sum = 0;
+    for (let i = 0; i < catalog.length; i++) sum += projectedRevenue(catalog[i], data.time);
+    return sum;
+}
+
 export function projectedOsAdoption(data) {
     data = data || {};
     const catalog = (data.products && Array.isArray(data.products.catalog)) ? data.products.catalog : [];
