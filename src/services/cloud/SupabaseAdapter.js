@@ -11,7 +11,7 @@ var _client = null;
 var _loading = null;
 var _injected = null;
 var _pubIdOk = true; 
-var PUB_COLS = 'id, display_name, avatar_path, company_name, founded_year, founded_month, game_minutes, created_at, updated_at, stat_revenue, stat_sold, stat_reputation, stat_share, stat_level, stat_xp, stat_credibility, stat_score';
+var PUB_COLS = 'id, display_name, avatar_path, company_name, founded_year, founded_month, game_minutes, created_at, updated_at, stat_revenue, stat_sold, stat_reputation, stat_share, stat_level, stat_xp, stat_credibility, stat_score, stat_company_level, stat_company_xp';
 function _pubCols() { return PUB_COLS + (_pubIdOk ? ', public_id' : ''); }
 function _isPubIdMissing(err) { return !!err && String(err.message || '').toLowerCase().indexOf('public_id') >= 0; }
 var _idemOk = true;
@@ -428,6 +428,13 @@ export const SupabaseAdapter = {
         var res = await c.rpc('sync_player_profile', fields);
         if (res.error) throw mk(res.error);
         return true;
+    },
+
+    rpcSyncCompanyLevel: async function (fields) {
+        var c = await getClient();
+        var res = await c.rpc('sync_company_level', fields);
+        if (res.error) throw mk(res.error);
+        return res.data;
     },
 
     getGameAssetUrl: async function (path) {
