@@ -613,17 +613,33 @@ const SHOTS = [
   { id: 'pasar', tab: 'Pasar', img: 'pasar.jpg', alt: 'Cuplikan layar Pasar', h: 'Baca pasar sebelum bersaing', p: 'Pangsa pasar, kompetitor, tren, promosi, dan opini publik. Segmen konsumen dan wilayah menunjukkan peluang yang belum kamu garap.', li: ['<b>Pangsa pasar</b> dengan riwayat 24 bulan', '<b>Promosi regional</b> dan 8 event musiman', '<b>Peluang terbaik</b> per segmen dan wilayah'] },
   { id: 'setelan', tab: 'Setelan', img: 'setelan.jpg', alt: 'Cuplikan layar Pengaturan', h: 'Profil, cloud, dan Silicon', p: 'Kelola profil pemain, akun cloud, leaderboard, tema dan warna aksen, bahasa ID/EN, dan Dompet Universal.', li: ['<b>Cloud save</b> dan profil pemain', '<b>Tema</b> gelap dan terang, 6 warna aksen', '<b>Export dan import</b> save'] }
 ];
+const SHOT_ORDER = { hq: 0, peta: 1, kantor: 2, riset: 3, desain: 4, pasar: 5, setelan: 6 };
+// Tab tambahan: hanya tampil bila file fotonya ada di assets/img/landing/.
+const OPTIONAL_SHOTS = [
+  { id: 'peta', tab: 'Peta kampus', img: 'peta.jpg', alt: 'Cuplikan peta kampus 3D di layar Home', h: 'Kampus 3D yang tumbuh', p: 'Peta kampus di Home berkembang seiring progres. HQ, lab riset, dan showroom ikut berubah sesuai kemajuan perusahaanmu.', li: ['<b>Kampus tumbuh</b> mengikuti progres', '<b>Lab riset</b> menyala saat riset aktif', '<b>Showroom</b> menampilkan produk yang dijual'] },
+  { id: 'kantor', tab: 'Kantor 3D', img: 'kantor.jpg', alt: 'Cuplikan kantor 3D isometrik di tab HQ', h: 'Kantor isometrik yang hidup', p: 'Di HQ ada kantor dengan 9 ruangan yang terhubung ke data game. Staf duduk di meja, dan Fab bisa dibangun atau di-upgrade dari peta.', li: ['<b>9 ruangan</b> terhubung ke data game', '<b>Staf</b> duduk di meja masing-masing', '<b>Bangun dan latih</b> langsung dari peta kantor'] }
+];
 const tabs = $('#tabs');
-tabs.innerHTML = SHOTS.map((s, i) => `<button class="tab" role="tab" id="tab-${s.id}" aria-selected="${i === 0}" data-i="${i}">${s.tab}</button>`).join('');
+let curId = 'hq';
+function renderTabs() {
+  tabs.innerHTML = SHOTS.map((s, i) => `<button class="tab" role="tab" id="tab-${s.id}" aria-selected="${s.id === curId}" data-i="${i}">${s.tab}</button>`).join('');
+}
 function showShot(i) {
-  const s = SHOTS[i];
+  const s = SHOTS[i]; if (!s) return;
+  curId = s.id;
   $$('.tab', tabs).forEach((b, k) => b.setAttribute('aria-selected', k === i));
   const img = $('#showImg'); img.style.opacity = 0;
   setTimeout(() => { img.src = './assets/img/landing/' + s.img; img.alt = s.alt; img.style.opacity = 1; }, 160);
   $('#showCopy').innerHTML = `<h3>${s.h}</h3><p>${s.p}</p><ul>${s.li.map(x => `<li>${x}</li>`).join('')}</ul>`;
 }
 tabs.addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) showShot(+b.dataset.i); });
-showShot(0);
+function probeImg(src) { return new Promise(res => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = src; }); }
+renderTabs(); showShot(0);
+OPTIONAL_SHOTS.forEach(o => probeImg('./assets/img/landing/' + o.img).then(ok => {
+  if (!ok || SHOTS.some(x => x.id === o.id)) return;
+  SHOTS.push(o); SHOTS.sort((x, y) => SHOT_ORDER[x.id] - SHOT_ORDER[y.id]);
+  const keep = curId; renderTabs(); showShot(SHOTS.findIndex(x => x.id === keep));
+}));
 
 /* ---------- paket SIL (fallback; disinkronkan dari data game bila bisa) ---------- */
 let PACKAGES = [
