@@ -149,6 +149,76 @@ export function readComponents() {
     };
 }
 
+
+// ============================================================
+// LEVEL PERUSAHAAN (lokal / tampilan) — AKTIVITAS + KREDIBILITAS
+//   Aktivitas    : pendapatan, unit terjual, produk aktif, staf, riset selesai, lama beroperasi, pangsa pasar
+//   Kredibilitas : reputasi 30% + skor kredit 30% + sentimen publik 25% + moral tim 15%
+//   XP perusahaan = XP aktivitas + XP kredibilitas (maks 300), lalu level 1..50 memakai kurva levelXp().
+// ============================================================
+export function companyCred(rep, credit, sentiment, morale) {
+    return (30 * _clamp(rep, 0, 100) + 30 * _clamp(credit, 0, 100) + 25 * _clamp(sentiment, 0, 100) + 15 * _clamp(morale, 0, 100)) / 100;
+}
+
+export function deriveCompany(c) {
+    var cred = companyCred(c.reputation, c.creditScore, c.sentiment, c.morale);
+    var months = Math.min(400, Math.floor(Math.max(0, Number(c.gameMinutes) || 0) / MIN_PER_MONTH));
+    var parts = {
+        revenue: Number(lgPts(_big(c.revenue) / 100000n, 60)),
+        sold: Number(lgPts(_big(c.sold), 40)),
+        products: Math.min(40, 4 * Math.max(0, Math.floor(Number(c.activeProducts) || 0))),
+        staff: Math.min(60, 2 * Math.max(0, Math.floor(Number(c.staff) || 0))),
+        research: Math.min(150, 3 * Math.max(0, Math.floor(Number(c.research) || 0))),
+        tenure: months,
+        share: 3 * Math.floor(_clamp(c.share, 0, 100))
+    };
+    var activityXp = 0;
+    for (var k in parts) activityXp += parts[k];
+    var credXp = Math.min(300, Math.max(0, Math.floor((cred * 10 - 400) * 0.5)));
+    var xp = activityXp + credXp;
+    var level = levelFromXp(xp);
+    var curXp = levelXp(level);
+    var nextXp = level >= LEVEL_MAX ? curXp : levelXp(level + 1);
+    return {
+        level: level, xp: xp, activityXp: activityXp, credXp: credXp,
+        credibility: Math.round(cred * 10) / 10,
+        tier: credTier(Math.round(cred * 10)),
+        parts: parts,
+        levelXp: curXp, nextLevelXp: nextXp,
+        levelPct: level >= LEVEL_MAX ? 100 : Math.max(0, Math.min(100, Math.floor(((xp - curXp) * 100) / Math.max(1, nextXp - curXp))))
+    };
+}
+
+export function readCompanyComponents() {
+    var base = readComponents();
+    var d = state.data || {};
+    var cat = (d.products && d.products.catalog) || [];
+    var staff = d.staff || [];
+    var msum = 0;
+    for (var i = 0; i < staff.length; i++) msum += Number(staff[i].morale) || 0;
+    var done = (d.research && Array.isArray(d.research.completed)) ? d.research.completed.length : 0;
+    base.activeProducts = cat.filter(function (p) { return p.status === 'selling'; }).length;
+    base.staff = staff.length;
+    base.morale = staff.length ? Math.round(msum / staff.length) : 50;
+    base.research = done;
+    return base;
+}
+
+// Tingkat peringkat visual (0..5) dari level 1..50 — menentukan warna & bentuk ikon.
+export var RANKS = [
+    { id: 0, min: 1,  id_name: 'Rintisan',  en_name: 'Starter',   c1: '#cd8a54', c2: '#8a5a2b' },
+    { id: 1, min: 10, id_name: 'Berkembang', en_name: 'Rising',   c1: '#cbd5e1', c2: '#64748b' },
+    { id: 2, min: 20, id_name: 'Mapan',     en_name: 'Established', c1: '#fbbf24', c2: '#b45309' },
+    { id: 3, min: 30, id_name: 'Elit',      en_name: 'Elite',     c1: '#67e8f9', c2: '#0e7490' },
+    { id: 4, min: 40, id_name: 'Legenda',   en_name: 'Legend',    c1: '#c4b5fd', c2: '#6d28d9' },
+    { id: 5, min: 50, id_name: 'Puncak',    en_name: 'Apex',      c1: '#fda4af', c2: '#be123c' }
+];
+export function rankOfLevel(level) {
+    var r = RANKS[0];
+    for (var i = 0; i < RANKS.length; i++) if (level >= RANKS[i].min) r = RANKS[i];
+    return r;
+}
+
 var _cache = null;
 var _cacheAt = 0;
 
@@ -166,6 +236,10 @@ export var PlayerProgression = {
             if (!_cache) _cache = derive({ revenue: 0, sold: 0, reputation: 0, creditScore: 50, missed: 0, sentiment: 50, gameMinutes: 0, share: 0 });
         }
         return _cache;
+    },
+    computeCompany: function () {
+        try { var c = readCompanyComponents(); var r = deriveCompany(c); r.components = c; return r; }
+        catch (e) { return deriveCompany({ revenue: 0, sold: 0, reputation: 0, creditScore: 50, sentiment: 50, morale: 50, gameMinutes: 0, share: 0 }); }
     },
     getCached: function () { return _cache || PlayerProgression.compute(true); },
     invalidate: function () { _cache = null; }
