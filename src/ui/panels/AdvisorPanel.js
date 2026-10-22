@@ -1,4 +1,7 @@
-// FILE: src/ui/panels/AdvisorPanel.js
+// FILE: src/ui/panels/AdvisorPanel.js  (REPLACE — v2028.42: navigasi tab + layout ringkas)
+// v2028.42 — sheet Asisten dibuat ringkas: tab "Saran | Tanya asisten" (hanya satu bagian tampil),
+//   ringkasan sejak terakhir dicek jadi satu baris, saran ditampilkan satu per satu ("Lihat semua"),
+//   chat berukuran tetap sehingga kolom input selalu terlihat, dan tinggi sheet dibatasi.
 // v2028.41 — tombol asisten (FAB) + panel saran + CHAT asisten.
 // Baru: kartu kesehatan bisnis (6 dimensi, bisa dibuka), ringkasan perubahan sejak terakhir dilihat,
 // format chat berdaftar (bullet rapi), label jawaban AI, dan aksesibilitas (aria-live, label).
@@ -87,13 +90,40 @@ function ensureStyles() {
         '.adv-inputrow{display:flex;gap:6px;margin-top:8px;}' +
         '.adv-inputrow .advisor-input{flex:1;min-width:0;}' +
         '.adv-send{width:40px;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0;}' +
+        // --- v2028.42: layout ringkas ---
+        '.adv-hd-txt{min-width:0;flex:1;}' +
+        '.adv-sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
+        '.adv-brief{margin-top:8px;padding:7px 10px;border-radius:var(--r-md);background:var(--accent-soft);}' +
+        '.adv-brief-t{margin-bottom:2px;}' +
+        '.adv-brief-l{font-size:var(--fs-xs);line-height:1.4;}' +
+        '.adv-tabs{display:flex;gap:4px;padding:3px;margin:10px 0 6px;border-radius:var(--r-pill);background:var(--bg-3);border:1px solid var(--border);}' +
+        '.adv-tab{flex:1;min-height:36px;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 8px;border:none;border-radius:var(--r-pill);' +
+            'background:transparent;color:var(--text-secondary);font-family:inherit;font-size:var(--fs-sm);font-weight:var(--fw-bold);cursor:pointer;}' +
+        '.adv-tab[aria-selected="true"]{background:var(--accent);color:#fff;}' +
+        '.adv-count{min-width:18px;height:18px;padding:0 5px;border-radius:var(--r-pill);background:var(--danger);color:#fff;font-size:10px;line-height:18px;text-align:center;}' +
+        '.adv-count[hidden]{display:none;}' +
+        '.adv-tab[aria-selected="true"] .adv-count{background:#fff;color:var(--accent,#2563eb);}' +
+        '.adv-panel[hidden]{display:none;}' +
+        '.adv-row{display:flex;justify-content:flex-end;min-height:24px;margin-bottom:2px;}' +
+        '.adv-advice .advisor-list{max-height:36vh;overflow-y:auto;overscroll-behavior:contain;padding:2px;}' +
+        '.adv-advice .advisor-item{padding:8px 10px;gap:8px;}' +
+        '.adv-advice .advisor-ico{font-size:18px;}' +
+        '.adv-advice .advisor-title{font-size:var(--fs-sm);}' +
+        '.adv-advice .advisor-detail{font-size:var(--fs-xs);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}' +
+        '.adv-advice .advisor-actions{margin-top:6px;}' +
+        '.adv-advice .advisor-btn{padding:5px 10px;font-size:var(--fs-xs);}' +
+        '.adv-chatp .adv-chat{height:auto;max-height:clamp(140px,30vh,280px);}' +
+        '.adv-chatp .adv-chips{padding-top:6px;}' +
+        '.adv-chatp .adv-inputrow{margin-top:6px;}' +
+        '.adv-close{width:100%;margin-top:10px;min-height:44px;}' +
+        '.modal-backdrop[data-modal-id="advisor"] .modal-card{max-height:min(76vh,640px);}' +
         '@media (prefers-reduced-motion:reduce){.adv-typing i{animation:none}.adv-chat{scroll-behavior:auto}}';
     document.head.appendChild(st);
 }
 
 function renderItems(advisor, all) {
     var list = advisor.getAdvice();
-    var shown = all ? list : list.slice(0, 2);
+    var shown = all ? list : list.slice(0, 1);
     return shown.map(function (a) {
         var go = (a.action && a.action.patch)
             ? (a.action.patch === 'reload'
@@ -135,6 +165,31 @@ function renderBriefing(b) {
     b.fresh.forEach(function (a) { rows.push('<div>• ' + esc(a.title) + '</div>'); });
     return '<div class="adv-brief"><div class="adv-brief-t">' + esc(tx('ui.briefing')) + ' · ' + esc(tx('ui.days_lbl', { n: b.days })) + '</div>' +
         '<div class="adv-brief-l">' + rows.join('') + '</div></div>';
+}
+
+// Ringkasan "sejak terakhir" dalam satu baris (kotak besar dihapus agar sheet tidak penuh).
+function renderBriefingLine(b) {
+    if (!b) return '';
+    var parts = [esc(tx('ui.cash_lbl')) + ' <span class="' + (b.cashDelta >= 0 ? 'adv-up' : 'adv-down') + '">' + signed(b.cashDelta) + '</span>'];
+    if (b.soldDelta > 0) parts.push(esc(tx('ui.sold_lbl')) + ' <b>' + b.soldDelta.toLocaleString('en-US') + '</b>');
+    if (b.healthDelta) parts.push(esc(tx('ui.health_lbl')) + ' <span class="' + (b.healthDelta > 0 ? 'adv-up' : 'adv-down') + '">' + (b.healthDelta > 0 ? '+' : '−') + Math.abs(b.healthDelta) + '</span>');
+    return '<div class="adv-brief">' +
+        '<div class="adv-brief-t">' + esc(tx('ui.briefing')) + ' · ' + esc(tx('ui.days_lbl', { n: b.days })) + '</div>' +
+        '<div class="adv-brief-l">' + parts.join(' · ') + '</div></div>';
+}
+
+// Tab segmen: Saran (dengan jumlah) | Tanya asisten.
+function renderTabs(count, tab) {
+    function tabBtn(id, label, extra) {
+        var on = tab === id;
+        return '<button type="button" role="tab" class="adv-tab" id="adv-t-' + id + '" data-adv-tab="' + id + '" ' +
+            'aria-selected="' + (on ? 'true' : 'false') + '" aria-controls="adv-p-' + id + '" tabindex="' + (on ? '0' : '-1') + '">' +
+            esc(label) + (extra || '') + '</button>';
+    }
+    return '<div class="adv-tabs" role="tablist">' +
+        tabBtn('advice', tx('ui.advice'), '<span class="adv-count" data-adv-count' + (count ? '' : ' hidden') + '>' + count + '</span>') +
+        tabBtn('chat', tx('ui.chat')) +
+        '</div>';
 }
 
 function renderHealthBox(h) {
@@ -202,32 +257,39 @@ export function openAdvisor(advisor) {
     var showAll = false;
     var briefing = null;
     try { briefing = advisor.getBriefing(); } catch (e) {}
+    function realCount() { return advisor.getAdvice().filter(function (a) { return a.id !== 'all_good'; }).length; }
+    var count = realCount();
+    // Tab awal: saran bila ada yang perlu dilihat; kalau tidak, langsung ke chat.
+    var tab = count > 0 ? 'advice' : 'chat';
 
     var html = '' +
-        '<div class="adv-head">' +
-            '<div class="adv-avatar">' + gIcon('spark', 20) + '</div>' +
-            '<div><div class="modal-title" style="margin:0">' + esc(tx('ui.title')) + '</div>' +
-            '<div class="modal-sub" style="margin:0">' + esc(advisor.getSummary()) + '</div></div>' +
-            '<button type="button" class="adv-health band-' + healthBand(h.score) + '" data-adv-health aria-expanded="false" aria-label="' + esc(tx('ui.health')) + '">' + h.score + '/100</button>' +
+        '<div class=\"adv-head\">' +
+            '<div class=\"adv-avatar\">' + gIcon('spark', 18) + '</div>' +
+            '<div class=\"adv-hd-txt\"><div class=\"modal-title\" style=\"margin:0\">' + esc(tx('ui.title')) + '</div>' +
+            '<div class=\"modal-sub adv-sub\" style=\"margin:0\">' + esc(advisor.getSummary()) + '</div></div>' +
+            '<button type=\"button\" class=\"adv-health band-' + healthBand(h.score) + '\" data-adv-health aria-expanded=\"false\" aria-label=\"' + esc(tx('ui.health')) + '\">' + h.score + '/100</button>' +
         '</div>' +
-        '<div class="adv-hbox" data-adv-hbox hidden>' + renderHealthBox(h) + '</div>' +
-        renderBriefing(briefing) +
-        '<div class="adv-section"><span>' + esc(tx('ui.advice')) + '</span>' +
-            '<button class="adv-link" type="button" data-adv-toggle>' + esc(tx('ui.show_all')) + '</button></div>' +
-        '<div class="advisor-list" data-adv-list>' + renderItems(advisor, false) + '</div>' +
-        '<div class="adv-section"><span>' + esc(tx('ui.chat')) + '</span>' +
-            '<button class="adv-link" type="button" data-adv-clear>' + esc(tx('ui.clear')) + '</button></div>' +
-        '<div class="adv-chat" data-adv-chat role="log" aria-live="polite" aria-label="' + esc(tx('ui.chat')) + '">' + chat.map(renderMsg).join('') + '</div>' +
-        '<div class="adv-chips" data-adv-chips>' + renderChips(chat[chat.length - 1].chips) + '</div>' +
-        '<div class="adv-inputrow">' +
-            '<input class="advisor-input" type="text" maxlength="300" data-adv-input autocomplete="off" enterkeyhint="send" aria-label="' + esc(tx('ui.chat')) + '" placeholder="' + esc(tx('ui.ask_ph')) + '">' +
-            '<button class="btn-primary advisor-btn adv-send" type="button" data-adv-send="1" aria-label="' + esc(tx('ui.ask_send')) + '">' + gIcon('send', 16) + '</button>' +
+        '<div class=\"adv-hbox\" data-adv-hbox hidden>' + renderHealthBox(h) + '</div>' +
+        renderBriefingLine(briefing) +
+        renderTabs(count, tab) +
+        '<div class=\"adv-panel adv-advice\" data-adv-panel=\"advice\" id=\"adv-p-advice\" role=\"tabpanel\" aria-labelledby=\"adv-t-advice\"' + (tab === 'advice' ? '' : ' hidden') + '>' +
+            '<div class=\"adv-row\"><button class=\"adv-link\" type=\"button\" data-adv-toggle>' + esc(tx('ui.show_all')) + '</button></div>' +
+            '<div class=\"advisor-list\" data-adv-list>' + renderItems(advisor, false) + '</div>' +
         '</div>' +
-        '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:12px;">' + esc(tx('ui.close')) + '</button>';
+        '<div class=\"adv-panel adv-chatp\" data-adv-panel=\"chat\" id=\"adv-p-chat\" role=\"tabpanel\" aria-labelledby=\"adv-t-chat\"' + (tab === 'chat' ? '' : ' hidden') + '>' +
+            '<div class=\"adv-row\"><button class=\"adv-link\" type=\"button\" data-adv-clear>' + esc(tx('ui.clear')) + '</button></div>' +
+            '<div class=\"adv-chat\" data-adv-chat role=\"log\" aria-live=\"polite\" aria-label=\"' + esc(tx('ui.chat')) + '\">' + chat.map(renderMsg).join('') + '</div>' +
+            '<div class=\"adv-chips\" data-adv-chips>' + renderChips(chat[chat.length - 1].chips) + '</div>' +
+            '<div class=\"adv-inputrow\">' +
+                '<input class=\"advisor-input\" type=\"text\" maxlength=\"300\" data-adv-input autocomplete=\"off\" enterkeyhint=\"send\" aria-label=\"' + esc(tx('ui.chat')) + '\" placeholder=\"' + esc(tx('ui.ask_ph')) + '\">' +
+                '<button class=\"btn-primary advisor-btn adv-send\" type=\"button\" data-adv-send=\"1\" aria-label=\"' + esc(tx('ui.ask_send')) + '\">' + gIcon('send', 16) + '</button>' +
+            '</div>' +
+        '</div>' +
+        '<button class=\"btn-secondary adv-close\" data-modal-close type=\"button\">' + esc(tx('ui.close')) + '</button>';
 
     Modal.open(MODAL_ID, html);
 
-    var node = document.querySelector('[data-modal-id="' + MODAL_ID + '"]');
+    var node = document.querySelector('[data-modal-id=\"' + MODAL_ID + '\"]');
     if (!node) return;
     try { advisor.markSeen(); } catch (e) {}
     var log = node.querySelector('[data-adv-chat]');
@@ -235,6 +297,25 @@ export function openAdvisor(advisor) {
     var input = node.querySelector('[data-adv-input]');
     function scroll() { if (log) log.scrollTop = log.scrollHeight; }
     scroll();
+
+    function paintCount() {
+        var c = realCount();
+        var el = node.querySelector('[data-adv-count]');
+        if (el) { el.textContent = String(c); el.hidden = c === 0; }
+    }
+    function setTab(name) {
+        if (name !== 'advice' && name !== 'chat') return;
+        tab = name;
+        node.querySelectorAll('[data-adv-tab]').forEach(function (b) {
+            var on = b.dataset.advTab === name;
+            b.setAttribute('aria-selected', on ? 'true' : 'false');
+            b.tabIndex = on ? 0 : -1;
+        });
+        node.querySelectorAll('[data-adv-panel]').forEach(function (p) {
+            p.hidden = p.dataset.advPanel !== name;
+        });
+        if (name === 'chat') scroll();      // panel chat baru tampil: geser ke pesan terakhir
+    }
 
     // Tekan chip tidak boleh memindahkan fokus: kalau input sedang fokus, keyboard tetap
     // seperti semula (tidak tertutup lalu terbuka lagi, yang membuat layar naik-turun).
@@ -254,12 +335,12 @@ export function openAdvisor(advisor) {
         input.value = '';
         var typing = document.createElement('div');
         typing.className = 'adv-msg bot';
-        typing.innerHTML = '<div class="adv-bubble adv-typing"><i></i><i></i><i></i></div>';
+        typing.innerHTML = '<div class=\"adv-bubble adv-typing\"><i></i><i></i><i></i></div>';
         log.appendChild(typing);
         scroll();
         var started = Date.now();
         var res = await advisor.chat(text);
-        var wait = Math.max(0, 380 - (Date.now() - started));       // jeda singkat agar terasa "berpikir"
+        var wait = Math.max(0, 380 - (Date.now() - started));       // jeda singkat agar terasa \"berpikir\"
         await new Promise(function (r) { setTimeout(r, wait); });
         typing.remove();
         if (res) {
@@ -275,6 +356,8 @@ export function openAdvisor(advisor) {
     }
 
     node.addEventListener('click', function (e) {
+        var tb = e.target.closest('[data-adv-tab]');
+        if (tb) { setTab(tb.dataset.advTab); return; }
         var goBtn = e.target.closest('[data-adv-go]');
         if (goBtn) {
             bus.emit('advisor:go', { nav: goBtn.dataset.advNav, subtab: goBtn.dataset.advSubtab || null });
@@ -286,6 +369,7 @@ export function openAdvisor(advisor) {
             advisor.ackPatch(pt.dataset.advVer);
             pt.disabled = true;
             node.querySelector('[data-adv-list]').innerHTML = renderItems(advisor, showAll);
+            paintCount();
             return;
         }
         var rep = e.target.closest('[data-adv-report]');
@@ -294,6 +378,7 @@ export function openAdvisor(advisor) {
         if (snz) {
             advisor.snooze(snz.dataset.advSnooze);
             node.querySelector('[data-adv-list]').innerHTML = renderItems(advisor, showAll);
+            paintCount();
             return;
         }
         var hb = e.target.closest('[data-adv-health]');
@@ -320,6 +405,16 @@ export function openAdvisor(advisor) {
         var chip = e.target.closest('[data-adv-chip]');
         if (chip) { send(chip.dataset.advChip); return; }
         if (e.target.closest('[data-adv-send]')) send(input.value, { fromInput: true });
+    });
+
+    // Navigasi keyboard antar tab (panah kiri/kanan), sesuai pola ARIA tablist.
+    node.querySelector('.adv-tabs').addEventListener('keydown', function (e) {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        var next = tab === 'advice' ? 'chat' : 'advice';
+        setTab(next);
+        var nb = node.querySelector('[data-adv-tab=\"' + next + '\"]');
+        if (nb) nb.focus();
+        e.preventDefault();
     });
 
     input.addEventListener('keydown', function (e) {
