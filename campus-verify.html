@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verifikasi Peta Kampus 3D</title>
+<style>
+  :root { --bg:#f4f5f7; --fg:#1b1d22; --mut:#5b616e; --ok:#15803d; --bad:#b91c1c; --card:#fff; --line:#d7dbe2; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#101216; --fg:#e8eaf0; --mut:#9aa1ae; --ok:#4ade80; --bad:#f87171; --card:#181b22; --line:#2a2f3a; } }
+  :root[data-theme="dark"] { --bg:#101216; --fg:#e8eaf0; --mut:#9aa1ae; --ok:#4ade80; --bad:#f87171; --card:#181b22; --line:#2a2f3a; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.5 system-ui,sans-serif; padding:16px; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  .sub { color:var(--mut); margin:0 0 12px; }
+  .bar { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  button { font:inherit; padding:6px 10px; border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:6px; cursor:pointer; }
+  button.on { border-color:var(--fg); font-weight:600; }
+  #stage { width:100%; max-width:960px; height:560px; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--card); position:relative; }
+  pre { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px; overflow:auto; max-height:260px; white-space:pre-wrap; }
+  .ok { color:var(--ok); } .bad { color:var(--bad); }
+</style>
+</head>
+<body>
+<h1>Verifikasi Peta Kampus 3D</h1>
+<p class="sub">Halaman ini memuat modul kampus dari folder proyek dan Three.js 0.160.0 dari CDN (sama seperti aplikasi). Jalankan lewat server lokal, bukan dengan membuka berkas langsung.</p>
+<div class="bar" id="bar"></div>
+<div id="stage"></div>
+<h2 style="font-size:15px">Log uji</h2>
+<pre id="log">memuat…</pre>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { createCampusScene } from './src/ui/campus/CampusScene.js';
+
+const log = (msg, cls) => {
+  const el = document.getElementById('log');
+  const s = document.createElement('span');
+  if (cls) s.className = cls;
+  s.textContent = msg + '\n';
+  if (el.textContent === 'memuat…') el.textContent = '';
+  el.appendChild(s);
+};
+
+const base = {
+  componentPlants: { plants: [{ built: true, level: 1, unpaid: false, idleDays: 0, producing: true }] },
+  chipResearch: { completed: [], active: [], maxSlots: 1 }, fab: { producing: false },
+  os: { versions: [] }, products: { catalog: [] }, market: { share: 0.3 },
+  marketing: { activeCampaigns: [] }, staff: [], research: { completed: [] },
+};
+const SCENARIOS = {
+  'Awal (kosong)':      {},
+  'Dasar':              base,
+  'Pabrik sibuk':       { ...base, fab: { producing: true } },
+  'Pangsa 90% (0..1)':  { ...base, market: { share: 0.9 } },
+  'Pangsa 85 (0..100)': { ...base, market: { share: 85 } },
+  'Riset chip aktif':   { ...base, chipResearch: { completed: ['a', 'b', 'c'], active: ['d'], maxSlots: 3 } },
+  'PC plant tanpa bayar': { ...base, componentPlants: { plants: [{ built: true, level: 2, unpaid: true, idleDays: 0, producing: false }] } },
+  'Maksimal':           { ...base, componentPlants: { plants: [{ built: true, level: 3, unpaid: false, idleDays: 0, producing: true }] },
+                          chipResearch: { completed: new Array(20).fill('x'), active: [], maxSlots: 4 }, fab: { producing: true },
+                          market: { share: 1 }, marketing: { activeCampaigns: ['a', 'b'] }, research: { completed: new Array(40).fill('r') } },
+};
+
+const stage = document.getElementById('stage');
+const bar = document.getElementById('bar');
+let scene = null;
+const gameState = { getState: () => ({}) };
+
+try {
+  scene = createCampusScene(THREE, stage, gameState);
+  log('[OK] createCampusScene dibuat', 'ok');
+} catch (e) {
+  log('[GAGAL] createCampusScene: ' + (e && e.stack || e), 'bad');
+}
+
+function run(name, btn) {
+  bar.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === btn));
+  if (!scene) return;
+  try {
+    scene.update(SCENARIOS[name]);
+    log('[OK] update: ' + name, 'ok');
+  } catch (e) {
+    log('[GAGAL] update ' + name + ': ' + (e && e.message), 'bad');
+  }
+}
+
+for (const name of Object.keys(SCENARIOS)) {
+  const b = document.createElement('button');
+  b.textContent = name;
+  b.onclick = () => run(name, b);
+  bar.appendChild(b);
+}
+
+// Jalankan semua skenario sekali di awal sebagai smoke test otomatis.
+if (scene) {
+  let fails = 0;
+  for (const name of Object.keys(SCENARIOS)) {
+    try { scene.update(SCENARIOS[name]); } catch (e) { fails++; log('[GAGAL] ' + name + ': ' + (e && e.message), 'bad'); }
+  }
+  try { scene.refreshLang(); scene.refreshTheme(); } catch (e) { fails++; log('[GAGAL] refresh: ' + e.message, 'bad'); }
+  log(fails ? ('Smoke test: ' + fails + ' gagal') : ('Smoke test: ' + Object.keys(SCENARIOS).length + ' skenario lolos'), fails ? 'bad' : 'ok');
+  log('Periksa visual: gedung tidak menembus pohon/jalan, label terbaca, bayangan wajar, asap pabrik saat "Pabrik sibuk", kereta di rel.');
+  bar.querySelector('button').click();
+}
+</script>
+</body>
+</html>
