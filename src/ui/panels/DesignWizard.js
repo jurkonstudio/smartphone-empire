@@ -1187,6 +1187,9 @@ function _previewHtml(s) {
         const demand = ps.estimateDemand ? ps.estimateDemand(s) : 0;
         const margin = (s.price || 0) - unitCost;
         const marginPct = s.price > 0 ? Math.round((margin / s.price) * 100) : 0;
+        // Pecahan biaya per unit: bagian desain (ditagih sekarang) + baterai & layar (ditagih saat produksi).
+        // designUnitCost * qty + setup = totalCost, sehingga angka di pratinjau bisa dicocokkan.
+        const plantPartCost = Math.max(0, unitCost - designUnitCost);
         const noCamera = !s.cameraId || s.cameraId === 'none';
 
         const warnings = [];
@@ -1203,7 +1206,8 @@ function _previewHtml(s) {
 
         return `
             <div class="preview-row"><span>${t('wiz.preview.quality')}</span><b>${stats.qualityScore || 0}/100</b></div>
-            <div class="preview-row"><span>${t('wiz.preview.unit_cost')}</span><b>$${unitCost}</b></div>
+            <div class="preview-row"><span>${_tf('wiz.preview.unit_design', _pick('Biaya desain per unit', 'Design cost per unit'))}</span><b>$${designUnitCost}</b></div>
+            <div class="preview-row"><span>${_tf('wiz.preview.unit_parts', _pick('Baterai & layar (saat produksi)', 'Battery & screen (at production)'))}</span><b>$${plantPartCost}</b></div>
             <div class="preview-row"><span>${t('wiz.preview.total_cost')}</span><b>$${totalCost.toLocaleString('en-US')}</b></div>
             <div class="preview-row"><span>${t('wiz.preview.margin')}</span><b style="color:${margin >= 0 ? 'var(--success)' : 'var(--danger)'};">$${margin} (${marginPct}%)</b></div>
             <div class="preview-row"><span>${t('wiz.preview.demand')}</span><b>${t('wiz.preview.demand_unit', { n: demand.toLocaleString('en-US') })}</b></div>
