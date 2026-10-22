@@ -503,7 +503,9 @@ export function bindSettingsActions(root) {
             var newLang = langBtn.dataset.langPick;
             var ok = LanguageService.setLang(newLang);
             if (ok) {
-                var label = newLang === 'id' ? t('settings.lang.indonesian') : t('settings.lang.english');
+                // Nama asli bahasa dari SUPPORTED_LANGS (mendukung zh & ko tanpa key tambahan).
+                var picked = LanguageService.getSupported().filter(function (l) { return l.id === newLang; })[0];
+                var label = picked ? picked.label : newLang;
                 ToastService.info(t('toast.lang_changed', { value: label }));
             }
             return;
