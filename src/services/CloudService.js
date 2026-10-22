@@ -274,6 +274,14 @@ export const CloudService = {
         catch (err) { return _fail(err); }
     },
 
+    async syncCompanyLevel(fields) {
+        if (!_adapter) return NOT_CONFIGURED;
+        if (!_userId) return NOT_SIGNED_IN;
+        if (typeof _adapter.rpcSyncCompanyLevel !== 'function') return NOT_CONFIGURED;
+        try { return { ok: true, data: await _adapter.rpcSyncCompanyLevel(fields) }; }
+        catch (err) { return _fail(err); }
+    },
+
     async getPlayerAssetUrls(paths, expiresSec) {
         if (!_adapter || !_userId) return NOT_SIGNED_IN;
         if (typeof _adapter.getPlayerAssetUrls !== 'function') return NOT_CONFIGURED;
