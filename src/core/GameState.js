@@ -40,6 +40,7 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
         team: { engineers: 0, designers: 0, marketers: 0 },
         staff: [],
         candidates: [],
+        pendingHires: [],
         candidatePool: { lastRefreshMinute: 0, lastRefreshMonth: null },
 
         research: {
@@ -421,6 +422,7 @@ class GameState {
             team:     { ...base.team,     ...(incoming.team || {}) },
             staff:    Array.isArray(incoming.staff) ? incoming.staff : [],
             candidates: Array.isArray(incoming.candidates) ? incoming.candidates : [],
+            pendingHires: Array.isArray(incoming.pendingHires) ? incoming.pendingHires : [],
             candidatePool: { ...base.candidatePool, ...(incoming.candidatePool || {}) },
             research: {
                 ...base.research, ...(incoming.research || {}),
