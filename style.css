@@ -7,7 +7,7 @@
    1. DESIGN TOKENS
    ============================================================================ */
 :root {
-    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Hiragino Sans", "Yu Gothic", "Meiryo", "Noto Sans JP", "Noto Sans Devanagari", "Nirmala UI", "Mangal", sans-serif;
     --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
 
     --fs-2xs: 10px; --fs-xs: 11px; --fs-sm: 12px; --fs-base: 13px;
