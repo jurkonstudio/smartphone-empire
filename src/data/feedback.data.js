@@ -2,6 +2,7 @@
 // ============================================================
 // DATA FEEDBACK PUBLIK — template ulasan, viral events, saran.
 // ============================================================
+import { VIRAL_RESPONSES_EXT } from './market-nav.data.js';
 
 // Sumber ulasan per era
 export const FEEDBACK_SOURCES = {
@@ -131,12 +132,24 @@ export const CUSTOMER_SUGGESTIONS = [
 ];
 
 // Aksi pemain untuk merespons viral negatif (opsional, pakai uang)
+// i18n = teks dwibahasa untuk UI; label/description tetap Indonesia demi kompatibilitas.
 export const VIRAL_RESPONSES = [
-    { id: 'apology',        label: 'Permintaan Maaf Publik',    cost: 2000,  effect: { reputation: +2 }, description: 'Minta maaf terbuka, tenangkan publik.' },
-    { id: 'recall',         label: 'Program Perbaikan Unit',    cost: 15000, effect: { reputation: +6 }, description: 'Tukar/perbaiki unit bermasalah.' },
-    { id: 'clarify',        label: 'Kampanye Klarifikasi',      cost: 8000,  effect: { reputation: +4 }, description: 'Jelaskan fakta lewat iklan.' },
-    { id: 'ignore',         label: 'Abaikan',                   cost: 0,     effect: { reputation: -3 }, description: 'Diamkan saja, biarkan mereda sendiri.' }
+    { id: 'apology',        label: 'Permintaan Maaf Publik',    cost: 2000,  effect: { reputation: +2 }, description: 'Minta maaf terbuka, tenangkan publik.',
+      i18n: { label: { id: 'Permintaan Maaf Publik', en: 'Public Apology' }, description: { id: 'Minta maaf terbuka, tenangkan publik.', en: 'Apologise openly and calm the public.' } } },
+    { id: 'recall',         label: 'Program Perbaikan Unit',    cost: 15000, effect: { reputation: +6 }, description: 'Tukar/perbaiki unit bermasalah.',
+      i18n: { label: { id: 'Program Perbaikan Unit', en: 'Unit Repair Program' }, description: { id: 'Tukar/perbaiki unit bermasalah.', en: 'Swap or repair the affected units.' } } },
+    { id: 'clarify',        label: 'Kampanye Klarifikasi',      cost: 8000,  effect: { reputation: +4 }, description: 'Jelaskan fakta lewat iklan.',
+      i18n: { label: { id: 'Kampanye Klarifikasi', en: 'Clarification Campaign' }, description: { id: 'Jelaskan fakta lewat iklan.', en: 'Explain the facts through ads.' } } },
+    { id: 'ignore',         label: 'Abaikan',                   cost: 0,     effect: { reputation: -3 }, description: 'Diamkan saja, biarkan mereda sendiri.',
+      i18n: { label: { id: 'Abaikan', en: 'Ignore' }, description: { id: 'Diamkan saja, biarkan mereda sendiri.', en: 'Stay silent and let it blow over.' } } }
 ];
+// Respons tambahan (market-nav.data.js) digabung ke daftar yang sama.
+VIRAL_RESPONSES_EXT.forEach(function (r) {
+    VIRAL_RESPONSES.splice(VIRAL_RESPONSES.length - 1, 0, {
+        id: r.id, label: r.label.id, cost: r.cost, effect: { reputation: r.effect.reputation },
+        description: r.description.id, i18n: { label: r.label, description: r.description }
+    });
+});
 
 // ============================================================
 // v2028.41 — ULASAN LEBIH BERAGAM DARI TAHUN KE TAHUN
