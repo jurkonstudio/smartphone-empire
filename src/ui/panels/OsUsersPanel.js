@@ -9,6 +9,7 @@
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { escapeHtml } from '../../utils/html.js';
 import { formatUsers, ADOPTION_CONFIG } from '../../systems/OsAdoptionModel.js';
+import { projectedOsAdoption } from '../../systems/LiveProjection.js';
 
 var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 var TIER_LABEL = { current: 'Terbaru', previous: 'Sebelumnya', older: 'Lama' };
@@ -22,8 +23,9 @@ export function renderOsKpiRow(osSystem, data) {
     var cur = osSystem.getCurrentVersionObject ? osSystem.getCurrentVersionObject() : null;
     var features = cur && cur.features ? cur.features.length : 0;
     var bugs = (os.bugs || []).filter(function (b) { return b.status === 'active' || b.status === 'patching'; }).length;
+    var liveUsers = projectedOsAdoption(data).activeUsers;
     var chips = [
-        { ico: 'users',  label: 'Pengguna aktif', val: formatUsers(a.activeUsers) },
+        { ico: 'users',  label: 'Pengguna aktif', val: formatUsers(liveUsers), live: true },
         { ico: 'cpu',    label: 'Versi',          val: cur ? cur.versionString : '-' },
         { ico: 'layers', label: 'Fitur di versi', val: String(features) },
         { ico: 'blocks', label: 'Apps pihak ketiga', val: String(os.apps ? os.apps.thirdParty : 0) },
@@ -31,7 +33,7 @@ export function renderOsKpiRow(osSystem, data) {
     ];
     return '<div class="ou-kpis">' + chips.map(function (c) {
         return '<div class="ou-kpi ' + (c.tone || '') + '"><div class="ou-kpi-ico">' + renderIcon(c.ico, 14) + '</div>' +
-            '<div><div class="ou-kpi-val">' + escapeHtml(c.val) + '</div><div class="ou-kpi-lbl">' + escapeHtml(c.label) + '</div></div></div>';
+            '<div><div class="ou-kpi-val">' + (c.live ? '<span data-live-os-users>' + Math.round(liveUsers).toLocaleString('en-US') + '</span>' : escapeHtml(c.val)) + '</div><div class="ou-kpi-lbl">' + escapeHtml(c.label) + '</div></div></div>';
     }).join('') + '</div>';
 }
 
@@ -46,7 +48,7 @@ export function renderOsUsersTab(osSystem, data) {
 
     var header = '<div class="ou-hero">' +
         '<div class="ou-hero-top"><div><div class="ou-hero-label">Total pengguna aktif</div>' +
-        '<div class="ou-hero-big">' + escapeHtml(formatUsers(a.activeUsers)) + '</div></div>' +
+        '<div class="ou-hero-big"><span data-live-os-users>' + Math.round(projectedOsAdoption(data).activeUsers).toLocaleString('en-US') + '</span></div></div>' +
         '<div class="ou-hero-side"><div>Unit terjual <b>' + escapeHtml(formatUsers(a.shippedUnits)) + '</b></div>' +
         '<div>Retensi <b>' + Math.round(a.retentionRate * 100) + '%</b></div>' +
         '<div>Ponsel ber-OS <b>' + a.phoneCount + '</b></div></div></div>' +
