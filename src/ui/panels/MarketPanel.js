@@ -5,6 +5,7 @@ import { escapeHtml } from '../../utils/html.js';
 import { renderPublicOpinionPanel } from './PublicOpinionPanel.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
 import { renderPromotionPanel } from './PromotionPanel.js';
+import { renderNavShare, renderNavTrends, renderNavPublic } from './MarketNavPanels.js';
 import '../charts/ChartZoomModal.js'; // side-effect: pasang listener [data-chart-zoom]
 
 
@@ -19,6 +20,11 @@ function _personalityLabel(p) {
     };
     var key = map[p];
     return key ? t(key) : p;
+}
+
+// Kartu Navigasi Pasar: tidak boleh merusak sub-tab bila gagal.
+function _navCards(fn) {
+    try { return fn() || ''; } catch (e) { console.warn('[MarketPanel] kartu navigasi gagal', e); return ''; }
 }
 
 export function renderMarketPanel(params) {
@@ -38,10 +44,10 @@ export function renderMarketPanel(params) {
     `;
     let body = '';
     if (subtab === 'competitors') body = _renderCompetitors(competitorSystem);
-    else if (subtab === 'trends') body = _renderTrends(marketSystem);
+    else if (subtab === 'trends') body = _renderTrends(marketSystem) + _navCards(renderNavTrends);
     else if (subtab === 'promo') body = renderPromotionPanel();
-    else if (subtab === 'public') body = renderPublicOpinionPanel({ opinionSystem });
-    else body = _renderShare(marketSystem);
+    else if (subtab === 'public') body = renderPublicOpinionPanel({ opinionSystem }) + _navCards(renderNavPublic);
+    else body = _renderShare(marketSystem) + _navCards(renderNavShare);
     return subtabBar + body;
 }
 

@@ -6,6 +6,8 @@ import { t } from '../../core/LanguageService.js';
 import { formatCurrency } from '../../utils/format.js';
 import { REGION_IDS, SCOPE_IDS, REGION_COLORS } from '../../data/region.data.js';
 import { getPackageById, getPackagesByScope } from '../../data/promotion.data.js';
+import { getSegment } from '../../data/market-nav.data.js';
+import { loc } from '../../systems/MarketNavSystem.js';
 import { ensureRegionalStyle } from './RegionalStyle.js';
 
 var _productId = null;
@@ -80,10 +82,27 @@ function _demandCard(ps) {
         '<div class="rg-row-meta">' + esc(t('promo.demand.share')) + '</div>' + split + rows + '</div>';
 }
 
+// Tag segmen target + kecocokan produk (hanya paket segmen).
+function _segmentTags(ps, product, pkg) {
+    if (!pkg.segment) return '';
+    var seg = getSegment(pkg.segment);
+    if (!seg) return '';
+    var nav = window.__game && window.__game.marketNav;
+    var out = '<span class="rg-tag info">' + esc(seg.icon + ' ' + loc(seg.name)) + '</span>';
+    if (nav && nav.getSegmentFit) {
+        var fit = nav.getSegmentFit(product, pkg.segment);
+        var cls = fit >= 1.0 ? 'good' : (fit < 0.75 ? 'warn' : '');
+        out += '<span class="rg-tag ' + cls + '">' + esc(t('promo.seg_fit', { n: Math.round(fit * 100) })) + '</span>';
+    }
+    return out;
+}
+
 function _packageRow(ps, product, pkg, recId, activeIds) {
     var pv = ps.previewPackage(product.id, pkg.id);
     if (!pv) return '';
     var isActive = activeIds.indexOf(pkg.id) >= 0;
+    var curYear = ps.state.data.time.currentYear;
+    var lockedYear = !!(pkg.minYear && curYear < pkg.minYear);
     var badges = '';
     if (recId === pkg.id && !isActive) badges += '<span class="rg-tag info">' + esc(t('promo.badge.rec')) + '</span>';
     if (isActive) badges += '<span class="rg-tag good">' + esc(t('promo.badge.active')) + '</span>';
@@ -93,9 +112,12 @@ function _packageRow(ps, product, pkg, recId, activeIds) {
         '<span class="rg-tag">' + esc(t('promo.days', { n: pv.durationDays })) + '</span>' +
         '<span class="rg-tag good">' + esc(t('promo.est', { n: Math.round(pv.estLift * 100) })) + '</span>' +
         '<span class="rg-tag">' + esc(t('promo.brandgain', { n: pv.brandGain })) + '</span>';
+    meta += _segmentTags(ps, product, pkg);
 
     var btn;
-    if (isActive) {
+    if (lockedYear) {
+        btn = '<button class="btn-secondary rg-btn" disabled>' + esc(t('promo.locked_year', { n: pkg.minYear })) + '</button>';
+    } else if (isActive) {
         btn = '<button class="btn-secondary rg-btn" disabled>' + esc(t('promo.badge.active')) + '</button>';
     } else if (pv.affordable) {
         btn = '<button class="btn-primary rg-btn" data-promo-open="' + pkg.id + '">' + esc(t('promo.btn.start')) + '</button>';
@@ -114,7 +136,7 @@ function _scopeCard(ps, product, scope, recId, activeIds) {
     var title = '<div class="rg-title">' + dot(scope) + esc(regionName(scope)) + '</div>';
     var desc = '<div class="rg-desc">' + esc(t('promo.scope.' + scope + '.desc')) + '</div>';
     var fitHtml = '';
-    if (scope === 'asia' || scope === 'europe') {
+    if (scope === 'asia' || scope === 'europe' || scope === 'rest') {
         var fit = ps.getRegionFit(product, scope);
         var cls = fit >= 1.05 ? 'good' : (fit < 0.9 ? 'warn' : '');
         fitHtml = '<div class="rg-pkg-meta"><span class="rg-tag ' + cls + '">' +
@@ -213,6 +235,17 @@ export function renderPromotionPanel() {
 
 // ------------------------------------------------------------ modal konfirmasi
 
+function _segmentModalRow(product, pkg) {
+    if (!pkg.segment) return '';
+    var seg = getSegment(pkg.segment);
+    if (!seg) return '';
+    var nav = window.__game && window.__game.marketNav;
+    var fit = (nav && nav.getSegmentFit) ? nav.getSegmentFit(product, pkg.segment) : 1;
+    return '<div class="rg-sum"><span>' + esc(t('promo.modal.segment')) + '</span><b>' + esc(seg.icon + ' ' + loc(seg.name)) + ' · ' +
+        esc(t('promo.seg_fit', { n: Math.round(fit * 100) })) + '</b></div>' +
+        '<div class="rg-tip">' + esc(t('promo.modal.segment_hint')) + '</div>';
+}
+
 export function openPromoConfirmModal(pkgId) {
     ensureRegionalStyle();
     var g = window.__game;
@@ -242,6 +275,7 @@ export function openPromoConfirmModal(pkgId) {
         '<div class="rg-sum"><span>' + esc(t('promo.modal.duration')) + '</span><b>' + esc(t('promo.days', { n: pv.durationDays })) + '</b></div>' +
         '<div class="rg-sum"><span>' + esc(t('promo.modal.est')) + '</span><b style="color:var(--success,#34c759)">+' + (pv.estLift * 100).toFixed(1) + '%</b></div>' +
         '<div class="rg-sum"><span>' + esc(t('promo.brandgain', { n: pv.brandGain })) + '</span><b>' + esc(t('promo.modal.brand_hint')) + '</b></div>' +
+        _segmentModalRow(product, pkg) +
         '<div class="card-title" style="margin:12px 0 4px;">' + esc(t('promo.modal.regions')) + '</div>' + regionRows +
         '<button class="btn-primary" data-promo-confirm="' + pkgId + '" style="width:100%;margin-top:14px;">' + esc(t('promo.modal.confirm')) + '</button>' +
         '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:6px;">' + esc(t('promo.modal.cancel')) + '</button>';
