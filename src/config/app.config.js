@@ -9,5 +9,5 @@ export const APP_CONFIG = {
     // Berkas catatan patch yang dibaca Asisten Bisnis (relatif terhadap index.html).
     patchUrl: './patches.json',
     // Halaman studio (kontak, sosial media, download APK). Dibuka di tab baru dari Pengaturan > Umum > Tentang.
-    studioUrl: 'https://www.smartphone-empire.my.id/hi-myfriend.html'
+    studioUrl: 'https://www.smartphone-empire.my.id/demo-final2026.html'
 };
