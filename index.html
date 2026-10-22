@@ -121,6 +121,37 @@
 </script>
 
 <!-- ============================================================
+     LOADING SCREEN BERDASARKAN BAHASA — dipilih & di-preload sebelum render pertama.
+     Prioritas: bahasa pilihan pemain di game (Setelan) > bahasa HP/browser. Indonesia -> versi Indonesia, selain itu -> English. Logika sama dengan src/core/LanguageService.js.
+     ============================================================ -->
+<script>
+(function () {
+    var lang = 'en';
+    try {
+        var saved = localStorage.getItem('smartphone-empire:lang:v1');
+        if (saved === 'id' || saved === 'en') lang = saved;
+        else {
+            var list = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language];
+            for (var i = 0; i < list.length; i++) {
+                var b = String(list[i] || '').toLowerCase().split(/[-_]/)[0];
+                if (b === 'in') b = 'id';
+                if (b === 'id' || b === 'en') { lang = b; break; }
+            }
+        }
+    } catch (e) {}
+    var pick = lang === 'id'
+        ? { lang: 'id', src: './assets/img/loading-id.webp', bg: '#ffffff', ink: '#1b2a4a' }
+        : { lang: 'en', src: './assets/img/loading-en.webp', bg: '#f2ece0', ink: '#1b2a4a' };
+    window.__splashPick = pick;
+    try {
+        var ln = document.createElement('link');
+        ln.rel = 'preload'; ln.as = 'image'; ln.href = pick.src; ln.setAttribute('fetchpriority', 'high');
+        document.head.appendChild(ln);
+    } catch (e) {}
+})();
+</script>
+
+<!-- ============================================================
      VERSION CHECK
      ============================================================ -->
 <script>
@@ -252,25 +283,16 @@ window.addEventListener('unhandledrejection', function (e) {
     </div>
 
     <script>
-    /* Pilih gambar loading ACAK tiap web dibuka. Tidak mengulang gambar yang sama dengan kunjungan sebelumnya.
-       Tambah gambar baru cukup dengan menambah satu baris di SCREENS (bg = warna kertas gambar). */
+    /* Pasang gambar loading sesuai bahasa (dipilih di <head>). Cadangan: loading-screen.jpg. */
     (function () {
-        var SCREENS = [
-            { src: './assets/img/loading/loading-1.webp', bg: '#f6efe2', ink: '#1b2a4a' },
-            { src: './assets/img/loading/loading-2.webp', bg: '#ffffff', ink: '#1b2a4a' },
-            { src: './assets/img/loading/loading-3.webp', bg: '#f7f1e3', ink: '#1b2a4a' }
-        ];
-        var KEY = 'smartphone-empire:last-splash', last = -1, i;
-        try { last = parseInt(sessionStorage.getItem(KEY) || localStorage.getItem(KEY), 10); } catch (e) {}
-        if (isNaN(last)) last = -1;
-        do { i = Math.floor(Math.random() * SCREENS.length); } while (SCREENS.length > 1 && i === last);
-        try { localStorage.setItem(KEY, String(i)); } catch (e) {}
-        var s = SCREENS[i], el = document.getElementById('loading-screen'), img = document.getElementById('ls-art');
+        var s = window.__splashPick || { src: './assets/img/loading-en.webp', bg: '#f2ece0', ink: '#1b2a4a' };
+        var el = document.getElementById('loading-screen'), img = document.getElementById('ls-art');
         el.style.setProperty('--ls-bg', s.bg);
         el.style.setProperty('--ls-ink', s.ink);
         window.__splashBg = s.bg;
         var meta = document.querySelector('meta[name="theme-color"]');
         if (meta) { window.__origTheme = meta.getAttribute('content'); meta.setAttribute('content', s.bg); }
+        if (s.lang === 'id') img.alt = 'Smartphone Empire oleh Jurkon Studio';
         img.addEventListener('load', function () { img.classList.add('ls-in'); });
         img.addEventListener('error', function () {
             if (img.getAttribute('data-fb')) return;
@@ -278,6 +300,7 @@ window.addEventListener('unhandledrejection', function (e) {
             img.src = './assets/img/loading-screen.jpg';
         });
         img.src = s.src;
+        if (img.complete && img.naturalWidth) img.classList.add('ls-in');
     })();
     </script>
 
