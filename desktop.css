@@ -113,3 +113,27 @@
 @media (prefers-reduced-motion: reduce) {
     .dk-nav-btn { transition: none; }
 }
+
+/* ============================================================================
+   DESKTOP — penyesuaian tambahan (>=768px saja; mobile tidak terpengaruh)
+   ============================================================================ */
+@media (min-width: 768px) {
+    /* Navigasi keyboard: indikator fokus yang terlihat, tidak muncul saat klik mouse. */
+    button:focus-visible,
+    a:focus-visible,
+    [role="button"]:focus-visible,
+    [role="tab"]:focus-visible,
+    select:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+    }
+
+    /* FAB asisten (kanan bawah) tidak menutupi bagian bawah konten saat di-scroll. */
+    #app > .app-view:not(.view-home) { padding-bottom: 96px; }
+    #app > .app-view.view-home       { padding-bottom: 96px; }
+}
+
+/* Wizard desain: di layar lebar, cukup lebar untuk label langkah dan pratinjau. */
+@media (min-width: 1100px) {
+    [data-modal-id="design-wizard"] .modal-card { max-width: 760px; }
+}
