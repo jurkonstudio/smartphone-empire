@@ -134,6 +134,14 @@ h2.h{font-size:clamp(1.9rem,5vw,3rem);font-weight:800;letter-spacing:-.05em;line
 .show-ph{display:flex;justify-content:center}
 .show-ph .phone{position:relative;left:auto;margin-left:0;width:min(270px,70vw);transform:none}
 .show-ph .phone img{transition:opacity .35s}
+.show-ph .phone.wide{width:min(340px,88vw);aspect-ratio:auto;border-radius:30px;padding:6px;cursor:zoom-in}
+.show-ph .phone.wide img{height:auto;object-fit:contain;border-radius:25px}
+.zoom-hint{display:none;margin-top:10px;text-align:center;font-size:.8rem;color:var(--text3);font-weight:600}
+.show-ph.has-wide{flex-direction:column;align-items:center}.show-ph.has-wide .zoom-hint{display:block}
+.zoom{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.92);display:none;overflow:auto;-webkit-overflow-scrolling:touch;cursor:zoom-out}
+.zoom.open{display:block;animation:fade .2s}
+.zoom img{width:min(760px,100%);margin:0 auto;display:block}
+.zoom .zx{position:fixed;top:max(12px,env(safe-area-inset-top));right:14px;z-index:2;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.16);font-size:1.5rem;line-height:1}
 @media(min-width:900px){.show{grid-template-columns:.8fr 1.2fr;gap:56px}.show-ph{order:-1}}
 
 /* ERA */
@@ -405,7 +413,7 @@ details p{padding:0 20px 18px;color:var(--text2);font-size:.95rem;max-width:62ch
   <div class="tabs" role="tablist" aria-label="Cuplikan game" id="tabs" style="margin-top:28px"></div>
   <div class="show">
     <div class="show-copy" id="showCopy" aria-live="polite"></div>
-    <div class="show-ph"><div class="phone"><img id="showImg" src="./assets/img/landing/hq.jpg" alt="Cuplikan layar HQ Smartphone Empire"></div></div>
+    <div class="show-ph"><div class="phone"><img id="showImg" src="./assets/img/landing/hq.jpg" alt="Cuplikan layar HQ Smartphone Empire"></div><div class="zoom-hint">Ketuk gambar untuk memperbesar</div></div>
   </div>
 </div></section>
 
@@ -565,6 +573,8 @@ details p{padding:0 20px 18px;color:var(--text2);font-size:.95rem;max-width:62ch
   </div>
 </div>
 
+<div class="zoom" id="zoom" role="dialog" aria-modal="true" aria-label="Cuplikan diperbesar"><button class="zx" type="button" aria-label="Tutup">&times;</button><img alt=""></div>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
@@ -608,8 +618,8 @@ $$('#eras .rv').forEach(el => el.classList.add('in'));
 /* ---------- showcase ---------- */
 const SHOTS = [
   { id: 'hq', tab: 'HQ', img: 'hq.jpg', alt: 'Cuplikan layar HQ Smartphone Empire', h: 'Pusat kendali perusahaan', p: 'Ringkasan kas, burn rate, reputasi, sentimen, tim, dan era dalam satu layar, plus tab Office, Team, Exchange, Bank, dan History.', li: ['<b>Kas dan burn-rate</b> dengan laporan bulanan', '<b>Reputasi dan sentimen</b> publik', '<b>Bank dan bursa</b> hanya satu ketukan'] },
-  { id: 'peta', tab: 'Peta kampus', img: 'peta.jpg', r: '720/1354', alt: 'Cuplikan peta kampus 3D di layar Home', h: 'Kampus 3D yang tumbuh', p: 'Peta kampus di Home berkembang seiring progres. HQ, lab riset, dan showroom ikut berubah sesuai kemajuan perusahaanmu.', li: ['<b>Kampus tumbuh</b> mengikuti progres', '<b>Lab riset</b> menyala saat riset aktif', '<b>Showroom</b> menampilkan produk yang dijual'] },
-  { id: 'kantor', tab: 'Kantor 3D', img: 'kantor.jpg', r: '720/1354', alt: 'Cuplikan kantor 3D isometrik di tab HQ', h: 'Kantor isometrik yang hidup', p: 'Di HQ ada kantor dengan 9 ruangan yang terhubung ke data game. Staf duduk di meja, dan Fab bisa dibangun atau di-upgrade dari peta.', li: ['<b>9 ruangan</b> terhubung ke data game', '<b>Staf</b> duduk di meja masing-masing', '<b>Bangun dan latih</b> langsung dari peta kantor'] },
+  { id: 'peta', tab: 'Peta kampus', img: 'peta.jpg', r: 1, alt: 'Cuplikan peta kampus 3D di layar Home: Kantor Pusat, Lab R&D, Toko Flagship, billboard, dan pelabuhan logistik', h: 'Kampus 3D yang tumbuh', p: 'Peta kampus di Home berkembang mengikuti progres perusahaanmu. Tiap gedung punya aturan tumbuh sendiri, dan dekorasi kota muncul sesuai era desain.', li: ['<b>Kantor Pusat</b> tumbuh seiring jumlah staf', '<b>Lab R&amp;D</b> tumbuh seiring riset yang selesai', '<b>Toko Flagship</b> makin megah seiring produk dirilis', '<b>Billboard</b> menyala saat kampanye aktif'] },
+  { id: 'kantor', tab: 'Kantor 3D', img: 'kantor.jpg', r: 1, alt: 'Cuplikan kantor 3D isometrik di tab HQ', h: 'Kantor isometrik yang hidup', p: 'Di HQ ada kantor dengan 9 ruangan yang terhubung ke data game. Staf duduk di meja, dan Fab bisa dibangun atau di-upgrade dari peta.', li: ['<b>9 ruangan</b> terhubung ke data game', '<b>Staf</b> duduk di meja masing-masing', '<b>Bangun dan latih</b> langsung dari peta kantor'] },
   { id: 'riset', tab: 'Riset', img: 'riset.jpg', alt: 'Cuplikan layar Riset', h: 'Tech tree yang dalam', p: 'Riset teknologi, OS, manufaktur, dan masa depan. Antrian riset berjalan paralel, makin banyak engineer makin banyak slot.', li: ['<b>70 node</b> di 8 kategori', '<b>OS sendiri</b> dengan 35 fitur', '<b>Chip</b> dan Fab untuk tingkat lanjut'] },
   { id: 'desain', tab: 'Desain', img: 'desain.jpg', alt: 'Cuplikan layar wizard desain ponsel', h: 'Wizard desain dengan preview real-time', p: 'Pilih form factor, komponen, warna, dan OS. Pilihan mengikuti tahun, dan mockup berubah mengikuti era.', li: ['<b>117 komponen</b> di 9 kategori', '<b>Auto-fill rekomendasi</b> untuk pemula', '<b>4 fase</b>: desain, prototipe, produksi, rilis'] },
   { id: 'pasar', tab: 'Pasar', img: 'pasar.jpg', alt: 'Cuplikan layar Pasar', h: 'Baca pasar sebelum bersaing', p: 'Pangsa pasar, kompetitor, tren, promosi, dan opini publik. Segmen konsumen dan wilayah menunjukkan peluang yang belum kamu garap.', li: ['<b>Pangsa pasar</b> dengan riwayat 24 bulan', '<b>Promosi regional</b> dan 8 event musiman', '<b>Peluang terbaik</b> per segmen dan wilayah'] },
@@ -627,10 +637,17 @@ function showShot(i) {
   curId = s.id;
   $$('.tab', tabs).forEach((b, k) => b.setAttribute('aria-selected', k === i));
   const img = $('#showImg'); img.style.opacity = 0;
-  setTimeout(() => { img.closest('.phone').style.aspectRatio = s.r || ''; img.src = './assets/img/landing/' + s.img; img.alt = s.alt; img.style.opacity = 1; }, 160);
+  setTimeout(() => { img.closest('.phone').classList.toggle('wide', !!s.r); $('.show-ph').classList.toggle('has-wide', !!s.r); img.src = './assets/img/landing/' + s.img; img.alt = s.alt; img.style.opacity = 1; }, 160);
   $('#showCopy').innerHTML = `<h3>${s.h}</h3><p>${s.p}</p><ul>${s.li.map(x => `<li>${x}</li>`).join('')}</ul>`;
 }
 tabs.addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) showShot(+b.dataset.i); });
+const zoom = $('#zoom');
+$('.show-ph .phone').addEventListener('click', () => {
+  if (!$('.show-ph .phone').classList.contains('wide')) return;
+  const im = $('#showImg'); $('img', zoom).src = im.src; $('img', zoom).alt = im.alt; zoom.classList.add('open'); zoom.scrollTop = 0;
+});
+zoom.addEventListener('click', () => zoom.classList.remove('open'));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') zoom.classList.remove('open'); });
 renderTabs(); showShot(0);
 
 /* ---------- paket SIL (fallback; disinkronkan dari data game bila bisa) ---------- */
