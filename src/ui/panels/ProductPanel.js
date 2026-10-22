@@ -10,6 +10,7 @@ import { renderSalesChart } from './SalesChart.js';
 import { getComponentById } from '../../data/components.data.js';
 import { getLicenseById } from '../../data/os.data.js'; // [FIX] Import data lisensi OS
 import { state } from '../../core/GameState.js';
+import { projectedStock } from '../../systems/LiveProjection.js';
 import { ToastService } from '../../core/ToastService.js';
 import { openChipDesigner } from './ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './FabPanel.js';
@@ -193,10 +194,11 @@ function _avgReview(p) {
         ? p.reviews.reduce(function (s, r) { return s + r.score; }, 0) / p.reviews.length : null;
 }
 
-function _stockPct(p) {
+function _stockPct(p, stockVal) {
+    var s = stockVal === undefined ? p.stock : stockVal;
     var cap = p.baseCapacity || p.totalProduced || 0;
-    if (cap <= 0) return p.stock > 0 ? 100 : 0;
-    return Math.max(0, Math.min(100, Math.round((p.stock / cap) * 100)));
+    if (cap <= 0) return s > 0 ? 100 : 0;
+    return Math.max(0, Math.min(100, Math.round((s / cap) * 100)));
 }
 
 function _renderCatalog() {
@@ -247,9 +249,11 @@ function _renderCatalog() {
         var isSelling = p.status === 'selling';
         var statusLabel = isSelling ? t('prod.catalog.status_selling') : t('prod.catalog.status_discontinued');
         var autoActive = !!(p.autoRestock && p.autoRestock.enabled);
-        var pct = _stockPct(p);
-        var stockCls = p.stock <= 0 ? 'out' : (pct < 20 ? 'low' : '');
-        var stockNote = !isSelling ? '' : (p.stock <= 0
+        var liveStock = projectedStock(p, data.time);
+        var liveN = Math.round(liveStock);
+        var pct = _stockPct(p, liveStock);
+        var stockCls = liveN <= 0 ? 'out' : (pct < 20 ? 'low' : '');
+        var stockNote = !isSelling ? '' : (liveN <= 0
             ? '<span class="cat-warn">' + tx('prod.catalog.out', 'Stok habis') + '</span>'
             : (pct < 20 ? '<span class="cat-warn">' + tx('prod.catalog.low', 'Stok menipis') + '</span>' : ''));
         var pendQty = (p.pendingProduction || []).reduce(function (n, o) { return n + (o.qty || 0); }, 0);
@@ -269,8 +273,8 @@ function _renderCatalog() {
             '</div>' +
             '<div class="prod-stats-mini"><span class="cat-rate ' + avgCls + '">' + t('prod.catalog.review', { n: avgTxt }) + '</span><span>' + t('prod.catalog.price', { n: p.price }) + '</span><span>' + t('prod.catalog.quality', { n: p.stats.qualityScore }) + '</span></div>' +
             '<div class="prod-stats-mini"><span>' + t('prod.catalog.sold', { n: p.totalSold.toLocaleString('en-US') }) + '</span><span>' + t('prod.catalog.revenue', { n: p.totalRevenue.toLocaleString('en-US') }) + '</span></div>' +
-            '<div class="cat-stock"><div class="cat-stock-head"><span>' + t('prod.catalog.stock', { n: p.stock.toLocaleString('en-US') }) + '</span>' + stockNote + '</div>' +
-            '<div class="cat-bar"><div class="cat-bar-fill ' + stockCls + '" style="width:' + pct + '%;"></div></div></div>' +
+            '<div class="cat-stock"><div class="cat-stock-head"><span>' + t('prod.catalog.stock', { n: '<span data-live-stock="' + escapeHtml(String(p.id)) + '">' + liveN.toLocaleString('en-US') + '</span>' }) + '</span>' + stockNote + '</div>' +
+            '<div class="cat-bar"><div class="cat-bar-fill ' + stockCls + '" data-live-bar="' + escapeHtml(String(p.id)) + '" data-live-cap="' + (p.baseCapacity || p.totalProduced || 0) + '" style="width:' + pct + '%;"></div></div></div>' +
             toggle +
             '</div>';
     }
@@ -504,7 +508,7 @@ export function openProductDetailModal(params) {
             '<div class="card-title">' + t('prod.detail.section_sales') + '</div>' +
             '<div class="sum-row"><span>' + t('prod.detail.total_sold') + '</span><b>' + p.totalSold.toLocaleString('en-US') + ' ' + t('prod.detail.unit') + '</b></div>' +
             '<div class="sum-row"><span>' + t('prod.detail.revenue') + '</span><b>$' + p.totalRevenue.toLocaleString('en-US') + '</b></div>' +
-            '<div class="sum-row"><span>' + t('prod.detail.stock') + '</span><b>' + p.stock.toLocaleString('en-US') + '</b></div>' +
+            '<div class="sum-row"><span>' + t('prod.detail.stock') + '</span><b data-live-stock="' + escapeHtml(String(p.id)) + '">' + Math.round(projectedStock(p, data.time)).toLocaleString('en-US') + '</b></div>' +
             '<div class="sum-row"><span>' + t('prod.detail.review_avg') + '</span><b>' + avg + '/10 (' + p.reviews.length + ')</b></div>' +
             '<div class="card-title" style="margin-top:12px;">' + t('prod.detail.section_spec') + '</div>' +
             specRows +
