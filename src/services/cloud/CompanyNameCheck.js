@@ -1,8 +1,10 @@
 // FILE: src/services/cloud/CompanyNameCheck.js
-// Cek apakah nama perusahaan sudah dipakai pemain lain (butuh supabase/company-name-unique.sql).
+// Cek apakah nama perusahaan sudah dipakai pemain lain.
+// RPC company_name_available dibuat di supabase/03-profil-leaderboard.sql.
+// Penjaga sebenarnya di server: indeks unik profiles (03) dan trigger game_saves (14).
 // Return: true = tersedia, false = sudah dipakai, null = tidak bisa dicek
 // (offline / belum dikonfigurasi / SQL belum dijalankan) -> pemanggil tetap mengizinkan;
-// index unik di server tetap jadi penjaga saat sinkronisasi.
+// penjaga di server tetap berlaku saat sinkronisasi.
 import { SupabaseAdapter } from './SupabaseAdapter.js';
 import { SUPABASE_KEY } from './supabase.config.js';
 

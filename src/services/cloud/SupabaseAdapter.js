@@ -32,6 +32,7 @@ function classify(err) {
     var code = String(err.code || err.error_code || '').toLowerCase();
     var status = err.status || err.statusCode || 0;
 
+    if (msg.indexOf('company_name_taken') >= 0) return 'name_taken';
     if (msg.indexOf('invalid login credentials') >= 0 || code === 'invalid_credentials') return 'invalid_credentials';
     if (msg.indexOf('already registered') >= 0 || code === 'user_already_exists' || code === 'email_exists') return 'email_exists';
     if (msg.indexOf('email not confirmed') >= 0 || code === 'email_not_confirmed') return 'email_not_confirmed';
