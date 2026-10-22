@@ -15,6 +15,25 @@ import { state } from '../core/GameState.js';
 
 export var LEVEL_MAX = 50;
 export var START_YEAR = 2000;
+
+// BATAS LEVEL PER ERA (tahun game). Level tidak boleh melewati batas tahun berjalan,
+// meski XP sudah cukup. Ubah angka di sini LALU samakan dengan fungsi public._level_cap()
+// di supabase/12-level-kredibilitas-reward.sql (server yang menyimpan stat_level).
+// Entri dibaca dari atas ke bawah: batas = entri terakhir yang `from` <= tahun berjalan.
+export var ERA_LEVEL_CAP = [
+    { from: 2000, cap: 5 },
+    { from: 2003, cap: 10 },
+    { from: 2006, cap: 14 },
+    { from: 2010, cap: 22 },
+    { from: 2015, cap: 32 },
+    { from: 2020, cap: 42 },
+    { from: 2025, cap: 50 }
+];
+export function levelCapForYear(year) {
+    var y = Number(year) || START_YEAR, cap = ERA_LEVEL_CAP[0].cap;
+    for (var i = 0; i < ERA_LEVEL_CAP.length; i++) if (y >= ERA_LEVEL_CAP[i].from) cap = ERA_LEVEL_CAP[i].cap;
+    return Math.min(LEVEL_MAX, cap);
+}
 var MIN_PER_MONTH = 43200;        // 30 hari * 1440
 var MIN_PER_YEAR = 525600;        // 365 hari * 1440
 
@@ -97,25 +116,30 @@ export function rewardTierCash(tier, year) {
 export function derive(c) {
     var c10 = cred10(c.reputation, c.creditScore, c.sentiment, c.missed);
     var xp = xpOf(c.revenue, c.sold, c.gameMinutes, c10, c.share);
-    var level = levelFromXp(xp);
-    var m10 = money10(c.revenue);
     var years = Math.floor(Math.max(0, Number(c.gameMinutes) || 0) / MIN_PER_YEAR);
+    var year = START_YEAR + years;
+    var cap = levelCapForYear(year);
+    var level = Math.min(levelFromXp(xp), cap);      // dibatasi era
+    var isMax = level >= cap;                        // maks untuk tahun ini (bisa < 50)
+    var m10 = money10(c.revenue);
     var curXp = levelXp(level);
-    var nextXp = level >= LEVEL_MAX ? curXp : levelXp(level + 1);
+    var nextXp = isMax ? curXp : levelXp(level + 1);
     return {
         credibility: c10 / 10,
         cred10: c10,
         tier: credTier(c10),
         xp: xp,
         level: level,
+        cap: cap,
+        isMax: isMax,
         levelXp: curXp,
         nextLevelXp: nextXp,
-        levelPct: level >= LEVEL_MAX ? 100 : Math.max(0, Math.min(100, Math.floor(((xp - curXp) * 100) / Math.max(1, nextXp - curXp)))),
+        levelPct: isMax ? 100 : Math.max(0, Math.min(100, Math.floor(((xp - curXp) * 100) / Math.max(1, nextXp - curXp)))),
         money: m10 / 10,
         score: score10(m10, c10, level) / 10,
-        year: START_YEAR + years,
+        year: year,
         years: years,
-        nextReward: level >= LEVEL_MAX ? 0 : rewardLevelCash(level + 1, START_YEAR + years)
+        nextReward: isMax ? 0 : rewardLevelCash(level + 1, year)
     };
 }
 
@@ -176,16 +200,20 @@ export function deriveCompany(c) {
     for (var k in parts) activityXp += parts[k];
     var credXp = Math.min(300, Math.max(0, Math.floor((cred * 10 - 400) * 0.5)));
     var xp = activityXp + credXp;
-    var level = levelFromXp(xp);
+    var years = Math.floor(Math.max(0, Number(c.gameMinutes) || 0) / MIN_PER_YEAR);
+    var year = START_YEAR + years;
+    var cap = levelCapForYear(year);
+    var level = Math.min(levelFromXp(xp), cap);      // dibatasi era
+    var isMax = level >= cap;
     var curXp = levelXp(level);
-    var nextXp = level >= LEVEL_MAX ? curXp : levelXp(level + 1);
+    var nextXp = isMax ? curXp : levelXp(level + 1);
     return {
-        level: level, xp: xp, activityXp: activityXp, credXp: credXp,
+        level: level, cap: cap, isMax: isMax, year: year, xp: xp, activityXp: activityXp, credXp: credXp,
         credibility: Math.round(cred * 10) / 10,
         tier: credTier(Math.round(cred * 10)),
         parts: parts,
         levelXp: curXp, nextLevelXp: nextXp,
-        levelPct: level >= LEVEL_MAX ? 100 : Math.max(0, Math.min(100, Math.floor(((xp - curXp) * 100) / Math.max(1, nextXp - curXp))))
+        levelPct: isMax ? 100 : Math.max(0, Math.min(100, Math.floor(((xp - curXp) * 100) / Math.max(1, nextXp - curXp))))
     };
 }
 
@@ -221,6 +249,23 @@ export function rankOfLevel(level) {
 
 var _cache = null;
 var _cacheAt = 0;
+// Hasil level perusahaan dari server (sync_company_level). null = belum ada / belum login.
+var _serverCo = null;
+export function setServerCompany(d) {
+    _serverCo = (d && typeof d.level === 'number') ? { level: d.level, xp: Number(d.xp) || 0, cap: Number(d.cap) || d.level } : null;
+}
+function _applyServerCompany(r) {
+    var s = _serverCo;
+    if (!s) return r;
+    var lv = Math.max(1, Math.min(LEVEL_MAX, s.level | 0));
+    var max = lv >= s.cap;
+    var curXp = levelXp(lv);
+    var nextXp = max ? curXp : levelXp(lv + 1);
+    r.level = lv; r.xp = s.xp; r.cap = s.cap; r.isMax = max; r.serverSynced = true;
+    r.levelXp = curXp; r.nextLevelXp = nextXp;
+    r.levelPct = max ? 100 : Math.max(0, Math.min(100, Math.floor(((s.xp - curXp) * 100) / Math.max(1, nextXp - curXp))));
+    return r;
+}
 
 export var PlayerProgression = {
     // Hitung ulang dari state game (murah, tapi bank.getCreditScore() agak berat -> ada cache singkat).
@@ -238,8 +283,10 @@ export var PlayerProgression = {
         return _cache;
     },
     computeCompany: function () {
-        try { var c = readCompanyComponents(); var r = deriveCompany(c); r.components = c; return r; }
-        catch (e) { return deriveCompany({ revenue: 0, sold: 0, reputation: 0, creditScore: 50, sentiment: 50, morale: 50, gameMinutes: 0, share: 0 }); }
+        var r;
+        try { var c = readCompanyComponents(); r = deriveCompany(c); r.components = c; }
+        catch (e) { r = deriveCompany({ revenue: 0, sold: 0, reputation: 0, creditScore: 50, sentiment: 50, morale: 50, gameMinutes: 0, share: 0 }); }
+        return _applyServerCompany(r);
     },
     getCached: function () { return _cache || PlayerProgression.compute(true); },
     invalidate: function () { _cache = null; }
@@ -248,7 +295,7 @@ export var PlayerProgression = {
 // Cache dibuang saat hari berganti / save dimuat, supaya header & profil selalu segar tanpa hitung tiap render.
 if (typeof bus !== 'undefined' && bus && typeof bus.on === 'function') {
     bus.on('time:day-changed', function () { _cache = null; });
-    bus.on('state:hydrated', function () { _cache = null; });
+    bus.on('state:hydrated', function () { _cache = null; _serverCo = null; });
 }
 
 // Nama tingkat kredibilitas (0..4) untuk tampilan.
