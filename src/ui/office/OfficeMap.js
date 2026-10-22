@@ -1,9 +1,10 @@
-// FILE: src/ui/office/OfficeMap.js  (REPLACE — v2027.52a)
+// FILE: src/ui/office/OfficeMap.js  (REPLACE — v2027.53a: event game -> efek 3D di ruangan)
 // Mount/unmount Office 3D Map (tab HQ → Kantor). Three.js dimuat lazy dari CDN (versi dipin,
 // sama dengan peta kampus, jadi modul di-cache browser & tidak diunduh dua kali).
 import { createOfficeScene } from './OfficeScene.js';
 import { bus } from '../../core/EventBus.js';
 import { t } from '../../core/LanguageService.js';
+import { FX_EVENTS, createThrottle } from './OfficeFx.js';
 
 var THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 var _threePromise = null;
@@ -63,6 +64,18 @@ export async function mountOfficeMap(containerEl, gameState) {
                 if (_active && _active.scene === scene) scene.update(currentData());
             });
         }
+        // event game -> efek di ruangan terkait (riset selesai, produk rilis, OS dirilis, Fab berdiri, ...).
+        // Hanya berjalan selama peta ini aktif; jeda per event dijaga oleh throttle.
+        var fxGate = createThrottle();
+        var fxUnsubs = Object.keys(FX_EVENTS).map(function (evName) {
+            return bus.on(evName, function (payload) {
+                if (!_active || _active.scene !== scene) return;
+                var spec = FX_EVENTS[evName](payload || {});
+                if (!spec) return;
+                if (!fxGate(evName + ':' + spec.room, Date.now(), spec.gap)) return;
+                scene.celebrate(spec.room, spec.kind, spec.key ? t(spec.key, spec.params) : '');
+            });
+        });
         // jam dinding mengikuti waktu game; 'time:tick' sering -> dibatasi ~2x/detik
         var lastClock = 0;
         var unsubs = [
@@ -91,7 +104,7 @@ export async function mountOfficeMap(containerEl, gameState) {
             bus.on('fab:production-progress', queue),
             bus.on('time:day-changed', queue),
             function () { if (queued) { cancelAnimationFrame(queued); queued = 0; } }
-        ];
+        ].concat(fxUnsubs);
         _active = { scene: scene, unsubs: unsubs };
     } catch (err) {
         console.warn('[OfficeMap] gagal, pakai fallback:', err);

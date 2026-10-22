@@ -1,4 +1,7 @@
 // FILE: src/ui/office/OfficeScene.js  (REPLACE)
+// v2027.53a — progres riset & fase produk tampil sebagai bar 3D di Lab / Studio Desain; event game
+//   (riset selesai, produk rilis, penjualan, OS dirilis, Fab berdiri/upgrade, kenaikan skill) memunculkan
+//   efek partikel + label melayang di ruangan terkait. Efek dibatasi jumlahnya & dimatikan saat animasi nonaktif.
 // v2027.52b — label ruangan & chip dirender 2x (lebih tajam di HP).
 // v2027.52a — Office 3D Map: interior kantor isometrik (dollhouse) yang terhubung ke data game.
 //
@@ -61,6 +64,7 @@ import { buildCampusSilhouette, NEIGHBOR_OFFSET } from '../campus/NeighborSilhou
 import { t } from '../../core/LanguageService.js';
 import { BASE_VIEW, COLORS, COLS, ROWS, CORRIDORS, nearPlinth, officeCoastR, onIsland, DEST_BY_ROLE, DEST_DEFAULT, DEST_EMOJI, DEST_ROOM, DOOR_EAST, DOOR_NORTH, FLOOR, FRAME_MS, HAIR, MAX_DESKS, MAX_DPR, MIN_RESIZE_DELTA, MORALE_HEX, NARROW_PX, PHASES, ROOM_DEFS, SHADOW_OPACITY, SKIN, WALKERS_MAX, clamp, deskCapacity, hash, hexCss, len, moraleTier, prefersReducedMotion, readAccent, roleCount, sortedStaff, tint } from './OfficeConfig.js';
 import { describeRoom, describeStaff, fabProgress, roomAlert, totalStock, trophyCount, ROOM_LOGIC } from './OfficeLogic.js';
+import { activeResearchPct, devPhaseFrac } from './OfficeFx.js';
 
 // ============================================================
 // SCENE
@@ -966,6 +970,14 @@ export function createOfficeScene(THREE, container, gameState) {
         for (var c = 0; c < 12; c++) {
             box(f, c < done ? 'glow' : 'part', 0.24, 0.24, 0.02, -1.4 + (c % 6) * 0.56, 1.5 - Math.floor(c / 6) * 0.4, -2.14);
         }
+        // progres riset aktif (rata-rata): bar di lantai depan meja holo, terisi sesuai persen
+        var rp = activeResearchPct(d);
+        if (rp >= 0) {
+            var lbw = 1.8, lfw = Math.max(0.04, lbw * rp);
+            box(f, 'dark', lbw + 0.1, 0.05, 0.14, 0, 0.03, 1.45);
+            var lfill = box(f, rp >= 0.66 ? 'ledG' : 'ledA', lfw, 0.06, 0.1, -lbw / 2 + lfw / 2, 0.045, 1.45);
+            tk.push(function (sec) { lfill.scale.y = 0.06 * (1 + Math.sin(sec * 4) * 0.12); });   // skala dasar = tinggi bar (0.06)
+        }
         plant(f, 1.9, 1.8, 0.9);
     };
 
@@ -986,6 +998,14 @@ export function createOfficeScene(THREE, container, gameState) {
             monitor(f, x, 0.655, -1.6, true);
             box(f, 'dark', 0.5, 0.02, 0.32, x, 0.67, -1.3);                // tablet gambar
             chair(f, x, -0.8);
+        }
+        // progres fase berjalan: bar di depan pedestal ponsel
+        var pfr = devPhaseFrac(dev);
+        if (pfr >= 0) {
+            var dbw = 2.2, dfw = Math.max(0.04, dbw * pfr);
+            box(f, 'dark', dbw + 0.1, 0.05, 0.14, 0, 0.03, 1.95);
+            var dfill = box(f, pfr >= 0.66 ? 'ledG' : 'glow', dfw, 0.06, 0.1, -dbw / 2 + dfw / 2, 0.045, 1.95);
+            tk.push(function (sec) { dfill.scale.y = 0.06 * (1 + Math.sin(sec * 4 + 1) * 0.12); });
         }
         box(f, 'white', 3.0, 1.0, 0.05, 0, 1.3, -2.18);                    // mood board
         var cs = [accentHex, 0xe0b445, 0x43c07a, 0xef5350, 0x8a7fe0, 0x4fb3e8, 0xf472b6, 0xfb923c];
@@ -1065,7 +1085,7 @@ export function createOfficeScene(THREE, container, gameState) {
         var bw = Math.max(1.0, w), fw = bw * Math.max(0.03, pct);                      // bar progres di lantai
         box(f, 'dark', bw + 0.1, 0.05, 0.14, x, 0.03, z + pz + 0.4);
         var fill = box(f, pct >= 0.66 ? 'ledG' : 'ledA', fw, 0.06, 0.1, x - bw / 2 + fw / 2, 0.045, z + pz + 0.4);
-        tk.push(function (sec) { fill.scale.y = 1 + Math.sin(sec * 4) * 0.12; });
+        tk.push(function (sec) { fill.scale.y = 0.06 * (1 + Math.sin(sec * 4) * 0.12); });   // perbaikan: sebelumnya skala jadi 1 unit
     }
 
     BUILD.chip = function (r, d, p, st, tk) {
@@ -1422,6 +1442,83 @@ export function createOfficeScene(THREE, container, gameState) {
         tweenView(r.group.position.x, r.group.position.z, Math.max(controls.view.zoom, 1.25));
     }
 
+    // ---------- efek kejadian game (partikel + label melayang) ----------
+    // Dipanggil dari OfficeMap saat event game terjadi. Hanya saat animasi aktif (mati di mode reduced-motion).
+    // Efek dibersihkan otomatis setelah FX_LIFE detik dan dibatasi jumlah simultannya.
+    var FX_MAX = 6, FX_LIFE = 2.2, FX_G = 3.4, FX_PARTS = 16;
+    var FX_COLORS = { gold: 0xf5c542, green: 0x43c07a, cyan: 0x00b8d9, red: 0xff4d4d };
+    var fxList = [], fxMatMap = {};
+    function fxMaterial(kind) {
+        if (!fxMatMap[kind]) fxMatMap[kind] = new THREE.MeshBasicMaterial({ color: FX_COLORS[kind] || 0xffffff });
+        return fxMatMap[kind];
+    }
+    function disposeFxLabel(sp) {
+        if (!sp) return;
+        if (sp.material) sp.material.dispose();
+        var tx = sp.userData.tex;
+        if (tx) {
+            tx.dispose();
+            var ix = labelTex.indexOf(tx);
+            if (ix >= 0) labelTex.splice(ix, 1);
+        }
+    }
+    function endFx(i) {
+        var fx = fxList[i];
+        scene.remove(fx.group);
+        if (fx.label) { fx.group.remove(fx.label); disposeFxLabel(fx.label); }
+        fxList.splice(i, 1);
+    }
+    function celebrate(roomId, kind, text) {
+        if (disposed || !ambient) return;
+        var r = rooms[roomId];
+        if (!r || r.locked) return;
+        while (fxList.length >= FX_MAX) endFx(0);
+        var g = new THREE.Group();
+        g.position.set(r.group.position.x, 0, r.group.position.z);
+        var parts = [], i, a, sp, m;
+        for (i = 0; i < FX_PARTS; i++) {
+            a = (i / FX_PARTS) * Math.PI * 2 + Math.random() * 0.4;
+            sp = 0.9 + Math.random() * 1.1;
+            m = new THREE.Mesh(G.box, fxMaterial(kind));
+            m.scale.setScalar(0.08 + Math.random() * 0.06);
+            m.position.set(0, 0.9, 0);
+            m.userData.vx = Math.cos(a) * sp;
+            m.userData.vz = Math.sin(a) * sp;
+            m.userData.vy = 2.2 + Math.random() * 1.2;
+            m.userData.s = m.scale.x;
+            g.add(m);
+            parts.push(m);
+        }
+        var lbl = null;
+        if (text) {
+            lbl = makeLabel(text, dark, false, accentHex);
+            lbl.position.set(0, 1.5, 0);
+            lbl.renderOrder = 23;
+            g.add(lbl);
+        }
+        scene.add(g);
+        fxList.push({ group: g, parts: parts, label: lbl, t0: performance.now() / 1000 });
+        requestRender();
+    }
+    function updateFx(sec) {
+        for (var i = fxList.length - 1; i >= 0; i--) {
+            var fx = fxList[i], tau = Math.max(0, sec - fx.t0);
+            if (tau >= FX_LIFE) { endFx(i); continue; }
+            var p = tau / FX_LIFE, k = 1 - p;
+            for (var q = 0; q < fx.parts.length; q++) {
+                var m = fx.parts[q], u = m.userData;
+                var py = 0.9 + u.vy * tau - 0.5 * FX_G * tau * tau;
+                m.position.set(u.vx * tau, Math.max(0.06, py), u.vz * tau);   // jangan tembus lantai
+                var sc = Math.max(0.001, k) * u.s;
+                m.scale.set(sc, sc, sc);
+            }
+            if (fx.label) {
+                fx.label.position.y = 1.5 + p * 0.5;
+                fx.label.material.opacity = p < 0.7 ? 1 : Math.max(0, (1 - p) / 0.3);
+            }
+        }
+    }
+
     // ---------- render loop ----------
     function animateOverlays(sec) {
         for (var i = 0; i < roomList.length; i++) {
@@ -1473,6 +1570,7 @@ export function createOfficeScene(THREE, container, gameState) {
         var sec = now / 1000;
         for (var i = 0; i < animRooms.length; i++) animRooms[i].tick(sec);
         animateOverlays(sec);
+        if (fxList.length) updateFx(sec);
         renderer.render(scene, camera);
         watchQuality(now);
     }
@@ -1929,6 +2027,7 @@ export function createOfficeScene(THREE, container, gameState) {
             if (lastData) update(lastData); else requestRender();
         },
         relabel: relabel,
+        celebrate: celebrate,
         select: function (id) { select(id ? { room: id } : null); if (id) focusRoom(id); },
         selectStaff: function (id) {        // pilih staf (kartu + kamera fokus); dipakai juga untuk uji
             if (!staffObjs[id]) return false;
@@ -1954,6 +2053,8 @@ export function createOfficeScene(THREE, container, gameState) {
                 if (r.alertSp && r.alertSp.material) r.alertSp.material.dispose();
                 r.floorMat.dispose(); r.ovMat.dispose(); r.patMat.dispose(); if (r.railMat) r.railMat.dispose();
             });
+            while (fxList.length) endFx(0);
+            Object.keys(fxMatMap).forEach(function (k) { fxMatMap[k].dispose(); });
             labelTex.forEach(function (tx) { tx.dispose(); });
             ownTex.forEach(function (tx) { tx.dispose(); });
             Object.keys(alertTex).forEach(function (k) { alertTex[k].dispose(); });

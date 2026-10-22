@@ -1,10 +1,11 @@
-// FILE: src/ui/office/OfficeLogic.js
+// FILE: src/ui/office/OfficeLogic.js  (REPLACE — v2027.53a: progres riset & desain di kartu)
 // Logika ruangan murni (tanpa THREE/DOM): status buka/terkunci, level, teks kartu.
 // Dipisah dari OfficeScene.js (refactor, tanpa perubahan perilaku).
 import { FAB_LEVELS } from '../../systems/FabSystem.js';
 import { WalletService } from '../../systems/WalletService.js';
 import { t } from '../../core/LanguageService.js';
 import { MAX_DESKS, ROOM_DEFS, clamp, deskCapacity, fmtMoney, len, lowMoraleCount, moneyBucket, moraleTier, roleCount, roleDef, sortedStaff, tierDef, traitDef } from './OfficeConfig.js';
+import { activeResearchPct, devOverallPct, devPhaseFrac } from './OfficeFx.js';
 
 // ============================================================
 // LOGIKA RUANGAN (murni, tanpa THREE) — status buka/terkunci, level, signature, teks kartu.
@@ -56,14 +57,20 @@ export var ROOM_LOGIC = {
             return { open: lv > 0 || act > 0, level: Math.max(1, lv), req: 'office.req.lab' };
         },
         sig: function (d) {
+            var rp = activeResearchPct(d);
             return [len(d.research && d.research.active) + len(d.chipResearch && d.chipResearch.active),
-                    Math.min(12, len(d.research && d.research.completed))].join('|');
+                    Math.min(12, len(d.research && d.research.completed)),
+                    rp < 0 ? '-' : Math.floor(rp * 10)].join('|');
         },
         lines: function (d) {
-            return [
-                t('office.lab.active', { n: len(d.research && d.research.active) + len(d.chipResearch && d.chipResearch.active) }),
+            var n = len(d.research && d.research.active) + len(d.chipResearch && d.chipResearch.active);
+            var lines = [
+                t('office.lab.active', { n: n }),
                 t('office.lab.done', { n: len(d.research && d.research.completed) + len(d.chipResearch && d.chipResearch.completed) })
             ];
+            var rp = activeResearchPct(d);
+            if (n && rp >= 0) lines.push(t('office.lab.progress', { n: Math.round(rp * 100) }));
+            return lines;
         }
     },
     design: {
@@ -74,13 +81,17 @@ export var ROOM_LOGIC = {
         },
         sig: function (d) {
             var dev = d.products && d.products.development;
-            return [dev ? dev.phase : '-', dev ? dev.id : '-', (d.products && d.products.designing) ? 1 : 0, roleCount(d, 'designer')].join('|');
+            var pf = devPhaseFrac(dev);
+            return [dev ? dev.phase : '-', dev ? dev.id : '-', (d.products && d.products.designing) ? 1 : 0, roleCount(d, 'designer'),
+                    pf < 0 ? '-' : Math.floor(pf * 20)].join('|');
         },
         lines: function (d) {
             var dev = d.products && d.products.development;
             var lines = [];
-            if (dev) lines.push(t('office.design.dev', { name: dev.name || '-', phase: t('office.phase.' + (dev.phase || 'design')) }));
-            else lines.push(t('office.design.idle'));
+            if (dev) {
+                lines.push(t('office.design.dev', { name: dev.name || '-', phase: t('office.phase.' + (dev.phase || 'design')) }));
+                lines.push(t('office.design.progress', { n: devOverallPct(dev) }));
+            } else lines.push(t('office.design.idle'));
             lines.push(t('office.design.designers', { n: roleCount(d, 'designer') }));
             return lines;
         }
