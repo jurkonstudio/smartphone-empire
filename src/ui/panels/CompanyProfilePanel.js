@@ -11,6 +11,8 @@ import { openEditCompanyNameModal, openEditPlayerModal } from '../social/Profile
 import { openPlayerListModal } from '../social/PlayerListPanel.js';
 import { compactNumber } from '../social/PlayerProfileModal.js';
 import { PlayerProfileService, NAME_RULES } from '../../systems/PlayerProfileService.js';
+import { PlayerProgression } from '../../systems/PlayerProgression.js';
+import { levelBadgeHtml, playerLevelCardHtml, companyLevelCardHtml } from '../social/LevelBadge.js';
 import { pidTf, getCachedMyPublicId, loadMyPublicId, copyPublicId } from '../social/PlayerIdView.js';
 
 // IMPORT MODAL BARU KITA
@@ -103,10 +105,11 @@ function _companyTab(params) {
     var rank = 1 + comps.filter(function (c) { return c.share > marketShare; }).length;
     var totalCompanies = 1 + comps.length;
 
+    var cLv = PlayerProgression.computeCompany();
     var hero =
         '<div class="pf-hero">' +
             '<div class="pf-hero-top">' +
-                '<div class="pf-logo">' + esc((data.companyName || '?').charAt(0).toUpperCase()) + '</div>' +
+                '<div class="pf-logo-wrap"><div class="pf-logo">' + esc((data.companyName || '?').charAt(0).toUpperCase()) + '</div>' + levelBadgeHtml({ level: cLv.level, kind: 'company', size: 34 }) + '</div>' +
                 '<div class="pf-hero-info">' +
                     '<div class="pf-name">' + esc(data.companyName) + '</div>' +
                     '<div class="pf-tags">' +
@@ -152,7 +155,7 @@ function _companyTab(params) {
             '<div class="pf-timeline">' + msHtml + '</div>' +
         '</div>';
 
-    return hero + kpis + health + ms + _cloudCard();
+    return hero + companyLevelCardHtml(cLv) + kpis + health + ms + _cloudCard();
 }
 
 function _playerTab(params) {
@@ -167,11 +170,15 @@ function _playerTab(params) {
         ? '<span class="pf-badge pf-badge-sil">' + gIcon('sil', 13) + ' ' + esc(t('pp.company.paid_badge', { cost: info.cost })) + '</span>'
         : '<span class="pf-badge pf-badge-free">' + esc(t('pp.company.free_left', { n: info.freeLeft })) + '</span>';
 
+    var pLv = PlayerProgression.compute(true);
     var hero =
         '<div class="pf-hero pf-hero-player">' +
-            '<button class="pf-avatar-btn" data-pf="edit-player" type="button" aria-label="' + esc(t('pp.player.edit')) + '">' +
-                avatarHtml({ src: player.avatar, name: player.displayName || data.companyName, size: 88, cls: 'pp-avatar-lg', edit: true }) +
-            '</button>' +
+            '<div class="pf-avatar-wrap">' +
+                '<button class="pf-avatar-btn" data-pf="edit-player" type="button" aria-label="' + esc(t('pp.player.edit')) + '">' +
+                    avatarHtml({ src: player.avatar, name: player.displayName || data.companyName, size: 88, cls: 'pp-avatar-lg', edit: true }) +
+                '</button>' +
+                levelBadgeHtml({ level: pLv.level, kind: 'player', size: 38 }) +
+            '</div>' +
             '<div class="pf-player-name">' + esc(playerName) + '</div>' +
             '<div class="pf-player-company">' + renderIcon('building', 12) + '<span>' + esc(data.companyName) + '</span></div>' +
             '<div class="pf-tags pf-tags-center">' +
@@ -234,7 +241,7 @@ function _playerTab(params) {
             '<div class="pf-hint">' + esc(t('pp.stats.hint')) + ' ' + esc(t(connected ? 'pp.player.cloud_on' : 'pp.player.cloud_off')) + '</div>' +
         '</div>';
 
-    return hero + idCard + company + statsCard + _cloudCard();
+    return hero + playerLevelCardHtml(pLv) + idCard + company + statsCard + _cloudCard();
 }
 
 export function renderCompanyProfilePanel(params) {
