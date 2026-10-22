@@ -12,12 +12,12 @@ function _esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, functio
 function _fmt(n) { return Math.round(Number(n) || 0).toLocaleString(_lang() === 'en' ? 'en-US' : 'id-ID'); }
 
 var TXT = {
-    id: { level: 'Level', xp: 'XP', next: 'Menuju Lv {n}', max: 'Level maksimum', reward: 'Hadiah naik level', activity: 'Aktivitas', cred: 'Kredibilitas',
+    id: { level: 'Level', xp: 'XP', next: 'Menuju Lv {n}', max: 'Level maksimum', eraMax: 'Batas level era {y} (Lv {n})', reward: 'Hadiah naik level', activity: 'Aktivitas', cred: 'Kredibilitas',
           playerTitle: 'Level & Kredibilitas', companyTitle: 'Level Perusahaan', rank: 'Peringkat',
           playerHint: 'Level naik dari pendapatan, unit terjual, lama bermain, pangsa pasar, dan kredibilitas.',
           companyHint: 'Level perusahaan = aktivitas (penjualan, produk, tim, riset, lama beroperasi) + kredibilitas (reputasi, kredit bank, sentimen publik, moral tim).',
           revenue: 'Pendapatan', sold: 'Unit terjual', products: 'Produk aktif', staff: 'Tim', research: 'Riset', tenure: 'Lama operasi', share: 'Pangsa pasar' },
-    en: { level: 'Level', xp: 'XP', next: 'To Lv {n}', max: 'Max level', reward: 'Level-up reward', activity: 'Activity', cred: 'Credibility',
+    en: { level: 'Level', xp: 'XP', next: 'To Lv {n}', max: 'Max level', eraMax: 'Era {y} cap (Lv {n})', reward: 'Level-up reward', activity: 'Activity', cred: 'Credibility',
           playerTitle: 'Level & Credibility', companyTitle: 'Company Level', rank: 'Rank',
           playerHint: 'Level grows from revenue, units sold, play time, market share, and credibility.',
           companyHint: 'Company level = activity (sales, products, team, research, years active) + credibility (reputation, bank credit, public sentiment, team morale).',
@@ -62,9 +62,10 @@ function _bar(label, pct, value, cls) {
 }
 
 function _xpBlock(d) {
-    var max = d.level >= LEVEL_MAX;
+    var max = !!d.isMax;
     var into = Math.max(0, d.xp - d.levelXp), span = Math.max(1, d.nextLevelXp - d.levelXp);
-    return _bar(max ? T('max') : T('next', { n: d.level + 1 }), d.levelPct, max ? 'MAX' : _fmt(into) + ' / ' + _fmt(span) + ' ' + T('xp'), 'is-xp');
+    var label = max ? (d.level >= LEVEL_MAX ? T('max') : T('eraMax', { y: d.year, n: d.level })) : T('next', { n: d.level + 1 });
+    return _bar(label, d.levelPct, max ? 'MAX' : _fmt(into) + ' / ' + _fmt(span) + ' ' + T('xp'), 'is-xp');
 }
 
 function _head(d, kind, title) {
@@ -77,7 +78,7 @@ function _head(d, kind, title) {
 // d = PlayerProgression.compute()
 export function playerLevelCardHtml(d) {
     var lang = _lang();
-    var reward = d.level >= LEVEL_MAX ? '' :
+    var reward = d.isMax ? '' :
         '<div class="sum-row" style="margin-top:8px;"><span>' + _esc(T('reward')) + '</span><b style="color:var(--success);">+$' + _fmt(d.nextReward) + '</b></div>';
     return '<div class="card pf-card lv-card">' + _head(d, 'player', T('playerTitle')) + _xpBlock(d) +
         _bar(T('cred'), d.credibility, tierName(d.tier, lang) + ' · ' + d.credibility.toFixed(1), 'is-cred') + reward +
