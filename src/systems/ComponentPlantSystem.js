@@ -52,6 +52,9 @@ export class ComponentPlantSystem {
     start() {
         this._unsubs.push(bus.on('time:day-changed', () => this._tickDaily()));
         this._unsubs.push(bus.on('state:hydrated',   () => this._onHydrated()));
+        // Game baru (onboarding) tidak memicu state:hydrated, jadi inisialisasi juga di sini.
+        // _onHydrated idempoten: hanya mengisi yang belum ada.
+        this._onHydrated();
         console.info('[ComponentPlantSystem] siap.');
     }
 
