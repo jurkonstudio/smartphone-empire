@@ -1,4 +1,5 @@
 // FILE: src/ui/panels/SiliconStorePanel.js
+// v2029.7 — [LOCK] Top Up (tab Beli + panel pembayaran QRIS) dikunci sementara. Ubah TOPUP_LOCKED ke false untuk membuka lagi.
 // v2029.6 — [FIX] Cegah double-render saat proses sinkronisasi. Ganti _e() ke _tf().
 import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 import { Modal } from '../modal.js';
@@ -14,6 +15,8 @@ import { CloudService } from '../../services/CloudService.js';
 import { SaveService } from '../../core/SaveService.js';
 
 var MODAL_ID = 'silicon-store';
+// [LOCK] true = Top Up ditutup sementara & belum bisa digunakan.
+var TOPUP_LOCKED = true;
 var _sel = { pkg: 'pkg_l', method: null, busy: false };
 var _pollingTimer = null;
 var _countdownTimer = null;
@@ -263,6 +266,14 @@ function _renderMethods(methods) {
 }
 
 function _renderBuyTab() {
+    if (TOPUP_LOCKED) {
+        return '<div style="text-align:center; padding:28px 16px; background:var(--bg-3); border:1px solid var(--border); border-radius:12px; margin-bottom:8px;">' +
+            '<div style="font-size:40px; margin-bottom:10px;">🔒</div>' +
+            '<div style="font-weight:bold; font-size:15px; margin-bottom:8px; color:var(--text-primary);">' + _tf('silstore.locked.title', 'Top Up Ditutup Sementara') + '</div>' +
+            '<div style="font-size:12px; line-height:1.5; color:var(--text-secondary);">' + _tf('silstore.locked.desc', 'Pembelian SIL belum dapat digunakan saat ini. Silakan coba lagi nanti.') + '</div>' +
+            '<button type="button" class="btn-primary" disabled style="width:100%; margin-top:16px; opacity:.5; cursor:not-allowed;">' + _tf('silstore.locked.btn', 'Top Up Terkunci') + '</button>' +
+        '</div>';
+    }
     var methods = PaymentService.getMethods();
     var anyAvail = methods.some(function (m) { return m.status === 'available'; });
     var cur = methods.find(function (m) { return m.id === _sel.method && m.status === 'available'; });
@@ -353,10 +364,10 @@ function _onClick(e) {
     }
 
     var pk = e.target.closest('[data-sil-pkg]');
-    if (pk) { _sel.pkg = pk.dataset.silPkg; _render(); return; }
+    if (pk && !TOPUP_LOCKED) { _sel.pkg = pk.dataset.silPkg; _render(); return; }
 
     var md = e.target.closest('[data-sil-method]');
-    if (md && !md.disabled) { _sel.method = md.dataset.silMethod; _render(); return; }
+    if (md && !md.disabled && !TOPUP_LOCKED) { _sel.method = md.dataset.silMethod; _render(); return; }
 
     var rf = e.target.closest('[data-sil-order-refresh]');
     if (rf) {
@@ -370,6 +381,7 @@ function _onClick(e) {
     }
 
     if (e.target.closest('[data-sil-pay]')) {
+        if (TOPUP_LOCKED) { ToastService.warning(_tf('silstore.locked.toast', 'Top Up sedang ditutup sementara.')); return; }
         if (!_sel.method || _sel.busy) return;
         _sel.busy = true; _render();
         PaymentService.pay(_sel.pkg, _sel.method).then(function (r) {
@@ -382,6 +394,7 @@ function _onClick(e) {
 }
 
 function _showPaymentModal(order) {
+    if (TOPUP_LOCKED) { ToastService.warning(_tf('silstore.locked.toast', 'Top Up sedang ditutup sementara.')); return; }
     var pkg = PaymentService.getPackage(order.packageId);
     var mockBtnHtml = DEV_BUILD ? `<div style="margin-top:24px; padding-top:16px; border-top:1px dashed var(--border); text-align:center;"><button type="button" data-qr-mock style="background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger); padding:8px; border-radius:8px; font-size:11px; width:100%; cursor:pointer;">${_tf('silstore.qr.mock', 'Simulasi Lunas')}</button></div>` : '';
     var html = `<div class="modal-title" style="text-align:center; font-size:18px;">${_tf('silstore.qr.title', 'Pindai QRIS')}</div><div class="modal-sub" style="text-align:center; margin-bottom:16px;">${_tf('silstore.qr.time_left', 'Sisa waktu')} <b id="qr-timer" style="color:var(--danger); font-family:monospace; font-size:14px;">15:00</b></div><div style="text-align:center; margin-bottom:12px;"><div style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">${_tf('silstore.qr.total', 'Total Pembayaran')}</div><div style="font-size:24px; font-weight:bold; color:var(--accent);">${_price(pkg)}</div></div><div style="text-align:center; padding: 12px; background: #fff; border-radius: 12px; margin-bottom:16px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);"><img src="${STATIC_QRIS_URL}" style="width:100%; max-width:250px; display:block; margin:0 auto; border-radius:8px;" alt="QRIS" /></div><div style="font-size:13px; color:var(--text-secondary); text-align:center; margin-bottom:16px; line-height:1.5;">${_tf('silstore.qr.scan', 'Pindai kode di atas menggunakan aplikasi bank atau e-wallet Anda.')}<br><b>${_tf('silstore.qr.important', 'PENTING')}</b> ${_tf('silstore.qr.note_pre', 'Sertakan Order ID')} <b>${_esc(order.id)}</b> ${_tf('silstore.qr.note_post', 'pada berita transfer.')}</div><div style="display:flex; flex-direction:column; gap:8px;"><button type="button" class="btn-primary" data-qr-check style="width:100%;">${_tf('silstore.qr.check', 'Cek Status')}</button><button type="button" class="btn-secondary" data-qr-cancel style="width:100%;">${_tf('silstore.qr.cancel', 'Batal')}</button></div>${mockBtnHtml}`;
