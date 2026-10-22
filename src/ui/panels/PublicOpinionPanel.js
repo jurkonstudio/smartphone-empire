@@ -14,8 +14,22 @@ const ASPECT_LABELS = {
     price:       { key: 'opinion.aspect.price',       icon: '💰' },
     reliability: { key: 'opinion.aspect.reliability', icon: '🛡️' },
     os:          { key: 'opinion.aspect.os',          icon: '💿' },
-    support:     { key: 'opinion.aspect.support',     icon: '🎧' }
+    support:     { key: 'opinion.aspect.support',     icon: '🎧' },
+    display:      { key: 'opinion.aspect.display',      icon: '📱' },
+    connectivity: { key: 'opinion.aspect.connectivity', icon: '📶' },
+    usability:    { key: 'opinion.aspect.usability',    icon: '👆' }
 };
+
+// Teks respons viral dwibahasa (r.i18n); jatuh ke label Indonesia bila tidak ada.
+function _respText(r, field) {
+    var o = r && r.i18n && r.i18n[field];
+    if (o && typeof o === 'object') {
+        var lg = 'id';
+        try { lg = (window.__game && window.__game.LanguageService && window.__game.LanguageService.getLang()) === 'en' ? 'en' : 'id'; } catch (e) {}
+        return o[lg] || o.id || o.en || r[field] || '';
+    }
+    return (r && r[field]) || '';
+}
 
 function _sentimentLabel(sentiment) {
     if (sentiment >= 70) return t('opinion.sentiment.very_good');
@@ -196,8 +210,8 @@ export function openViralResponseModal(params) {
         ${VIRAL_RESPONSES.map(function (r) {
             var costLabel = r.cost > 0 ? '$' + r.cost.toLocaleString('en-US') : t('opinion.viral_modal.free');
             return '<button class="wiz-option" data-viral-response-pick="' + r.id + '" data-viral-id="' + viralId + '" style="width:100%;margin-bottom:6px;text-align:left;">' +
-                '<div class="wiz-opt-name">' + escapeHtml(r.label) + '</div>' +
-                '<div class="wiz-opt-meta">' + costLabel + ' • ' + escapeHtml(r.description) + '</div>' +
+                '<div class="wiz-opt-name">' + escapeHtml(_respText(r, 'label')) + '</div>' +
+                '<div class="wiz-opt-meta">' + costLabel + ' • ' + escapeHtml(_respText(r, 'description')) + '</div>' +
                 '</button>';
         }).join('')}
         <button class="btn-secondary" data-modal-close style="width:100%;margin-top:8px;">${t('opinion.viral_modal.cancel')}</button>
