@@ -573,7 +573,6 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
           <button class="btn btn-blue" type="button" id="coBtn" disabled>Top up sekarang</button>
         </div>
         <p class="fine" data-en="QRIS and GoPay payments are confirmed manually by an admin. Once approved, the SIL balance is added to your account. Include the Order ID in the transfer note. Maximum 5 orders awaiting approval.">Pembayaran lewat QRIS dan GoPay dikonfirmasi manual oleh admin. Setelah disetujui, saldo SIL masuk ke akunmu. Sertakan Order ID di berita transfer. Maksimal 5 pesanan menunggu persetujuan.</p>
-        <div class="orders" id="orders" hidden><h4 data-en="Recent orders">Pesanan terakhir</h4><div id="ordList"></div></div>
       </div>
     </div>
   </div>
@@ -967,7 +966,6 @@ function renderAcct() {
     nav.className = 'btn btn-ghost btn-sm'; nav.textContent = t('signIn'); nav.dataset.mode = 'in';
     box.innerHTML = `<div class="acct-row"><div class="av">?</div><div><div class="nm">${t('accNone')}</div><div class="mt">${t('accNoneSub')}</div></div></div>
       <div class="acct-act"><button class="btn btn-blue btn-sm" type="button" data-open-auth>${t('signIn')}</button><button class="btn btn-ghost btn-sm" type="button" data-open-auth="up">${t('signUp')}</button></div>`;
-    $('#orders').hidden = true;
     return;
   }
   nav.className = 'acct-chip'; nav.dataset.mode = 'acct';
@@ -994,7 +992,12 @@ async function loadAccount() {
   loadOrders();
 }
 function renderOrders() {
+  // Daftar 'Pesanan terakhir' sudah dihapus dari halaman; fungsi ini sengaja dikosongkan.
+  return;
+}
+function _renderOrdersLegacy() {
   const rows = lastOrders;
+  if (!$('#orders') || !$('#ordList')) return;
   $('#orders').hidden = !user || rows.length === 0;
   $('#orders h4').textContent = t('ordTitle');
   $('#ordList').innerHTML = '';
