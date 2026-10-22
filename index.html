@@ -70,7 +70,6 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Smartphone Empire">
-<link rel="preload" as="image" href="./assets/img/loading-screen.jpg">
 
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -243,14 +242,44 @@ window.addEventListener('unhandledrejection', function (e) {
 
     <div id="toast-container" class="toast-container" aria-live="polite"></div>
     <div id="loading-screen" class="loading-screen" role="progressbar" aria-label="Memuat Smartphone Empire" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-        <div class="ls-stage">
-            <img class="ls-art" src="./assets/img/loading-screen.jpg" alt="Smartphone Empire by Jurkon Studio" decoding="async" draggable="false">
-            <div class="ls-meter">
-                <div class="ls-track"><div class="ls-fill" id="ls-fill"></div></div>
-                <span class="ls-pct" id="ls-pct">0%</span>
-            </div>
+        <div class="ls-art-wrap">
+            <img class="ls-art" id="ls-art" alt="Smartphone Empire by Jurkon Studio" decoding="async" fetchpriority="high" draggable="false">
+        </div>
+        <div class="ls-meter">
+            <div class="ls-track"><div class="ls-fill" id="ls-fill"></div></div>
+            <span class="ls-pct" id="ls-pct">0%</span>
         </div>
     </div>
+
+    <script>
+    /* Pilih gambar loading ACAK tiap web dibuka. Tidak mengulang gambar yang sama dengan kunjungan sebelumnya.
+       Tambah gambar baru cukup dengan menambah satu baris di SCREENS (bg = warna kertas gambar). */
+    (function () {
+        var SCREENS = [
+            { src: './assets/img/loading/loading-1.webp', bg: '#f6efe2', ink: '#1b2a4a' },
+            { src: './assets/img/loading/loading-2.webp', bg: '#ffffff', ink: '#1b2a4a' },
+            { src: './assets/img/loading/loading-3.webp', bg: '#f7f1e3', ink: '#1b2a4a' }
+        ];
+        var KEY = 'smartphone-empire:last-splash', last = -1, i;
+        try { last = parseInt(sessionStorage.getItem(KEY) || localStorage.getItem(KEY), 10); } catch (e) {}
+        if (isNaN(last)) last = -1;
+        do { i = Math.floor(Math.random() * SCREENS.length); } while (SCREENS.length > 1 && i === last);
+        try { localStorage.setItem(KEY, String(i)); } catch (e) {}
+        var s = SCREENS[i], el = document.getElementById('loading-screen'), img = document.getElementById('ls-art');
+        el.style.setProperty('--ls-bg', s.bg);
+        el.style.setProperty('--ls-ink', s.ink);
+        window.__splashBg = s.bg;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) { window.__origTheme = meta.getAttribute('content'); meta.setAttribute('content', s.bg); }
+        img.addEventListener('load', function () { img.classList.add('ls-in'); });
+        img.addEventListener('error', function () {
+            if (img.getAttribute('data-fb')) return;
+            img.setAttribute('data-fb', '1');
+            img.src = './assets/img/loading-screen.jpg';
+        });
+        img.src = s.src;
+    })();
+    </script>
 
     <script>
     /* Loading screen: persen = progres nyata (modul JS yang sudah terunduh + tahap boot di main.js). */
@@ -259,11 +288,11 @@ window.addEventListener('unhandledrejection', function (e) {
         var fill = document.getElementById('ls-fill');
         var pct = document.getElementById('ls-pct');
         var meta = document.querySelector('meta[name="theme-color"]');
-        var origTheme = meta ? meta.getAttribute('content') : null;
+        var origTheme = window.__origTheme || (meta ? meta.getAttribute('content') : null);
         var TOTAL_MODULES = 190;   
         var MODULE_CAP = 70;       
         var target = 2, shown = 0, finished = false, raf = 0, closed = false, seen = {};
-        if (meta) meta.setAttribute('content', '#fafafa');
+        if (meta) meta.setAttribute('content', window.__splashBg || '#fafafa');
 
         function paint(v) {
             var n = Math.min(100, Math.round(v));
