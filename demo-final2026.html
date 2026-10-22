@@ -1,299 +1,368 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#fbfbfd" id="metaTheme">
+<meta name="color-scheme" content="light dark">
 <title>Smartphone Empire — Jurkon Studio</title>
-<meta name="description" content="Smartphone Empire: game simulasi bisnis ponsel dari tahun 2000 sampai era AI dan foldable. Mainkan gratis di browser, download APK Android, masuk akun, dan top up Silicon.">
+<meta name="description" id="metaDesc" content="Smartphone Empire: game simulasi bisnis ponsel dari tahun 2000 sampai era AI dan foldable. Mainkan gratis di browser, download APK Android, masuk akun, dan top up Silicon.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Smartphone Empire — Bangun kerajaan ponselmu">
 <meta property="og:description" content="Mulai 1 Januari 2000, lawan Nokia, Apple, Samsung dan 22 kompetitor lain. Gratis di browser dan Android.">
 <meta property="og:image" content="https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/assets/img/loading-screen.jpg">
 <link rel="icon" type="image/png" sizes="32x32" href="./assets/icon/favicon-32.png">
 <link rel="apple-touch-icon" href="./assets/icon/apple-touch-icon.png">
+<script>
+/* Tema + bahasa dipasang sebelum halaman digambar, supaya tidak berkedip.
+   Kunjungan pertama = mode terang + Bahasa Indonesia. */
+(function () {
+  var d = document.documentElement, th = 'light', lg = 'id';
+  try {
+    if (localStorage.getItem('se-landing:theme') === 'dark') th = 'dark';
+    if (localStorage.getItem('se-landing:lang') === 'en') lg = 'en';
+  } catch (e) {}
+  d.setAttribute('data-theme', th); d.setAttribute('lang', lg);
+  var m = document.getElementById('metaTheme'); if (m) m.setAttribute('content', th === 'dark' ? '#000000' : '#fbfbfd');
+})();
+</script>
 <style>
 :root{
-  --bg:#000; --s1:#0c0d10; --s2:#16181d; --s3:#1f2229;
-  --text:#f5f5f7; --text2:#c7c7cc; --text3:#8e8e96;
-  --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.18);
-  --blue:#0a84ff; --blue2:#0040dd; --violet:#bf5af2; --green:#30d158; --orange:#ff9f0a; --red:#ff453a;
+  color-scheme:light;
+  --bg:#fbfbfd; --bg2:#f5f5f7; --card:#fff; --inner:#f5f5f7; --fill:rgba(0,0,0,.05); --fill2:rgba(0,0,0,.09);
+  --text:#1d1d1f; --text2:#424245; --text3:#6e6e73;
+  --line:rgba(0,0,0,.08); --line2:rgba(0,0,0,.16);
+  --blue:#0071e3; --blue-h:#0077ed; --link:#0066cc;
+  --green:#1d7f37; --orange:#a85400; --red:#c4160a; --violet:#8944ab;
+  --nav:rgba(251,251,253,.74); --shadow:0 1px 2px rgba(0,0,0,.04),0 10px 30px rgba(0,0,0,.06); --shadow-h:0 2px 6px rgba(0,0,0,.06),0 20px 44px rgba(0,0,0,.12);
+  --inv:#1d1d1f; --inv-tx:#fff; --seg-on:#fff; --seg-sh:0 1px 3px rgba(0,0,0,.18);
+  --sheet:#fff; --scrim:rgba(0,0,0,.38); --in:#fff; --code:#f5f5f7;
+  --g1:rgba(0,113,227,.17); --g2:rgba(90,200,250,.22); --g3:rgba(175,82,222,.13);
+  --phone-sh:0 0 0 1px rgba(0,0,0,.12),0 28px 56px rgba(20,30,60,.28);
+  --err-bg:rgba(215,0,21,.09); --err-tx:#c4160a; --ok-bg:rgba(36,138,61,.11); --ok-tx:#1d7f37; --info-bg:rgba(0,113,227,.09); --info-tx:#0057b8;
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Inter","Segoe UI",Roboto,system-ui,sans-serif;
-  --r:20px; --ease:cubic-bezier(.2,.8,.2,1);
+  --r:22px; --ease:cubic-bezier(.2,.8,.2,1);
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#000; --bg2:#0a0a0c; --card:#1c1c1e; --inner:rgba(0,0,0,.38); --fill:rgba(255,255,255,.08); --fill2:rgba(255,255,255,.15);
+  --text:#f5f5f7; --text2:#c7c7cc; --text3:#98989d;
+  --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.18);
+  --blue:#0a84ff; --blue-h:#3d9bff; --link:#2997ff;
+  --green:#30d158; --orange:#ff9f0a; --red:#ff453a; --violet:#bf5af2;
+  --nav:rgba(0,0,0,.62); --shadow:none; --shadow-h:none;
+  --inv:#fff; --inv-tx:#06143a; --seg-on:#3a3a3c; --seg-sh:none;
+  --sheet:#1c1c1e; --scrim:rgba(0,0,0,.7); --in:#0b0c0f; --code:#0b0c0f;
+  --g1:rgba(10,132,255,.40); --g2:rgba(50,173,230,.14); --g3:rgba(191,90,242,.28);
+  --phone-sh:0 0 0 1px rgba(255,255,255,.14),0 30px 60px rgba(0,0,0,.65);
+  --err-bg:rgba(255,69,58,.14); --err-tx:#ff8d85; --ok-bg:rgba(48,209,88,.14); --ok-tx:#7be598; --info-bg:rgba(10,132,255,.14); --info-tx:#8cc4ff;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
-html{background:#000;overflow-x:clip;scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:76px}
+html{background:var(--bg);overflow-x:clip;scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:68px}
 body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.5;letter-spacing:-.011em;overflow-x:hidden;
   padding-bottom:max(0px,env(safe-area-inset-bottom))}
+.tt,.tt *{transition:background-color .35s ease,color .35s ease,border-color .35s ease,box-shadow .35s ease!important}
 [hidden]{display:none!important}
 img{max-width:100%;display:block}
 a{color:inherit}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
-:focus-visible{outline:3px solid #fff;outline-offset:3px;border-radius:8px}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px;border-radius:8px}
 .wrap{max-width:1120px;margin:0 auto;padding:0 max(20px,env(safe-area-inset-left))}
-.glow{position:absolute;inset:0 0 auto 0;height:760px;pointer-events:none;z-index:0;
-  background:radial-gradient(800px 420px at 12% -6%,rgba(10,132,255,.40),transparent 70%),radial-gradient(640px 380px at 92% 6%,rgba(191,90,242,.28),transparent 70%)}
+.glow{position:absolute;inset:0 0 auto 0;height:820px;pointer-events:none;z-index:0;
+  background:radial-gradient(760px 420px at 50% -8%,var(--g1),transparent 70%),radial-gradient(560px 340px at 8% 8%,var(--g2),transparent 70%),radial-gradient(560px 340px at 94% 12%,var(--g3),transparent 70%)}
 main,header,footer{position:relative;z-index:1}
 
-/* NAV */
-.nav{position:sticky;top:0;z-index:50;background:rgba(0,0,0,.62);backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);border-bottom:1px solid var(--line)}
-.nav-in{display:flex;align-items:center;gap:14px;height:60px}
-.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:800;letter-spacing:-.03em;font-size:1.02rem;white-space:nowrap}
-@media(max-width:480px){.brand{font-size:.92rem;gap:8px}.brand img{width:26px;height:26px}.nav-in{gap:8px}.nav .btn-sm{padding:0 13px}}
-.brand img{width:30px;height:30px;border-radius:8px}
-.nav-links{display:none;gap:4px;margin-left:12px}
-.nav-links a{text-decoration:none;color:var(--text2);font-size:.9rem;font-weight:600;padding:8px 12px;border-radius:999px;transition:.2s}
-.nav-links a:hover{color:#fff;background:rgba(255,255,255,.08)}
+/* NAV (gaya bilah iCloud: tipis, transparan, tautan kecil) */
+.nav{position:sticky;top:0;z-index:50;background:var(--nav);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--line)}
+.nav-in{display:flex;align-items:center;gap:10px;height:56px}
+.brand{display:flex;align-items:center;gap:9px;text-decoration:none;font-weight:700;letter-spacing:-.03em;font-size:1.02rem;white-space:nowrap}
+.brand img{width:28px;height:28px;border-radius:8px}
+.nav-links{display:none;gap:2px;margin-left:14px}
+.nav-links a{text-decoration:none;color:var(--text2);font-size:.84rem;font-weight:500;padding:7px 12px;border-radius:999px;transition:.2s}
+.nav-links a:hover{color:var(--text);background:var(--fill)}
 .nav-sp{flex:1}
-@media(max-width:399px){.brand-tx{display:none}}
 @media(min-width:880px){.nav-links{display:flex}}
+@media(max-width:399px){.brand-tx{display:none}}
+@media(max-width:480px){.nav-in{gap:6px}.nav .btn-sm{padding:0 12px}.brand img{width:26px;height:26px}}
+
+.lang{display:inline-flex;padding:3px;border-radius:999px;background:var(--fill);flex:none}
+.lang button{min-width:34px;height:30px;padding:0 9px;border-radius:999px;font-size:.78rem;font-weight:700;color:var(--text3);transition:.2s}
+.lang button[aria-pressed=true]{background:var(--seg-on);color:var(--text);box-shadow:var(--seg-sh)}
+.icon-btn{width:36px;height:36px;border-radius:50%;background:var(--fill);display:grid;place-items:center;flex:none;transition:background .2s,transform .2s var(--ease)}
+.icon-btn:hover{background:var(--fill2)}.icon-btn:active{transform:scale(.92)}
+.icon-btn svg{width:18px;height:18px;fill:none;stroke:var(--text);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.icon-btn .i-sun{display:none}
+:root[data-theme="dark"] .icon-btn .i-sun{display:block}
+:root[data-theme="dark"] .icon-btn .i-moon{display:none}
 
 /* BUTTONS */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 22px;border-radius:999px;font-weight:700;font-size:.95rem;text-decoration:none;white-space:nowrap;transition:transform .25s var(--ease),background .2s,box-shadow .2s}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 24px;border-radius:999px;font-weight:600;font-size:.97rem;text-decoration:none;white-space:nowrap;transition:transform .25s var(--ease),background .2s,box-shadow .2s,filter .2s}
 .btn:active{transform:scale(.96)}
 .btn svg{width:18px;height:18px;flex:none}
-.btn-primary{background:#fff;color:#06143a}
-.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(255,255,255,.18)}
-.btn-blue{background:linear-gradient(180deg,#2b96ff,#0a6cf0);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 6px 18px rgba(10,108,240,.4)}
-.btn-blue:hover{transform:translateY(-1px);filter:brightness(1.08)}
-.btn-ghost{background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px var(--line2)}
-.btn-ghost:hover{background:rgba(255,255,255,.15)}
-.btn-sm{min-height:38px;padding:0 16px;font-size:.88rem}
-.btn[disabled]{opacity:.5;pointer-events:none}
-.acct-chip{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 6px 0 14px;border-radius:999px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px var(--line2);font-weight:700;font-size:.85rem}
-.acct-chip .av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--violet));display:grid;place-items:center;font-size:.8rem;font-weight:800}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-blue:hover{background:var(--blue-h)}
+.btn-primary{background:var(--inv);color:var(--inv-tx)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:var(--shadow-h)}
+.btn-ghost{background:var(--fill);color:var(--text)}
+.btn-ghost:hover{background:var(--fill2)}
+.btn-sm{min-height:36px;padding:0 15px;font-size:.85rem}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.acct-chip{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 5px 0 13px;border-radius:999px;background:var(--fill);font-weight:600;font-size:.84rem}
+.acct-chip .av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0a84ff,#5ac8fa);color:#fff;display:grid;place-items:center;font-size:.8rem;font-weight:700}
 
 /* HERO */
-.hero{padding:56px max(20px,env(safe-area-inset-left)) 24px;display:grid;grid-template-columns:minmax(0,1fr);gap:40px;align-items:center}
-.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.8rem;font-weight:700;color:var(--text2);padding:6px 14px 6px 8px;border-radius:999px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px var(--line);margin-bottom:20px}
+.hero{padding:76px max(20px,env(safe-area-inset-left)) 8px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.8rem;font-weight:600;color:var(--text2);padding:6px 14px 6px 7px;border-radius:999px;background:var(--card);box-shadow:var(--shadow),inset 0 0 0 1px var(--line);margin-bottom:22px}
 .eyebrow b{background:var(--blue);color:#fff;border-radius:999px;padding:2px 9px;font-size:.72rem}
-h1.title{font-size:clamp(2.5rem,7.4vw,4.9rem);font-weight:800;letter-spacing:-.055em;line-height:1.0}
-h1.title em{font-style:normal;background:linear-gradient(100deg,#5ac8fa,#0a84ff 45%,#bf5af2);-webkit-background-clip:text;background-clip:text;color:transparent}
-.lede{margin-top:20px;font-size:1.12rem;color:var(--text2);max-width:34em;font-weight:500}
-.cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
-.hero-note{margin-top:14px;font-size:.84rem;color:var(--text3)}
-.phones{position:relative;height:440px;display:flex;justify-content:center;align-items:center}
-.phone{position:absolute;left:50%;margin-left:-105px;width:210px;aspect-ratio:390/844;border-radius:34px;padding:7px;background:linear-gradient(160deg,#3a3d46,#101115);box-shadow:0 0 0 1px rgba(255,255,255,.14),0 30px 60px rgba(0,0,0,.65);transition:transform .5s var(--ease)}
+h1.title{font-size:clamp(2.6rem,8.2vw,5.6rem);font-weight:700;letter-spacing:-.058em;line-height:1.02;max-width:12.5em}
+h1.title em{font-style:normal;background:linear-gradient(95deg,#0a84ff 0%,#32ade6 48%,#5e5ce6 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{margin:22px auto 0;font-size:clamp(1.05rem,2.4vw,1.3rem);color:var(--text2);max-width:34em;font-weight:400;line-height:1.45}
+.cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px;justify-content:center}
+.hero-note{margin-top:16px;font-size:.84rem;color:var(--text3);max-width:44em}
+.phones{position:relative;height:440px;width:100%;display:flex;justify-content:center;align-items:center;margin-top:30px}
+.phone{position:absolute;left:50%;margin-left:-105px;width:210px;aspect-ratio:390/844;border-radius:34px;padding:7px;background:linear-gradient(160deg,#3a3d46,#101115);box-shadow:var(--phone-sh);transition:transform .5s var(--ease)}
 .phone img{width:100%;height:100%;object-fit:cover;border-radius:27px;object-position:top}
-.phone.p1{transform:translateX(-120px) rotate(-8deg) scale(.86);z-index:1;opacity:.92}
+.phone.p1{transform:translateX(-120px) rotate(-8deg) scale(.86);z-index:1;opacity:.94}
 .phone.p2{z-index:3}
-.phone.p3{transform:translateX(120px) rotate(8deg) scale(.86);z-index:1;opacity:.92}
+.phone.p3{transform:translateX(120px) rotate(8deg) scale(.86);z-index:1;opacity:.94}
 .phones:hover .p1{transform:translateX(-134px) rotate(-10deg) scale(.88)}
 .phones:hover .p3{transform:translateX(134px) rotate(10deg) scale(.88)}
-@media(min-width:900px){.hero{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);padding-top:84px}.phones{height:560px}.phone{width:250px;margin-left:-125px}.phone.p1{transform:translateX(-96px) rotate(-8deg) scale(.86)}.phone.p3{transform:translateX(96px) rotate(8deg) scale(.86)}}
+@media(min-width:900px){.hero{padding-top:92px}.phones{height:580px}.phone{width:260px;margin-left:-130px}.phone.p1{transform:translateX(-190px) rotate(-8deg) scale(.86)}.phone.p3{transform:translateX(190px) rotate(8deg) scale(.86)}.phones:hover .p1{transform:translateX(-210px) rotate(-10deg) scale(.88)}.phones:hover .p3{transform:translateX(210px) rotate(10deg) scale(.88)}}
 @media(max-width:560px){.phones{height:360px}.phone{width:168px;margin-left:-84px}.phone.p1,.phones:hover .p1{transform:translateX(-46px) rotate(-7deg) scale(.88)}.phone.p3,.phones:hover .p3{transform:translateX(46px) rotate(7deg) scale(.88)}}
 
-.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border-radius:var(--r);overflow:hidden;margin:36px 0 0;box-shadow:0 0 0 1px var(--line)}
-.stat{background:var(--s1);padding:20px 18px;min-width:0}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border-radius:var(--r);overflow:hidden;margin:40px 0 0;box-shadow:var(--shadow),0 0 0 1px var(--line)}
+.stat{background:var(--card);padding:22px 18px;min-width:0;text-align:center}
 @media(max-width:759px){.stat:last-child{grid-column:1/-1}}
-.stat b{display:block;font-size:clamp(1.6rem,4.4vw,2.3rem);font-weight:800;letter-spacing:-.05em;line-height:1.05}
-.stat span{font-size:.84rem;color:var(--text3);font-weight:600}
+.stat b{display:block;font-size:clamp(1.8rem,4.6vw,2.6rem);font-weight:700;letter-spacing:-.05em;line-height:1.05}
+.stat span{font-size:.84rem;color:var(--text3);font-weight:500;display:block;margin-top:2px}
 @media(min-width:760px){.stats{grid-template-columns:repeat(5,1fr)}}
 
 /* SECTIONS */
-section{padding:84px 0 0}
-.kicker{font-size:.82rem;font-weight:700;color:var(--blue);letter-spacing:.02em;margin-bottom:10px}
-h2.h{font-size:clamp(1.9rem,5vw,3rem);font-weight:800;letter-spacing:-.05em;line-height:1.05;max-width:18em}
-.sub{margin-top:14px;color:var(--text2);font-size:1.05rem;max-width:40em;font-weight:500}
+section{padding:96px 0 0}
+.kicker{font-size:.84rem;font-weight:600;color:var(--blue);letter-spacing:.01em;margin-bottom:10px;text-align:center}
+h2.h{font-size:clamp(2rem,5.4vw,3.2rem);font-weight:700;letter-spacing:-.052em;line-height:1.06;max-width:17em;margin-inline:auto;text-align:center}
+.sub{margin:16px auto 0;color:var(--text2);font-size:1.08rem;max-width:40em;font-weight:400;text-align:center}
 
 /* BENTO */
-.bento{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-top:36px}
-.tile{position:relative;min-width:0;overflow:hidden;border-radius:var(--r);padding:24px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);transition:transform .3s var(--ease),box-shadow .3s}
-.tile:hover{transform:translateY(-3px);box-shadow:inset 0 0 0 1px var(--line2)}
-.tile .ic{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;margin-bottom:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
-.tile .ic svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.tile h3{font-size:1.25rem;font-weight:800;letter-spacing:-.035em;margin-bottom:8px;overflow-wrap:anywhere}
-.tile p{color:var(--text2);font-size:.95rem}
-.tile ul{list-style:none;margin-top:14px;display:grid;gap:7px}
-.tile li{font-size:.88rem;color:var(--text2);padding-left:20px;position:relative}
+.bento{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin-top:40px}
+.tile{position:relative;min-width:0;overflow:hidden;border-radius:var(--r);padding:26px;background:var(--card);box-shadow:var(--shadow),inset 0 0 0 1px var(--line);transition:transform .3s var(--ease),box-shadow .3s}
+.tile:hover{transform:translateY(-3px);box-shadow:var(--shadow-h),inset 0 0 0 1px var(--line2)}
+.tile .ic{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;margin-bottom:18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 4px 10px rgba(0,0,0,.14)}
+.tile .ic svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tile h3{font-size:1.28rem;font-weight:700;letter-spacing:-.035em;margin-bottom:8px;overflow-wrap:anywhere}
+.tile p{color:var(--text2);font-size:.96rem}
+.tile ul{list-style:none;margin-top:14px;display:grid;gap:8px}
+.tile li{font-size:.9rem;color:var(--text2);padding-left:20px;position:relative}
 .tile li::before{content:"";position:absolute;left:2px;top:.55em;width:8px;height:8px;border-radius:50%;background:var(--c,var(--blue))}
-.tile .big{font-size:2.6rem;font-weight:800;letter-spacing:-.06em;line-height:1;margin-bottom:4px}
+.tile .big{font-size:2.8rem;font-weight:700;letter-spacing:-.06em;line-height:1;margin-bottom:4px}
 .c-blue{--c:#0a84ff}.c-blue .ic{background:linear-gradient(180deg,#2b96ff,#0a5fe0)}
 .c-violet{--c:#bf5af2}.c-violet .ic{background:linear-gradient(180deg,#c97bf5,#8b2fc9)}
 .c-green{--c:#30d158}.c-green .ic{background:linear-gradient(180deg,#3ddc68,#139a3c)}
 .c-orange{--c:#ff9f0a}.c-orange .ic{background:linear-gradient(180deg,#ffb340,#d97700)}
 .c-red{--c:#ff453a}.c-red .ic{background:linear-gradient(180deg,#ff6a60,#c9251b)}
 .c-cyan{--c:#32ade6}.c-cyan .ic{background:linear-gradient(180deg,#5ac8fa,#1b86c2)}
-.tile.hl{background:radial-gradient(120% 90% at 0% 0%,rgba(10,132,255,.22),transparent 60%),var(--s1)}
+.tile.hl{background:radial-gradient(120% 90% at 0% 0%,rgba(10,132,255,.13),transparent 60%),var(--card)}
+:root[data-theme="dark"] .tile.hl{background:radial-gradient(120% 90% at 0% 0%,rgba(10,132,255,.22),transparent 60%),var(--card)}
 @media(min-width:720px){.bento{grid-template-columns:repeat(2,minmax(0,1fr))}.tile.hl,.tile:last-child{grid-column:1/-1}}
 @media(min-width:1000px){.bento{grid-template-columns:repeat(6,minmax(0,1fr))}.tile{grid-column:span 2}.tile.w3{grid-column:span 3}.tile.w4{grid-column:span 4}}
 
 /* SHOWCASE */
 .show{display:grid;gap:28px;margin-top:36px;align-items:center}
-.tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin:0 -20px;padding-left:20px;padding-right:20px}
+.tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 20px 4px;margin:28px -20px 0}
 .tabs::-webkit-scrollbar{display:none}
-@media(max-width:640px){.tabs{-webkit-mask-image:linear-gradient(90deg,#000 82%,transparent);mask-image:linear-gradient(90deg,#000 82%,transparent);padding-right:40px}}
-.tab{flex:none;min-height:42px;padding:0 18px;border-radius:999px;font-weight:700;font-size:.9rem;color:var(--text2);background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px var(--line);transition:.2s}
-.tab[aria-selected=true]{background:#fff;color:#06143a;box-shadow:none}
-.show-copy h3{font-size:1.7rem;font-weight:800;letter-spacing:-.045em;margin:18px 0 10px;line-height:1.1}
-.show-copy p{color:var(--text2);font-size:1.02rem}
+.tabs>:first-child{margin-left:auto}.tabs>:last-child{margin-right:auto}
+@media(max-width:640px){.tabs{-webkit-mask-image:linear-gradient(90deg,#000 86%,transparent);mask-image:linear-gradient(90deg,#000 86%,transparent);padding-right:40px}}
+.tab{flex:none;min-height:40px;padding:0 18px;border-radius:999px;font-weight:600;font-size:.9rem;color:var(--text2);background:var(--fill);transition:.2s}
+.tab:hover{background:var(--fill2)}
+.tab[aria-selected=true]{background:var(--inv);color:var(--inv-tx)}
+.show-copy h3{font-size:1.8rem;font-weight:700;letter-spacing:-.045em;margin:6px 0 10px;line-height:1.1}
+.show-copy p{color:var(--text2);font-size:1.04rem}
 .show-copy ul{list-style:none;margin-top:16px;display:grid;gap:9px}
-.show-copy li{padding:12px 14px 12px 44px;background:var(--s1);border-radius:14px;box-shadow:inset 0 0 0 1px var(--line);font-size:.92rem;color:var(--text2);position:relative}
-.show-copy li b{color:#fff}
+.show-copy li{padding:13px 14px 13px 46px;background:var(--card);border-radius:14px;box-shadow:var(--shadow),inset 0 0 0 1px var(--line);font-size:.93rem;color:var(--text2);position:relative}
+.show-copy li b{color:var(--text)}
 .show-copy li::before{content:"";position:absolute;left:14px;top:50%;width:20px;height:20px;margin-top:-10px;border-radius:50%;background:var(--blue) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/13px no-repeat}
 .show-ph{display:flex;justify-content:center}
 .show-ph .phone{position:relative;left:auto;margin-left:0;width:min(270px,70vw);transform:none}
 .show-ph .phone img{transition:opacity .35s}
 .show-ph .phone.wide{width:min(340px,88vw);aspect-ratio:auto;border-radius:30px;padding:6px;cursor:zoom-in}
 .show-ph .phone.wide img{height:auto;object-fit:contain;border-radius:25px}
-.zoom-hint{display:none;margin-top:10px;text-align:center;font-size:.8rem;color:var(--text3);font-weight:600}
+.zoom-hint{display:none;margin-top:10px;text-align:center;font-size:.8rem;color:var(--text3);font-weight:500}
 .show-ph.has-wide{flex-direction:column;align-items:center}.show-ph.has-wide .zoom-hint{display:block}
 .zoom{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.92);display:none;overflow:auto;-webkit-overflow-scrolling:touch;cursor:zoom-out}
 .zoom.open{display:block;animation:fade .2s}
 .zoom img{width:min(760px,100%);margin:0 auto;display:block}
-.zoom .zx{position:fixed;top:max(12px,env(safe-area-inset-top));right:14px;z-index:2;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.16);font-size:1.5rem;line-height:1}
+.zoom .zx{position:fixed;top:max(12px,env(safe-area-inset-top));right:14px;z-index:2;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;font-size:1.5rem;line-height:1}
 @media(min-width:900px){.show{grid-template-columns:.8fr 1.2fr;gap:56px}.show-ph{order:-1}}
 
 /* ERA */
-.eras{display:grid;gap:10px;margin-top:36px;counter-reset:e}
-.era{display:flex;align-items:center;gap:16px;padding:16px 18px;border-radius:16px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);position:relative;overflow:hidden}
+.eras{display:grid;gap:10px;margin-top:40px}
+.era{display:flex;align-items:center;gap:16px;padding:17px 20px;border-radius:16px;background:var(--card);box-shadow:var(--shadow),inset 0 0 0 1px var(--line);position:relative;overflow:hidden}
 .era::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c)}
-.era .yr{font-weight:800;font-size:1.05rem;letter-spacing:-.03em;min-width:98px;font-variant-numeric:tabular-nums}
-.era .nm{font-weight:700}
-.era .ds{display:block;color:var(--text3);font-size:.84rem;font-weight:500}
+.era .yr{font-weight:700;font-size:1.05rem;letter-spacing:-.03em;min-width:98px;font-variant-numeric:tabular-nums}
+.era .nm{font-weight:600}
+.era .ds{display:block;color:var(--text3);font-size:.84rem;font-weight:400}
 @media(min-width:900px){.eras{grid-template-columns:repeat(2,1fr)}}
 
+/* BAHASA + TEMA */
+.duo{display:grid;gap:14px;margin-top:40px}
+@media(min-width:760px){.duo{grid-template-columns:1.3fr 1fr}}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:8px 8px 8px 14px;border-radius:999px;background:var(--inner);box-shadow:inset 0 0 0 1px var(--line);font-size:.9rem;font-weight:600}
+.chip i{font-style:normal;font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--fill2);color:var(--text3)}
+.chip.full{background:rgba(0,113,227,.09);box-shadow:inset 0 0 0 1px rgba(0,113,227,.35)}
+.chip.full i{background:var(--blue);color:#fff}
+.chip.on{box-shadow:inset 0 0 0 2px var(--blue)}
+.swatches{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
+.sw{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:.74rem;font-weight:600;color:var(--text3)}
+.sw span{width:38px;height:38px;border-radius:50%;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 0 1px var(--line),0 4px 10px rgba(0,0,0,.14)}
+.tmini{display:flex;gap:10px;margin-top:20px}
+.tmini div{flex:1;border-radius:14px;padding:12px;font-size:.78rem;font-weight:700;min-height:64px;display:flex;align-items:flex-end}
+.tmini .l{background:#fff;color:#1d1d1f;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.tmini .d{background:#1c1c1e;color:#f5f5f7;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+
 /* STEPS */
-.steps{display:grid;gap:12px;margin-top:36px}
-.step{padding:22px;border-radius:var(--r);background:var(--s1);box-shadow:inset 0 0 0 1px var(--line)}
-.step .n{width:34px;height:34px;border-radius:50%;background:var(--blue);display:grid;place-items:center;font-weight:800;margin-bottom:14px}
-.step h3{font-size:1.1rem;font-weight:800;letter-spacing:-.03em;margin-bottom:6px}
+.steps{display:grid;gap:12px;margin-top:40px}
+.step{padding:24px;border-radius:var(--r);background:var(--card);box-shadow:var(--shadow),inset 0 0 0 1px var(--line)}
+.step .n{width:34px;height:34px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:700;margin-bottom:14px}
+.step h3{font-size:1.12rem;font-weight:700;letter-spacing:-.03em;margin-bottom:6px}
 .step p{font-size:.92rem;color:var(--text2)}
-.rules{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
-.pill{font-size:.84rem;font-weight:600;color:var(--text2);padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px var(--line)}
-.pill b{color:#fff}
+.rules{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px;justify-content:center}
+.pill{font-size:.84rem;font-weight:500;color:var(--text2);padding:8px 14px;border-radius:999px;background:var(--card);box-shadow:var(--shadow),inset 0 0 0 1px var(--line)}
+.pill b{color:var(--text)}
 @media(min-width:760px){.steps{grid-template-columns:repeat(4,1fr)}}
 
 /* SILICON / TOPUP */
-.sil{position:relative;border-radius:28px;padding:28px 20px;background:radial-gradient(90% 70% at 100% 0%,rgba(191,90,242,.25),transparent 60%),radial-gradient(90% 70% at 0% 100%,rgba(10,132,255,.28),transparent 60%),var(--s1);box-shadow:inset 0 0 0 1px var(--line2)}
-@media(min-width:760px){.sil{padding:44px}}
-.sil-grid{display:grid;gap:28px;margin-top:8px}
+.sil{position:relative;border-radius:30px;padding:36px 20px 28px;background:radial-gradient(90% 70% at 100% 0%,rgba(175,82,222,.12),transparent 60%),radial-gradient(90% 70% at 0% 100%,rgba(10,132,255,.13),transparent 60%),var(--card);box-shadow:var(--shadow),inset 0 0 0 1px var(--line)}
+:root[data-theme="dark"] .sil{background:radial-gradient(90% 70% at 100% 0%,rgba(191,90,242,.25),transparent 60%),radial-gradient(90% 70% at 0% 100%,rgba(10,132,255,.28),transparent 60%),var(--card);box-shadow:inset 0 0 0 1px var(--line2)}
+@media(min-width:760px){.sil{padding:56px 44px 44px}}
+.sil-grid{display:grid;gap:28px;margin-top:30px}
 @media(min-width:980px){.sil-grid{grid-template-columns:.85fr 1.15fr;gap:44px}}
-.acct{border-radius:18px;padding:18px;background:rgba(0,0,0,.38);box-shadow:inset 0 0 0 1px var(--line);margin-top:22px}
+.acct{border-radius:18px;padding:18px;background:var(--inner);box-shadow:inset 0 0 0 1px var(--line)}
 .acct-row{display:flex;align-items:center;gap:12px}
-.acct .av{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--violet));display:grid;place-items:center;font-weight:800;font-size:1.1rem;flex:none}
-.acct .nm{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acct .av{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#0a84ff,#5ac8fa);color:#fff;display:grid;place-items:center;font-weight:700;font-size:1.1rem;flex:none}
+.acct .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .acct .mt{font-size:.82rem;color:var(--text3)}
 .acct-kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
-.kpi{padding:12px;border-radius:12px;background:rgba(255,255,255,.06)}
+.kpi{padding:12px;border-radius:12px;background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
 .kpi span{display:block;font-size:.74rem;color:var(--text3);font-weight:600}
-.kpi b{font-size:1.15rem;font-weight:800;letter-spacing:-.03em}
+.kpi b{font-size:1.15rem;font-weight:700;letter-spacing:-.03em}
 .acct-act{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
 .wallet-list{list-style:none;margin-top:20px;display:grid;gap:8px}
 .wallet-list li{font-size:.9rem;color:var(--text2);padding-left:24px;position:relative}
 .wallet-list li::before{content:"💎";position:absolute;left:0;font-size:.8rem;top:.1em}
 .pkgs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.pkg{position:relative;text-align:left;padding:16px 14px 14px;border-radius:18px;background:rgba(0,0,0,.4);box-shadow:inset 0 0 0 1px var(--line);transition:transform .25s var(--ease),box-shadow .2s,background .2s;display:flex;flex-direction:column;gap:2px;min-height:132px}
+.pkg{position:relative;text-align:left;padding:16px 14px 14px;border-radius:18px;background:var(--inner);box-shadow:inset 0 0 0 1px var(--line);transition:transform .25s var(--ease),box-shadow .2s,background .2s;display:flex;flex-direction:column;gap:2px;min-height:132px}
 .pkg:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 1px var(--line2)}
-.pkg[aria-checked=true]{background:rgba(10,132,255,.16);box-shadow:inset 0 0 0 2px var(--blue)}
+.pkg[aria-checked=true]{background:rgba(0,113,227,.09);box-shadow:inset 0 0 0 2px var(--blue)}
 .pkg .g{font-size:1.3rem}
-.pkg .amt{font-size:1.7rem;font-weight:800;letter-spacing:-.05em;line-height:1.05}
-.pkg .amt small{font-size:.8rem;font-weight:700;color:var(--text3);margin-left:3px;letter-spacing:0}
+.pkg .amt{font-size:1.7rem;font-weight:700;letter-spacing:-.05em;line-height:1.05}
+.pkg .amt small{font-size:.8rem;font-weight:600;color:var(--text3);margin-left:3px;letter-spacing:0}
 .pkg .bn{font-size:.78rem;font-weight:700;color:var(--green);min-height:1.2em}
-.pkg .pr{margin-top:auto;font-weight:700;font-size:.95rem;color:var(--text2)}
-.pkg .tg{position:absolute;top:10px;right:10px;font-size:.66rem;font-weight:800;padding:3px 8px;border-radius:999px;background:var(--orange);color:#2a1700}
-.pkg .tg.best{background:var(--violet);color:#fff}
+.pkg .pr{margin-top:auto;font-weight:600;font-size:.95rem;color:var(--text2)}
+.pkg .tg{position:absolute;top:10px;right:10px;font-size:.64rem;font-weight:800;padding:3px 8px;border-radius:999px;background:#ff9f0a;color:#2a1700}
+.pkg .tg.best{background:#af52de;color:#fff}
 .pkg:last-child{grid-column:span 2}
 @media(min-width:560px){.pkgs{grid-template-columns:repeat(3,1fr)}.pkg:last-child{grid-column:auto}}
 .methods{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
-.method{flex:1;min-width:130px;min-height:48px;border-radius:14px;font-weight:700;background:rgba(0,0,0,.4);box-shadow:inset 0 0 0 1px var(--line);display:flex;align-items:center;justify-content:center;gap:8px}
-.method[aria-checked=true]{background:rgba(10,132,255,.16);box-shadow:inset 0 0 0 2px var(--blue)}
-.checkout{margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 16px;border-radius:16px;background:rgba(0,0,0,.4);box-shadow:inset 0 0 0 1px var(--line)}
+.method{flex:1;min-width:130px;min-height:48px;border-radius:14px;font-weight:600;background:var(--inner);box-shadow:inset 0 0 0 1px var(--line);display:flex;align-items:center;justify-content:center;gap:8px}
+.method[aria-checked=true]{background:rgba(0,113,227,.09);box-shadow:inset 0 0 0 2px var(--blue)}
+.checkout{margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 16px;border-radius:16px;background:var(--inner);box-shadow:inset 0 0 0 1px var(--line)}
 .checkout .sm{font-size:.82rem;color:var(--text3);font-weight:600}
-.checkout .tt{font-size:1.2rem;font-weight:800;letter-spacing:-.03em}
+.checkout .tt{font-size:1.2rem;font-weight:700;letter-spacing:-.03em}
 .fine{margin-top:12px;font-size:.8rem;color:var(--text3);line-height:1.5}
 .orders{margin-top:22px}
 .orders h4{font-size:.82rem;font-weight:700;color:var(--text3);margin-bottom:8px}
-.ord{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;background:rgba(0,0,0,.35);margin-bottom:6px;font-size:.86rem}
+.ord{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;background:var(--inner);margin-bottom:6px;font-size:.86rem}
 .ord .o1{flex:1;min-width:0}
 .ord .o1 b{display:block;font-weight:700}
 .ord .o1 span{color:var(--text3);font-size:.76rem;font-family:ui-monospace,Menlo,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
 .st{font-size:.72rem;font-weight:800;padding:3px 9px;border-radius:999px}
 .st.pending{background:rgba(255,159,10,.18);color:var(--orange)}
 .st.approved{background:rgba(48,209,88,.18);color:var(--green)}
-.st.rejected{background:rgba(255,69,58,.18);color:var(--red)}
-.ord .lnk{font-size:.8rem;font-weight:700;color:var(--blue);padding:6px 8px}
+.st.rejected{background:rgba(255,69,58,.16);color:var(--red)}
+.ord .lnk{font-size:.8rem;font-weight:600;color:var(--link);padding:6px 8px}
 
 /* STUDIO */
-.studio{display:grid;gap:12px;margin-top:36px}
+.studio{display:grid;gap:14px;margin-top:40px}
 @media(min-width:800px){.studio{grid-template-columns:repeat(3,1fr)}}
-.sc{border-radius:var(--r);padding:24px;color:#fff;position:relative;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 10px 30px rgba(0,0,0,.5)}
+.sc{border-radius:var(--r);padding:26px;color:#fff;position:relative;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 14px 34px rgba(0,0,0,.16)}
 .sc::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 70% at 0% 0%,rgba(255,255,255,.2),transparent 55%)}
 .sc>*{position:relative;z-index:1}
-.sc h3{font-size:1.4rem;font-weight:800;letter-spacing:-.04em;margin-bottom:8px}
-.sc p{font-size:.94rem;color:rgba(255,255,255,.92);font-weight:500}
-.sc .bd{display:inline-block;font-size:.72rem;font-weight:800;padding:4px 11px;border-radius:999px;background:rgba(0,0,0,.34);box-shadow:inset 0 0 0 1px rgba(255,255,255,.3);margin:14px 6px 0 0}
+.sc h3{font-size:1.4rem;font-weight:700;letter-spacing:-.04em;margin-bottom:8px}
+.sc p{font-size:.94rem;color:rgba(255,255,255,.93);font-weight:400}
+.sc .bd{display:inline-block;font-size:.72rem;font-weight:700;padding:4px 11px;border-radius:999px;background:rgba(0,0,0,.28);box-shadow:inset 0 0 0 1px rgba(255,255,255,.3);margin:14px 6px 0 0}
 .sc.b{background:linear-gradient(135deg,#0a84ff,#0040dd)}
 .sc.o{background:linear-gradient(135deg,#f26a00,#b92d00)}
 .sc.g{background:linear-gradient(135deg,#0f9d4a,#06592a)}
-.social{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
-.ib{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 4px 14px rgba(0,0,0,.45);transition:transform .25s var(--ease)}
+.social{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px;justify-content:center}
+.ib{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 16px rgba(0,0,0,.2);transition:transform .25s var(--ease)}
 .ib:hover{transform:translateY(-3px) scale(1.06)}
 .ib svg{width:22px;height:22px;fill:currentColor}
 .n-gh{background:linear-gradient(180deg,#8b5cf6,#5b21b6)}.n-ig{background:linear-gradient(45deg,#fd5900,#ff0069 50%,#7638fa)}
-.n-tt{background:linear-gradient(180deg,#2a2a2e,#000);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35)}
+.n-tt{background:linear-gradient(180deg,#2a2a2e,#000)}
 .n-x{background:linear-gradient(180deg,#3a3a3c,#0b0b0c)}.n-sc{background:linear-gradient(180deg,#ff7a1a,#f50)}
 .n-yt{background:linear-gradient(180deg,#ff3b30,#d70015)}.n-sp{background:linear-gradient(180deg,#34e06f,#14a844);color:#001a08}
 .n-tb{background:linear-gradient(180deg,#3d6a99,#1f3d5e)}
 
 /* ROADMAP + FAQ */
-.road{display:grid;gap:10px;margin-top:32px}
-.rd{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border-radius:16px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line)}
+.road{display:grid;gap:10px;margin-top:36px}
+.rd{display:flex;gap:14px;align-items:flex-start;padding:17px 18px;border-radius:16px;background:var(--card);box-shadow:var(--shadow),inset 0 0 0 1px var(--line)}
 .rd .tag{flex:none;font-size:.72rem;font-weight:800;padding:4px 10px;border-radius:999px;margin-top:2px}
 .rd .tag.ok{background:rgba(48,209,88,.18);color:var(--green)}
 .rd .tag.next{background:rgba(255,159,10,.18);color:var(--orange)}
-.rd b{display:block;font-weight:700}
+.rd b{display:block;font-weight:600}
 .rd span{font-size:.88rem;color:var(--text3)}
 @media(min-width:800px){.road{grid-template-columns:repeat(2,1fr)}}
-.faq{margin-top:32px;border-radius:var(--r);background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);overflow:hidden}
+.faq{margin:36px auto 0;max-width:820px;border-radius:var(--r);background:var(--card);box-shadow:var(--shadow),inset 0 0 0 1px var(--line);overflow:hidden}
 details{border-bottom:1px solid var(--line)}details:last-child{border:0}
-summary{list-style:none;cursor:pointer;padding:18px 20px;font-weight:700;display:flex;justify-content:space-between;gap:14px;align-items:center}
+summary{list-style:none;cursor:pointer;padding:19px 22px;font-weight:600;display:flex;justify-content:space-between;gap:14px;align-items:center}
 summary::-webkit-details-marker{display:none}
-summary::after{content:"+";font-size:1.4rem;color:var(--text3);transition:transform .25s}
+summary::after{content:"+";font-size:1.5rem;font-weight:300;color:var(--text3);transition:transform .25s}
 details[open] summary::after{transform:rotate(45deg)}
-details p{padding:0 20px 18px;color:var(--text2);font-size:.95rem;max-width:62ch}
+details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch}
 
-/* FOOTER */
-.foot{margin-top:84px;padding:34px 0 40px;border-top:1px solid var(--line)}
+/* FOOTER (abu-abu lembut seperti footer Apple) */
+.foot{margin-top:96px;padding:40px 0 44px;background:var(--bg2);border-top:1px solid var(--line)}
+.foot .kicker{text-align:left;color:var(--text3)}
 .contact{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 28px}
-.ci{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 4px 14px rgba(0,0,0,.4)}
+.ci{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 6px 16px rgba(0,0,0,.16)}
 .ci svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2}
 .ci svg.f{fill:currentColor;stroke:none}
 .c-wa{background:#25d366;color:#04230f}.c-dc{background:#5865f2}.c-em{background:#0a84ff}
 .legal{font-size:.8rem;color:var(--text3);max-width:70ch;line-height:1.6}
 
 /* MODAL */
-.ovl{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:none;align-items:flex-end;justify-content:center;padding:0}
+.ovl{position:fixed;inset:0;z-index:100;background:var(--scrim);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:none;align-items:flex-end;justify-content:center;padding:0}
 .ovl.open{display:flex;animation:fade .2s}
 @keyframes fade{from{opacity:0}}
-.sheet{width:100%;max-width:440px;max-height:92dvh;overflow:auto;background:#17181c;border-radius:26px 26px 0 0;padding:24px 22px max(24px,env(safe-area-inset-bottom));box-shadow:0 -20px 60px rgba(0,0,0,.6),inset 0 0 0 1px var(--line2);animation:up .3s var(--ease)}
+.sheet{width:100%;max-width:440px;max-height:92dvh;overflow:auto;background:var(--sheet);border-radius:26px 26px 0 0;padding:24px 22px max(24px,env(safe-area-inset-bottom));box-shadow:0 -20px 60px rgba(0,0,0,.25),inset 0 0 0 1px var(--line);animation:up .3s var(--ease)}
 @keyframes up{from{transform:translateY(30px);opacity:0}}
 @media(min-width:560px){.ovl{align-items:center;padding:20px}.sheet{border-radius:26px}}
 .sh-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.sh-head h3{font-size:1.4rem;font-weight:800;letter-spacing:-.04em}
-.x{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;font-size:1.2rem;line-height:1}
-.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:14px;background:rgba(255,255,255,.07);margin:16px 0}
-.seg button{min-height:40px;border-radius:11px;font-weight:700;font-size:.9rem;color:var(--text2)}
-.seg button[aria-selected=true]{background:#fff;color:#06143a}
-.fl{display:block;font-size:.82rem;font-weight:700;color:var(--text2);margin:14px 0 6px}
-.in{width:100%;min-height:48px;padding:0 14px;border-radius:14px;background:#0b0c0f;border:1px solid var(--line2);color:#fff;font:inherit;font-size:1rem}
-.in:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(10,132,255,.35)}
-.pw{position:relative}.pw .in{padding-right:64px}
-.pw button{position:absolute;right:6px;top:6px;height:36px;padding:0 12px;border-radius:10px;font-size:.78rem;font-weight:700;color:var(--text2);background:rgba(255,255,255,.08)}
-.msg{display:none;margin-top:14px;padding:11px 14px;border-radius:12px;font-size:.88rem;font-weight:600}
-.msg.show{display:block}.msg.err{background:rgba(255,69,58,.14);color:#ff8d85}.msg.ok{background:rgba(48,209,88,.14);color:#7be598}.msg.info{background:rgba(10,132,255,.14);color:#8cc4ff}
-.lnk-b{background:none;color:var(--blue);font-weight:700;font-size:.86rem;padding:8px 0}
-.qrbox{background:#fff;border-radius:18px;padding:10px;margin:14px 0}
+.sh-head h3{font-size:1.4rem;font-weight:700;letter-spacing:-.04em}
+.x{width:36px;height:36px;border-radius:50%;background:var(--fill);display:grid;place-items:center;font-size:1.2rem;line-height:1}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:14px;background:var(--fill);margin:16px 0}
+.seg button{min-height:40px;border-radius:11px;font-weight:600;font-size:.9rem;color:var(--text2)}
+.seg button[aria-selected=true]{background:var(--seg-on);color:var(--text);box-shadow:var(--seg-sh)}
+.fl{display:block;font-size:.82rem;font-weight:600;color:var(--text2);margin:14px 0 6px}
+.in{width:100%;min-height:48px;padding:0 14px;border-radius:14px;background:var(--in);border:1px solid var(--line2);color:var(--text);font:inherit;font-size:1rem}
+.in:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,113,227,.28)}
+.pw{position:relative}.pw .in{padding-right:76px}
+.pw button{position:absolute;right:6px;top:6px;height:36px;padding:0 12px;border-radius:10px;font-size:.78rem;font-weight:600;color:var(--text2);background:var(--fill)}
+.msg{display:none;margin-top:14px;padding:11px 14px;border-radius:12px;font-size:.88rem;font-weight:500}
+.msg.show{display:block}.msg.err{background:var(--err-bg);color:var(--err-tx)}.msg.ok{background:var(--ok-bg);color:var(--ok-tx)}.msg.info{background:var(--info-bg);color:var(--info-tx)}
+.lnk-b{background:none;color:var(--link);font-weight:600;font-size:.86rem;padding:8px 0}
+.qrbox{background:#fff;border-radius:18px;padding:10px;margin:14px 0;box-shadow:inset 0 0 0 1px var(--line)}
 .qrbox img{width:100%;max-width:300px;margin:0 auto;border-radius:10px}
 .tm{font-family:ui-monospace,Menlo,monospace;font-weight:700;color:var(--red)}
-.ordid{display:flex;gap:8px;align-items:center;background:#0b0c0f;border-radius:12px;padding:10px 12px;margin:6px 0 4px;border:1px solid var(--line2)}
+.ordid{display:flex;gap:8px;align-items:center;background:var(--code);border-radius:12px;padding:10px 12px;margin:6px 0 4px;border:1px solid var(--line2)}
 .ordid code{flex:1;font-size:.85rem;word-break:break-all;font-family:ui-monospace,Menlo,monospace}
-.ordid button{font-size:.78rem;font-weight:700;color:var(--blue);padding:6px 10px;border-radius:8px;background:rgba(10,132,255,.14)}
+.ordid button{font-size:.78rem;font-weight:600;color:var(--link);padding:6px 10px;border-radius:8px;background:rgba(0,113,227,.12)}
 .cnt{text-align:center;font-size:.84rem;color:var(--text2);margin:6px 0}
-.big-amt{text-align:center;font-size:2rem;font-weight:800;letter-spacing:-.05em}
+.big-amt{text-align:center;font-size:2rem;font-weight:700;letter-spacing:-.05em}
 
 /* TOAST */
-.toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:200;background:#fff;color:#06143a;font-weight:700;font-size:.9rem;padding:12px 20px;border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:.3s var(--ease);max-width:calc(100vw - 32px);text-align:center}
+.toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:200;background:var(--inv);color:var(--inv-tx);font-weight:600;font-size:.9rem;padding:12px 20px;border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:.3s var(--ease);max-width:calc(100vw - 32px);text-align:center}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 
 .rv{opacity:0;transform:translateY(18px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
@@ -306,32 +375,38 @@ details p{padding:0 20px 18px;color:var(--text2);font-size:.95rem;max-width:62ch
 <div class="glow" aria-hidden="true"></div>
 
 <!-- NAV -->
-<nav class="nav" aria-label="Utama">
+<nav class="nav" aria-label="Utama" data-en-aria="Main">
   <div class="wrap nav-in">
-    <a class="brand" href="#top" aria-label="Smartphone Empire"><img src="./assets/icon/icon-192.png" alt="" width="30" height="30"><span class="brand-tx">Smartphone Empire</span></a>
+    <a class="brand" href="#top" aria-label="Smartphone Empire"><img src="./assets/icon/icon-192.png" alt="" width="28" height="28"><span class="brand-tx">Smartphone Empire</span></a>
     <div class="nav-links">
-      <a href="#fitur">Fitur</a><a href="#cuplikan">Cuplikan</a><a href="#era">Era</a><a href="#silicon">Silicon</a><a href="#studio">Studio</a>
+      <a href="#fitur" data-en="Features">Fitur</a><a href="#cuplikan" data-en="Screenshots">Cuplikan</a><a href="#era" data-en="Eras">Era</a><a href="#bahasa" data-en="Language">Bahasa</a><a href="#silicon">Silicon</a><a href="#studio">Studio</a>
     </div>
     <span class="nav-sp"></span>
+    <div class="lang" role="group" aria-label="Bahasa" data-en-aria="Language">
+      <button type="button" data-lang="id" aria-pressed="true" title="Bahasa Indonesia">ID</button>
+      <button type="button" data-lang="en" aria-pressed="false" title="English">EN</button>
+    </div>
+    <button class="icon-btn" id="themeBtn" type="button" aria-label="Ganti ke mode gelap">
+      <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
+      <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
     <button class="btn btn-ghost btn-sm" id="navAuth" type="button">Masuk</button>
-    <a class="btn btn-primary btn-sm" href="./index.html">Mainkan</a>
+    <a class="btn btn-blue btn-sm" href="./index.html" data-en="Play">Mainkan</a>
   </div>
 </nav>
 
 <header id="top" class="wrap hero">
-  <div>
-    <div class="eyebrow"><b>v0.2.1</b> Jurkon Studio · Game simulasi independen</div>
-    <h1 class="title">Bangun kerajaan <em>ponselmu</em>.<br>Dari 2000 sampai era AI.</h1>
-    <p class="lede">Kamu CEO perusahaan ponsel yang baru berdiri pada 1 Januari 2000. Rekrut tim, riset teknologi, rancang ponsel, lalu lawan Nokia, Apple, Samsung, dan 22 kompetitor lain sampai era foldable.</p>
-    <div class="cta">
-      <a class="btn btn-blue" href="./index.html">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Mainkan gratis</a>
-      <a class="btn btn-primary" href="https://github.com/jurkonstudio/smartphone-empire/releases/download/tycoon/Smartphone.Empire.apk" download rel="noopener">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>Download APK</a>
-      <button class="btn btn-ghost" type="button" data-open-auth>Masuk / Daftar</button>
-    </div>
-    <p class="hero-note">Tanpa instalasi di browser HP atau PC. APK untuk Android, izinkan instal dari sumber tidak dikenal bila diminta.</p>
+  <div class="eyebrow"><b>v0.2.1</b> <span data-en="Jurkon Studio · Independent simulation game">Jurkon Studio · Game simulasi independen</span></div>
+  <h1 class="title" data-en="Build your <em>phone</em> empire.<br>From 2000 to the AI era.">Bangun kerajaan <em>ponselmu</em>.<br>Dari 2000 sampai era AI.</h1>
+  <p class="lede" data-en="You’re the CEO of a phone company founded on January 1, 2000. Hire a team, research technology, design phones, then take on Nokia, Apple, Samsung, and 22 other competitors all the way to the foldable era.">Kamu CEO perusahaan ponsel yang baru berdiri pada 1 Januari 2000. Rekrut tim, riset teknologi, rancang ponsel, lalu lawan Nokia, Apple, Samsung, dan 22 kompetitor lain sampai era foldable.</p>
+  <div class="cta">
+    <a class="btn btn-blue" href="./index.html">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span data-en="Play for free">Mainkan gratis</span></a>
+    <a class="btn btn-primary" href="https://github.com/jurkonstudio/smartphone-empire/releases/download/tycoon/Smartphone.Empire.apk" download rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/></svg><span data-en="Download APK">Download APK</span></a>
+    <button class="btn btn-ghost" type="button" data-open-auth data-en="Sign in / Sign up">Masuk / Daftar</button>
   </div>
+  <p class="hero-note" data-en="No install needed in your phone or PC browser. For the Android APK, allow installs from unknown sources if prompted.">Tanpa instalasi di browser HP atau PC. APK untuk Android, izinkan instal dari sumber tidak dikenal bila diminta.</p>
   <div class="phones" aria-hidden="true">
     <div class="phone p1"><img src="./assets/img/landing/riset.jpg" alt="" loading="lazy"></div>
     <div class="phone p2"><img src="./assets/img/landing/desain.jpg" alt=""></div>
@@ -342,105 +417,129 @@ details p{padding:0 20px 18px;color:var(--text2);font-size:.95rem;max-width:62ch
 <main>
 <div class="wrap">
   <div class="stats rv" role="list">
-    <div class="stat" role="listitem"><b>26</b><span>Perusahaan kompetitor</span></div>
-    <div class="stat" role="listitem"><b>70</b><span>Node tech tree</span></div>
-    <div class="stat" role="listitem"><b>117</b><span>Komponen ponsel</span></div>
-    <div class="stat" role="listitem"><b>84</b><span>Saham di bursa</span></div>
-    <div class="stat" role="listitem"><b>2</b><span>Bahasa penuh: ID dan EN</span></div>
+    <div class="stat" role="listitem"><b>26</b><span data-en="Competitor companies">Perusahaan kompetitor</span></div>
+    <div class="stat" role="listitem"><b>70</b><span data-en="Tech tree nodes">Node tech tree</span></div>
+    <div class="stat" role="listitem"><b>117</b><span data-en="Phone components">Komponen ponsel</span></div>
+    <div class="stat" role="listitem"><b>84</b><span data-en="Stocks on the exchange">Saham di bursa</span></div>
+    <div class="stat" role="listitem"><b>12</b><span data-en="Languages · ID and EN complete">Bahasa · ID dan EN penuh</span></div>
   </div>
 </div>
 
 <!-- FITUR -->
 <section id="fitur"><div class="wrap">
-  <div class="kicker">Isi game</div>
-  <h2 class="h">Satu perusahaan, banyak sistem yang saling terhubung.</h2>
-  <p class="sub">Setiap fitur di bawah ini ada di dalam game. Angkanya dihitung dari file data game versi 0.2.1.</p>
+  <div class="kicker" data-en="What’s inside">Isi game</div>
+  <h2 class="h" data-en="One company, many connected systems.">Satu perusahaan, banyak sistem yang saling terhubung.</h2>
+  <p class="sub" data-en="Every feature below is in the game. The numbers are counted from the game’s data files, version 0.2.1.">Setiap fitur di bawah ini ada di dalam game. Angkanya dihitung dari file data game versi 0.2.1.</p>
   <div class="bento">
     <article class="tile hl w4 c-blue rv">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg></div>
-      <h3>Kampus 3D, Kantor, dan Tim</h3>
-      <p>Peta kampus 3D tumbuh seiring progres. Di HQ ada kantor isometrik dengan 9 ruangan yang terhubung ke data game: staf duduk di meja, lab menampilkan riset aktif, showroom menampilkan produk yang dijual.</p>
-      <ul><li>Tim 3 peran: Engineer, Designer, Marketer, 5 tingkat skill dan 8 trait</li><li>Kandidat dari 7 negara, headhunter, dan tawar gaji</li><li>Bangun atau upgrade Fab dan latih staf langsung dari peta kantor</li></ul>
+      <h3 data-en="3D Campus, Office, and Team">Kampus 3D, Kantor, dan Tim</h3>
+      <p data-en="The 3D campus map grows with your progress. At HQ there’s an isometric office with 9 rooms wired to game data: staff sit at desks, the lab shows active research, the showroom shows the products you sell.">Peta kampus 3D tumbuh seiring progres. Di HQ ada kantor isometrik dengan 9 ruangan yang terhubung ke data game: staf duduk di meja, lab menampilkan riset aktif, showroom menampilkan produk yang dijual.</p>
+      <ul>
+        <li data-en="3 roles: Engineer, Designer, Marketer, with 5 skill levels and 8 traits">Tim 3 peran: Engineer, Designer, Marketer, 5 tingkat skill dan 8 trait</li>
+        <li data-en="Candidates from 7 countries, headhunters, and salary negotiation">Kandidat dari 7 negara, headhunter, dan tawar gaji</li>
+        <li data-en="Build or upgrade a Fab and train staff right from the office map">Bangun atau upgrade Fab dan latih staf langsung dari peta kantor</li>
+      </ul>
     </article>
     <article class="tile c-violet rv">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L4 20h16L14 9V3"/></svg></div>
       <div class="big">70</div>
-      <h3>Riset dan OS</h3>
-      <p>70 node di 8 kategori dari 2000 sampai 2025. Bangun OS sendiri dengan 35 fitur, atau lisensi OS pihak ketiga.</p>
+      <h3 data-en="Research and OS">Riset dan OS</h3>
+      <p data-en="70 nodes across 8 categories from 2000 to 2025. Build your own OS with 35 features, or license a third-party OS.">70 node di 8 kategori dari 2000 sampai 2025. Bangun OS sendiri dengan 35 fitur, atau lisensi OS pihak ketiga.</p>
     </article>
     <article class="tile c-orange rv">
       <div class="ic"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg></div>
-      <h3>Wizard desain ponsel</h3>
-      <p>Preview real-time dengan 117 komponen di 9 kategori dan 8 warna bodi. Pilihan mengikuti tahun: tidak ada layar OLED di 2001.</p>
+      <h3 data-en="Phone design wizard">Wizard desain ponsel</h3>
+      <p data-en="Real-time preview with 117 components in 9 categories and 8 body colors. Choices follow the year: no OLED screens in 2001.">Preview real-time dengan 117 komponen di 9 kategori dan 8 warna bodi. Pilihan mengikuti tahun: tidak ada layar OLED di 2001.</p>
     </article>
     <article class="tile c-green rv">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 17l5-5 4 4 8-9"/><path d="M15 7h5v5"/></svg></div>
-      <h3>Permintaan yang transparan</h3>
-      <p>Kualitas, harga, reputasi, pemasaran, OS, tren, kompetitor, siklus hidup, dan kondisi makro ikut menentukan penjualan.</p>
+      <h3 data-en="Transparent demand">Permintaan yang transparan</h3>
+      <p data-en="Quality, price, reputation, marketing, OS, trends, competitors, lifecycle, and macro conditions all shape your sales.">Kualitas, harga, reputasi, pemasaran, OS, tren, kompetitor, siklus hidup, dan kondisi makro ikut menentukan penjualan.</p>
     </article>
     <article class="tile c-red rv">
       <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg></div>
-      <h3>26 kompetitor hidup</h3>
-      <p>Nokia, Motorola, Samsung, Apple, Xiaomi dan lainnya punya kepribadian, produk ikonik, serta life event historis. Mode nama asli atau parodi.</p>
+      <h3 data-en="26 living competitors">26 kompetitor hidup</h3>
+      <p data-en="Nokia, Motorola, Samsung, Apple, Xiaomi, and more each have a personality, iconic products, and historical life events. Real-name or parody-name mode.">Nokia, Motorola, Samsung, Apple, Xiaomi dan lainnya punya kepribadian, produk ikonik, serta life event historis. Mode nama asli atau parodi.</p>
     </article>
     <article class="tile w3 c-cyan rv">
       <div class="ic"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg></div>
-      <h3>Chip dan Fab</h3>
-      <p>Riset 52 node chip, rancang chip sendiri dari 8 arsitektur dan 14 process node. Fab 4 tingkat, dari Small Fab 5.000 chip per bulan sampai Mega Fab 5 juta chip per bulan.</p>
+      <h3 data-en="Chips and Fabs">Chip dan Fab</h3>
+      <p data-en="Research 52 chip nodes, design your own chip from 8 architectures and 14 process nodes. 4 Fab tiers, from the Small Fab at 5,000 chips a month to the Mega Fab at 5 million.">Riset 52 node chip, rancang chip sendiri dari 8 arsitektur dan 14 process node. Fab 4 tingkat, dari Small Fab 5.000 chip per bulan sampai Mega Fab 5 juta chip per bulan.</p>
     </article>
     <article class="tile w3 c-orange rv">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 9l9-6 9 6M5 9v10M19 9v10M9 19v-6M15 19v-6M3 21h18"/></svg></div>
-      <h3>Keuangan dan bursa</h3>
-      <p>Tiga bank dengan pinjaman, deposito, dan credit rating AAA sampai D. Bursa dengan 84 saham, 9 indeks, dan 5 mata uang dengan kurs historis. Kas negatif 2 bulan berturut-turut berarti game over.</p>
+      <h3 data-en="Finance and stock exchange">Keuangan dan bursa</h3>
+      <p data-en="Three banks with loans, deposits, and credit ratings from AAA to D. An exchange with 84 stocks, 9 indices, and 5 currencies with historical rates. Two months of negative cash in a row means game over.">Tiga bank dengan pinjaman, deposito, dan credit rating AAA sampai D. Bursa dengan 84 saham, 9 indeks, dan 5 mata uang dengan kurs historis. Kas negatif 2 bulan berturut-turut berarti game over.</p>
     </article>
     <article class="tile w3 c-blue rv">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H4zM8 21h8M12 16v5"/></svg></div>
-      <h3>Opini publik dan berita</h3>
-      <p>Sentimen per aspek, feed ulasan, dan 10 viral event yang bisa kamu tanggapi: minta maaf, recall, klarifikasi, atau diabaikan. Berita otomatis dari 20 media.</p>
+      <h3 data-en="Public opinion and news">Opini publik dan berita</h3>
+      <p data-en="Sentiment across 11 aspects, a review feed, and 26 viral events you can respond to: apologize, recall, clarify, or ignore. Automatic news from 20 outlets.">Sentimen per 11 aspek, feed ulasan, dan 26 viral event yang bisa kamu tanggapi: minta maaf, recall, klarifikasi, atau diabaikan. Berita otomatis dari 20 media.</p>
     </article>
     <article class="tile w3 c-violet rv">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.4 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/></svg></div>
-      <h3>Dompet Universal</h3>
-      <p>Uang ($) dan Silicon (SIL) bisa saling menutup untuk hampir semua biaya. Pilih mode bayar: Otomatis, Uang dulu, SIL dulu, atau Terpisah.</p>
+      <h3 data-en="Universal Wallet">Dompet Universal</h3>
+      <p data-en="Money ($) and Silicon (SIL) can cover each other for almost any cost. Pick a pay mode: Automatic, Money first, SIL first, or Separate.">Uang ($) dan Silicon (SIL) bisa saling menutup untuk hampir semua biaya. Pilih mode bayar: Otomatis, Uang dulu, SIL dulu, atau Terpisah.</p>
     </article>
   </div>
 </div></section>
 
 <!-- CUPLIKAN -->
 <section id="cuplikan"><div class="wrap">
-  <div class="kicker">Cuplikan</div>
-  <h2 class="h">Tampilan asli dari dalam game.</h2>
-  <div class="tabs" role="tablist" aria-label="Cuplikan game" id="tabs" style="margin-top:28px"></div>
+  <div class="kicker" data-en="Screenshots">Cuplikan</div>
+  <h2 class="h" data-en="The real look, straight from the game.">Tampilan asli dari dalam game.</h2>
+  <div class="tabs" role="tablist" aria-label="Cuplikan game" data-en-aria="Game screenshots" id="tabs"></div>
   <div class="show">
     <div class="show-copy" id="showCopy" aria-live="polite"></div>
-    <div class="show-ph"><div class="phone"><img id="showImg" src="./assets/img/landing/hq.jpg" alt="Cuplikan layar HQ Smartphone Empire"></div><div class="zoom-hint">Ketuk gambar untuk memperbesar</div></div>
+    <div class="show-ph"><div class="phone"><img id="showImg" src="./assets/img/landing/hq.jpg" alt="Cuplikan layar HQ Smartphone Empire"></div><div class="zoom-hint" data-en="Tap the image to enlarge">Ketuk gambar untuk memperbesar</div></div>
   </div>
 </div></section>
 
 <!-- ERA -->
 <section id="era"><div class="wrap">
-  <div class="kicker">Evolusi</div>
-  <h2 class="h">Tujuh era desain. Satu perjalanan.</h2>
-  <p class="sub">Mockup ponsel, layar, dan notifikasi berubah mengikuti era, dari candybar monokrom sampai ponsel lipat.</p>
+  <div class="kicker" data-en="Evolution">Evolusi</div>
+  <h2 class="h" data-en="Seven design eras. One journey.">Tujuh era desain. Satu perjalanan.</h2>
+  <p class="sub" data-en="Phone mockups, screens, and notifications change with the era, from monochrome candybars to foldables.">Mockup ponsel, layar, dan notifikasi berubah mengikuti era, dari candybar monokrom sampai ponsel lipat.</p>
   <div class="eras" id="eras"></div>
+</div></section>
+
+<!-- BAHASA & TEMA -->
+<section id="bahasa"><div class="wrap">
+  <div class="kicker" data-en="Language and appearance">Bahasa dan tampilan</div>
+  <h2 class="h" data-en="Play in your language, in your light.">Mainkan dalam bahasamu, dalam cahayamu.</h2>
+  <p class="sub" data-en="The game supports 12 languages you can switch anytime in Settings. Bahasa Indonesia and English are complete; the other 10 use a core dictionary and fall back to English for text that isn’t translated yet.">Game mendukung 12 bahasa yang bisa diganti kapan saja di Setelan. Bahasa Indonesia dan English tersedia penuh; 10 bahasa lainnya memakai kamus inti dan kembali ke English untuk teks yang belum diterjemahkan.</p>
+  <div class="duo">
+    <article class="tile c-blue rv">
+      <h3 data-en="12 languages in the game">12 bahasa di dalam game</h3>
+      <p data-en="Pick one in Settings. Without a saved choice, the game follows your phone or browser language.">Pilih di Setelan. Tanpa pilihan tersimpan, game mengikuti bahasa ponsel atau browsermu.</p>
+      <div class="chips" id="langChips"></div>
+    </article>
+    <article class="tile c-violet rv">
+      <h3 data-en="Light and dark theme">Tema terang dan gelap</h3>
+      <p data-en="Switch theme and choose from 6 accent colors in Settings. This page has its own theme and language buttons in the top bar.">Ganti tema dan pilih 6 warna aksen di Setelan. Halaman ini juga punya tombol tema dan bahasa di bilah atas.</p>
+      <div class="tmini" aria-hidden="true"><div class="l"><span data-en="Light">Terang</span></div><div class="d"><span data-en="Dark">Gelap</span></div></div>
+      <div class="swatches" id="swatches"></div>
+    </article>
+  </div>
 </div></section>
 
 <!-- CARA MAIN -->
 <section id="cara"><div class="wrap">
-  <div class="kicker">Cara main</div>
-  <h2 class="h">Empat langkah dari garasi ke puncak pasar.</h2>
+  <div class="kicker" data-en="How to play">Cara main</div>
+  <h2 class="h" data-en="Four steps from the garage to the top of the market.">Empat langkah dari garasi ke puncak pasar.</h2>
   <div class="steps">
-    <div class="step rv"><div class="n">1</div><h3>Bentuk tim</h3><p>Rekrut engineer, designer, dan marketer. Gaji dan moral ikut bergerak.</p></div>
-    <div class="step rv"><div class="n">2</div><h3>Riset teknologi</h3><p>Buka tech tree dan OS supaya tidak tertinggal dari kompetitor.</p></div>
-    <div class="step rv"><div class="n">3</div><h3>Desain dan rilis</h3><p>Desain, prototipe, produksi, rilis. Maksimal 5 produk aktif.</p></div>
-    <div class="step rv"><div class="n">4</div><h3>Kuasai pasar</h3><p>Baca ulasan, atur harga dan promosi, jaga kas supaya tidak bangkrut.</p></div>
+    <div class="step rv"><div class="n">1</div><h3 data-en="Build a team">Bentuk tim</h3><p data-en="Hire engineers, designers, and marketers. Salaries and morale shift over time.">Rekrut engineer, designer, dan marketer. Gaji dan moral ikut bergerak.</p></div>
+    <div class="step rv"><div class="n">2</div><h3 data-en="Research technology">Riset teknologi</h3><p data-en="Open the tech tree and OS so you don’t fall behind your competitors.">Buka tech tree dan OS supaya tidak tertinggal dari kompetitor.</p></div>
+    <div class="step rv"><div class="n">3</div><h3 data-en="Design and launch">Desain dan rilis</h3><p data-en="Design, prototype, production, release. Up to 5 active products.">Desain, prototipe, produksi, rilis. Maksimal 5 produk aktif.</p></div>
+    <div class="step rv"><div class="n">4</div><h3 data-en="Own the market">Kuasai pasar</h3><p data-en="Read reviews, set prices and promotions, and keep your cash positive to avoid bankruptcy.">Baca ulasan, atur harga dan promosi, jaga kas supaya tidak bangkrut.</p></div>
   </div>
   <div class="rules">
-    <span class="pill">Modal awal <b>$200K / $100K / $50K</b></span>
-    <span class="pill">1 hari game = <b>60 detik</b></span>
-    <span class="pill">Kecepatan <b>2x, 5x, 10x</b></span>
-    <span class="pill">Pajak <b>12% / 15% / 20%</b></span>
-    <span class="pill">Mode hemat otomatis di HP kelas bawah</span>
+    <span class="pill" data-en="Starting capital <b>$200K / $100K / $50K</b>">Modal awal <b>$200K / $100K / $50K</b></span>
+    <span class="pill" data-en="1 game day = <b>60 seconds</b>">1 hari game = <b>60 detik</b></span>
+    <span class="pill" data-en="Speed <b>2x, 5x, 10x</b>">Kecepatan <b>2x, 5x, 10x</b></span>
+    <span class="pill" data-en="Tax <b>12% / 15% / 20%</b>">Pajak <b>12% / 15% / 20%</b></span>
+    <span class="pill" data-en="Automatic lite mode on low-end phones">Mode hemat otomatis di HP kelas bawah</span>
   </div>
 </div></section>
 
@@ -448,21 +547,21 @@ details p{padding:0 20px 18px;color:var(--text2);font-size:.95rem;max-width:62ch
 <section id="silicon"><div class="wrap">
   <div class="sil">
     <div class="kicker">Silicon (SIL)</div>
-    <h2 class="h">Akun, saldo, dan top up Silicon.</h2>
-    <p class="sub">SIL adalah mata uang premium untuk mempercepat waktu dan riset. Masuk dengan akun yang sama dengan di game, lalu top up dari sini.</p>
+    <h2 class="h" data-en="Account, balance, and Silicon top-up.">Akun, saldo, dan top up Silicon.</h2>
+    <p class="sub" data-en="SIL is a premium currency for speeding up time and research. Sign in with the same account you use in the game, then top up from here.">SIL adalah mata uang premium untuk mempercepat waktu dan riset. Masuk dengan akun yang sama dengan di game, lalu top up dari sini.</p>
     <div class="sil-grid">
       <div>
         <div class="acct" id="acct"></div>
         <ul class="wallet-list">
-          <li>Percepat waktu 2x, 5x, 10x dan mempercepat riset serta OS.</li>
-          <li>Bonus login harian dan reward quest di dalam game.</li>
-          <li>SIL tidak pernah dicetak dari uang. Saldo dan ledger dijaga di server.</li>
-          <li>Pemain tanpa akun tetap bisa main penuh, akun dibutuhkan untuk cloud save, SIL, dan leaderboard.</li>
+          <li data-en="Speed up time 2x, 5x, 10x and accelerate research and OS.">Percepat waktu 2x, 5x, 10x dan mempercepat riset serta OS.</li>
+          <li data-en="Daily login bonus and quest rewards inside the game.">Bonus login harian dan reward quest di dalam game.</li>
+          <li data-en="SIL is never minted from money. Balance and ledger are kept on the server.">SIL tidak pernah dicetak dari uang. Saldo dan ledger dijaga di server.</li>
+          <li data-en="Players without an account can still play everything. An account is needed for cloud save, SIL, and the leaderboard.">Pemain tanpa akun tetap bisa main penuh, akun dibutuhkan untuk cloud save, SIL, dan leaderboard.</li>
         </ul>
       </div>
       <div id="shop">
-        <div class="pkgs" role="radiogroup" aria-label="Paket Silicon" id="pkgs"></div>
-        <div class="methods" role="radiogroup" aria-label="Metode pembayaran" id="methods">
+        <div class="pkgs" role="radiogroup" aria-label="Paket Silicon" data-en-aria="Silicon packages" id="pkgs"></div>
+        <div class="methods" role="radiogroup" aria-label="Metode pembayaran" data-en-aria="Payment method" id="methods">
           <button class="method" type="button" role="radio" aria-checked="true" data-m="qris">QRIS</button>
           <button class="method" type="button" role="radio" aria-checked="false" data-m="gopay">GoPay</button>
         </div>
@@ -470,8 +569,8 @@ details p{padding:0 20px 18px;color:var(--text2);font-size:.95rem;max-width:62ch
           <div><div class="sm" id="coLabel">Pilih paket</div><div class="tt" id="coTotal">—</div></div>
           <button class="btn btn-blue" type="button" id="coBtn" disabled>Top up sekarang</button>
         </div>
-        <p class="fine">Pembayaran lewat QRIS dan GoPay dikonfirmasi manual oleh admin. Setelah disetujui, saldo SIL masuk ke akunmu. Sertakan Order ID di berita transfer. Maksimal 5 pesanan menunggu persetujuan.</p>
-        <div class="orders" id="orders" hidden><h4>Pesanan terakhir</h4><div id="ordList"></div></div>
+        <p class="fine" data-en="QRIS and GoPay payments are confirmed manually by an admin. Once approved, the SIL balance is added to your account. Include the Order ID in the transfer note. Maximum 5 orders awaiting approval.">Pembayaran lewat QRIS dan GoPay dikonfirmasi manual oleh admin. Setelah disetujui, saldo SIL masuk ke akunmu. Sertakan Order ID di berita transfer. Maksimal 5 pesanan menunggu persetujuan.</p>
+        <div class="orders" id="orders" hidden><h4 data-en="Recent orders">Pesanan terakhir</h4><div id="ordList"></div></div>
       </div>
     </div>
   </div>
@@ -480,14 +579,14 @@ details p{padding:0 20px 18px;color:var(--text2);font-size:.95rem;max-width:62ch
 <!-- STUDIO -->
 <section id="studio"><div class="wrap">
   <div class="kicker">Jurkon Studio</div>
-  <h2 class="h">Studio game independen.</h2>
-  <p class="sub">Dibuat oleh Kalfin Agus Setiawan: mekanik simulasi yang dalam, sistem cloud, dan antarmuka yang nyaman di ponsel.</p>
+  <h2 class="h" data-en="An independent game studio.">Studio game independen.</h2>
+  <p class="sub" data-en="Made by Kalfin Agus Setiawan: deep simulation mechanics, a cloud system, and an interface that feels right on a phone.">Dibuat oleh Kalfin Agus Setiawan: mekanik simulasi yang dalam, sistem cloud, dan antarmuka yang nyaman di ponsel.</p>
   <div class="studio">
-    <article class="sc b rv"><h3>Smartphone Empire</h3><p>Proyek utama. Simulasi bisnis dan strategi teknologi dengan cloud save, leaderboard, dan Silicon.</p><span class="bd">Proyek utama</span><span class="bd">Gratis</span></article>
-    <article class="sc o rv"><h3>Juragan Konstruksi</h3><p>Simulasi infrastruktur berskala besar: proyek sipil, perizinan, serta manajemen kredit dan arus kas.</p><span class="bd">Simulasi</span><span class="bd">Manajemen</span></article>
-    <article class="sc g rv"><h3>The Engine</h3><p>Dibangun dengan JavaScript murni dan HTML5, tanpa framework dan tanpa bundler. Three.js dimuat lazy untuk peta 3D.</p><span class="bd">Vanilla JS</span><span class="bd">Mobile-first</span></article>
+    <article class="sc b rv"><h3>Smartphone Empire</h3><p data-en="The flagship project. A business and tech-strategy simulation with cloud save, a leaderboard, and Silicon.">Proyek utama. Simulasi bisnis dan strategi teknologi dengan cloud save, leaderboard, dan Silicon.</p><span class="bd" data-en="Flagship project">Proyek utama</span><span class="bd" data-en="Free">Gratis</span></article>
+    <article class="sc o rv"><h3>Juragan Konstruksi</h3><p data-en="A large-scale infrastructure simulation: civil projects, permits, and credit and cash-flow management.">Simulasi infrastruktur berskala besar: proyek sipil, perizinan, serta manajemen kredit dan arus kas.</p><span class="bd" data-en="Simulation">Simulasi</span><span class="bd" data-en="Management">Manajemen</span></article>
+    <article class="sc g rv"><h3>The Engine</h3><p data-en="Built with plain JavaScript and HTML5, no framework and no bundler. Three.js loads lazily for the 3D maps.">Dibangun dengan JavaScript murni dan HTML5, tanpa framework dan tanpa bundler. Three.js dimuat lazy untuk peta 3D.</p><span class="bd">Vanilla JS</span><span class="bd">Mobile-first</span></article>
   </div>
-  <div class="social" aria-label="Jejaring">
+  <div class="social" aria-label="Jejaring" data-en-aria="Social links">
     <a class="ib n-gh" href="https://github.com/jurkonstudio" target="_blank" rel="noopener" aria-label="GitHub"><svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg></a>
     <a class="ib n-ig" href="https://instagram.com/calvf1nka" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>
     <a class="ib n-tt" href="https://tiktok.com/@ks2908_" target="_blank" rel="noopener" aria-label="TikTok"><svg viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1.04-.1z"/></svg></a>
@@ -502,56 +601,59 @@ details p{padding:0 20px 18px;color:var(--text2);font-size:.95rem;max-width:62ch
 <!-- ROADMAP -->
 <section id="roadmap"><div class="wrap">
   <div class="kicker">Roadmap</div>
-  <h2 class="h">Yang sudah jalan dan yang sedang dikerjakan.</h2>
+  <h2 class="h" data-en="What’s done and what’s in progress.">Yang sudah jalan dan yang sedang dikerjakan.</h2>
   <div class="road">
-    <div class="rd"><span class="tag ok">Selesai</span><div><b>Office 3D Map tahap 3</b><span>Bangun atau upgrade Fab dan latih staf langsung dari peta.</span></div></div>
-    <div class="rd"><span class="tag ok">Selesai</span><div><b>Integrasi Office dan Tim</b><span>Dari kartu staf ke detail staf, dan "Lihat di kantor".</span></div></div>
-    <div class="rd"><span class="tag next">Berikutnya</span><div><b>Event acak dengan pilihan</b><span>Plus transisi layar per era dan polish UI.</span></div></div>
-    <div class="rd"><span class="tag next">Berikutnya</span><div><b>Pembayaran Silicon otomatis</b><span>Saat ini top up dikonfirmasi manual oleh admin.</span></div></div>
+    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Office 3D Map, stage 3">Office 3D Map tahap 3</b><span data-en="Build or upgrade a Fab and train staff right from the map.">Bangun atau upgrade Fab dan latih staf langsung dari peta.</span></div></div>
+    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Office and Team integration">Integrasi Office dan Tim</b><span data-en="From a staff card to staff details, and “View in office”.">Dari kartu staf ke detail staf, dan “Lihat di kantor”.</span></div></div>
+    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Random events with choices">Event acak dengan pilihan</b><span data-en="Plus per-era screen transitions and UI polish.">Plus transisi layar per era dan polish UI.</span></div></div>
+    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Automatic Silicon payments">Pembayaran Silicon otomatis</b><span data-en="Top-ups are currently confirmed manually by an admin.">Saat ini top up dikonfirmasi manual oleh admin.</span></div></div>
+    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Market Navigation panel UI">Panel UI Navigasi Pasar</b><span data-en="Segment, region, opportunity, and trend-wave cards in the Market tab.">Kartu segmen, wilayah, peluang, dan gelombang tren di tab Pasar.</span></div></div>
+    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Fully bilingual news">Berita bilingual penuh</b><span data-en="English headlines are in; some review templates are still Indonesian.">Headline English sudah ada; sebagian template ulasan masih berbahasa Indonesia.</span></div></div>
   </div>
 </div></section>
 
 <!-- FAQ -->
 <section id="faq"><div class="wrap">
   <div class="kicker">FAQ</div>
-  <h2 class="h">Pertanyaan yang sering muncul.</h2>
+  <h2 class="h" data-en="Frequently asked questions.">Pertanyaan yang sering muncul.</h2>
   <div class="faq">
-    <details><summary>Apakah game ini gratis?</summary><p>Ya. Game bisa dimainkan gratis di browser dan lewat APK Android. Silicon adalah mata uang premium opsional.</p></details>
-    <details><summary>Perlu akun untuk bermain?</summary><p>Tidak. Save lokal otomatis. Akun dibutuhkan untuk cloud save (1 slot), profil pemain, leaderboard, dan saldo SIL yang tersimpan di server.</p></details>
-    <details><summary>Berapa lama top up diproses?</summary><p>Pesanan dikonfirmasi manual oleh admin, jadi waktunya tidak instan. Status pesananmu bisa dicek di halaman ini atau di dalam game. Setelah disetujui, saldo SIL masuk otomatis.</p></details>
-    <details><summary>Apakah leaderboard sudah resmi?</summary><p>Belum. Statistik leaderboard saat ini dilaporkan dari perangkat pemain, jadi belum bisa dianggap peringkat resmi. Validasi server masih dalam pengerjaan.</p></details>
-    <details><summary>Apakah ini produk resmi Nokia, Apple, atau Samsung?</summary><p>Bukan. Ini fan project tanpa afiliasi dengan perusahaan mana pun. Nama dan merek dipakai untuk tujuan edukasi dan hiburan, dan ada mode nama parodi.</p></details>
+    <details><summary data-en="Is the game free?">Apakah game ini gratis?</summary><p data-en="Yes. You can play for free in the browser and through the Android APK. Silicon is an optional premium currency.">Ya. Game bisa dimainkan gratis di browser dan lewat APK Android. Silicon adalah mata uang premium opsional.</p></details>
+    <details><summary data-en="Do I need an account to play?">Perlu akun untuk bermain?</summary><p data-en="No. Local saves are automatic. An account is needed for cloud save (1 slot), the player profile, the leaderboard, and a server-side SIL balance.">Tidak. Save lokal otomatis. Akun dibutuhkan untuk cloud save (1 slot), profil pemain, leaderboard, dan saldo SIL yang tersimpan di server.</p></details>
+    <details><summary data-en="Which languages are supported?">Bahasa apa saja yang didukung?</summary><p data-en="12 languages: English, Bahasa Indonesia, Chinese (Simplified), Korean, Japanese, French, German, Spanish, Italian, Russian, Polish, and Hindi. Indonesian and English are complete; the rest use a core dictionary and fall back to English for untranslated text. Change it anytime in Settings.">12 bahasa: English, Bahasa Indonesia, Mandarin (Sederhana), Korea, Jepang, Prancis, Jerman, Spanyol, Italia, Rusia, Polandia, dan Hindi. Indonesia dan English tersedia penuh; sisanya memakai kamus inti dan kembali ke English untuk teks yang belum diterjemahkan. Bisa diganti kapan saja di Setelan.</p></details>
+    <details><summary data-en="How long does a top-up take?">Berapa lama top up diproses?</summary><p data-en="Orders are confirmed manually by an admin, so it isn’t instant. You can check your order status on this page or in the game. Once approved, the SIL balance is added automatically.">Pesanan dikonfirmasi manual oleh admin, jadi waktunya tidak instan. Status pesananmu bisa dicek di halaman ini atau di dalam game. Setelah disetujui, saldo SIL masuk otomatis.</p></details>
+    <details><summary data-en="Is the leaderboard official yet?">Apakah leaderboard sudah resmi?</summary><p data-en="Not yet. Leaderboard stats are currently reported from the player’s device, so they can’t be treated as official rankings. Server-side validation is still in progress.">Belum. Statistik leaderboard saat ini dilaporkan dari perangkat pemain, jadi belum bisa dianggap peringkat resmi. Validasi server masih dalam pengerjaan.</p></details>
+    <details><summary data-en="Is this an official Nokia, Apple, or Samsung product?">Apakah ini produk resmi Nokia, Apple, atau Samsung?</summary><p data-en="No. This is a fan project with no affiliation to any company. Names and brands are used for educational and entertainment purposes, and there’s a parody-name mode.">Bukan. Ini fan project tanpa afiliasi dengan perusahaan mana pun. Nama dan merek dipakai untuk tujuan edukasi dan hiburan, dan ada mode nama parodi.</p></details>
   </div>
 </div></section>
 </main>
 
-<footer class="wrap foot">
-  <span class="kicker" style="color:var(--text3)">Hubungi langsung</span>
+<footer class="foot"><div class="wrap">
+  <span class="kicker" data-en="Get in touch">Hubungi langsung</span>
   <div class="contact">
     <a class="ci c-wa" href="https://wa.me/6282243562960" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>WhatsApp</a>
     <a class="ci c-dc" href="https://discord.gg/8rQGa4yYa" target="_blank" rel="noopener"><svg class="f" viewBox="0 0 24 24"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg>Discord</a>
     <a class="ci c-em" href="mailto:calvfinka@yahoo.com"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Email</a>
   </div>
-  <p class="legal">Smartphone Empire adalah fan project, bukan produk komersial, dan tidak berafiliasi dengan Nokia, Apple, Samsung, atau perusahaan lain. Nama dan merek dipakai untuk tujuan edukasi dan hiburan; hak ciptanya milik masing-masing pemilik. Data historis disederhanakan untuk kebutuhan gameplay.</p>
+  <p class="legal" data-en="Smartphone Empire is a fan project, not a commercial product, and is not affiliated with Nokia, Apple, Samsung, or any other company. Names and brands are used for educational and entertainment purposes; rights belong to their respective owners. Historical data is simplified for gameplay.">Smartphone Empire adalah fan project, bukan produk komersial, dan tidak berafiliasi dengan Nokia, Apple, Samsung, atau perusahaan lain. Nama dan merek dipakai untuk tujuan edukasi dan hiburan; hak ciptanya milik masing-masing pemilik. Data historis disederhanakan untuk kebutuhan gameplay.</p>
   <p class="legal" style="margin-top:10px">&copy; 2026 Jurkon Studio. All rights reserved.</p>
-</footer>
+</div></footer>
 
 <!-- MODAL: AUTH -->
 <div class="ovl" id="authOvl" role="dialog" aria-modal="true" aria-labelledby="authTitle">
   <div class="sheet">
-    <div class="sh-head"><h3 id="authTitle">Masuk ke akunmu</h3><button class="x" type="button" data-close aria-label="Tutup">&times;</button></div>
-    <p style="color:var(--text2);font-size:.92rem">Pakai akun yang sama dengan di dalam game, supaya cloud save dan saldo SIL tersambung.</p>
-    <div class="seg" role="tablist"><button type="button" role="tab" aria-selected="true" data-mode="in">Masuk</button><button type="button" role="tab" aria-selected="false" data-mode="up">Daftar</button></div>
+    <div class="sh-head"><h3 id="authTitle">Masuk ke akunmu</h3><button class="x" type="button" data-close aria-label="Tutup" data-en-aria="Close">&times;</button></div>
+    <p style="color:var(--text2);font-size:.92rem" data-en="Use the same account as in the game so your cloud save and SIL balance stay connected.">Pakai akun yang sama dengan di dalam game, supaya cloud save dan saldo SIL tersambung.</p>
+    <div class="seg" role="tablist"><button type="button" role="tab" aria-selected="true" data-mode="in" data-en="Sign in">Masuk</button><button type="button" role="tab" aria-selected="false" data-mode="up" data-en="Sign up">Daftar</button></div>
     <form id="authForm" novalidate>
       <label class="fl" for="aEmail">Email</label>
-      <input class="in" id="aEmail" type="email" inputmode="email" autocomplete="email" placeholder="nama@email.com" required>
+      <input class="in" id="aEmail" type="email" inputmode="email" autocomplete="email" placeholder="nama@email.com" data-en-ph="name@email.com" required>
       <div id="aPassWrap">
-        <label class="fl" for="aPass">Kata sandi</label>
-        <div class="pw"><input class="in" id="aPass" type="password" autocomplete="current-password" placeholder="Minimal 6 karakter" required><button type="button" id="aShow">Lihat</button></div>
+        <label class="fl" for="aPass" data-en="Password">Kata sandi</label>
+        <div class="pw"><input class="in" id="aPass" type="password" autocomplete="current-password" placeholder="Minimal 6 karakter" data-en-ph="At least 6 characters" required><button type="button" id="aShow">Lihat</button></div>
       </div>
       <div class="msg" id="aMsg" role="status"></div>
       <button class="btn btn-blue" id="aSubmit" type="submit" style="width:100%;margin-top:18px">Masuk</button>
-      <div style="display:flex;justify-content:space-between;margin-top:8px"><button type="button" class="lnk-b" id="aForgot">Lupa kata sandi?</button><button type="button" class="lnk-b" id="aBack" hidden>Kembali</button></div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px"><button type="button" class="lnk-b" id="aForgot" data-en="Forgot password?">Lupa kata sandi?</button><button type="button" class="lnk-b" id="aBack" data-en="Back" hidden>Kembali</button></div>
     </form>
   </div>
 </div>
@@ -559,41 +661,99 @@ details p{padding:0 20px 18px;color:var(--text2);font-size:.95rem;max-width:62ch
 <!-- MODAL: QR -->
 <div class="ovl" id="qrOvl" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
   <div class="sheet">
-    <div class="sh-head"><h3 id="qrTitle">Pindai QRIS</h3><button class="x" type="button" data-close aria-label="Tutup">&times;</button></div>
-    <div class="cnt">Sisa waktu <span class="tm" id="qrTimer">15:00</span></div>
-    <div class="cnt" style="margin-top:10px">Total pembayaran</div>
+    <div class="sh-head"><h3 id="qrTitle" data-en="Scan QRIS">Pindai QRIS</h3><button class="x" type="button" data-close aria-label="Tutup" data-en-aria="Close">&times;</button></div>
+    <div class="cnt"><span data-en="Time left">Sisa waktu</span> <span class="tm" id="qrTimer">15:00</span></div>
+    <div class="cnt" style="margin-top:10px" data-en="Total payment">Total pembayaran</div>
     <div class="big-amt" id="qrAmt">Rp0</div>
     <div class="cnt" id="qrPkg"></div>
-    <div class="qrbox"><img src="./qris-gopay.png" alt="Kode QRIS pembayaran Jurkon Studio"></div>
-    <div class="cnt">Pindai dengan aplikasi bank atau e-wallet.<br><b>PENTING:</b> sertakan Order ID pada berita transfer.</div>
-    <div class="ordid"><code id="qrOrd"></code><button type="button" id="qrCopy">Salin</button></div>
+    <div class="qrbox"><img src="./qris-gopay.png" alt="Kode QRIS pembayaran Jurkon Studio" data-en-alt="Jurkon Studio QRIS payment code"></div>
+    <div class="cnt" data-en="Scan with your banking or e-wallet app.<br><b>IMPORTANT:</b> include the Order ID in the transfer note.">Pindai dengan aplikasi bank atau e-wallet.<br><b>PENTING:</b> sertakan Order ID pada berita transfer.</div>
+    <div class="ordid"><code id="qrOrd"></code><button type="button" id="qrCopy" data-en="Copy">Salin</button></div>
     <div class="msg" id="qMsg" role="status"></div>
-    <button class="btn btn-blue" type="button" id="qrCheck" style="width:100%;margin-top:14px">Cek status</button>
-    <p class="fine" style="text-align:center">Pesanan tetap tersimpan setelah ditutup. Admin akan memprosesnya, dan kamu bisa melihat statusnya di daftar pesanan.</p>
+    <button class="btn btn-blue" type="button" id="qrCheck" style="width:100%;margin-top:14px" data-en="Check status">Cek status</button>
+    <p class="fine" style="text-align:center" data-en="The order stays saved after you close this. An admin will process it, and you can see the status in your order list.">Pesanan tetap tersimpan setelah ditutup. Admin akan memprosesnya, dan kamu bisa melihat statusnya di daftar pesanan.</p>
   </div>
 </div>
 
-<div class="zoom" id="zoom" role="dialog" aria-modal="true" aria-label="Cuplikan diperbesar"><button class="zx" type="button" aria-label="Tutup">&times;</button><img alt=""></div>
+<div class="zoom" id="zoom" role="dialog" aria-modal="true" aria-label="Cuplikan diperbesar" data-en-aria="Enlarged screenshot"><button class="zx" type="button" aria-label="Tutup" data-en-aria="Close">&times;</button><img alt=""></div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
 /* =====================================================================
-   Smartphone Empire — landing page
+   Smartphone Empire — landing page (ID/EN, tema terang/gelap)
    Login dan top up memakai backend Supabase yang sama dengan game
    (konfigurasi diambil dari ./src/services/cloud/supabase.config.js),
    dan kunci sesi yang sama, jadi login di sini = login di game.
    ===================================================================== */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const LS_LANG = 'se-landing:lang', LS_THEME = 'se-landing:theme';
+let lang = document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'id';
+const loc = () => (lang === 'en' ? 'en-US' : 'id-ID');
 const rp = n => 'Rp' + Number(n).toLocaleString('id-ID');
-const nf = n => Number(n).toLocaleString('id-ID');
+const nf = n => Number(n).toLocaleString(loc());
+
+/* ---------- kamus teks dinamis (teks statis memakai atribut data-en) ---------- */
+const T = {
+  id: {
+    signIn: 'Masuk', signUp: 'Daftar', signOut: 'Keluar', pickPkg: 'Pilih paket', topup: 'Top up sekarang', creating: 'Membuat pesanan…',
+    popular: 'POPULER', best: 'TERBAIK', bonus: 'bonus', show: 'Lihat', hide: 'Sembunyi',
+    accNone: 'Belum masuk', accNoneSub: 'Masuk untuk top up dan melihat saldo SIL', accBal: 'Saldo SIL', accPid: 'ID Pemain', player: 'Pemain',
+    cont: 'Lanjut main', start: 'Mulai main', yourCo: 'Perusahaanmu',
+    saveYear: (co, y) => `${co} · Save cloud tahun ${y}`, noSave: co => `${co} · Belum ada save cloud`, linked: 'Akun game terhubung · belum ada save cloud',
+    ordTitle: 'Pesanan terakhir', pending: 'Menunggu', approved: 'Disetujui', rejected: 'Ditolak', viewQr: 'Lihat QR',
+    tIn: 'Masuk ke akunmu', tUp: 'Buat akun baru', tReset: 'Atur ulang kata sandi', sIn: 'Masuk', sUp: 'Daftar', sReset: 'Kirim tautan',
+    vEmail: 'Masukkan email yang valid.', vPass: 'Kata sandi minimal 6 karakter.', busy: 'Memproses…',
+    resetSent: 'Tautan atur ulang sudah dikirim. Cek emailmu.', created: 'Akun dibuat. Cek emailmu untuk konfirmasi, lalu masuk.',
+    okIn: 'Berhasil masuk', okOut: 'Kamu sudah keluar', okTop: 'Top up berhasil', idCopied: 'Order ID disalin', copyHint: 'Tekan salin pada pilihan teks',
+    qrExpired: 'Waktu scan habis. Pesanan tetap tersimpan, kamu bisa membuka QR lagi dari daftar pesanan.',
+    qrPaid: n => `Pembayaran disetujui. ${n} SIL sudah masuk ke akunmu.`, qrCancel: 'Pesanan ditolak atau dibatalkan oleh admin.',
+    qrWait: 'Belum disetujui admin. Selesaikan pembayaran, lalu cek lagi beberapa saat kemudian.',
+    e_cred: 'Email atau kata sandi salah.', e_exists: 'Email ini sudah terdaftar. Coba masuk.', e_conf: 'Email belum dikonfirmasi. Cek kotak masuk emailmu.',
+    e_weak: 'Kata sandi terlalu lemah. Pakai minimal 6 karakter.', e_rate: 'Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.',
+    e_pend: 'Kamu masih punya 5 pesanan yang menunggu persetujuan. Tunggu diproses admin.', e_pkg: 'Paket tidak valid. Muat ulang halaman lalu coba lagi.',
+    e_auth: 'Sesi login berakhir. Masuk lagi lalu coba lagi.', e_net: 'Tidak bisa terhubung ke server. Cek koneksi internetmu.', e_cfg: 'Login belum tersedia di halaman ini.',
+    e_gen: m => 'Terjadi masalah' + (m ? ' (' + m + ')' : '') + '. Coba lagi.',
+    themeToDark: 'Ganti ke mode gelap', themeToLight: 'Ganti ke mode terang',
+    full: 'Penuh', core: 'Inti',
+    desc: 'Smartphone Empire: game simulasi bisnis ponsel dari tahun 2000 sampai era AI dan foldable. Mainkan gratis di browser, download APK Android, masuk akun, dan top up Silicon.',
+    ogT: 'Smartphone Empire — Bangun kerajaan ponselmu', ogD: 'Mulai 1 Januari 2000, lawan Nokia, Apple, Samsung dan 22 kompetitor lain. Gratis di browser dan Android.',
+    accent: { blue: 'Biru', emerald: 'Emerald', violet: 'Violet', amber: 'Amber', rose: 'Rose', cyan: 'Cyan' }
+  },
+  en: {
+    signIn: 'Sign in', signUp: 'Sign up', signOut: 'Sign out', pickPkg: 'Choose a package', topup: 'Top up now', creating: 'Creating order…',
+    popular: 'POPULAR', best: 'BEST VALUE', bonus: 'bonus', show: 'Show', hide: 'Hide',
+    accNone: 'Not signed in', accNoneSub: 'Sign in to top up and see your SIL balance', accBal: 'SIL balance', accPid: 'Player ID', player: 'Player',
+    cont: 'Continue playing', start: 'Start playing', yourCo: 'Your company',
+    saveYear: (co, y) => `${co} · Cloud save, year ${y}`, noSave: co => `${co} · No cloud save yet`, linked: 'Game account linked · no cloud save yet',
+    ordTitle: 'Recent orders', pending: 'Pending', approved: 'Approved', rejected: 'Rejected', viewQr: 'View QR',
+    tIn: 'Sign in to your account', tUp: 'Create a new account', tReset: 'Reset your password', sIn: 'Sign in', sUp: 'Sign up', sReset: 'Send link',
+    vEmail: 'Enter a valid email address.', vPass: 'Password must be at least 6 characters.', busy: 'Working on it…',
+    resetSent: 'Reset link sent. Check your email.', created: 'Account created. Check your email to confirm, then sign in.',
+    okIn: 'Signed in', okOut: 'You’ve signed out', okTop: 'Top-up successful', idCopied: 'Order ID copied', copyHint: 'Press copy on the selected text',
+    qrExpired: 'Scan time is up. The order is still saved, and you can reopen the QR from your order list.',
+    qrPaid: n => `Payment approved. ${n} SIL has been added to your account.`, qrCancel: 'The order was rejected or cancelled by an admin.',
+    qrWait: 'Not approved by an admin yet. Complete the payment, then check again in a little while.',
+    e_cred: 'Wrong email or password.', e_exists: 'This email is already registered. Try signing in.', e_conf: 'Email not confirmed yet. Check your inbox.',
+    e_weak: 'Password is too weak. Use at least 6 characters.', e_rate: 'Too many attempts. Wait a moment and try again.',
+    e_pend: 'You still have 5 orders awaiting approval. Wait for an admin to process them.', e_pkg: 'Invalid package. Reload the page and try again.',
+    e_auth: 'Your session expired. Sign in again and retry.', e_net: 'Can’t reach the server. Check your internet connection.', e_cfg: 'Sign-in isn’t available on this page.',
+    e_gen: m => 'Something went wrong' + (m ? ' (' + m + ')' : '') + '. Please try again.',
+    themeToDark: 'Switch to dark mode', themeToLight: 'Switch to light mode',
+    full: 'Full', core: 'Core',
+    desc: 'Smartphone Empire: a phone-business simulation game from the year 2000 to the AI and foldable era. Play free in your browser, download the Android APK, sign in, and top up Silicon.',
+    ogT: 'Smartphone Empire — Build your phone empire', ogD: 'Starting January 1, 2000, take on Nokia, Apple, Samsung and 22 other competitors. Free in the browser and on Android.',
+    accent: { blue: 'Blue', emerald: 'Emerald', violet: 'Violet', amber: 'Amber', rose: 'Rose', cyan: 'Cyan' }
+  }
+};
+const t = (k, ...a) => { const v = (T[lang][k] ?? T.id[k]); return typeof v === 'function' ? v(...a) : v; };
 
 /* ---------- toast ---------- */
 let toastT;
 function toast(msg) {
-  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 3200);
+  const el = $('#toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 3200);
 }
 
 /* ---------- reveal on scroll ---------- */
@@ -604,41 +764,90 @@ if ('IntersectionObserver' in window) {
 
 /* ---------- era ---------- */
 const ERAS = [
-  ['2000–2002', 'LCD Monokrom', 'Candybar, flip, dan layar hijau', '#8e8e96'],
-  ['2003–2006', 'Layar TFT Warna', 'Kamera, ringtone, dan layar berwarna', '#32ade6'],
-  ['2007–2010', 'Revolusi Touchscreen', 'iPhone muncul, Nokia mulai goyah', '#0a84ff'],
-  ['2011–2014', 'Smartphone Matang', 'Ekosistem aplikasi dan OS modern', '#30d158'],
-  ['2015–2018', 'Premium & Bezel-less', 'Layar tanpa bingkai dan bodi premium', '#ff9f0a'],
-  ['2019–2022', 'AI & Notch', 'Kamera komputasional dan AI', '#bf5af2'],
-  ['2023+', 'Foldable & Ultra', 'Ponsel lipat dan AI on-device', '#ff453a']
+  ['2000–2002', { id: 'LCD Monokrom', en: 'Monochrome LCD' }, { id: 'Candybar, flip, dan layar hijau', en: 'Candybars, flips, and green screens' }, '#8e8e96'],
+  ['2003–2006', { id: 'Layar TFT Warna', en: 'Color TFT Screens' }, { id: 'Kamera, ringtone, dan layar berwarna', en: 'Cameras, ringtones, and color displays' }, '#32ade6'],
+  ['2007–2010', { id: 'Revolusi Touchscreen', en: 'Touchscreen Revolution' }, { id: 'iPhone muncul, Nokia mulai goyah', en: 'The iPhone arrives, Nokia starts to wobble' }, '#0a84ff'],
+  ['2011–2014', { id: 'Smartphone Matang', en: 'Mature Smartphones' }, { id: 'Ekosistem aplikasi dan OS modern', en: 'App ecosystems and modern OSes' }, '#30d158'],
+  ['2015–2018', { id: 'Premium & Bezel-less', en: 'Premium & Bezel-less' }, { id: 'Layar tanpa bingkai dan bodi premium', en: 'Edge-to-edge screens and premium bodies' }, '#ff9f0a'],
+  ['2019–2022', { id: 'AI & Notch', en: 'AI & Notch' }, { id: 'Kamera komputasional dan AI', en: 'Computational cameras and AI' }, '#bf5af2'],
+  ['2023+', { id: 'Foldable & Ultra', en: 'Foldable & Ultra' }, { id: 'Ponsel lipat dan AI on-device', en: 'Foldable phones and on-device AI' }, '#ff453a']
 ];
-$('#eras').innerHTML = ERAS.map(e => `<div class="era rv" style="--c:${e[3]}"><div class="yr">${e[0]}</div><div><span class="nm">${e[1]}</span><span class="ds">${e[2]}</span></div></div>`).join('');
-$$('#eras .rv').forEach(el => el.classList.add('in'));
+function renderEras() {
+  $('#eras').innerHTML = ERAS.map(e => `<div class="era rv in" style="--c:${e[3]}"><div class="yr">${e[0]}</div><div><span class="nm">${e[1][lang]}</span><span class="ds">${e[2][lang]}</span></div></div>`).join('');
+}
+
+/* ---------- bahasa + tema (kartu info) ---------- */
+const LANGS = [
+  ['en', 'English', 1], ['id', 'Bahasa Indonesia', 1], ['zh', '中文（简体）'], ['ko', '한국어'], ['ja', '日本語'], ['fr', 'Français'],
+  ['de', 'Deutsch'], ['es', 'Español'], ['it', 'Italiano'], ['ru', 'Русский'], ['pl', 'Polski'], ['hi', 'हिन्दी']
+];
+function renderLangChips() {
+  $('#langChips').innerHTML = LANGS.map(l => `<span class="chip ${l[2] ? 'full' : ''} ${l[0] === lang ? 'on' : ''}" lang="${l[0]}">${l[1]}<i>${l[2] ? t('full') : t('core')}</i></span>`).join('');
+}
+const ACCENTS = [['blue', '#2563eb'], ['emerald', '#10b981'], ['violet', '#8b5cf6'], ['amber', '#f59e0b'], ['rose', '#f43f5e'], ['cyan', '#06b6d4']];
+function renderSwatches() {
+  $('#swatches').innerHTML = ACCENTS.map(a => `<div class="sw"><span style="background:${a[1]}"></span>${T[lang].accent[a[0]]}</div>`).join('');
+}
 
 /* ---------- showcase ---------- */
 const SHOTS = [
-  { id: 'hq', tab: 'HQ', img: 'hq.jpg', alt: 'Cuplikan layar HQ Smartphone Empire', h: 'Pusat kendali perusahaan', p: 'Ringkasan kas, burn rate, reputasi, sentimen, tim, dan era dalam satu layar, plus tab Office, Team, Exchange, Bank, dan History.', li: ['<b>Kas dan burn-rate</b> dengan laporan bulanan', '<b>Reputasi dan sentimen</b> publik', '<b>Bank dan bursa</b> hanya satu ketukan'] },
-  { id: 'peta', tab: 'Peta kampus', img: 'peta.jpg', r: 1, alt: 'Cuplikan peta kampus 3D di layar Home: Kantor Pusat, Lab R&D, Toko Flagship, billboard, dan pelabuhan logistik', h: 'Kampus 3D yang tumbuh', p: 'Peta kampus di Home berkembang mengikuti progres perusahaanmu. Tiap gedung punya aturan tumbuh sendiri, dan dekorasi kota muncul sesuai era desain.', li: ['<b>Kantor Pusat</b> tumbuh seiring jumlah staf', '<b>Lab R&amp;D</b> tumbuh seiring riset yang selesai', '<b>Toko Flagship</b> makin megah seiring produk dirilis', '<b>Billboard</b> menyala saat kampanye aktif'] },
-  { id: 'kantor', tab: 'Kantor 3D', img: 'kantor.jpg', r: 1, alt: 'Cuplikan kantor 3D isometrik di tab HQ', h: 'Kantor isometrik yang hidup', p: 'Di HQ ada kantor dengan 9 ruangan yang terhubung ke data game. Staf duduk di meja, dan Fab bisa dibangun atau di-upgrade dari peta.', li: ['<b>9 ruangan</b> terhubung ke data game', '<b>Staf</b> duduk di meja masing-masing', '<b>Bangun dan latih</b> langsung dari peta kantor'] },
-  { id: 'riset', tab: 'Riset', img: 'riset.jpg', alt: 'Cuplikan layar Riset', h: 'Tech tree yang dalam', p: 'Riset teknologi, OS, manufaktur, dan masa depan. Antrian riset berjalan paralel, makin banyak engineer makin banyak slot.', li: ['<b>70 node</b> di 8 kategori', '<b>OS sendiri</b> dengan 35 fitur', '<b>Chip</b> dan Fab untuk tingkat lanjut'] },
-  { id: 'desain', tab: 'Desain', img: 'desain.jpg', alt: 'Cuplikan layar wizard desain ponsel', h: 'Wizard desain dengan preview real-time', p: 'Pilih form factor, komponen, warna, dan OS. Pilihan mengikuti tahun, dan mockup berubah mengikuti era.', li: ['<b>117 komponen</b> di 9 kategori', '<b>Auto-fill rekomendasi</b> untuk pemula', '<b>4 fase</b>: desain, prototipe, produksi, rilis'] },
-  { id: 'pasar', tab: 'Pasar', img: 'pasar.jpg', alt: 'Cuplikan layar Pasar', h: 'Baca pasar sebelum bersaing', p: 'Pangsa pasar, kompetitor, tren, promosi, dan opini publik. Segmen konsumen dan wilayah menunjukkan peluang yang belum kamu garap.', li: ['<b>Pangsa pasar</b> dengan riwayat 24 bulan', '<b>Promosi regional</b> dan 8 event musiman', '<b>Peluang terbaik</b> per segmen dan wilayah'] },
-  { id: 'setelan', tab: 'Setelan', img: 'setelan.jpg', alt: 'Cuplikan layar Pengaturan', h: 'Profil, cloud, dan Silicon', p: 'Kelola profil pemain, akun cloud, leaderboard, tema dan warna aksen, bahasa ID/EN, dan Dompet Universal.', li: ['<b>Cloud save</b> dan profil pemain', '<b>Tema</b> gelap dan terang, 6 warna aksen', '<b>Export dan import</b> save'] }
+  { id: 'hq', img: 'hq.jpg',
+    tab: { id: 'HQ', en: 'HQ' },
+    alt: { id: 'Cuplikan layar HQ Smartphone Empire', en: 'Smartphone Empire HQ screenshot' },
+    h: { id: 'Pusat kendali perusahaan', en: 'Your company control center' },
+    p: { id: 'Ringkasan kas, burn rate, reputasi, sentimen, tim, dan era dalam satu layar, plus tab Office, Team, Exchange, Bank, dan History.', en: 'Cash, burn rate, reputation, sentiment, team, and era on one screen, plus the Office, Team, Exchange, Bank, and History tabs.' },
+    li: { id: ['<b>Kas dan burn-rate</b> dengan laporan bulanan', '<b>Reputasi dan sentimen</b> publik', '<b>Bank dan bursa</b> hanya satu ketukan'], en: ['<b>Cash and burn rate</b> with monthly reports', '<b>Reputation and public sentiment</b>', '<b>Bank and exchange</b> are one tap away'] } },
+  { id: 'peta', img: 'peta.jpg', r: 1,
+    tab: { id: 'Peta kampus', en: 'Campus map' },
+    alt: { id: 'Cuplikan peta kampus 3D di layar Home: Kantor Pusat, Lab R&D, Toko Flagship, billboard, dan pelabuhan logistik', en: '3D campus map on the Home screen: HQ, R&D Lab, Flagship Store, billboards, and a logistics port' },
+    h: { id: 'Kampus 3D yang tumbuh', en: 'A 3D campus that grows' },
+    p: { id: 'Peta kampus di Home berkembang mengikuti progres perusahaanmu. Tiap gedung punya aturan tumbuh sendiri, dan dekorasi kota muncul sesuai era desain.', en: 'The campus map on Home evolves with your company’s progress. Each building has its own growth rules, and city decor appears to match the design era.' },
+    li: { id: ['<b>Kantor Pusat</b> tumbuh seiring jumlah staf', '<b>Lab R&amp;D</b> tumbuh seiring riset yang selesai', '<b>Toko Flagship</b> makin megah seiring produk dirilis', '<b>Billboard</b> menyala saat kampanye aktif'], en: ['<b>Headquarters</b> grows with your headcount', '<b>R&amp;D Lab</b> grows as research completes', '<b>Flagship Store</b> gets grander as products launch', '<b>Billboards</b> light up during active campaigns'] } },
+  { id: 'kantor', img: 'kantor.jpg', r: 1,
+    tab: { id: 'Kantor 3D', en: '3D office' },
+    alt: { id: 'Cuplikan kantor 3D isometrik di tab HQ', en: 'Isometric 3D office in the HQ tab' },
+    h: { id: 'Kantor isometrik yang hidup', en: 'A living isometric office' },
+    p: { id: 'Di HQ ada kantor dengan 9 ruangan yang terhubung ke data game. Staf duduk di meja, dan Fab bisa dibangun atau di-upgrade dari peta.', en: 'HQ has an office with 9 rooms wired to game data. Staff sit at their desks, and you can build or upgrade a Fab from the map.' },
+    li: { id: ['<b>9 ruangan</b> terhubung ke data game', '<b>Staf</b> duduk di meja masing-masing', '<b>Bangun dan latih</b> langsung dari peta kantor'], en: ['<b>9 rooms</b> connected to game data', '<b>Staff</b> sit at their own desks', '<b>Build and train</b> right from the office map'] } },
+  { id: 'riset', img: 'riset.jpg',
+    tab: { id: 'Riset', en: 'Research' },
+    alt: { id: 'Cuplikan layar Riset', en: 'Research screenshot' },
+    h: { id: 'Tech tree yang dalam', en: 'A deep tech tree' },
+    p: { id: 'Riset teknologi, OS, manufaktur, dan masa depan. Antrian riset berjalan paralel, makin banyak engineer makin banyak slot.', en: 'Research technology, OS, manufacturing, and the future. The research queue runs in parallel, and more engineers means more slots.' },
+    li: { id: ['<b>70 node</b> di 8 kategori', '<b>OS sendiri</b> dengan 35 fitur', '<b>Chip</b> dan Fab untuk tingkat lanjut'], en: ['<b>70 nodes</b> across 8 categories', '<b>Your own OS</b> with 35 features', '<b>Chips</b> and Fabs for the advanced tiers'] } },
+  { id: 'desain', img: 'desain.jpg',
+    tab: { id: 'Desain', en: 'Design' },
+    alt: { id: 'Cuplikan layar wizard desain ponsel', en: 'Phone design wizard screenshot' },
+    h: { id: 'Wizard desain dengan preview real-time', en: 'A design wizard with real-time preview' },
+    p: { id: 'Pilih form factor, komponen, warna, dan OS. Pilihan mengikuti tahun, dan mockup berubah mengikuti era.', en: 'Pick the form factor, components, color, and OS. Choices follow the year, and the mockup changes with the era.' },
+    li: { id: ['<b>117 komponen</b> di 9 kategori', '<b>Auto-fill rekomendasi</b> untuk pemula', '<b>4 fase</b>: desain, prototipe, produksi, rilis'], en: ['<b>117 components</b> in 9 categories', '<b>Recommended auto-fill</b> for beginners', '<b>4 phases</b>: design, prototype, production, release'] } },
+  { id: 'pasar', img: 'pasar.jpg',
+    tab: { id: 'Pasar', en: 'Market' },
+    alt: { id: 'Cuplikan layar Pasar', en: 'Market screenshot' },
+    h: { id: 'Baca pasar sebelum bersaing', en: 'Read the market before you compete' },
+    p: { id: 'Pangsa pasar, kompetitor, tren, promosi, dan opini publik. Segmen konsumen dan wilayah menunjukkan peluang yang belum kamu garap.', en: 'Market share, competitors, trends, promotions, and public opinion. Consumer segments and regions show the opportunities you haven’t tapped yet.' },
+    li: { id: ['<b>Pangsa pasar</b> dengan riwayat 24 bulan', '<b>Promosi regional</b> dan 8 event musiman', '<b>Peluang terbaik</b> per segmen dan wilayah'], en: ['<b>Market share</b> with 24 months of history', '<b>Regional promotions</b> and 8 seasonal events', '<b>Best opportunities</b> by segment and region'] } },
+  { id: 'setelan', img: 'setelan.jpg',
+    tab: { id: 'Setelan', en: 'Settings' },
+    alt: { id: 'Cuplikan layar Pengaturan', en: 'Settings screenshot' },
+    h: { id: 'Profil, cloud, dan Silicon', en: 'Profile, cloud, and Silicon' },
+    p: { id: 'Kelola profil pemain, akun cloud, leaderboard, tema dan warna aksen, 12 bahasa, dan Dompet Universal.', en: 'Manage your player profile, cloud account, leaderboard, theme and accent color, 12 languages, and the Universal Wallet.' },
+    li: { id: ['<b>Cloud save</b> dan profil pemain', '<b>Tema</b> gelap dan terang, 6 warna aksen', '<b>Export dan import</b> save'], en: ['<b>Cloud save</b> and player profile', '<b>Dark and light</b> theme, 6 accent colors', '<b>Export and import</b> saves'] } }
 ];
-const SHOT_ORDER = { hq: 0, peta: 1, kantor: 2, riset: 3, desain: 4, pasar: 5, setelan: 6 };
-
 const tabs = $('#tabs');
-let curId = 'hq';
+let curIdx = 0;
 function renderTabs() {
-  tabs.innerHTML = SHOTS.map((s, i) => `<button class="tab" role="tab" id="tab-${s.id}" aria-selected="${s.id === curId}" data-i="${i}">${s.tab}</button>`).join('');
+  tabs.innerHTML = SHOTS.map((s, i) => `<button class="tab" role="tab" id="tab-${s.id}" aria-selected="${i === curIdx}" data-i="${i}">${s.tab[lang]}</button>`).join('');
 }
-function showShot(i) {
+function showShot(i, instant) {
   const s = SHOTS[i]; if (!s) return;
-  curId = s.id;
+  const changed = i !== curIdx || !$('#showImg').src.endsWith(s.img);
+  curIdx = i;
   $$('.tab', tabs).forEach((b, k) => b.setAttribute('aria-selected', k === i));
-  const img = $('#showImg'); img.style.opacity = 0;
-  setTimeout(() => { img.closest('.phone').classList.toggle('wide', !!s.r); $('.show-ph').classList.toggle('has-wide', !!s.r); img.src = './assets/img/landing/' + s.img; img.alt = s.alt; img.style.opacity = 1; }, 160);
-  $('#showCopy').innerHTML = `<h3>${s.h}</h3><p>${s.p}</p><ul>${s.li.map(x => `<li>${x}</li>`).join('')}</ul>`;
+  const img = $('#showImg');
+  const apply = () => { img.closest('.phone').classList.toggle('wide', !!s.r); $('.show-ph').classList.toggle('has-wide', !!s.r); img.src = './assets/img/landing/' + s.img; img.alt = s.alt[lang]; img.style.opacity = 1; };
+  if (instant || !changed) { apply(); } else { img.style.opacity = 0; setTimeout(apply, 160); }
+  $('#showCopy').innerHTML = `<h3>${s.h[lang]}</h3><p>${s.p[lang]}</p><ul>${s.li[lang].map(x => `<li>${x}</li>`).join('')}</ul>`;
 }
 tabs.addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) showShot(+b.dataset.i); });
 const zoom = $('#zoom');
@@ -648,7 +857,6 @@ $('.show-ph .phone').addEventListener('click', () => {
 });
 zoom.addEventListener('click', () => zoom.classList.remove('open'));
 document.addEventListener('keydown', e => { if (e.key === 'Escape') zoom.classList.remove('open'); });
-renderTabs(); showShot(0);
 
 /* ---------- paket SIL (fallback; disinkronkan dari data game bila bisa) ---------- */
 let PACKAGES = [
@@ -658,42 +866,43 @@ let PACKAGES = [
   { id: 'pkg_xl', sil: 700, bonus: 140, priceIdr: 169000, tag: null },
   { id: 'pkg_xxl', sil: 1500, bonus: 400, priceIdr: 329000, tag: 'best' }
 ];
-let selPkg = null, selMethod = 'qris';
+let selPkg = null, selMethod = 'qris', coBusy = false;
 
 function renderPkgs() {
   $('#pkgs').innerHTML = PACKAGES.map(p => `
     <button class="pkg" type="button" role="radio" aria-checked="${selPkg === p.id}" data-id="${p.id}">
-      ${p.tag ? `<span class="tg ${p.tag === 'best' ? 'best' : ''}">${p.tag === 'best' ? 'TERBAIK' : 'POPULER'}</span>` : ''}
+      ${p.tag ? `<span class="tg ${p.tag === 'best' ? 'best' : ''}">${p.tag === 'best' ? t('best') : t('popular')}</span>` : ''}
       <span class="g">💎</span>
       <span class="amt">${nf(p.sil)}<small>SIL</small></span>
-      <span class="bn">${p.bonus ? '+' + nf(p.bonus) + ' bonus' : ''}</span>
+      <span class="bn">${p.bonus ? '+' + nf(p.bonus) + ' ' + t('bonus') : ''}</span>
       <span class="pr">${rp(p.priceIdr)}</span>
     </button>`).join('');
   updateCheckout();
 }
 function updateCheckout() {
   const p = PACKAGES.find(x => x.id === selPkg);
-  $('#coLabel').textContent = p ? `${nf(p.sil + p.bonus)} SIL` : 'Pilih paket';
+  $('#coLabel').textContent = p ? `${nf(p.sil + p.bonus)} SIL` : t('pickPkg');
   $('#coTotal').textContent = p ? rp(p.priceIdr) : '—';
-  $('#coBtn').disabled = !p;
+  $('#coBtn').disabled = !p || coBusy;
+  $('#coBtn').textContent = coBusy ? t('creating') : t('topup');
 }
 $('#pkgs').addEventListener('click', e => { const b = e.target.closest('.pkg'); if (!b) return; selPkg = b.dataset.id; renderPkgs(); });
 $('#methods').addEventListener('click', e => {
   const b = e.target.closest('.method'); if (!b) return; selMethod = b.dataset.m;
   $$('.method').forEach(m => m.setAttribute('aria-checked', m === b));
 });
-selPkg = 'pkg_l'; renderPkgs();
+selPkg = 'pkg_l';
 
 /* ---------- Supabase ---------- */
 let cfg = null, client = null, user = null, publicId = null, balance = null, cloudErr = null;
-let profile = null, head = null, lastRefresh = 0; // data dari sistem game: profil + ringkasan save cloud
+let profile = null, head = null, lastRefresh = 0, lastOrders = [];
 
 let syncBound = false;
 function bindAuthSync(c) {
   if (syncBound) return; syncBound = true;
   // Login/keluar di tab game atau tab lain ikut tercermin di sini (kunci sesi sama dengan game).
   c.auth.onAuthStateChange((ev, s) => {
-    if (ev === 'SIGNED_OUT') { user = null; balance = null; publicId = null; profile = null; head = null; renderAcct(); return; }
+    if (ev === 'SIGNED_OUT') { user = null; balance = null; publicId = null; profile = null; head = null; lastOrders = []; renderAcct(); return; }
     if (s && s.user && (ev === 'SIGNED_IN' || ev === 'USER_UPDATED' || ev === 'TOKEN_REFRESHED') && (!user || user.id !== s.user.id)) {
       user = { id: s.user.id, email: s.user.email || '' }; renderAcct();
       setTimeout(loadAccount, 0); // jangan memanggil Supabase langsung di dalam callback auth
@@ -734,17 +943,17 @@ async function syncPackages() {
 
 function errText(e) {
   const m = String((e && (e.message || e.code)) || e || '').toLowerCase();
-  if (/invalid login|invalid_credentials/.test(m)) return 'Email atau kata sandi salah.';
-  if (/already registered|already been registered|email_exists/.test(m)) return 'Email ini sudah terdaftar. Coba masuk.';
-  if (/not confirmed|email_not_confirmed/.test(m)) return 'Email belum dikonfirmasi. Cek kotak masuk emailmu.';
-  if (/weak|at least 6|should be at least/.test(m)) return 'Kata sandi terlalu lemah. Pakai minimal 6 karakter.';
-  if (/rate limit|too many requests|over_email_send_rate_limit/.test(m)) return 'Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.';
-  if (/too_many_pending/.test(m)) return 'Kamu masih punya 5 pesanan yang menunggu persetujuan. Tunggu diproses admin.';
-  if (/invalid_package/.test(m)) return 'Paket tidak valid. Muat ulang halaman lalu coba lagi.';
-  if (/not_authenticated|jwt|not_signed_in/.test(m)) return 'Sesi login berakhir. Masuk lagi lalu coba lagi.';
-  if (/failed to fetch|network|load failed|lib/.test(m)) return 'Tidak bisa terhubung ke server. Cek koneksi internetmu.';
-  if (/not_configured/.test(m)) return 'Login belum tersedia di halaman ini.';
-  return 'Terjadi masalah' + (m ? ' (' + m.slice(0, 80) + ')' : '') + '. Coba lagi.';
+  if (/invalid login|invalid_credentials/.test(m)) return t('e_cred');
+  if (/already registered|already been registered|email_exists/.test(m)) return t('e_exists');
+  if (/not confirmed|email_not_confirmed/.test(m)) return t('e_conf');
+  if (/weak|at least 6|should be at least/.test(m)) return t('e_weak');
+  if (/rate limit|too many requests|over_email_send_rate_limit/.test(m)) return t('e_rate');
+  if (/too_many_pending/.test(m)) return t('e_pend');
+  if (/invalid_package/.test(m)) return t('e_pkg');
+  if (/not_authenticated|jwt|not_signed_in/.test(m)) return t('e_auth');
+  if (/failed to fetch|network|load failed|lib/.test(m)) return t('e_net');
+  if (/not_configured/.test(m)) return t('e_cfg');
+  return t('e_gen', m.slice(0, 80));
 }
 
 /* ---------- akun ---------- */
@@ -752,23 +961,24 @@ const initial = u => ((u && u.email) || '?').trim().charAt(0).toUpperCase();
 function renderAcct() {
   const nav = $('#navAuth'), box = $('#acct');
   if (!user) {
-    nav.className = 'btn btn-ghost btn-sm'; nav.textContent = 'Masuk'; nav.dataset.mode = 'in';
-    box.innerHTML = `<div class="acct-row"><div class="av">?</div><div><div class="nm">Belum masuk</div><div class="mt">Masuk untuk top up dan melihat saldo SIL</div></div></div>
-      <div class="acct-act"><button class="btn btn-blue btn-sm" type="button" data-open-auth>Masuk</button><button class="btn btn-ghost btn-sm" type="button" data-open-auth="up">Daftar</button></div>`;
+    nav.className = 'btn btn-ghost btn-sm'; nav.textContent = t('signIn'); nav.dataset.mode = 'in';
+    box.innerHTML = `<div class="acct-row"><div class="av">?</div><div><div class="nm">${t('accNone')}</div><div class="mt">${t('accNoneSub')}</div></div></div>
+      <div class="acct-act"><button class="btn btn-blue btn-sm" type="button" data-open-auth>${t('signIn')}</button><button class="btn btn-ghost btn-sm" type="button" data-open-auth="up">${t('signUp')}</button></div>`;
     $('#orders').hidden = true;
     return;
   }
   nav.className = 'acct-chip'; nav.dataset.mode = 'acct';
   nav.innerHTML = `<span>${balance == null ? '💎' : '💎 ' + nf(balance)}</span><span class="av">${initial(user)}</span>`;
   box.innerHTML = `<div class="acct-row"><div class="av">${initial(user)}</div><div style="min-width:0"><div class="nm"></div><div class="mt"></div></div></div>
-    <div class="acct-kpi"><div class="kpi"><span>Saldo SIL</span><b>💎 ${balance == null ? '…' : nf(balance)}</b></div><div class="kpi"><span>ID Pemain</span><b>${publicId == null ? '—' : publicId}</b></div></div>
-    <div class="acct-act"><a class="btn btn-blue btn-sm" href="./index.html" id="goPlay"></a><button class="btn btn-ghost btn-sm" type="button" id="logout">Keluar</button></div>`;
-  $('.nm', box).textContent = user.email || 'Pemain';
+    <div class="acct-kpi"><div class="kpi"><span>${t('accBal')}</span><b>💎 ${balance == null ? '…' : nf(balance)}</b></div><div class="kpi"><span>${t('accPid')}</span><b>${publicId == null ? '—' : publicId}</b></div></div>
+    <div class="acct-act"><a class="btn btn-blue btn-sm" href="./index.html" id="goPlay"></a><button class="btn btn-ghost btn-sm" type="button" id="logout">${t('signOut')}</button></div>`;
+  $('.nm', box).textContent = user.email || t('player');
   const co = profile && profile.company_name;
   $('.mt', box).textContent = head
-    ? `${co || head.company_name || 'Perusahaanmu'} · Save cloud tahun ${head.game_year == null ? '—' : head.game_year}`
-    : (co ? `${co} · Belum ada save cloud` : 'Akun game terhubung · belum ada save cloud');
-  $('#goPlay').textContent = head ? 'Lanjut main' : 'Mulai main';
+    ? t('saveYear', co || head.company_name || t('yourCo'), head.game_year == null ? '—' : head.game_year)
+    : (co ? t('noSave', co) : t('linked'));
+  $('#goPlay').textContent = head ? t('cont') : t('start');
+  renderOrders();
 }
 async function loadAccount() {
   if (!client || !user) return;
@@ -780,29 +990,33 @@ async function loadAccount() {
   renderAcct();
   loadOrders();
 }
+function renderOrders() {
+  const rows = lastOrders;
+  $('#orders').hidden = !user || rows.length === 0;
+  $('#orders h4').textContent = t('ordTitle');
+  $('#ordList').innerHTML = '';
+  rows.forEach(o => {
+    const d = document.createElement('div'); d.className = 'ord';
+    const when = new Date(o.created_at).toLocaleDateString(loc(), { day: 'numeric', month: 'short' });
+    d.innerHTML = `<div class="o1"><b></b><span></span></div><span class="st ${o.status}"></span>`;
+    $('b', d).textContent = `${nf(o.sil_amount)} SIL · ${rp(o.amount)}`;
+    $('.o1 span', d).textContent = `${when} · ${o.id}`;
+    $('.st', d).textContent = t(o.status) || o.status;
+    if (o.status === 'pending') {
+      const a = document.createElement('button'); a.type = 'button'; a.className = 'lnk'; a.textContent = t('viewQr');
+      a.addEventListener('click', () => openQr({ id: o.id, amount: o.amount, sil: o.sil_amount, packageId: o.package_id }));
+      d.insertBefore(a, $('.st', d).nextSibling);
+    }
+    $('#ordList').appendChild(d);
+  });
+}
 async function loadOrders() {
   if (!client || !user) return;
   try {
     const r = await client.from('payment_orders').select('id,package_id,amount,sil_amount,status,created_at').order('created_at', { ascending: false }).limit(6);
     if (r.error) throw r.error;
-    const rows = r.data || [];
-    $('#orders').hidden = rows.length === 0;
-    const lab = { pending: 'Menunggu', approved: 'Disetujui', rejected: 'Ditolak' };
-    $('#ordList').innerHTML = '';
-    rows.forEach(o => {
-      const d = document.createElement('div'); d.className = 'ord';
-      const when = new Date(o.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-      d.innerHTML = `<div class="o1"><b></b><span></span></div><span class="st ${o.status}"></span>`;
-      $('b', d).textContent = `${nf(o.sil_amount)} SIL · ${rp(o.amount)}`;
-      $('.o1 span', d).textContent = `${when} · ${o.id}`;
-      $('.st', d).textContent = lab[o.status] || o.status;
-      if (o.status === 'pending') {
-        const a = document.createElement('button'); a.type = 'button'; a.className = 'lnk'; a.textContent = 'Lihat QR';
-        a.addEventListener('click', () => openQr({ id: o.id, amount: o.amount, sil: o.sil_amount, packageId: o.package_id }));
-        d.insertBefore(a, $('.st', d).nextSibling);
-      }
-      $('#ordList').appendChild(d);
-    });
+    lastOrders = r.data || [];
+    renderOrders();
     // saldo bisa berubah bila ada pesanan yang baru disetujui
     const r2 = await client.rpc('get_silicon'); if (!r2.error && r2.data != null) { balance = Number(r2.data); renderAcct2(); }
   } catch (e) { /* riwayat opsional */ }
@@ -834,21 +1048,26 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { const o = 
 let authMode = 'in', afterAuth = null;
 function setMsg(el, text, kind) { el.className = 'msg show ' + kind; el.textContent = text; }
 function clearMsg(el) { el.className = 'msg'; el.textContent = ''; }
+function renderAuthText() {
+  const m = authMode;
+  $('#authTitle').textContent = m === 'up' ? t('tUp') : m === 'reset' ? t('tReset') : t('tIn');
+  $('#aSubmit').textContent = m === 'up' ? t('sUp') : m === 'reset' ? t('sReset') : t('sIn');
+  $('#aShow').textContent = $('#aPass').type === 'password' ? t('show') : t('hide');
+}
 function setAuthMode(m) {
   authMode = m;
   $$('.seg button').forEach(b => b.setAttribute('aria-selected', b.dataset.mode === m));
-  $('#authTitle').textContent = m === 'up' ? 'Buat akun baru' : m === 'reset' ? 'Atur ulang kata sandi' : 'Masuk ke akunmu';
-  $('#aSubmit').textContent = m === 'up' ? 'Daftar' : m === 'reset' ? 'Kirim tautan' : 'Masuk';
   $('#aPassWrap').hidden = m === 'reset';
   $('#aForgot').hidden = m !== 'in'; $('#aBack').hidden = m !== 'reset';
   $('.seg').hidden = m === 'reset';
   $('#aPass').autocomplete = m === 'up' ? 'new-password' : 'current-password';
+  renderAuthText();
   clearMsg($('#aMsg'));
 }
 function openAuth(mode, cb) { afterAuth = cb || null; setAuthMode(mode || 'in'); openOvl($('#authOvl')); }
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-open-auth]');
-  if (t) { e.preventDefault(); openAuth(t.dataset.openAuth === 'up' ? 'up' : 'in'); return; }
+  const b = e.target.closest('[data-open-auth]');
+  if (b) { e.preventDefault(); openAuth(b.dataset.openAuth === 'up' ? 'up' : 'in'); return; }
   if (e.target.closest('#logout')) doLogout();
 });
 $('#navAuth').addEventListener('click', () => { if (user) $('#silicon').scrollIntoView({ behavior: 'smooth' }); else openAuth('in'); });
@@ -856,26 +1075,26 @@ $$('.seg button').forEach(b => b.addEventListener('click', () => setAuthMode(b.d
 $('#aForgot').addEventListener('click', () => setAuthMode('reset'));
 $('#aBack').addEventListener('click', () => setAuthMode('in'));
 $('#aShow').addEventListener('click', () => {
-  const p = $('#aPass'), s = p.type === 'password'; p.type = s ? 'text' : 'password'; $('#aShow').textContent = s ? 'Sembunyi' : 'Lihat';
+  const p = $('#aPass'); p.type = p.type === 'password' ? 'text' : 'password'; renderAuthText();
 });
 $('#authForm').addEventListener('submit', async e => {
   e.preventDefault();
   const msg = $('#aMsg'), email = $('#aEmail').value.trim(), pass = $('#aPass').value;
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setMsg(msg, 'Masukkan email yang valid.', 'err'); return; }
-  if (authMode !== 'reset' && pass.length < 6) { setMsg(msg, 'Kata sandi minimal 6 karakter.', 'err'); return; }
-  const btn = $('#aSubmit'); btn.disabled = true; setMsg(msg, 'Memproses…', 'info');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setMsg(msg, t('vEmail'), 'err'); return; }
+  if (authMode !== 'reset' && pass.length < 6) { setMsg(msg, t('vPass'), 'err'); return; }
+  const btn = $('#aSubmit'); btn.disabled = true; setMsg(msg, t('busy'), 'info');
   try {
     const c = await loadCloud(); if (!c) throw cloudErr || new Error('lib');
     if (authMode === 'reset') {
       const r = await c.auth.resetPasswordForEmail(email, { redirectTo: location.origin });
       if (r.error) throw r.error;
-      setMsg(msg, 'Tautan atur ulang sudah dikirim. Cek emailmu.', 'ok');
+      setMsg(msg, t('resetSent'), 'ok');
     } else if (authMode === 'up') {
       const r = await c.auth.signUp({ email, password: pass, options: { emailRedirectTo: location.origin } });
       if (r.error) throw r.error;
       const u = r.data.user;
       if (u && Array.isArray(u.identities) && u.identities.length === 0) throw new Error('email_exists');
-      if (!r.data.session) { setMsg(msg, 'Akun dibuat. Cek emailmu untuk konfirmasi, lalu masuk.', 'ok'); setAuthMode('in'); setMsg(msg, 'Akun dibuat. Cek emailmu untuk konfirmasi, lalu masuk.', 'ok'); }
+      if (!r.data.session) { setAuthMode('in'); setMsg(msg, t('created'), 'ok'); }
       else await onSignedIn(r.data.user);
     } else {
       const r = await c.auth.signInWithPassword({ email, password: pass });
@@ -887,13 +1106,13 @@ $('#authForm').addEventListener('submit', async e => {
 });
 async function onSignedIn(u) {
   user = { id: u.id, email: u.email || '' }; renderAcct();
-  closeOvl($('#authOvl')); $('#aPass').value = ''; toast('Berhasil masuk');
+  closeOvl($('#authOvl')); $('#aPass').value = ''; toast(t('okIn'));
   await loadAccount();
   if (afterAuth) { const f = afterAuth; afterAuth = null; f(); }
 }
 async function doLogout() {
   try { const c = await loadCloud(); if (c) await c.auth.signOut(); } catch (e) {}
-  user = null; balance = null; publicId = null; profile = null; head = null; renderAcct(); toast('Kamu sudah keluar');
+  user = null; balance = null; publicId = null; profile = null; head = null; lastOrders = []; renderAcct(); toast(t('okOut'));
 }
 
 /* ---------- top up ---------- */
@@ -903,7 +1122,7 @@ const newId = () => 'ord_' + Date.now().toString(36) + Math.random().toString(36
 $('#coBtn').addEventListener('click', async () => {
   const p = PACKAGES.find(x => x.id === selPkg); if (!p) return;
   if (!user) { openAuth('in', () => $('#coBtn').click()); return; }
-  const btn = $('#coBtn'); btn.disabled = true; btn.textContent = 'Membuat pesanan…';
+  coBusy = true; updateCheckout();
   try {
     const c = await loadCloud(); if (!c) throw cloudErr || new Error('lib');
     const order = { id: newId(), packageId: p.id, amount: p.priceIdr, sil: p.sil + p.bonus };
@@ -911,7 +1130,7 @@ $('#coBtn').addEventListener('click', async () => {
     if (r.error) throw r.error;
     openQr(order); loadOrders();
   } catch (err) { toast(errText(err)); }
-  finally { btn.textContent = 'Top up sekarang'; updateCheckout(); }
+  finally { coBusy = false; updateCheckout(); }
 });
 
 function fmtT(s) { s = Math.max(0, s); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
@@ -921,7 +1140,7 @@ function openQr(order) {
   $('#qrAmt').textContent = rp(order.amount);
   $('#qrPkg').textContent = `${nf(order.sil)} SIL · ${selMethod === 'gopay' ? 'GoPay' : 'QRIS'}`;
   $('#qrOrd').textContent = order.id; clearMsg($('#qMsg'));
-  const tick = () => { const left = Math.round((qr.until - Date.now()) / 1000); $('#qrTimer').textContent = fmtT(left); if (left <= 0) { stopQr(); setMsg($('#qMsg'), 'Waktu scan habis. Pesanan tetap tersimpan, kamu bisa membuka QR lagi dari daftar pesanan.', 'info'); } };
+  const tick = () => { const left = Math.round((qr.until - Date.now()) / 1000); $('#qrTimer').textContent = fmtT(left); if (left <= 0) { stopQr(); setMsg($('#qMsg'), t('qrExpired'), 'info'); } };
   tick(); qr.timer = setInterval(tick, 1000);
   qr.poll = setInterval(() => checkStatus(true), 10000);
   openOvl($('#qrOvl'));
@@ -933,21 +1152,66 @@ async function checkStatus(silent) {
     if (r.error) throw r.error;
     const st = r.data && r.data.status;
     if (st === 'paid') {
-      stopQr(); setMsg($('#qMsg'), `Pembayaran disetujui. ${nf(qr.order.sil)} SIL sudah masuk ke akunmu.`, 'ok');
-      toast('Top up berhasil'); await loadAccount();
-    } else if (st === 'cancelled') { stopQr(); setMsg($('#qMsg'), 'Pesanan ditolak atau dibatalkan oleh admin.', 'err'); loadOrders(); }
-    else if (!silent) setMsg($('#qMsg'), 'Belum disetujui admin. Selesaikan pembayaran, lalu cek lagi beberapa saat kemudian.', 'info');
+      stopQr(); setMsg($('#qMsg'), t('qrPaid', nf(qr.order.sil)), 'ok');
+      toast(t('okTop')); await loadAccount();
+    } else if (st === 'cancelled') { stopQr(); setMsg($('#qMsg'), t('qrCancel'), 'err'); loadOrders(); }
+    else if (!silent) setMsg($('#qMsg'), t('qrWait'), 'info');
   } catch (err) { if (!silent) setMsg($('#qMsg'), errText(err), 'err'); }
 }
 $('#qrCheck').addEventListener('click', async () => { const b = $('#qrCheck'); b.disabled = true; await checkStatus(false); b.disabled = false; });
 $('#qrCopy').addEventListener('click', async () => {
   const id = $('#qrOrd').textContent;
-  try { await navigator.clipboard.writeText(id); toast('Order ID disalin'); }
-  catch (e) { const r = document.createRange(); r.selectNodeContents($('#qrOrd')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Tekan salin pada pilihan teks'); }
+  try { await navigator.clipboard.writeText(id); toast(t('idCopied')); }
+  catch (e) { const r = document.createRange(); r.selectNodeContents($('#qrOrd')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast(t('copyHint')); }
 });
 
+/* ---------- bahasa (ID / EN) ---------- */
+const ATTRS = [['data-en-aria', 'aria-label'], ['data-en-ph', 'placeholder'], ['data-en-alt', 'alt']];
+function applyStatic() {
+  $$('[data-en]').forEach(el => {
+    if (el._id === undefined) el._id = el.innerHTML;       // teks Indonesia asli dari HTML
+    const v = lang === 'en' ? el.getAttribute('data-en') : el._id;
+    if (el.innerHTML !== v) el.innerHTML = v;
+  });
+  ATTRS.forEach(([src, attr]) => $$('[' + src + ']').forEach(el => {
+    const k = '_id_' + attr;
+    if (el[k] === undefined) el[k] = el.getAttribute(attr);
+    el.setAttribute(attr, lang === 'en' ? el.getAttribute(src) : el[k]);
+  }));
+}
+function setLang(l, persist) {
+  lang = l === 'en' ? 'en' : 'id';
+  document.documentElement.setAttribute('lang', lang);
+  if (persist) { try { localStorage.setItem(LS_LANG, lang); } catch (e) {} }
+  $$('.lang button').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === lang));
+  applyStatic();
+  $('#metaDesc').setAttribute('content', t('desc'));
+  $('meta[property="og:title"]').setAttribute('content', t('ogT'));
+  $('meta[property="og:description"]').setAttribute('content', t('ogD'));
+  renderTabs(); showShot(curIdx, true); renderEras(); renderLangChips(); renderSwatches();
+  renderPkgs(); renderAcct(); renderAuthText(); setThemeLabel();
+}
+$('.lang').addEventListener('click', e => { const b = e.target.closest('[data-lang]'); if (b && b.dataset.lang !== lang) setLang(b.dataset.lang, true); });
+
+/* ---------- tema (terang / gelap) ---------- */
+const root = document.documentElement;
+function setThemeLabel() {
+  const dark = root.getAttribute('data-theme') === 'dark';
+  const b = $('#themeBtn'); b.setAttribute('aria-label', dark ? t('themeToLight') : t('themeToDark')); b.title = b.getAttribute('aria-label');
+  b.setAttribute('aria-pressed', dark);
+}
+function setTheme(th, persist) {
+  root.classList.add('tt');
+  root.setAttribute('data-theme', th);
+  $('#metaTheme').setAttribute('content', th === 'dark' ? '#000000' : '#fbfbfd');
+  if (persist) { try { localStorage.setItem(LS_THEME, th); } catch (e) {} }
+  setThemeLabel();
+  clearTimeout(setTheme._t); setTheme._t = setTimeout(() => root.classList.remove('tt'), 450);
+}
+$('#themeBtn').addEventListener('click', () => setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark', true));
+
 /* ---------- init ---------- */
-renderAcct();
+setLang(lang, false);
 (async () => {
   syncPackages();
   const hasSess = (() => { try { return Object.keys(localStorage).some(k => k.indexOf('smartphone-empire:supabase-auth') === 0); } catch (e) { return false; } })();
