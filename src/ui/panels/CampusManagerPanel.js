@@ -1,5 +1,7 @@
 import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/CampusManagerPanel.js
+// v2027.62 — daftar gedung dibaca dari registri (campus-buildings.data.js); teks gedung baru memakai
+// fallback dari registri bila key i18n belum ada.
 // v2027.16a — Building Manager panel untuk HQ → Campus.
 // Baca data dari campus-buildings.data.js, tampilkan per kategori.
 import {
@@ -7,7 +9,7 @@ import {
     CAMPUS_BUILDINGS
 } from '../../data/campus-buildings.data.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
-import { t } from '../../core/LanguageService.js';
+import { t, LanguageService } from '../../core/LanguageService.js';
 
 
 // Urutan kategori yang ditampilkan
@@ -16,11 +18,25 @@ const CATEGORY_ORDER = ['core', 'innovation', 'marketing', 'industry', 'support'
 // Ikon kategori (bukan ikon gedung — ikon gedung dari data)
 const CATEGORY_ICONS = {
     core:       'activity',
-    innovation: 'flask',
+    innovation: 'brain',
     marketing:  'signal',
     industry:   'factory',
-    support:    'coffee'
+    support:    'users'
 };
+
+// t() dengan fallback bila key belum ada di kamus (gedung baru di registri).
+function _tx(key, fallback) {
+    const v = t(key);
+    return (v && v !== key) ? v : (fallback || key);
+}
+
+// Pilih teks [id, en] sesuai bahasa aktif (dipakai bila key i18n belum ada).
+function _pair(pair) {
+    if (!pair) return '';
+    let lang = 'id';
+    try { lang = LanguageService.getLang(); } catch (e) {}
+    return pair[lang === 'en' ? 1 : 0] || pair[0] || '';
+}
 
 // ============================================================
 // MAIN
@@ -101,8 +117,8 @@ function _renderCategoryGroup(catId, list) {
 // BUILDING ROW
 // ============================================================
 function _renderBuildingRow(b) {
-    const name = t(b.nameKey);
-    const desc = t(b.descKey);
+    const name = _tx(b.nameKey, _pair(b.namePair) || b.name);
+    const desc = _tx(b.descKey, _pair(b.descPair) || b.desc);
     const built = b.built;
     const atMax = b.level >= b.maxLevel;
 
@@ -125,7 +141,7 @@ function _renderBuildingRow(b) {
     let valueText = '';
     if (built && b.progress && b.progress.next != null) {
         const unitKey = b.progress.unitKey || 'campus.unit.level';
-        const unitLabel = t(unitKey);
+        const unitLabel = _tx(unitKey, _pair(b.progress.unitPair) || b.progress.unitText || 'level');
         valueText = t('campus.manager.to_next', {
             cur: b.progress.cur,
             next: b.progress.next,
