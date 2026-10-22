@@ -22,6 +22,7 @@ import { MarketSystem } from './systems/MarketSystem.js';
 import { CompetitorSystem } from './systems/CompetitorSystem.js';
 import { CompetitorActionSystem } from './systems/CompetitorActionSystem.js';
 import { PublicOpinionSystem } from './systems/PublicOpinionSystem.js';
+import { MarketNavSystem } from './systems/MarketNavSystem.js';
 import { EraSystem } from './systems/EraSystem.js';
 import { TeamSystem } from './systems/TeamSystem.js';
 import { ChipSystem } from './systems/ChipSystem.js';
@@ -104,6 +105,8 @@ var market            = new MarketSystem(state);
 var competitors       = new CompetitorSystem(state);
 var competitorActions = new CompetitorActionSystem(state);
 var opinion           = new PublicOpinionSystem(state);
+var marketNav         = new MarketNavSystem(state);
+products.setMarketNav(marketNav);
 var eraSystem         = new EraSystem(state);
 var teamSystem        = new TeamSystem(state);
 var chipSystem        = new ChipSystem(state);
@@ -1273,6 +1276,7 @@ async function boot() {
         competitorActions.start();
         market.start();
         opinion.start();
+        marketNav.start();
         chipSystem.start();
         fabSystem.start();
         componentPlants.start();
@@ -1326,7 +1330,7 @@ async function boot() {
             cloudSync: CloudSync,
             forcePull: function() { return CloudSync.forcePull(); },
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
-            research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, eraSystem: eraSystem, teamSystem: teamSystem,
+            research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, marketNav: marketNav, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, plants: componentPlants, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
             silicon: SiliconService, promotion: promotion, bank: bank, payment: PaymentService,
             openSiliconStore: openSiliconStoreModal, LanguageService: LanguageService,
