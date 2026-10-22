@@ -109,6 +109,20 @@ begin
     return n;
 end $$;
 
+-- Batas level menurut tahun game. HARUS sama dengan ERA_LEVEL_CAP di src/systems/PlayerProgression.js.
+create or replace function public._level_cap(p_year integer) returns integer
+language sql immutable as $$
+    select case
+        when p_year >= 2025 then 50
+        when p_year >= 2020 then 42
+        when p_year >= 2015 then 32
+        when p_year >= 2010 then 22
+        when p_year >= 2006 then 14
+        when p_year >= 2003 then 10
+        else 5
+    end
+$$;
+
 -- Indeks kekayaan 0..1000 (skala log; $1 triliun = 1000).
 create or replace function public._money10(p_revenue numeric) returns integer
 language sql immutable as $$
@@ -138,7 +152,7 @@ $$;
 
 revoke all on function public._lg_pts(numeric, bigint), public._cred10(numeric, numeric, numeric, numeric),
     public._cred_tier(integer), public._xp(numeric, numeric, numeric, integer, numeric),
-    public._level_xp(integer), public._level_from_xp(bigint), public._money10(numeric),
+    public._level_xp(integer), public._level_from_xp(bigint), public._level_cap(integer), public._money10(numeric),
     public._score10(integer, integer, integer), public._reward_scale_pct(integer),
     public._reward_level_cash(integer, integer), public._reward_tier_cash(integer, integer)
     from public, anon, authenticated;
@@ -303,7 +317,8 @@ begin
     -- Turunan dihitung SERVER.
     v_cred10  := public._cred10(v_rep, v_credit, v_sent, v_missed);
     v_xp      := public._xp(v_rev, v_sold, v_min, v_cred10, v_share);
-    v_level   := public._level_from_xp(v_xp);
+    -- Level = dari XP, tetapi dibatasi tahun game (era). XP tetap tersimpan utuh di stat_xp.
+    v_level   := least(public._level_from_xp(v_xp), public._level_cap(2000 + div(v_min, 525600)::integer));
     v_money10 := public._money10(v_rev);
     v_score10 := public._score10(v_money10, v_cred10, v_level);
 
@@ -450,5 +465,16 @@ revoke all on function public.leaderboard_my_rank(text) from public, anon;
 grant execute on function public.leaderboard_my_rank(text) to authenticated;
 revoke all on function public.inbox_delete(bigint[]) from public, anon;
 grant execute on function public.inbox_delete(bigint[]) to authenticated;
+
+-- Koreksi data lama: turunkan stat_level (dan skor) yang melewati batas era. Aman diulang.
+update public.profiles p
+   set stat_level = x.lv,
+       stat_score = public._score10(public._money10(p.stat_revenue), round(p.stat_credibility * 10)::integer, x.lv) / 10.0
+  from (select id,
+               least(public._level_from_xp(stat_xp::bigint),
+                     public._level_cap(2000 + div(stat_game_minutes, 525600)::integer)) as lv
+          from public.profiles) x
+ where x.id = p.id
+   and x.lv <> p.stat_level;
 
 notify pgrst, 'reload schema';

@@ -16,6 +16,8 @@ Hasil "Success" → lanjut ke file berikutnya. Jika error: berhenti, jangan lanj
 | 08 | `08-jadikan-admin.sql` | Jadikan akunmu admin (**ganti email dulu**) | **Wajib** (sekali) |
 | 09 | `09-pesan-inbox.sql` | Pesan pemain: notifikasi SIL masuk otomatis + pesan/broadcast dari panel admin | Opsional (fitur Pesan) |
 | 14 | `14-nama-save-unik.sql` | Nama perusahaan unik juga di jalur save (trigger game_saves) | **Wajib** (setelah 03) |
+| 15 | `15-level-perusahaan.sql` | Level perusahaan dihitung & disimpan di server (leaderboard/profil) | **Wajib** (setelah 12) |
+| 15b | `15b-uji-paritas-level-perusahaan.sql` | Uji paritas rumus level perusahaan (hanya baca) | Opsional (setelah 15) |
 
 Minimum agar game tidak crash + pembayaran jalan: **01 → 05, lalu 08**. File 06–07 melengkapi panel admin.
 
