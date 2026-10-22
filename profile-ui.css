@@ -262,3 +262,38 @@
 }
 .pf-id-chip b { color: var(--text-primary); letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
 .pf-id-chip:active { opacity: 0.75; }
+
+/* ---------- Ikon & kartu LEVEL ---------- */
+.lv-badge { display: inline-flex; width: var(--lv-size, 36px); height: var(--lv-size, 36px); flex-shrink: 0; line-height: 0;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,.45)); }
+.lv-badge svg { width: 100%; height: 100%; display: block; }
+.lv-badge.lv-r2 { filter: drop-shadow(0 0 6px rgba(251,191,36,.55)); }
+.lv-badge.lv-r3 { filter: drop-shadow(0 0 7px rgba(103,232,249,.6)); }
+.lv-badge.lv-r4 { filter: drop-shadow(0 0 8px rgba(196,181,253,.7)); }
+.lv-badge.lv-r5 { filter: drop-shadow(0 0 9px rgba(253,164,175,.85)); animation: lvPulse 2.4s ease-in-out infinite; }
+@keyframes lvPulse { 50% { transform: scale(1.06); } }
+@media (prefers-reduced-motion: reduce) { .lv-badge.lv-r5 { animation: none; } }
+
+/* ikon menempel di avatar / logo */
+.pf-avatar-wrap { position: relative; display: inline-block; margin-bottom: 12px; }
+.pf-avatar-wrap .pf-avatar-btn { margin-bottom: 0; }
+.pf-avatar-wrap > .lv-badge { position: absolute; left: -6px; bottom: -4px; }
+.pf-logo-wrap { position: relative; flex-shrink: 0; }
+.pf-logo-wrap > .lv-badge { position: absolute; right: -8px; bottom: -8px; }
+.pf-view-hero .lv-badge { margin-top: 6px; }
+
+.lv-card .lv-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.lv-head-info { min-width: 0; }
+.lv-head-title { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--text-tertiary); font-weight: var(--fw-semibold); }
+.lv-head-level { font-size: var(--fs-lg); font-weight: var(--fw-black); letter-spacing: -0.02em; line-height: 1.25; }
+.lv-head-xp { font-size: var(--fs-sm); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.lv-bar { margin-bottom: 11px; }
+.lv-bar-head { display: flex; justify-content: space-between; gap: 8px; font-size: var(--fs-sm); color: var(--text-secondary); margin-bottom: 5px; }
+.lv-bar-head b { color: var(--text-primary); font-variant-numeric: tabular-nums; text-align: right; }
+.lv-bar-track { height: 7px; border-radius: var(--r-pill); background: var(--bg-4); overflow: hidden; }
+.lv-bar-fill { height: 100%; border-radius: inherit; transition: width .4s ease; background: var(--accent); }
+.lv-bar-fill.is-cred { background: var(--success); }
+.lv-bar-fill.is-act { background: var(--warn, #f59e0b); }
+.lv-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.lv-chip { padding: 3px 9px; border-radius: var(--r-pill); background: var(--bg-4); color: var(--text-secondary); font-size: var(--fs-xs); white-space: nowrap; }
+.lv-chip b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
