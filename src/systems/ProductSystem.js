@@ -33,7 +33,11 @@ export class ProductSystem {
         this._unsubs = [];
         this._promotion = null;
         this._componentPlants = null;
+        this._nav = null;
     }
+
+    // Navigasi pasar (MarketNavSystem): segmen, wilayah, gelombang tren, dan efek viral ke permintaan.
+    setMarketNav(nav) { this._nav = nav; }
 
     // Promosi regional (PromotionSystem) menambah lift ke faktor pemasaran.
     setPromotionSystem(ps) { this._promotion = ps; }
@@ -180,8 +184,9 @@ export class ProductSystem {
         var competitorF = 0.8;
         var lifecycleF = 1.0;
         var techF = this._getTechFactor(null);
+        var navF = this._nav ? this._nav.estimateFactor(stats, config.price, config) : 1.0;
 
-        var demand = baseDemand * baseMult * qualityF * priceF * repF * marketingF * osFactor * trendF * competitorF * lifecycleF * techF;
+        var demand = baseDemand * baseMult * qualityF * priceF * repF * marketingF * osFactor * trendF * competitorF * lifecycleF * techF * navF;
         return Math.max(0, Math.round(demand));
     }
 
@@ -604,6 +609,7 @@ export class ProductSystem {
         var competitorF = Math.max(0.4, 1 / (1 + (p.competitorPressure || 0)));
         var lifecycleF = this._getLifecycleFactor(p);
         var techF = this._getTechFactor(p);
+        var navF = this._nav ? this._nav.getDemandFactor(p) : 1.0;
 
         // Noise harian dihaluskan (AR1) supaya penjualan tidak naik-turun liar.
         var sm = BALANCE.macro.demandNoiseSmoothing;
@@ -613,7 +619,7 @@ export class ProductSystem {
 
         var demand = baseDemand * baseMult * qualityF * priceF * repF
                      * marketingF * osFactor * trendF * competitorF
-                     * lifecycleF * techF * noise;
+                     * lifecycleF * techF * navF * noise;
 
         return Math.max(0, Math.round(demand));
     }

@@ -1,5 +1,9 @@
 // FILE: src/systems/PublicOpinionSystem.js
 // v2028.6 — [LOGIC] Reaksi konsumen sekarang sangat sensitif terhadap Harga vs Kualitas (Value for Money).
+// v2028.60 — [PERLUASAN] 11 aspek (+layar, konektivitas, kemudahan), viral 10 -> 26 (fokus segmen/wilayah/produk,
+//             dwibahasa), efek permintaan viral kini benar-benar terpasang (lewat MarketNavSystem), ulasan membawa
+//             segmen & wilayah pengulas, sentimen kompetitor dari tier/pangsa/momentum, riwayat viral terisi,
+//             tombol "Abaikan" tidak lagi bisa dispam. Perbaikan: viralHistory selalu kosong.
 // v2028.41 — Ulasan lebih banyak & beragam dari tahun ke tahun: volume naik mengikuti tahun/popularitas,
 //             teks dipilih per era TAHUN (bukan data.era), variasi harga/bug/topik era, anti-duplikat.
 import { bus } from '../core/EventBus.js';
@@ -18,11 +22,18 @@ import {
     VIRAL_RESPONSES
 } from '../data/feedback.data.js';
 import { WalletService } from './WalletService.js';
+import { LanguageService } from '../core/LanguageService.js';
+import { VIRAL_EXT, VIRAL_LEGACY_EN } from '../data/market-nav.data.js';
 import { attachBugReactions } from './PublicOpinionBugReactions.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
 function clamp(n) { return Math.max(0, Math.min(100, Math.round(n))); }
+function _lang() { try { return LanguageService.getLang() === 'id' ? 'id' : 'en'; } catch (e) { return 'en'; } }
+function _L(obj) { return obj == null ? '' : (typeof obj === 'string' ? obj : (obj[_lang()] || obj.en || obj.id || '')); }
+const ASPECT_KEYS = ['design', 'camera', 'battery', 'performance', 'price', 'reliability', 'os', 'support', 'display', 'connectivity', 'usability'];
+function _neutralAspects() { const o = {}; ASPECT_KEYS.forEach(k => { o[k] = 50; }); return o; }
+const VIRAL_HISTORY_MAX = 15;
 
 export class PublicOpinionSystem {
     constructor(gameState) {
@@ -47,7 +58,7 @@ export class PublicOpinionSystem {
 
     _onHydrated() {
         const fb = this.state.data.feedback;
-        if (!fb.aspectSentiment) fb.aspectSentiment = { design: 50, camera: 50, battery: 50, performance: 50, price: 50, reliability: 50, os: 50, support: 50 };
+        if (!fb.aspectSentiment) fb.aspectSentiment = _neutralAspects();
         if (!Array.isArray(fb.feed)) fb.feed = [];
         if (!Array.isArray(fb.activeViral)) fb.activeViral = [];
         if (!Array.isArray(fb.viralHistory)) fb.viralHistory = [];
@@ -116,17 +127,14 @@ export class PublicOpinionSystem {
 
         if (!this._hasReleasedProducts()) {
             fb.sentiment = 50;
-            fb.aspectSentiment = {
-                design: 50, camera: 50, battery: 50, performance: 50,
-                price: 50, reliability: 50, os: 50, support: 50
-            };
+            fb.aspectSentiment = _neutralAspects();
             bus.emit('feedback:sentiment-changed', { value: 50 });
             return;
         }
 
         const activeProducts = data.products.catalog.filter(p => p.status === 'selling');
         let avgQuality = 50;
-        let cDesign = 0, cCam = 0, cBat = 0, cPerf = 0, count = 0;
+        let cDesign = 0, cCam = 0, cBat = 0, cPerf = 0, cDisp = 0, cConn = 0, cUse = 0, count = 0;
         let priceScoreSum = 0;
 
         activeProducts.forEach(p => {
@@ -135,6 +143,9 @@ export class PublicOpinionSystem {
             cCam += p.stats.camera || 50;
             cBat += p.stats.battery || 50;
             cPerf += p.stats.performance || 50;
+            cDisp += p.stats.display || 50;
+            cConn += p.stats.connectivity || 50;
+            cUse += p.stats.usability || 50;
             
             // Hitung skor harga berdasarkan ekspektasi pasar
             const expected = this._getExpectedPrice(p.stats.qualityScore || 50, data);
@@ -156,9 +167,12 @@ export class PublicOpinionSystem {
             cCam /= count;
             cBat /= count;
             cPerf /= count;
+            cDisp /= count;
+            cConn /= count;
+            cUse /= count;
         } else {
             avgQuality = 50;
-            cDesign = cCam = cBat = cPerf = 50;
+            cDesign = cCam = cBat = cPerf = cDisp = cConn = cUse = 50;
         }
 
         const reputation = data.market.reputation || 10;
@@ -196,7 +210,10 @@ export class PublicOpinionSystem {
             price:       clamp(priceScore),
             reliability: clamp(100 - bugPenalty * 2),
             os:          clamp(this._osScore()),
-            support:     clamp(50 + reputation * 0.3)
+            support:     clamp(50 + reputation * 0.3),
+            display:      clamp(cDisp),
+            connectivity: clamp(cConn),
+            usability:    clamp(cUse)
         };
 
         bus.emit('feedback:sentiment-changed', { value: sentiment });
@@ -246,14 +263,27 @@ export class PublicOpinionSystem {
         });
     }
 
+    // Persepsi publik terhadap kompetitor: tier teknologi, pangsa, dan momentum pangsa (bukan angka acak murni).
     _updateCompetitorSentiment() {
-        const fb = this.state.data.feedback;
+        const data = this.state.data;
+        const fb = data.feedback;
         const cs = window.__game && window.__game.competitors ? window.__game.competitors : null;
         if (!cs) return;
+        const comps = (data.market && data.market.competitors) || [];
+        const hist = (data.market && data.market.shareHistory) || [];
+        const prev = (hist[1] && hist[1].competitors) || [];
         cs.getActiveIds().forEach(id => {
             const e = cs.state.data.competitorState.entities[id];
             if (!e) return;
-            fb.competitorSentiment[id] = Math.round(50 + ((e.currentTier || 1) - 1) * 10 + (Math.random() * 8 - 4));
+            const cur = comps.find(c => c.id === id);
+            const old = prev.find(c => c.id === id);
+            const share = cur ? (cur.share || 0) : 0;
+            const momentum = (cur && old) ? share - (old.share || 0) : 0;
+            const v = 45 + ((e.currentTier || 1) - 1) * 7
+                + Math.max(0, Math.min(12, share * 60))
+                + Math.max(-6, Math.min(6, momentum * 300))
+                + (Math.random() * 6 - 3);
+            fb.competitorSentiment[id] = Math.round(Math.max(5, Math.min(95, v)));
         });
     }
 
@@ -349,11 +379,26 @@ export class PublicOpinionSystem {
             recent: recent
         });
 
+        // Pengulas berasal dari segmen & sub-wilayah tertentu (MarketNavSystem).
+        let segment = null, region = null, finalText = text;
+        const nav = window.__game && window.__game.marketNav ? window.__game.marketNav : null;
+        if (nav && typeof nav.sampleAudience === 'function') {
+            const aud = nav.sampleAudience(product);
+            segment = aud.segment; region = aud.region;
+            if (score >= 6.5 || score <= 4.5) {
+                if (Math.random() < 0.35) {
+                    const line = nav.personaLine(segment, score >= 6.5, product.name);
+                    if (line) finalText = line;
+                }
+            }
+        }
+
         return {
             id: 'rv_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
             productId: product.id,
             productName: product.name,
-            source, score, text,
+            segment, region,
+            source, score, text: finalText,
             year: data.time.currentYear,
             month: data.time.currentMonth,
             day: data.time.currentDay,
@@ -371,32 +416,70 @@ export class PublicOpinionSystem {
     }
 
     _rollForViralEvent() {
-        const fb = this.state.data.feedback;
+        const data = this.state.data;
+        const fb = data.feedback;
         if (!this._hasReleasedProducts()) return;
         if (this._daysSinceFirstRelease() < 30) return;
         if (fb.activeViral.length >= 2) return;
-        if (Math.random() > 0.15) return;
+        if (Math.random() > 0.18) return;
 
         const sentiment = fb.sentiment || 50;
         const positiveChance = 0.5 + (sentiment - 50) / 100;
         const wantType = Math.random() < positiveChance ? 'positive' : 'negative';
-        const candidates = VIRAL_EVENTS.filter(v => v.type === wantType);
-        if (!candidates.length) return;
-        this._startViralEvent(candidates[Math.floor(Math.random() * candidates.length)]);
+        const year = data.time.currentYear || 2000;
+        const selling = (data.products.catalog || []).filter(p => p.status === 'selling');
+        const activeIds = fb.activeViral.map(v => v.eventId);
+
+        const pool = VIRAL_EVENTS.filter(v => v.type === wantType).map(v => ({ ev: v, ext: false }))
+            .concat(VIRAL_EXT.filter(v => v.type === wantType
+                && (!v.minYear || year >= v.minYear) && (!v.maxYear || year <= v.maxYear)
+                && (v.kind !== 'product' || selling.length > 0)).map(v => ({ ev: v, ext: true })))
+            .filter(x => activeIds.indexOf(x.ev.id) < 0);
+        if (!pool.length) return;
+        const chosen = pool[Math.floor(Math.random() * pool.length)];
+        const extra = {};
+        if (chosen.ext) {
+            if (chosen.ev.segs) extra.segs = chosen.ev.segs.slice();
+            if (chosen.ev.regs) extra.regs = chosen.ev.regs.slice();
+            if (chosen.ev.kind === 'product' && selling.length) {
+                const prod = selling[Math.floor(Math.random() * selling.length)];
+                extra.productId = prod.id;
+                extra.productName = prod.name;
+            }
+        }
+        this._startViralEvent(chosen.ev, extra);
     }
 
-    _startViralEvent(ev) {
+    // Teks viral sesuai bahasa aktif (event lama hanya berbahasa Indonesia -> pakai terjemahan EN bila ada).
+    _viralText(ev, field) {
+        if (ev[field] && typeof ev[field] === 'object') return _L(ev[field]);
+        if (_lang() === 'en' && VIRAL_LEGACY_EN[ev.id] && VIRAL_LEGACY_EN[ev.id][field]) return VIRAL_LEGACY_EN[ev.id][field];
+        return ev[field];
+    }
+
+    _startViralEvent(ev, extra) {
         const data = this.state.data;
         const fb = data.feedback;
+        extra = extra || {};
         const dur = ev.effects.durationDays || 7;
+        const legacyEn = VIRAL_LEGACY_EN[ev.id];
+        const i18n = (ev.title && typeof ev.title === 'object')
+            ? { title: ev.title, text: ev.text }
+            : (legacyEn ? { title: { id: ev.title, en: legacyEn.title }, text: { id: ev.text, en: legacyEn.text } } : null);
         const viral = {
-            id: 'vir_' + Date.now(),
+            id: 'vir_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
             eventId: ev.id,
             type: ev.type,
             effectType: ev.type,
-            title: ev.title,
-            text: ev.text,
+            title: this._viralText(ev, 'title'),
+            text: this._viralText(ev, 'text'),
+            i18n: i18n,
             effects: { ...ev.effects },
+            segs: extra.segs || null,
+            regs: extra.regs || null,
+            productId: extra.productId != null ? extra.productId : null,
+            productName: extra.productName || null,
+            ignored: false,
             startedAtMinute: data.time.elapsedGameMinutes,
             endsAtMinute: data.time.elapsedGameMinutes + dur * MINUTES_PER_DAY
         };
@@ -404,21 +487,33 @@ export class PublicOpinionSystem {
         if (ev.effects.reputation) this.state.addReputation(ev.effects.reputation);
 
         const isPos = ev.type === 'positive';
-        ToastService[isPos ? 'success' : 'warning']((isPos ? '✨ ' : '⚠ ') + ev.title);
-        this.state.addLog('Viral ' + (isPos ? 'positif' : 'negatif') + ': ' + ev.title + '.', isPos ? LOG_TYPES.success : LOG_TYPES.warning);
+        ToastService[isPos ? 'success' : 'warning']((isPos ? '✨ ' : '⚠ ') + viral.title);
+        this.state.addLog((_lang() === 'id' ? 'Viral ' + (isPos ? 'positif' : 'negatif') : 'Viral ' + (isPos ? 'positive' : 'negative')) + ': ' + viral.title + '.', isPos ? LOG_TYPES.success : LOG_TYPES.warning);
         if (data.settings.vibrate) { try { if (navigator.vibrate) navigator.vibrate(isPos ? [20, 40, 20] : [80, 40, 80]); } catch (e) {} }
 
         bus.emit('feedback:viral-started', { viral });
         bus.emit('state:changed', data);
     }
 
+    _archiveViral(v, outcome) {
+        const fb = this.state.data.feedback;
+        if (!Array.isArray(fb.viralHistory)) fb.viralHistory = [];
+        fb.viralHistory.unshift({
+            id: v.id, eventId: v.eventId, type: v.type, title: v.title, i18n: v.i18n || null,
+            productName: v.productName || null, outcome: outcome || 'expired',
+            year: this.state.data.time.currentYear, month: this.state.data.time.currentMonth
+        });
+        if (fb.viralHistory.length > VIRAL_HISTORY_MAX) fb.viralHistory.length = VIRAL_HISTORY_MAX;
+    }
+
     _tickViral() {
         const fb = this.state.data.feedback;
         const now = this.state.data.time.elapsedGameMinutes;
         const before = fb.activeViral.length;
+        const ended = fb.activeViral.filter(v => v.endsAtMinute <= now);
         fb.activeViral = fb.activeViral.filter(v => v.endsAtMinute > now);
         if (fb.activeViral.length < before) {
-            fb.viralHistory = fb.viralHistory.slice(0, 15);
+            ended.forEach(v => this._archiveViral(v, v.ignored ? 'ignored' : 'expired'));
             bus.emit('feedback:viral-ended', { count: before - fb.activeViral.length });
             bus.emit('state:changed', this.state.data);
         }
@@ -432,13 +527,21 @@ export class PublicOpinionSystem {
         if (viral.type !== 'negative') return { ok: false, reason: 'Hanya untuk viral negatif.' };
         const resp = VIRAL_RESPONSES.find(r => r.id === responseId);
         if (!resp) return { ok: false, reason: 'Respons tidak valid.' };
+        // "Abaikan" hanya sekali per viral (sebelumnya bisa diklik berulang dan menguras reputasi).
+        if (responseId === 'ignore' && viral.ignored) return { ok: false, reason: _lang() === 'id' ? 'Sudah diabaikan.' : 'Already ignored.' };
         if (!WalletService.canAfford(resp.cost)) return { ok: false, reason: 'Uang tidak cukup.' };
         if (resp.cost > 0) WalletService.pay(resp.cost, 'viral-response');
         if (resp.effect.reputation) this.state.addReputation(resp.effect.reputation);
+        if (responseId === 'ignore') {
+            viral.ignored = true;
+        } else {
+            fb.activeViral = fb.activeViral.filter(v => v.id !== viralId);
+            this._archiveViral(viral, responseId);
+        }
         this._recomputeSentiment();
-        if (responseId !== 'ignore') fb.activeViral = fb.activeViral.filter(v => v.id !== viralId);
-        this.state.addLog('Respons publik: ' + resp.label + '.', LOG_TYPES.info);
-        ToastService.success('Respons: ' + resp.label);
+        const label = (resp.i18n && resp.i18n.label) ? _L(resp.i18n.label) : resp.label;
+        this.state.addLog((_lang() === 'id' ? 'Respons publik: ' : 'Public response: ') + label + '.', LOG_TYPES.info);
+        ToastService.success((_lang() === 'id' ? 'Respons: ' : 'Response: ') + label);
         bus.emit('feedback:viral-responded', { viralId, responseId });
         bus.emit('state:changed', data);
         return { ok: true };
@@ -451,13 +554,16 @@ export class PublicOpinionSystem {
     getSuggestions()         { return this.state.data.feedback.suggestions || []; }
     getPerProductSatisfaction() { return this.state.data.feedback.perProductSatisfaction || {}; }
     getCompetitorSentiment() { return this.state.data.feedback.competitorSentiment || {}; }
+    getViralHistory()        { return this.state.data.feedback.viralHistory || []; }
 
     forceViral(type) {
-        const list = VIRAL_EVENTS.filter(v => v.type === (type === 'positive' ? 'positive' : 'negative'));
+        const want = type === 'positive' ? 'positive' : 'negative';
+        const list = VIRAL_EVENTS.filter(v => v.type === want).concat(VIRAL_EXT.filter(v => v.type === want && v.kind !== 'product'));
         if (!list.length) return { ok: false };
         const ev = list[Math.floor(Math.random() * list.length)];
-        this._startViralEvent(ev);
-        return { ok: true, event: ev.title };
+        const extra = ev.segs || ev.regs ? { segs: ev.segs ? ev.segs.slice() : null, regs: ev.regs ? ev.regs.slice() : null } : {};
+        this._startViralEvent(ev, extra);
+        return { ok: true, event: this._viralText(ev, 'title') };
     }
 
     recomputeNow() {
@@ -478,4 +584,4 @@ export class PublicOpinionSystem {
         bus.emit('state:changed', this.state.data);
         return { ok: true, review: rv };
     }
-            }
+}
