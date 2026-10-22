@@ -287,7 +287,7 @@ function _renderRecruit(data, teamSystem) {
     const pipeline = _renderPipeline(data, teamSystem);
 
     if (!candidates.length) {
-        return _recruitStyle() + pipeline + header + filterChips + `
+        return _recruitStyle() + _renderPending(data, teamSystem) + pipeline + header + filterChips + `
             <div class="empty">
                 <div class="empty-title">${escapeHtml(t('team.recruit.empty_title'))}</div>
                 <div class="empty-desc">${escapeHtml(allCandidates.length ? t('team.recruit.empty_hint_filter') : t('team.recruit.empty_hint_wait'))}</div>
@@ -299,7 +299,7 @@ function _renderRecruit(data, teamSystem) {
     const rows = candidates.map(function (c) {
         return _renderCandidateRow(c, _impactOf(teamSystem, c));
     }).join('');
-    return _recruitStyle() + pipeline + header + filterChips + '<div class="cand-list">' + rows + '</div>';
+    return _recruitStyle() + _renderPending(data, teamSystem) + pipeline + header + filterChips + '<div class="cand-list">' + rows + '</div>';
 }
 
 // ---------- Helper rekrut (v2027.10c) ----------
@@ -777,4 +777,37 @@ function _negotiateHtml(c) {
                 escapeHtml(_tf('team.nego.hard', 'Keras −12%')) + ' · ' + hard + '%</button>' +
         '</div>' +
         '<div class="nego-hint">' + escapeHtml(_tf('team.nego.hint', 'Kalau ditolak, kandidat mundur dari pool. Hanya bisa sekali, potongan maks 15%.')) + '</div>';
+}
+
+
+// ---------- Antrean onboarding (24 jam game) ----------
+// Kandidat yang sudah menerima tawaran tampil di sini sampai waktunya bergabung.
+function _renderPending(data, teamSystem) {
+    const list = (teamSystem && teamSystem.getPendingHires) ? teamSystem.getPendingHires() : (data.pendingHires || []);
+    if (!list.length) return '';
+
+    const rows = list.map(function (p) {
+        const s = p.staff || {};
+        const role = getRoleById(s.role);
+        const hours = (teamSystem && teamSystem.pendingHoursLeft) ? teamSystem.pendingHoursLeft(p) : 0;
+        const etaText = _tf('team.pending.eta', 'Bergabung dalam {h} jam game').replace('{h}', String(hours));
+        return '<div class="cand-row" style="opacity:.85;cursor:default;">' +
+            '<div class="cand-row-main">' +
+                '<div class="cand-row-head">' +
+                    '<span class="cand-row-name">' + escapeHtml(s.name || '?') + '</span>' +
+                    (s.countryFlag ? '<span class="cand-row-flag">' + s.countryFlag + '</span>' : '') +
+                '</div>' +
+                '<div class="cand-row-meta">' +
+                    '<span style="color:' + (role.color || 'inherit') + ';font-weight:600;">' + escapeHtml(_roleLabel(role)) + '</span>' +
+                    '<span class="cand-row-dot">·</span>' +
+                    '<span>' + escapeHtml(etaText) + '</span>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+
+    return '<div class="recruit-pending">' +
+        '<div class="recruit-next">' + escapeHtml(_tf('team.pending.title', 'Sedang onboarding')) + ' (' + list.length + ')</div>' +
+        rows +
+    '</div>';
 }
