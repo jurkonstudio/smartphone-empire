@@ -1105,6 +1105,7 @@ function bindStateEvents() {
     bus.on('era:changed', function () { renderAll(); });
     bus.on('team:changed', function () { if (activeView === 'team') renderView({ soft: true }); });
     bus.on('team:recruited', function () { if (activeView === 'team') renderView({ soft: true }); });
+    bus.on('team:joined',    function () { if (activeView === 'team') renderView({ soft: true }); });
     bus.on('team:fired', function () { if (activeView === 'team') renderView({ soft: true }); });
 
     function refreshRegionalView() {
