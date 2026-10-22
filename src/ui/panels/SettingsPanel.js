@@ -173,6 +173,9 @@ function _tabUmum(s) {
         _row({ label: t('settings.row.difficulty'), value: escapeHtml(t('settings.difficulty.' + (s.difficulty || 'normal'))) }) +
         _row({ label: t('settings.row.founded'), value: escapeHtml(_formatFounded(s)) })
     ) +
+    _section('portrait', _tf('settings.section.account_real', _pick('Akun', 'Account')),
+        _row({ label: _tf('settings.row.account_created', _pick('Akun dibuat', 'Account created')), hint: _tf('settings.row.account_created_hint', _pick('Tanggal dunia nyata', 'Real-world date')), value: escapeHtml(_formatAccountCreated()) })
+    ) +
     _section('globe', t('pp.settings.section_community'),
         _row({ icon: 'target', label: t('pp.settings.row_leaderboard'), hint: t('pp.settings.row_leaderboard_hint'), action: true, attrs: 'data-set="leaderboard"', chevron: true }) +
         _row({ icon: 'globe', label: t('pp.settings.row_players'), hint: t('pp.settings.row_players_hint'), action: true, attrs: 'data-set="player-list"', chevron: true })
@@ -188,6 +191,15 @@ function _formatFounded(s) {
     const time = s.time || {};
     const monthShort = _monthShort(time.currentMonth);
     return time.currentDay + ' ' + monthShort + ' ' + time.currentYear;
+}
+
+// Tanggal akun dibuat (dunia nyata, mengikuti bahasa aktif & zona waktu perangkat).
+function _formatAccountCreated() {
+    try {
+        const d = new Date(PlayerProfileService.getAccountCreatedAt());
+        if (isNaN(d.getTime())) return '—';
+        return d.toLocaleDateString(_isId() ? 'id-ID' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch (e) { return '—'; }
 }
 
 function _tabTampilan() {
