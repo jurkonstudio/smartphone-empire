@@ -18,7 +18,6 @@ import { SiliconService } from '../../systems/SiliconService.js';
 import { renderOsKpiRow, renderOsUsersTab } from './OsUsersPanel.js';
 import { formatUsers } from '../../systems/OsAdoptionModel.js';
 import { renderUpdateCardsTab, resetUpdateDraft } from './OsUpdateCards.js';
-import { renderOsHub } from './OsPlatformHub.js';
 import { TIME_CONFIG } from '../../config/time.config.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
@@ -64,13 +63,10 @@ export function renderOSPanel(params) {
     if (_osActiveTab === 'status') {
         const hero = _renderHero(os, currentVersion, osSystem);
         const devStrip = developing ? _renderDevStrip(developing) : '';
+        const platformHtml = _renderPlatformSection(osSystem, data);
         const history = _renderVersionHistory(os, currentVersion, osSystem.getAdoption());
         _ensureSumStyles();
-        bodyHtml = renderOsHub({
-            osSystem: osSystem,
-            data: data,
-            parts: { kpi: renderOsKpiRow(osSystem, data), hero: hero, devStrip: devStrip, history: history, rdSummary: _renderRdSummary(osSystem, data) }
-        });
+        bodyHtml = _renderRdSummary(osSystem, data) + renderOsKpiRow(osSystem, data) + hero + devStrip + platformHtml + history;
     } 
     else if (_osActiveTab === 'rancang') {
         bodyHtml = renderUpdateCardsTab(osSystem, data);
