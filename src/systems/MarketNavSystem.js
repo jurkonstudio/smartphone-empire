@@ -28,6 +28,8 @@ import {
 // tetap ditangani qualityF/priceF yang sudah ada.
 export const NAV_LIMITS = { staticMin: 0.78, staticMax: 1.30, totalMin: 0.45, totalMax: 1.60 };
 const SEG_DAMP = 0.65;
+const TARGET_GAIN = 0.15;       // kekuatan efek penargetan kampanye segmen
+const TARGET_MIN = 0.90, TARGET_MAX = 1.12;
 const REG_DAMP = 0.50;
 const MINUTES_PER_DAY = 24 * 60;
 const HISTORY_MAX = 24;
@@ -186,6 +188,27 @@ export class MarketNavSystem {
         return out;
     }
 
+    // Kecocokan BENTUK produk + harga dengan segmen (tanpa level kualitas, supaya tidak dihitung dua kali).
+    _targetFit(seg, vec, price, ctx) {
+        var aff = Math.max(0.35, this._aff(price, seg.tilt, seg.width, ctx));
+        return clamp(this._shape(seg.tastes, vec) * Math.pow(aff, 0.7), 0.25, 2);
+    }
+
+    // Efek penargetan kampanye segmen: cocok -> naik, tidak cocok -> turun (0,90..1,12).
+    _targetFactor(p, vec, ctx) {
+        var promo = this.state.data.promo, self = this, f = 1;
+        if (!promo || !Array.isArray(promo.campaigns)) return 1;
+        promo.campaigns.forEach(function (c) {
+            if (!c || !c.segment || c.productId !== p.id) return;
+            var seg = getSegment(c.segment);
+            if (!seg) return;
+            var delta = clamp(self._targetFit(seg, vec, p.price, ctx) - 1, -0.4, 0.5);
+            var k = (Number(c.segmentBoost) || 0.5) / 0.5;
+            f *= 1 + TARGET_GAIN * delta * k;
+        });
+        return clamp(f, TARGET_MIN, TARGET_MAX);
+    }
+
     _weightsWithBoost(ctx, boost) {
         if (!boost) return ctx.segW;
         var out = {}, sum = 0;
@@ -238,7 +261,7 @@ export class MarketNavSystem {
     // ------------------------------------------------------------ API permintaan
 
     getDemandBreakdown(p) {
-        if (!p || !p.stats) return { segPart: 1, regPart: 1, waveF: 1, viralF: 1, base: 1, total: 1 };
+        if (!p || !p.stats) return { segPart: 1, regPart: 1, waveF: 1, viralF: 1, targetF: 1, base: 1, total: 1 };
         var ctx = this._context();
         var vec = this._vec(p.stats, p.config);
         var segW = this._weightsWithBoost(ctx, this._segBoostFor(p.id));
@@ -247,9 +270,10 @@ export class MarketNavSystem {
         var waveF = this._waveFactor(vec, ctx);
         var base = clamp(segPart * regPart * waveF, NAV_LIMITS.staticMin, NAV_LIMITS.staticMax);
         var viralF = this._viralFactor(p.id, ctx);
+        var targetF = this._targetFactor(p, vec, ctx);
         return {
-            segPart: segPart, regPart: regPart, waveF: waveF, viralF: viralF, base: base,
-            total: clamp(base * viralF, NAV_LIMITS.totalMin, NAV_LIMITS.totalMax)
+            segPart: segPart, regPart: regPart, waveF: waveF, viralF: viralF, targetF: targetF, base: base,
+            total: clamp(base * viralF * targetF, NAV_LIMITS.totalMin, NAV_LIMITS.totalMax)
         };
     }
 
@@ -270,6 +294,17 @@ export class MarketNavSystem {
             var regPart = 1 + (this._fitMix(SUBREGIONS, ctx.subW, vec, price, ctx).raw - 1) * REG_DAMP;
             var f = clamp(segPart * regPart * this._waveFactor(vec, ctx), NAV_LIMITS.staticMin, NAV_LIMITS.staticMax);
             return isFinite(f) ? f : 1;
+        } catch (e) { return 1; }
+    }
+
+    // Kecocokan produk dengan satu segmen (0,25..2), dipakai panel promosi segmen. Selalu angka aman.
+    getSegmentFit(p, segmentId) {
+        try {
+            var seg = getSegment(segmentId);
+            if (!seg || !p || !p.stats) return 1;
+            var ctx = this._context();
+            var f = this._targetFit(seg, this._vec(p.stats, p.config), p.price, ctx);
+            return (typeof f === 'number' && isFinite(f) && f > 0) ? f : 1;
         } catch (e) { return 1; }
     }
 

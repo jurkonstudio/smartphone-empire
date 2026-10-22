@@ -23,7 +23,7 @@ import {
     REGION_IDS, getRegionWeights, getSeason, getSeasonMult, getRegionCostMult
 } from '../data/region.data.js';
 import {
-    PROMO_PACKAGES, getPackageById, getPackagesByScope, getCoverage, MAX_ACTIVE_PER_PRODUCT
+    PROMO_PACKAGES, getPackageById, getPackagesByScope, getCoverage, isBroadScope, MAX_ACTIVE_PER_PRODUCT
 } from '../data/promotion.data.js';
 import { WalletService } from './WalletService.js';
 
@@ -129,7 +129,7 @@ export class PromotionSystem {
 
     getPackageCost(pkg) {
         var year = this.state.data.time.currentYear;
-        var regionMult = pkg.scope === 'global' ? 1.0 : getRegionCostMult(pkg.scope, year);
+        var regionMult = isBroadScope(pkg.scope) ? 1.0 : getRegionCostMult(pkg.scope, year);
         return Math.max(100, Math.round((pkg.cost * this.getCostScale() * regionMult) / 100) * 100);
     }
 
@@ -152,6 +152,14 @@ export class PromotionSystem {
             var q = (st.qualityScore || 50) / Math.max(1, macro.qualityRef);
             var dsg = (st.design || 50) / 100;
             return clamp(Math.pow(Math.max(0.2, q), 0.8) * (0.9 + dsg * 0.2), 0.7, 1.4);
+        }
+        if (region === 'rest') {
+            // Amerika & Lainnya: campuran kualitas dan reputasi/brand.
+            var st2 = product.stats || {};
+            var q2 = (st2.qualityScore || 50) / Math.max(1, macro.qualityRef);
+            var refRep = (BALANCE.products && BALANCE.products.refs && BALANCE.products.refs.reputation) || 50;
+            var rep = clamp((this.state.data.market.reputation || 10) / Math.max(1, refRep), 0.5, 1.5);
+            return clamp(Math.pow(Math.max(0.2, q2), 0.6) * Math.pow(rep, 0.3) * 1.08, 0.7, 1.4);
         }
         return 1;
     }
@@ -177,7 +185,7 @@ export class PromotionSystem {
         if (r === 'asia' && pkgLike.valueFitBonus) fit += pkgLike.valueFitBonus;
         if (r === 'europe' && pkgLike.designFitBonus) fit += pkgLike.designFitBonus;
         var season = getSeasonMult(r, month);
-        var festival = (r === 'asia' && pkgLike.festivalBonus && season > 1) ? (1 + pkgLike.festivalBonus) : 1;
+        var festival = ((r === 'asia' || r === 'rest') && pkgLike.festivalBonus && season > 1) ? (1 + pkgLike.festivalBonus) : 1;
         return reachR * fit * season * festival;
     }
 
@@ -277,6 +285,9 @@ export class PromotionSystem {
         if (activeCount >= MAX_ACTIVE_PER_PRODUCT) {
             return { ok: false, reason: t('promo.err.max_active', { n: MAX_ACTIVE_PER_PRODUCT }) };
         }
+        if (pkg.minYear && d.time.currentYear < pkg.minYear) {
+            return { ok: false, reason: t('promo.err.locked_year', { n: pkg.minYear }) };
+        }
         var cost = this.getPackageCost(pkg);
         if (!WalletService.canAfford(cost)) return { ok: false, reason: t('promo.err.no_cash') };
 
@@ -295,7 +306,9 @@ export class PromotionSystem {
             brandGain: pkg.brandGain,
             festivalBonus: pkg.festivalBonus || 0,
             valueFitBonus: pkg.valueFitBonus || 0,
-            designFitBonus: pkg.designFitBonus || 0
+            designFitBonus: pkg.designFitBonus || 0,
+            segment: pkg.segment || null,
+            segmentBoost: pkg.segment ? (pkg.segmentBoost || 0.5) : 0
         });
         p.stats.spent += cost;
         p.stats.launched += 1;
@@ -325,10 +338,10 @@ export class PromotionSystem {
         active.forEach(function (c) {
             var perDay = c.brandGain / Math.max(1, c.durationDays);
             REGION_IDS.forEach(function (r) {
-                var inScope = c.scope === 'global' || c.scope === r;
+                var inScope = isBroadScope(c.scope) || c.scope === r;
                 if (!inScope) return;
                 covered[r] = true;
-                var share = c.scope === 'global' ? GLOBAL_BRAND_SHARE : 1;
+                var share = isBroadScope(c.scope) ? GLOBAL_BRAND_SHARE : 1;
                 p.brand[r] = clamp(p.brand[r] + perDay * share * (1 - p.brand[r] / 120), 0, 100);
             });
         });
