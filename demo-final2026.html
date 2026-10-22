@@ -1,264 +1,909 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#000000">
-    <title>KLVF — Independent Studio · Smartphone Empire</title>
-    <meta name="description" content="KLVF dan Jurkon Studio: game simulasi independen. Mainkan atau download APK Smartphone Empire untuk Android.">
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="KLVF — Jurkon Studio">
-    <meta property="og:description" content="Game simulasi independen. Download APK Smartphone Empire untuk Android.">
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230a84ff'/%3E%3Ctext x='50' y='68' font-size='52' font-weight='800' text-anchor='middle' fill='white' font-family='sans-serif'%3EK%3C/text%3E%3C/svg%3E">
-    <style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Smartphone Empire — Jurkon Studio</title>
+<meta name="description" content="Smartphone Empire: game simulasi bisnis ponsel dari tahun 2000 sampai era AI dan foldable. Mainkan gratis di browser, download APK Android, masuk akun, dan top up Silicon.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Smartphone Empire — Bangun kerajaan ponselmu">
+<meta property="og:description" content="Mulai 1 Januari 2000, lawan Nokia, Apple, Samsung dan 22 kompetitor lain. Gratis di browser dan Android.">
+<meta property="og:image" content="https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/assets/img/loading-screen.jpg">
+<link rel="icon" type="image/png" sizes="32x32" href="./assets/icon/favicon-32.png">
+<link rel="apple-touch-icon" href="./assets/icon/apple-touch-icon.png">
+<style>
 :root{
-  --bg:#000; --surface:#1c1c1e; --surface-2:#2c2c2e;
-  --text:#fff; --text-2:#c7c7cc; --text-3:#98989f;
-  --line:rgba(255,255,255,.14);
-  --blue:#0a84ff; --blue-d:#0040dd; --orange:#ff9f0a; --green:#30d158; --red:#ff453a;
-  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue","Inter",system-ui,sans-serif;
+  --bg:#000; --s1:#0c0d10; --s2:#16181d; --s3:#1f2229;
+  --text:#f5f5f7; --text2:#c7c7cc; --text3:#8e8e96;
+  --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.18);
+  --blue:#0a84ff; --blue2:#0040dd; --violet:#bf5af2; --green:#30d158; --orange:#ff9f0a; --red:#ff453a;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Inter","Segoe UI",Roboto,system-ui,sans-serif;
+  --r:20px; --ease:cubic-bezier(.2,.8,.2,1);
 }
-*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-html{background:#000;-webkit-text-size-adjust:100%}
-body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.45;letter-spacing:-.011em;text-rendering:optimizeLegibility;padding-bottom:56px;min-height:100vh;
-  background-image:radial-gradient(900px 420px at 12% -8%,rgba(10,132,255,.38),transparent 70%),radial-gradient(700px 380px at 95% 4%,rgba(191,90,242,.26),transparent 70%);
-  background-repeat:no-repeat}
-.wrapper{max-width:1080px;margin:0 auto;padding:0 20px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+html{background:#000;overflow-x:clip;scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:76px}
+body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.5;letter-spacing:-.011em;overflow-x:hidden;
+  padding-bottom:max(0px,env(safe-area-inset-bottom))}
+[hidden]{display:none!important}
+img{max-width:100%;display:block}
+a{color:inherit}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+:focus-visible{outline:3px solid #fff;outline-offset:3px;border-radius:8px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 max(20px,env(safe-area-inset-left))}
+.glow{position:absolute;inset:0 0 auto 0;height:760px;pointer-events:none;z-index:0;
+  background:radial-gradient(800px 420px at 12% -6%,rgba(10,132,255,.40),transparent 70%),radial-gradient(640px 380px at 92% 6%,rgba(191,90,242,.28),transparent 70%)}
+main,header,footer{position:relative;z-index:1}
 
-/* HEADER */
-.header{padding:56px 0 28px;display:flex;flex-direction:column;gap:20px}
-.brand-title{font-size:clamp(3.4rem,9vw,6rem);font-weight:800;letter-spacing:-.065em;line-height:.95;color:#fff}
-.brand-title::first-letter{color:#fff}
-.brand-subtitle{font-size:1.15rem;color:var(--text-2);max-width:520px;font-weight:500;letter-spacing:-.02em;margin-top:12px;line-height:1.4}
-.section-label{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.14em;color:var(--text-3);margin-bottom:12px;font-weight:700}
-.social-grid{display:flex;flex-wrap:wrap;gap:10px}
-.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:14px;color:#fff;text-decoration:none;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -1px 0 rgba(0,0,0,.25),0 4px 14px rgba(0,0,0,.45);
-  transition:transform .25s cubic-bezier(.34,1.56,.64,1),filter .2s}
-.icon-btn:hover{transform:translateY(-3px) scale(1.06);filter:brightness(1.12)}
-.icon-btn:active{transform:scale(.94)}
-.icon-btn:focus-visible,.btn-primary:focus-visible,.contact-item:focus-visible{outline:3px solid #fff;outline-offset:3px}
-.icon-btn svg{width:23px;height:23px;fill:currentColor}
-.n-github{background:linear-gradient(180deg,#8b5cf6,#5b21b6)}
-.n-instagram{background:linear-gradient(45deg,#fd5900 0%,#ff0069 50%,#7638fa 100%)}
-.n-tiktok{background:linear-gradient(180deg,#2a2a2e,#000);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35),0 4px 14px rgba(0,0,0,.45)}
-.n-x{background:linear-gradient(180deg,#3a3a3c,#0b0b0c)}
-.n-soundcloud{background:linear-gradient(180deg,#ff7a1a,#f50)}
-.n-youtube{background:linear-gradient(180deg,#ff3b30,#d70015)}
-.n-spotify{background:linear-gradient(180deg,#34e06f,#14a844);color:#001a08}
-.n-tumblr{background:linear-gradient(180deg,#3d6a99,#1f3d5e)}
+/* NAV */
+.nav{position:sticky;top:0;z-index:50;background:rgba(0,0,0,.62);backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);border-bottom:1px solid var(--line)}
+.nav-in{display:flex;align-items:center;gap:14px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:800;letter-spacing:-.03em;font-size:1.02rem;white-space:nowrap}
+@media(max-width:480px){.brand{font-size:.92rem;gap:8px}.brand img{width:26px;height:26px}.nav-in{gap:8px}.nav .btn-sm{padding:0 13px}}
+.brand img{width:30px;height:30px;border-radius:8px}
+.nav-links{display:none;gap:4px;margin-left:12px}
+.nav-links a{text-decoration:none;color:var(--text2);font-size:.9rem;font-weight:600;padding:8px 12px;border-radius:999px;transition:.2s}
+.nav-links a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.nav-sp{flex:1}
+@media(min-width:880px){.nav-links{display:flex}}
 
-.divider{height:1px;background:var(--line);margin:28px 0}
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 22px;border-radius:999px;font-weight:700;font-size:.95rem;text-decoration:none;white-space:nowrap;transition:transform .25s var(--ease),background .2s,box-shadow .2s}
+.btn:active{transform:scale(.96)}
+.btn svg{width:18px;height:18px;flex:none}
+.btn-primary{background:#fff;color:#06143a}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(255,255,255,.18)}
+.btn-blue{background:linear-gradient(180deg,#2b96ff,#0a6cf0);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 6px 18px rgba(10,108,240,.4)}
+.btn-blue:hover{transform:translateY(-1px);filter:brightness(1.08)}
+.btn-ghost{background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px var(--line2)}
+.btn-ghost:hover{background:rgba(255,255,255,.15)}
+.btn-sm{min-height:38px;padding:0 16px;font-size:.88rem}
+.btn[disabled]{opacity:.5;pointer-events:none}
+.acct-chip{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 6px 0 14px;border-radius:999px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px var(--line2);font-weight:700;font-size:.85rem}
+.acct-chip .av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--violet));display:grid;place-items:center;font-size:.8rem;font-weight:800}
+
+/* HERO */
+.hero{padding:56px 0 24px;display:grid;gap:40px;align-items:center}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.8rem;font-weight:700;color:var(--text2);padding:6px 14px 6px 8px;border-radius:999px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px var(--line);margin-bottom:20px}
+.eyebrow b{background:var(--blue);color:#fff;border-radius:999px;padding:2px 9px;font-size:.72rem}
+h1.title{font-size:clamp(2.5rem,7.4vw,4.9rem);font-weight:800;letter-spacing:-.055em;line-height:1.0}
+h1.title em{font-style:normal;background:linear-gradient(100deg,#5ac8fa,#0a84ff 45%,#bf5af2);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{margin-top:20px;font-size:1.12rem;color:var(--text2);max-width:34em;font-weight:500}
+.cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
+.hero-note{margin-top:14px;font-size:.84rem;color:var(--text3)}
+.phones{position:relative;height:440px;display:flex;justify-content:center;align-items:center}
+.phone{position:absolute;width:210px;aspect-ratio:390/844;border-radius:34px;padding:7px;background:linear-gradient(160deg,#3a3d46,#101115);box-shadow:0 0 0 1px rgba(255,255,255,.14),0 30px 60px rgba(0,0,0,.65);transition:transform .5s var(--ease)}
+.phone img{width:100%;height:100%;object-fit:cover;border-radius:27px;object-position:top}
+.phone.p1{transform:translateX(-120px) rotate(-8deg) scale(.86);z-index:1;opacity:.92}
+.phone.p2{z-index:3}
+.phone.p3{transform:translateX(120px) rotate(8deg) scale(.86);z-index:1;opacity:.92}
+.phones:hover .p1{transform:translateX(-134px) rotate(-10deg) scale(.88)}
+.phones:hover .p3{transform:translateX(134px) rotate(10deg) scale(.88)}
+@media(min-width:900px){.hero{grid-template-columns:1.1fr .9fr;padding-top:84px}.phones{height:560px}.phone{width:250px}.phone.p1{transform:translateX(-150px) rotate(-8deg) scale(.86)}.phone.p3{transform:translateX(150px) rotate(8deg) scale(.86)}}
+
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border-radius:var(--r);overflow:hidden;margin:36px 0 0;box-shadow:0 0 0 1px var(--line)}
+.stat{background:var(--s1);padding:20px 18px}
+.stat b{display:block;font-size:clamp(1.6rem,4.4vw,2.3rem);font-weight:800;letter-spacing:-.05em;line-height:1.05}
+.stat span{font-size:.84rem;color:var(--text3);font-weight:600}
+@media(min-width:760px){.stats{grid-template-columns:repeat(5,1fr)}}
+
+/* SECTIONS */
+section{padding:84px 0 0}
+.kicker{font-size:.82rem;font-weight:700;color:var(--blue);letter-spacing:.02em;margin-bottom:10px}
+h2.h{font-size:clamp(1.9rem,5vw,3rem);font-weight:800;letter-spacing:-.05em;line-height:1.05;max-width:18em}
+.sub{margin-top:14px;color:var(--text2);font-size:1.05rem;max-width:40em;font-weight:500}
+
+/* BENTO */
+.bento{display:grid;gap:12px;margin-top:36px}
+.tile{position:relative;overflow:hidden;border-radius:var(--r);padding:24px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);transition:transform .3s var(--ease),box-shadow .3s}
+.tile:hover{transform:translateY(-3px);box-shadow:inset 0 0 0 1px var(--line2)}
+.tile .ic{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;margin-bottom:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+.tile .ic svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tile h3{font-size:1.25rem;font-weight:800;letter-spacing:-.035em;margin-bottom:8px}
+.tile p{color:var(--text2);font-size:.95rem}
+.tile ul{list-style:none;margin-top:14px;display:grid;gap:7px}
+.tile li{font-size:.88rem;color:var(--text2);padding-left:20px;position:relative}
+.tile li::before{content:"";position:absolute;left:2px;top:.55em;width:8px;height:8px;border-radius:50%;background:var(--c,var(--blue))}
+.tile .big{font-size:2.6rem;font-weight:800;letter-spacing:-.06em;line-height:1;margin-bottom:4px}
+.c-blue{--c:#0a84ff}.c-blue .ic{background:linear-gradient(180deg,#2b96ff,#0a5fe0)}
+.c-violet{--c:#bf5af2}.c-violet .ic{background:linear-gradient(180deg,#c97bf5,#8b2fc9)}
+.c-green{--c:#30d158}.c-green .ic{background:linear-gradient(180deg,#3ddc68,#139a3c)}
+.c-orange{--c:#ff9f0a}.c-orange .ic{background:linear-gradient(180deg,#ffb340,#d97700)}
+.c-red{--c:#ff453a}.c-red .ic{background:linear-gradient(180deg,#ff6a60,#c9251b)}
+.c-cyan{--c:#32ade6}.c-cyan .ic{background:linear-gradient(180deg,#5ac8fa,#1b86c2)}
+.tile.hl{background:radial-gradient(120% 90% at 0% 0%,rgba(10,132,255,.22),transparent 60%),var(--s1)}
+@media(min-width:720px){.bento{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1000px){.bento{grid-template-columns:repeat(6,1fr)}.tile{grid-column:span 2}.tile.w3{grid-column:span 3}.tile.w4{grid-column:span 4}}
+
+/* SHOWCASE */
+.show{display:grid;gap:28px;margin-top:36px;align-items:center}
+.tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin:0 -20px;padding-left:20px;padding-right:20px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;min-height:42px;padding:0 18px;border-radius:999px;font-weight:700;font-size:.9rem;color:var(--text2);background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px var(--line);transition:.2s}
+.tab[aria-selected=true]{background:#fff;color:#06143a;box-shadow:none}
+.show-copy h3{font-size:1.7rem;font-weight:800;letter-spacing:-.045em;margin:18px 0 10px;line-height:1.1}
+.show-copy p{color:var(--text2);font-size:1.02rem}
+.show-copy ul{list-style:none;margin-top:16px;display:grid;gap:9px}
+.show-copy li{padding:12px 14px 12px 44px;background:var(--s1);border-radius:14px;box-shadow:inset 0 0 0 1px var(--line);font-size:.92rem;color:var(--text2);position:relative}
+.show-copy li b{color:#fff}
+.show-copy li::before{content:"";position:absolute;left:14px;top:50%;width:20px;height:20px;margin-top:-10px;border-radius:50%;background:var(--blue) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/13px no-repeat}
+.show-ph{display:flex;justify-content:center}
+.show-ph .phone{position:relative;width:min(270px,70vw);transform:none}
+.show-ph .phone img{transition:opacity .35s}
+@media(min-width:900px){.show{grid-template-columns:.8fr 1.2fr;gap:56px}.show-ph{order:-1}}
+
+/* ERA */
+.eras{display:grid;gap:10px;margin-top:36px;counter-reset:e}
+.era{display:flex;align-items:center;gap:16px;padding:16px 18px;border-radius:16px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);position:relative;overflow:hidden}
+.era::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c)}
+.era .yr{font-weight:800;font-size:1.05rem;letter-spacing:-.03em;min-width:98px;font-variant-numeric:tabular-nums}
+.era .nm{font-weight:700}
+.era .ds{display:block;color:var(--text3);font-size:.84rem;font-weight:500}
+@media(min-width:900px){.eras{grid-template-columns:repeat(2,1fr)}}
+
+/* STEPS */
+.steps{display:grid;gap:12px;margin-top:36px}
+.step{padding:22px;border-radius:var(--r);background:var(--s1);box-shadow:inset 0 0 0 1px var(--line)}
+.step .n{width:34px;height:34px;border-radius:50%;background:var(--blue);display:grid;place-items:center;font-weight:800;margin-bottom:14px}
+.step h3{font-size:1.1rem;font-weight:800;letter-spacing:-.03em;margin-bottom:6px}
+.step p{font-size:.92rem;color:var(--text2)}
+.rules{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.pill{font-size:.84rem;font-weight:600;color:var(--text2);padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px var(--line)}
+.pill b{color:#fff}
+@media(min-width:760px){.steps{grid-template-columns:repeat(4,1fr)}}
+
+/* SILICON / TOPUP */
+.sil{position:relative;border-radius:28px;padding:28px 20px;background:radial-gradient(90% 70% at 100% 0%,rgba(191,90,242,.25),transparent 60%),radial-gradient(90% 70% at 0% 100%,rgba(10,132,255,.28),transparent 60%),var(--s1);box-shadow:inset 0 0 0 1px var(--line2)}
+@media(min-width:760px){.sil{padding:44px}}
+.sil-grid{display:grid;gap:28px;margin-top:8px}
+@media(min-width:980px){.sil-grid{grid-template-columns:.85fr 1.15fr;gap:44px}}
+.acct{border-radius:18px;padding:18px;background:rgba(0,0,0,.38);box-shadow:inset 0 0 0 1px var(--line);margin-top:22px}
+.acct-row{display:flex;align-items:center;gap:12px}
+.acct .av{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--violet));display:grid;place-items:center;font-weight:800;font-size:1.1rem;flex:none}
+.acct .nm{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acct .mt{font-size:.82rem;color:var(--text3)}
+.acct-kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.kpi{padding:12px;border-radius:12px;background:rgba(255,255,255,.06)}
+.kpi span{display:block;font-size:.74rem;color:var(--text3);font-weight:600}
+.kpi b{font-size:1.15rem;font-weight:800;letter-spacing:-.03em}
+.acct-act{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.wallet-list{list-style:none;margin-top:20px;display:grid;gap:8px}
+.wallet-list li{font-size:.9rem;color:var(--text2);padding-left:24px;position:relative}
+.wallet-list li::before{content:"💎";position:absolute;left:0;font-size:.8rem;top:.1em}
+.pkgs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.pkg{position:relative;text-align:left;padding:16px 14px 14px;border-radius:18px;background:rgba(0,0,0,.4);box-shadow:inset 0 0 0 1px var(--line);transition:transform .25s var(--ease),box-shadow .2s,background .2s;display:flex;flex-direction:column;gap:2px;min-height:132px}
+.pkg:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 1px var(--line2)}
+.pkg[aria-checked=true]{background:rgba(10,132,255,.16);box-shadow:inset 0 0 0 2px var(--blue)}
+.pkg .g{font-size:1.3rem}
+.pkg .amt{font-size:1.7rem;font-weight:800;letter-spacing:-.05em;line-height:1.05}
+.pkg .amt small{font-size:.8rem;font-weight:700;color:var(--text3);margin-left:3px;letter-spacing:0}
+.pkg .bn{font-size:.78rem;font-weight:700;color:var(--green);min-height:1.2em}
+.pkg .pr{margin-top:auto;font-weight:700;font-size:.95rem;color:var(--text2)}
+.pkg .tg{position:absolute;top:10px;right:10px;font-size:.66rem;font-weight:800;padding:3px 8px;border-radius:999px;background:var(--orange);color:#2a1700}
+.pkg .tg.best{background:var(--violet);color:#fff}
+.pkg:last-child{grid-column:span 2}
+@media(min-width:560px){.pkgs{grid-template-columns:repeat(3,1fr)}.pkg:last-child{grid-column:auto}}
+.methods{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.method{flex:1;min-width:130px;min-height:48px;border-radius:14px;font-weight:700;background:rgba(0,0,0,.4);box-shadow:inset 0 0 0 1px var(--line);display:flex;align-items:center;justify-content:center;gap:8px}
+.method[aria-checked=true]{background:rgba(10,132,255,.16);box-shadow:inset 0 0 0 2px var(--blue)}
+.checkout{margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 16px;border-radius:16px;background:rgba(0,0,0,.4);box-shadow:inset 0 0 0 1px var(--line)}
+.checkout .sm{font-size:.82rem;color:var(--text3);font-weight:600}
+.checkout .tt{font-size:1.2rem;font-weight:800;letter-spacing:-.03em}
+.fine{margin-top:12px;font-size:.8rem;color:var(--text3);line-height:1.5}
+.orders{margin-top:22px}
+.orders h4{font-size:.82rem;font-weight:700;color:var(--text3);margin-bottom:8px}
+.ord{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;background:rgba(0,0,0,.35);margin-bottom:6px;font-size:.86rem}
+.ord .o1{flex:1;min-width:0}
+.ord .o1 b{display:block;font-weight:700}
+.ord .o1 span{color:var(--text3);font-size:.76rem;font-family:ui-monospace,Menlo,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.st{font-size:.72rem;font-weight:800;padding:3px 9px;border-radius:999px}
+.st.pending{background:rgba(255,159,10,.18);color:var(--orange)}
+.st.approved{background:rgba(48,209,88,.18);color:var(--green)}
+.st.rejected{background:rgba(255,69,58,.18);color:var(--red)}
+.ord .lnk{font-size:.8rem;font-weight:700;color:var(--blue);padding:6px 8px}
 
 /* STUDIO */
-.studio-title{font-size:2.4rem;font-weight:800;letter-spacing:-.045em;line-height:1.05;margin-bottom:8px}
-.studio-desc{color:var(--text-2);font-size:1.05rem;font-weight:500;margin-bottom:24px;max-width:720px;line-height:1.45}
-.bento-grid{display:grid;grid-template-columns:1fr;gap:12px}
-@media(min-width:768px){.bento-grid{grid-template-columns:repeat(2,1fr)}.col-span-2{grid-column:span 2}}
-.card{border-radius:24px;padding:26px;display:flex;flex-direction:column;position:relative;overflow:hidden;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 10px 30px rgba(0,0,0,.5);transition:transform .3s cubic-bezier(.2,.8,.2,1),filter .3s}
-.card:hover{transform:translateY(-3px);filter:brightness(1.06)}
-.card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(120% 70% at 0% 0%,rgba(255,255,255,.22),transparent 55%)}
-.card>*{position:relative;z-index:1}
-.card-blue{background:linear-gradient(135deg,#0a84ff 0%,#0040dd 100%)}
-.card-orange{background:linear-gradient(135deg,#f26a00 0%,#b92d00 100%)}
-.card-green{background:linear-gradient(135deg,#0f9d4a 0%,#06592a 100%)}
-.card-title{font-size:1.55rem;font-weight:800;letter-spacing:-.04em;margin-bottom:10px;line-height:1.1}
-.card-text{color:rgba(255,255,255,.94);font-size:.97rem;line-height:1.5;flex-grow:1;font-weight:500}
-.card-text i{font-style:normal;font-weight:700;color:#fff}
-.badge{display:inline-block;background:#fff;color:#0040dd;padding:4px 11px;border-radius:999px;font-size:.72rem;font-weight:800;letter-spacing:.02em;text-transform:uppercase;margin-bottom:12px}
-.badge-solid{background:rgba(0,0,0,.34);color:#fff;margin:0 6px 0 0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
-.specs-list{margin-top:14px;list-style:none;display:grid;gap:8px}
-.specs-list li{position:relative;padding:11px 14px 11px 42px;font-size:.9rem;color:rgba(255,255,255,.95);background:rgba(0,0,0,.28);border-radius:14px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);font-weight:500;line-height:1.4}
-.specs-list li b{color:#fff;font-weight:800}
-.specs-list li::before{content:"";position:absolute;left:13px;top:50%;width:20px;height:20px;margin-top:-10px;border-radius:50%;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230040dd' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/14px no-repeat}
-@media(min-width:768px){
-  .card-blue{display:grid;grid-template-columns:1.05fr 1fr;column-gap:32px;align-items:center;padding:32px}
-  .card-blue .flag-head{grid-column:1/-1;margin-bottom:6px}
-  .card-blue .flag-copy{display:flex;flex-direction:column;height:100%;justify-content:space-between}
-  .card-blue .specs-list{margin-top:0}
-}
-.flag-copy{display:flex;flex-direction:column}
-.btn-primary{display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;background:#fff;color:#0040dd;padding:14px 26px;border-radius:999px;font-size:1rem;font-weight:800;text-decoration:none;margin-top:20px;letter-spacing:-.01em;box-shadow:0 6px 18px rgba(0,0,0,.35);transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .2s}
-.btn-primary:hover{transform:scale(1.04);box-shadow:0 10px 24px rgba(0,0,0,.45)}
-.btn-primary:active{transform:scale(.97)}
+.studio{display:grid;gap:12px;margin-top:36px}
+@media(min-width:800px){.studio{grid-template-columns:repeat(3,1fr)}}
+.sc{border-radius:var(--r);padding:24px;color:#fff;position:relative;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 10px 30px rgba(0,0,0,.5)}
+.sc::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 70% at 0% 0%,rgba(255,255,255,.2),transparent 55%)}
+.sc>*{position:relative;z-index:1}
+.sc h3{font-size:1.4rem;font-weight:800;letter-spacing:-.04em;margin-bottom:8px}
+.sc p{font-size:.94rem;color:rgba(255,255,255,.92);font-weight:500}
+.sc .bd{display:inline-block;font-size:.72rem;font-weight:800;padding:4px 11px;border-radius:999px;background:rgba(0,0,0,.34);box-shadow:inset 0 0 0 1px rgba(255,255,255,.3);margin:14px 6px 0 0}
+.sc.b{background:linear-gradient(135deg,#0a84ff,#0040dd)}
+.sc.o{background:linear-gradient(135deg,#f26a00,#b92d00)}
+.sc.g{background:linear-gradient(135deg,#0f9d4a,#06592a)}
+.social{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
+.ib{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 4px 14px rgba(0,0,0,.45);transition:transform .25s var(--ease)}
+.ib:hover{transform:translateY(-3px) scale(1.06)}
+.ib svg{width:22px;height:22px;fill:currentColor}
+.n-gh{background:linear-gradient(180deg,#8b5cf6,#5b21b6)}.n-ig{background:linear-gradient(45deg,#fd5900,#ff0069 50%,#7638fa)}
+.n-tt{background:linear-gradient(180deg,#2a2a2e,#000);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35)}
+.n-x{background:linear-gradient(180deg,#3a3a3c,#0b0b0c)}.n-sc{background:linear-gradient(180deg,#ff7a1a,#f50)}
+.n-yt{background:linear-gradient(180deg,#ff3b30,#d70015)}.n-sp{background:linear-gradient(180deg,#34e06f,#14a844);color:#001a08}
+.n-tb{background:linear-gradient(180deg,#3d6a99,#1f3d5e)}
 
-.btn-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:20px}
-.btn-row .btn-primary{margin-top:0}
-.btn-apk{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:rgba(255,255,255,.14);color:#fff;padding:13px 24px;border-radius:999px;font-size:1rem;font-weight:800;text-decoration:none;letter-spacing:-.01em;border:1.5px solid rgba(255,255,255,.55);box-shadow:0 6px 18px rgba(0,0,0,.25);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:transform .25s cubic-bezier(.34,1.56,.64,1),background .2s}
-.btn-apk:hover{transform:scale(1.04);background:rgba(255,255,255,.24)}
-.btn-apk:active{transform:scale(.97)}
+/* ROADMAP + FAQ */
+.road{display:grid;gap:10px;margin-top:32px}
+.rd{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border-radius:16px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line)}
+.rd .tag{flex:none;font-size:.72rem;font-weight:800;padding:4px 10px;border-radius:999px;margin-top:2px}
+.rd .tag.ok{background:rgba(48,209,88,.18);color:var(--green)}
+.rd .tag.next{background:rgba(255,159,10,.18);color:var(--orange)}
+.rd b{display:block;font-weight:700}
+.rd span{font-size:.88rem;color:var(--text3)}
+@media(min-width:800px){.road{grid-template-columns:repeat(2,1fr)}}
+.faq{margin-top:32px;border-radius:var(--r);background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);overflow:hidden}
+details{border-bottom:1px solid var(--line)}details:last-child{border:0}
+summary{list-style:none;cursor:pointer;padding:18px 20px;font-weight:700;display:flex;justify-content:space-between;gap:14px;align-items:center}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-size:1.4rem;color:var(--text3);transition:transform .25s}
+details[open] summary::after{transform:rotate(45deg)}
+details p{padding:0 20px 18px;color:var(--text2);font-size:.95rem;max-width:62ch}
 
-/* CONTACT */
-.contact-section{margin-top:36px;padding-top:24px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
-.contact-links{display:flex;flex-wrap:wrap;gap:10px}
-.contact-item{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-size:1rem;font-weight:700;padding:13px 20px;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 4px 14px rgba(0,0,0,.4);transition:transform .25s cubic-bezier(.34,1.56,.64,1),filter .2s}
-.contact-item:hover{transform:translateY(-2px);filter:brightness(1.1)}
-.contact-item:active{transform:scale(.96)}
-.contact-item svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2.2}
-.contact-item svg[fill="currentColor"]{fill:currentColor}
-.c-wa{background:#25d366;color:#04230f}
-.c-dc{background:#5865f2}
-.c-em{background:#0a84ff}
-@media(max-width:480px){.contact-item{flex:1 1 100%;justify-content:center}.studio-title{font-size:2rem}}
-@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+/* FOOTER */
+.foot{margin-top:84px;padding:34px 0 40px;border-top:1px solid var(--line)}
+.contact{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 28px}
+.ci{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 4px 14px rgba(0,0,0,.4)}
+.ci svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2}
+.ci svg.f{fill:currentColor;stroke:none}
+.c-wa{background:#25d366;color:#04230f}.c-dc{background:#5865f2}.c-em{background:#0a84ff}
+.legal{font-size:.8rem;color:var(--text3);max-width:70ch;line-height:1.6}
 
-/* REFINEMENTS */
-body{min-height:100vh;min-height:100dvh;padding-bottom:max(56px,env(safe-area-inset-bottom))}
-.wrapper{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
-.brand-title::first-letter{color:inherit}
-.section-label{text-transform:none;letter-spacing:0;font-size:.82rem;font-weight:600}
-.badge{text-transform:none;font-size:.78rem;letter-spacing:0}
-.brand-subtitle,.studio-desc,.card-text{max-width:60ch}
-.btn-apk:focus-visible{outline:3px solid #fff;outline-offset:3px}
-.btn-apk{background:#fff;color:#0040dd;border-color:#fff}
-.btn-apk:hover{background:#fff;transform:scale(1.04)}
-.btn-primary{background:rgba(255,255,255,.14);color:#fff;border:1.5px solid rgba(255,255,255,.55);padding:13px 24px;box-shadow:none}
-.btn-primary:hover{background:rgba(255,255,255,.24);box-shadow:none}
-.dl-note{margin-top:12px;font-size:.85rem;font-weight:500;color:rgba(255,255,255,.85);max-width:46ch}
-.copyright{margin-top:28px;font-size:.82rem;color:var(--text-3);text-align:center}
-.card:hover{filter:none}
-@media(hover:none){.card:hover,.icon-btn:hover,.btn-primary:hover,.btn-apk:hover,.contact-item:hover{transform:none}}
-@media(max-width:480px){.btn-row{flex-direction:column;align-items:stretch}.btn-row .btn-primary,.btn-row .btn-apk{width:100%;align-self:stretch}.card{padding:22px}}
-.header{animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
-@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-@media(prefers-reduced-motion:reduce){.header{animation:none}}
+/* MODAL */
+.ovl{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:none;align-items:flex-end;justify-content:center;padding:0}
+.ovl.open{display:flex;animation:fade .2s}
+@keyframes fade{from{opacity:0}}
+.sheet{width:100%;max-width:440px;max-height:92dvh;overflow:auto;background:#17181c;border-radius:26px 26px 0 0;padding:24px 22px max(24px,env(safe-area-inset-bottom));box-shadow:0 -20px 60px rgba(0,0,0,.6),inset 0 0 0 1px var(--line2);animation:up .3s var(--ease)}
+@keyframes up{from{transform:translateY(30px);opacity:0}}
+@media(min-width:560px){.ovl{align-items:center;padding:20px}.sheet{border-radius:26px}}
+.sh-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.sh-head h3{font-size:1.4rem;font-weight:800;letter-spacing:-.04em}
+.x{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;font-size:1.2rem;line-height:1}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:14px;background:rgba(255,255,255,.07);margin:16px 0}
+.seg button{min-height:40px;border-radius:11px;font-weight:700;font-size:.9rem;color:var(--text2)}
+.seg button[aria-selected=true]{background:#fff;color:#06143a}
+.fl{display:block;font-size:.82rem;font-weight:700;color:var(--text2);margin:14px 0 6px}
+.in{width:100%;min-height:48px;padding:0 14px;border-radius:14px;background:#0b0c0f;border:1px solid var(--line2);color:#fff;font:inherit;font-size:1rem}
+.in:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(10,132,255,.35)}
+.pw{position:relative}.pw .in{padding-right:64px}
+.pw button{position:absolute;right:6px;top:6px;height:36px;padding:0 12px;border-radius:10px;font-size:.78rem;font-weight:700;color:var(--text2);background:rgba(255,255,255,.08)}
+.msg{display:none;margin-top:14px;padding:11px 14px;border-radius:12px;font-size:.88rem;font-weight:600}
+.msg.show{display:block}.msg.err{background:rgba(255,69,58,.14);color:#ff8d85}.msg.ok{background:rgba(48,209,88,.14);color:#7be598}.msg.info{background:rgba(10,132,255,.14);color:#8cc4ff}
+.lnk-b{background:none;color:var(--blue);font-weight:700;font-size:.86rem;padding:8px 0}
+.qrbox{background:#fff;border-radius:18px;padding:10px;margin:14px 0}
+.qrbox img{width:100%;max-width:300px;margin:0 auto;border-radius:10px}
+.tm{font-family:ui-monospace,Menlo,monospace;font-weight:700;color:var(--red)}
+.ordid{display:flex;gap:8px;align-items:center;background:#0b0c0f;border-radius:12px;padding:10px 12px;margin:6px 0 4px;border:1px solid var(--line2)}
+.ordid code{flex:1;font-size:.85rem;word-break:break-all;font-family:ui-monospace,Menlo,monospace}
+.ordid button{font-size:.78rem;font-weight:700;color:var(--blue);padding:6px 10px;border-radius:8px;background:rgba(10,132,255,.14)}
+.cnt{text-align:center;font-size:.84rem;color:var(--text2);margin:6px 0}
+.big-amt{text-align:center;font-size:2rem;font-weight:800;letter-spacing:-.05em}
+
+/* TOAST */
+.toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:200;background:#fff;color:#06143a;font-weight:700;font-size:.9rem;padding:12px 20px;border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:.3s var(--ease);max-width:calc(100vw - 32px);text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+.rv{opacity:0;transform:translateY(18px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.rv.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.rv{opacity:1;transform:none}html{scroll-behavior:auto}}
+@media(max-width:480px){.cta .btn{flex:1 1 100%}.phones{height:380px}.phone{width:180px}.phone.p1{transform:translateX(-96px) rotate(-8deg) scale(.86)}.phone.p3{transform:translateX(96px) rotate(8deg) scale(.86)}}
 </style>
 </head>
 <body>
+<div class="glow" aria-hidden="true"></div>
 
-    <div class="wrapper">
-        
-        <!-- HEADER -->
-        <header class="header">
-            <div>
-                <h1 class="brand-title">KLVF.</h1>
-                <p class="brand-subtitle">Digital architect & audio engineer independen. Membangun pengalaman web yang presisi dan sistem simulasi yang dalam.</p>
-            </div>
-
-            <!-- Sosial Media -->
-            <div class="social-section">
-                <span class="section-label">Jejaring</span>
-                <div class="social-grid">
-                    <!-- GitHub -->
-                    <a href="https://github.com/jurkonstudio" target="_blank" class="icon-btn n-github" aria-label="GitHub" rel="noopener">
-                        <svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
-                    </a>
-                    <!-- Instagram -->
-                    <a href="https://instagram.com/calvf1nka" target="_blank" class="icon-btn n-instagram" aria-label="Instagram" rel="noopener">
-                        <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-                    </a>
-                    <!-- TikTok -->
-                    <a href="https://tiktok.com/@ks2908_" target="_blank" class="icon-btn n-tiktok" aria-label="TikTok" rel="noopener">
-                        <svg viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1.04-.1z"/></svg>
-                    </a>
-                    <!-- X (Twitter) -->
-                    <a href="https://x.com/calvf1nka" target="_blank" class="icon-btn n-x" aria-label="X" rel="noopener">
-                        <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                    </a>
-                    <!-- Soundcloud -->
-                    <a href="https://soundcloud.com/calvfinka" target="_blank" class="icon-btn n-soundcloud" aria-label="Soundcloud" rel="noopener">
-                        <svg viewBox="0 0 24 24"><path d="M21.5 12c-1.1 0-2.1.3-3 .8C18 9.2 14.9 6.5 11 6.5c-1.1 0-2 .1-2.8.3v11.3c.8.2 1.7.3 2.8.3h10.5c1.9 0 3.5-1.6 3.5-3.5S23.4 12 21.5 12zM1 14c0 1.7.4 3.2 1.2 4.1h1.5V12.2C2.4 12.1 1 12.9 1 14zm4.5-2.7V18h1.3V10.6c-.5.1-1 .4-1.3.7zm3-.9V18h1.3V9.6c-.5.1-.9.4-1.3.8zm3.1.1V18h1.3V9.8c-.4.3-.9.5-1.3.7z"/></svg>
-                    </a>
-                    <!-- YouTube -->
-                    <a href="https://youtube.com/@calvfinka" target="_blank" class="icon-btn n-youtube" aria-label="YouTube" rel="noopener">
-                        <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                    </a>
-                    <!-- Spotify -->
-                    <a href="https://open.spotify.com/playlist/4hiTFBL8p8TaaQZxXFaANj?si=mE-jQG6ET6STrdfYQe_KQQ&utm_source=copy-link&pi=3ImTEITeQcuG9" target="_blank" class="icon-btn n-spotify" aria-label="Spotify" rel="noopener">
-                        <svg viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.502 17.302c-.225.369-.705.484-1.074.259-3.022-1.845-6.83-2.263-11.317-1.239-.422.096-.843-.164-.938-.586-.096-.422.164-.843.586-.938 4.905-1.12 9.094-.637 12.482 1.431.368.225.483.704.261 1.073zm1.47-3.265c-.283.46-.886.604-1.346.321-3.458-2.126-8.73-2.741-12.82-1.501-.518.158-1.066-.133-1.224-.65-.158-.518.133-1.066.65-1.224 4.68-1.419 10.482-.733 14.42 1.688.459.283.603.886.32 1.346zm.126-3.416c-4.146-2.462-10.986-2.69-14.963-1.484-.635.193-1.304-.166-1.497-.8-.193-.634.166-1.304.8-1.497 4.566-1.385 12.116-1.114 16.857 1.701.571.339.761 1.08.422 1.651-.34.57-1.081.76-1.651.421z"/></svg>
-                    </a>
-                    <!-- Tumblr -->
-                    <a href="https://tumblr.com/calvfinka" target="_blank" class="icon-btn n-tumblr" aria-label="Tumblr" rel="noopener">
-                        <svg viewBox="0 0 24 24"><path d="M14.278 23.95c-3.14 0-5.464-1.586-5.464-5.258V11.14H4.839V8.522c3.427-.983 4.973-3.92 5.227-6.887h2.864v6.14h3.835v3.365h-3.835v6.602c0 1.567.74 2.153 1.84 2.153.54 0 1.047-.12 1.492-.33v3.086c-.523.185-1.455.31-2.442.31z"/></svg>
-                    </a>
-                </div>
-            </div>
-        </header>
-
-        <div class="divider"></div>
-
-        <!-- JURKON STUDIO -->
-        <section>
-            <h2 class="studio-title">Jurkon Studio</h2>
-            <p class="studio-desc">Studio game independen. Membuat mekanik simulasi yang dalam, sistem cloud yang skalabel, dan antarmuka yang nyaman dipakai di ponsel.</p>
-
-            <div class="bento-grid">
-                
-                <!-- Game 1: Smartphone Empire (Wide) -->
-                <div class="card col-span-2 card-blue">
-                    <div class="flag-head"><span class="badge">Proyek utama</span>
-                    <h3 class="card-title">Smartphone Empire</h3></div>
-                    <div class="flag-copy"><p class="card-text">
-                        Sebuah simulasi ekonomi makro dan strategi bisnis teknologi. Pemain dituntut untuk menavigasi 
-                        kompleksitas riset <i>hardware</i>, pengembangan <i>software</i>, hingga perang harga dengan AI kompetitor. 
-                        Dilengkapi dengan sistem <i>Cloud Save</i> dan sinkronisasi <i>real-time</i>.
-                    </p>
-                    <div class="btn-row">
-                        <a href="/" class="btn-primary">Enter the Simulation</a>
-                        <a href="https://github.com/jurkonstudio/smartphone-empire/releases/download/tycoon/Smartphone.Empire.apk" class="btn-apk" rel="noopener" download>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>
-                            Download APK
-                        </a>
-                    </div>
-                    <p class="dl-note">Untuk Android. Jika diminta, izinkan instal dari sumber tidak dikenal.</p></div>
-                    <ul class="specs-list">
-                        <li><b>Dynamic Market:</b> Harga, tren, dan feedback konsumen bereaksi secara logis.</li>
-                        <li><b>Deep Tech Tree:</b> Integrasi antara riset OS dan komponen Hardware.</li>
-                        <li><b>Secure Backend:</b> Validasi ekonomi terpusat untuk mencegah kecurangan data.</li>
-                    </ul>
-                </div>
-
-                <!-- Game 2: Juragan Konstruksi -->
-                <div class="card card-orange">
-                    <h3 class="card-title">Juragan Konstruksi</h3>
-                    <p class="card-text">
-                        Proyek simulasi infrastruktur berskala masif. Berfokus pada manajemen proyek sipil,
-                        pengurusan perizinan (lisensi) yang kompleks, serta manajemen kredit dan arus kas perusahaan.
-                    </p>
-                    <div style="margin-top: 16px;">
-                        <span class="badge badge-solid">Simulasi</span>
-                        <span class="badge badge-solid">Manajemen</span>
-                    </div>
-                </div>
-
-                <!-- Studio Info -->
-                <div class="card card-green">
-                    <h3 class="card-title">The Engine</h3>
-                    <p class="card-text">
-                        Dibangun murni menggunakan Vanilla JavaScript dan HTML5 Canvas untuk performa optimal di perangkat mobile. 
-                        Tanpa framework berat, memastikan <i>rendering</i> 60fps dan responsivitas sentuhan yang presisi.
-                    </p>
-                </div>
-            </div>
-        </section>
-
-        <!-- CONTACT SECTION -->
-        <footer class="contact-section">
-            <span class="section-label">Hubungi langsung</span>
-            <div class="contact-links">
-                <!-- WhatsApp -->
-                <a href="https://wa.me/6282243562960" target="_blank" class="contact-item c-wa" rel="noopener">
-                    <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                    WhatsApp
-                </a>
-                
-                <!-- Discord -->
-                <a href="https://discord.gg/8rQGa4yYa" target="_blank" class="contact-item c-dc" rel="noopener">
-                    <svg viewBox="0 0 24 24" stroke="none" fill="currentColor"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg>
-                    Discord
-                </a>
-
-                <!-- Email -->
-                <a href="mailto:calvfinka@yahoo.com" class="contact-item c-em">
-                    <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                    Email
-                </a>
-            </div>
-        </footer>
-
-        <p class="copyright">&copy; 2026 Jurkon Studio. All rights reserved.</p>
-
+<!-- NAV -->
+<nav class="nav" aria-label="Utama">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top"><img src="./assets/icon/icon-192.png" alt="" width="30" height="30"> Smartphone Empire</a>
+    <div class="nav-links">
+      <a href="#fitur">Fitur</a><a href="#cuplikan">Cuplikan</a><a href="#era">Era</a><a href="#silicon">Silicon</a><a href="#studio">Studio</a>
     </div>
+    <span class="nav-sp"></span>
+    <button class="btn btn-ghost btn-sm" id="navAuth" type="button">Masuk</button>
+    <a class="btn btn-primary btn-sm" href="./index.html">Mainkan</a>
+  </div>
+</nav>
+
+<header id="top" class="wrap hero">
+  <div>
+    <div class="eyebrow"><b>v0.2.1</b> Jurkon Studio · Game simulasi independen</div>
+    <h1 class="title">Bangun kerajaan <em>ponselmu</em>.<br>Dari 2000 sampai era AI.</h1>
+    <p class="lede">Kamu CEO perusahaan ponsel yang baru berdiri pada 1 Januari 2000. Rekrut tim, riset teknologi, rancang ponsel, lalu lawan Nokia, Apple, Samsung, dan 22 kompetitor lain sampai era foldable.</p>
+    <div class="cta">
+      <a class="btn btn-blue" href="./index.html">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Mainkan gratis</a>
+      <a class="btn btn-primary" href="https://github.com/jurkonstudio/smartphone-empire/releases/download/tycoon/Smartphone.Empire.apk" download rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>Download APK</a>
+      <button class="btn btn-ghost" type="button" data-open-auth>Masuk / Daftar</button>
+    </div>
+    <p class="hero-note">Tanpa instalasi di browser HP atau PC. APK untuk Android, izinkan instal dari sumber tidak dikenal bila diminta.</p>
+  </div>
+  <div class="phones" aria-hidden="true">
+    <div class="phone p1"><img src="./assets/img/landing/riset.jpg" alt="" loading="lazy"></div>
+    <div class="phone p2"><img src="./assets/img/landing/desain.jpg" alt=""></div>
+    <div class="phone p3"><img src="./assets/img/landing/pasar.jpg" alt="" loading="lazy"></div>
+  </div>
+</header>
+
+<main>
+<div class="wrap">
+  <div class="stats rv" role="list">
+    <div class="stat" role="listitem"><b>26</b><span>Perusahaan kompetitor</span></div>
+    <div class="stat" role="listitem"><b>70</b><span>Node tech tree</span></div>
+    <div class="stat" role="listitem"><b>117</b><span>Komponen ponsel</span></div>
+    <div class="stat" role="listitem"><b>84</b><span>Saham di bursa</span></div>
+    <div class="stat" role="listitem"><b>2</b><span>Bahasa penuh: ID dan EN</span></div>
+  </div>
+</div>
+
+<!-- FITUR -->
+<section id="fitur"><div class="wrap">
+  <div class="kicker">Isi game</div>
+  <h2 class="h">Satu perusahaan, banyak sistem yang saling terhubung.</h2>
+  <p class="sub">Setiap fitur di bawah ini ada di dalam game. Angkanya dihitung dari file data game versi 0.2.1.</p>
+  <div class="bento">
+    <article class="tile hl w4 c-blue rv">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg></div>
+      <h3>Kampus 3D, Kantor, dan Tim</h3>
+      <p>Peta kampus 3D tumbuh seiring progres. Di HQ ada kantor isometrik dengan 9 ruangan yang terhubung ke data game: staf duduk di meja, lab menampilkan riset aktif, showroom menampilkan produk yang dijual.</p>
+      <ul><li>Tim 3 peran: Engineer, Designer, Marketer, 5 tingkat skill dan 8 trait</li><li>Kandidat dari 7 negara, headhunter, dan tawar gaji</li><li>Bangun atau upgrade Fab dan latih staf langsung dari peta kantor</li></ul>
+    </article>
+    <article class="tile c-violet rv">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L4 20h16L14 9V3"/></svg></div>
+      <div class="big">70</div>
+      <h3>Riset dan OS</h3>
+      <p>70 node di 8 kategori dari 2000 sampai 2025. Bangun OS sendiri dengan 35 fitur, atau lisensi OS pihak ketiga.</p>
+    </article>
+    <article class="tile c-orange rv">
+      <div class="ic"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg></div>
+      <h3>Wizard desain ponsel</h3>
+      <p>Preview real-time dengan 117 komponen di 9 kategori dan 8 warna bodi. Pilihan mengikuti tahun: tidak ada layar OLED di 2001.</p>
+    </article>
+    <article class="tile c-green rv">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 17l5-5 4 4 8-9"/><path d="M15 7h5v5"/></svg></div>
+      <h3>Permintaan yang transparan</h3>
+      <p>Kualitas, harga, reputasi, pemasaran, OS, tren, kompetitor, siklus hidup, dan kondisi makro ikut menentukan penjualan.</p>
+    </article>
+    <article class="tile c-red rv">
+      <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg></div>
+      <h3>26 kompetitor hidup</h3>
+      <p>Nokia, Motorola, Samsung, Apple, Xiaomi dan lainnya punya kepribadian, produk ikonik, serta life event historis. Mode nama asli atau parodi.</p>
+    </article>
+    <article class="tile w3 c-cyan rv">
+      <div class="ic"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg></div>
+      <h3>Chip dan Fab</h3>
+      <p>Riset 52 node chip, rancang chip sendiri dari 8 arsitektur dan 14 process node. Fab 4 tingkat, dari Small Fab 5.000 chip per bulan sampai Mega Fab 5 juta chip per bulan.</p>
+    </article>
+    <article class="tile w3 c-orange rv">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 9l9-6 9 6M5 9v10M19 9v10M9 19v-6M15 19v-6M3 21h18"/></svg></div>
+      <h3>Keuangan dan bursa</h3>
+      <p>Tiga bank dengan pinjaman, deposito, dan credit rating AAA sampai D. Bursa dengan 84 saham, 9 indeks, dan 5 mata uang dengan kurs historis. Kas negatif 2 bulan berturut-turut berarti game over.</p>
+    </article>
+    <article class="tile w3 c-blue rv">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H4zM8 21h8M12 16v5"/></svg></div>
+      <h3>Opini publik dan berita</h3>
+      <p>Sentimen per aspek, feed ulasan, dan 10 viral event yang bisa kamu tanggapi: minta maaf, recall, klarifikasi, atau diabaikan. Berita otomatis dari 20 media.</p>
+    </article>
+    <article class="tile w3 c-violet rv">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.4 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/></svg></div>
+      <h3>Dompet Universal</h3>
+      <p>Uang ($) dan Silicon (SIL) bisa saling menutup untuk hampir semua biaya. Pilih mode bayar: Otomatis, Uang dulu, SIL dulu, atau Terpisah.</p>
+    </article>
+  </div>
+</div></section>
+
+<!-- CUPLIKAN -->
+<section id="cuplikan"><div class="wrap">
+  <div class="kicker">Cuplikan</div>
+  <h2 class="h">Tampilan asli dari dalam game.</h2>
+  <div class="tabs" role="tablist" aria-label="Cuplikan game" id="tabs" style="margin-top:28px"></div>
+  <div class="show">
+    <div class="show-copy" id="showCopy" aria-live="polite"></div>
+    <div class="show-ph"><div class="phone"><img id="showImg" src="./assets/img/landing/hq.jpg" alt="Cuplikan layar HQ Smartphone Empire"></div></div>
+  </div>
+</div></section>
+
+<!-- ERA -->
+<section id="era"><div class="wrap">
+  <div class="kicker">Evolusi</div>
+  <h2 class="h">Tujuh era desain. Satu perjalanan.</h2>
+  <p class="sub">Mockup ponsel, layar, dan notifikasi berubah mengikuti era, dari candybar monokrom sampai ponsel lipat.</p>
+  <div class="eras" id="eras"></div>
+</div></section>
+
+<!-- CARA MAIN -->
+<section id="cara"><div class="wrap">
+  <div class="kicker">Cara main</div>
+  <h2 class="h">Empat langkah dari garasi ke puncak pasar.</h2>
+  <div class="steps">
+    <div class="step rv"><div class="n">1</div><h3>Bentuk tim</h3><p>Rekrut engineer, designer, dan marketer. Gaji dan moral ikut bergerak.</p></div>
+    <div class="step rv"><div class="n">2</div><h3>Riset teknologi</h3><p>Buka tech tree dan OS supaya tidak tertinggal dari kompetitor.</p></div>
+    <div class="step rv"><div class="n">3</div><h3>Desain dan rilis</h3><p>Desain, prototipe, produksi, rilis. Maksimal 5 produk aktif.</p></div>
+    <div class="step rv"><div class="n">4</div><h3>Kuasai pasar</h3><p>Baca ulasan, atur harga dan promosi, jaga kas supaya tidak bangkrut.</p></div>
+  </div>
+  <div class="rules">
+    <span class="pill">Modal awal <b>$200K / $100K / $50K</b></span>
+    <span class="pill">1 hari game = <b>60 detik</b></span>
+    <span class="pill">Kecepatan <b>2x, 5x, 10x</b></span>
+    <span class="pill">Pajak <b>12% / 15% / 20%</b></span>
+    <span class="pill">Mode hemat otomatis di HP kelas bawah</span>
+  </div>
+</div></section>
+
+<!-- SILICON & TOP UP -->
+<section id="silicon"><div class="wrap">
+  <div class="sil">
+    <div class="kicker">Silicon (SIL)</div>
+    <h2 class="h">Akun, saldo, dan top up Silicon.</h2>
+    <p class="sub">SIL adalah mata uang premium untuk mempercepat waktu dan riset. Masuk dengan akun yang sama dengan di game, lalu top up dari sini.</p>
+    <div class="sil-grid">
+      <div>
+        <div class="acct" id="acct"></div>
+        <ul class="wallet-list">
+          <li>Percepat waktu 2x, 5x, 10x dan mempercepat riset serta OS.</li>
+          <li>Bonus login harian dan reward quest di dalam game.</li>
+          <li>SIL tidak pernah dicetak dari uang. Saldo dan ledger dijaga di server.</li>
+          <li>Pemain tanpa akun tetap bisa main penuh, akun dibutuhkan untuk cloud save, SIL, dan leaderboard.</li>
+        </ul>
+      </div>
+      <div id="shop">
+        <div class="pkgs" role="radiogroup" aria-label="Paket Silicon" id="pkgs"></div>
+        <div class="methods" role="radiogroup" aria-label="Metode pembayaran" id="methods">
+          <button class="method" type="button" role="radio" aria-checked="true" data-m="qris">QRIS</button>
+          <button class="method" type="button" role="radio" aria-checked="false" data-m="gopay">GoPay</button>
+        </div>
+        <div class="checkout">
+          <div><div class="sm" id="coLabel">Pilih paket</div><div class="tt" id="coTotal">—</div></div>
+          <button class="btn btn-blue" type="button" id="coBtn" disabled>Top up sekarang</button>
+        </div>
+        <p class="fine">Pembayaran lewat QRIS dan GoPay dikonfirmasi manual oleh admin. Setelah disetujui, saldo SIL masuk ke akunmu. Sertakan Order ID di berita transfer. Maksimal 5 pesanan menunggu persetujuan.</p>
+        <div class="orders" id="orders" hidden><h4>Pesanan terakhir</h4><div id="ordList"></div></div>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<!-- STUDIO -->
+<section id="studio"><div class="wrap">
+  <div class="kicker">Jurkon Studio</div>
+  <h2 class="h">Studio game independen.</h2>
+  <p class="sub">Dibuat oleh Kalfin Agus Setiawan: mekanik simulasi yang dalam, sistem cloud, dan antarmuka yang nyaman di ponsel.</p>
+  <div class="studio">
+    <article class="sc b rv"><h3>Smartphone Empire</h3><p>Proyek utama. Simulasi bisnis dan strategi teknologi dengan cloud save, leaderboard, dan Silicon.</p><span class="bd">Proyek utama</span><span class="bd">Gratis</span></article>
+    <article class="sc o rv"><h3>Juragan Konstruksi</h3><p>Simulasi infrastruktur berskala besar: proyek sipil, perizinan, serta manajemen kredit dan arus kas.</p><span class="bd">Simulasi</span><span class="bd">Manajemen</span></article>
+    <article class="sc g rv"><h3>The Engine</h3><p>Dibangun dengan JavaScript murni dan HTML5, tanpa framework dan tanpa bundler. Three.js dimuat lazy untuk peta 3D.</p><span class="bd">Vanilla JS</span><span class="bd">Mobile-first</span></article>
+  </div>
+  <div class="social" aria-label="Jejaring">
+    <a class="ib n-gh" href="https://github.com/jurkonstudio" target="_blank" rel="noopener" aria-label="GitHub"><svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg></a>
+    <a class="ib n-ig" href="https://instagram.com/calvf1nka" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>
+    <a class="ib n-tt" href="https://tiktok.com/@ks2908_" target="_blank" rel="noopener" aria-label="TikTok"><svg viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1.04-.1z"/></svg></a>
+    <a class="ib n-x" href="https://x.com/calvf1nka" target="_blank" rel="noopener" aria-label="X"><svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+    <a class="ib n-sc" href="https://soundcloud.com/calvfinka" target="_blank" rel="noopener" aria-label="SoundCloud"><svg viewBox="0 0 24 24"><path d="M21.5 12c-1.1 0-2.1.3-3 .8C18 9.2 14.9 6.5 11 6.5c-1.1 0-2 .1-2.8.3v11.3c.8.2 1.7.3 2.8.3h10.5c1.9 0 3.5-1.6 3.5-3.5S23.4 12 21.5 12zM1 14c0 1.7.4 3.2 1.2 4.1h1.5V12.2C2.4 12.1 1 12.9 1 14zm4.5-2.7V18h1.3V10.6c-.5.1-1 .4-1.3.7zm3-.9V18h1.3V9.6c-.5.1-.9.4-1.3.8zm3.1.1V18h1.3V9.8c-.4.3-.9.5-1.3.7z"/></svg></a>
+    <a class="ib n-yt" href="https://youtube.com/@calvfinka" target="_blank" rel="noopener" aria-label="YouTube"><svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
+    <a class="ib n-sp" href="https://open.spotify.com/playlist/4hiTFBL8p8TaaQZxXFaANj" target="_blank" rel="noopener" aria-label="Spotify"><svg viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.502 17.302c-.225.369-.705.484-1.074.259-3.022-1.845-6.83-2.263-11.317-1.239-.422.096-.843-.164-.938-.586-.096-.422.164-.843.586-.938 4.905-1.12 9.094-.637 12.482 1.431.368.225.483.704.261 1.073zm1.47-3.265c-.283.46-.886.604-1.346.321-3.458-2.126-8.73-2.741-12.82-1.501-.518.158-1.066-.133-1.224-.65-.158-.518.133-1.066.65-1.224 4.68-1.419 10.482-.733 14.42 1.688.459.283.603.886.32 1.346zm.126-3.416c-4.146-2.462-10.986-2.69-14.963-1.484-.635.193-1.304-.166-1.497-.8-.193-.634.166-1.304.8-1.497 4.566-1.385 12.116-1.114 16.857 1.701.571.339.761 1.08.422 1.651-.34.57-1.081.76-1.651.421z"/></svg></a>
+    <a class="ib n-tb" href="https://tumblr.com/calvfinka" target="_blank" rel="noopener" aria-label="Tumblr"><svg viewBox="0 0 24 24"><path d="M14.278 23.95c-3.14 0-5.464-1.586-5.464-5.258V11.14H4.839V8.522c3.427-.983 4.973-3.92 5.227-6.887h2.864v6.14h3.835v3.365h-3.835v6.602c0 1.567.74 2.153 1.84 2.153.54 0 1.047-.12 1.492-.33v3.086c-.523.185-1.455.31-2.442.31z"/></svg></a>
+  </div>
+</div></section>
+
+<!-- ROADMAP -->
+<section id="roadmap"><div class="wrap">
+  <div class="kicker">Roadmap</div>
+  <h2 class="h">Yang sudah jalan dan yang sedang dikerjakan.</h2>
+  <div class="road">
+    <div class="rd"><span class="tag ok">Selesai</span><div><b>Office 3D Map tahap 3</b><span>Bangun atau upgrade Fab dan latih staf langsung dari peta.</span></div></div>
+    <div class="rd"><span class="tag ok">Selesai</span><div><b>Integrasi Office dan Tim</b><span>Dari kartu staf ke detail staf, dan "Lihat di kantor".</span></div></div>
+    <div class="rd"><span class="tag next">Berikutnya</span><div><b>Event acak dengan pilihan</b><span>Plus transisi layar per era dan polish UI.</span></div></div>
+    <div class="rd"><span class="tag next">Berikutnya</span><div><b>Pembayaran Silicon otomatis</b><span>Saat ini top up dikonfirmasi manual oleh admin.</span></div></div>
+  </div>
+</div></section>
+
+<!-- FAQ -->
+<section id="faq"><div class="wrap">
+  <div class="kicker">FAQ</div>
+  <h2 class="h">Pertanyaan yang sering muncul.</h2>
+  <div class="faq">
+    <details><summary>Apakah game ini gratis?</summary><p>Ya. Game bisa dimainkan gratis di browser dan lewat APK Android. Silicon adalah mata uang premium opsional.</p></details>
+    <details><summary>Perlu akun untuk bermain?</summary><p>Tidak. Save lokal otomatis. Akun dibutuhkan untuk cloud save (1 slot), profil pemain, leaderboard, dan saldo SIL yang tersimpan di server.</p></details>
+    <details><summary>Berapa lama top up diproses?</summary><p>Pesanan dikonfirmasi manual oleh admin, jadi waktunya tidak instan. Status pesananmu bisa dicek di halaman ini atau di dalam game. Setelah disetujui, saldo SIL masuk otomatis.</p></details>
+    <details><summary>Apakah leaderboard sudah resmi?</summary><p>Belum. Statistik leaderboard saat ini dilaporkan dari perangkat pemain, jadi belum bisa dianggap peringkat resmi. Validasi server masih dalam pengerjaan.</p></details>
+    <details><summary>Apakah ini produk resmi Nokia, Apple, atau Samsung?</summary><p>Bukan. Ini fan project tanpa afiliasi dengan perusahaan mana pun. Nama dan merek dipakai untuk tujuan edukasi dan hiburan, dan ada mode nama parodi.</p></details>
+  </div>
+</div></section>
+</main>
+
+<footer class="wrap foot">
+  <span class="kicker" style="color:var(--text3)">Hubungi langsung</span>
+  <div class="contact">
+    <a class="ci c-wa" href="https://wa.me/6282243562960" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>WhatsApp</a>
+    <a class="ci c-dc" href="https://discord.gg/8rQGa4yYa" target="_blank" rel="noopener"><svg class="f" viewBox="0 0 24 24"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg>Discord</a>
+    <a class="ci c-em" href="mailto:calvfinka@yahoo.com"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Email</a>
+  </div>
+  <p class="legal">Smartphone Empire adalah fan project, bukan produk komersial, dan tidak berafiliasi dengan Nokia, Apple, Samsung, atau perusahaan lain. Nama dan merek dipakai untuk tujuan edukasi dan hiburan; hak ciptanya milik masing-masing pemilik. Data historis disederhanakan untuk kebutuhan gameplay.</p>
+  <p class="legal" style="margin-top:10px">&copy; 2026 Jurkon Studio. All rights reserved.</p>
+</footer>
+
+<!-- MODAL: AUTH -->
+<div class="ovl" id="authOvl" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+  <div class="sheet">
+    <div class="sh-head"><h3 id="authTitle">Masuk ke akunmu</h3><button class="x" type="button" data-close aria-label="Tutup">&times;</button></div>
+    <p style="color:var(--text2);font-size:.92rem">Pakai akun yang sama dengan di dalam game, supaya cloud save dan saldo SIL tersambung.</p>
+    <div class="seg" role="tablist"><button type="button" role="tab" aria-selected="true" data-mode="in">Masuk</button><button type="button" role="tab" aria-selected="false" data-mode="up">Daftar</button></div>
+    <form id="authForm" novalidate>
+      <label class="fl" for="aEmail">Email</label>
+      <input class="in" id="aEmail" type="email" inputmode="email" autocomplete="email" placeholder="nama@email.com" required>
+      <div id="aPassWrap">
+        <label class="fl" for="aPass">Kata sandi</label>
+        <div class="pw"><input class="in" id="aPass" type="password" autocomplete="current-password" placeholder="Minimal 6 karakter" required><button type="button" id="aShow">Lihat</button></div>
+      </div>
+      <div class="msg" id="aMsg" role="status"></div>
+      <button class="btn btn-blue" id="aSubmit" type="submit" style="width:100%;margin-top:18px">Masuk</button>
+      <div style="display:flex;justify-content:space-between;margin-top:8px"><button type="button" class="lnk-b" id="aForgot">Lupa kata sandi?</button><button type="button" class="lnk-b" id="aBack" hidden>Kembali</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: QR -->
+<div class="ovl" id="qrOvl" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+  <div class="sheet">
+    <div class="sh-head"><h3 id="qrTitle">Pindai QRIS</h3><button class="x" type="button" data-close aria-label="Tutup">&times;</button></div>
+    <div class="cnt">Sisa waktu <span class="tm" id="qrTimer">15:00</span></div>
+    <div class="cnt" style="margin-top:10px">Total pembayaran</div>
+    <div class="big-amt" id="qrAmt">Rp0</div>
+    <div class="cnt" id="qrPkg"></div>
+    <div class="qrbox"><img src="./qris-gopay.png" alt="Kode QRIS pembayaran Jurkon Studio"></div>
+    <div class="cnt">Pindai dengan aplikasi bank atau e-wallet.<br><b>PENTING:</b> sertakan Order ID pada berita transfer.</div>
+    <div class="ordid"><code id="qrOrd"></code><button type="button" id="qrCopy">Salin</button></div>
+    <div class="msg" id="qMsg" role="status"></div>
+    <button class="btn btn-blue" type="button" id="qrCheck" style="width:100%;margin-top:14px">Cek status</button>
+    <p class="fine" style="text-align:center">Pesanan tetap tersimpan setelah ditutup. Admin akan memprosesnya, dan kamu bisa melihat statusnya di daftar pesanan.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script type="module">
+/* =====================================================================
+   Smartphone Empire — landing page
+   Login dan top up memakai backend Supabase yang sama dengan game
+   (konfigurasi diambil dari ./src/services/cloud/supabase.config.js),
+   dan kunci sesi yang sama, jadi login di sini = login di game.
+   ===================================================================== */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const rp = n => 'Rp' + Number(n).toLocaleString('id-ID');
+const nf = n => Number(n).toLocaleString('id-ID');
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+/* ---------- reveal on scroll ---------- */
+if ('IntersectionObserver' in window) {
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .12 });
+  $$('.rv').forEach(el => io.observe(el));
+} else $$('.rv').forEach(el => el.classList.add('in'));
+
+/* ---------- era ---------- */
+const ERAS = [
+  ['2000–2002', 'LCD Monokrom', 'Candybar, flip, dan layar hijau', '#8e8e96'],
+  ['2003–2006', 'Layar TFT Warna', 'Kamera, ringtone, dan layar berwarna', '#32ade6'],
+  ['2007–2010', 'Revolusi Touchscreen', 'iPhone muncul, Nokia mulai goyah', '#0a84ff'],
+  ['2011–2014', 'Smartphone Matang', 'Ekosistem aplikasi dan OS modern', '#30d158'],
+  ['2015–2018', 'Premium & Bezel-less', 'Layar tanpa bingkai dan bodi premium', '#ff9f0a'],
+  ['2019–2022', 'AI & Notch', 'Kamera komputasional dan AI', '#bf5af2'],
+  ['2023+', 'Foldable & Ultra', 'Ponsel lipat dan AI on-device', '#ff453a']
+];
+$('#eras').innerHTML = ERAS.map(e => `<div class="era rv" style="--c:${e[3]}"><div class="yr">${e[0]}</div><div><span class="nm">${e[1]}</span><span class="ds">${e[2]}</span></div></div>`).join('');
+$$('#eras .rv').forEach(el => el.classList.add('in'));
+
+/* ---------- showcase ---------- */
+const SHOTS = [
+  { id: 'hq', tab: 'HQ', img: 'hq.jpg', alt: 'Cuplikan layar HQ Smartphone Empire', h: 'Pusat kendali perusahaan', p: 'Ringkasan kas, burn rate, reputasi, sentimen, tim, dan era dalam satu layar, plus tab Office, Team, Exchange, Bank, dan History.', li: ['<b>Kas dan burn-rate</b> dengan laporan bulanan', '<b>Reputasi dan sentimen</b> publik', '<b>Bank dan bursa</b> hanya satu ketukan'] },
+  { id: 'riset', tab: 'Riset', img: 'riset.jpg', alt: 'Cuplikan layar Riset', h: 'Tech tree yang dalam', p: 'Riset teknologi, OS, manufaktur, dan masa depan. Antrian riset berjalan paralel, makin banyak engineer makin banyak slot.', li: ['<b>70 node</b> di 8 kategori', '<b>OS sendiri</b> dengan 35 fitur', '<b>Chip</b> dan Fab untuk tingkat lanjut'] },
+  { id: 'desain', tab: 'Desain', img: 'desain.jpg', alt: 'Cuplikan layar wizard desain ponsel', h: 'Wizard desain dengan preview real-time', p: 'Pilih form factor, komponen, warna, dan OS. Pilihan mengikuti tahun, dan mockup berubah mengikuti era.', li: ['<b>117 komponen</b> di 9 kategori', '<b>Auto-fill rekomendasi</b> untuk pemula', '<b>4 fase</b>: desain, prototipe, produksi, rilis'] },
+  { id: 'pasar', tab: 'Pasar', img: 'pasar.jpg', alt: 'Cuplikan layar Pasar', h: 'Baca pasar sebelum bersaing', p: 'Pangsa pasar, kompetitor, tren, promosi, dan opini publik. Segmen konsumen dan wilayah menunjukkan peluang yang belum kamu garap.', li: ['<b>Pangsa pasar</b> dengan riwayat 24 bulan', '<b>Promosi regional</b> dan 8 event musiman', '<b>Peluang terbaik</b> per segmen dan wilayah'] },
+  { id: 'setelan', tab: 'Setelan', img: 'setelan.jpg', alt: 'Cuplikan layar Pengaturan', h: 'Profil, cloud, dan Silicon', p: 'Kelola profil pemain, akun cloud, leaderboard, tema dan warna aksen, bahasa ID/EN, dan Dompet Universal.', li: ['<b>Cloud save</b> dan profil pemain', '<b>Tema</b> gelap dan terang, 6 warna aksen', '<b>Export dan import</b> save'] }
+];
+const tabs = $('#tabs');
+tabs.innerHTML = SHOTS.map((s, i) => `<button class="tab" role="tab" id="tab-${s.id}" aria-selected="${i === 0}" data-i="${i}">${s.tab}</button>`).join('');
+function showShot(i) {
+  const s = SHOTS[i];
+  $$('.tab', tabs).forEach((b, k) => b.setAttribute('aria-selected', k === i));
+  const img = $('#showImg'); img.style.opacity = 0;
+  setTimeout(() => { img.src = './assets/img/landing/' + s.img; img.alt = s.alt; img.style.opacity = 1; }, 160);
+  $('#showCopy').innerHTML = `<h3>${s.h}</h3><p>${s.p}</p><ul>${s.li.map(x => `<li>${x}</li>`).join('')}</ul>`;
+}
+tabs.addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) showShot(+b.dataset.i); });
+showShot(0);
+
+/* ---------- paket SIL (fallback; disinkronkan dari data game bila bisa) ---------- */
+let PACKAGES = [
+  { id: 'pkg_s', sil: 50, bonus: 0, priceIdr: 15000, tag: null },
+  { id: 'pkg_m', sil: 120, bonus: 10, priceIdr: 35000, tag: null },
+  { id: 'pkg_l', sil: 300, bonus: 45, priceIdr: 79000, tag: 'popular' },
+  { id: 'pkg_xl', sil: 700, bonus: 140, priceIdr: 169000, tag: null },
+  { id: 'pkg_xxl', sil: 1500, bonus: 400, priceIdr: 329000, tag: 'best' }
+];
+let selPkg = null, selMethod = 'qris';
+
+function renderPkgs() {
+  $('#pkgs').innerHTML = PACKAGES.map(p => `
+    <button class="pkg" type="button" role="radio" aria-checked="${selPkg === p.id}" data-id="${p.id}">
+      ${p.tag ? `<span class="tg ${p.tag === 'best' ? 'best' : ''}">${p.tag === 'best' ? 'TERBAIK' : 'POPULER'}</span>` : ''}
+      <span class="g">💎</span>
+      <span class="amt">${nf(p.sil)}<small>SIL</small></span>
+      <span class="bn">${p.bonus ? '+' + nf(p.bonus) + ' bonus' : ''}</span>
+      <span class="pr">${rp(p.priceIdr)}</span>
+    </button>`).join('');
+  updateCheckout();
+}
+function updateCheckout() {
+  const p = PACKAGES.find(x => x.id === selPkg);
+  $('#coLabel').textContent = p ? `${nf(p.sil + p.bonus)} SIL` : 'Pilih paket';
+  $('#coTotal').textContent = p ? rp(p.priceIdr) : '—';
+  $('#coBtn').disabled = !p;
+}
+$('#pkgs').addEventListener('click', e => { const b = e.target.closest('.pkg'); if (!b) return; selPkg = b.dataset.id; renderPkgs(); });
+$('#methods').addEventListener('click', e => {
+  const b = e.target.closest('.method'); if (!b) return; selMethod = b.dataset.m;
+  $$('.method').forEach(m => m.setAttribute('aria-checked', m === b));
+});
+selPkg = 'pkg_l'; renderPkgs();
+
+/* ---------- Supabase ---------- */
+let cfg = null, client = null, user = null, publicId = null, balance = null, cloudErr = null;
+
+async function loadCloud() {
+  if (client || cloudErr) return client;
+  try {
+    cfg = await import('./src/services/cloud/supabase.config.js');
+    if (!cfg.isCloudConfigured()) throw new Error('not_configured');
+    let createClient = null;
+    for (const u of cfg.SUPABASE_LIB_URLS) {
+      try { const m = await import(u); if (m && typeof m.createClient === 'function') { createClient = m.createClient; break; } } catch (e) {}
+    }
+    if (!createClient) throw new Error('lib');
+    client = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: cfg.CLOUD.authStorageKey }
+    });
+    return client;
+  } catch (e) { cloudErr = e; return null; }
+}
+async function syncPackages() {
+  try {
+    const m = await import('./src/data/silicon.data.js');
+    if (Array.isArray(m.SILICON_PACKAGES) && m.SILICON_PACKAGES.length) {
+      PACKAGES = m.SILICON_PACKAGES.map(p => ({ id: p.id, sil: p.sil, bonus: p.bonus || 0, priceIdr: p.priceIdr, tag: p.tag || null }));
+      if (!PACKAGES.some(p => p.id === selPkg)) selPkg = PACKAGES[0].id;
+      renderPkgs();
+    }
+  } catch (e) { /* pakai fallback */ }
+}
+
+function errText(e) {
+  const m = String((e && (e.message || e.code)) || e || '').toLowerCase();
+  if (/invalid login|invalid_credentials/.test(m)) return 'Email atau kata sandi salah.';
+  if (/already registered|already been registered|email_exists/.test(m)) return 'Email ini sudah terdaftar. Coba masuk.';
+  if (/not confirmed|email_not_confirmed/.test(m)) return 'Email belum dikonfirmasi. Cek kotak masuk emailmu.';
+  if (/weak|at least 6|should be at least/.test(m)) return 'Kata sandi terlalu lemah. Pakai minimal 6 karakter.';
+  if (/rate limit|too many requests|over_email_send_rate_limit/.test(m)) return 'Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.';
+  if (/too_many_pending/.test(m)) return 'Kamu masih punya 5 pesanan yang menunggu persetujuan. Tunggu diproses admin.';
+  if (/invalid_package/.test(m)) return 'Paket tidak valid. Muat ulang halaman lalu coba lagi.';
+  if (/not_authenticated|jwt|not_signed_in/.test(m)) return 'Sesi login berakhir. Masuk lagi lalu coba lagi.';
+  if (/failed to fetch|network|load failed|lib/.test(m)) return 'Tidak bisa terhubung ke server. Cek koneksi internetmu.';
+  if (/not_configured/.test(m)) return 'Login belum tersedia di halaman ini.';
+  return 'Terjadi masalah' + (m ? ' (' + m.slice(0, 80) + ')' : '') + '. Coba lagi.';
+}
+
+/* ---------- akun ---------- */
+const initial = u => ((u && u.email) || '?').trim().charAt(0).toUpperCase();
+function renderAcct() {
+  const nav = $('#navAuth'), box = $('#acct');
+  if (!user) {
+    nav.className = 'btn btn-ghost btn-sm'; nav.textContent = 'Masuk'; nav.dataset.mode = 'in';
+    box.innerHTML = `<div class="acct-row"><div class="av">?</div><div><div class="nm">Belum masuk</div><div class="mt">Masuk untuk top up dan melihat saldo SIL</div></div></div>
+      <div class="acct-act"><button class="btn btn-blue btn-sm" type="button" data-open-auth>Masuk</button><button class="btn btn-ghost btn-sm" type="button" data-open-auth="up">Daftar</button></div>`;
+    $('#orders').hidden = true;
+    return;
+  }
+  nav.className = 'acct-chip'; nav.dataset.mode = 'acct';
+  nav.innerHTML = `<span>${balance == null ? '💎' : '💎 ' + nf(balance)}</span><span class="av">${initial(user)}</span>`;
+  box.innerHTML = `<div class="acct-row"><div class="av">${initial(user)}</div><div style="min-width:0"><div class="nm"></div><div class="mt">Akun cloud terhubung</div></div></div>
+    <div class="acct-kpi"><div class="kpi"><span>Saldo SIL</span><b>💎 ${balance == null ? '…' : nf(balance)}</b></div><div class="kpi"><span>ID Pemain</span><b>${publicId == null ? '—' : publicId}</b></div></div>
+    <div class="acct-act"><a class="btn btn-blue btn-sm" href="./index.html">Lanjut main</a><button class="btn btn-ghost btn-sm" type="button" id="logout">Keluar</button></div>`;
+  $('.nm', box).textContent = user.email || 'Pemain';
+}
+async function loadAccount() {
+  if (!client || !user) return;
+  try { const r = await client.rpc('get_silicon'); if (!r.error && r.data != null) balance = Number(r.data); } catch (e) {}
+  try { const r = await client.rpc('get_my_public_id'); if (!r.error && r.data != null) publicId = r.data; } catch (e) {}
+  renderAcct();
+  loadOrders();
+}
+async function loadOrders() {
+  if (!client || !user) return;
+  try {
+    const r = await client.from('payment_orders').select('id,package_id,amount,sil_amount,status,created_at').order('created_at', { ascending: false }).limit(6);
+    if (r.error) throw r.error;
+    const rows = r.data || [];
+    $('#orders').hidden = rows.length === 0;
+    const lab = { pending: 'Menunggu', approved: 'Disetujui', rejected: 'Ditolak' };
+    $('#ordList').innerHTML = '';
+    rows.forEach(o => {
+      const d = document.createElement('div'); d.className = 'ord';
+      const when = new Date(o.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+      d.innerHTML = `<div class="o1"><b></b><span></span></div><span class="st ${o.status}"></span>`;
+      $('b', d).textContent = `${nf(o.sil_amount)} SIL · ${rp(o.amount)}`;
+      $('.o1 span', d).textContent = `${when} · ${o.id}`;
+      $('.st', d).textContent = lab[o.status] || o.status;
+      if (o.status === 'pending') {
+        const a = document.createElement('button'); a.type = 'button'; a.className = 'lnk'; a.textContent = 'Lihat QR';
+        a.addEventListener('click', () => openQr({ id: o.id, amount: o.amount, sil: o.sil_amount, packageId: o.package_id }));
+        d.insertBefore(a, $('.st', d).nextSibling);
+      }
+      $('#ordList').appendChild(d);
+    });
+    // saldo bisa berubah bila ada pesanan yang baru disetujui
+    const r2 = await client.rpc('get_silicon'); if (!r2.error && r2.data != null) { balance = Number(r2.data); renderAcct2(); }
+  } catch (e) { /* riwayat opsional */ }
+}
+function renderAcct2() { // update angka saldo tanpa merender ulang daftar pesanan
+  const k = $('#acct .kpi b'); if (k) k.textContent = '💎 ' + nf(balance);
+  const c = $('#navAuth span'); if (c && user) c.textContent = '💎 ' + nf(balance);
+}
+
+/* ---------- modal util ---------- */
+let lastFocus = null;
+function openOvl(el) {
+  lastFocus = document.activeElement; el.classList.add('open'); document.body.style.overflow = 'hidden';
+  const sh = $('.sheet', el); sh.scrollTop = 0; sh.setAttribute('tabindex', '-1');
+  const f = el.id === 'authOvl' ? $('#aEmail') : sh;
+  setTimeout(() => { f.focus({ preventScroll: true }); sh.scrollTop = 0; }, 60);
+}
+function closeOvl(el) {
+  el.classList.remove('open');
+  if (!$('.ovl.open')) document.body.style.overflow = '';
+  if (lastFocus && lastFocus.focus) lastFocus.focus();
+}
+$$('.ovl').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o || e.target.closest('[data-close]')) { closeOvl(o); if (o.id === 'qrOvl') stopQr(); } });
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { const o = $('.ovl.open'); if (o) { closeOvl(o); if (o.id === 'qrOvl') stopQr(); } } });
+
+/* ---------- auth modal ---------- */
+let authMode = 'in', afterAuth = null;
+function setMsg(el, text, kind) { el.className = 'msg show ' + kind; el.textContent = text; }
+function clearMsg(el) { el.className = 'msg'; el.textContent = ''; }
+function setAuthMode(m) {
+  authMode = m;
+  $$('.seg button').forEach(b => b.setAttribute('aria-selected', b.dataset.mode === m));
+  $('#authTitle').textContent = m === 'up' ? 'Buat akun baru' : m === 'reset' ? 'Atur ulang kata sandi' : 'Masuk ke akunmu';
+  $('#aSubmit').textContent = m === 'up' ? 'Daftar' : m === 'reset' ? 'Kirim tautan' : 'Masuk';
+  $('#aPassWrap').hidden = m === 'reset';
+  $('#aForgot').hidden = m !== 'in'; $('#aBack').hidden = m !== 'reset';
+  $('.seg').hidden = m === 'reset';
+  $('#aPass').autocomplete = m === 'up' ? 'new-password' : 'current-password';
+  clearMsg($('#aMsg'));
+}
+function openAuth(mode, cb) { afterAuth = cb || null; setAuthMode(mode || 'in'); openOvl($('#authOvl')); }
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-open-auth]');
+  if (t) { e.preventDefault(); openAuth(t.dataset.openAuth === 'up' ? 'up' : 'in'); return; }
+  if (e.target.closest('#logout')) doLogout();
+});
+$('#navAuth').addEventListener('click', () => { if (user) $('#silicon').scrollIntoView({ behavior: 'smooth' }); else openAuth('in'); });
+$$('.seg button').forEach(b => b.addEventListener('click', () => setAuthMode(b.dataset.mode)));
+$('#aForgot').addEventListener('click', () => setAuthMode('reset'));
+$('#aBack').addEventListener('click', () => setAuthMode('in'));
+$('#aShow').addEventListener('click', () => {
+  const p = $('#aPass'), s = p.type === 'password'; p.type = s ? 'text' : 'password'; $('#aShow').textContent = s ? 'Sembunyi' : 'Lihat';
+});
+$('#authForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const msg = $('#aMsg'), email = $('#aEmail').value.trim(), pass = $('#aPass').value;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setMsg(msg, 'Masukkan email yang valid.', 'err'); return; }
+  if (authMode !== 'reset' && pass.length < 6) { setMsg(msg, 'Kata sandi minimal 6 karakter.', 'err'); return; }
+  const btn = $('#aSubmit'); btn.disabled = true; setMsg(msg, 'Memproses…', 'info');
+  try {
+    const c = await loadCloud(); if (!c) throw cloudErr || new Error('lib');
+    if (authMode === 'reset') {
+      const r = await c.auth.resetPasswordForEmail(email, { redirectTo: location.origin });
+      if (r.error) throw r.error;
+      setMsg(msg, 'Tautan atur ulang sudah dikirim. Cek emailmu.', 'ok');
+    } else if (authMode === 'up') {
+      const r = await c.auth.signUp({ email, password: pass, options: { emailRedirectTo: location.origin } });
+      if (r.error) throw r.error;
+      const u = r.data.user;
+      if (u && Array.isArray(u.identities) && u.identities.length === 0) throw new Error('email_exists');
+      if (!r.data.session) { setMsg(msg, 'Akun dibuat. Cek emailmu untuk konfirmasi, lalu masuk.', 'ok'); setAuthMode('in'); setMsg(msg, 'Akun dibuat. Cek emailmu untuk konfirmasi, lalu masuk.', 'ok'); }
+      else await onSignedIn(r.data.user);
+    } else {
+      const r = await c.auth.signInWithPassword({ email, password: pass });
+      if (r.error) throw r.error;
+      await onSignedIn(r.data.user);
+    }
+  } catch (err) { setMsg(msg, errText(err), 'err'); }
+  finally { btn.disabled = false; }
+});
+async function onSignedIn(u) {
+  user = { id: u.id, email: u.email || '' }; renderAcct();
+  closeOvl($('#authOvl')); $('#aPass').value = ''; toast('Berhasil masuk');
+  await loadAccount();
+  if (afterAuth) { const f = afterAuth; afterAuth = null; f(); }
+}
+async function doLogout() {
+  try { const c = await loadCloud(); if (c) await c.auth.signOut(); } catch (e) {}
+  user = null; balance = null; publicId = null; renderAcct(); toast('Kamu sudah keluar');
+}
+
+/* ---------- top up ---------- */
+let qr = { order: null, timer: null, poll: null, until: 0 };
+const newId = () => 'ord_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+$('#coBtn').addEventListener('click', async () => {
+  const p = PACKAGES.find(x => x.id === selPkg); if (!p) return;
+  if (!user) { openAuth('in', () => $('#coBtn').click()); return; }
+  const btn = $('#coBtn'); btn.disabled = true; btn.textContent = 'Membuat pesanan…';
+  try {
+    const c = await loadCloud(); if (!c) throw cloudErr || new Error('lib');
+    const order = { id: newId(), packageId: p.id, amount: p.priceIdr, sil: p.sil + p.bonus };
+    const r = await c.rpc('create_payment_order', { p_order_id: order.id, p_package_id: order.packageId, p_amount: order.amount, p_sil_amount: order.sil });
+    if (r.error) throw r.error;
+    openQr(order); loadOrders();
+  } catch (err) { toast(errText(err)); }
+  finally { btn.textContent = 'Top up sekarang'; updateCheckout(); }
+});
+
+function fmtT(s) { s = Math.max(0, s); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+function stopQr() { clearInterval(qr.timer); clearInterval(qr.poll); qr.timer = qr.poll = null; }
+function openQr(order) {
+  stopQr(); qr.order = order; qr.until = Date.now() + 15 * 60 * 1000;
+  $('#qrAmt').textContent = rp(order.amount);
+  $('#qrPkg').textContent = `${nf(order.sil)} SIL · ${selMethod === 'gopay' ? 'GoPay' : 'QRIS'}`;
+  $('#qrOrd').textContent = order.id; clearMsg($('#qMsg'));
+  const tick = () => { const left = Math.round((qr.until - Date.now()) / 1000); $('#qrTimer').textContent = fmtT(left); if (left <= 0) { stopQr(); setMsg($('#qMsg'), 'Waktu scan habis. Pesanan tetap tersimpan, kamu bisa membuka QR lagi dari daftar pesanan.', 'info'); } };
+  tick(); qr.timer = setInterval(tick, 1000);
+  qr.poll = setInterval(() => checkStatus(true), 10000);
+  openOvl($('#qrOvl'));
+}
+async function checkStatus(silent) {
+  if (!qr.order || !client) return;
+  try {
+    const r = await client.rpc('check_payment_status', { p_order_id: qr.order.id });
+    if (r.error) throw r.error;
+    const st = r.data && r.data.status;
+    if (st === 'paid') {
+      stopQr(); setMsg($('#qMsg'), `Pembayaran disetujui. ${nf(qr.order.sil)} SIL sudah masuk ke akunmu.`, 'ok');
+      toast('Top up berhasil'); await loadAccount();
+    } else if (st === 'cancelled') { stopQr(); setMsg($('#qMsg'), 'Pesanan ditolak atau dibatalkan oleh admin.', 'err'); loadOrders(); }
+    else if (!silent) setMsg($('#qMsg'), 'Belum disetujui admin. Selesaikan pembayaran, lalu cek lagi beberapa saat kemudian.', 'info');
+  } catch (err) { if (!silent) setMsg($('#qMsg'), errText(err), 'err'); }
+}
+$('#qrCheck').addEventListener('click', async () => { const b = $('#qrCheck'); b.disabled = true; await checkStatus(false); b.disabled = false; });
+$('#qrCopy').addEventListener('click', async () => {
+  const id = $('#qrOrd').textContent;
+  try { await navigator.clipboard.writeText(id); toast('Order ID disalin'); }
+  catch (e) { const r = document.createRange(); r.selectNodeContents($('#qrOrd')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Tekan salin pada pilihan teks'); }
+});
+
+/* ---------- init ---------- */
+renderAcct();
+(async () => {
+  syncPackages();
+  const hasSess = (() => { try { return Object.keys(localStorage).some(k => k.indexOf('smartphone-empire:supabase-auth') === 0); } catch (e) { return false; } })();
+  if (!hasSess) return;
+  const c = await loadCloud(); if (!c) return;
+  try {
+    const r = await c.auth.getSession();
+    if (r.data && r.data.session) { user = { id: r.data.session.user.id, email: r.data.session.user.email || '' }; renderAcct(); loadAccount(); }
+  } catch (e) {}
+  c.auth.onAuthStateChange((ev, s) => { if (ev === 'SIGNED_OUT') { user = null; balance = null; publicId = null; renderAcct(); } });
+})();
+</script>
 </body>
 </html>
