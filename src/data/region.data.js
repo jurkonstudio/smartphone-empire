@@ -6,13 +6,14 @@
 // ============================================================
 
 export const REGION_IDS = ['asia', 'europe', 'rest'];   // wilayah permintaan
-export const SCOPE_IDS  = ['global', 'asia', 'europe']; // cakupan promosi
+export const SCOPE_IDS  = ['global', 'asia', 'europe', 'rest', 'segment']; // cakupan promosi
 
 export const REGION_COLORS = {
     global: '#3b82f6',
     asia:   '#ef4444',
     europe: '#a855f7',
-    rest:   '#10b981'
+    rest:   '#10b981',
+    segment: '#f59e0b'
 };
 
 // Porsi permintaan dunia per tahun: [tahun, asia, eropa]  (lainnya = sisa)
@@ -47,10 +48,14 @@ export function getRegionWeights(year) {
 export const SEASON_EVENTS = [
     { region: 'asia',   month: 2,  mult: 1.15, key: 'season.asia.lny' },
     { region: 'asia',   month: 6,  mult: 1.12, key: 'season.asia.618' },
+    { region: 'asia',   month: 10, mult: 1.10, key: 'season.asia.goldenweek' },
     { region: 'asia',   month: 11, mult: 1.35, key: 'season.asia.1111' },
+    { region: 'asia',   month: 12, mult: 1.08, key: 'season.asia.yearend' },
     { region: 'europe', month: 7,  mult: 1.12, key: 'season.europe.summer' },
     { region: 'europe', month: 11, mult: 1.18, key: 'season.europe.blackfriday' },
     { region: 'europe', month: 12, mult: 1.30, key: 'season.europe.christmas' },
+    { region: 'rest',   month: 2,  mult: 1.10, key: 'season.rest.carnival' },
+    { region: 'rest',   month: 8,  mult: 1.08, key: 'season.rest.backtoschool' },
     { region: 'rest',   month: 11, mult: 1.25, key: 'season.rest.blackfriday' },
     { region: 'rest',   month: 12, mult: 1.30, key: 'season.rest.holiday' }
 ];
