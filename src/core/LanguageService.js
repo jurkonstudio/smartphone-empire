@@ -13,15 +13,36 @@ let _dict = null;
 const _missingKeys = new Set();
 const _missingOnce = Object.create(null);
 
+// Bahasa ponsel/browser pemain: cek daftar bahasa pilihan berurutan, ambil yang pertama didukung game.
+// 'in' (kode lama Indonesia) dianggap 'id'. Tidak ada yang cocok -> DEFAULT_LANG.
+function _detectDeviceLang() {
+    try {
+        var list = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language];
+        for (var i = 0; i < list.length; i++) {
+            var base = String(list[i] || '').toLowerCase().split(/[-_]/)[0];
+            if (base === 'in') base = 'id';
+            if (base && isValidLang(base)) return base;
+        }
+    } catch (e) {}
+    return DEFAULT_LANG;
+}
+
+function _applyDocLang() {
+    try { document.documentElement.setAttribute('lang', _lang); } catch (e) {}
+}
+
 function _load() {
     try {
+        // Pilihan manual pemain (Setelan) selalu menang. Bila belum pernah memilih, ikuti bahasa ponsel
+        // dan JANGAN disimpan, supaya tetap mengikuti bila bahasa ponsel diganti nanti.
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved && isValidLang(saved)) _lang = saved;
-        else _lang = DEFAULT_LANG;
+        else _lang = _detectDeviceLang();
     } catch (e) {
-        _lang = DEFAULT_LANG;
+        _lang = _detectDeviceLang();
     }
     _dict = getDictionary(_lang);
+    _applyDocLang();
 }
 
 function _save() {
@@ -72,6 +93,7 @@ export const LanguageService = {
         _lang = langId;
         _dict = getDictionary(_lang);
         _save();
+        _applyDocLang();
         bus.emit('lang:changed', { lang: _lang });
         return true;
     },
