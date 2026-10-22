@@ -282,41 +282,74 @@ window.addEventListener('unhandledrejection', function (e) {
     </script>
 
     <script>
-    /* Loading screen: persen = progres nyata (modul JS yang sudah terunduh + tahap boot di main.js). */
+    /* Loading screen halus.
+       - Persen = progres NYATA (modul JS terunduh + tahap boot di main.js) sebagai batas bawah kecepatan,
+         tetapi animasinya berbasis waktu (easing), tidak lompat-lompat.
+       - Ada durasi tampil minimum (MIN_MS) supaya gambar sempat dinikmati walau HP/koneksi cepat.
+       - Penutupan: tahan sejenak di 100%, lalu fade + zoom lembut.
+       Atur kecepatan lewat 3 angka di bawah (milidetik). */
     window.__splash = (function () {
+        var MIN_MS  = 3000;   // total waktu tampil minimum sebelum boleh menutup
+        var HOLD_MS = 400;    // tahan di 100% sebelum fade-out
+        var FADE_MS = 800;    // lama fade-out (harus sama dengan transisi CSS .ls-done)
+        var reduce = false;
+        try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+        if (reduce) { MIN_MS = 1200; HOLD_MS = 150; FADE_MS = 300; }
+
         var el = document.getElementById('loading-screen');
         var fill = document.getElementById('ls-fill');
         var pct = document.getElementById('ls-pct');
         var meta = document.querySelector('meta[name="theme-color"]');
         var origTheme = window.__origTheme || (meta ? meta.getAttribute('content') : null);
-        var TOTAL_MODULES = 190;   
-        var MODULE_CAP = 70;       
-        var target = 2, shown = 0, finished = false, raf = 0, closed = false, seen = {};
+        var TOTAL_MODULES = 190, MODULE_CAP = 70;
+        var t0 = performance.now(), last = t0;
+        var real = 2;          // progres nyata (0-99, 100 saat finish)
+        var shown = 0;         // nilai yang digambar
+        var creep = 0, finished = false, closed = false, raf = 0, doneAt = 0, seen = {};
         if (meta) meta.setAttribute('content', window.__splashBg || '#fafafa');
 
         function paint(v) {
-            var n = Math.min(100, Math.round(v));
-            fill.style.width = v.toFixed(1) + '%';
-            pct.textContent = n + '%';
-            el.setAttribute('aria-valuenow', String(n));
+            var n = Math.min(100, Math.floor(v));
+            fill.style.transform = 'scaleX(' + (Math.min(100, v) / 100).toFixed(4) + ')';
+            if (pct._n !== n) { pct._n = n; pct.textContent = n + '%'; el.setAttribute('aria-valuenow', String(n)); }
         }
         function close() {
             if (closed) return; closed = true;
             el.classList.add('ls-done');
             if (meta && origTheme) meta.setAttribute('content', origTheme);
-            setTimeout(function () { el.style.display = 'none'; }, 450);
+            setTimeout(function () { el.style.display = 'none'; }, FADE_MS + 80);
         }
-        function tick() {
+        function frame(now) {
             raf = 0;
-            var diff = target - shown;
-            if (diff > 0.05) shown += Math.max(diff * 0.14, 0.25); else shown = target;
-            if (shown > target) shown = target;
+            var dt = Math.min(64, now - last); last = now;
+            var elapsed = now - t0;
+
+            // Tujuan: progres nyata, tapi tidak boleh melampaui "jadwal minimum" (garis lurus 0 -> 100 dalam MIN_MS)
+            // supaya bar naik pelan dan merata. Sedikit merayap ke depan agar tidak terlihat macet.
+            var schedule = Math.min(100, (elapsed / MIN_MS) * 100);
+            // Bila macet menunggu modul/jaringan, bar tetap merayap pelan (maks 94%) supaya tidak terlihat hang.
+            if (!finished && shown >= real + 3.5) creep += dt * 0.004;
+            var goal = finished ? 100 : Math.min(real + 4 + creep, 94);
+            goal = Math.min(goal, schedule + 3);
+            if (finished && elapsed < MIN_MS) goal = Math.min(100, schedule + 3);
+
+            // Easing eksponensial berbasis waktu + batas kecepatan maksimum (maks ~100% per MIN_MS*0.6)
+            var k = 1 - Math.exp(-dt / 260);
+            var step = (goal - shown) * k;
+            var maxStep = dt * (100 / (MIN_MS * 0.6));
+            if (step > maxStep) step = maxStep;
+            if (step > 0) shown += step;
+            if (finished && goal >= 100 && shown > 99.6) shown = 100;
             paint(shown);
-            if (shown < target) { raf = requestAnimationFrame(tick); return; }
-            if (finished && shown >= 100) setTimeout(close, 220);
+
+            if (finished && shown >= 100 && elapsed >= MIN_MS) {
+                if (!doneAt) doneAt = now;
+                if (now - doneAt >= HOLD_MS) { close(); return; }
+            }
+            raf = requestAnimationFrame(frame);
         }
-        function kick() { if (!raf) raf = requestAnimationFrame(tick); }
-        function set(p) { if (!finished && p > target) { target = Math.min(99, p); kick(); } }
+        function kick() { if (!raf && !closed) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+        function set(p) { if (!finished && p > real) { real = Math.min(99, p); } }
 
         function countModules() {
             try {
@@ -334,9 +367,11 @@ window.addEventListener('unhandledrejection', function (e) {
             new PerformanceObserver(countModules).observe({ type: 'resource', buffered: true });
         } catch (e) { /* tanpa PerformanceObserver: persen naik lewat tahap boot */ }
 
+        paint(0);
+        kick();
         return {
             set: set,
-            finish: function () { if (finished) return; finished = true; target = 100; kick(); },
+            finish: function () { if (finished) return; finished = true; real = 100; kick(); },
         };
     })();
     </script>

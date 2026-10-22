@@ -1070,9 +1070,11 @@ body {
     display: flex; flex-direction: column; align-items: center;
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    transition: opacity 0.45s ease;
+    transition: opacity 0.8s cubic-bezier(.4, 0, .2, 1);
 }
 .loading-screen.ls-done { opacity: 0; pointer-events: none; }
+.loading-screen.ls-done .ls-art { transform: scale(1.035); }
+.loading-screen.ls-done .ls-meter { opacity: 0; transform: translateY(6px); }
 /* Gambar acak (rasio 2:3 / 9:16) ditampilkan UTUH (contain) di atas warna kertas yang sama,
    tepi atas/bawah dipudarkan supaya menyatu mulus di layar HP tinggi maupun desktop lebar. */
 .loading-screen .ls-art-wrap {
@@ -1082,8 +1084,9 @@ body {
 .loading-screen .ls-art {
     display: block; max-width: 100%; max-height: 100%;
     width: auto; height: auto; object-fit: contain;
-    opacity: 0; transform: scale(1.015);
-    transition: opacity 0.5s ease, transform 0.9s ease-out;
+    opacity: 0; transform: scale(1.02);
+    transition: opacity 0.9s ease-out, transform 1.4s cubic-bezier(.2, .7, .2, 1);
+    will-change: opacity, transform;
     -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 3%, #000 97%, transparent 100%);
             mask-image: linear-gradient(to bottom, transparent 0, #000 3%, #000 97%, transparent 100%);
     user-select: none; -webkit-user-drag: none; pointer-events: none;
@@ -1094,14 +1097,28 @@ body {
     flex: 0 0 auto; width: min(72%, 360px);
     padding: 10px 0 clamp(14px, 2.6dvh, 26px);
     display: flex; align-items: center; gap: 10px;
+    transition: opacity 0.5s ease, transform 0.5s ease;
 }
 .loading-screen .ls-track {
     flex: 1; height: 6px; border-radius: 99px;
     background: color-mix(in srgb, var(--ls-ink) 16%, transparent); overflow: hidden;
 }
 .loading-screen .ls-fill {
-    width: 0; height: 100%; border-radius: inherit;
+    position: relative; width: 100%; height: 100%; border-radius: inherit;
     background: linear-gradient(90deg, #1b5fc4, #3b9aea);
+    transform: scaleX(0); transform-origin: left center; will-change: transform;
+}
+/* kilau halus yang berjalan di bar (GPU, hanya transform) */
+.loading-screen .ls-fill::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit;
+    background: linear-gradient(90deg, transparent 0, rgba(255,255,255,.55) 50%, transparent 100%);
+    transform: translateX(-100%); animation: ls-sheen 1.8s ease-in-out infinite;
+}
+@keyframes ls-sheen { to { transform: translateX(100%); } }
+html[data-perf="lite"] .loading-screen .ls-fill::after { animation: none; display: none; }
+@media (prefers-reduced-motion: reduce) {
+    .loading-screen .ls-fill::after { animation: none; display: none; }
+    .loading-screen .ls-art, .loading-screen.ls-done .ls-art { transition-duration: .2s; transform: none; }
 }
 .loading-screen .ls-pct {
     min-width: 3.4em; text-align: right;
