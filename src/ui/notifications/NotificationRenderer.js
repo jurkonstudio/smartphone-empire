@@ -1,11 +1,13 @@
 import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/notifications/NotificationRenderer.js  (REPLACE)
-// v3.2 — [DEEP GLASSMORPHISM] Menyesuaikan warna, blur, dan border agar persis seperti iCloud.
+// v3.3 — [FIX TUMPUK] Toast kini berada DI BAWAH header (tidak menutupi header), maksimal 2 toast,
+//         berita hanya 1 toast aktif (yang baru menggantikan yang lama), tinggi container dibatasi.
 import { t } from '../../core/LanguageService.js';
 import { bus } from '../../core/EventBus.js';
 import { NotificationPrefs } from '../../core/NotificationPrefs.js';
 
-var MAX_ACTIVE = 3;
+var MAX_ACTIVE = 2;
+var MAX_NEWS = 1;
 var MIN_MS = 2800;
 var MAX_MS = 9000;
 var PER_CHAR_MS = 45;
@@ -56,7 +58,8 @@ function ensureStyle() {
     if (typeof document === 'undefined' || document.getElementById('ni-style')) return;
     var css = [
         '.toast-container{animation:none!important;gap:8px;',
-        'top:calc(env(safe-area-inset-top,0px) + 8px)!important;max-height:calc(100dvh - 16px);overflow:visible}',
+        'top:calc(max(var(--ni-top,0px),env(safe-area-inset-top,0px)) + 8px)!important;',
+        'max-height:calc(100dvh - max(var(--ni-top,0px),env(safe-area-inset-top,0px)) - 16px);overflow:visible}',
         '.ni{flex:0 0 auto}',
         '.ni.ni-collapse{max-height:0!important;margin-top:0!important;margin-bottom:-8px!important;padding-top:0!important;',
         'padding-bottom:0!important;border-width:0!important;box-shadow:none!important;',
@@ -193,6 +196,12 @@ function updateTop(container) {
         if (r.height > 0) top = Math.max(0, Math.round(r.bottom));
     }
     container.style.setProperty('--ni-top', top + 'px');
+}
+
+function bindHeaderObserver(container) {
+    var h = document.getElementById('app-header');
+    if (!h || typeof ResizeObserver === 'undefined') return;
+    try { new ResizeObserver(function () { updateTop(container); }).observe(h); } catch (e) {}
 }
 
 function headerBottom() {
@@ -531,6 +540,7 @@ export function renderNotification(container, payload) {
     updateTop(container);
     if (!_resizeBound) {
         _resizeBound = true;
+        bindHeaderObserver(container);
         window.addEventListener('resize', function () {
             updateTop(container);
             if (_panel) {
@@ -555,6 +565,11 @@ export function renderNotification(container, payload) {
         }
     }
 
+    // Berita: hanya 1 toast aktif; berita baru menggantikan yang lama (anti-tumpuk).
+    if (type === 'news') {
+        var newsAct = _active.filter(function (a) { return a.type === 'news' && !a.gone; });
+        while (newsAct.length >= MAX_NEWS) removeEntry(newsAct.shift(), 'up');
+    }
     while (_active.length >= MAX_ACTIVE) removeEntry(_active[0], 'up');
 
     var meta = TYPES[type];
