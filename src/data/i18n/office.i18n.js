@@ -1,4 +1,4 @@
-// FILE: src/data/i18n/office.i18n.js  (REPLACE — v2027.51a)
+// FILE: src/data/i18n/office.i18n.js  (REPLACE — v2027.53a: progres & efek kejadian peta kantor)
 // Kamus Office 3D Map (ID / EN). Digabung di src/data/i18n/index.js.
 export const OFFICE_I18N = {
     id: {
@@ -94,7 +94,22 @@ export const OFFICE_I18N = {
         'office.legend.morale.low': 'Moral rendah (<40%)',
         'office.legend.tier': 'Plat meja = tier skill',
         'office.legend.alert': 'Gelembung ! = perlu perhatian',
-        'office.legend.locked': 'Ruangan terkunci'
+        'office.legend.locked': 'Ruangan terkunci',
+
+        'office.lab.progress': 'Progres riset rata-rata: {n}%',
+        'office.design.progress': 'Progres proyek: {n}%',
+        'office.fx.research': 'Riset selesai: {name}',
+        'office.fx.chipres': 'Riset chip selesai: {name}',
+        'office.fx.released': 'Rilis! {name}',
+        'office.fx.phase.prototype': 'Masuk prototipe',
+        'office.fx.phase.production': 'Masuk produksi',
+        'office.fx.phase.released': 'Siap dirilis',
+        'office.fx.sold': '+{n} terjual',
+        'office.fx.osver': 'OS {v} dirilis',
+        'office.fx.bug': 'Bug baru terdeteksi',
+        'office.fx.fabbuilt': 'Fab level {n} berdiri!',
+        'office.fx.fabup': 'Fab naik ke level {n}!',
+        'office.fx.skillup': 'Skill naik!'
     },
     en: {
         'office.aria': '3D office interior map. Drag to explore, pinch to zoom, tap a room for details.',
@@ -189,6 +204,21 @@ export const OFFICE_I18N = {
         'office.legend.morale.low': 'Low morale (<40%)',
         'office.legend.tier': 'Desk plate = skill tier',
         'office.legend.alert': '! bubble = needs attention',
-        'office.legend.locked': 'Locked room'
+        'office.legend.locked': 'Locked room',
+
+        'office.lab.progress': 'Average research progress: {n}%',
+        'office.design.progress': 'Project progress: {n}%',
+        'office.fx.research': 'Research done: {name}',
+        'office.fx.chipres': 'Chip research done: {name}',
+        'office.fx.released': 'Released! {name}',
+        'office.fx.phase.prototype': 'Entered prototype',
+        'office.fx.phase.production': 'Entered production',
+        'office.fx.phase.released': 'Ready to release',
+        'office.fx.sold': '+{n} sold',
+        'office.fx.osver': 'OS {v} released',
+        'office.fx.bug': 'New bug detected',
+        'office.fx.fabbuilt': 'Fab level {n} is ready!',
+        'office.fx.fabup': 'Fab upgraded to level {n}!',
+        'office.fx.skillup': 'Skill up!'
     }
 };
