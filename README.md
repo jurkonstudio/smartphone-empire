@@ -71,7 +71,8 @@ Angka di bawah dihitung dari file data di repo ini (v0.2.1).
 - **Rumus permintaan yang transparan**: kualitas × harga × reputasi × pemasaran × OS × tren × kompetitor × lifecycle × kondisi makro.
 - **Lifecycle produk**: naik → puncak → turun → mati. Ada stok gudang, restock otomatis, dan maksimal **5 produk aktif**.
 - **Pemasaran**: **5 jenis kampanye** (Iklan Online, Sponsor Event, Peluncuran Produk, Billboard Kota, Kampanye Influencer).
-- **Promosi regional**: **9 paket** di 3 wilayah (Global, Asia, Eropa), dengan **8 event musiman** seperti Imlek, 618, Singles Day 11.11, Summer Sales, Black Friday, dan Natal.
+- **Promosi**: **18 paket**: 12 paket regional (Global, Asia, Eropa, Amerika & Lainnya, masing-masing 3 paket) dan 6 paket per segmen konsumen. Ada **8 event musiman** seperti Imlek, 618, Singles Day 11.11, Summer Sales, Black Friday, dan Natal.
+- **Navigasi Pasar**: pasar dibaca per **8 segmen konsumen** (value, mainstream, premium, gamer, creator, pro, youth, senior) dan **8 sub-wilayah**. Ada **16 gelombang tren** ditambah 4 tren tambahan, dan faktor ini ikut masuk ke rumus permintaan. Datanya bisa dibaca lewat `window.__game.marketNav`. Panel kartu segmen/wilayah/peluang di `MarketPanel` masih dalam pengerjaan.
 
 ### 🧠 Chip dan Fab
 
@@ -88,7 +89,7 @@ Angka di bawah dihitung dari file data di repo ini (v0.2.1).
 - **Mode nama**: pakai nama asli atau nama parodi fiktif (misalnya "Nokio", "Apel", "Samsul").
 - **Aksi dinamis kompetitor**: mereka bisa agresif, menekan harga, atau melemah, tergantung kepribadian dan tingkat kesulitan.
 - **Pangsa pasar** dihitung bulanan dengan riwayat 24 bulan. Model makro (GDP, inflasi, suku bunga, 2000–2026) memengaruhi permintaan.
-- **Opini publik**: sentimen per aspek (desain, kamera, baterai, performa, harga, keandalan, OS, support), feed ulasan, dan **10 viral event** yang bisa kamu tanggapi (minta maaf, recall, klarifikasi, atau diabaikan).
+- **Opini publik**: sentimen per **11 aspek** (desain, kamera, baterai, performa, harga, keandalan, OS, support, layar, konektivitas, kemudahan pakai), feed ulasan, dan **26 viral event** yang bisa kamu tanggapi (minta maaf, recall, klarifikasi, atau diabaikan; "Abaikan" hanya bisa sekali per event). Efek viral kini benar-benar memengaruhi penjualan harian.
 - **Berita**: headline otomatis dari **20 media**, dengan jurnalis dan dateline per negara. Ada **72 headline bulanan** dan template berita yang menyoroti rilis produk, milestone, dan kejadian industri.
 
 ### 💰 Keuangan
@@ -110,6 +111,7 @@ Angka di bawah dihitung dari file data di repo ini (v0.2.1).
 - **Dua bahasa penuh**: Indonesia dan English, bisa diganti kapan saja di Setelan. Kamus berisi sekitar 615 kunci per bahasa.
 - **Audio** tap sound sintetis (Web Audio API), plus getar di perangkat yang mendukung.
 - **Mode hemat** otomatis di HP kelas bawah (RAM, CPU, Data Saver, dan baterai dideteksi saat start). Bisa dipaksa lewat `?perf=lite`, `?perf=full`, atau `?perf=auto`.
+- **Loading screen acak**: tiap web dibuka, salah satu dari 3 gambar sampul tampil (versi Inggris berwarna, versi Indonesia abu-abu, dan varian berwarna lain), tidak pernah sama dua kali berturut-turut. Persen di bawah gambar adalah progres nyata (modul JS yang terunduh + tahap boot). Gambar ada di `assets/img/loading/`, dan menambah gambar baru cukup menambah satu baris di daftar `SCREENS` pada `index.html`. Kalau gambar gagal dimuat, dipakai `assets/img/loading-screen.jpg`.
 - Layout mobile-first, dengan swipe antar sub-tab.
 
 ### ☁️ Cloud, Akun, dan Save
@@ -118,12 +120,15 @@ Angka di bawah dihitung dari file data di repo ini (v0.2.1).
 - **Cloud save** lewat Supabase: login, **1 slot** (menyimpan save terbaru), profil pemain (nama tampil dan avatar), pengecekan nama perusahaan yang unik, dan leaderboard.
 - **Dompet Universal**: uang ($) dan Silicon (SIL) bisa dipakai untuk hampir semua hal. Biaya dalam uang boleh ditutup dengan SIL, dan sebaliknya. Kurs mengikuti inflasi (tahun 2000: 1 SIL = $2.500). SIL tidak pernah dicetak dari uang. Mode bayar (Otomatis, Uang dulu, SIL dulu, Terpisah) dan Dana Darurat SIL ada di Setelan → Keuangan.
 - **Silicon (SIL)**: mata uang premium untuk mempercepat waktu dan riset, dengan bonus login harian dan reward quest. Top-up saat ini manual (GoPay/QRIS) dan disetujui admin lewat panel `/fsociety`. Provider pembayaran otomatis belum terhubung.
-- **Keamanan**: save diberi tanda tangan integritas (penghalang edit manual, bukan enkripsi). Saldo SIL dan ledger dijaga di server lewat Row Level Security dan fungsi yang hanya bisa dipanggil server. Detail ada di `SECURITY.md`.
+- **Keamanan**: save diberi tanda tangan integritas (penghalang edit manual, bukan enkripsi). Saldo SIL dan ledger dijaga di server lewat Row Level Security dan fungsi yang hanya bisa dipanggil server. Kebijakan keamanan lengkap dan cara melapor ada di [`SECURITY.md`](SECURITY.md).
 
 ### ⚠️ Known issues
 
 - **Statistik leaderboard dilaporkan klien.** Angka seperti pendapatan dan kas dikirim dari perangkat pemain, sehingga belum bisa dianggap peringkat resmi. Rencana validasi ada di `supabase/11-validasi-leaderboard.sql`, tetapi belum terhubung penuh.
-- **Tukar SIL → uang** memerlukan `supabase/10-tukar-sil.sql`. File ini tidak ada di tabel urutan `BACA-DULU.md`, jadi pastikan sudah dijalankan. Tanpa file ini, pemanggilan gagal dan SIL tidak terpotong.
+- **`supabase/BACA-DULU.md` belum lengkap.** Tabelnya hanya memuat 01–09 dan 14, sementara file 10 (dua file), 11, 12, dan 13 belum tercantum. Selain itu, ia menyebut `functions/advisor-chat/` padahal foldernya `supabase/function/advisor-chat/`.
+- **Tukar SIL → uang** memerlukan `supabase/10-tukar-sil.sql`. Tanpa file ini, pemanggilan gagal dan SIL tidak terpotong.
+- **Edge Function Asisten Bisnis (AI)** belum punya rate limit per pengguna dan CORS-nya terbuka (`*`). Jangan diaktifkan untuk publik luas sebelum itu ditambahkan. Detail di `SECURITY.md`.
+- **Catatan rilis belum lengkap.** `patches.json` baru memuat 0.2.1 (Asisten Bisnis). Navigasi Pasar, loading screen acak, dan integrasi peta kantor belum tercatat.
 - **Gate admin di sisi klien hanya kosmetik.** Admin yang sebenarnya diverifikasi di server lewat `is_admin()`.
 - **Office 3D Map** belum menampilkan dampak rekrut dan bonus trait dari `TeamSystem`. Ringkasan di peta masih dihitung sendiri.
 
@@ -153,18 +158,21 @@ Lalu buka `http://localhost:8000`. Tidak ada langkah build dan tidak ada `npm in
 - **Three.js 0.160.0** (versi dipin, dimuat lazy dari CDN) untuk Peta Kampus dan Office 3D Map. Kalau WebGL atau CDN gagal, game tetap jalan dengan tampilan cadangan.
 - **Supabase** (`supabase-js` dari CDN) untuk auth, cloud save, profil, dan storage avatar.
 - Komunikasi antar sistem lewat **event bus** (`src/core/EventBus.js`). Daftar event ada di `src/config/event.md`.
-- Ukuran kode: **256 file JS** dengan sekitar **69 ribu baris** di `src/`.
-- Belum ada test otomatis, linter, atau `package.json`.
+- Ukuran kode: **262 file JS** dengan sekitar **72 ribu baris** di `src/`.
+- Belum ada test otomatis resmi, linter, atau `package.json`. Folder `tools/` berisi 9 skrip uji manual (Node, ES Modules) untuk kalibrasi, simulasi permintaan, dan render panel; skrip ini tidak dimuat game. Contoh: `node --experimental-default-type=module tools/sim.mjs src`.
 
 ### Struktur folder
 
 ```
 smartphone-empire/
 ├─ index.html · style.css · density.css · profile-ui.css · desktop.css
-├─ 031411/              panel admin (dashboard data pemain, persetujuan SIL)
-├─ supabase/            skema SQL 01–12 + panduan urutan (lihat BACA-DULU.md)
-├─ assets/              ikon, gambar, dan audio
+├─ 031411/              panel admin (dashboard data pemain, persetujuan SIL), noindex
+├─ supabase/            skema SQL 01–14, Edge Function Asisten (function/), panduan (BACA-DULU.md)
+├─ tools/               skrip uji manual (bukan bagian game)
+├─ _diff/               diff perubahan lama untuk referensi
+├─ assets/              ikon, audio, gambar (img/loading = loading screen acak, img/landing)
 ├─ patches.json         catatan rilis yang dibaca Asisten Bisnis
+├─ CHANGES*.md · PERF-CHANGES.md   catatan perubahan per paket update
 └─ src/
    ├─ main.js           boot, routing tab, binding event
    ├─ config/           konstanta, waktu, dev flag, dokumentasi event
@@ -184,12 +192,14 @@ Data dipisah dari logika. Untuk menambah komponen, saham, kompetitor, atau headl
 
 Game bisa jalan tanpa Supabase, tapi cloud save, SIL, dan panel admin membutuhkannya. Jalankan file di `supabase/` **berurutan** lewat SQL Editor (lihat `supabase/BACA-DULU.md`):
 
-- **Wajib:** `01` → `05`, lalu `08` (ganti email di `08-jadikan-admin.sql` dulu).
-- **Opsional:** `06`–`07` (panel admin lengkap), `09` (pesan pemain), `10-pesan-antar-pemain` dan `10-tukar-sil` (pesan antar pemain dan tukar SIL), `11` (validasi leaderboard), `12` (level kredibilitas dan reward).
+- **Wajib:** `01` → `05`, lalu `08` (ganti email di `08-jadikan-admin.sql` dulu), dan `14` setelah `03` (nama perusahaan unik di jalur save).
+- **Opsional:** `06`–`07` (panel admin lengkap), `09` (pesan pemain), `10-pesan-antar-pemain` dan `10-tukar-sil` (pesan antar pemain dan tukar SIL), `11` (validasi leaderboard), `12` (level kredibilitas dan reward), `13` (diagnosa leaderboard, hanya untuk pengecekan).
+- **Opsional, AI:** `function/advisor-chat/` (Edge Function Asisten Bisnis). Butuh secret `ANTHROPIC_API_KEY` di Supabase, bukan di kode klien.
+- URL dan *publishable key* Supabase di `src/services/cloud/supabase.config.js` memang boleh publik. Kalau kamu menjalankan proyek sendiri, ganti keduanya dengan milik proyekmu. Jangan pernah menaruh `service_role` key di repo.
 
 Semua file aman dijalankan ulang. Proyek lama cukup menjalankan file yang belum pernah dijalankan dengan urutan yang sama.
 
-> Catatan: `BACA-DULU.md` saat ini hanya menyebut file 01–09. File 10–12 perlu dijalankan secara manual sesuai fiturnya.
+> Catatan: `BACA-DULU.md` belum memuat file 10–13. Jalankan secara manual sesuai fiturnya, setelah 01–09.
 
 ---
 
@@ -199,6 +209,8 @@ Proyek ini masih berjalan. Catatan roadmap:
 
 - ✅ **Office 3D Map tahap 3**: bangun atau upgrade Fab dan latih staf langsung dari peta, konstruksi Fab 3D, aktivitas staf yang lebih hidup, dan tampilan yang lebih rapi di HP
 - ✅ **Integrasi Office ↔ Tim**: dari kartu staf di peta bisa membuka detail staf, dari detail staf bisa melihat staf di kantor, dan ruang Work punya jalan pintas ke rekrutmen
+- ✅ **Navigasi Pasar (data, permintaan, opini, promosi Amerika & Lainnya)**
+- ⏳ **Panel UI Navigasi Pasar** (kartu segmen, wilayah, peluang, dan gelombang tren di Pasar)
 - ⏳ **Peta kantor membaca TeamSystem**: dampak rekrut, bonus trait, dan ringkasan tim dihitung dari satu sumber
 - ⏳ **Event acak dengan pilihan**, transisi layar per era, dan polish UI
 - ⏳ **Patch UI Evolution**: tampilan notifikasi berubah per era (monokrom → glossy → flat → Dynamic Island)
@@ -213,12 +225,14 @@ Proyek ini masih berjalan. Catatan roadmap:
 Versi terbaru: **0.2.1** (18 Oktober 2026). Daftar perubahan ada di `patches.json` dan `PERF-CHANGES.md`.
 
 Perubahan yang belum masuk `patches.json`:
+- Navigasi Pasar (segmen, sub-wilayah, gelombang tren, 11 aspek opini, 26 viral event, promosi Amerika & Lainnya dan per segmen).
 - Integrasi peta kantor dengan panel Tim (deep-link staf, tombol Lihat di kantor, jalan pintas Rekrut dari ruang Work).
+- Loading screen acak dengan 3 gambar sampul.
 
 ---
 
 ## Kontribusi dan laporan bug
 
-Bug atau saran? Buka [issue](https://github.com/jurkonstudio/smartphone-empire/issues). Kalau menemukan celah keamanan, baca dulu `SECURITY.md`.
+Bug atau saran? Buka [issue](https://github.com/jurkonstudio/smartphone-empire/issues). Kalau menemukan celah keamanan, **jangan** buka issue publik. Ikuti cara pelaporan privat di [`SECURITY.md`](SECURITY.md).
 
 Nama dan merek perusahaan dalam game dipakai untuk tujuan edukasi dan hiburan. Hak ciptanya milik masing-masing pemiliknya. Data historis disederhanakan untuk kebutuhan gameplay.
