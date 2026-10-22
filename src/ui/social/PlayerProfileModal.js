@@ -7,6 +7,7 @@ import { avatarHtml, resolveAvatarUrls, esc } from './AvatarView.js';
 import { pidTf, copyPublicId } from './PlayerIdView.js';
 import { CloudService } from '../../services/CloudService.js';
 import { openInboxCompose } from '../panels/InboxPanel.js';
+import { levelBadgeHtml } from './LevelBadge.js';
 import { credTier, tierName } from '../../systems/PlayerProgression.js';
 // v2.4 — teks waktu/umur akun & label tidak lagi hardcoded Indonesia (ikut bahasa aktif).
 
@@ -91,6 +92,7 @@ export async function openPlayerProfileModal(profile) {
             avatarHtml({ src: urls[profile.id], name: company, size: 84, cls: 'pp-avatar-lg' }) +
             '<div class="pf-view-company">' + esc(company) + '</div>' +
             (player ? '<div class="pf-view-player">' + esc(player) + '</div>' : '') +
+            levelBadgeHtml({ level: profile.stat_level || 1, kind: 'player', size: 44 }) +
             (profile.public_id ? '<button type="button" class="pf-id-chip" data-copy-pid="' + esc(profile.public_id) + '">' +
                 esc(pidTf('pp.id.label', 'ID Pemain')) + ' <b>' + esc(profile.public_id) + '</b></button>' : '') +
         '</div>' +
