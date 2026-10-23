@@ -79,6 +79,8 @@ export const RESEARCH_DATA_EN = {
 
         net_gsm: { name: 'GSM', description: '2G cellular network for calls and SMS.' },
         net_gprs: { name: 'GPRS', description: 'The first 2.5G packet data for phones.' },
+        net_irda: { name: 'Infrared (IrDA)', description: 'Infrared port for short-range contact and file transfer.' },
+        net_wifi: { name: 'Wi-Fi (802.11b/g)', description: 'Local wireless network for fast data at home and the office.' },
         net_edge: { name: 'EDGE', description: '2.75G data speed upgrade.' },
         net_3g: { name: '3G', description: 'Third-generation cellular data and video calls.' },
         net_hspa: { name: 'HSPA', description: '3.5G upgrade for streaming.' },
