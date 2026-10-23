@@ -1,4 +1,11 @@
 // FILE: src/ui/office/OfficeScene.js  (REPLACE)
+// v2027.53b — perbaikan audit tata letak:
+//   * BUG KRITIS: indeks rambut memakai shift bertanda (h >> 3) pada hash tak bertanda. Untuk ~41% id staf
+//     indeksnya negatif -> material undefined -> pembangunan ruang Work berhenti di tengah (staf & meja
+//     setelahnya hilang). Sekarang memakai >>> (tanpa tanda).
+//   * Tanaman pojok Work & dispenser digeser agar tidak menembus dinding/partisi/meja; rak buku CEO menempel dinding.
+//   * Slot kosong terlihat rapi: podium bayangan di Showroom (sesuai kapasitas), meja bayangan di Marketing.
+//     Grid podium tetap sama saat produk bertambah.
 // v2027.53a — progres riset & fase produk tampil sebagai bar 3D di Lab / Studio Desain; event game
 //   (riset selesai, produk rilis, penjualan, OS dirilis, Fab berdiri/upgrade, kenaikan skill) memunculkan
 //   efek partikel + label melayang di ruangan terkait. Efek dibatasi jumlahnya & dimatikan saat animasi nonaktif.
@@ -644,8 +651,8 @@ export function createOfficeScene(THREE, container, gameState) {
         var mt = moraleTier(s.morale || 0);
         var rm = roleMat[s.role] || roleMat.engineer;
         var skin = skinMat[h % skinMat.length];
-        var hairM = hairMat[(h >> 3) % hairMat.length];
-        var style = (h >> 6) % 3;
+        var hairM = hairMat[(h >>> 3) % hairMat.length];   // >>> (tanpa tanda): hash() tak bertanda, >> membuat indeks negatif
+        var style = (h >>> 6) % 3;
         var torso = cyl(g, rm, 0.15, 0.42, 0, 0.62, -0.02);                 // badan
         var headG = new THREE.Group();
         headG.position.set(0, 0.97, -0.02);
@@ -838,14 +845,14 @@ export function createOfficeScene(THREE, container, gameState) {
         monitor(f, 0.1, 0.76, -1.0, true);
         box(f, 'gold', 0.3, 0.05, 0.08, 0.4, 0.78, -0.62);               // papan nama
         chair(f, 0.1, -0.15, 'wood');
-        box(f, 'wood', 2.5, 1.3, 0.3, 0.0, 0.65, -2.05);                 // rak buku
+        box(f, 'wood', 2.5, 1.3, 0.3, 0.0, 0.65, -1.98);                 // rak buku (menempel dinding belakang)
         var cols = [accentHex, 0xe0b445, 0x43c07a, 0xef5350, 0x8a7fe0, 0x4fb3e8];
-        for (var i = 0; i < 9; i++) box(f, new THREE.MeshStandardMaterial({ color: cols[i % cols.length] }), 0.16, 0.34, 0.2, -1.0 + i * 0.25, 0.92, -1.93).userData.own = 1;
+        for (var i = 0; i < 9; i++) box(f, new THREE.MeshStandardMaterial({ color: cols[i % cols.length] }), 0.16, 0.34, 0.2, -1.0 + i * 0.25, 0.92, -1.91).userData.own = 1;
         var tn = trophyCount(d, p);
         for (var k = 0; k < tn; k++) {
-            cyl(f, 'gold', 0.1, 0.05, -0.8 + k * 0.45, 1.36, -2.0);
-            cyl(f, 'gold', 0.03, 0.2, -0.8 + k * 0.45, 1.46, -2.0);
-            sph(f, 'gold', 0.1, -0.8 + k * 0.45, 1.64, -2.0);
+            cyl(f, 'gold', 0.1, 0.05, -0.8 + k * 0.45, 1.36, -1.93);
+            cyl(f, 'gold', 0.03, 0.2, -0.8 + k * 0.45, 1.46, -1.93);
+            sph(f, 'gold', 0.1, -0.8 + k * 0.45, 1.64, -1.93);
         }
         box(f, 'chair', 0.7, 0.35, 1.3, -1.2, 0.18, 1.2);                // sofa
         box(f, 'chair', 0.18, 0.55, 1.3, -1.5, 0.4, 1.2);
@@ -922,12 +929,12 @@ export function createOfficeScene(THREE, container, gameState) {
                 person(f, s, x, z + 0.52, tk, opts);
             }
         }
-        plant(f, -5.75, -3.55, 0.9);
-        plant(f, 5.75, -3.55, 0.9);
-        plant(f, 5.6, 3.3, 1.2);
-        shadowRound(f, 0.3, -5.7, 3.3);
-        cyl(f, 'metal', 0.17, 0.12, -5.7, 0.06, 3.3);                     // dispenser air
-        cyl(f, 'glass', 0.15, 0.5, -5.7, 0.4, 3.3);
+        plant(f, -5.5, -3.5, 0.7);                       // pojok NW (tidak menembus dinding)
+        plant(f, 5.5, -3.5, 0.7);                        // pojok NE (tidak menembus partisi)
+        plant(f, 5.5, 3.4, 0.9);                         // pojok SE
+        shadowRound(f, 0.3, -5.7, 3.45);
+        cyl(f, 'metal', 0.17, 0.12, -5.7, 0.06, 3.45);                     // dispenser air
+        cyl(f, 'glass', 0.15, 0.5, -5.7, 0.4, 3.45);
         shadowBox(f, 0.5, 0.45, 5.72, 0.2);
         box(f, 'white', 0.3, 0.7, 0.4, 5.72, 0.35, 0.2);                  // printer
         // papan nama perusahaan di dinding kiri
@@ -1150,7 +1157,7 @@ export function createOfficeScene(THREE, container, gameState) {
         var perRow = 5;
         for (var i = 0; i < show.length; i++) {
             var row = Math.floor(i / perRow), idxInRow = i % perRow;
-            var count = Math.min(perRow, show.length - row * perRow);
+            var count = Math.min(perRow, cap - row * perRow);      // grid mengikuti kapasitas, bukan jumlah produk
             var x = (idxInRow - (count - 1) / 2) * 1.0 - 0.3, z = -0.55 + row * 1.2;
             var pd = show[i];
             cyl(f, 'white', 0.3, 0.35, x, 0.175, z);
@@ -1161,6 +1168,13 @@ export function createOfficeScene(THREE, container, gameState) {
             if (pd.stock > 0) cone(f, 'holo', 0.32, 1.05, x, 0.9, z);          // sorot lampu
         }
         tk.push(function (sec) { for (var q = 0; q < spin.length; q++) spin[q].rotation.y = sec * 0.7 + q; });
+        // slot kosong: podium bayangan (sama seperti meja bayangan di Work) agar ruang tidak tampak rusak
+        for (var g = show.length; g < cap; g++) {
+            var gRow = Math.floor(g / perRow), gIdx = g % perRow;
+            var gCount = Math.min(perRow, cap - gRow * perRow);
+            var gx = (gIdx - (gCount - 1) / 2) * 1.0 - 0.3, gz = -0.55 + gRow * 1.2;
+            cyl(f, 'ghost', 0.3, 0.35, gx, 0.175, gz);
+        }
         box(f, 'glow', 2.4, 0.45, 0.05, -0.6, 1.5, -1.58);                   // banner
         var crates = clamp(Math.round(Math.log10(totalStock(d) + 1) * 3), 0, 12);
         for (var c = 0; c < crates; c++) {
@@ -1191,6 +1205,12 @@ export function createOfficeScene(THREE, container, gameState) {
             var m = cone(f, 'glow', 0.35, 0.8, 1.0, 0.5, 1.6);
             m.rotation.z = -Math.PI / 2.4;
             tk.push(function (sec) { var s = 1 + Math.sin(sec * 4) * 0.06; m.scale.set(0.35 * s, 0.8, 0.35 * s); });
+        }
+        for (var gk = mk; gk < 3; gk++) {                                    // slot meja marketer yang belum terisi
+            var gx2 = -0.7 + gk * 0.7;
+            box(f, 'ghost', 0.6, 0.06, 0.5, gx2, 0.6, -0.3);
+            box(f, 'ghost', 0.05, 0.57, 0.46, gx2 - 0.27, 0.285, -0.3);
+            box(f, 'ghost', 0.05, 0.57, 0.46, gx2 + 0.27, 0.285, -0.3);
         }
         plant(f, -1.1, 1.6, 0.9);
         tk.push(function (sec) {
