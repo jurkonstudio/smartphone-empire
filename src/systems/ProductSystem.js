@@ -17,7 +17,7 @@ import { getLicenseById, getLicenseStatsAtYear } from '../data/os.data.js';
 import { computeTechEdge, getMasteryStatBonus, RND_TRACKS } from '../data/research.data.js';
 import { getMacro, reviewBaseScore } from '../core/MacroModel.js';
 import { WalletService } from './WalletService.js';
-import { getDevToolsDemandMult } from './FutureEffects.js';
+import { getDevToolsDemandMult, getGameEnginePerfBonus } from './FutureEffects.js';
 
 var MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -163,6 +163,10 @@ export class ProductSystem {
         stats.camera = stats.camera * (1 + getBuiltPlantEffect(this.state.data, 'camera', 'cameraQuality'));
         // RAM: efek berupa poin tambahan pada skala 0–100 (L1 +2 … L4 +8), bukan perkalian.
         stats.usability = stats.usability + getBuiltPlantEffect(this.state.data, 'ram', 'usability') * 100;
+        // [Mesin Game] Bonus performa sebanding performa chip, hanya bila OS milik pemain punya App Store (FutureEffects.js).
+        var chipComp = getComponentById(config.chipId);
+        var chipPerf = (chipComp && chipComp.stats && chipComp.stats.performance) || 0;
+        stats.performance += getGameEnginePerfBonus(chipPerf, config.osOptionId, this.state.data);
 
         ['display','camera','battery','performance','connectivity','quality','design','usability'].forEach(function (k) {
             stats[k] = Math.max(0, Math.min(100, Math.round(stats[k])));

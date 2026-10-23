@@ -1,5 +1,5 @@
 // FILE: src/systems/FutureEffects.js  (BARU)
-// Efek panel Future ke sistem game. Satu-satunya tempat angka bonus F-AI dan Alat Pengembang.
+// Efek panel Future ke sistem game. Satu-satunya tempat angka bonus F-AI, Alat Pengembang, dan Mesin Game.
 // Semua hitungan biaya OS (sistem + UI) harus lewat helper ini supaya angkanya cocok.
 import { getFutureUnlockState, getFuturePanelById } from '../data/future-panels.data.js';
 
@@ -10,6 +10,13 @@ export const DEV_TOOLS_CONFIG = {
     osDevFeatures: ['fw_appstore', 'fw_cloud_sync', 'fw_sign_in', 'fw_ecosystem'],
     // Bonus permintaan untuk produk ber-OS milik pemain (own:) saat terbuka. 0.04 = faktor OS x1.04. Sengaja kecil.
     demandBonus: 0.04
+};
+
+export const GAME_ENGINE_CONFIG = {
+    // Bonus performa per poin performa chip (0.12 = chip performa 72 dapat +8,6 poin). Sebanding performa chip.
+    perfPerChipPoint: 0.12,
+    // Fitur OS yang wajib dimiliki OS produk milik pemain agar bonus berlaku.
+    requiredOsFeature: 'fw_appstore'
 };
 
 export const FAI_CONFIG = {
@@ -57,6 +64,31 @@ export function getOsFeatureCost(f, data) {
 export function getDevToolsDemandMult(osOptionId, data) {
     if (!osOptionId || osOptionId.indexOf('own:') !== 0) return 1;
     return isDevToolsActive(data) ? 1 + DEV_TOOLS_CONFIG.demandBonus : 1;
+}
+
+// True bila Mesin Game terbuka (riset chip_octa selesai).
+export function isGameEngineActive(data) {
+    try { return getFutureUnlockState(getFuturePanelById('game_engine'), data).unlocked === true; }
+    catch (e) { return false; }
+}
+
+// True bila OS produk punya fitur itu. Hanya OS milik pemain ('own:') yang dicek:
+// OS lisensi tidak punya daftar fitur di data, jadi dianggap tidak memenuhi syarat.
+export function osOptionHasFeature(osOptionId, featureId, data) {
+    if (!osOptionId || !featureId || osOptionId.indexOf('own:') !== 0) return false;
+    var versionId = osOptionId.slice(4);
+    var versions = (data && data.os && data.os.versions) || [];
+    var v = versions.find(function (x) { return x.id === versionId; });
+    return !!v && Array.isArray(v.features) && v.features.indexOf(featureId) !== -1;
+}
+
+// Bonus poin performa Mesin Game untuk produk. chipPerf = performa chip dari komponen (0 bila tanpa chip).
+// Dipanggil dari ProductSystem.computeStats, jadi preview desain dan produk nyata selalu sama.
+export function getGameEnginePerfBonus(chipPerf, osOptionId, data) {
+    if (!(chipPerf > 0)) return 0;
+    if (!isGameEngineActive(data)) return 0;
+    if (!osOptionHasFeature(osOptionId, GAME_ENGINE_CONFIG.requiredOsFeature, data)) return 0;
+    return chipPerf * GAME_ENGINE_CONFIG.perfPerChipPoint;
 }
 
 // True bila fitur ini sedang mendapat diskon F-AI (untuk label di UI).
