@@ -17,6 +17,7 @@ import { renderChipMockup } from '../phone/ChipMockup.js';
 import { t } from '../../core/LanguageService.js';
 import { bus } from '../../core/EventBus.js';
 import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
+import { renderSupplyCard } from './CountryPanels.js';
 
 
 function safe(fn, fallback) {
@@ -158,7 +159,8 @@ function _renderDesignTab(productSystem) {
             '<div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;" data-prod-dev-eta>' + t('prod.design.dev_eta') + '</div>' +
             renderSilSpeedBar({ speed: true, finish: 'dev' }) +
             '<button class="btn-danger" data-prod-action="cancel-dev" style="margin-top:12px;width:100%;">' + t('prod.design.cancel') + '</button>' +
-            '</div>';
+            '</div>' +
+            renderSupplyCard(dev, data.time.currentYear);
     }
 
     return '<div class="card">' +

@@ -9,6 +9,7 @@
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { escapeHtml } from '../../utils/html.js';
 import { formatUsers, ADOPTION_CONFIG } from '../../systems/OsAdoptionModel.js';
+import { renderOsCountryPreview, ensureCountryHandlers } from './CountryPanels.js';
 
 var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 var TIER_LABEL = { current: 'Terbaru', previous: 'Sebelumnya', older: 'Lama' };
@@ -17,26 +18,30 @@ var _stylesInjected = false;
 
 export function renderOsKpiRow(osSystem, data) {
     _ensureStyles();
+    ensureCountryHandlers();
     var a = osSystem.getAdoption();
     var os = data.os;
     var cur = osSystem.getCurrentVersionObject ? osSystem.getCurrentVersionObject() : null;
     var features = cur && cur.features ? cur.features.length : 0;
     var bugs = (os.bugs || []).filter(function (b) { return b.status === 'active' || b.status === 'patching'; }).length;
     var chips = [
-        { ico: 'users',  label: 'Pengguna aktif', val: formatUsers(a.activeUsers) },
+        { ico: 'users',  label: 'Pengguna aktif', val: formatUsers(a.activeUsers), tap: true },
         { ico: 'cpu',    label: 'Versi',          val: cur ? cur.versionString : '-' },
         { ico: 'layers', label: 'Fitur di versi', val: String(features) },
         { ico: 'blocks', label: 'Apps pihak ketiga', val: String(os.apps ? os.apps.thirdParty : 0) },
         { ico: 'warn',   label: 'Bug aktif',      val: String(bugs), tone: bugs >= 3 ? 'down' : '' }
     ];
     return '<div class="ou-kpis">' + chips.map(function (c) {
-        return '<div class="ou-kpi ' + (c.tone || '') + '"><div class="ou-kpi-ico">' + renderIcon(c.ico, 14) + '</div>' +
-            '<div><div class="ou-kpi-val">' + escapeHtml(c.val) + '</div><div class="ou-kpi-lbl">' + escapeHtml(c.label) + '</div></div></div>';
+        var tapAttr = c.tap ? ' data-os-countries role="button" tabindex="0"' : '';
+        return '<div class="ou-kpi ' + (c.tone || '') + '"' + tapAttr + '><div class="ou-kpi-ico">' + renderIcon(c.ico, 14) + '</div>' +
+            '<div><div class="ou-kpi-val">' + escapeHtml(c.val) + '</div><div class="ou-kpi-lbl">' + escapeHtml(c.label) + '</div></div>' +
+            (c.tap ? '<span class="ou-kpi-chev">›</span>' : '') + '</div>';
     }).join('') + '</div>';
 }
 
 export function renderOsUsersTab(osSystem, data) {
     _ensureStyles();
+    ensureCountryHandlers();
     var a = osSystem.getAdoption();
 
     if (!a.hasOs) {
@@ -44,7 +49,7 @@ export function renderOsUsersTab(osSystem, data) {
             '<div class="empty-desc">Rilis versi OS pertama, lalu luncurkan ponsel yang memakai OS-mu. Pengguna dihitung dari unit ponsel tersebut yang terjual.</div></div>';
     }
 
-    var header = '<div class="ou-hero">' +
+    var header = '<div class="ou-hero" data-os-countries role="button" tabindex="0">' +
         '<div class="ou-hero-top"><div><div class="ou-hero-label">Total pengguna aktif</div>' +
         '<div class="ou-hero-big">' + escapeHtml(formatUsers(a.activeUsers)) + '</div></div>' +
         '<div class="ou-hero-side"><div>Unit terjual <b>' + escapeHtml(formatUsers(a.shippedUnits)) + '</b></div>' +
@@ -68,7 +73,7 @@ export function renderOsUsersTab(osSystem, data) {
         ' Semakin banyak pengguna, semakin ramai App Store-mu.</div>' +
         '</div>';
 
-    return header + trend + versions + phones + eco;
+    return header + renderOsCountryPreview(data) + trend + versions + phones + eco;
 }
 
 function _renderVersionRow(v) {
