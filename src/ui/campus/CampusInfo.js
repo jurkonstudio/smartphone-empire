@@ -1,4 +1,6 @@
 // FILE: src/ui/campus/CampusInfo.js  (REPLACE — registri + navigasi sub-tab)
+// v2027.63 — gedung HQ kini punya tombol "Masuk Kantor" (zoom masuk ke Office 3D di kanvas yang sama,
+// ditangani CampusOfficeBridge.js). Data registri TIDAK diubah; HQ dikenali lewat id.
 // v2027.62 — nama, ikon, deskripsi, satuan, dan tujuan tombol "Buka ..." sekarang dibaca dari
 // REGISTRI (campus-buildings.data.js), bukan tabel terpisah. Tombol kini membawa sub-tab
 // (mis. Riset > Manufaktur) sehingga pemain langsung mendarat di tab yang tepat.
@@ -24,6 +26,7 @@ var UI = [
         open: 'Buka {view}', close: 'Tutup', built: '{name} berhasil dibangun!',
         up: '{name} naik ke Lv {lv}!', multi: '{n} bangunan berkembang!',
         bannerSub: 'Kampus Anda terus tumbuh', decor: 'Dekorasi era',
+        enterOffice: 'Masuk Kantor', backCampus: 'Kampus',
         blocks: 'Blok kota aktif: {n}', reset: 'Reset tampilan peta', zin: 'Perbesar peta', zout: 'Perkecil peta'
     },
     {   // en
@@ -33,6 +36,7 @@ var UI = [
         open: 'Open {view}', close: 'Close', built: '{name} is built!',
         up: '{name} reached Lv {lv}!', multi: '{n} buildings grew!',
         bannerSub: 'Your campus keeps growing', decor: 'Era decoration',
+        enterOffice: 'Enter Office', backCampus: 'Campus',
         blocks: 'City blocks active: {n}', reset: 'Reset map view', zin: 'Zoom in', zout: 'Zoom out'
     }
 ];
@@ -71,6 +75,11 @@ export function getUiStrings() {
     };
 }
 
+// Teks untuk tombol jembatan Kampus <-> Kantor (CampusOfficeBridge.js).
+export function getBridgeStrings() {
+    return { enterOffice: _ui('enterOffice'), backCampus: _ui('backCampus') };
+}
+
 export function getBuildingName(id) {
     return CAMPUS_BY_ID[id] ? _name(id) : String(id);
 }
@@ -81,6 +90,10 @@ export function hasCelebration(id) { return !!RULES[id]; }
 function _navOf(entry) {
     var n = entry.nav;
     if (!n) return null;
+    // HQ: masuk ke interior kantor (Office 3D) langsung di peta, bukan pindah ke panel Tim.
+    if (entry.id === 'hq') {
+        return { view: n.view, sub: '', label: _ui('enterOffice'), office: true, attrs: { 'data-campus-office': '1' } };
+    }
     var key = n.sub || n.view;
     var pair = n.label || VIEW_LABEL[n.view] || [n.view, n.view];
     return { view: n.view, sub: n.sub || '', label: _ui('open', { view: _view(key, pair) }) };

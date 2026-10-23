@@ -1,4 +1,4 @@
-// FILE: src/ui/campus/CampusOverlay.js
+// FILE: src/ui/campus/CampusOverlay.js  (REPLACE — v2027.63: tombol "Masuk Kantor" lewat atribut data-campus-office)
 // v2027.62 — tombol "Buka ..." membawa sub-tab (info.nav.sub), mis. Riset > Manufaktur.
 // v2027.60 — panel glass konsisten dengan tampilan 3D (blur + bayangan lembut, mati di mode hemat),
 // vinyet halus untuk kedalaman, ikon kartu dengan gradien aksen. API publik TIDAK berubah.
@@ -146,7 +146,7 @@ export function createCampusOverlay(container, cfg) {
     bAlert.addEventListener('click', function () { if (cfg.onAlert) cfg.onAlert(); });
 
     // Pasang aksi pada tombol lewat atribut data-* (ditangani delegasi klik di main.js).
-    var ACT_ATTRS = ['data-nav', 'data-nav-sub', 'data-chip-action'];
+    var ACT_ATTRS = ['data-nav', 'data-nav-sub', 'data-chip-action', 'data-campus-office'];
     function setAction(btn, label, nav, sub, attrs) {
         ACT_ATTRS.forEach(function (a) { btn.removeAttribute(a); });
         btn.textContent = label + ' →';
@@ -200,7 +200,7 @@ export function createCampusOverlay(container, cfg) {
         if (info.nav) {
             go.style.display = '';
             go.className = 'cmp-go' + (al && al.action ? ' sec' : '');
-            setAction(go, info.nav.label, info.nav.view, info.nav.sub || '', null);
+            setAction(go, info.nav.label, info.nav.office ? '' : info.nav.view, info.nav.sub || '', info.nav.attrs || null);
         } else {
             go.style.display = 'none';
         }

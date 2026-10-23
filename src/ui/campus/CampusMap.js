@@ -1,9 +1,12 @@
-// FILE: src/ui/campus/CampusMap.js
+// FILE: src/ui/campus/CampusMap.js  (REPLACE — v2027.63: terhubung ke CampusOfficeBridge)
+// v2027.63 — bila pemain sedang "di dalam kantor" (zoom masuk dari gedung HQ), render ulang Home memasang
+// Office 3D di kotak yang sama, bukan peta kampus. Selain itu perilaku TIDAK berubah.
 // v2027.44 — + dengarkan lang:changed supaya kartu info ganti bahasa.
 // Mount/unmount peta kampus 3D. Three.js dimuat lazy dari CDN (versi dipin).
 import { createCampusScene } from './CampusScene.js';
 import { renderCampusFallback } from './CampusFallback.js';
 import { bus } from '../../core/EventBus.js';
+import { isOfficeMode, resumeOffice, registerCampusHooks } from './CampusOfficeBridge.js';
 
 var THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 var _threePromise = null;
@@ -19,6 +22,8 @@ function loadThree() {
 
 export async function mountCampusMap(containerEl, gameState) {
     unmountCampusMap();
+    // Sedang di dalam kantor (mis. Home dirender ulang): lanjutkan Office 3D, jangan buat peta kampus.
+    if (isOfficeMode()) { resumeOffice(containerEl, gameState); return; }
     var token = ++_token;
     try {
         var THREE = await loadThree();
@@ -56,3 +61,6 @@ export function unmountCampusMap() {
 export function updateCampus(data) {
     if (_active) _active.scene.update(data);
 }
+
+// Daftarkan pasangan mount/unmount ke jembatan (dipanggil saat pemain keluar dari kantor kembali ke kampus).
+registerCampusHooks({ mount: mountCampusMap, unmount: unmountCampusMap });
