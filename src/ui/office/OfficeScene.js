@@ -67,7 +67,6 @@ import { bus } from '../../core/EventBus.js';
 import { computePlan, rememberPeak, PALETTES, ERA_WINDOWS } from '../campus/CampusBuildings.js';
 import { createLookRig, detectQuality } from '../campus/CampusLook.js';
 import { createCampusControls } from '../campus/CampusControls.js';
-import { buildCampusSilhouette, NEIGHBOR_OFFSET } from '../campus/NeighborSilhouette.js';
 import { t } from '../../core/LanguageService.js';
 import { BASE_VIEW, COLORS, COLS, ROWS, CORRIDORS, nearPlinth, officeCoastR, onIsland, DEST_BY_ROLE, DEST_DEFAULT, DEST_EMOJI, DEST_ROOM, DOOR_EAST, DOOR_NORTH, FLOOR, FRAME_MS, HAIR, MAX_DESKS, MAX_DPR, MIN_RESIZE_DELTA, MORALE_HEX, NARROW_PX, PHASES, ROOM_DEFS, SHADOW_OPACITY, SKIN, WALKERS_MAX, clamp, deskCapacity, hash, hexCss, len, moraleTier, prefersReducedMotion, readAccent, roleCount, sortedStaff, tint } from './OfficeConfig.js';
 import { describeRoom, describeStaff, fabProgress, roomAlert, totalStock, trophyCount, ROOM_LOGIC } from './OfficeLogic.js';
@@ -293,8 +292,7 @@ export function createOfficeScene(THREE, container, gameState) {
     // ---------- shell statis (lantai dasar, dinding, partisi) ----------
     var shell = new THREE.Group();
     scene.add(shell);
-    // siluet kampus di sebelah kanan kantor: terlihat saat peta digeser ke kanan
-    var neighbor = buildCampusSilhouette(THREE, scene, NEIGHBOR_OFFSET);
+    // Kantor berdiri sendiri: tidak ada pulau kampus di sebelahnya (sebelah kampus dicadangkan untuk Manufaktur).
     // ---------- lingkungan pulau: pinggir peta kantor dibuat seperti Peta Kampus ----------
     // Lantai kantor tetap di y = 0. Rumput pulau di y = GY (sama dengan alas lama). Laut, pantai pasir,
     // busa ombak, bukit, batu, semak dan pepohonan hanya ditaruh di daratan pulau & di luar denah kantor.
@@ -1406,7 +1404,6 @@ export function createOfficeScene(THREE, container, gameState) {
         M.pool.opacity = dark ? 0.2 : 0;
         M.shade.opacity = dark ? SHADOW_OPACITY + 0.08 : SHADOW_OPACITY;
         rig.applyTheme(dark);          // warna & intensitas cahaya sama dengan Peta Kampus
-        neighbor.setDark(dark);
         roomList.forEach(function (r) {
             r.ovMat.color.setHex(accentHex);
             r.patMat.color.setHex(dark ? 0xffffff : 0x000000);
@@ -1956,7 +1953,7 @@ export function createOfficeScene(THREE, container, gameState) {
         unitsPerPixel: function (zoom) { return (BASE_VIEW / zoom) / Math.max(1, container.clientHeight); },
         minZoom: 0.3,
         maxZoom: 3,
-        limit: 20,
+        limit: 16,
         onChange: function () { applyCamera(); requestRender(); },
         onTap: handleTap
     });
@@ -2087,7 +2084,6 @@ export function createOfficeScene(THREE, container, gameState) {
             skinMat.forEach(function (m) { m.dispose(); });
             moraleMat.forEach(function (m) { m.dispose(); });
             Object.keys(hueMats).forEach(function (k) { hueMats[k].dispose(); });
-            neighbor.dispose();
             rig.dispose();
             renderer.dispose();
             try { renderer.forceContextLoss(); } catch (e) {}
