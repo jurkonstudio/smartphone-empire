@@ -16,6 +16,7 @@ export class MarketSystem {
     }
 
     setCompetitorSystem(cs) { this._competitorSystem = cs; }
+    setEconBrakes(eb) { this._econ = eb; }
 
     start() {
         this._unsubs.push(bus.on('time:month-changed', (s) => this._onMonthChanged(s)));
@@ -196,10 +197,13 @@ export class MarketSystem {
                 const compQuality = tier * cfg.tierToQuality + cfg.tierOffset;
                 const gap = Math.max(0, Math.min(cfg.maxGap, (compQuality - p.stats.qualityScore) / cfg.gapDivisor));
                 
-                pressure += c.share * gap * cfg.gainPerShare * pricePressureMod;
+                const rw = this._econ ? this._econ.rivalWeight(c.id) : 1; // rival yang diakuisisi menekan lebih lemah
+                pressure += c.share * gap * cfg.gainPerShare * pricePressureMod * rw;
             });
             
-            p.competitorPressure = Math.min(cfg.maxPressure, pressure * aggr);
+            // [v2029.1] Rival bereaksi saat pemain mendekati plafon pasar.
+            const reaction = this._econ ? this._econ.rivalResponse() : 1;
+            p.competitorPressure = Math.min(cfg.maxPressure, pressure * aggr * reaction);
         });
     }
 

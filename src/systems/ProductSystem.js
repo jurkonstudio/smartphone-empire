@@ -44,6 +44,23 @@ export class ProductSystem {
 
     // Pabrik komponen internal: stok baterai & layar diambil dari sini saat rilis dan restok.
     setComponentPlantSystem(cps) { this._componentPlants = cps; }
+    setEconBrakes(eb) { this._econ = eb; }
+
+    // [v2029.1] Pengali biaya volume & tagihan produksi massal.
+    _volMult(qty) { return this._econ ? this._econ.volumeMultiplier(qty) : 1; }
+    _recordProd(qty) { if (this._econ) this._econ.recordProduction(qty); }
+    // Tagihan produksi tambahan (restock): komponen x pengali volume + biaya setup.
+    // Tagihan desain (sama persis dengan confirmDesign): komponen non-pabrik x pengali volume + setup.
+    quoteDesign(config) {
+        var qty = (config && config.productionQty) || 0;
+        var vm = this._volMult(qty);
+        return { volMult: vm, total: Math.round(this.computeUnitCost(config, true) * qty * vm) + BALANCE.products.productionSetupCost };
+    }
+    quoteProduction(config, qty) {
+        var parts = this.computeUnitCost(config, true) * qty + this._quoteComponents(config, qty);
+        var vm = this._volMult(qty);
+        return { volMult: vm, parts: Math.round(parts), total: Math.round(parts * vm + BALANCE.products.productionSetupCost) };
+    }
 
     start() {
         var self = this;
@@ -308,7 +325,8 @@ export class ProductSystem {
 
         var setupCost = BALANCE.products.productionSetupCost;
         // Baterai & layar tidak ditagih di sini: diambil dari stok pabrik atau dibeli harga pasar saat rilis.
-        var totalCost = this.computeUnitCost(config, true) * config.productionQty + setupCost;
+        var volMult = this._volMult(config.productionQty);
+        var totalCost = Math.round(this.computeUnitCost(config, true) * config.productionQty * volMult) + setupCost;
 
         if (!WalletService.canAfford(totalCost)) return { ok: false, reason: 'Uang tidak cukup. Butuh $' + totalCost.toLocaleString('en-US') + '.' };
 
@@ -318,6 +336,7 @@ export class ProductSystem {
         var totalDays = Math.max(7, Math.round(baseDays / speedup));
 
         WalletService.pay(totalCost, 'product-dev');
+        this._recordProd(config.productionQty);
 
         var productId = 'p_' + Date.now() + '_' + data.products.nextProductId;
         data.products.nextProductId += 1;
@@ -328,6 +347,7 @@ export class ProductSystem {
             config: Object.assign({}, config),
             stats: stats,
             unitCost: unitCost,
+            volMult: volMult,
             totalCost: totalCost,
             price: config.price,
             productionQty: config.productionQty,
@@ -501,7 +521,7 @@ export class ProductSystem {
         var repDelta = this._reviewReputationDelta(rv.score, 1);
         if (repDelta !== 0) this.state.addReputation(repDelta);
 
-        var partsBill = this._settleComponents(cfg, cfg.productionQty);
+        var partsBill = Math.round(this._settleComponents(cfg, cfg.productionQty) * (d.volMult || 1));
         if (partsBill > 0) {
             this.state.addCash(-partsBill);
             this.state.addLog('Komponen "' + product.name + '" dibeli harga pasar: $' + partsBill.toLocaleString('en-US') + '.', LOG_TYPES.info);
@@ -529,14 +549,24 @@ export class ProductSystem {
         var data = this.state.data;
         if (!data.products.catalog.length) return;
 
-        var totalDailyRevenue = 0;
-
+        // [v2029.1] Pass 1: permintaan mentah semua produk yang dijual.
+        var rows = [], rawTotal = 0;
         for (var i = 0; i < data.products.catalog.length; i++) {
             var p = data.products.catalog[i];
             if (p.status !== 'selling') continue;
+            var dm = this._computeDailyDemand(p);
+            rows.push({ p: p, demand: dm });
+            rawTotal += dm;
+        }
+        // Plafon pasar: total permintaan jenuh (semua produk berbagi pasar yang sama).
+        var capFactor = this._econ ? this._econ.applyDemandCap(rawTotal) : 1;
+
+        var totalDailyRevenue = 0;
+        for (var r = 0; r < rows.length; r++) {
+            var p = rows[r].p;
             if (p.stock <= 0) continue;
 
-            var demand = this._computeDailyDemand(p);
+            var demand = Math.round(rows[r].demand * capFactor);
             var sold = Math.min(demand, p.stock);
             if (sold <= 0) continue;
 
@@ -679,7 +709,7 @@ export class ProductSystem {
             if (p.stock + neededQty > maxStock) neededQty = maxStock - p.stock;
             if (neededQty <= 0) continue;
 
-            var totalCost = Math.round(this.computeUnitCost(p.config, true) * neededQty + this._quoteComponents(p.config, neededQty) + BALANCE.products.productionSetupCost);
+            var totalCost = this.quoteProduction(p.config, neededQty).total;
 
             if (data.cash < totalCost) {
                 if ((now - (ar.lastWarnMinute || 0)) >= warnInterval) {
@@ -692,6 +722,7 @@ export class ProductSystem {
             }
 
             this.state.setCash(data.cash - totalCost);
+            this._recordProd(neededQty);
             this._settleComponents(p.config, neededQty);
             p.stock += neededQty;
             p.totalProduced += neededQty;
@@ -791,10 +822,11 @@ export class ProductSystem {
         if (!p) return { ok: false, reason: 'Produk tidak ditemukan.' };
         if (p.status !== 'selling') return { ok: false, reason: 'Produk sudah tidak dijual.' };
         if (qty < 100) return { ok: false, reason: 'Minimal 100 unit.' };
-        var totalCost = Math.round(this.computeUnitCost(p.config, true) * qty + this._quoteComponents(p.config, qty) + BALANCE.products.productionSetupCost);
+        var totalCost = this.quoteProduction(p.config, qty).total;
         if (!WalletService.canAfford(totalCost)) return { ok: false, reason: 'Uang tidak cukup.' };
 
         WalletService.pay(totalCost, 'restock');
+        this._recordProd(qty);
         this._settleComponents(p.config, qty);
 
         var days = this.getManualRestockDays(qty);

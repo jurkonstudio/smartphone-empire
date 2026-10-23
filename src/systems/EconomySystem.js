@@ -28,6 +28,7 @@ export class EconomySystem {
     }
 
     setBank(bank) { this.bank = bank; }
+    setEconBrakes(eb) { this.econ = eb; }
 
     start() {
         this._unsubMonth = bus.on('time:month-changed', (snapshot) => {
@@ -86,7 +87,9 @@ export class EconomySystem {
         } else {
             loanInterest = this._calcMonthlyLoanInterest();
         }
-        const expenseBase = salary + fixed + loanInterest;
+        // [v2029.1] Pemeliharaan investasi pabrik & akuisisi.
+        const upkeep = this.econ ? this.econ.getMonthlyUpkeep() : 0;
+        const expenseBase = salary + fixed + loanInterest + upkeep;
         const expense = Math.round(expenseBase * mul);
 
         // ---- Pemasukan (info saja, sudah masuk cash via harian) ----
@@ -122,7 +125,7 @@ export class EconomySystem {
             net,
             cash: cashAfter,
             breakdown: {
-                salary, fixed, loanInterest, loanPrincipal, depositInterest,
+                salary, fixed, loanInterest, loanPrincipal, depositInterest, upkeep,
                 tax,
                 expenseRaw: expenseBase
             }
@@ -225,7 +228,8 @@ export class EconomySystem {
         let debtService = 0;
         if (this.bank) debtService = this.bank.previewMonthly().total;
         else debtService = this._calcMonthlyLoanInterest();
-        const base = this.state.getMonthlySalary() + this.state.getMonthlyFixedCost() + debtService;
+        const upkeep = this.econ ? this.econ.getMonthlyUpkeep() : 0;
+        const base = this.state.getMonthlySalary() + this.state.getMonthlyFixedCost() + debtService + upkeep;
         return Math.round(base * diff.expense);
     }
 }
