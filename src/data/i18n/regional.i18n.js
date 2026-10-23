@@ -19,6 +19,7 @@ export const REGIONAL_I18N = {
         // ---- navigasi ----
         'market.subtab.promo': 'Promosi',
         'hq.tab.bank': 'Bank',
+        'hq.tab.invest': 'Investasi',
 
         // ---- promosi ----
         'promo.sub': 'Pilih produk, lalu beli paket promosi Global, Asia, atau Eropa. Brand wilayah bertahan lama dan menaikkan permintaan.',
@@ -274,6 +275,7 @@ export const REGIONAL_I18N = {
 
         'market.subtab.promo': 'Promo',
         'hq.tab.bank': 'Bank',
+        'hq.tab.invest': 'Invest',
 
         'promo.sub': 'Pick a product, then buy a Global, Asia, or Europe promotion package. Regional brand lasts and lifts demand.',
         'promo.empty.title': 'No products on sale yet',
