@@ -42,7 +42,7 @@ function _apply() {
     // Meta theme-color untuk address bar mobile
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
-        meta.setAttribute('content', _theme === 'dark' ? '#0a0c10' : '#ffffff');
+        meta.setAttribute('content', _theme === 'dark' ? '#000000' : '#f5f5f7');
     }
 }
 
