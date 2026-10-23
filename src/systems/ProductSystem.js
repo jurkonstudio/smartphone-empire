@@ -17,6 +17,7 @@ import { getLicenseById, getLicenseStatsAtYear } from '../data/os.data.js';
 import { computeTechEdge, getMasteryStatBonus, RND_TRACKS } from '../data/research.data.js';
 import { getMacro, reviewBaseScore } from '../core/MacroModel.js';
 import { WalletService } from './WalletService.js';
+import { getDevToolsDemandMult } from './FutureEffects.js';
 
 var MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -257,7 +258,8 @@ export class ProductSystem {
         }
 
         var avg = (stats.stability + stats.speed + stats.features + stats.security + stats.design) / 5;
-        return Math.pow(Math.max(0.2, avg / BALANCE.products.refs.os), BALANCE.products.weights.os);
+        return Math.pow(Math.max(0.2, avg / BALANCE.products.refs.os), BALANCE.products.weights.os)
+             * getDevToolsDemandMult(osOptionId, data);
     }
 
     // Faktor teknologi: (1) keunggulan level R&D saat produk dirancang vs standar

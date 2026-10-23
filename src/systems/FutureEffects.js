@@ -1,7 +1,16 @@
 // FILE: src/systems/FutureEffects.js  (BARU)
-// Efek panel Future ke sistem game. Satu-satunya tempat angka bonus F-AI.
+// Efek panel Future ke sistem game. Satu-satunya tempat angka bonus F-AI dan Alat Pengembang.
 // Semua hitungan biaya OS (sistem + UI) harus lewat helper ini supaya angkanya cocok.
 import { getFutureUnlockState, getFuturePanelById } from '../data/future-panels.data.js';
+
+export const DEV_TOOLS_CONFIG = {
+    // Diskon biaya pengembangan fitur ekosistem aplikasi (0.15 = 15%). Ubah di sini untuk menyeimbangkan.
+    osDevDiscount: 0.15,
+    // Fitur OS yang kena diskon Alat Pengembang.
+    osDevFeatures: ['fw_appstore', 'fw_cloud_sync', 'fw_sign_in', 'fw_ecosystem'],
+    // Bonus permintaan untuk produk ber-OS milik pemain (own:) saat terbuka. 0.04 = faktor OS x1.04. Sengaja kecil.
+    demandBonus: 0.04
+};
 
 export const FAI_CONFIG = {
     // Diskon biaya pengembangan fitur OS berbasis AI (0.20 = 20%). Ubah di sini untuk menyeimbangkan.
@@ -20,14 +29,34 @@ export function isFaiActive(data) {
     catch (e) { return false; }
 }
 
-// Biaya fitur OS setelah efek F-AI. f = objek fitur dari os.data.js.
+// True bila Alat Pengembang terbuka (tahun >= 2008 dan riset net_4g selesai).
+export function isDevToolsActive(data) {
+    try { return getFutureUnlockState(getFuturePanelById('dev_tools'), data).unlocked === true; }
+    catch (e) { return false; }
+}
+
+// Biaya fitur OS setelah efek F-AI dan Alat Pengembang. f = objek fitur dari os.data.js.
 export function getOsFeatureCost(f, data) {
     if (!f) return 0;
     var base = f.devCost || 0;
+    var cost = base;
+    var discounted = false;
     if (FAI_CONFIG.osAiFeatures.indexOf(f.id) !== -1 && isFaiActive(data)) {
-        return Math.round(base * (1 - FAI_CONFIG.osAiDiscount));
+        cost *= (1 - FAI_CONFIG.osAiDiscount);
+        discounted = true;
     }
-    return base;
+    if (DEV_TOOLS_CONFIG.osDevFeatures.indexOf(f.id) !== -1 && isDevToolsActive(data)) {
+        cost *= (1 - DEV_TOOLS_CONFIG.osDevDiscount);
+        discounted = true;
+    }
+    return discounted ? Math.round(cost) : base;
+}
+
+// Pengali permintaan dari Alat Pengembang untuk produk ber-OS milik pemain (osOptionId 'own:...').
+// Dipanggil dari ProductSystem._getOsFactor, jadi preview desain dan penjualan nyata selalu sama.
+export function getDevToolsDemandMult(osOptionId, data) {
+    if (!osOptionId || osOptionId.indexOf('own:') !== 0) return 1;
+    return isDevToolsActive(data) ? 1 + DEV_TOOLS_CONFIG.demandBonus : 1;
 }
 
 // True bila fitur ini sedang mendapat diskon F-AI (untuk label di UI).
