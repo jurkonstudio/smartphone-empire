@@ -795,6 +795,7 @@ export const en = {
     'monthly.income':         'Income',
     'monthly.salary':         'Team salary',
     'monthly.fixed':          'Rent & utilities',
+    'monthly.infra_tax':      'Infrastructure tax & utilities',
     'monthly.loan_interest':  'Loan interest',
     'monthly.tax':            'Tax',
     'monthly.net':            'Net Profit',

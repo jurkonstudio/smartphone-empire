@@ -796,6 +796,7 @@ export const id = {
     'monthly.income':         'Pemasukan',
     'monthly.salary':         'Gaji tim',
     'monthly.fixed':          'Sewa & utilitas',
+    'monthly.infra_tax':      'Pajak & utilitas infrastruktur',
     'monthly.loan_interest':  'Bunga pinjaman',
     'monthly.tax':            'Pajak',
     'monthly.net':            'Laba Bersih',
