@@ -564,7 +564,148 @@ function screenModern(screenStyle, rect, uid) {
     return `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#1a1a1a"/>`;
 }
 
-function screenContent(screenStyle, rect, uid, brand, displayId) {
+// ============================================================
+// BAHASA DESAIN ORISINAL 2019+ (bukan tiruan produk/OS nyata)
+//   2019-21 "Tiles"  : kartu kaca + aksen biru es, modul kamera heksagon
+//   2022-23 "Bloom"  : wallpaper blob hangat + cincin aktivitas, modul kamera cakram
+//   2024-25 "Aurora" : pita cahaya + bilah tanya, modul kamera kapsul vertikal
+//   2026+   "Prism"  : faset prisma + widget orbit, modul kamera orbit bercahaya
+// ============================================================
+function eraAccent(yr) {
+    return yr >= 2026 ? '#a78bfa' : yr >= 2024 ? '#34d399' : yr >= 2022 ? '#ff6aa2' : '#38bdf8';
+}
+
+function phoneDateText() {
+    try {
+        const lang = (LanguageService && LanguageService.getLang && LanguageService.getLang()) || 'id';
+        return _esc(new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'id-ID', { weekday: 'long', day: 'numeric', month: 'long' }));
+    } catch (e) { return ''; }
+}
+
+function eraStatus(x0, y0, w, col) {
+    return `<text x="${x0 + 3.6}" y="${y0 + 4.9}" font-size="1.7" font-family="sans-serif" font-weight="600" fill="${col}">${phoneClockText()}</text>` +
+        sigBars(x0 + w - 12.8, y0 + 2.6, col) + batt(x0 + w - 3, y0 + 3.1, col);
+}
+
+function screenEra(yr, r, uid) {
+    const x0 = r.x, y0 = r.y, w = r.w, h = r.h, cx = x0 + w / 2;
+    const u = 'e' + uid;
+    const acc = eraAccent(yr);
+    const date = phoneDateText();
+    const F = 'font-family="sans-serif"';
+    const dockColors = [0, 1, 2, 3].map(function (c) { return ICON_COLORS[(c + 3) % ICON_COLORS.length]; });
+
+    if (yr < 2022) { // ---- Tiles ----
+        const cw = (w - 11) / 2, ch = 15, ty = y0 + h * 0.3;
+        let tiles = '';
+        for (let i = 0; i < 4; i++) {
+            const tx = x0 + 4 + (i % 2) * (cw + 3), tY = ty + Math.floor(i / 2) * (ch + 3);
+            tiles += `<rect x="${tx}" y="${tY}" width="${cw}" height="${ch}" rx="3.2" fill="#fff" opacity="0.07" stroke="${acc}" stroke-opacity="0.32" stroke-width="0.25"/>
+                <circle cx="${tx + 4.6}" cy="${tY + 4.6}" r="1.9" fill="${ICON_COLORS[(i * 3) % ICON_COLORS.length]}"/>
+                <rect x="${tx + 3}" y="${tY + ch - 6}" width="${cw * 0.56}" height="1.3" rx="0.65" fill="#fff" opacity="0.75"/>
+                <rect x="${tx + 3}" y="${tY + ch - 3.4}" width="${cw * 0.34}" height="1" rx="0.5" fill="#fff" opacity="0.32"/>`;
+        }
+        const wy = ty + 2 * (ch + 3);
+        return `<defs>
+                <linearGradient id="${u}bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d1a2e"/><stop offset="1" stop-color="#04060c"/></linearGradient>
+                <radialGradient id="${u}gl" cx="0.15" cy="0.05" r="0.9"><stop offset="0" stop-color="${acc}" stop-opacity="0.4"/><stop offset="1" stop-color="${acc}" stop-opacity="0"/></radialGradient>
+            </defs>
+            <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="url(#${u}bg)"/>
+            <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="url(#${u}gl)"/>
+            ${eraStatus(x0, y0, w, '#e8f3ff')}
+            <text x="${x0 + 4.4}" y="${y0 + h * 0.2}" font-size="13" font-weight="300" fill="#fff" ${F} letter-spacing="-0.4">${phoneClockText()}</text>
+            <text x="${x0 + 4.7}" y="${y0 + h * 0.2 + 4}" font-size="1.9" fill="${acc}" ${F}>${date}</text>
+            ${tiles}
+            <rect x="${x0 + 4}" y="${wy}" width="${w - 8}" height="10" rx="3.2" fill="#fff" opacity="0.07" stroke="${acc}" stroke-opacity="0.32" stroke-width="0.25"/>
+            <rect x="${x0 + 7}" y="${wy + 6}" width="${w - 14}" height="1.6" rx="0.8" fill="#fff" opacity="0.14"/>
+            <rect x="${x0 + 7}" y="${wy + 6}" width="${(w - 14) * 0.62}" height="1.6" rx="0.8" fill="${acc}"/>
+            <text x="${x0 + 7}" y="${wy + 4}" font-size="1.7" fill="#fff" opacity="0.8" ${F}>${_scr('phone.mock.focus', 'Fokus hari ini', 'Today focus')}</text>
+            ${renderDock(x0, y0, w, h, dockColors)}`;
+    }
+
+    if (yr < 2024) { // ---- Bloom ----
+        const ry = y0 + h * 0.42;
+        const rings = [[9, 0.78, '#ff6aa2'], [6.4, 0.55, '#ffb703'], [3.8, 0.9, '#22d3ee']].map(function (q) {
+            const C = 2 * Math.PI * q[0];
+            return `<circle cx="${cx}" cy="${ry}" r="${q[0]}" fill="none" stroke="#fff" stroke-opacity="0.14" stroke-width="1.5"/>
+                <circle cx="${cx}" cy="${ry}" r="${q[0]}" fill="none" stroke="${q[2]}" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="${C * q[1]} ${C}" transform="rotate(-90 ${cx} ${ry})"/>`;
+        }).join('');
+        let grid = '';
+        const ir = w * 0.085;
+        for (let rr = 0; rr < 2; rr++) for (let c = 0; c < 4; c++) {
+            const gx = x0 + w * (0.17 + c * 0.22), gy = y0 + h * 0.6 + rr * (ir * 2.9);
+            grid += `<circle cx="${gx}" cy="${gy}" r="${ir}" fill="#fff" opacity="0.14" stroke="#fff" stroke-opacity="0.22" stroke-width="0.2"/>
+                <circle cx="${gx}" cy="${gy}" r="${ir * 0.45}" fill="${ICON_COLORS[(rr * 4 + c + 1) % ICON_COLORS.length]}"/>`;
+        }
+        return `<defs>
+                <radialGradient id="${u}a" cx="0.2" cy="0.25" r="0.7"><stop offset="0" stop-color="#ff4d8d" stop-opacity="0.85"/><stop offset="1" stop-color="#ff4d8d" stop-opacity="0"/></radialGradient>
+                <radialGradient id="${u}b" cx="0.85" cy="0.15" r="0.6"><stop offset="0" stop-color="#ffb703" stop-opacity="0.75"/><stop offset="1" stop-color="#ffb703" stop-opacity="0"/></radialGradient>
+                <radialGradient id="${u}c" cx="0.6" cy="0.92" r="0.7"><stop offset="0" stop-color="#22d3ee" stop-opacity="0.6"/><stop offset="1" stop-color="#22d3ee" stop-opacity="0"/></radialGradient>
+            </defs>
+            <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#170a2b"/>
+            <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="url(#${u}a)"/>
+            <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="url(#${u}b)"/>
+            <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="url(#${u}c)"/>
+            ${eraStatus(x0, y0, w, '#fff')}
+            <text x="${cx}" y="${y0 + h * 0.2}" text-anchor="middle" font-size="14" font-weight="200" fill="#fff" ${F}>${phoneClockText()}</text>
+            <text x="${cx}" y="${y0 + h * 0.2 + 4}" text-anchor="middle" font-size="1.9" fill="#fff" opacity="0.85" ${F}>${date}</text>
+            ${rings}
+            <text x="${cx}" y="${ry + 0.9}" text-anchor="middle" font-size="2.4" font-weight="700" fill="#fff" ${F}>78</text>
+            ${grid}
+            ${renderDock(x0, y0, w, h, dockColors)}`;
+    }
+
+    if (yr < 2026) { // ---- Aurora ----
+        const bands = [[0.34, 0.14, 0.5, 0.26, 9, 0.32], [0.46, 0.3, 0.58, 0.4, 5, 0.22], [0.56, 0.42, 0.7, 0.5, 3, 0.18]].map(function (b, i) {
+            return `<path d="M ${x0 - 2} ${y0 + h * b[0]} C ${x0 + w * 0.3} ${y0 + h * b[1]}, ${x0 + w * 0.6} ${y0 + h * b[2]}, ${x0 + w + 2} ${y0 + h * b[3]}" fill="none" stroke="url(#${u}g)" stroke-width="${b[4]}" stroke-linecap="round" opacity="${b[5] + 0.1}"/>`;
+        }).join('');
+        const chip = function (i, label) {
+            const cw = (w - 14) / 3;
+            return `<rect x="${x0 + 4 + i * (cw + 3)}" y="${y0 + h * 0.3}" width="${cw}" height="5" rx="2.5" fill="#fff" opacity="0.09" stroke="#fff" stroke-opacity="0.16" stroke-width="0.2"/>
+                <text x="${x0 + 4 + i * (cw + 3) + cw / 2}" y="${y0 + h * 0.3 + 3.3}" text-anchor="middle" font-size="1.7" fill="#fff" opacity="0.9" ${F}>${label}</text>`;
+        };
+        return `<defs>
+                <linearGradient id="${u}g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#34d399"/><stop offset="0.5" stop-color="#22d3ee"/><stop offset="1" stop-color="#818cf8"/></linearGradient>
+            </defs>
+            <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#02050d"/>
+            ${bands}
+            ${eraStatus(x0, y0, w, '#e9fff7')}
+            <text x="${cx}" y="${y0 + h * 0.2}" text-anchor="middle" font-size="15" font-weight="100" fill="#fff" ${F}>${phoneClockText()}</text>
+            <text x="${cx}" y="${y0 + h * 0.2 + 4}" text-anchor="middle" font-size="1.9" fill="${acc}" ${F} letter-spacing="0.3">${date}</text>
+            ${chip(0, '24°')}${chip(1, '3 ' + _scr('phone.mock.new_short', 'baru', 'new'))}${chip(2, '78%')}
+            <rect x="${x0 + 4}" y="${y0 + h * 0.66}" width="${w - 8}" height="7" rx="3.5" fill="#fff" opacity="0.09" stroke="${acc}" stroke-opacity="0.55" stroke-width="0.25"/>
+            <circle cx="${x0 + 8}" cy="${y0 + h * 0.66 + 3.5}" r="1.5" fill="${acc}"/>
+            <text x="${x0 + 11.6}" y="${y0 + h * 0.66 + 4.3}" font-size="1.9" fill="#fff" opacity="0.75" ${F}>${_scr('phone.mock.ask_ai', 'Tanya apa saja…', 'Ask anything…')}</text>
+            ${renderDock(x0, y0, w, h, dockColors)}`;
+    }
+
+    // ---- Prism (2026+) ----
+    const facets = [
+        [[0, 0.22], [0.75, 0], [1, 0.36], '#7c3aed', 0.30], [[0, 0.22], [1, 0.36], [0.2, 0.6], '#22d3ee', 0.16],
+        [[1, 0.36], [0.2, 0.6], [1, 0.82], '#f472b6', 0.16], [[0.2, 0.6], [0, 1], [1, 0.82], '#4f46e5', 0.24]
+    ].map(function (f) {
+        return `<polygon points="${[f[0], f[1], f[2]].map(function (p) { return (x0 + w * p[0]) + ',' + (y0 + h * p[1]); }).join(' ')}" fill="${f[3]}" opacity="${f[4]}"/>`;
+    }).join('');
+    const oy = y0 + h * 0.46;
+    return `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#05030f"/>
+        ${facets}
+        ${eraStatus(x0, y0, w, '#f3eeff')}
+        <text x="${cx}" y="${y0 + h * 0.2}" text-anchor="middle" font-size="16" font-weight="700" fill="none" stroke="#fff" stroke-width="0.28" ${F}>${phoneClockText()}</text>
+        <text x="${cx}" y="${y0 + h * 0.2 + 4}" text-anchor="middle" font-size="1.9" fill="${acc}" ${F} letter-spacing="0.3">${date}</text>
+        <ellipse cx="${cx}" cy="${oy}" rx="${w * 0.3}" ry="5.2" fill="none" stroke="${acc}" stroke-opacity="0.55" stroke-width="0.3" transform="rotate(-20 ${cx} ${oy})"/>
+        <ellipse cx="${cx}" cy="${oy}" rx="${w * 0.3}" ry="5.2" fill="none" stroke="#fff" stroke-opacity="0.25" stroke-width="0.25" transform="rotate(30 ${cx} ${oy})"/>
+        <circle cx="${cx}" cy="${oy}" r="5.6" fill="${acc}" opacity="0.2"/>
+        <circle cx="${cx}" cy="${oy}" r="3.2" fill="${acc}"/>
+        <circle cx="${cx + w * 0.26}" cy="${oy - 3.6}" r="1" fill="#fff"/>
+        <rect x="${x0 + 8}" y="${y0 + h * 0.64 - 2.2}" width="${w - 16}" height="9" rx="3" fill="#fff" opacity="0.05"/>
+        <rect x="${x0 + 5}" y="${y0 + h * 0.64}" width="${w - 10}" height="9.5" rx="3.2" fill="#fff" opacity="0.1" stroke="#fff" stroke-opacity="0.2" stroke-width="0.2"/>
+        <circle cx="${x0 + 9.4}" cy="${y0 + h * 0.64 + 4.75}" r="2" fill="${acc}"/>
+        <rect x="${x0 + 13.5}" y="${y0 + h * 0.64 + 3.2}" width="${w * 0.4}" height="1.4" rx="0.7" fill="#fff" opacity="0.8"/>
+        <rect x="${x0 + 13.5}" y="${y0 + h * 0.64 + 5.6}" width="${w * 0.25}" height="1" rx="0.5" fill="#fff" opacity="0.35"/>
+        ${renderDock(x0, y0, w, h, dockColors)}`;
+}
+
+function screenContent(screenStyle, rect, uid, brand, displayId, yr) {
     const b = brand || 'SMARTEL';
     if (displayId && displayId.indexOf('scr_mono') === 0 && screenStyle !== 'monochrome') {
         return screenMono(rect, uid, b);
@@ -573,6 +714,7 @@ function screenContent(screenStyle, rect, uid, brand, displayId) {
     if (screenStyle === 'color_tft') return screenTft(rect, uid, b);
     if (screenStyle === 'glossy') return screenGlossy(rect, uid, b);
     if (screenStyle === 'flat') return screenFlat(rect, uid, b);
+    if (yr >= 2019 && (screenStyle === 'hdr' || screenStyle === 'flexible')) return screenEra(yr, rect, uid);
     return screenModern(screenStyle, rect, uid);
 }
 
@@ -659,7 +801,9 @@ function renderSideButtons(g) {
     const left = g.kind === 'fold' ? '' : `
         <rect x="${g.x - 1.2}" y="${yv}" width="1.6" height="7" rx="0.6" fill="${col}"/>
         <rect x="${g.x - 1.2}" y="${yv + 10}" width="1.6" height="7" rx="0.6" fill="${col}"/>`;
-    return left + `<rect x="${g.x + g.w - 0.4}" y="${g.y + g.h * 0.28}" width="1.6" height="11" rx="0.6" fill="${col}"/>`;
+    // Tanda tangan era 2019+: tombol daya berwarna aksen.
+    const pwr = g.yr >= 2019 ? eraAccent(g.yr) : col;
+    return left + `<rect x="${g.x + g.w - 0.4}" y="${g.y + g.h * 0.28}" width="1.6" height="11" rx="0.6" fill="${pwr}"/>`;
 }
 
 function renderAntenna(g, hex) {
@@ -870,12 +1014,18 @@ function renderNotchLayer(spec, scr, g) {
         return `<circle cx="${scr.x + 4}" cy="${top + 2.2}" r="1.3" fill="#000" stroke="#222" stroke-width="0.25"/><circle cx="${scr.x + 4}" cy="${top + 2.2}" r="0.5" fill="#142033"/>`;
     }
     if (notch === 'dynamic_island') {
-        const w = Math.min(15, scr.w * 0.3), hh = 3.4;
-        return `<rect x="${cx - w / 2}" y="${top + 1.6}" width="${w}" height="${hh}" rx="${hh / 2}" fill="#000"/>
-            <circle cx="${cx + w / 2 - 2}" cy="${top + 1.6 + hh / 2}" r="0.7" fill="#13202e"/>`;
+        // Cutout orisinal: oval sensor dengan cincin cahaya beraksen era dan dua titik sensor.
+        const acc = eraAccent(g ? g.yr : 2022);
+        const w = Math.min(12.5, scr.w * 0.25), hh = 3.6, y = top + 1.5;
+        return `<rect x="${cx - w / 2}" y="${y}" width="${w}" height="${hh}" rx="${hh / 2}" fill="#000"/>
+            <rect x="${cx - w / 2}" y="${y}" width="${w}" height="${hh}" rx="${hh / 2}" fill="none" stroke="${acc}" stroke-opacity="0.55" stroke-width="0.22"/>
+            <circle cx="${cx - w / 2 + 2.1}" cy="${y + hh / 2}" r="0.75" fill="#13202e" stroke="#2c3a4d" stroke-width="0.15"/>
+            <circle cx="${cx + w / 2 - 2.1}" cy="${y + hh / 2}" r="0.45" fill="${acc}" opacity="0.9"/>`;
     }
     if (notch === 'under_display') {
-        return `<circle cx="${cx}" cy="${top + 2.4}" r="1.1" fill="#000" opacity="0.22"/>`;
+        const acc = eraAccent(g ? g.yr : 2024);
+        return `<circle cx="${cx}" cy="${top + 2.4}" r="1.1" fill="#000" opacity="0.3"/>
+            <circle cx="${cx}" cy="${top + 2.4}" r="1.8" fill="none" stroke="${acc}" stroke-opacity="0.28" stroke-width="0.2"/>`;
     }
     return '';
 }
@@ -992,13 +1142,11 @@ function lensRing(cx, cy, r) {
 // Kotak modul kamera belakang per era (dipakai kamera & sensor LiDAR).
 function cameraBox(T, n, yr) {
     const k = Math.max(1, Math.min(4, n));
-    if (yr >= 2025) return { x: T.x + 3, y: T.y + 6, w: T.w - 6, h: 13 };
-    if (yr >= 2022) {
-        const s = T.w * ({ 1: 0.42, 2: 0.48, 3: 0.56, 4: 0.6 })[k];
-        return { x: T.x + 5, y: T.y + 5, w: s, h: s };
-    }
-    const s = T.w * ({ 1: 0.30, 2: 0.36, 3: 0.42, 4: 0.44 })[k];
-    return { x: T.x + 7, y: T.y + 7, w: s, h: s };
+    if (yr >= 2026) { const d = T.w * 0.46; return { x: T.x + 5, y: T.y + 5, w: d, h: d }; }
+    if (yr >= 2024) return { x: T.x + 6, y: T.y + 6, w: 15, h: 10 + k * 10.5 };
+    if (yr >= 2022) { const d = T.w * ({ 1: 0.40, 2: 0.46, 3: 0.52, 4: 0.56 })[k]; return { x: T.x + 5, y: T.y + 5, w: d, h: d }; }
+    const sz = T.w * ({ 1: 0.34, 2: 0.40, 3: 0.46, 4: 0.50 })[k];
+    return { x: T.x + 7, y: T.y + 7, w: sz, h: sz };
 }
 
 function flashSvg(cx, cy, r) {
@@ -1042,53 +1190,64 @@ function renderRearCamera(T, n, yr, hex, spec) {
             lensSvg(L + 4.8, Tp + 4.8, 3.1) + (n >= 2 ? lensSvg(L + 4.8, Tp + 15.2, 3.1) : '') +
             (flash ? flashSvg(L + 13.2, Tp + 4.8, 1.2) : '');
     }
-    // 2022-2023: pelat kaca frosted besar, lensa bercincin logam.
-    if (yr >= 2022 && yr < 2025) {
-        const bx = cameraBox(T, n, yr);
-        const lightB = lum(hex) > 140;
-        const glassC = lightB ? shadeHex(hex, -16) : shadeHex(hex, 20);
-        const inner = lightB ? shadeHex(hex, -6) : shadeHex(hex, 8);
-        const k = Math.max(1, Math.min(4, n));
-        const posS = k === 1 ? [[0.5, 0.5]] : k === 2 ? [[0.5, 0.3], [0.5, 0.7]] :
-            k === 3 ? [[0.3, 0.3], [0.3, 0.7], [0.7, 0.5]] : [[0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]];
-        const rr = bx.w * (k === 1 ? 0.24 : k >= 4 ? 0.15 : 0.18);
-        return `<rect x="${bx.x}" y="${bx.y}" width="${bx.w}" height="${bx.h}" rx="${bx.w * 0.26}" fill="${glassC}" stroke="${shadeHex(glassC, 30)}" stroke-width="0.45"/>` +
-            `<rect x="${bx.x + 1}" y="${bx.y + 1}" width="${bx.w - 2}" height="${bx.h - 2}" rx="${bx.w * 0.22}" fill="${inner}" opacity="0.9"/>` +
-            `<path d="M ${bx.x + bx.w * 0.26} ${bx.y} H ${bx.x + bx.w * 0.74} Q ${bx.x + bx.w} ${bx.y} ${bx.x + bx.w} ${bx.y + bx.w * 0.26} V ${bx.y + bx.h * 0.42} H ${bx.x} V ${bx.y + bx.w * 0.26} Q ${bx.x} ${bx.y} ${bx.x + bx.w * 0.26} ${bx.y} Z" fill="#fff" opacity="${lightB ? 0.2 : 0.09}"/>` +
-            posS.map(function (p) { return lensRing(bx.x + bx.w * p[0], bx.y + bx.h * p[1], rr); }).join('') +
-            (flash ? flashSvg(bx.x + bx.w - 3.2, bx.y + bx.h + 3.2, 1.3) : '');
+    // ---- Modul kamera orisinal per era (2019+) ----
+    const bx = cameraBox(T, n, yr);
+    const k = Math.max(1, Math.min(4, n));
+    const acc = eraAccent(yr);
+    const lightB = lum(hex) > 140;
+    const glassC = lightB ? shadeHex(hex, -14) : shadeHex(hex, 18);
+    const innerC = lightB ? shadeHex(hex, -5) : shadeHex(hex, 7);
+    const darkC = lightB ? '#17181d' : shadeHex(hex, -28);
+    const cx0 = bx.x + bx.w / 2, cy0 = bx.y + bx.h / 2;
+
+    if (yr < 2022) { // heksagon: lensa tersusun sarang lebah
+        const hexP = function (b, inset) {
+            const r = (b.w / 2) * (1 - inset), c = b.x + b.w / 2, d = b.y + b.h / 2, q = r * 0.866;
+            const pts = [[c, d - r], [c + q, d - r / 2], [c + q, d + r / 2], [c, d + r], [c - q, d + r / 2], [c - q, d - r / 2]];
+            return 'M ' + pts.map(function (v) { return v[0] + ' ' + v[1]; }).join(' L ') + ' Z';
+        };
+        const pos = k === 1 ? [[0.5, 0.5]] : k === 2 ? [[0.5, 0.34], [0.5, 0.66]] :
+            k === 3 ? [[0.5, 0.3], [0.32, 0.62], [0.68, 0.62]] : [[0.36, 0.38], [0.64, 0.38], [0.36, 0.68], [0.64, 0.68]];
+        const rr = bx.w * (k === 1 ? 0.2 : k >= 4 ? 0.125 : 0.15);
+        return `<path d="${hexP(bx, 0)}" fill="${glassC}" stroke="${shadeHex(glassC, 30)}" stroke-width="1.4" stroke-linejoin="round"/>` +
+            `<path d="${hexP(bx, 0)}" fill="${innerC}" stroke="${innerC}" stroke-width="0.6" stroke-linejoin="round"/>` +
+            `<path d="${hexP(bx, 0.14)}" fill="none" stroke="${acc}" stroke-opacity="0.6" stroke-width="0.28" stroke-linejoin="round"/>` +
+            pos.map(function (q) { return lensRing(bx.x + bx.w * q[0], bx.y + bx.h * q[1], rr); }).join('') +
+            (flash ? flashSvg(bx.x + bx.w + 3.4, bx.y + bx.h * 0.3, 1.2) : '');
     }
-    // 2025+: "visor" kamera selebar bodi, lensa berjajar rapi.
-    if (yr >= 2025) {
-        const bx = cameraBox(T, n, yr);
-        const k = Math.max(1, Math.min(4, n));
-        const lightB = lum(hex) > 140;
-        const bar = lightB ? '#15161b' : shadeHex(hex, -26);
-        const rr = k === 1 ? 4.6 : 3.5;
-        const step = 11.4;
-        let o = `<rect x="${bx.x}" y="${bx.y}" width="${bx.w}" height="${bx.h}" rx="${bx.h / 2}" fill="${bar}" stroke="${shadeHex(bar, 40)}" stroke-width="0.4"/>` +
-            `<rect x="${bx.x + 1.2}" y="${bx.y + 0.9}" width="${bx.w - 2.4}" height="${bx.h * 0.38}" rx="${bx.h * 0.19}" fill="#fff" opacity="0.1"/>`;
-        for (let i = 0; i < k; i++) {
-            o += lensRing(bx.x + bx.w / 2 + (i - (k - 1) / 2) * step, bx.y + bx.h / 2, rr);
-        }
-        o += `<circle cx="${bx.x + 5.2}" cy="${bx.y + bx.h / 2}" r="0.8" fill="#000" opacity="0.7"/>`;
-        if (flash) o += flashSvg(bx.x + bx.w - 6, bx.y + bx.h / 2, 1.5);
-        return o;
+    if (yr < 2024) { // cakram: pelat bundar dengan cincin aksen
+        const R = bx.w / 2;
+        const pos = k === 1 ? [[0.5, 0.5]] : k === 2 ? [[0.35, 0.5], [0.65, 0.5]] :
+            k === 3 ? [[0.5, 0.3], [0.33, 0.63], [0.67, 0.63]] : [[0.34, 0.34], [0.66, 0.34], [0.34, 0.66], [0.66, 0.66]];
+        const rr = R * (k === 1 ? 0.5 : k >= 4 ? 0.27 : 0.32);
+        return `<circle cx="${cx0}" cy="${cy0}" r="${R}" fill="${glassC}" stroke="${shadeHex(glassC, 30)}" stroke-width="0.5"/>` +
+            `<circle cx="${cx0}" cy="${cy0}" r="${R * 0.9}" fill="${innerC}"/>` +
+            `<circle cx="${cx0}" cy="${cy0}" r="${R * 0.9}" fill="none" stroke="${acc}" stroke-opacity="0.75" stroke-width="0.35"/>` +
+            `<path d="M ${cx0 - R * 0.8} ${cy0 - R * 0.35} A ${R * 0.88} ${R * 0.88} 0 0 1 ${cx0 + R * 0.8} ${cy0 - R * 0.35}" fill="none" stroke="#fff" stroke-opacity="${lightB ? 0.5 : 0.22}" stroke-width="0.5" stroke-linecap="round"/>` +
+            pos.map(function (q) { return lensRing(bx.x + bx.w * q[0], bx.y + bx.h * q[1], rr); }).join('') +
+            (flash ? flashSvg(bx.x + bx.w + 3.2, bx.y + 3, 1.25) : '');
     }
-    const scale = { 1: 0.30, 2: 0.36, 3: 0.42, 4: 0.44 }[n] * (yr >= 2023 ? 1.05 : 1);
-    const size = T.w * scale;
-    const light = lum(hex) > 140;
-    const plate = light ? shadeHex(hex, -9) : shadeHex(hex, 14);
-    const pos = n === 1 ? [[0.5, 0.5]] :
-        n === 2 ? [[0.33, 0.32], [0.67, 0.68]] :
-        n === 3 ? [[0.32, 0.30], [0.32, 0.70], [0.70, 0.5]] :
-                  [[0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]];
-    const r = size * (n === 1 ? 0.28 : n === 4 ? 0.17 : 0.2);
-    // Modul kaca modern: plat dengan kilau atas (glass sheen) dan tepi halus.
-    return `<rect x="${L}" y="${Tp}" width="${size}" height="${size}" rx="${size * 0.24}" fill="${plate}" stroke="${shadeHex(plate, 25)}" stroke-width="0.4"/>` +
-        `<path d="M ${L + size * 0.24} ${Tp} H ${L + size * 0.76} Q ${L + size} ${Tp} ${L + size} ${Tp + size * 0.24} V ${Tp + size * 0.5} H ${L} V ${Tp + size * 0.24} Q ${L} ${Tp} ${L + size * 0.24} ${Tp} Z" fill="#fff" opacity="${light ? 0.22 : 0.10}"/>` +
-        pos.map(function (p) { return lensSvg(L + size * p[0], Tp + size * p[1], r); }).join('') +
-        (flash ? flashSvg(L + size + 3.4, Tp + 3.4, 1.3) + `<circle cx="${L + size + 3.4}" cy="${Tp + 8}" r="0.7" fill="#111"/>` : '');
+    if (yr < 2026) { // kapsul vertikal bergaris LED
+        let o = `<rect x="${bx.x}" y="${bx.y}" width="${bx.w}" height="${bx.h}" rx="${bx.w / 2}" fill="${darkC}" stroke="${shadeHex(darkC, 45)}" stroke-width="0.45"/>` +
+            `<rect x="${bx.x + bx.w - 2.9}" y="${bx.y + 4.5}" width="0.8" height="${bx.h - 9}" rx="0.4" fill="${acc}" opacity="0.95"/>` +
+            `<rect x="${bx.x + bx.w - 3.5}" y="${bx.y + 4.5}" width="2" height="${bx.h - 9}" rx="1" fill="${acc}" opacity="0.18"/>`;
+        for (let i = 0; i < k; i++) o += lensRing(bx.x + bx.w / 2 - 1.2, bx.y + 6.4 + i * 10.5, 3.5);
+        return o + (flash ? flashSvg(bx.x + bx.w + 3.2, bx.y + 4, 1.3) : '');
+    }
+    // orbit (2026+): cakram gelap bercahaya dengan lensa mengitari titik pusat
+    const R = bx.w / 2;
+    let o = `<defs><radialGradient id="orbG"><stop offset="0.62" stop-color="${acc}" stop-opacity="0"/><stop offset="1" stop-color="${acc}" stop-opacity="0.4"/></radialGradient></defs>` +
+        `<circle cx="${cx0}" cy="${cy0}" r="${R * 1.2}" fill="url(#orbG)"/>` +
+        `<circle cx="${cx0}" cy="${cy0}" r="${R}" fill="${darkC}" stroke="${shadeHex(darkC, 45)}" stroke-width="0.45"/>` +
+        `<circle cx="${cx0}" cy="${cy0}" r="${R * 0.9}" fill="none" stroke="${acc}" stroke-opacity="0.85" stroke-width="0.35"/>` +
+        `<circle cx="${cx0}" cy="${cy0}" r="${R * 0.66}" fill="none" stroke="#fff" stroke-opacity="0.18" stroke-width="0.25"/>`;
+    if (k === 1) o += lensRing(cx0, cy0, R * 0.42);
+    else for (let i = 0; i < k; i++) {
+        const ang = (-135 + i * (360 / k)) * Math.PI / 180;
+        o += lensRing(cx0 + Math.cos(ang) * R * 0.5, cy0 + Math.sin(ang) * R * 0.5, R * (k >= 4 ? 0.22 : 0.26));
+    }
+    if (k > 1) o += `<circle cx="${cx0}" cy="${cy0}" r="0.9" fill="${acc}"/>`;
+    return o + (flash ? flashSvg(bx.x + bx.w + 3.2, cy0 - R * 0.3, 1.25) : '');
 }
 
 // Sensor belakang (sidik jari di bawah modul kamera, LiDAR di modul).
@@ -1106,7 +1265,7 @@ function renderRearSensors(T, yr, n, sensors) {
         if (yr >= 2019) {
             // modul kamera modern: LiDAR di bawah modul, sejajar sisi kiri
             const bx = cameraBox(T, n, yr);
-            cx = bx.x + (yr >= 2025 ? 5 : bx.w * 0.5);
+            cx = bx.x + bx.w * 0.5;
             cy = bx.y + bx.h + 5.5;
         } else {
             cx = T.x + T.w / 2;
@@ -1157,7 +1316,7 @@ function renderBackView(g, spec, ids, hex, brand, n, sensors) {
     }
     if (g.hinge && !g.book) {
         // layar cover mungil di sisi luar (flip lipat vertikal); 2025+ di bawah visor kamera
-        const cvY = yr >= 2025 ? T.y + 22 : T.y + 5;
+        const cvY = T.y + 5;
         out += `<rect x="${T.x + T.w - 17}" y="${cvY}" width="12" height="14" rx="3.2" fill="#07090f" stroke="#555" stroke-width="0.3"/>
             <text x="${T.x + T.w - 11}" y="${cvY + 8}" text-anchor="middle" font-size="3.4" font-family="sans-serif" font-weight="700" fill="#cfe3ff">${phoneClockText()}</text>`;
     }
@@ -1209,13 +1368,13 @@ function renderScreens(g, scr, era, uid, brand, displayId, netLabel) {
             const id = uid + 'd' + i;
             return `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="${r.cornerRadius}" fill="#050505"/>
                 <clipPath id="screenclip_${id}"><rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="${r.cornerRadius}"/></clipPath>
-                <g clip-path="url(#screenclip_${id})">${screenContent(era.screenStyle, r, id, brand, displayId)}</g>
+                <g clip-path="url(#screenclip_${id})">${screenContent(era.screenStyle, r, id, brand, displayId, g.yr)}</g>
                 ${renderReflectionLayer(r, id, g.yr)}`;
         }).join('');
     }
     const content = g.kind === 'communicator'
         ? screenWide(scr, uid, brand, era.screenStyle)
-        : screenContent(era.screenStyle, scr, uid, brand, displayId);
+        : screenContent(era.screenStyle, scr, uid, brand, displayId, g.yr);
     return `<rect x="${scr.x}" y="${scr.y}" width="${scr.w}" height="${scr.h}" rx="${scr.cornerRadius}" fill="#050505"/>
         <clipPath id="screenclip_${uid}">
             <rect x="${scr.x}" y="${scr.y}" width="${scr.w}" height="${scr.h}" rx="${scr.cornerRadius}"/>
