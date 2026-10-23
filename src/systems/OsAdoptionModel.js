@@ -18,8 +18,10 @@
 //     jumlah pengguna aktif (getEcosystemAppBonus).
 //   - Riwayat bulanan disimpan di data.os.adoption.history untuk grafik tren.
 //
-// Fungsi di file ini murni (tanpa DOM / bus), jadi mudah dites.
+// Fungsi perhitungan di file ini murni (tanpa DOM / bus), jadi mudah dites.
+// Satu-satunya pengecualian: formatUsers() membaca bahasa aktif (rb/jt vs K/M).
 // ============================================================
+import { LanguageService } from '../core/LanguageService.js';
 
 export const ADOPTION_CONFIG = {
     historyMax: 60,                 // jumlah bulan riwayat yang disimpan
@@ -144,9 +146,12 @@ export function computeOsAdoption(data) {
     };
 }
 
+// Bahasa Indonesia: "rb" (ribu) / "jt" (juta). Bahasa lain: "K" / "M".
 export function formatUsers(n) {
     n = Math.round(n || 0);
-    if (n >= 1000000) return (n / 1000000).toFixed(2).replace(/\.?0+$/, '') + ' jt';
-    if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + ' rb';
+    var idLang = false;
+    try { idLang = LanguageService.getLang() === 'id'; } catch (e) {}
+    if (n >= 1000000) return (n / 1000000).toFixed(2).replace(/\.?0+$/, '') + (idLang ? ' jt' : 'M');
+    if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + (idLang ? ' rb' : 'K');
     return String(n);
 }

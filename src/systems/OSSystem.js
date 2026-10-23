@@ -5,6 +5,7 @@ import { bus } from '../core/EventBus.js';
 import { BALANCE } from '../data/balance.data.js';
 import { TIME_CONFIG } from '../config/time.config.js';
 import { ToastService } from '../core/ToastService.js';
+import { t as _t } from '../core/LanguageService.js';
 import { LOG_TYPES } from '../config/constants.js';
 import { getNodeById } from '../data/research.data.js';
 import {
@@ -637,20 +638,20 @@ export class OSSystem {
         const dev = data.os.platform.developing;
         const running = dev && dev.statId === statId ? dev : null;
         let status = 'available', reason = null, blocker = null;
-        if (!v) { status = 'locked'; blocker = 'version'; reason = 'Rilis versi OS pertama dulu'; }
+        if (!v) { status = 'locked'; blocker = 'version'; reason = _t('osp.platform.reason.need_version'); }
         else if (running) status = 'running';
-        else if (dev) { status = 'locked'; blocker = 'slots'; reason = 'R&D platform lain sedang berjalan'; }
-        else if (level >= cfg.maxLevel) { status = 'maxed'; reason = 'Level maksimum'; }
+        else if (dev) { status = 'locked'; blocker = 'slots'; reason = _t('osp.platform.reason.busy'); }
+        else if (level >= cfg.maxLevel) { status = 'maxed'; reason = _t('osp.platform.reason.max'); }
         else if (level >= cap) {
             status = 'capped';
-            if (level >= capFeat && capFeat <= capYear) { blocker = 'feature'; reason = 'Kembangkan lebih banyak fitur OS untuk level lebih tinggi'; }
-            else { blocker = 'year'; reason = 'Tunggu kemajuan zaman untuk level berikutnya'; }
+            if (level >= capFeat && capFeat <= capYear) { blocker = 'feature'; reason = _t('osp.platform.reason.need_features'); }
+            else { blocker = 'year'; reason = _t('osp.platform.reason.need_year'); }
         }
-        else if (!WalletService.canAfford(cost)) { status = 'locked'; blocker = 'cash'; reason = 'Uang tidak cukup ($' + cost.toLocaleString('en-US') + ')'; }
+        else if (!WalletService.canAfford(cost)) { status = 'locked'; blocker = 'cash'; reason = _t('osp.platform.reason.cash', { amount: '$' + cost.toLocaleString('en-US') }); }
 
         const speed = this._getSpeedMultiplier();
         return {
-            id: statId, name: track ? track.name : statId, hint: track ? track.hint : '',
+            id: statId, name: track ? _t('osp.track.' + statId + '.name') : statId, hint: track ? _t('osp.track.' + statId + '.hint') : '',
             level, cap, maxLevel: cfg.maxLevel, cost, days, etaDays: Math.ceil(days / Math.max(0.01, speed)),
             bonus: level * cfg.statPerLevel, nextBonus: (level + 1) * cfg.statPerLevel,
             status, reason, blocker, running
@@ -660,9 +661,9 @@ export class OSSystem {
     startPlatformUpgrade(statId) {
         this._ensurePlatform();
         const data = this.state.data;
-        if (!OS_PLATFORM_TRACKS.some(t => t.id === statId)) return { ok: false, reason: 'Jalur tidak ditemukan.' };
+        if (!OS_PLATFORM_TRACKS.some(t => t.id === statId)) return { ok: false, reason: _t('osp.platform.err.track') };
         const info = this.getPlatformInfo(statId);
-        if (info.status !== 'available') return { ok: false, reason: info.reason || 'Belum bisa dimulai.' };
+        if (info.status !== 'available') return { ok: false, reason: info.reason || _t('osp.platform.err.cannot_start') };
 
         WalletService.pay(info.cost, 'os-dev');
         data.os.platform.developing = {
@@ -680,7 +681,7 @@ export class OSSystem {
         this._ensurePlatform();
         const data = this.state.data;
         const d = data.os.platform.developing;
-        if (!d) return { ok: false, reason: 'Tidak ada R&D platform berjalan.' };
+        if (!d) return { ok: false, reason: _t('osp.platform.err.none_running') };
         const refund = Math.floor((d.cost || 0) * (BALANCE.os.refundPercent || 0));
         if (refund > 0) this.state.addCash(refund);
         data.os.platform.developing = null;
@@ -693,7 +694,7 @@ export class OSSystem {
     boostPlatform(days) {
         this._ensurePlatform();
         const d = this.state.data.os.platform.developing;
-        if (!d) return { ok: false, reason: 'Tidak ada R&D platform berjalan.' };
+        if (!d) return { ok: false, reason: _t('osp.platform.err.none_running') };
         const add = (days === Infinity) ? (d.durationDays - d.progressDays) : Math.max(0, days || 0);
         d.progressDays = Math.min(d.durationDays, d.progressDays + add);
         if (d.progressDays >= d.durationDays) { this._completePlatform(); return { ok: true, completed: true }; }
