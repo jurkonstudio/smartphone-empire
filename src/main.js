@@ -37,7 +37,8 @@ import { BankSystem } from './systems/BankSystem.js';
 import { EconBrakeSystem } from './systems/EconBrakeSystem.js';
 import { bindRegionalActions } from './ui/panels/RegionalBindings.js';
 import { SiliconService } from './systems/SiliconService.js';
-import { renderHeader } from './ui/layout/Header.js';
+import { renderHeader, renderRunwayChip } from './ui/layout/Header.js';
+import { escapeHtml } from './utils/html.js';
 import { renderMobileNav } from './ui/layout/MobileNav.js';
 import { renderSidebar } from './ui/layout/Sidebar.js';
 import { renderEmptyState } from './ui/panels/EmptyState.js';
@@ -134,6 +135,7 @@ products.setEconBrakes(econBrakes);
 market.setEconBrakes(econBrakes);
 economy.setEconBrakes(econBrakes);
 economy.setPlants(componentPlants);
+teamSystem.setEconomy(economy); // [v2030] simulasi runway saat rekrut
 
 // ============ STATE UI ============
 var activeView = 'dashboard';
@@ -166,9 +168,43 @@ function hideLoading() {
 }
 function splash(pct) { if (window.__splash) window.__splash.set(pct); }
 
+// [v2030] Runway untuk header dan pesan. Aman dipanggil kapan pun.
+function _runwayNow() {
+    try { return economy.getRunway(); } catch (e) { return null; }
+}
+
+function _runwayL(id, en) { return LanguageService.getLang() === 'en' ? en : id; }
+
+// Perbarui chip runway saja (tanpa render ulang header) agar ketukan tidak terganggu.
+function updateRunwayChip() {
+    if (!els.header) return;
+    var cur = els.header.querySelector('[data-runway]');
+    if (!cur) { renderHeaderOnly(); return; }
+    cur.outerHTML = renderRunwayChip(_runwayNow());
+}
+
 function renderHeaderOnly() {
     if (!els.header) return;
-    els.header.innerHTML = renderHeader({ state: state.get(), timeSnapshot: getTime(), warning: (_burnWarn == null ? null : tr('main.burn_short', { n: _burnWarn })) });
+    els.header.innerHTML = renderHeader({ state: state.get(), timeSnapshot: getTime(), runway: _runwayNow() });
+}
+
+// Konfirmasi rekrut bila gaji baru menurunkan runway di bawah batas aman (tidak memblokir).
+function _openRunwayConfirm(imp, candidateId) {
+    var b = _runwayL('bln', 'mo');
+    var fmt = function (m) { return m === Infinity ? '∞' : Math.max(0, Math.floor(m)) + ' ' + b; };
+    var name = escapeHtml(imp.name || '');
+    var msg = _runwayL(
+        'Merekrut ' + name + ' menurunkan runway dari ~' + fmt(imp.runwayBefore) + ' ke ~' + fmt(imp.runwayAfter) + ', di bawah batas aman ' + imp.safeMonths + ' ' + b + '.',
+        'Hiring ' + name + ' drops runway from ~' + fmt(imp.runwayBefore) + ' to ~' + fmt(imp.runwayAfter) + ', below the ' + imp.safeMonths + '-' + b + ' safety line.'
+    );
+    var html = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;">' +
+        '<h3 style="margin:0;">' + _runwayL('Runway di bawah batas aman', 'Runway below safety line') + '</h3>' +
+        '<p style="margin:0;">' + msg + '</p>' +
+        '<div style="display:flex;gap:8px;">' +
+        '<button class="btn-secondary" data-modal-close style="flex:1;">' + _runwayL('Batal', 'Cancel') + '</button>' +
+        '<button class="btn-primary" data-team-action="hire-confirm" data-candidate-id="' + escapeHtml(candidateId) + '" style="flex:2;">' + _runwayL('Tetap rekrut', 'Hire anyway') + '</button>' +
+        '</div></div>';
+    Modal.open('runway-confirm', html);
 }
 
 // ============================================================
@@ -800,8 +836,17 @@ function bindGlobalClicks() {
             e.preventDefault(); vibrate(8);
             var ta = teamAction.dataset.teamAction;
             if (ta === 'hire') {
+                var himp = teamSystem.getHireImpactById(teamAction.dataset.candidateId);
+                if (himp && himp.belowSafe) { _openRunwayConfirm(himp, teamAction.dataset.candidateId); return; }
                 var res = teamSystem.hireCandidate(teamAction.dataset.candidateId);
                 if (!res.ok) ToastService.error(res.reason);
+                else { Modal.close('candidate-detail', true); renderAll(); }
+                return;
+            }
+            if (ta === 'hire-confirm') {
+                Modal.close('runway-confirm', true);
+                var rcf = teamSystem.hireCandidate(teamAction.dataset.candidateId);
+                if (!rcf.ok) ToastService.error(rcf.reason);
                 else { Modal.close('candidate-detail', true); renderAll(); }
                 return;
             }
@@ -1115,6 +1160,22 @@ function bindStateEvents() {
         ToastService.warning(tr('main.toast.burn_warn', { n: data.monthsLeft }));
         notifVibrate(30, 'warning');
     });
+    // [v2030] Peringatan runway: hanya saat level naik peringkat (dikirim dari EconomySystem).
+    bus.on('economy:runway-low', function (data) {
+        updateRunwayChip();
+        var b = _runwayL('bln', 'mo');
+        var n = Math.max(0, Math.floor(data.months));
+        var msg = _runwayL(
+            (data.level === 'danger' ? 'Runway kritis: kas cukup ~' : 'Runway menipis: kas cukup ~') + n + ' ' + b,
+            (data.level === 'danger' ? 'Critical runway: cash lasts ~' : 'Runway low: cash lasts ~') + n + ' ' + b
+        );
+        if (data.level === 'danger') ToastService.error(msg); else ToastService.warning(msg);
+        notifVibrate(30, 'warning');
+    });
+    bus.on('time:day-changed', updateRunwayChip);
+    bus.on('state:cash-changed', updateRunwayChip);
+    bus.on('economy:month-processed', updateRunwayChip);
+    bus.on('team:changed', updateRunwayChip);
     bus.on('settings:take-loan', function (data) {
         var res = economy.takeLoan(data.loanId);
         if (!res.ok) ToastService.error(res.error);
