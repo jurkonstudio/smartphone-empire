@@ -4,7 +4,7 @@
 //   1. SEGMENTS    : 8 segmen konsumen (selera, daya beli, porsi per tahun)
 //   2. SUBREGIONS  : 8 sub-wilayah di bawah Asia / Eropa / Amerika & Lainnya
 //   3. EXT_TRENDS  : dimensi tren tambahan (tren inti 5 dimensi tetap di MacroModel)
-//   4. TREND_WAVES : 18 "gelombang tren" (15 historis + 3 skenario 2027-29) (naik -> puncak -> surut)
+//   4. TREND_WAVES : 19 "gelombang tren" (16 historis + 3 skenario 2027-29) (naik -> puncak -> surut)
 //   5. VIRAL_EXT   : 16 event viral tambahan (dwibahasa) + terjemahan EN event lama
 //   6. PERSONAS    : suara pengulas per segmen (dwibahasa)
 // Teks pakai pasangan { id, en }. Angka = perkiraan pembulatan tren publik,
