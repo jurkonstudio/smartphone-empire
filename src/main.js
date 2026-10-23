@@ -65,7 +65,8 @@ import { openCandidateDetailModal, setRecruitFilter, setTeamMode } from './ui/pa
 import { renderHqPanel } from './ui/panels/HqPanel.js';
 import { renderHomePanel, initHomeTabs, refreshHomeSlides } from './ui/panels/HomePanel.js';
 import { mountCampusMap, unmountCampusMap } from './ui/campus/CampusMap.js';
-import { mountOfficeMap, unmountOfficeMap, isOfficeMounted, focusOfficeStaff } from './ui/office/OfficeMap.js';
+import { unmountOfficeMap, focusOfficeStaff } from './ui/office/OfficeMap.js';
+import { enterOffice } from './ui/campus/CampusOfficeBridge.js';
 import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
 import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
@@ -143,7 +144,7 @@ var NAV_SUBTABS = {
     research: ['tech', 'os', 'manufaktur', 'chip'],
     products: ['design', 'catalog', 'sales', 'chip'],
     market: ['share', 'competitors', 'trends', 'promo', 'public'],
-    team: ['office', 'overview', 'team', 'exchange', 'bank']
+    team: ['overview', 'team', 'exchange', 'bank']
 };
 var _burnWarn = null;
 
@@ -262,7 +263,6 @@ function _viewKey() {
 function renderView(opts) {
     if (!els.view) return;
     var soft = !!(opts && opts.soft);
-    if (soft && activeView === 'team' && activeHqSubtab === 'office' && isOfficeMounted()) return;
     var prevScroll = els.view.scrollTop;
     var viewKey = _viewKey();
     var sameView = (viewKey === _lastViewKey);
@@ -316,10 +316,6 @@ function renderView(opts) {
         if (activeView === 'team' && activeHqSubtab === 'exchange') {
             var exChart = els.view.querySelector('[data-ex-chart]');
             if (exChart) drawExchangeChart(exChart);
-        }
-        if (activeView === 'team' && activeHqSubtab === 'office') {
-            var officeEl = els.view.querySelector('#office-map');
-            if (officeEl) mountOfficeMap(officeEl, state.get());
         }
         if (activeView === 'dashboard') {
             var campusEl = els.view.querySelector('#campus-map');
@@ -831,7 +827,7 @@ function bindGlobalClicks() {
         var staffCard = e.target.closest('[data-staff-detail]');
         if (staffCard && !e.target.closest('[data-staff-action]')) { e.preventDefault(); openStaffDetailModal({ staffId: staffCard.dataset.staffDetail }); return; }
         var staffOffice = e.target.closest('[data-staff-office]');
-        if (staffOffice) { e.preventDefault(); bus.emit('advisor:go', { nav: 'team', subtab: 'office', staffId: staffOffice.dataset.staffOffice }); return; }
+        if (staffOffice) { e.preventDefault(); bus.emit('advisor:go', { nav: 'dashboard', officeStaffId: staffOffice.dataset.staffOffice }); return; }
         var staffAction = e.target.closest('[data-staff-action]');
         if (staffAction) {
             e.preventDefault();
@@ -1192,8 +1188,15 @@ function bindStateEvents() {
         if (p.nav === activeView) renderView(); else navigate(p.nav);
         // Integrasi peta kantor <-> panel Team
         if (p.nav === 'team' && p.staffId) {
-            if (p.subtab === 'office') focusOfficeStaff(p.staffId);
-            else if (p.subtab === 'team') openStaffDetailModal({ staffId: p.staffId });
+            if (p.subtab === 'team') openStaffDetailModal({ staffId: p.staffId });
+        }
+        // Peta kantor kini ada di Home (sakelar Kampus | Kantor), bukan di tab HQ.
+        if (p.nav === 'dashboard' && p.officeStaffId) {
+            focusOfficeStaff(p.officeStaffId);
+            setTimeout(function () {
+                var box = document.getElementById('campus-map');
+                if (box) enterOffice(box);
+            }, 0);
         }
     });
 
