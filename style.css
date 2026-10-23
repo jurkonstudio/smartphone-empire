@@ -4746,3 +4746,8 @@ html[data-perf="lite"] body { background-attachment: scroll !important; }
 .mf-buy-btn[disabled] { opacity: .45; }
 .mf-short { font-size: 10.5px; color: var(--text-mute); margin-top: 3px; text-align: right; }
 .mf-year { font-weight: 700; color: var(--text-mute); }
+
+/* Lencana komponen buatan sendiri (pabrik komponen) di mockup tampak belakang */
+.phone-inhouse { display:flex; flex-wrap:wrap; gap:3px; justify-content:center; align-items:center; margin-top:4px; font-size:10px; line-height:1; }
+.phone-inhouse-lbl { color: var(--text-mute); font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+.phone-inhouse-chip { padding:2px 5px; border-radius:6px; background: var(--surface, rgba(255,255,255,.06)); border:1px solid var(--border, rgba(255,255,255,.12)); color: var(--text-dim); }
