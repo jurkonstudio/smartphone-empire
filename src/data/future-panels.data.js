@@ -9,7 +9,12 @@
 // Tidak perlu mengubah UI, cukup isi data di sini.
 //
 // linksTo = sistem game yang akan dihubungkan. Hanya label, belum ada logika.
+//
+// connected = sistem yang SUDAH benar-benar dipengaruhi panel ini (kosong = belum ada efek;
+// kartu terbuka akan menampilkan "efek menyusul"). Isi saat efeknya sudah dibuat.
 // ============================================================
+
+import { getNodeById } from './research.data.js';
 
 export const FUTURE_SYSTEM_LABELS = {
     advisor:   'Asisten Bisnis',
@@ -29,7 +34,9 @@ export const FUTURE_PANELS = [
         icon: 'brain',
         description: 'Model AI generasi berikutnya untuk seluruh perusahaan: asisten bisnis yang lebih tajam, saran desain, dan fitur OS berbasis AI.',
         linksTo: ['advisor', 'os', 'design'],
-        unlock: { enabled: false, year: null, research: null }
+        connected: [],
+        // Terbuka: tahun 2022 ke atas DAN riset NPU AI (chip_npu) selesai.
+        unlock: { enabled: true, year: 2022, research: 'chip_npu' }
     },
     {
         id: 'dev_tools',
@@ -75,7 +82,9 @@ export function getFutureUnlockState(panel, data) {
     if (u.research) {
         var done = (data && data.research && data.research.completed) || [];
         if (done.indexOf(u.research) === -1) {
-            return { unlocked: false, reason: 'Butuh riset: ' + u.research + '.', reasonKey: 'future.reason.research', reasonVars: { id: u.research } };
+            var node = getNodeById(u.research);
+            var rname = node ? node.name : u.research;
+            return { unlocked: false, reason: 'Butuh riset: ' + rname + '.', reasonKey: 'future.reason.research', reasonVars: { id: rname, nodeId: u.research } };
         }
     }
     return { unlocked: true, reason: '' };
