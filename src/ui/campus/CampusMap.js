@@ -1,4 +1,6 @@
-// FILE: src/ui/campus/CampusMap.js  (REPLACE — v2027.63: terhubung ke CampusOfficeBridge)
+// FILE: src/ui/campus/CampusMap.js  (REPLACE — v2027.64: ikut membuang Peta Manufaktur)
+// v2027.64 — unmountCampusMap() juga membuang Peta Manufaktur 3D. main.js memanggil unmountCampusMap() tiap renderView,
+//   sehingga scene manufaktur tidak tertinggal saat pindah tab (satu konteks WebGL aktif pada satu waktu).
 // v2027.63 — bila pemain sedang "di dalam kantor" (zoom masuk dari gedung HQ), render ulang Home memasang
 // Office 3D di kotak yang sama, bukan peta kampus. Selain itu perilaku TIDAK berubah.
 // v2027.44 — + dengarkan lang:changed supaya kartu info ganti bahasa.
@@ -6,6 +8,7 @@
 import { createCampusScene } from './CampusScene.js';
 import { renderCampusFallback } from './CampusFallback.js';
 import { bus } from '../../core/EventBus.js';
+import { unmountManufactureMap } from '../manufacture/ManufactureMap.js';
 import { isOfficeMode, isManufactureMode, resumeOffice, resumeManufacture, registerCampusHooks } from './CampusOfficeBridge.js';
 
 var THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
@@ -52,6 +55,7 @@ export async function mountCampusMap(containerEl, gameState) {
 
 export function unmountCampusMap() {
     _token++; // batalkan mount yang masih menunggu
+    unmountManufactureMap();
     if (!_active) return;
     _active.unsubs.forEach(function (u) { if (typeof u === 'function') u(); });
     _active.scene.dispose();

@@ -1,4 +1,6 @@
-// FILE: src/ui/campus/CampusOfficeBridge.js  (REPLACE — v2027.66: sakelar Kampus | Manufaktur di Home)
+// FILE: src/ui/campus/CampusOfficeBridge.js  (REPLACE — v2027.67: tab Manufaktur memuat Peta Manufaktur 3D)
+// v2027.67 — tab Manufaktur di Home kini menampilkan Peta Manufaktur 3D (src/ui/manufacture/*), menggantikan placeholder
+//   "Segera hadir". Aturan tetap: hanya satu scene WebGL aktif; pindah Kampus/Kantor/Manufaktur membuang scene sebelumnya.
 // v2027.66 — sakelar Home kini "Kampus | Manufaktur" (Manufaktur = placeholder, belum ada isinya). Tab "Kantor" dihapus:
 //   Office 3D hanya dibuka lewat gedung HQ di peta kampus (tombol "Masuk Kantor"), dan tab Kampus tetap aktif
 //   selama di dalam kantor; ketuk "Kampus" untuk kembali ke peta kampus.
@@ -14,10 +16,9 @@
 //    sehingga render ulang Home tetap berada di kantor. Pindah ke tab lain mengembalikan mode ke kampus.
 //  - Tab HQ > Kantor tetap berfungsi seperti biasa.
 import { mountOfficeMap, unmountOfficeMap, isOfficeMounted, renderOfficeLoading } from '../office/OfficeMap.js';
+import { mountManufactureMap, unmountManufactureMap, renderManufactureLoading } from '../manufacture/ManufactureMap.js';
 import { renderCampusLoading } from './CampusFallback.js';
-import { getBridgeStrings } from './CampusInfo.js';
 import { bus } from '../../core/EventBus.js';
-import { renderIcon } from '../icons/FeatureIcons.js';
 
 var STYLE_ID = 'campus-office-bridge-style';
 var FADE_MS = 240;
@@ -36,15 +37,7 @@ var CSS = [
     '.home-switch-btn svg{flex:0 0 auto;width:17px;height:17px;display:block;}',
     '.home-switch-btn.active{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent-soft);}',
     '.home-switch-btn:active{transform:scale(.96);}',
-    '.home-switch-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}',
-    /* placeholder Manufaktur */
-    '.manu-soon{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center;',
-    'background:linear-gradient(180deg,var(--accent-soft) 0%,transparent 100%);}',
-    '.manu-soon-ico{width:64px;height:64px;border-radius:20px;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);color:var(--accent);}',
-    '.manu-soon-ico svg{width:30px;height:30px;}',
-    '.manu-soon-title{font-size:16px;font-weight:800;color:var(--text-primary);}',
-    '.manu-soon-badge{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:99px;background:var(--accent-soft);color:var(--accent);}',
-    '.manu-soon-desc{max-width:260px;font-size:12.5px;line-height:1.5;color:var(--text-tertiary);}'
+    '.home-switch-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}'
 ].join('');
 
 var _inOffice = false;      // true = Home menampilkan Office (dibuka dari gedung HQ), bukan peta kampus
@@ -107,14 +100,10 @@ function syncSwitch() {
     }
 }
 
-function manufactureHtml() {
-    var L = getBridgeStrings();
-    return '<div class="manu-soon">' +
-        '<div class="manu-soon-ico">' + renderIcon('factory', 30) + '</div>' +
-        '<div class="manu-soon-title">' + L.tabManufacture + '</div>' +
-        '<div class="manu-soon-badge">' + L.manufactureSoon + '</div>' +
-        '<div class="manu-soon-desc">' + L.manufactureDesc + '</div>' +
-    '</div>';
+async function mountManufactureInto(el, data) {
+    el.classList.add('office-map', 'manu-map');   // menonaktifkan vinyet kampus
+    el.innerHTML = renderManufactureLoading();
+    await mountManufactureMap(el, data);
 }
 
 async function mountOfficeInto(el, data) {
@@ -152,6 +141,7 @@ export function enterOffice(containerEl) {
     fadeOut(containerEl, function () {
         if (tok !== _tok || !containerEl.isConnected) return;
         _hooks.unmount();                         // buang scene kampus (WebGL context dilepas)
+        unmountManufactureMap();                  // dan scene manufaktur bila sebelumnya di sana
         fadeIn(containerEl);
         mountOfficeInto(containerEl, gameData());
     });
@@ -177,8 +167,7 @@ export function exitOffice(containerEl) {
 // Dipakai CampusMap saat Home dirender ulang sementara pemain masih di tab Manufaktur.
 export function resumeManufacture(containerEl) {
     ensureStyle();
-    containerEl.classList.add('office-map', 'manu-map');
-    containerEl.innerHTML = manufactureHtml();
+    mountManufactureInto(containerEl, gameData());
 }
 
 export function enterManufacture(containerEl) {
@@ -194,9 +183,8 @@ export function enterManufacture(containerEl) {
         if (tok !== _tok || !containerEl.isConnected) return;
         _hooks.unmount();                         // buang scene kampus
         if (fromOffice) unmountOfficeMap();       // buang scene office bila dibuka dari dalam kantor
-        containerEl.classList.add('office-map', 'manu-map');
-        containerEl.innerHTML = manufactureHtml();
         fadeIn(containerEl);
+        mountManufactureInto(containerEl, gameData());
     });
 }
 
@@ -209,6 +197,7 @@ export function exitManufacture(containerEl) {
     clearTimers();
     fadeOut(containerEl, function () {
         if (tok !== _tok || !containerEl.isConnected) return;
+        unmountManufactureMap();                  // buang scene manufaktur (WebGL context dilepas)
         containerEl.classList.remove('office-map', 'manu-map');
         containerEl.innerHTML = renderCampusLoading();
         fadeIn(containerEl);
