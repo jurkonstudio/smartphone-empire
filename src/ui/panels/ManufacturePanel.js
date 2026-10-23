@@ -49,6 +49,8 @@ function _renderPlantSection(sys) {
     var summary = sys.getSummary();
     var builtList = summary.filter(function (s) { return s.built; });
     var upkeep = builtList.reduce(function (a, s) { return a + (s.maintenanceMonthly || 0); }, 0);
+    var infraTax = sys.getMonthlyInfraTax();
+    var cpd = data.componentPlants || {};
     var unpaid = builtList.reduce(function (a, s) { return a + (s.unpaid || 0); }, 0);
     var stock = 0;
     var inv = (data.componentPlants && data.componentPlants.inventory) || {};
@@ -56,6 +58,9 @@ function _renderPlantSection(sys) {
     head = head.replace('</div></div>',
         '<span>' + esc(_tf('mf.plant.stat.built', 'Pabrik berdiri')) + ' <b>' + builtList.length + '/' + summary.length + '</b></span>' +
         '<span>' + esc(_tf('mf.plant.stat.upkeep', 'Perawatan/bulan')) + ' <b>' + _money(upkeep) + '</b></span>' +
+        '<span>' + esc(_tf('mf.plant.stat.infra_tax', 'Pajak infrastruktur/bulan')) + ' <b>' + _money(infraTax) + '</b></span>' +
+        '<span>' + esc(_tf('mf.plant.stat.savings', 'Hemat vs pasar')) + ' <b>' + _money(cpd.savings) + '</b></span>' +
+        '<span>' + esc(_tf('mf.plant.stat.ext_rev', 'Omzet jual grosir')) + ' <b>' + _money(cpd.externalRevenue) + '</b></span>' +
         (unpaid > 0 ? '<span style="color:var(--danger);">' + esc(_tf('mf.plant.stat.unpaid', 'Tunggakan')) + ' <b>' + _money(unpaid) + '</b></span>' : '') +
         '<span>' + esc(_tf('mf.plant.stat.stock', 'Total stok')) + ' <b>' + _num(stock) + '</b></span>' +
         '</div></div>');
@@ -95,6 +100,7 @@ function _renderPlantCard(sys, s, cash) {
             ' · ' + _tf('mf.plant.upkeep', 'Perawatan') + ' ' + _money(s.maintenanceMonthly) + '/' + _tf('mf.plant.month', 'bulan');
         var fx = _effectText(li.effects);
         if (fx) status += ' · ' + fx;
+        status += ' · ' + _tf('mf.plant.infra_tax', 'Pajak') + ' ' + _money(s.infraTax) + '/' + _tf('mf.plant.month', 'bulan');
         if (s.unpaid > 0) status += ' · ' + _tf('mf.plant.stat.unpaid', 'Tunggakan') + ' ' + _money(s.unpaid);
         if (s.nextInfo) {
             var canUp = cash >= s.nextInfo.cost && !s.upgrade;
@@ -132,18 +138,32 @@ function _renderPlantCard(sys, s, cash) {
             var total = Math.round(unit * batch);
             var can = !s.producing && !s.upgrade && cash >= total;
             var inv = sys.getInventory(c.id);
+            var q = sys.getExternalQuote(pt.id, c.id);
+            var marginTag = '';
+            if (q) {
+                var mp = Math.round(q.marginPct * 100);
+                marginTag = ' · ' + _tf('mf.plant.margin', 'Margin jual') + ' <b style="color:var(' + (q.marginPerUnit >= 0 ? '--success' : '--danger') + ');">' +
+                    (mp >= 0 ? '+' : '') + mp + '%</b> (' + _money(q.price) + ' vs ' + _money(q.effCost) + ')';
+            }
+            var canSell = q && q.stock > 0 && q.quotaLeft > 0;
+            var sellQty = q ? Math.min(q.stock, q.quotaLeft) : 0;
+            var sellBtn = q
+                ? '<button class="btn-secondary mf-buy-btn" data-mf-action="sell" data-mf-plant="' + id + '" data-mf-comp="' + esc(c.id) + '" data-mf-qty="' + sellQty + '"' + (canSell ? '' : ' disabled') + '>' +
+                  esc(_tf('mf.plant.sell', 'Jual grosir')) + ' ' + _num(sellQty) + '</button>' +
+                  '<div class="mf-short">' + esc(_tf('mf.plant.quota_left', 'Kuota bulan ini {n}', { n: _num(q.quotaLeft) })) + '</div>'
+                : '';
             var priceTag = unit < c.costPerUnit
                 ? _money(unit) + ' <s>' + _money(c.costPerUnit) + '</s>'
                 : _money(unit);
             rows.push('<div class="mf-row"><div class="mf-main">' +
                 '<div class="mf-name">' + esc(c.name) + '</div>' +
                 '<div class="mf-reason">' + _tf('mf.plant.unit_cost', 'Biaya internal') + ' ' + priceTag + '/unit' +
-                ' · ' + _tf('mf.plant.stock', 'Stok') + ' <b>' + _num(inv) + '</b></div></div>' +
+                ' · ' + _tf('mf.plant.stock', 'Stok') + ' <b>' + _num(inv) + '</b>' + marginTag + '</div></div>' +
                 '<div class="mf-buy"><button class="btn-primary mf-buy-btn" data-mf-action="order" data-mf-plant="' + id +
                 '" data-mf-comp="' + esc(c.id) + '" data-mf-qty="' + batch + '"' + (can ? '' : ' disabled') + '>' +
                 esc(_tf('mf.plant.produce', 'Produksi')) + ' ' + _num(batch) + '</button>' +
                 (can ? '' : '<div class="mf-short">' + esc(_tf('mf.reason.need_more', 'Kurang {m}', { m: _money(total - cash) })) + '</div>') +
-                '</div></div>');
+                sellBtn + '</div></div>');
         });
     }
 

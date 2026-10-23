@@ -8,6 +8,13 @@ export function initMonthlySummary() {
     bus.on('economy:month-processed', function (entry) { _show(entry); });
 }
 
+function _infraLabel() {
+    const k = 'monthly.infra_tax';
+    const v = t(k);
+    if (v && v !== k) return v;
+    return 'Pajak & utilitas infrastruktur';
+}
+
 function _show(e) {
     const netColor = e.net >= 0 ? 'var(--accent)' : 'var(--danger)';
     const fmt = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
@@ -17,6 +24,7 @@ function _show(e) {
         <div class="sum-row"><span>${t('monthly.income')}</span><b>${fmt(e.income)}</b></div>
         <div class="sum-row"><span>${t('monthly.salary')}</span><b>-${fmt(e.breakdown.salary)}</b></div>
         <div class="sum-row"><span>${t('monthly.fixed')}</span><b>-${fmt(e.breakdown.fixed)}</b></div>
+        ${(e.breakdown.infraTax || 0) > 0 ? `<div class="sum-row"><span>${_infraLabel()}</span><b>-${fmt(e.breakdown.infraTax)}</b></div>` : ''}
         <div class="sum-row"><span>${t('monthly.loan_interest')}</span><b>-${fmt(e.breakdown.loanInterest)}</b></div>
         <div class="sum-row"><span>${t('monthly.tax')}</span><b>-${fmt(e.tax)}</b></div>
         <div class="sum-row total">
