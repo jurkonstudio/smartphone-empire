@@ -6,7 +6,7 @@
 import { createCampusScene } from './CampusScene.js';
 import { renderCampusFallback } from './CampusFallback.js';
 import { bus } from '../../core/EventBus.js';
-import { isOfficeMode, resumeOffice, registerCampusHooks } from './CampusOfficeBridge.js';
+import { isOfficeMode, isManufactureMode, resumeOffice, resumeManufacture, registerCampusHooks } from './CampusOfficeBridge.js';
 
 var THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 var _threePromise = null;
@@ -23,6 +23,7 @@ function loadThree() {
 export async function mountCampusMap(containerEl, gameState) {
     unmountCampusMap();
     // Sedang di dalam kantor (mis. Home dirender ulang): lanjutkan Office 3D, jangan buat peta kampus.
+    if (isManufactureMode()) { resumeManufacture(containerEl); return; }
     if (isOfficeMode()) { resumeOffice(containerEl, gameState); return; }
     var token = ++_token;
     try {

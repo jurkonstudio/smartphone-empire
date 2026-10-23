@@ -28,6 +28,7 @@ var UI = [
         up: '{name} naik ke Lv {lv}!', multi: '{n} bangunan berkembang!',
         bannerSub: 'Kampus Anda terus tumbuh', decor: 'Dekorasi era',
         enterOffice: 'Masuk Kantor', backCampus: 'Kampus', tabCampus: 'Kampus', tabOffice: 'Kantor',
+        tabManufacture: 'Manufaktur', manufactureSoon: 'Segera hadir', manufactureDesc: 'Peta manufaktur sedang disiapkan. Fitur ini akan hadir di pembaruan berikutnya.',
         blocks: 'Blok kota aktif: {n}', reset: 'Reset tampilan peta', zin: 'Perbesar peta', zout: 'Perkecil peta'
     },
     {   // en
@@ -38,6 +39,7 @@ var UI = [
         up: '{name} reached Lv {lv}!', multi: '{n} buildings grew!',
         bannerSub: 'Your campus keeps growing', decor: 'Era decoration',
         enterOffice: 'Enter Office', backCampus: 'Campus', tabCampus: 'Campus', tabOffice: 'Office',
+        tabManufacture: 'Manufacture', manufactureSoon: 'Coming soon', manufactureDesc: 'The manufacturing map is being prepared. It will arrive in an upcoming update.',
         blocks: 'City blocks active: {n}', reset: 'Reset map view', zin: 'Zoom in', zout: 'Zoom out'
     }
 ];
@@ -78,7 +80,8 @@ export function getUiStrings() {
 
 // Teks untuk tombol jembatan Kampus <-> Kantor (CampusOfficeBridge.js).
 export function getBridgeStrings() {
-    return { enterOffice: _ui('enterOffice'), backCampus: _ui('backCampus'), tabCampus: _ui('tabCampus'), tabOffice: _ui('tabOffice') };
+    return { enterOffice: _ui('enterOffice'), backCampus: _ui('backCampus'), tabCampus: _ui('tabCampus'), tabOffice: _ui('tabOffice'),
+        tabManufacture: _ui('tabManufacture'), manufactureSoon: _ui('manufactureSoon'), manufactureDesc: _ui('manufactureDesc') };
 }
 
 export function getBuildingName(id) {

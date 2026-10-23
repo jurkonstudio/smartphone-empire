@@ -1,4 +1,7 @@
-// FILE: src/ui/campus/CampusOfficeBridge.js  (REPLACE — v2027.65: sakelar Kampus | Kantor di Home)
+// FILE: src/ui/campus/CampusOfficeBridge.js  (REPLACE — v2027.66: sakelar Kampus | Manufaktur di Home)
+// v2027.66 — sakelar Home kini "Kampus | Manufaktur" (Manufaktur = placeholder, belum ada isinya). Tab "Kantor" dihapus:
+//   Office 3D hanya dibuka lewat gedung HQ di peta kampus (tombol "Masuk Kantor"), dan tab Kampus tetap aktif
+//   selama di dalam kantor; ketuk "Kampus" untuk kembali ke peta kampus.
 // v2027.65 — Home punya sakelar "Kampus | Kantor" tepat di atas peta (markup dari HomePanel.js, gaya & logika di sini).
 //   Satu bagian Home, dua tampilan: ketuk sakelar atau gedung HQ untuk berpindah. Tombol "← Kampus" di dalam peta dihapus.
 // Jembatan Kampus <-> Kantor: ketuk gedung HQ di peta kampus -> "Masuk Kantor" -> peta kampus memudar,
@@ -14,6 +17,7 @@ import { mountOfficeMap, unmountOfficeMap, isOfficeMounted, renderOfficeLoading 
 import { renderCampusLoading } from './CampusFallback.js';
 import { getBridgeStrings } from './CampusInfo.js';
 import { bus } from '../../core/EventBus.js';
+import { renderIcon } from '../icons/FeatureIcons.js';
 
 var STYLE_ID = 'campus-office-bridge-style';
 var FADE_MS = 240;
@@ -32,10 +36,19 @@ var CSS = [
     '.home-switch-btn svg{flex:0 0 auto;width:17px;height:17px;display:block;}',
     '.home-switch-btn.active{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent-soft);}',
     '.home-switch-btn:active{transform:scale(.96);}',
-    '.home-switch-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}'
+    '.home-switch-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}',
+    /* placeholder Manufaktur */
+    '.manu-soon{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center;',
+    'background:linear-gradient(180deg,var(--accent-soft) 0%,transparent 100%);}',
+    '.manu-soon-ico{width:64px;height:64px;border-radius:20px;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);color:var(--accent);}',
+    '.manu-soon-ico svg{width:30px;height:30px;}',
+    '.manu-soon-title{font-size:16px;font-weight:800;color:var(--text-primary);}',
+    '.manu-soon-badge{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:99px;background:var(--accent-soft);color:var(--accent);}',
+    '.manu-soon-desc{max-width:260px;font-size:12.5px;line-height:1.5;color:var(--text-tertiary);}'
 ].join('');
 
-var _inOffice = false;      // true = Home menampilkan Office, bukan peta kampus
+var _inOffice = false;      // true = Home menampilkan Office (dibuka dari gedung HQ), bukan peta kampus
+var _inManu = false;        // true = Home menampilkan placeholder Manufaktur
 var _tok = 0;               // membatalkan transisi yang tertunda
 var _hooks = null;          // { mount, unmount } milik CampusMap.js
 var _timers = [];
@@ -83,14 +96,25 @@ function fadeIn(el) {
     later(function () { el.classList.remove('cof-in'); }, 360);
 }
 
-// Sinkronkan status aktif sakelar Kampus | Kantor di Home dengan mode saat ini.
+// Sinkronkan status aktif sakelar Kampus | Manufaktur di Home dengan mode saat ini.
+// Office adalah bagian dari Kampus, jadi tab Kampus tetap aktif selama di dalam kantor.
 function syncSwitch() {
     var btns = document.querySelectorAll('.home-switch-btn');
     for (var i = 0; i < btns.length; i++) {
-        var on = (btns[i].getAttribute('data-home-switch') === 'office') === _inOffice;
+        var on = (btns[i].getAttribute('data-home-switch') === 'manufacture') === _inManu;
         btns[i].classList.toggle('active', on);
         btns[i].setAttribute('aria-selected', on ? 'true' : 'false');
     }
+}
+
+function manufactureHtml() {
+    var L = getBridgeStrings();
+    return '<div class="manu-soon">' +
+        '<div class="manu-soon-ico">' + renderIcon('factory', 30) + '</div>' +
+        '<div class="manu-soon-title">' + L.tabManufacture + '</div>' +
+        '<div class="manu-soon-badge">' + L.manufactureSoon + '</div>' +
+        '<div class="manu-soon-desc">' + L.manufactureDesc + '</div>' +
+    '</div>';
 }
 
 async function mountOfficeInto(el, data) {
@@ -105,6 +129,7 @@ async function mountOfficeInto(el, data) {
 export function registerCampusHooks(h) { _hooks = h; }
 
 export function isOfficeMode() { return _inOffice; }
+export function isManufactureMode() { return _inManu; }
 
 // CSS sakelar dipasang sekali; HomePanel memanggilnya sebelum menggambar markup sakelar.
 export function ensureBridgeStyle() { ensureStyle(); }
@@ -118,6 +143,8 @@ export function resumeOffice(containerEl, gameState) {
 export function enterOffice(containerEl) {
     if (!containerEl || _inOffice || !_hooks) return;
     ensureStyle();
+    _inManu = false;                          // keluar dari Manufaktur bila sedang di sana
+    containerEl.classList.remove('manu-map');
     _inOffice = true;
     syncSwitch();
     var tok = ++_tok;
@@ -147,6 +174,48 @@ export function exitOffice(containerEl) {
     });
 }
 
+// Dipakai CampusMap saat Home dirender ulang sementara pemain masih di tab Manufaktur.
+export function resumeManufacture(containerEl) {
+    ensureStyle();
+    containerEl.classList.add('office-map', 'manu-map');
+    containerEl.innerHTML = manufactureHtml();
+}
+
+export function enterManufacture(containerEl) {
+    if (!containerEl || _inManu || !_hooks) return;
+    ensureStyle();
+    var fromOffice = _inOffice;
+    _inOffice = false;
+    _inManu = true;
+    syncSwitch();
+    var tok = ++_tok;
+    clearTimers();
+    fadeOut(containerEl, function () {
+        if (tok !== _tok || !containerEl.isConnected) return;
+        _hooks.unmount();                         // buang scene kampus
+        if (fromOffice) unmountOfficeMap();       // buang scene office bila dibuka dari dalam kantor
+        containerEl.classList.add('office-map', 'manu-map');
+        containerEl.innerHTML = manufactureHtml();
+        fadeIn(containerEl);
+    });
+}
+
+export function exitManufacture(containerEl) {
+    if (!_inManu) return;
+    ensureStyle();
+    _inManu = false;
+    syncSwitch();
+    var tok = ++_tok;
+    clearTimers();
+    fadeOut(containerEl, function () {
+        if (tok !== _tok || !containerEl.isConnected) return;
+        containerEl.classList.remove('office-map', 'manu-map');
+        containerEl.innerHTML = renderCampusLoading();
+        fadeIn(containerEl);
+        if (_hooks) _hooks.mount(containerEl, gameData());
+    });
+}
+
 // ---------------- pengait global (dipasang sekali saat modul dimuat) ----------------
 if (typeof document !== 'undefined') {
     // Tombol "Masuk Kantor" pada kartu info gedung HQ.
@@ -158,18 +227,21 @@ if (typeof document !== 'undefined') {
         e.preventDefault();
         enterOffice(box);
     });
-    // Sakelar Kampus | Kantor di atas peta Home.
+    // Sakelar Kampus | Manufaktur di atas peta Home.
+    // Tab Kampus: dari Manufaktur kembali ke kampus; dari dalam kantor keluar ke peta kampus.
     document.addEventListener('click', function (e) {
         var sw = e.target && e.target.closest && e.target.closest('.home-switch-btn');
         if (!sw) return;
         var box = document.getElementById('campus-map');
         if (!box) return;
         e.preventDefault();
-        if (sw.getAttribute('data-home-switch') === 'office') enterOffice(box); else exitOffice(box);
+        if (sw.getAttribute('data-home-switch') === 'manufacture') { enterManufacture(box); return; }
+        if (_inManu) exitManufacture(box);
+        else if (_inOffice) exitOffice(box);
     });
     // Pindah ke tab lain => kembali ke mode kampus (kantor ditutup oleh renderView di main.js).
     bus.on('view:changed', function (p) {
-        if (p && p.id !== 'dashboard' && _inOffice) { _inOffice = false; _tok++; clearTimers(); syncSwitch(); }
+        if (p && p.id !== 'dashboard' && (_inOffice || _inManu)) { _inOffice = false; _inManu = false; _tok++; clearTimers(); syncSwitch(); }
     });
 }
 
