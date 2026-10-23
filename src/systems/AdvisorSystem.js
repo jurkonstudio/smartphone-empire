@@ -124,6 +124,12 @@ const DICT = {
         'fab_ready.d': 'Riset konstruksi Fab selesai. Punya pabrik sendiri menekan biaya chip.',
         'morale.t': 'Moral tim rendah',
         'morale.d': 'Rata-rata moral {n}/100. Moral rendah menurunkan kinerja dan bisa membuat staf keluar.',
+        'plant_unpaid.t': 'Pabrik komponen menunggak biaya',
+        'plant_unpaid.d': 'Pabrik {id} punya tunggakan ${n}. Tunggakan bisa menghentikan produksi pabrik ini.',
+        'plant_idle.t': 'Pabrik komponen menganggur',
+        'plant_idle.d': 'Pabrik {id} tidak berproduksi selama {n} hari. Periksa rencana produksinya.',
+        'aspect_weak.t': 'Penilaian {aspect} paling lemah',
+        'aspect_weak.d': 'Skor opini untuk {aspect} hanya {n}/100. Perbaiki lewat desain produk atau kampanye.',
         'reputation.t': 'Reputasi masih rendah',
         'reputation.d': 'Reputasi {n}/100. Rilis produk berkualitas dan jaga ulasan agar naik.',
         'all_good.t': 'Semua terkendali',
@@ -229,6 +235,12 @@ const DICT = {
         'fab_ready.d': 'Fab construction research is done. Your own fab lowers chip costs.',
         'morale.t': 'Team morale is low',
         'morale.d': 'Average morale {n}/100. Low morale hurts performance and can make staff quit.',
+        'plant_unpaid.t': 'Component plant has unpaid costs',
+        'plant_unpaid.d': 'Plant {id} owes ${n}. Unpaid costs can stop this plant from producing.',
+        'plant_idle.t': 'Component plant is idle',
+        'plant_idle.d': 'Plant {id} has not produced for {n} days. Review its production plan.',
+        'aspect_weak.t': 'Weakest rating: {aspect}',
+        'aspect_weak.d': 'Public opinion for {aspect} is only {n}/100. Improve it through product design or campaigns.',
         'reputation.t': 'Reputation is still low',
         'reputation.d': 'Reputation {n}/100. Ship quality products and watch reviews to raise it.',
         'all_good.t': 'Everything under control',
@@ -516,8 +528,32 @@ const RULES = [
     function idleCash(c, push) {
         if (c.burn <= 0 || !isFinite(c.runway) || c.runway < 15 || c.cash < 50000) return;
         push('idle_cash', 'info', 'gem-s', { months: c.runway.toFixed(0) }, { nav: 'research', subtab: 'tech' }, 85);
+    },
+    function plants(c, push) {
+        var nav = { nav: 'research', subtab: 'manufaktur' };
+        c.plants.forEach(function (pl) {
+            if (pl.unpaid > 0) {
+                push('plant_unpaid:' + pl.id, 'critical', 'factory', { id: pl.id, n: money(pl.unpaid) }, nav, 4);
+            } else if (pl.idleDays >= 3 && !pl.producing) {
+                push('plant_idle:' + pl.id, 'warn', 'factory', { id: pl.id, n: pl.idleDays }, nav, 16);
+            }
+        });
+    },
+    function aspect(c, push) {
+        var w = c.weakAspect;
+        if (!w || w.v >= 40 || c.catalog.length < 1) return;
+        var names = ASPECT_NAME[w.k] || [w.k, w.k];
+        var label = names[curLang() === 'id' ? 0 : 1];
+        push('aspect_weak', 'tip', 'star', { aspect: label, n: Math.round(w.v) }, { nav: 'market' }, 40);
     }
 ];
+
+// Nama aspek opini untuk teks saran: [Indonesia, English].
+var ASPECT_NAME = {
+    design: ['desain', 'design'], camera: ['kamera', 'camera'], battery: ['baterai', 'battery'],
+    performance: ['performa', 'performance'], price: ['harga', 'price'], reliability: ['keandalan', 'reliability'],
+    os: ['OS', 'OS'], support: ['dukungan', 'support']
+};
 
 export class AdvisorSystem {
     constructor(gameState, deps) {
@@ -682,6 +718,19 @@ export class AdvisorSystem {
             recruitCost: function (role) { return self.recruitCostOf(role); },
             bestResearch: function () { return self._bestResearch(c); }
         };
+        // Skema tambahan: pabrik komponen (SoC/Kamera/RAM), saldo SIL, dan opini per aspek.
+        var cp = (d.componentPlants && d.componentPlants.plants) || {};
+        c.plants = Object.keys(cp).map(function (id) {
+            var pl = cp[id] || {};
+            return { id: id, built: !!pl.built, level: pl.level || 0, producing: !!pl.producing,
+                     idleDays: pl.idleDays || 0, unpaid: pl.unpaid || 0 };
+        }).filter(function (pl) { return pl.built; });
+        c.silicon = d.silicon || 0;
+        var asp = (d.feedback && d.feedback.aspectSentiment) || {};
+        c.weakAspect = null;
+        Object.keys(asp).forEach(function (k) {
+            if (typeof asp[k] === 'number' && (!c.weakAspect || asp[k] < c.weakAspect.v)) c.weakAspect = { k: k, v: asp[k] };
+        });
         return c;
     }
 
