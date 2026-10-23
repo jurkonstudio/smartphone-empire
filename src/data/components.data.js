@@ -10,6 +10,7 @@ export const COMPONENT_CATEGORIES = [
     { id: 'battery',     name: 'Baterai',  icon: 'battery' },
     { id: 'chip',        name: 'Chip',     icon: 'cpu' },
     { id: 'ram',         name: 'RAM',      icon: 'layers' },
+    { id: 'storage',     name: 'Penyimpanan', icon: 'disc' },
     { id: 'network',     name: 'Jaringan', icon: 'signal' },
     { id: 'body',        name: 'Bodi',     icon: 'layers' },
     { id: 'sensor',      name: 'Sensor',   icon: 'shield' },
@@ -866,6 +867,31 @@ export const COMPONENTS = [
       description: 'Memori kerja mungil bawaan ponsel fitur awal.',
       costPerUnit: 1, stats: { performance: 2, usability: 1 },
       realReference: 'Nokia 3310 (2000)', milestone: false },
+
+    // ---- Penyimpanan / kartu memori (opsional) ----
+    { id: 'stor_mmc_16', category: 'storage', tier: 1, minYear: 2002,
+      name: 'MMC 16MB', icon: 'disc',
+      description: 'Slot kartu memori pertama untuk foto dan kontak tambahan.',
+      costPerUnit: 1, stats: { usability: 2 },
+      realReference: 'Standar industri (2002)', milestone: false, requiresResearch: 'stor_mmc' },
+
+    { id: 'stor_sd_128', category: 'storage', tier: 1, minYear: 2003,
+      name: 'SD 128MB', icon: 'disc',
+      description: 'Kartu SD yang muat puluhan lagu atau ratusan foto.',
+      costPerUnit: 2, stats: { usability: 3 },
+      realReference: 'Standar industri (2003)', milestone: false, requiresResearch: 'stor_sd' },
+
+    { id: 'stor_minisd_512', category: 'storage', tier: 2, minYear: 2004,
+      name: 'miniSD 512MB', icon: 'disc',
+      description: 'Kartu mungil untuk ponsel tipis dengan ruang jauh lebih lega.',
+      costPerUnit: 3, stats: { usability: 5 },
+      realReference: 'Standar industri (2004)', milestone: false, requiresResearch: 'stor_minisd' },
+
+    { id: 'stor_microsd_1g', category: 'storage', tier: 2, minYear: 2005,
+      name: 'microSD 1GB', icon: 'disc',
+      description: 'Kartu terkecil dengan kapasitas gigabyte pertama.',
+      costPerUnit: 4, stats: { usability: 7 },
+      realReference: 'Standar industri (2005)', milestone: false, requiresResearch: 'stor_microsd' },
 
     { id: 'ram_sdram_16', category: 'ram', tier: 1, minYear: 2003,
       name: 'SDRAM 16MB', icon: 'layers',
