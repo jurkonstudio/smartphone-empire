@@ -46,6 +46,7 @@ export function renderOSPanel(params) {
     ensureRndStyles();
     _ensureOsPlatformHandlers(osSystem);
     _ensureOsTabHandlers();
+    _ensureHeroLive();
 
     // --- RENDER SUB-TABS OS ---
     const subtabsHtml = `
@@ -247,9 +248,50 @@ function _renderEmptyState() {
         '<button class="btn-primary" data-os-action="create" style="max-width:220px;margin:0 auto;">' + t('os.empty.create') + '</button></div>';
 }
 
+// Opsi layar mockup untuk kartu hero: update versi > perbaikan bug > tampilan Pengaturan biasa.
+function _heroMockupOpts(os) {
+    const mk = { size: 100 };
+    const gd = currentGameData();
+    const nowMin = gd && gd.time ? gd.time.elapsedGameMinutes : undefined;
+    const patching = (os.bugs || []).filter(function (b) { return b.status === 'patching'; })[0];
+    if (os.developing) {
+        const d = os.developing;
+        mk.screen = 'update';
+        mk.progress = d.durationDays > 0 ? Math.round(Math.min(1, (d.progressDays || 0) / d.durationDays) * 100) : 0;
+        mk.toVersion = d.versionString;
+    } else if (patching) {
+        mk.screen = 'patch';
+        mk.progress = _patchPercent(patching, nowMin);
+        mk.bugName = patching.name;
+    }
+    return mk;
+}
+
+// Pembaruan langsung: tiap tick game, gambar ulang HANYA layar mini di kartu hero (bukan seluruh panel),
+// dan hanya bila layar/persentasenya berubah. Aman dipanggil berkali-kali (terikat sekali).
+var _heroLiveBound = false;
+var _heroLiveKey = '';
+function _ensureHeroLive() {
+    if (_heroLiveBound) return;
+    _heroLiveBound = true;
+    bus.on('time:tick', function () {
+        var el = document.querySelector('.os-hero-screen');
+        if (!el) { _heroLiveKey = ''; return; }
+        try {
+            var os = window.__game.state.get().os;
+            if (!os || !os.name) return;
+            var mk = _heroMockupOpts(os);
+            var key = (mk.screen || 'home') + '|' + (mk.progress || 0) + '|' + (mk.toVersion || '') + '|' + (mk.bugName || '');
+            if (key === _heroLiveKey) return;
+            _heroLiveKey = key;
+            el.innerHTML = renderOsScreenMockup(mk);
+        } catch (e) { /* abaikan: panel akan dirender ulang normal */ }
+    });
+}
+
 function _renderHero(os, currentVersion, osSystem) {
     let mockupHtml = '';
-    try { mockupHtml = renderOsScreenMockup({ size: 100 }); } catch (e) { console.error('[OSPanel] mockup error:', e); }
+    try { mockupHtml = renderOsScreenMockup(_heroMockupOpts(os)); } catch (e) { console.error('[OSPanel] mockup error:', e); }
     const verLabel = currentVersion ? t('os.hero.version', { v: escapeHtml(currentVersion.versionString) }) : t('os.hero.no_version');
     const heroBadge = os.developing
         ? '<span class="os-hero-badge os-hero-badge-dev">' + t('osrd.badge_dev') + '</span>'
