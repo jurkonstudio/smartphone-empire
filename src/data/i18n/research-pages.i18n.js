@@ -58,6 +58,7 @@ export const RESEARCH_PAGES_I18N = {
 
         'pl.unlock.year': 'Pabrik ini tersedia mulai {y}.',
         'pl.unlock.fab': 'Butuh fab chip yang sudah berdiri.',
+        'pl.unlock.components': 'Belum ada komponen yang bisa diproduksi. Selesaikan riset dulu.',
         'pl.unlock.unknown': 'Tipe pabrik tidak dikenal.',
 
         'rs.rnd.menuju': 'Menuju Lv {lv}',
@@ -127,6 +128,7 @@ export const RESEARCH_PAGES_I18N = {
 
         'pl.unlock.year': 'This plant is available from {y}.',
         'pl.unlock.fab': 'Requires an established chip fab.',
+        'pl.unlock.components': 'No components can be produced yet. Finish research first.',
         'pl.unlock.unknown': 'Unknown plant type.',
 
         'rs.rnd.menuju': 'Toward Lv {lv}',
