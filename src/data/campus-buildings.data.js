@@ -26,7 +26,7 @@ export const CAMPUS_NAV_SUBTABS = {
     research: ['tech', 'os', 'manufaktur', 'chip'],
     products: ['design', 'catalog', 'sales', 'chip'],
     market: ['share', 'competitors', 'trends', 'promo', 'public'],
-    team: ['office', 'overview', 'team', 'exchange', 'bank']
+    team: ['overview', 'team', 'exchange', 'bank']
 };
 
 // ============================================================
