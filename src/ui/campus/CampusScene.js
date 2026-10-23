@@ -22,7 +22,6 @@ import {
 } from './CampusBuildings.js';
 import { CAMPUS_BY_ID, validateCampusRegistry } from '../../data/campus-buildings.data.js';
 import { detectQuality, createLookRig } from './CampusLook.js';
-import { buildOfficeSilhouette, NEIGHBOR_OFFSET } from './NeighborSilhouette.js';
 import { createCampusLabels } from './CampusLabels.js';
 import { createCampusControls } from './CampusControls.js';
 import { createCampusLife } from './CampusLife.js';
@@ -100,8 +99,8 @@ export function createCampusScene(THREE, container, gameState) {
     scene.add(forest.group);
     var shrubs = buildShrubs(A, THREE);
     scene.add(shrubs);
-    // siluet kantor di sebelah kiri pulau kampus: terlihat saat peta digeser ke kiri
-    var neighbor = buildOfficeSilhouette(THREE, scene, -NEIGHBOR_OFFSET);
+    // Sisi sebelah pulau kampus dikosongkan: area itu dicadangkan untuk Manufaktur (belum dibangun).
+    // Kantor TIDAK lagi ditampilkan sebagai tetangga kampus; kantor hanya dibuka lewat gedung HQ.
     var shadowDirty = true;       // shadow map statis: hitung ulang hanya saat geometri berubah
     // Animasi ambient (mobil, awan, asap, drone, dll). Dimatikan bila pengguna memilih reduced-motion.
     var life = prefersReducedMotion() ? null : createCampusLife(THREE, A, scene, forest.nodes);
@@ -454,7 +453,7 @@ export function createCampusScene(THREE, container, gameState) {
         unitsPerPixel: function (zoom) { return (BASE_VIEW / zoom) / Math.max(1, container.clientHeight); },
         maxZoom: 3.2,                // detail halus untuk zoom dekat
         minZoom: 0.5,                // zoom-out cukup jauh untuk melihat seluruh pulau 30x30
-        limit: 20,                   // batas geser: cukup untuk melihat sedikit kantor di sebelah kiri
+        limit: 16,                   // batas geser: pulau kampus saja (sisi sebelah dicadangkan untuk Manufaktur)
         onChange: function () { applyCamera(); requestRender(); },
         reduceMotion: prefersReducedMotion,
         onTap: handleTap
@@ -483,7 +482,6 @@ export function createCampusScene(THREE, container, gameState) {
     function applyTheme() {
         var dark = document.documentElement.getAttribute('data-theme') === 'dark';
         var look = rig.applyTheme(dark);                  // cahaya, exposure, env (CampusLook.js)
-        neighbor.setDark(dark);
         var base = dark ? PALETTES.dark : PALETTES.light;
         var p = Object.assign({}, base, look.colors, { aoOpacity: look.aoOpacity });
         var w = ERA_WINDOWS[Math.max(0, eraIdx)];
@@ -576,7 +574,6 @@ export function createCampusScene(THREE, container, gameState) {
             for (var dk in dyn) disposeObject(dyn[dk].group);   // buffer InstancedMesh bangunan
             forest.dispose();
             disposeObject(shrubs);
-            neighbor.dispose();
             rig.dispose();
             A.dispose();
             renderer.dispose();
