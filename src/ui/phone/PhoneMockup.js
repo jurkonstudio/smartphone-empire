@@ -21,6 +21,7 @@ import { escapeHtml } from '../../utils/html.js';
 // oleh handler 'lang:changed' di main.js.
 // ============================================================
 import { getComponentById, getBodyColorById } from '../../data/components.data.js';
+import { getPlantTypeForCategory } from '../../data/material-plants.data.js';
 import { getDesignEraForYear, getDesignEraById } from '../../data/era-design.data.js';
 import { state } from '../../core/GameState.js';
 import { resolveSpec } from '../../data/phone-specs.data.js';
@@ -1402,10 +1403,47 @@ export function renderPhoneMockup(config, opts) {
     const brandHtml = (opts.showBrand === false || view !== 'front' || opts.fit) ? '' :
         (companyName ? `<div class="phone-brand">${escapeHtml(companyName)}</div>` : '');
     const capHtml = (opts.label ? `<div class="phone-cap">${escapeHtml(opts.label)}</div>` : '') +
+        ((view === 'back' && opts.inHouse !== false && !opts.fit) ? inHouseBadge(config) : '') +
         ((view === 'box' && opts.packCaption !== false && !opts.fit) ? packCaption(pack, width) : '');
     const cls = 'phone-mockup-wrap phone-era-' + era.id + ' phone-spec-' + spec.id + (opts.isStatic ? ' phone-static' : '');
 
     return `<div class="${cls}" style="width:${width}px;height:${height + (brandHtml ? 18 : 0)}px;">${svg}${brandHtml}</div>${capHtml}`;
+}
+
+// Komponen dari pabrik sendiri yang sedang berdiri (untuk lencana "Internal").
+// Mengembalikan daftar { label, id } mis. [{ label: 'SoC', id: 'soc' }].
+const _PLANT_SHORT = {
+    battery: ['Baterai', 'Battery'], display: ['Layar', 'Display'], soc: ['SoC', 'SoC'],
+    camera: ['Kamera', 'Camera'], ram: ['RAM', 'RAM']
+};
+export function listInHouseParts(config) {
+    const st = safeGetState();
+    const out = [];
+    if (!config || !st || !st.componentPlants) return out;
+    const ids = [config.displayId, config.cameraId, config.batteryId, config.chipId, config.ramId];
+    const seen = {};
+    ids.forEach(function (cid) {
+        if (!cid || cid === 'none') return;
+        const comp = getComponentById(cid);
+        const pt = comp && getPlantTypeForCategory(comp.category);
+        if (!pt || seen[pt.id]) return;
+        const ps = st.componentPlants.plants && st.componentPlants.plants[pt.id];
+        if (!ps || !ps.built || !ps.level) return;
+        seen[pt.id] = true;
+        const names = _PLANT_SHORT[pt.id] || [pt.id, pt.id];
+        out.push({ id: pt.id, label: LanguageService.getLang() === 'en' ? names[1] : names[0], level: ps.level });
+    });
+    return out;
+}
+
+function inHouseBadge(config) {
+    const parts = listInHouseParts(config);
+    if (!parts.length) return '';
+    const title = _tf('mock.inhouse', 'Komponen buatan sendiri', 'In-house components');
+    return '<div class="phone-inhouse" title="' + escapeHtml(title) + '">' +
+        '<span class="phone-inhouse-lbl">' + escapeHtml(_tf('mock.inhouse_short', 'Internal', 'In-house')) + '</span>' +
+        parts.map(function (p) { return '<span class="phone-inhouse-chip">' + escapeHtml(p.label) + ' L' + p.level + '</span>'; }).join('') +
+        '</div>';
 }
 
 // Teks "Isi kotak" terpisah dari SVG (dipakai wizard di kolom samping, karena kolom ponsel sempit).
