@@ -4751,3 +4751,234 @@ html[data-perf="lite"] body { background-attachment: scroll !important; }
 .phone-inhouse { display:flex; flex-wrap:wrap; gap:3px; justify-content:center; align-items:center; margin-top:4px; font-size:10px; line-height:1; }
 .phone-inhouse-lbl { color: var(--text-mute); font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
 .phone-inhouse-chip { padding:2px 5px; border-radius:6px; background: var(--surface, rgba(255,255,255,.06)); border:1px solid var(--border, rgba(255,255,255,.12)); color: var(--text-dim); }
+
+
+/* ============================================================================
+   iCLOUD.COM THEME v2 + GLASS NAV (override terakhir — letakkan paling bawah)
+   Terang : kanvas abu #f5f5f7, kartu putih, garis hairline, bayangan sangat lembut
+   Gelap  : kanvas hitam murni, kartu #1c1c1e, lapisan naik #2c2c2e (seperti iOS/iCloud)
+   Nav    : "Liquid Glass" — kaca berlapis, tepi spekular, pil pilihan membiaskan cahaya
+   ============================================================================ */
+
+/* ---------- 1. Token ---------- */
+:root, [data-theme="dark"] {
+    --bg-0: #000000; --bg-1: #0d0d0f; --bg-2: #1c1c1e;
+    --bg-3: #2c2c2e; --bg-4: #3a3a3c;
+    --border: rgba(255,255,255,0.10);
+    --border-strong: rgba(255,255,255,0.18);
+    --text-primary: #f5f5f7;
+    --text-secondary: rgba(235,235,245,0.68);
+    --text-tertiary: rgba(235,235,245,0.46);
+    --text-disabled: rgba(235,235,245,0.26);
+    --shadow-sm: 0 0 0 0 transparent;
+    --shadow: 0 1px 2px rgba(0,0,0,0.5);
+    --shadow-lg: 0 12px 40px rgba(0,0,0,0.7);
+    --bg-overlay: rgba(0,0,0,0.55);
+    --bg-header: rgba(0,0,0,0.62);
+    --bg-nav: rgba(28,28,30,0.6);
+    --fill: rgba(118,118,128,0.24);
+    --seg-active: #636366;
+    --r-sm: 8px; --r: 10px; --r-md: 14px; --r-lg: 16px; --r-xl: 20px;
+}
+[data-theme="light"] {
+    --bg-0: #f5f5f7; --bg-1: #fbfbfd; --bg-2: #ffffff;
+    --bg-3: #f2f2f5; --bg-4: #e6e6eb;
+    --border: rgba(60,60,67,0.13);
+    --border-strong: rgba(60,60,67,0.26);
+    --text-primary: #1d1d1f;
+    --text-secondary: rgba(60,60,67,0.74);
+    --text-tertiary: rgba(60,60,67,0.55);
+    --text-disabled: rgba(60,60,67,0.30);
+    --shadow-sm: 0 0 0 0 transparent;
+    --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 14px rgba(0,0,0,0.05);
+    --shadow-lg: 0 14px 44px rgba(0,0,0,0.16);
+    --bg-overlay: rgba(0,0,0,0.36);
+    --bg-header: rgba(245,245,247,0.72);
+    --bg-nav: rgba(255,255,255,0.6);
+    --fill: rgba(118,118,128,0.12);
+    --seg-active: #ffffff;
+}
+
+/* warna aksen = warna sistem Apple (terang & gelap punya nada sendiri) */
+[data-theme="light"][data-accent="emerald"] { --accent:#30b350; --accent-hover:#248a3d; --accent-soft:rgba(48,179,80,0.12);  --accent-glow:rgba(0,0,0,0); }
+[data-theme="dark"][data-accent="emerald"]  { --accent:#30d158; --accent-hover:#5fe07f; --accent-soft:rgba(48,209,88,0.18);  --accent-glow:rgba(0,0,0,0); }
+[data-theme="light"][data-accent="violet"]  { --accent:#af52de; --accent-hover:#9a3fc9; --accent-soft:rgba(175,82,222,0.12); --accent-glow:rgba(0,0,0,0); }
+[data-theme="dark"][data-accent="violet"]   { --accent:#bf5af2; --accent-hover:#d17fff; --accent-soft:rgba(191,90,242,0.20); --accent-glow:rgba(0,0,0,0); }
+[data-theme="light"][data-accent="amber"]   { --accent:#ff9500; --accent-hover:#e08400; --accent-soft:rgba(255,149,0,0.14);  --accent-glow:rgba(0,0,0,0); }
+[data-theme="dark"][data-accent="amber"]    { --accent:#ff9f0a; --accent-hover:#ffb340; --accent-soft:rgba(255,159,10,0.20); --accent-glow:rgba(0,0,0,0); }
+[data-theme="light"][data-accent="rose"]    { --accent:#ff2d55; --accent-hover:#e0204a; --accent-soft:rgba(255,45,85,0.11);  --accent-glow:rgba(0,0,0,0); }
+[data-theme="dark"][data-accent="rose"]     { --accent:#ff453a; --accent-hover:#ff6961; --accent-soft:rgba(255,69,58,0.20);  --accent-glow:rgba(0,0,0,0); }
+[data-theme="light"][data-accent="cyan"]    { --accent:#32ade6; --accent-hover:#1f98d0; --accent-soft:rgba(50,173,230,0.13); --accent-glow:rgba(0,0,0,0); }
+[data-theme="dark"][data-accent="cyan"]     { --accent:#64d2ff; --accent-hover:#8be0ff; --accent-soft:rgba(100,210,255,0.20);--accent-glow:rgba(0,0,0,0); }
+
+/* ---------- 2. Kanvas rata (tanpa gradien warna-warni) ---------- */
+html[data-theme] body { background: var(--bg-0) !important; }
+
+/* ---------- 3. Header kaca tipis ---------- */
+html .app-header {
+    background: var(--bg-header) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+    backdrop-filter: blur(28px) saturate(180%) !important;
+    border-bottom: 0.5px solid var(--border);
+}
+html[data-theme="dark"] .app-header { background: var(--bg-header) !important; }
+
+/* ---------- 4. Kartu ---------- */
+.card, .kpi, .ov-card, .ov-qa, .ov-pulse, .ov-metric { border-radius: var(--r-md); }
+html[data-theme="light"] .card,
+html[data-theme="light"] .kpi { box-shadow: var(--shadow); border-color: var(--border); }
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .kpi { background: var(--bg-2); border-color: var(--border); }
+
+/* ---------- 5. Segmented control ala iOS ---------- */
+html .settings-segment, html .subtab-bar {
+    background: var(--fill); border: 0; border-radius: 10px; padding: 2px;
+}
+html .settings-seg-btn, html .subtab-btn { border-radius: 8px; }
+html .settings-seg-btn.active, html .subtab-btn.active {
+    background: var(--seg-active); color: var(--text-primary);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.12), 0 1px 1px rgba(0,0,0,0.06);
+}
+html[data-theme="dark"] .settings-seg-btn.active,
+html[data-theme="dark"] .subtab-btn.active { box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+
+/* ---------- 6. Toast kaca ---------- */
+html .toast {
+    background: var(--bg-nav); color: var(--text-primary);
+    -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+    border: 0.5px solid var(--border); border-radius: var(--r-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+/* ============================================================================
+   7. NAVIGASI BAWAH — LIQUID GLASS
+   ============================================================================ */
+html .mobile-nav {
+    background: linear-gradient(180deg, rgba(255,255,255,0.52) 0%, rgba(255,255,255,0.22) 100%) !important;
+    -webkit-backdrop-filter: blur(36px) saturate(220%) brightness(1.05) contrast(1.02) !important;
+    backdrop-filter: blur(36px) saturate(220%) brightness(1.05) contrast(1.02) !important;
+    box-shadow:
+        0 0 0 0.5px rgba(0,0,0,0.10),                    /* garis luar: bar tetap terbaca di latar terang */
+        0 20px 40px -10px rgba(20,30,60,0.24),
+        0 4px 12px rgba(20,30,60,0.10),
+        inset 0 1.5px 1px rgba(255,255,255,0.95),        /* tepi atas menyala */
+        inset 0 -1.5px 1px rgba(255,255,255,0.55),
+        inset 1px 0 1px rgba(255,255,255,0.45),
+        inset -1px 0 1px rgba(255,255,255,0.45),
+        inset 0 0 24px rgba(255,255,255,0.35) !important;
+}
+/* kilau spekular: dua pantulan (kiri-atas & kanan-bawah) seperti kaca asli */
+html .mobile-nav::before {
+    background:
+        radial-gradient(70% 150% at 10% -45%, rgba(255,255,255,0.80) 0%, rgba(255,255,255,0) 60%),
+        radial-gradient(60% 130% at 94% 155%, rgba(255,255,255,0.50) 0%, rgba(255,255,255,0) 60%),
+        linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0) 50%);
+}
+html .mobile-nav::after {
+    background: linear-gradient(135deg,
+        rgba(255,255,255,1) 0%, rgba(255,255,255,0.28) 26%,
+        rgba(255,255,255,0.10) 52%, rgba(255,255,255,0.30) 76%, rgba(255,255,255,0.95) 100%);
+}
+html[data-theme="dark"] .mobile-nav {
+    background: linear-gradient(180deg, rgba(118,118,128,0.34) 0%, rgba(58,58,62,0.20) 100%) !important;
+    -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(1.18) !important;
+    backdrop-filter: blur(40px) saturate(200%) brightness(1.18) !important;
+    box-shadow:
+        0 0 0 0.5px rgba(255,255,255,0.10),
+        0 22px 44px -10px rgba(0,0,0,0.70),
+        0 4px 12px rgba(0,0,0,0.40),
+        inset 0 1.5px 1px rgba(255,255,255,0.30),
+        inset 0 -1px 1px rgba(255,255,255,0.08),
+        inset 0 0 22px rgba(255,255,255,0.06) !important;
+}
+html[data-theme="dark"] .mobile-nav::before {
+    background:
+        radial-gradient(70% 150% at 10% -45%, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0) 60%),
+        radial-gradient(60% 130% at 94% 155%, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 60%),
+        linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 50%);
+}
+html[data-theme="dark"] .mobile-nav::after {
+    background: linear-gradient(135deg,
+        rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.10) 26%,
+        rgba(255,255,255,0.03) 52%, rgba(255,255,255,0.10) 76%, rgba(255,255,255,0.50) 100%);
+}
+
+/* ikon & label */
+html .mobile-nav .nav-btn:not(.active) { color: rgba(60,60,67,0.80) !important; }
+html[data-theme="dark"] .mobile-nav .nav-btn:not(.active) { color: rgba(235,235,245,0.70) !important; }
+
+/* pil pilihan: kaca padat dengan tint aksen, tebal di tepi bawah */
+html .mobile-nav .nav-slider::before {
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.90) 0%, rgba(255,255,255,0.30) 55%, rgba(255,255,255,0.55) 100%),
+        var(--accent-soft);
+    -webkit-backdrop-filter: blur(2px) saturate(230%) brightness(1.08);
+    backdrop-filter: blur(2px) saturate(230%) brightness(1.08);
+    box-shadow:
+        0 1px 2px rgba(0,0,0,0.10),
+        0 8px 18px -4px rgba(20,30,60,0.22),
+        0 0 0 0.5px rgba(0,0,0,0.06),
+        inset 0 1.5px 1px #ffffff,
+        inset 0 -2px 4px rgba(255,255,255,0.75),
+        inset 0 0 12px rgba(255,255,255,0.60);
+}
+html .mobile-nav .nav-slider::after {          /* kilau tipis di tepi atas pil */
+    display: block; content: ""; position: absolute; left: 16%; right: 16%; top: 2px; height: 34%;
+    border-radius: 999px; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.75), rgba(255,255,255,0));
+}
+html[data-theme="dark"] .mobile-nav .nav-slider::before {
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.06) 60%, rgba(255,255,255,0.12) 100%),
+        var(--accent-soft);
+    box-shadow:
+        0 1px 3px rgba(0,0,0,0.40),
+        0 8px 18px -4px rgba(0,0,0,0.55),
+        0 0 0 0.5px rgba(255,255,255,0.12),
+        inset 0 1.5px 1px rgba(255,255,255,0.50),
+        inset 0 -1.5px 2px rgba(255,255,255,0.12),
+        inset 0 0 12px rgba(255,255,255,0.10);
+}
+html[data-theme="dark"] .mobile-nav .nav-slider::after {
+    background: linear-gradient(180deg, rgba(255,255,255,0.30), rgba(255,255,255,0));
+}
+
+/* saat digeser: lensa membesar, hampir bening, membiaskan latar */
+html .mobile-nav.dragging .nav-slider::before {
+    transform: scale(1.20, 1.28);
+    background:
+        radial-gradient(120% 100% at 50% 0%, rgba(255,255,255,0.60) 0%, rgba(255,255,255,0) 65%),
+        rgba(255,255,255,0.14);
+    -webkit-backdrop-filter: blur(0.5px) saturate(280%) brightness(1.16);
+    backdrop-filter: blur(0.5px) saturate(280%) brightness(1.16);
+    box-shadow:
+        0 14px 30px rgba(15,25,50,0.28),
+        0 2px 6px rgba(15,25,50,0.14),
+        0 0 0 0.5px rgba(0,0,0,0.06),
+        inset 0 2px 1px #ffffff,
+        inset 0 -3px 4px rgba(255,255,255,0.80),
+        inset 0 0 16px rgba(255,255,255,0.55);
+}
+html[data-theme="dark"] .mobile-nav.dragging .nav-slider::before {
+    background:
+        radial-gradient(120% 100% at 50% 0%, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0) 65%),
+        rgba(255,255,255,0.10);
+    box-shadow:
+        0 16px 32px rgba(0,0,0,0.65),
+        0 0 0 0.5px rgba(255,255,255,0.18),
+        inset 0 2px 1px rgba(255,255,255,0.60),
+        inset 0 -3px 4px rgba(255,255,255,0.16),
+        inset 0 0 16px rgba(255,255,255,0.14);
+}
+
+/* fallback (ditaruh setelah override di atas agar tetap menang) */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    html .mobile-nav { background: rgba(245,245,250,0.94) !important; }
+    html[data-theme="dark"] .mobile-nav { background: rgba(38,38,42,0.94) !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+    html .mobile-nav, html .app-header, html .toast { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+    html .mobile-nav { background: rgba(245,245,250,0.97) !important; }
+    html[data-theme="dark"] .mobile-nav { background: rgba(38,38,42,0.97) !important; }
+    html .app-header { background: var(--bg-1) !important; }
+}
