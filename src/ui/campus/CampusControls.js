@@ -1,4 +1,4 @@
-// FILE: src/ui/campus/CampusControls.js
+// FILE: src/ui/campus/CampusControls.js  (REPLACE — v2027.65: dukung cfg.bounds tak simetris)
 // v2027.45 — interaksi peta lebih halus untuk layar sentuh dan mouse.
 // v2027.44 (Tahap 4) — + flyTo(x, z, zoom) kamera terbang halus, zoomTo(z), reset().
 //   Sentuhan / roda mouse / double-tap membatalkan animasi terbang.
@@ -16,6 +16,11 @@ export function createCampusControls(el, cfg) {
     // cfg.limit eksplisit tetap dihormati; bila tidak ada, kamera mengikuti dunia 100x100.
     var limit = (typeof cfg.limit === 'number') ? Math.max(1, cfg.limit) :
         Math.max(7, ((typeof cfg.worldSize === 'number' ? cfg.worldSize : 100) / 2) - 3);
+    // v2027.65: cfg.bounds { minX, maxX, minZ, maxZ } = batas geser TIDAK simetris (mis. Peta Kampus boleh
+    // digeser ke barat sampai Pulau Manufaktur). Tanpa bounds, perilaku lama (kotak simetris ±limit).
+    var bnd = (cfg.bounds && typeof cfg.bounds === 'object') ? {
+        minX: Number(cfg.bounds.minX), maxX: Number(cfg.bounds.maxX), minZ: Number(cfg.bounds.minZ), maxZ: Number(cfg.bounds.maxZ)
+    } : { minX: -limit, maxX: limit, minZ: -limit, maxZ: limit };
 
     // inertia & animasi zoom
     var vel = { x: 0, y: 0 };      // px per ms
@@ -38,8 +43,8 @@ export function createCampusControls(el, cfg) {
         // kanan layar = (S,0,-S), atas layar di tanah = (-S,0,-S)
         view.x += -dx * upp * S - dy * upp * SQRT3 * S;
         view.z +=  dx * upp * S - dy * upp * SQRT3 * S;
-        view.x = clamp(view.x, -limit, limit);
-        view.z = clamp(view.z, -limit, limit);
+        view.x = clamp(view.x, bnd.minX, bnd.maxX);
+        view.z = clamp(view.z, bnd.minZ, bnd.maxZ);
     }
     function zoomBy(f) { view.zoom = clamp(view.zoom * f, minZoom, maxZoom); }
     function ease(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
@@ -153,7 +158,7 @@ export function createCampusControls(el, cfg) {
     // Terbang halus ke (x, z) dengan zoom tertentu. ms = 0 / reduceMotion -> langsung pindah.
     function flyTo(x, z, zoom, ms) {
         var tz = (zoom == null) ? view.zoom : clamp(zoom, minZoom, maxZoom);
-        var tx = clamp(x, -limit, limit), tzz = clamp(z, -limit, limit);
+        var tx = clamp(x, bnd.minX, bnd.maxX), tzz = clamp(z, bnd.minZ, bnd.maxZ);
         vel.x = vel.y = 0;
         zoomTarget = 0;
         var instant = ms === 0 || (cfg.reduceMotion && cfg.reduceMotion());
@@ -179,8 +184,12 @@ export function createCampusControls(el, cfg) {
         view: view,
         flyTo: flyTo,
         zoomTo: zoomTo,
-        getBounds: function () { return { minX: -limit, maxX: limit, minZ: -limit, maxZ: limit }; },
-        setLimit: function (nextLimit) { limit = Math.max(1, Number(nextLimit) || 1); view.x = clamp(view.x, -limit, limit); view.z = clamp(view.z, -limit, limit); changed(); },
+        getBounds: function () { return { minX: bnd.minX, maxX: bnd.maxX, minZ: bnd.minZ, maxZ: bnd.maxZ }; },
+        setLimit: function (nextLimit) {
+            limit = Math.max(1, Number(nextLimit) || 1);
+            bnd = { minX: -limit, maxX: limit, minZ: -limit, maxZ: limit };
+            view.x = clamp(view.x, bnd.minX, bnd.maxX); view.z = clamp(view.z, bnd.minZ, bnd.maxZ); changed();
+        },
         reset: function () { flyTo(0, 0, 1); },
         dispose: function () {
             if (raf) cancelAnimationFrame(raf);

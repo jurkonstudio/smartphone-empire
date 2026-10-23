@@ -1,4 +1,7 @@
-// FILE: src/ui/campus/CampusScene.js
+// FILE: src/ui/campus/CampusScene.js  (REPLACE — v2027.65: Pulau Manufaktur di seberang + jembatan)
+// v2027.65 — Pulau Manufaktur tampil sebagai siluet di barat (selat ~12 unit) dan tersambung jembatan jalan raya
+// dari gerbang barat kampus ke jalan raya Manufaktur. Mobil jalan barat menyeberangi jembatan (CampusLife).
+// Batas geser kamera diperlebar ke barat (cfg.bounds) agar pemain bisa menggeser ke jembatan/pulau seberang.
 // v2027.62 — prioritas label dari registri; asap pabrik mengikuti status produksi Fab (fab.producing);
 // registri gedung divalidasi saat peta dibuat (peringatan konsol bila ada masalah).
 // v2027.60 — PREMIUM LOOK: tone mapping ACES + sRGB, rig cahaya (matahari/fill/rim/hemi) + environment
@@ -29,6 +32,7 @@ import { createCampusFx } from './CampusFx.js';
 import { createCampusOverlay } from './CampusOverlay.js';
 import { getBuildingInfo, getBuildingName, getUiStrings, hasCelebration } from './CampusInfo.js';
 import { computeAlerts, alertMap } from './CampusAlerts.js';
+import { LINK, buildLinkBridge, makeCampusKit, campusBridgeCfg, buildMfFar } from './IslandLink.js';
 
 var BASE_VIEW = 22;
 // DPR maksimum sekarang adaptif per tier kualitas (lihat detectQuality di CampusLook.js).
@@ -99,11 +103,14 @@ export function createCampusScene(THREE, container, gameState) {
     scene.add(forest.group);
     var shrubs = buildShrubs(A, THREE);
     scene.add(shrubs);
-    // Sisi sebelah pulau kampus dikosongkan: area itu dicadangkan untuk Manufaktur (belum dibangun).
-    // Kantor TIDAK lagi ditampilkan sebagai tetangga kampus; kantor hanya dibuka lewat gedung HQ.
+    // Pulau Manufaktur di seberang selat (barat) + jembatan jalan raya dari gerbang barat kampus.
+    // Kantor TIDAK ditampilkan sebagai tetangga kampus; kantor hanya dibuka lewat gedung HQ.
+    var farMf = buildMfFar(THREE, scene, -LINK.OFFSET);
+    var bridge = buildLinkBridge(THREE, makeCampusKit(THREE, A), campusBridgeCfg());
+    scene.add(bridge.group);
     var shadowDirty = true;       // shadow map statis: hitung ulang hanya saat geometri berubah
     // Animasi ambient (mobil, awan, asap, drone, dll). Dimatikan bila pengguna memilih reduced-motion.
-    var life = prefersReducedMotion() ? null : createCampusLife(THREE, A, scene, forest.nodes);
+    var life = prefersReducedMotion() ? null : createCampusLife(THREE, A, scene, forest.nodes, bridge);
     var ambient = !!life;
     fx.setImmediate(!ambient);
     var loopRaf = 0, loopTimer = 0, lastFrame = 0, inView = true;
@@ -453,7 +460,8 @@ export function createCampusScene(THREE, container, gameState) {
         unitsPerPixel: function (zoom) { return (BASE_VIEW / zoom) / Math.max(1, container.clientHeight); },
         maxZoom: 3.2,                // detail halus untuk zoom dekat
         minZoom: 0.5,                // zoom-out cukup jauh untuk melihat seluruh pulau 30x30
-        limit: 16,                   // batas geser: pulau kampus saja (sisi sebelah dicadangkan untuk Manufaktur)
+        // batas geser: pulau kampus + jembatan + sisi dekat Pulau Manufaktur di barat (tak simetris)
+        bounds: { minX: -(LINK.OFFSET - 12), maxX: 16, minZ: -16, maxZ: 16 },
         onChange: function () { applyCamera(); requestRender(); },
         reduceMotion: prefersReducedMotion,
         onTap: handleTap
@@ -488,6 +496,7 @@ export function createCampusScene(THREE, container, gameState) {
         if (w) p.window = dark ? w.dark : w.light;     // warna jendela ikut era
         A.applyPalette(p, readAccent());
         A.setEnvIntensity(look.envI);
+        farMf.setDark(dark);
         fx.setAccent(readAccent(), dark);
         if (life) life.setTheme(dark, p.window);
     }
@@ -574,6 +583,8 @@ export function createCampusScene(THREE, container, gameState) {
             for (var dk in dyn) disposeObject(dyn[dk].group);   // buffer InstancedMesh bangunan
             forest.dispose();
             disposeObject(shrubs);
+            farMf.dispose();
+            scene.remove(bridge.group);
             rig.dispose();
             A.dispose();
             renderer.dispose();

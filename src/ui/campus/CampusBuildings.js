@@ -1,4 +1,4 @@
-// FILE: src/ui/campus/CampusBuildings.js
+// FILE: src/ui/campus/CampusBuildings.js  (REPLACE — v2027.65: koridor jembatan ke Pulau Manufaktur bebas pohon/bukit/batu)
 // v2027.62 — gedung & aturan level dibaca dari REGISTRI (campus-buildings.data.js): satu sumber
 // kebenaran untuk 3D, kartu info, alert, dan panel. + Pabrik Komponen (pcplant) & Pusat Desain
 // Chip (chipdesign) yang terhubung ke sistem game. Logika level lama tidak berubah.
@@ -105,6 +105,8 @@ function _onReserved(x, z, pad) {
 // Zona inti yang tidak boleh dimasuki dekorasi luar (jalan, teluk, gerbang, monorail, kincir angin).
 function _inCore(x, z) { return Math.abs(x) < 16.3 && Math.abs(z) < 16.3; }
 function _inland(x, z, margin) { return Math.hypot(x, z) < islandRadius(Math.atan2(z, x)) - margin; }
+// v2027.65: koridor jembatan ke Pulau Manufaktur (jalan barat z = 0 menerus ke barat). Dekorasi dikosongkan dari sini.
+function _inLinkCorridor(x, z, pad) { return x < -14.5 && Math.abs(z) < 3.4 + (pad || 0); }
 
 // Bukit rendah di pinggiran pulau (setengah bola pipih) -> kedalaman visual, bukan gedung.
 export var HILLS = (function () {
@@ -119,7 +121,7 @@ export var HILLS = (function () {
         for (var i = 0; i < out.length; i++) { if (Math.hypot(out[i][0] - x, out[i][1] - z) < out[i][2] + rad + 1.5) { ok = false; break; } }
         if (ok) out.push([x, z, rad, 0.22 + rnd() * 0.2]);
     }
-    return out;
+    return out.filter(function (h) { return !_inLinkCorridor(h[0], h[1], h[2]); });   // bukan di jalur jembatan
 })();
 
 // Pohon: 29 di inti kampus + hutan berkelompok di pinggiran pulau (di luar zona inti & bukit).
@@ -155,7 +157,7 @@ export const TREE_SPOTS = (function () {
             if (--cnt === 0) break;
         }
     }
-    return out.concat(outer);
+    return out.concat(outer).filter(function (p) { return !_inLinkCorridor(p[0], p[1]); });   // jalur jembatan bebas pohon
 })();
 
 // Kolam kecil di utara plaza (dipakai juga oleh CampusLife untuk riak air).
@@ -707,7 +709,7 @@ function addScenery(g, A, THREE) {
         var surf = f < 1.05 ? -0.03 : (f < 1.08 ? -0.26 : (f < 1.115 ? -0.455 : -0.47));   // tinggi permukaan di lapisan itu
         rocks.push([Math.cos(th) * rr, surf + s0 * 0.25, Math.sin(th) * rr, s0 * (1 + rnd() * 0.6), s0 * (0.7 + rnd() * 0.5), s0 * (1 + rnd() * 0.6), rnd() * 6]);
     }
-    g.add(instanced(A, THREE, rg, 'rock', rocks, function (n, c) { var v = 0.85 + rnd() * 0.25; c.setRGB(v, v, v); }));
+    g.add(instanced(A, THREE, rg, 'rock', rocks.filter(function (r) { return !_inLinkCorridor(r[0], r[2]); }), function (n, c) { var v = 0.85 + rnd() * 0.25; c.setRGB(v, v, v); }));
 
     // riak ombak: garis busa tipis di laut sekeliling pulau
     var waves = [];

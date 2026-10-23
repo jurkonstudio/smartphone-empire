@@ -1,4 +1,6 @@
-// FILE: src/ui/campus/CampusLife.js
+// FILE: src/ui/campus/CampusLife.js  (REPLACE — v2027.65: mobil jalan barat menyeberangi jembatan ke Manufaktur)
+// v2027.65 — jalan barat diperpanjang melewati jembatan sampai jalan raya Pulau Manufaktur. Mobil naik-turun
+// mengikuti dek (link.heightAt), kecepatan dunia tetap sama (diskalakan terhadap panjang jalan), + 4 mobil.
 // v2027.62 — konstanta bersama (kolam, monorail, slot pabrik) diambil dari CampusBuildings (satu sumber);
 // lintasan monorail diperbaiki agar kereta berjalan persis di dalam rel; asap pabrik kini mengikuti
 // status produksi Fab (setFactoryBusy dipanggil dari CampusScene).
@@ -15,14 +17,16 @@ import { POND, RAIL, SLOTS } from './CampusBuildings.js';
 var CAR_COLORS = [0xef4444, 0xf59e0b, 0x10b981, 0x6366f1, 0xf8fafc, 0x1f2937, 0xec4899];
 var WALK_COLORS = [0xf97316, 0x3b82f6, 0xa855f7, 0x14b8a6, 0xeab308, 0xef4444];
 var ROAD_Z = { from: 14.6, to: 3.6 };     // jalan selatan: x = lane, z dari tepi ke plaza
-var ROAD_X = { from: -14.6, to: -3.6 };   // jalan barat:   z = lane, x dari tepi ke plaza
+var ROAD_X = { from: -41.0, to: -3.6 };   // jalan barat:   z = lane, x dari Pulau Manufaktur (lewat jembatan) ke plaza
+var ROAD_X_BASE = 11;                     // panjang jalan barat lama -> kecepatan dunia mobil tetap sama
+var SPD_X = ROAD_X_BASE / Math.abs(ROAD_X.to - ROAD_X.from);
 var FACTORY = { x: SLOTS.factory[0], z: SLOTS.factory[1], W: [0, 3.2, 3.4, 3.6], H: [0, 1.3, 1.5, 1.8] }; // W/H sama dgn buildFactory
 var PORT = { x: 12.5, z: 11.8 };          // kapal bersandar di sisi dermaga (slot port 11.0,6.8 + BAY)
 var CURB_Y = 0.09;                        // tinggi trotoar (pejalan berdiri di atasnya)
 var PUFFS = 9;
 var FLY_BASE = [[-1.4, -6.6], [2.5, -5.6], [-3, -5.5], [4.4, -4.4], [-7, -6], [8, -4], [-8, 5], [7.5, 6.5]];
 
-export function createCampusLife(THREE, A, scene, trees) {
+export function createCampusLife(THREE, A, scene, trees, link) {
     var root = new THREE.Group();
     scene.add(root);
     var mats = [];
@@ -84,6 +88,11 @@ export function createCampusLife(THREE, A, scene, trees) {
     addCar('x', -0.5, false, 0.16, 0.10, 4);
     addCar('x', -0.5, false, 0.16, 0.38, 5);
     addCar('x', -0.5, false, 0.16, 0.65, 6);
+    // jalan lebih panjang (jembatan) -> tambahan lalu lintas supaya tidak sepi
+    addCar('x',  0.5, true,  0.18, 0.45, 5);
+    addCar('x',  0.5, true,  0.18, 0.95, 'bus');
+    addCar('x', -0.5, false, 0.15, 0.88, 1);
+    addCar('x', -0.5, false, 0.15, 0.52, 2);
 
     // ---------- pejalan kaki (di trotoar) ----------
     var walkers = [];
@@ -233,12 +242,12 @@ export function createCampusLife(THREE, A, scene, trees) {
         // mobil + bus
         for (i = 0; i < cars.length; i++) {
             c = cars[i];
-            s = (c.s0 + t * c.speed) % 1;
+            s = (c.s0 + t * (c.axis === 'x' ? c.speed * SPD_X : c.speed)) % 1;
             var road = c.axis === 'z' ? ROAD_Z : ROAD_X;
             var a = c.inbound ? road.from : road.to, b = c.inbound ? road.to : road.from;
             var pos = lerp(a, b, s), dirv = b > a ? 1 : -1;
             if (c.axis === 'z') { c.g.position.set(c.lane, 0.06, pos); tmpDir.x = 0; tmpDir.z = dirv; }
-            else { c.g.position.set(pos, 0.06, c.lane); tmpDir.x = dirv; tmpDir.z = 0; }
+            else { c.g.position.set(pos, link ? link.heightAt(pos) : 0.06, c.lane); tmpDir.x = dirv; tmpDir.z = 0; }
             c.g.rotation.y = Math.atan2(-tmpDir.z, tmpDir.x);
             f = Math.min(1, s / 0.1, (1 - s) / 0.1);
             c.g.scale.setScalar(Math.max(0.001, f));
