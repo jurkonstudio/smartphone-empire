@@ -23,7 +23,7 @@ export const FAI_CONFIG = {
     // Diskon biaya pengembangan fitur OS berbasis AI (0.20 = 20%). Ubah di sini untuk menyeimbangkan.
     osAiDiscount: 0.20,
     // Fitur OS yang kena diskon.
-    osAiFeatures: ['fw_ai_on_device', 'fw_ondevice_llm', 'fw_ai_agent'],
+    osAiFeatures: ['fw_ai_on_device', 'fw_ondevice_llm', 'fw_ai_agent', 'fw_agentic_os', 'fw_agent_guard', 'fw_agent_store'],
     // Saran desain: markup harga = designMarkupBase + (skor mutu / 100) * designMarkupSpan.
     // Skor mutu 0 -> x1.35, skor 100 -> x2.10 dari biaya produksi per unit.
     designMarkupBase: 1.35,

@@ -21,6 +21,7 @@ import { getMacro } from '../core/MacroModel.js';
 import { COMPETITORS } from '../data/competitors.data.js';
 import { interpShare } from '../data/competitors/helpers.js';
 import { COMPETITOR_ACTIONS } from '../data/competitor-actions.data.js';
+import { isMemoryCrunchActive } from '../data/supply-shock.data.js';
 import { absMonth } from './CompetitorSystem.js';
 
 const CFG = COMPETITOR_ACTIONS;
@@ -74,6 +75,7 @@ export class CompetitorActionSystem {
         const playerShare = data.market.share || 0;
         const p = clamp(playerShare / CFG.market.pressureRefShare, 0, 1);
         const recession = getMacro(data.time, BALANCE.macro).demandCycle < CFG.market.recessionCycleBelow;
+        const crunch = isMemoryCrunchActive(data.time); // [paket kompetitor] krisis memori
 
         // Bersihkan brand yang sudah tidak aktif (cegah entri yatim).
         for (const id in mods) { if (!entities[id]) delete mods[id]; }
@@ -92,13 +94,20 @@ export class CompetitorActionSystem {
             // 2) Pilih aksi (bobot: agresivitas + kondisi pasar)
             const aggr = CFG.aggressionByPersonality[comp.personality];
             const a = (aggr === undefined ? CFG.defaultAggression : aggr);
+            let small = false;
+            if (crunch) {
+                const bs = interpShare(comp.shareByYear, snap.currentYear);
+                small = (bs === null || bs === undefined) ? true : bs < CFG.memoryCrunch.smallBrandShareBelow;
+            }
             let total = 0;
             for (let i = 0; i < POOL_KEYS.length; i++) {
                 const def = CFG.pool[POOL_KEYS[i]];
                 let w = def.weight
                     * (1 + def.aggressionGain * (2 * a - 1))
                     * (1 + def.pressureGain * p)
-                    * (1 + (recession ? def.recessionGain : 0));
+                    * (1 + (recession ? def.recessionGain : 0))
+                    * (1 + (crunch ? (def.crunchGain || 0) : 0))
+                    * (1 + (crunch && small && POOL_KEYS[i] === 'idle' ? CFG.memoryCrunch.smallBrandIdleGain : 0));
                 if (w < 0.05) w = 0.05;
                 this._weights[i] = w;
                 total += w;

@@ -12,7 +12,7 @@ import {
     getComponentById, getComponentsByCategory, getBodyColorById
 } from '../data/components.data.js';
 import { getCampaignById, MARKETING_CAMPAIGNS } from '../data/marketing.data.js';
-import { resolveComponentCost, getBuiltPlantEffect, getPlantTypeForCategory } from '../data/material-plants.data.js';
+import { resolveComponentCost, getMarketPrice, getBuiltPlantEffect, getPlantTypeForCategory } from '../data/material-plants.data.js';
 import { getLicenseById, getLicenseStatsAtYear } from '../data/os.data.js';
 import { computeTechEdge, getMasteryStatBonus, RND_TRACKS } from '../data/research.data.js';
 import { getMacro, reviewBaseScore } from '../core/MacroModel.js';
@@ -469,12 +469,13 @@ export class ProductSystem {
     // mengurangi stok dan mengembalikan tagihan. Penagihan dilakukan pemanggil.
     _quoteComponents(cfg, qty) {
         var cps = this._componentPlants;
+        var self = this;
         var bill = 0;
         [cfg.batteryId, cfg.displayId, cfg.chipId, cfg.cameraId, cfg.ramId].forEach(function (id) {
             var comp = getComponentById(id);
             if (!comp) return;
             var have = cps ? cps.getInventory(id) : 0;
-            bill += Math.max(0, qty - have) * (comp.costPerUnit || 0);
+            bill += Math.max(0, qty - have) * getMarketPrice(self.state.data, comp);
         });
         return Math.round(bill);
     }

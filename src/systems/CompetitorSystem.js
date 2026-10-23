@@ -6,6 +6,7 @@ import { BALANCE } from '../data/balance.data.js';
 import { TIME_CONFIG } from '../config/time.config.js';
 import { ToastService } from '../core/ToastService.js';
 import { LOG_TYPES } from '../config/constants.js';
+import { COMPETITOR_ACTIONS } from '../data/competitor-actions.data.js';
 import {
     COMPETITORS,
     getActiveCompetitors,
@@ -56,7 +57,11 @@ export class CompetitorSystem {
         const cs = data.competitorState;
         const active = getActiveCompetitors(year);
 
+        if (!cs.withdrawn || typeof cs.withdrawn !== 'object') cs.withdrawn = {};
+        if (!cs.lowShareYears || typeof cs.lowShareYears !== 'object') cs.lowShareYears = {};
+
         active.forEach(c => {
+            if (cs.withdrawn[c.id]) return; // [paket kompetitor] merek yang sudah menarik diri tidak disemai ulang
             if (!cs.entities[c.id]) {
                 cs.entities[c.id] = {
                     id: c.id,
@@ -91,6 +96,7 @@ export class CompetitorSystem {
         const year = snap.currentYear;
 
         this._seedForYear(year);
+        this._checkWithdrawals(year);
 
         const tierInc = BALANCE.competitors.aiResearchTierPerYear || 0.3;
         Object.keys(cs.entities).forEach(id => {
@@ -126,6 +132,38 @@ export class CompetitorSystem {
 
         cs.lastLifeEventYear = year;
         bus.emit('state:changed', data);
+    }
+
+    // [paket kompetitor, SPEKULATIF] Penarikan merek emergent berbasis ambang pangsa.
+    _checkWithdrawals(year) {
+        const cfg = COMPETITOR_ACTIONS.withdrawal;
+        if (!cfg || cfg.enabled === false || year < cfg.fromYear) return;
+        const data = this.state.data;
+        const cs = data.competitorState;
+        if (!cs.withdrawn) cs.withdrawn = {};
+        if (!cs.lowShareYears) cs.lowShareYears = {};
+        const mods = cs.actionMods || {};
+
+        Object.keys(cs.entities).forEach(id => {
+            const comp = getCompetitorById(id);
+            if (!comp || comp.isEcosystem) return;
+            let share = getHistoricalShare(id, year);
+            if (share === null) share = (cs.entities[id].currentShare || 0);
+            share += ((mods[id] || {}).modifier || 0);
+
+            if (share < cfg.shareBelow) cs.lowShareYears[id] = (cs.lowShareYears[id] || 0) + 1;
+            else cs.lowShareYears[id] = 0;
+            if (cs.lowShareYears[id] < cfg.consecutiveYears) return;
+
+            delete cs.entities[id];
+            if (mods[id]) delete mods[id];
+            cs.withdrawn[id] = year;
+            delete cs.lowShareYears[id];
+            const msg = comp.name + ' menarik diri dari pasar (simulasi: pangsa terlalu kecil bertahun-tahun).';
+            this.state.addLog(msg, LOG_TYPES.info);
+            ToastService.info('📰 ' + msg);
+            bus.emit('competitor:deactivated', { id: comp.id, name: comp.name, reason: 'withdrawn', year });
+        });
     }
 
     _onMonthChanged(snap) {

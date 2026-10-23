@@ -28,7 +28,7 @@ import { FAB_LEVELS } from './FabSystem.js';
 import { COMPONENTS, getComponentById } from '../data/components.data.js';
 import {
     PLANT_TYPES, PLANT_MIN_ORDER, PLANT_CYCLE_DAYS,
-    getPlantTypeById, getPlantLevelInfo, getPlantYield, resolveComponentCost,
+    getPlantTypeById, getPlantLevelInfo, getPlantYield, resolveComponentCost, getMarketPrice,
     getPlantMaintenance, getPlantCapital,
     INFRA_TAX_RATE_MONTHLY, EXTERNAL_PRICE_RATE, EXTERNAL_QUOTA_RATIO, EXTERNAL_PRICE_DECAY
 } from '../data/material-plants.data.js';
@@ -144,6 +144,12 @@ export class ComponentPlantSystem {
         return resolveComponentCost(this.state.data, comp);
     }
 
+    // [paket 2027-28] Harga pasar saat ini (costPerUnit x indeks krisis pasokan).
+    getMarketPrice(componentId) {
+        const comp = getComponentById(componentId);
+        return comp ? getMarketPrice(this.state.data, comp) : 0;
+    }
+
     getInventory(componentId) {
         const cp = this.state.data.componentPlants;
         return (cp && cp.inventory && cp.inventory[componentId]) || 0;
@@ -217,7 +223,7 @@ export class ComponentPlantSystem {
         const quota = Math.floor(info.capacityMonthly * EXTERNAL_QUOTA_RATIO);
         const sold = this._externalState().sold[typeId] || 0;
         const quotaLeft = Math.max(0, quota - sold);
-        const base = (comp.costPerUnit || 0) * EXTERNAL_PRICE_RATE;
+        const base = getMarketPrice(this.state.data, comp) * EXTERNAL_PRICE_RATE;
         const price = base * (1 - EXTERNAL_PRICE_DECAY * Math.min(1, sold / Math.max(1, quota)));
         const effCost = this.getEffectiveUnitCost(typeId, componentId);
         const margin = price - effCost;
@@ -243,7 +249,7 @@ export class ComponentPlantSystem {
         const ext = this._externalState();
         const sold = ext.sold[typeId] || 0;
         // Harga rata-rata batch: harga turun linear sepanjang kuota.
-        const base = (comp.costPerUnit || 0) * EXTERNAL_PRICE_RATE;
+        const base = getMarketPrice(this.state.data, comp) * EXTERNAL_PRICE_RATE;
         const midRatio = Math.min(1, (sold + qty / 2) / Math.max(1, q.quota));
         const avgPrice = base * (1 - EXTERNAL_PRICE_DECAY * midRatio);
         const revenue = Math.round(avgPrice * qty);
@@ -428,7 +434,7 @@ export class ComponentPlantSystem {
         const cp = this.state.data.componentPlants;
         const comp = getComponentById(componentId);
         qty = Math.max(0, Math.floor(qty || 0));
-        if (!comp || !cp) return { fromStock: 0, shortfall: qty, marketCost: (comp ? comp.costPerUnit || 0 : 0) * qty };
+        if (!comp || !cp) return { fromStock: 0, shortfall: qty, marketCost: (comp ? getMarketPrice(this.state.data, comp) : 0) * qty };
 
         const have = this.getInventory(componentId);
         const used = Math.min(have, qty);
@@ -440,7 +446,7 @@ export class ComponentPlantSystem {
             // Penghematan: selisih harga pasar vs biaya efektif internal.
             const pt = PLANT_TYPES.find(p => p.category === comp.category);
             if (pt) {
-                const saved = ((comp.costPerUnit || 0) - this.getEffectiveUnitCost(pt.id, componentId)) * used;
+                const saved = (getMarketPrice(this.state.data, comp) - this.getEffectiveUnitCost(pt.id, componentId)) * used;
                 cp.savings = (cp.savings || 0) + saved;
             }
             bus.emit('state:changed', this.state.data);
@@ -449,7 +455,7 @@ export class ComponentPlantSystem {
         return {
             fromStock: used,
             shortfall: shortfall,
-            marketCost: Math.round((comp.costPerUnit || 0) * shortfall * 100) / 100
+            marketCost: Math.round(getMarketPrice(this.state.data, comp) * shortfall * 100) / 100
         };
     }
 

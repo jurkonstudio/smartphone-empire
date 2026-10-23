@@ -26,6 +26,8 @@ import '../data/news-competitor-releases.s2.data.js';
 
 // [TAMBAHAN BARU] Import data 2018-2026
 import { MONTHLY_HEADLINES_2018_2026 } from '../data/news-headlines-2018-2026.data.js';
+// [paket 2027-28] Berita skenario 2027-2030 (spekulatif).
+import { MONTHLY_HEADLINES_2027_2030 } from '../data/news-headlines-2027-2030.data.js';
 
 // [Sesi 1] Estimasi reaksi bursa, disesuaikan ke rezim indeks pasar.
 import { estimateNewsMarketReaction } from './MarketIndexAdjuster.js';
@@ -51,7 +53,7 @@ function _getLocalizedHeadline(year, month) {
     var key = year + '-' + month;
     
     // [PERUBAHAN BARU] Prioritaskan data 2018-2026
-    var newData = MONTHLY_HEADLINES_2018_2026[key];
+    var newData = MONTHLY_HEADLINES_2018_2026[key] || MONTHLY_HEADLINES_2027_2030[key];
     if (newData) {
         var isEn = _currentLang() === 'en';
         return {
