@@ -1,4 +1,7 @@
-// FILE: src/ui/manufacture/ManufactureScene.js  (BARU — Peta Manufaktur 3D)
+// FILE: src/ui/manufacture/ManufactureScene.js  (REPLACE — v2027.65: Pulau Kampus di seberang + jembatan)
+// v2027.65 — Pulau Kampus tampil sebagai siluet di timur (selat ~12 unit) dan tersambung jembatan jalan raya
+// dari ujung timur jalan raya Manufaktur ke gerbang barat Kampus. Truk menyeberangi jembatan sampai jalan Kampus
+// (naik-turun mengikuti dek, muncul/menghilang dengan skala halus). Batas geser kamera diperlebar ke timur.
 // Peta isometrik pulau industri yang menampilkan SEMUA pabrik di game dan terhubung ke data + panelnya:
 //
 //   Fab Chip   -> data.fab (FabSystem)                  : hall + cerobong + menara pendingin, tumbuh sesuai level
@@ -26,6 +29,7 @@ import { createLookRig, detectQuality } from '../campus/CampusLook.js';
 import { createCampusControls } from '../campus/CampusControls.js';
 import { BASE_VIEW, MAX_DPR, FRAME_MS, MIN_RESIZE_DELTA, NARROW_PX, clamp, tint, hexCss, readAccent, prefersReducedMotion } from '../office/OfficeConfig.js';
 import { PLOTS, PLOT_BY_ID, CHIP_ORDER, PIPES, plotState, allStates, plotSig, describePlot, plotTitle, runAction, ms } from './ManufactureLogic.js';
+import { LINK, buildLinkBridge, mfBridgeCfg, buildCampusFar } from '../campus/IslandLink.js';
 
 // [terang, gelap]
 var COLORS = {
@@ -352,6 +356,23 @@ export function createManufactureScene(THREE, container, gameState) {
     [[ACC.fab, 1, 0.0], [ACC.battery, 1, 0.5], [ACC.camera, -1, 0.25], [ACC.display, -1, 0.75]].forEach(function (c, i) {
         truckObjs.push({ g: makeTruck(c[0], c[1]), dir: c[1], off: c[2], lane: c[1] > 0 ? 0.62 : -0.62, idx: i });
     });
+
+    // jembatan jalan raya ke Pulau Kampus (timur) + siluet Pulau Kampus. Adaptor memakai geometri/material scene ini
+    // (ikut tema lewat COLORS & di-dispose bersama G/M). Peta Kampus memakai jembatan yang sama dari sisi seberang.
+    var LINK_ROLE = { road: 'road', curb: 'curb', line: 'roadLine', post: 'steel', pole: 'metal', lamp: 'lamp' };
+    function noShadow(m) { m.castShadow = false; m.receiveShadow = false; return m; }
+    var linkKit = {
+        mat: function (role) { return M[LINK_ROLE[role]]; },
+        custom: function (key, fn) { return G[key] || (G[key] = fn()); },
+        box: function (g, role, w, h, d, x, y, z) { return noShadow(box(g, LINK_ROLE[role], w, h, d, x, y, z)); },
+        cyl: function (g, role, r, h, x, y, z) { return noShadow(cyl(g, LINK_ROLE[role], r, h, x, y, z)); },
+        sph: function (g, role, r, x, y, z) { return noShadow(sph(g, LINK_ROLE[role], r, x, y, z)); }
+    };
+    var linkBridge = buildLinkBridge(THREE, linkKit, mfBridgeCfg());
+    shell.add(linkBridge.group);
+    var farCampus = buildCampusFar(THREE, scene, LINK.OFFSET);
+    var TRUCK_X0 = -16, TRUCK_X1 = LINK.OFFSET - LINK.CAMPUS_ROAD_END + 3;   // dari ujung barat plaza sampai jalan Kampus di seberang
+    var TRUCK_RATE = 0.055 * 32 / (TRUCK_X1 - TRUCK_X0);                       // kecepatan dunia sama dengan sebelumnya
 
     // dermaga + kapal kargo (milik Pusat Logistik; dibangun di grup petak hub)
     // ============================================================
@@ -770,6 +791,7 @@ export function createManufactureScene(THREE, container, gameState) {
         Object.keys(COLORS).forEach(function (k) { M[k].color.setHex(COLORS[k][ix]); });
         M.win.emissive.setHex(dark ? tint(COLORS.win[1], -0.35) : 0x000000);
         M.shade.opacity = dark ? 0.22 : 0.14;
+        farCampus.setDark(dark);
         M.selRing.color.setHex(accentHex);
         M.lamp.color.setHex(dark ? 0xffe39a : 0xfff1c4);
         lampPosts.forEach(function (l) { var s = dark ? 0.16 : 0.12; l.scale.set(s, s, s); });
@@ -888,9 +910,10 @@ export function createManufactureScene(THREE, container, gameState) {
             tr = truckObjs[i];
             tr.g.visible = i < activeTrucks;
             if (!tr.g.visible) continue;
-            u = ((sec * 0.055 + tr.off) % 1);
-            var x = tr.dir > 0 ? -16 + u * 32 : 16 - u * 32;
-            tr.g.position.set(x, 0.13, tr.lane);
+            u = ((sec * TRUCK_RATE + tr.off) % 1);
+            var x = tr.dir > 0 ? TRUCK_X0 + u * (TRUCK_X1 - TRUCK_X0) : TRUCK_X1 - u * (TRUCK_X1 - TRUCK_X0);
+            tr.g.position.set(x, linkBridge.heightAt(x), tr.lane);
+            tr.g.scale.setScalar(Math.max(0.001, Math.min(1, u / 0.05, (1 - u) / 0.05)));   // muncul/hilang halus di ujung jalan
         }
         for (i = 0; i < pipeObjs.length; i++) {
             var po = pipeObjs[i];
@@ -1206,7 +1229,8 @@ export function createManufactureScene(THREE, container, gameState) {
 
     controls = createCampusControls(canvas, {
         unitsPerPixel: function (zoom) { return (BASE_VIEW / zoom) / Math.max(1, container.clientHeight); },
-        minZoom: 0.2, maxZoom: 3, limit: 20,
+        minZoom: 0.2, maxZoom: 3,
+        bounds: { minX: -20, maxX: LINK.OFFSET - 12, minZ: -20, maxZ: 20 },   // geser ke timur sampai jembatan/Pulau Kampus
         onChange: function () { applyCamera(); requestRender(); },
         onTap: handleTap
     });
@@ -1295,6 +1319,7 @@ export function createManufactureScene(THREE, container, gameState) {
             canvas.removeEventListener('webglcontextlost', onCtxLost);
             canvas.removeEventListener('webglcontextrestored', onCtxRestored);
             controls.dispose();
+            farCampus.dispose();
             plotList.forEach(function (r) {
                 if (r.label && r.label.material) r.label.material.dispose();
                 if (r.alertSp && r.alertSp.material) r.alertSp.material.dispose();
