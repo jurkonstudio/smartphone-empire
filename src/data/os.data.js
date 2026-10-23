@@ -31,11 +31,15 @@ export const OS_FEATURES = [
       statEffects: { stability: 0, speed: 0, features: 3, security: 0, design: 3 }, requiresFeatures: [], requiresResearch: ['net_edge'] },
     { id: 'fw_j2me', name: 'Java Mobile (J2ME)', description: 'Platform aplikasi dan game Java.', era: 'firmware', minYear: 2000, devCost: 6000, devDays: 8,
       statEffects: { stability: 0, speed: -1, features: 7, security: 0, design: 0 }, requiresFeatures: [], requiresResearch: ['net_gprs'] },
+    { id: 'fw_irda', name: 'Transfer Inframerah', description: 'Kirim kontak dan file lewat port inframerah (IrDA).', era: 'firmware', minYear: 2001, devCost: 2500, devDays: 4,
+      statEffects: { stability: 0, speed: 0, features: 2, security: 0, design: 0 }, requiresFeatures: [], requiresResearch: ['net_irda'] },
+    { id: 'fw_mms', name: 'MMS', description: 'Kirim pesan multimedia berisi foto dan nada lewat jaringan data.', era: 'firmware', minYear: 2002, devCost: 5000, devDays: 6,
+      statEffects: { stability: 0, speed: 0, features: 4, security: 0, design: 1 }, requiresFeatures: ['fw_sms'], requiresResearch: ['net_gprs'] },
     { id: 'fw_wap_browser', name: 'Browser WAP', description: 'Browser sederhana untuk situs WAP.', era: 'firmware', minYear: 2001, devCost: 5000, devDays: 7,
       statEffects: { stability: 0, speed: 0, features: 5, security: 0, design: 0 }, requiresFeatures: [], requiresResearch: ['net_gprs'] },
     { id: 'fw_touch_basic', name: 'Layar Sentuh Resistif', description: 'Dukungan stylus dan layar sentuh resistif.', era: 'firmware', minYear: 2003, devCost: 9000, devDays: 10,
       statEffects: { stability: -1, speed: 0, features: 5, security: 0, design: 4 }, requiresFeatures: [], requiresResearch: ['layar_touch_res'] },
-    { id: 'fw_camera_app', name: 'Aplikasi Kamera', description: 'Aplikasi kamera dasar dan MMS.', era: 'firmware', minYear: 2003, devCost: 6000, devDays: 7,
+    { id: 'fw_camera_app', name: 'Aplikasi Kamera', description: 'Aplikasi kamera dasar.', era: 'firmware', minYear: 2003, devCost: 6000, devDays: 7,
       statEffects: { stability: 0, speed: 0, features: 5, security: 0, design: 2 }, requiresFeatures: [], requiresResearch: ['cam_vga'] },
     { id: 'fw_bt_basic', name: 'Bluetooth Dasar', description: 'Transfer file dan headset via Bluetooth.', era: 'firmware', minYear: 2004, devCost: 6000, devDays: 7,
       statEffects: { stability: 1, speed: 0, features: 4, security: 1, design: 0 }, requiresFeatures: [], requiresResearch: [] },
@@ -45,6 +49,8 @@ export const OS_FEATURES = [
       statEffects: { stability: -1, speed: 3, features: 6, security: 0, design: 0 }, requiresFeatures: [], requiresResearch: ['chip_dual'] },
     { id: 'fw_browser_mobile', name: 'Browser Mobile Penuh', description: 'Browser web penuh dengan HTML.', era: 'firmware', minYear: 2005, devCost: 10000, devDays: 10,
       statEffects: { stability: 0, speed: 1, features: 7, security: 0, design: 1 }, requiresFeatures: ['fw_wap_browser'], requiresResearch: ['net_3g'] },
+    { id: 'fw_wifi', name: 'Wi-Fi', description: 'Terhubung ke jaringan Wi-Fi rumah dan kantor untuk data lebih cepat.', era: 'firmware', minYear: 2005, devCost: 9000, devDays: 9,
+      statEffects: { stability: -1, speed: 1, features: 5, security: 0, design: 0 }, requiresFeatures: [], requiresResearch: ['net_wifi'] },
     { id: 'fw_touch', name: 'UI Multitouch', description: 'Antarmuka kapasitif multitouch dengan gestur.', era: 'touch', minYear: 2007, devCost: 20000, devDays: 14,
       statEffects: { stability: 1, speed: 2, features: 6, security: 0, design: 8 }, requiresFeatures: [], requiresResearch: ['layar_touch_cap'] },
     { id: 'fw_appstore', name: 'App Store', description: 'Toko aplikasi resmi untuk developer pihak ketiga.', era: 'touch', minYear: 2008, devCost: 30000, devDays: 18,
@@ -168,8 +174,8 @@ export const BUG_TEMPLATES = [
     { id: 'bug_bat_drain', name: 'Baterai Cepat Habis', severity: 2, satisfactionHit: 6, reputationHit: 3, patchCost: 4000, patchDays: 6, minYear: 2000, maxYear: 2008 },
     { id: 'bug_gprs_fail', name: 'GPRS Gagal Tersambung', severity: 3, satisfactionHit: 7, reputationHit: 4, patchCost: 8000, patchDays: 8, minYear: 2001, maxYear: 2007, requiresFeature: 'fw_wap_browser' },
     { id: 'bug_java_crash', name: 'Aplikasi Java Crash', severity: 2, satisfactionHit: 5, reputationHit: 2, patchCost: 6000, patchDays: 7, minYear: 2002, maxYear: 2009, requiresFeature: 'fw_j2me' },
-    { id: 'bug_mms_fail', name: 'MMS Gagal Terkirim', severity: 2, satisfactionHit: 4, reputationHit: 2, patchCost: 5000, patchDays: 5, minYear: 2003, maxYear: 2008, requiresFeature: 'fw_camera_app' },
-    { id: 'bug_ir_fail', name: 'Transfer Inframerah Terputus', severity: 1, satisfactionHit: 3, reputationHit: 1, patchCost: 3000, patchDays: 4, minYear: 2002, maxYear: 2006 },
+    { id: 'bug_mms_fail', name: 'MMS Gagal Terkirim', severity: 2, satisfactionHit: 4, reputationHit: 2, patchCost: 5000, patchDays: 5, minYear: 2003, maxYear: 2008, requiresFeature: 'fw_mms' },
+    { id: 'bug_ir_fail', name: 'Transfer Inframerah Terputus', severity: 1, satisfactionHit: 3, reputationHit: 1, patchCost: 3000, patchDays: 4, minYear: 2002, maxYear: 2006, requiresFeature: 'fw_irda' },
 
     // ============================================================
     // ERA 2: Kamera, Multimedia, 3G Awal (2004 - 2006)
@@ -184,7 +190,7 @@ export const BUG_TEMPLATES = [
     // ERA 3: Layar Sentuh & Smartphone Awal (2007 - 2009)
     // ============================================================
     { id: 'bug_touch_unresponsive', name: 'Layar Sentuh Kurang Responsif', severity: 3, satisfactionHit: 9, reputationHit: 5, patchCost: 15000, patchDays: 12, minYear: 2007, maxYear: 2015, requiresFeature: 'fw_touch' },
-    { id: 'bug_wifi_drop', name: 'Koneksi Wi-Fi Terputus', severity: 3, satisfactionHit: 7, reputationHit: 4, patchCost: 12000, patchDays: 10, minYear: 2007, maxYear: 2018, requiresFeature: 'fw_browser_mobile' },
+    { id: 'bug_wifi_drop', name: 'Koneksi Wi-Fi Terputus', severity: 3, satisfactionHit: 7, reputationHit: 4, patchCost: 12000, patchDays: 10, minYear: 2006, maxYear: 2018, requiresFeature: 'fw_wifi' },
     { id: 'bug_browser_crash', name: 'Browser Sering Crash', severity: 3, satisfactionHit: 7, reputationHit: 4, patchCost: 15000, patchDays: 14, minYear: 2008, maxYear: 2016, requiresFeature: 'fw_browser_mobile' },
     { id: 'bug_appstore_fail', name: 'App Store Gagal Unduh', severity: 3, satisfactionHit: 8, reputationHit: 5, patchCost: 20000, patchDays: 15, minYear: 2008, maxYear: 2018, requiresFeature: 'fw_appstore' },
     { id: 'bug_gps_slow', name: 'GPS Lambat Dapat Lokasi', severity: 2, satisfactionHit: 5, reputationHit: 2, patchCost: 10000, patchDays: 8, minYear: 2009, maxYear: 2017, requiresFeature: 'fw_gps' },
