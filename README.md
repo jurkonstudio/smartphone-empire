@@ -43,7 +43,7 @@ Satu musim berakhir saat tanggal game memasuki **2051** (batas `endYear` 2050 di
 
 ## Isi game
 
-Angka di bawah dihitung langsung dari file data di repo ini (v0.2.1 plus perubahan yang belum masuk `patches.json`).
+Angka di bawah dihitung langsung dari file data di repo ini (v0.2.2, sudah tercatat di `patches.json`).
 
 ### 🧭 Navigasi
 
@@ -161,10 +161,10 @@ Bar bawah: **Home · HQ · Riset · Produk · Pasar · Setelan**.
 - **Leaderboard sebagian divalidasi server.** Statistik masih dikirim dari perangkat pemain. Server membatasi frekuensi sinkron, memeriksa invarian, dan menyembunyikan profil yang mencurigakan (`supabase/11`), serta menghitung level dan skor sendiri (`supabase/12` dan `15`). Nilai yang masih di dalam batas wajar tetap bisa dipalsukan, jadi belum bisa dianggap peringkat resmi.
 - **Penguncian top-up hanya di klien.** Fungsi server `create_payment_order` tetap bisa dipanggil akun yang login lewat API langsung. Pesanan tetap `pending` sampai admin menyetujui, tetapi kalau top-up memang harus tertutup total, tambahkan flag di server.
 - **Teks mentah di beberapa tempat.** Empat kunci terjemahan dipakai tanpa teks cadangan dan belum ada di kamus: `main.toast.fab_unlocked`, `wiz.warn.volume_cost`, `wiz.preview.unit_design`, `wiz.preview.unit_parts`. Selain itu ada 38 kunci baru (misalnya `team.recruit.*`, `team.nego.*`, `silstore.locked.*`) yang masih memakai teks cadangan dan belum digabung ke `src/data/i18n/en.js` dan `id.js`.
-- **`supabase/BACA-DULU.md` belum lengkap.** Tabelnya sudah memuat 01–09, 14, dan 15, tetapi file 10 (dua file), 11, 12, dan 13 belum tercantum. Selain itu, ia menyebut `functions/advisor-chat/` padahal foldernya `supabase/function/advisor-chat/`.
+- **`supabase/BACA-DULU.md` belum lengkap.** Tabelnya sudah memuat 01–09, 14, dan 15, tetapi file 10 (dua file), 11, 12, dan 13 belum tercantum. Selain itu, ia menyebut `functions/advisor-chat/` padahal foldernya `supabase/function/advisor-chat/` (sudah diperbaiki di 0.2.2).
 - **Tukar SIL → uang** memerlukan `supabase/10-tukar-sil.sql`. Tanpa file ini, pemanggilan gagal dan SIL tidak terpotong.
 - **Edge Function Asisten Bisnis (AI)** belum punya rate limit per pengguna dan CORS-nya terbuka (`*`). Jangan diaktifkan untuk publik luas sebelum itu ditambahkan. Detail di `SECURITY.md`.
-- **Catatan rilis belum lengkap.** `patches.json` baru memuat 0.2.1 (Asisten Bisnis). Hampir semua yang tercantum di bagian Versi di bawah belum tercatat.
+- **Catatan rilis belum lengkap.** `patches.json` sekarang memuat 0.2.2 (dan 0.2.1). Beberapa entri di bagian Versi di bawah belum dipindahkan ke `patches.json`.
 - **Screenshot di landing page** (`assets/img/landing/`) perlu diambil ulang. Gambar HQ masih menampilkan tab Kantor dan tata letak Ringkasan yang lama.
 - **Gate admin di sisi klien hanya kosmetik.** Admin yang sebenarnya diverifikasi di server lewat `is_admin()`.
 - **Office 3D Map** belum menampilkan dampak rekrut dan bonus trait dari `TeamSystem`. Ringkasan di peta masih dihitung sendiri.
@@ -269,7 +269,7 @@ Proyek ini masih berjalan. Catatan roadmap:
 
 ## Versi
 
-Versi terbaru yang tercatat: **0.2.1** (18 Oktober 2026). Daftar perubahan resmi ada di `patches.json` dan `PERF-CHANGES.md`.
+Versi terbaru yang tercatat: **0.2.2** (23 Oktober 2026). Daftar perubahan resmi ada di `patches.json` dan `PERF-CHANGES.md`.
 
 Perubahan yang sudah ada di kode tetapi belum masuk `patches.json`:
 - Navigasi Pasar (segmen, sub-wilayah, gelombang tren, 11 aspek opini, 26 viral event, promosi Amerika & Lainnya dan per segmen, panel UI di tab Pasar).
