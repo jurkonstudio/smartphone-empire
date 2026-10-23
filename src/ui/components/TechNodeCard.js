@@ -211,13 +211,13 @@ export function renderRndRow(info, opts) {
         var pct = run.durationDays > 0 ? Math.min(100, Math.round(run.progressDays / run.durationDays * 100)) : 0;
         actionHtml = '<div class="rnd-action-box">' +
             '<div class="rnd-progress-head">' +
-                '<span>Menuju Lv ' + run.targetLevel + '</span>' +
+                '<span>' + escapeHtml(t('osp.rnd.toward_lv', { n: run.targetLevel })) + '</span>' +
                 '<b data-rnd-pct="' + escapeHtml(info.id) + '">' + pct + '%</b>' +
             '</div>' +
             '<div class="rnd-bar-bg">' +
                 '<div class="rnd-bar-fill active" data-rnd-bar="' + escapeHtml(info.id) + '" style="width:' + pct + '%"></div>' +
             '</div>' +
-            '<button class="rnd-btn-cancel" ' + attr + '="cancel" data-rnd-id="' + escapeHtml(info.id) + '">Batalkan (Kembali 50%)</button>' +
+            '<button class="rnd-btn-cancel" ' + attr + '="cancel" data-rnd-id="' + escapeHtml(info.id) + '">' + escapeHtml(t('osp.rnd.cancel_refund')) + '</button>' +
         '</div>';
     } else if (info.status === 'available' || (info.status === 'locked' && info.blocker === 'cash')) {
         var can = info.status === 'available';
@@ -225,11 +225,11 @@ export function renderRndRow(info, opts) {
         var btnAttr = can ? attr + '="start" data-rnd-id="' + escapeHtml(info.id) + '"' : 'disabled';
         
         var costStr = _rndMoney(info.cost);
-        var etaStr = (info.etaDays || '?') + 'h';
+        var etaStr = t('osp.rnd.eta_short', { n: info.etaDays || '?' });
         
         var btnText = can 
-            ? '<span>' + iconUp + ' Upgrade Lv ' + (info.level + 1) + '</span><small>' + costStr + ' · ~' + etaStr + '</small>' 
-            : iconLock + ' ' + (info.reason || 'Kas Kurang');
+            ? '<span>' + iconUp + ' ' + escapeHtml(t('osp.rnd.upgrade_lv', { n: info.level + 1 })) + '</span><small>' + costStr + ' · ' + escapeHtml(etaStr) + '</small>' 
+            : iconLock + ' ' + escapeHtml(info.reason || t('osp.rnd.low_cash'));
 
         actionHtml = '<button class="' + btnCls + '" ' + btnAttr + '>' + btnText + '</button>';
     } else if (info.status === 'locked' && info.blocker === 'slots') {
@@ -237,23 +237,23 @@ export function renderRndRow(info, opts) {
         var canAfford = info.canAffordSlot !== false;
         
         if (slotCost === -1) {
-            actionHtml = '<button class="rnd-btn-disabled" disabled>' + iconWait + ' Slot Maksimal</button>';
+            actionHtml = '<button class="rnd-btn-disabled" disabled>' + iconWait + ' ' + escapeHtml(t('osp.rnd.slot_max')) + '</button>';
         } else {
             var bg = canAfford ? 'var(--success-soft)' : 'var(--bg-3)';
             var clr = canAfford ? 'var(--success)' : 'var(--text-tertiary)';
             var brd = canAfford ? '1px solid var(--success)' : '1px solid var(--border)';
             
             actionHtml = '<div style="display:flex; flex-direction:column; gap:6px; margin-top:4px;">' +
-                '<div style="font-size:10px; color:var(--warn); text-align:center; font-weight:600;">Slot R&D Penuh</div>' +
+                '<div style="font-size:10px; color:var(--warn); text-align:center; font-weight:600;">' + escapeHtml(t('osp.rnd.slots_full')) + '</div>' +
                 '<button class="rnd-btn-start" style="background:' + bg + '; color:' + clr + '; border:' + brd + ';" ' +
                     (canAfford ? attr + '="buy-slot"' : 'disabled') + '>' +
-                    '<span>' + iconPlus + ' Beli Slot Baru</span>' +
+                    '<span>' + iconPlus + ' ' + escapeHtml(t('osp.rnd.buy_slot')) + '</span>' +
                     '<small>' + _rndMoney(slotCost) + '</small>' +
                 '</button>' +
             '</div>';
         }
     } else {
-        actionHtml = '<div class="rnd-note">' + iconLock + ' ' + escapeHtml(info.reason || 'Terkunci') + '</div>';
+        actionHtml = '<div class="rnd-note">' + iconLock + ' ' + escapeHtml(info.reason || t('osp.rnd.locked')) + '</div>';
     }
 
     return '<div class="rnd-row">' +
@@ -267,7 +267,7 @@ export function renderRndRow(info, opts) {
         '<div class="rnd-meter">' +
             '<i class="rnd-meter-cap" style="width:' + capPct + '%"></i>' +
             '<i class="rnd-meter-fill" style="width:' + lvPct + '%"></i>' +
-            (benchPct !== null ? '<u class="rnd-meter-bench" style="left:' + benchPct + '%" title="Standar Pasar"></u>' : '') +
+            (benchPct !== null ? '<u class="rnd-meter-bench" style="left:' + benchPct + '%" title="' + escapeHtml(t('osp.rnd.market_std')) + '"></u>' : '') +
         '</div>' +
         actionHtml +
     '</div>';
