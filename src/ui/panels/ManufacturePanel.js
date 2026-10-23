@@ -152,8 +152,9 @@ function _renderPlantCard(sys, s, cash) {
                   esc(_tf('mf.plant.sell', 'Jual grosir')) + ' ' + _num(sellQty) + '</button>' +
                   '<div class="mf-short">' + esc(_tf('mf.plant.quota_left', 'Kuota bulan ini {n}', { n: _num(q.quotaLeft) })) + '</div>'
                 : '';
-            var priceTag = unit < c.costPerUnit
-                ? _money(unit) + ' <s>' + _money(c.costPerUnit) + '</s>'
+            var mkNow = sys.getMarketPrice(c.id);
+            var priceTag = unit < mkNow
+                ? _money(unit) + ' <s>' + _money(mkNow) + '</s>'
                 : _money(unit);
             rows.push('<div class="mf-row"><div class="mf-main">' +
                 '<div class="mf-name">' + esc(c.name) + '</div>' +
