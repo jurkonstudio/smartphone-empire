@@ -1,4 +1,4 @@
-// FILE: src/ui/panels/HqStyle.js  (BARU — v2027.64)
+// FILE: src/ui/panels/HqStyle.js  (REPLACE — v2027.64b: fade hanya saat pindah tab, tidak berkedip saat render ulang)
 // Gaya tab HQ (Kantor, Ringkasan, Tim, Bursa, Bank, Investasi, Riwayat): lebih lega, mudah disentuh, enak dipandang.
 // CSS disuntik SEKALI dari sini (pola yang sama dengan ExchangePanel/CampusOverlay), jadi style.css, density.css
 // dan panel lain TIDAK perlu diubah. Selektor memakai "html:root .hq-body ..." agar menang atas mode compact
@@ -29,10 +29,12 @@ var CSS = [
 '.hq-tab:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}',
 
 /* ============ BADAN PANEL ============ */
-'.hq-body{padding-bottom:12px;animation:hqFade .2s ease-out both;}',
+'.hq-body{padding-bottom:12px;}',
+/* fade hanya saat pindah tab/layar (.view-fresh dipasang main.js), bukan tiap render ulang akibat aksi pemain */
+'.view-fresh .hq-body{animation:hqFade .2s ease-out both;}',
 '@keyframes hqFade{from{opacity:0;}to{opacity:1;}}',
-'@media (prefers-reduced-motion:reduce){.hq-body{animation:none;}}',
-'html[data-perf="lite"] .hq-body{animation:none;}',
+'@media (prefers-reduced-motion:reduce){.view-fresh .hq-body{animation:none;}}',
+'html[data-perf="lite"] .view-fresh .hq-body{animation:none;}',
 
 /* ============ RINGKASAN (ov-*) ============ */
 'html:root .hq-body .ov-wrap{gap:12px;padding-bottom:4px;}',
