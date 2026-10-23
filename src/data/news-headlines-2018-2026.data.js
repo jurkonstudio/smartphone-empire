@@ -158,5 +158,99 @@ export const MONTHLY_HEADLINES_2018_2026 = {
         headline_en: '6G Network Trials Begin in Several Developed Countries',
         text_en: 'Although 5G is not yet widespread, developed countries are starting to conduct 6G network trials. This technology promises speeds up to 100 times faster than 5G and near-zero latency, paving the way for the era of holograms and the metaverse.',
         source: 'IEEE Spectrum', sourceId: 'ieee', tone: 'positive', era: 'ai_era', tags: ['6g', 'jaringan']
+    },
+
+    // ================= INTERNASIONAL (peristiwa teknologi dunia nyata) =================
+    '2018-1': {
+        headline: 'Meltdown dan Spectre: Cacat Keamanan Prosesor Terungkap Dunia',
+        text: 'Peneliti mengungkap dua kerentanan pada hampir semua prosesor modern, termasuk ponsel. Celah ini memungkinkan data sensitif dibaca tanpa izin. Produsen chip dan vendor OS bergegas merilis tambalan.',
+        headline_en: 'Meltdown and Spectre: Processor Security Flaws Revealed Worldwide',
+        text_en: 'Researchers disclose two vulnerabilities present in nearly all modern processors, including those in phones. The flaws let sensitive data be read without permission. Chipmakers and OS vendors rush out patches.',
+        source: 'Reuters', sourceId: 'reuters', tone: 'negative', era: 'smartphone_modern', tags: ['keamanan', 'chip', 'internasional']
+    },
+    '2018-5': {
+        headline: 'Aturan Privasi GDPR Berlaku di Uni Eropa',
+        text: 'Regulasi perlindungan data GDPR mulai berlaku. Perusahaan teknologi dan produsen ponsel wajib meminta persetujuan pengguna dan melaporkan kebocoran data. Denda bisa mencapai 4% omzet global.',
+        headline_en: 'GDPR Privacy Rules Take Effect Across the European Union',
+        text_en: 'The GDPR data protection regulation comes into force. Tech companies and phone makers must obtain user consent and report data breaches. Fines can reach 4% of global turnover.',
+        source: 'Financial Times', sourceId: 'ft', tone: 'mixed', era: 'smartphone_modern', tags: ['regulasi', 'privasi', 'eropa']
+    },
+    '2018-12': {
+        headline: 'CFO Huawei Ditahan di Kanada, Hubungan AS-China Memanas',
+        text: 'Meng Wanzhou, Direktur Keuangan Huawei, ditahan di Vancouver atas permintaan Amerika Serikat. Kasus ini memperdalam ketegangan dagang teknologi antara AS dan China, dan membayangi bisnis ponsel Huawei di pasar global.',
+        headline_en: 'Huawei CFO Detained in Canada as US-China Tech Tensions Rise',
+        text_en: 'Meng Wanzhou, Huawei\'s chief financial officer, is detained in Vancouver at the request of the United States. The case deepens the US-China technology dispute and casts a shadow over Huawei\'s global phone business.',
+        source: 'Reuters', sourceId: 'reuters', tone: 'negative', era: 'smartphone_modern', tags: ['huawei', 'regulasi', 'internasional']
+    },
+    '2019-9': {
+        headline: 'Huawei Mate 30 Dirilis Tanpa Layanan Google',
+        text: 'Huawei meluncurkan Mate 30 tanpa aplikasi dan layanan Google. Pengguna harus mengandalkan AppGallery dan toko aplikasi alternatif. Penjualan di pasar Barat diperkirakan tertekan.',
+        headline_en: 'Huawei Launches Mate 30 Without Google Apps and Services',
+        text_en: 'Huawei releases the Mate 30 without Google apps and services. Users must rely on AppGallery and alternative app stores. Sales in Western markets are expected to suffer.',
+        source: 'The Verge', sourceId: 'theverge', tone: 'negative', era: 'smartphone_modern', tags: ['huawei', 'os', 'google']
+    },
+    '2020-11': {
+        headline: 'Apple Perkenalkan Chip M1, Tinggalkan Prosesor Intel untuk Mac',
+        text: 'Apple mengumumkan chip M1 berbasis arsitektur ARM buatan sendiri untuk Mac. Chip ini menggabungkan CPU, GPU, dan memori dalam satu paket. Langkah ini menandai berakhirnya ketergantungan Apple pada Intel di komputer.',
+        headline_en: 'Apple Unveils M1 Chip, Moving Macs Away from Intel Processors',
+        text_en: 'Apple announces the M1, its in-house ARM-based chip for Mac. It combines CPU, GPU, and memory in one package. The move marks the end of Apple\'s reliance on Intel for its computers.',
+        source: 'Bloomberg', sourceId: 'bloomberg', tone: 'positive', era: 'smartphone_modern', tags: ['apple', 'chip', 'mac']
+    },
+    '2021-9': {
+        headline: 'Pengadilan AS Putuskan Apple Harus Buka Pembayaran di Luar App Store',
+        text: 'Dalam kasus Epic Games melawan Apple, hakim AS memerintahkan Apple mengizinkan pengembang mengarahkan pengguna ke metode pembayaran lain. Putusan ini bisa mengubah model bisnis toko aplikasi ponsel.',
+        headline_en: 'US Court Orders Apple to Allow Payment Options Outside the App Store',
+        text_en: 'In the Epic Games v. Apple case, a US judge orders Apple to let developers direct users to other payment methods. The ruling could change the business model of phone app stores.',
+        source: 'Reuters', sourceId: 'reuters', tone: 'mixed', era: 'smartphone_modern', tags: ['apple', 'regulasi', 'app store']
+    },
+    '2022-11': {
+        headline: 'ChatGPT Dirilis, Kecerdasan Buatan Generatif Jadi Sorotan Dunia',
+        text: 'OpenAI merilis ChatGPT untuk publik. Dalam hitungan hari, aplikasi ini menarik jutaan pengguna. Produsen ponsel dan perusahaan chip mulai berlomba menambahkan AI generatif ke produk mereka.',
+        headline_en: 'ChatGPT Launches, Generative AI Becomes a Global Focus',
+        text_en: 'OpenAI releases ChatGPT to the public. Within days, the app draws millions of users. Phone makers and chipmakers begin racing to add generative AI to their products.',
+        source: 'Bloomberg', sourceId: 'bloomberg', tone: 'positive', era: 'ai_era', tags: ['ai', 'chatgpt', 'internasional']
+    },
+    '2023-3': {
+        headline: 'OpenAI Rilis GPT-4, Model AI dengan Kemampuan Gambar dan Teks',
+        text: 'GPT-4 hadir dengan kemampuan memahami gambar dan teks sekaligus. Model ini mencetak skor tinggi pada ujian standar. Pengembang aplikasi ponsel dan produsen perangkat segera menguji integrasinya.',
+        headline_en: 'OpenAI Releases GPT-4, a Model That Understands Images and Text',
+        text_en: 'GPT-4 arrives with the ability to understand both images and text. The model scores highly on standardized exams. App developers and device makers quickly begin testing integrations.',
+        source: 'The Verge', sourceId: 'theverge', tone: 'positive', era: 'ai_era', tags: ['ai', 'openai']
+    },
+    '2023-6': {
+        headline: 'Apple Umumkan Vision Pro, Headset Komputasi Spasial Pertama',
+        text: 'Apple memperkenalkan Vision Pro di WWDC. Headset ini memadukan realitas campuran dengan kontrol mata dan tangan, tanpa pengontrol fisik. Harganya yang tinggi membuat pasarnya diperkirakan masih terbatas.',
+        headline_en: 'Apple Announces Vision Pro, Its First Spatial Computing Headset',
+        text_en: 'Apple introduces Vision Pro at WWDC. The headset blends mixed reality with eye and hand controls, with no physical controllers. Its high price suggests a limited market at first.',
+        source: 'CNET', sourceId: 'cnet', tone: 'mixed', era: 'ai_era', tags: ['apple', 'ar', 'wearable']
+    },
+    '2023-10': {
+        headline: 'AS Batasi Ekspor Chip AI Canggih ke China',
+        text: 'Pemerintah Amerika Serikat memperketat aturan ekspor chip AI berperforma tinggi ke China. Produsen chip harus mengurus izin khusus. Dampaknya terasa pada rantai pasok perangkat dan pusat data.',
+        headline_en: 'US Tightens Export Limits on Advanced AI Chips to China',
+        text_en: 'The US government tightens rules on exporting high-performance AI chips to China. Chipmakers must obtain special licenses. The impact is felt across device supply chains and data centers.',
+        source: 'Reuters', sourceId: 'reuters', tone: 'negative', era: 'ai_era', tags: ['chip', 'regulasi', 'ekspor']
+    },
+    '2024-6': {
+        headline: 'Apple Intelligence Diumumkan, AI Masuk ke iPhone dan Mac',
+        text: 'Apple memperkenalkan Apple Intelligence di WWDC, berjalan di perangkat dengan dukungan layanan awan privat. Fitur ini menuntut perangkat dengan chip yang lebih baru, sehingga memicu pembahasan soal siklus ganti ponsel.',
+        headline_en: 'Apple Unveils Apple Intelligence for iPhone and Mac',
+        text_en: 'Apple introduces Apple Intelligence at WWDC, running on-device with private cloud support. The features require newer chips, sparking debate about upgrade cycles.',
+        source: 'The Verge', sourceId: 'theverge', tone: 'positive', era: 'ai_era', tags: ['apple', 'ai', 'os']
+    },
+    '2024-7': {
+        headline: 'Pembaruan Keamanan Cacat Lumpuhkan Jutaan Komputer di Dunia',
+        text: 'Pembaruan perangkat lunak keamanan yang cacat menyebabkan layar biru di jutaan komputer Windows. Penerbangan, bank, dan rumah sakit terdampak. Insiden ini memicu seruan agar uji pembaruan dilakukan lebih ketat.',
+        headline_en: 'Faulty Security Update Crashes Millions of Computers Worldwide',
+        text_en: 'A flawed security software update causes blue screens on millions of Windows machines. Airlines, banks, and hospitals are affected. The incident prompts calls for stricter update testing.',
+        source: 'Reuters', sourceId: 'reuters', tone: 'negative', era: 'smartphone_modern', tags: ['keamanan', 'os', 'insiden']
+    },
+    '2025-1': {
+        headline: 'DeepSeek R1 Guncang Pasar Teknologi, Saham Chip Anjlok',
+        text: 'Model AI R1 dari DeepSeek diklaim melatih AI dengan biaya jauh lebih rendah. Kabar ini membuat saham perusahaan chip AI anjlok tajam dalam sehari. Investor mempertanyakan seberapa besar belanja chip yang benar-benar dibutuhkan.',
+        headline_en: 'DeepSeek R1 Shakes Tech Markets as Chip Stocks Plunge',
+        text_en: 'DeepSeek\'s R1 model is claimed to train AI at far lower cost. The news sends AI chip stocks sharply lower in a single day. Investors question how much chip spending is truly needed.',
+        source: 'Bloomberg', sourceId: 'bloomberg', tone: 'mixed', era: 'ai_era', tags: ['ai', 'chip', 'saham']
     }
+
 };
