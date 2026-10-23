@@ -133,7 +133,7 @@ export class ProductSystem {
         var map = {
             display: config.displayId, camera: config.cameraId,
             battery: config.batteryId, chip: config.chipId,
-            network: config.networkId, body: config.bodyId, ram: config.ramId,
+            network: config.networkId, body: config.bodyId, ram: config.ramId, storage: config.storageId,
             form_factor: config.formFactorId
         };
         for (var k in map) {
@@ -190,7 +190,7 @@ export class ProductSystem {
     computeUnitCost(config, excludePlantParts) {
         var cost = 0;
         var ids = [config.displayId, config.cameraId, config.batteryId,
-                   config.chipId, config.networkId, config.bodyId, config.formFactorId, config.ramId];
+                   config.chipId, config.networkId, config.bodyId, config.formFactorId, config.ramId, config.storageId];
         var self = this;
         ids.forEach(function (id) {
             var c = getComponentById(id);
@@ -316,6 +316,7 @@ export class ProductSystem {
 
         if (config.cameraId === 'none') config.cameraId = null;
         if (config.ramId === 'none') config.ramId = null;
+        if (config.storageId === 'none') config.storageId = null;
 
         var required = ['displayId', 'batteryId', 'chipId', 'networkId', 'formFactorId', 'bodyId'];
         for (var i = 0; i < required.length; i++) {
