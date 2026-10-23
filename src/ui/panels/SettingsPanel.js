@@ -209,13 +209,15 @@ function _tabTampilan() {
     const currentTheme  = ThemeService.getTheme();
     const currentAccent = ThemeService.getAccent();
 
-    const themeSegment = '<div class="settings-segment">' +
-        '<button class="settings-seg-btn' + (currentTheme === 'dark' ? ' active' : '') + '" data-theme-pick="dark" type="button">' +
-            renderIcon('moon', 14) + '<span>' + escapeHtml(_tf('settings.row.theme_dark', _pick('Gelap', 'Dark'))) + '</span>' +
-        '</button>' +
-        '<button class="settings-seg-btn' + (currentTheme === 'light' ? ' active' : '') + '" data-theme-pick="light" type="button">' +
-            renderIcon('sun', 14) + '<span>' + escapeHtml(_tf('settings.row.theme_light', _pick('Terang', 'Light'))) + '</span>' +
-        '</button>' +
+    const themeSegment = '<div class="settings-theme-grid">' +
+        THEMES.map(function (theme) {
+            const label = _isId() ? ({ dark: 'Gelap', light: 'Terang', ocean: 'Samudra', forest: 'Hutan', sunset: 'Senja', plum: 'Plum' }[theme.id] || theme.label) : theme.label;
+            return '<button class="settings-theme-option' + (currentTheme === theme.id ? ' active' : '') + '" data-theme-pick="' + theme.id + '" type="button" aria-pressed="' + (currentTheme === theme.id) + '">' +
+                '<span class="settings-theme-swatch theme-swatch-' + theme.id + '"></span>' +
+                '<span class="settings-theme-option-copy"><strong>' + escapeHtml(label) + '</strong><small>' + escapeHtml(theme.description) + '</small></span>' +
+                (currentTheme === theme.id ? '<span class="settings-theme-check">✓</span>' : '') +
+            '</button>';
+        }).join('') +
         '</div>';
 
     const accentPicker = '<div class="settings-accent-picker">' +
@@ -533,11 +535,8 @@ export function bindSettingsActions(root) {
         if (themeBtn) {
             e.preventDefault();
             ThemeService.setTheme(themeBtn.dataset.themePick);
-            ToastService.info(t('toast.theme_changed', {
-                value: themeBtn.dataset.themePick === 'light'
-                    ? _tf('settings.row.theme_light', _pick('Terang', 'Light'))
-                    : _tf('settings.row.theme_dark', _pick('Gelap', 'Dark'))
-            }));
+            var chosenTheme = THEMES.filter(function (item) { return item.id === themeBtn.dataset.themePick; })[0];
+            ToastService.info(t('toast.theme_changed', { value: chosenTheme ? chosenTheme.label : themeBtn.dataset.themePick }));
             _refresh();
             return;
         }
