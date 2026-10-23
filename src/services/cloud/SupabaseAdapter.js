@@ -12,8 +12,35 @@ var _loading = null;
 var _injected = null;
 var _pubIdOk = true; 
 var PUB_COLS = 'id, display_name, avatar_path, company_name, founded_year, founded_month, game_minutes, created_at, updated_at, stat_revenue, stat_sold, stat_reputation, stat_share, stat_level, stat_xp, stat_credibility, stat_score, stat_company_level, stat_company_xp';
-function _pubCols() { return PUB_COLS + (_pubIdOk ? ', public_id' : ''); }
+// Kolom view public_profiles yang ternyata belum ada di database (SQL 11/12/15 belum dijalankan).
+// Dipelajari dari pesan error Postgres lalu dibuang dari select, supaya leaderboard tetap tampil
+// (kolom yang kosong tampil sebagai nilai bawaan) alih-alih gagal total.
+var _pubMissing = {};
+function _pubCols() {
+    return (PUB_COLS + (_pubIdOk ? ', public_id' : '')).split(',').map(function (x) { return x.trim(); })
+        .filter(function (x) { return !_pubMissing[x]; }).join(', ');
+}
 function _isPubIdMissing(err) { return !!err && String(err.message || '').toLowerCase().indexOf('public_id') >= 0; }
+// Ambil nama kolom dari pesan: 'column public_profiles.stat_company_xp does not exist'.
+function _missingColumn(err) {
+    if (!err) return null;
+    var m = /column\s+(?:"?[\w]+"?\.)?"?([\w]+)"?\s+does not exist/i.exec(String(err.message || ''));
+    return m ? m[1] : null;
+}
+// Jalankan query public_profiles; bila gagal karena kolom belum ada, buang kolom itu lalu coba lagi.
+async function _queryPublic(build) {
+    var res = null;
+    for (var i = 0; i < 12; i++) {
+        res = await build();
+        if (!res.error) return res;
+        var col = _missingColumn(res.error);
+        if (!col || _pubMissing[col] || PUB_COLS.indexOf(col) < 0) break;
+        console.warn('[Leaderboard] Kolom public_profiles.' + col + ' belum ada di database. Jalankan SQL 11, 12 dan 15 (supabase/BACA-DULU.md).');
+        _pubMissing[col] = true;
+        if (col === 'public_id') _pubIdOk = false;
+    }
+    return res;
+}
 var _idemOk = true;
 var _inboxExt = true;
 var _reasonOk = true;
@@ -40,8 +67,10 @@ function classify(err) {
     if (msg.indexOf('rate limit') >= 0 || code.indexOf('rate_limit') >= 0 || status === 429) return 'rate_limit';
     if (msg.indexOf('failed to fetch') >= 0 || msg.indexOf('networkerror') >= 0 ||
         msg.indexOf('load failed') >= 0 || msg.indexOf('network request failed') >= 0) return 'network';
-    if (code === '42p01' || code === 'pgrst205' || msg.indexOf('does not exist') >= 0 ||
-        msg.indexOf('could not find the table') >= 0) return 'db_setup';
+    // Tabel/kolom/fungsi SQL belum ada (file supabase/*.sql belum dijalankan atau cache skema belum dimuat ulang).
+    if (code === '42p01' || code === '42703' || code === '42883' || code === 'pgrst202' || code === 'pgrst205' ||
+        msg.indexOf('does not exist') >= 0 || msg.indexOf('could not find the table') >= 0 ||
+        msg.indexOf('could not find the function') >= 0) return 'db_setup';
     // Token tidak valid/kedaluwarsa (mis. sesi dari project lama): minta masuk ulang,
     // bukan "Akses ditolak" yang membingungkan.
     if (status === 401 || msg.indexOf('jwt') >= 0 || msg.indexOf('invalid claim') >= 0 ||
@@ -368,26 +397,23 @@ export const SupabaseAdapter = {
     listProfiles: async function (orderBy) {
         var cols = { revenue: 'stat_revenue', sold: 'stat_sold', reputation: 'stat_reputation', share: 'stat_share', recent: 'updated_at',
                      score: 'stat_score', level: 'stat_xp', credibility: 'stat_credibility' };   // level diurutkan lewat XP
-        var col = cols[orderBy] || cols.revenue;
+        var want = cols[orderBy] || cols.revenue;
         var c = await getClient();
-        var res = await c.from('public_profiles').select(_pubCols())
-            .order(col, { ascending: false, nullsFirst: false }).limit(100);
-        if (res.error && _pubIdOk && _isPubIdMissing(res.error)) {
-            _pubIdOk = false;
-            res = await c.from('public_profiles').select(_pubCols())
+        var res = await _queryPublic(function () {
+            // Kolom urutan belum ada (SQL 12 belum dijalankan) -> urutkan berdasarkan pendapatan.
+            var col = _pubMissing[want] ? 'stat_revenue' : want;
+            return c.from('public_profiles').select(_pubCols())
                 .order(col, { ascending: false, nullsFirst: false }).limit(100);
-        }
-        if (res.error) throw mk(res.error);
+        });
+        if (res.error) { console.warn('[Leaderboard] Gagal memuat:', res.error.code, res.error.message); throw mk(res.error); }
         return res.data || [];
     },
 
     getProfileById: async function (id) {
         var c = await getClient();
-        var res = await c.from('public_profiles').select(_pubCols()).eq('id', id).maybeSingle();
-        if (res.error && _pubIdOk && _isPubIdMissing(res.error)) {
-            _pubIdOk = false;
-            res = await c.from('public_profiles').select(_pubCols()).eq('id', id).maybeSingle();
-        }
+        var res = await _queryPublic(function () {
+            return c.from('public_profiles').select(_pubCols()).eq('id', id).maybeSingle();
+        });
         if (res.error) throw mk(res.error);
         return res.data;
     },
