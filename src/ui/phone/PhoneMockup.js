@@ -45,6 +45,13 @@ function _esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// Jam sekarang (HH:MM, 24 jam) untuk status bar dan jam besar di layar ponsel.
+// Dibaca dari jam perangkat saat render, bukan teks tetap seperti "9:41".
+export function phoneClockText(date) {
+    const d = date instanceof Date ? date : new Date();
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
 // Era yang dipakai layar: eraId dari spesifikasi yang terbuka; fallback ke era tahun.
 function eraForSpec(spec, year) {
     const byId = spec && spec.eraId ? getDesignEraById(spec.eraId) : null;
@@ -107,7 +114,8 @@ function getGeom(formFactor, spec) {
     for (let i = 0; i < SIZES.length; i++) if (yr >= SIZES[i][0]) row = SIZES[i];
     const h = row[1];
     const w = Math.round(h * row[2]);
-    const rx = yr < 2013 ? 9 : (yr < 2017 ? 8 : (mat === 'titanium' ? 7 : 10));
+    // Radius sudut per era: kaca membulat (2019-21), titanium bingkai datar (2022-23), ultra-lembut (2024+).
+    const rx = yr < 2013 ? 9 : (yr < 2017 ? 8 : (yr >= 2024 ? 12 : (yr >= 2022 ? 9 : (yr >= 2019 ? 12 : 10))));
 
     if (formFactor === 'ff_qwerty') {
         const qh = Math.min(h, 128), qw = Math.round(qh * 0.56);
@@ -178,12 +186,31 @@ function getGeom(formFactor, spec) {
         return g;
     }
     if (formFactor === 'ff_fold' || formFactor === 'ff_foldable') {
-        return mk('fold', 6, GROUND - 110, 88, 110, 7, yr, mat);
+        // Gaya buku (mis. iPhone Duo 2026): saat tertutup tampak seperti ponsel tinggi
+        // dengan layar sampul; engsel vertikal di sisi tengah.
+        const fh = Math.min(h + 12, 156), fw = Math.round(fh * 0.45);
+        const g = mk('bar', (100 - fw) / 2, GROUND - fh, fw, fh, rx, yr, mat);
+        g.crease = true;
+        g.hinge = true;
+        g.book = true; // buku: engsel vertikal di sisi kiri, layar sampul solid
+
+        return g;
     }
     if (formFactor === 'ff_tri_fold') {
         return mk('trifold', 3, GROUND - 96, 94, 96, 6, yr, mat);
     }
     return mk('bar', (100 - w) / 2, GROUND - h, w, h, rx, yr, mat);
+}
+
+// Bezel modern (satuan viewBox): makin tahun makin tipis & seragam.
+// 2017-18 masih berdagu (notch), 2019-21 punch-hole, 2022-23 bingkai datar, 2024+ nyaris tanpa bezel.
+function modernBezel(yr) {
+    if (yr >= 2025) return { s: 1.3, t: 1.5, b: 1.5 };
+    if (yr >= 2024) return { s: 1.4, t: 1.6, b: 1.7 };
+    if (yr >= 2022) return { s: 1.6, t: 1.9, b: 1.9 };
+    if (yr >= 2019) return { s: 1.9, t: 2.4, b: 2.8 };
+    if (yr >= 2017) return { s: 2.4, t: 5.5, b: 6.5 };
+    return null;
 }
 
 function getScreenRect(spec, g) {
@@ -215,6 +242,14 @@ function _baseScreenRect(spec, g) {
             x: g.x + (g.w - w) / 2,
             y: g.y + g.h * (g.yr < 2003 ? 0.17 : 0.15),
             w: w, h: hh, cornerRadius: g.yr < 2003 ? 1.2 : 2.2
+        };
+    }
+    const mb = modernBezel(g.yr);
+    if (mb) {
+        return {
+            x: g.x + mb.s, y: g.y + mb.t,
+            w: g.w - mb.s * 2, h: g.h - mb.t - mb.b,
+            cornerRadius: Math.max(3, g.rx - mb.s + 0.4)
         };
     }
     const top = (s.insetTop / 100) * g.h;
@@ -267,7 +302,7 @@ function screenMono(r, uid, brand) {
         <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="url(#lcd_${uid})"/>
         ${sigBars(x0 + 1.5, y0 + 1.2, ink)}
         ${batt(x0 + w - 1.5, y0 + 1.6, ink)}
-        <text x="${cx}" y="${cy + fs * 0.15}" text-anchor="middle" font-size="${fs}" font-family="monospace" font-weight="700" fill="${ink}">12:30</text>
+        <text x="${cx}" y="${cy + fs * 0.15}" text-anchor="middle" font-size="${fs}" font-family="monospace" font-weight="700" fill="${ink}">${phoneClockText()}</text>
         <text x="${cx}" y="${cy + fs * 0.15 + 3.6}" text-anchor="middle" font-size="2.3" font-family="monospace" font-weight="700" fill="${ink}" letter-spacing="0.3">${brand}</text>
         <rect x="${x0}" y="${y0 + h - 4.4}" width="${w}" height="4.4" fill="${ink}" opacity="0.88"/>
         <text x="${x0 + 1.6}" y="${y0 + h - 1.3}" font-size="2.2" font-family="monospace" font-weight="700" fill="#b9cf92">${_scr('phone.mock.menu', 'Menu', 'Menu')}</text>
@@ -299,7 +334,7 @@ function screenTft(r, uid, brand) {
         <rect x="${x0}" y="${y0}" width="${w}" height="4.4" fill="#000" opacity="0.35"/>
         ${sigBars(x0 + 1.5, y0 + 0.8, '#bcd8ff')}
         ${batt(x0 + w - 1.5, y0 + 1.2, '#bcd8ff')}
-        <text x="${cx}" y="${y0 + h * 0.34}" text-anchor="middle" font-size="${Math.min(w * 0.2, 8)}" font-family="sans-serif" font-weight="700" fill="#fff">12:30</text>
+        <text x="${cx}" y="${y0 + h * 0.34}" text-anchor="middle" font-size="${Math.min(w * 0.2, 8)}" font-family="sans-serif" font-weight="700" fill="#fff">${phoneClockText()}</text>
         <text x="${cx}" y="${y0 + h * 0.34 + 3.2}" text-anchor="middle" font-size="2" font-family="sans-serif" fill="#bcd8ff">${brand}</text>
         ${icons}
         <rect x="${x0}" y="${y0 + h - 4.4}" width="${w}" height="4.4" fill="#06132a"/>
@@ -329,7 +364,7 @@ function screenGlossy(r, uid, brand) {
         <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="url(#gl_${uid})"/>
         <rect x="${x0}" y="${y0}" width="${w}" height="3.8" fill="#000" opacity="0.85"/>
         <text x="${x0 + 1.5}" y="${y0 + 2.7}" font-size="1.7" font-family="sans-serif" fill="#e8f0ff" font-weight="600">${brand.slice(0, 8)}</text>
-        <text x="${cx}" y="${y0 + 2.7}" text-anchor="middle" font-size="1.8" font-family="sans-serif" fill="#fff" font-weight="700">9:41</text>
+        <text x="${cx}" y="${y0 + 2.7}" text-anchor="middle" font-size="1.8" font-family="sans-serif" fill="#fff" font-weight="700">${phoneClockText()}</text>
         ${batt(x0 + w - 1.2, y0 + 0.9, '#e8f0ff')}
         ${grid}
         <circle cx="${cx - 1.6}" cy="${y0 + h - 12.2}" r="0.55" fill="#fff"/>
@@ -361,11 +396,11 @@ function screenFlat(r, uid, brand) {
         </defs>
         <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="url(#fl_${uid})"/>
         <rect x="${x0}" y="${y0}" width="${w}" height="3.6" fill="#000" opacity="0.3"/>
-        <text x="${x0 + 1.5}" y="${y0 + 2.6}" font-size="1.7" font-family="sans-serif" fill="#fff" font-weight="500">10:09</text>
+        <text x="${x0 + 1.5}" y="${y0 + 2.6}" font-size="1.7" font-family="sans-serif" fill="#fff" font-weight="500">${phoneClockText()}</text>
         <path d="M${x0 + w - 11} ${y0 + 2.8} l1.8 -2.2 l1.8 2.2 z" fill="#fff" opacity="0.9"/>
         ${sigBars(x0 + w - 8.4, y0 + 0.4, '#fff')}
         ${batt(x0 + w - 1.2, y0 + 0.9, '#fff')}
-        <text x="${cx}" y="${y0 + h * 0.2}" text-anchor="middle" font-size="${Math.min(w * 0.26, 10)}" font-family="sans-serif" font-weight="200" fill="#fff">10:09</text>
+        <text x="${cx}" y="${y0 + h * 0.2}" text-anchor="middle" font-size="${Math.min(w * 0.26, 10)}" font-family="sans-serif" font-weight="200" fill="#fff">${phoneClockText()}</text>
         <text x="${cx}" y="${y0 + h * 0.2 + 3.4}" text-anchor="middle" font-size="1.9" font-family="sans-serif" fill="#fff" opacity="0.85">${_scr('phone.mock.date_weather', 'Senin, 12 Oktober', 'Monday, October 12')}  24°C</text>
         ${grid}
         ${dock}
@@ -413,10 +448,10 @@ function screenModern(screenStyle, rect, uid) {
         const widgetW = (w - 10) / 3;
         return `
             <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#000000"/>
-            <text x="${x0 + 2}" y="${y0 + 3.2}" font-size="1.5" font-family="sans-serif" fill="#c9a961" font-weight="600">11:11</text>
+            <text x="${x0 + 2}" y="${y0 + 3.2}" font-size="1.5" font-family="sans-serif" fill="#c9a961" font-weight="600">${phoneClockText()}</text>
             <text x="${x0 + w - 2}" y="${y0 + 3.2}" text-anchor="end" font-size="1.5" font-family="sans-serif" fill="#c9a961">4G ▮▮</text>
 
-            <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#f0ede8" font-weight="200" letter-spacing="-0.5">11:11</text>
+            <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#f0ede8" font-weight="200" letter-spacing="-0.5">${phoneClockText()}</text>
             <text x="${cx}" y="${cy + 1}" text-anchor="middle" font-size="1.8" font-family="sans-serif" fill="#c9a961" letter-spacing="0.4">${_scr('phone.mock.date_full', 'Senin, 12 Oktober', 'Monday, October 12')}</text>
 
             <rect x="${x0 + 5}" y="${widgetY}" width="${widgetW}" height="5" rx="1.2" fill="#1a1a1a" stroke="#c9a961" stroke-width="0.1" opacity="0.7"/>
@@ -451,10 +486,10 @@ function screenModern(screenStyle, rect, uid) {
             </defs>
             <rect x="${x0}" y="${y0 + 4}" width="${w}" height="${h - 4}" fill="url(#${gradId})"/>
 
-            <text x="${x0 + 2}" y="${y0 + 3.2}" font-size="1.5" font-family="sans-serif" fill="#00d4ff" font-weight="600">12:30</text>
+            <text x="${x0 + 2}" y="${y0 + 3.2}" font-size="1.5" font-family="sans-serif" fill="#00d4ff" font-weight="600">${phoneClockText()}</text>
             <text x="${x0 + w - 2}" y="${y0 + 3.2}" text-anchor="end" font-size="1.5" font-family="sans-serif" fill="#00d4ff">5G ▮▮</text>
 
-            <text x="${cx}" y="${cy - 5}" text-anchor="middle" font-size="10" font-family="sans-serif" fill="#ffffff" font-weight="200" letter-spacing="-0.5">12:30</text>
+            <text x="${cx}" y="${cy - 5}" text-anchor="middle" font-size="10" font-family="sans-serif" fill="#ffffff" font-weight="200" letter-spacing="-0.5">${phoneClockText()}</text>
             <text x="${cx}" y="${cy - 0.5}" text-anchor="middle" font-size="1.7" font-family="sans-serif" fill="#00d4ff" opacity="0.9" letter-spacing="0.3">${_scr('phone.mock.date_short', 'Sen, 12 Okt 2021', 'Mon, Oct 12, 2021')}</text>
 
             <rect x="${x0 + 4}" y="${notifY + 3}" width="${w - 8}" height="4.5" rx="1.8" fill="#0f1420" stroke="#00d4ff" stroke-width="0.1" opacity="0.85"/>
@@ -500,10 +535,10 @@ function screenModern(screenStyle, rect, uid) {
             <ellipse cx="${cx}" cy="${y0 + 30}" rx="${w * 0.55}" ry="${h * 0.28}" fill="url(#${gradId})" filter="url(#${blurId})" opacity="0.7"/>
             <ellipse cx="${cx}" cy="${y0 + h - 20}" rx="${w * 0.5}" ry="${h * 0.22}" fill="url(#${gradId})" filter="url(#${blurId})" opacity="0.5"/>
 
-            <text x="${x0 + 2}" y="${y0 + 3.2}" font-size="1.5" font-family="sans-serif" fill="#ffffff" font-weight="600">12:30</text>
+            <text x="${x0 + 2}" y="${y0 + 3.2}" font-size="1.5" font-family="sans-serif" fill="#ffffff" font-weight="600">${phoneClockText()}</text>
             <text x="${x0 + w - 2}" y="${y0 + 3.2}" text-anchor="end" font-size="1.5" font-family="sans-serif" fill="#a855f7">6G ▮▮</text>
 
-            <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#ffffff" font-weight="200" letter-spacing="-0.5">12:30</text>
+            <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#ffffff" font-weight="200" letter-spacing="-0.5">${phoneClockText()}</text>
             <text x="${cx}" y="${cy - 1}" text-anchor="middle" font-size="1.7" font-family="sans-serif" fill="#ffffff" opacity="0.75" letter-spacing="0.4">${_scr('phone.mock.date_day', '12 Oktober', 'October 12')}</text>
 
             <g opacity="0.95">
@@ -553,10 +588,18 @@ function rimStops(mat, hex) {
 
 function bodyShape(x, y, w, h, rx, ids, mat) {
     const sw = mat === 'plastic' ? 0.5 : 1.1;
+    // Titanium: bingkai datar ber-bevel ganda (garis terang tipis di dalam rim).
+    const flatFrame = mat === 'titanium'
+        ? `<rect x="${x + 0.38}" y="${y + 0.38}" width="${w - 0.76}" height="${h - 0.76}" rx="${Math.max(1, rx - 0.38)}" fill="none" stroke="url(#${ids.rim})" stroke-width="0.5"/>
+        <rect x="${x + 0.9}" y="${y + 0.9}" width="${w - 1.8}" height="${h - 1.8}" rx="${Math.max(1, rx - 0.9)}" fill="none" stroke="#000" stroke-opacity="0.45" stroke-width="0.3"/>`
+        : '';
     return `
         <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="url(#${ids.body})"/>
         <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="none" stroke="url(#${ids.rim})" stroke-width="${sw}"/>
         <rect x="${x + 1}" y="${y + 1}" width="${w - 2}" height="${h - 2}" rx="${Math.max(1, rx - 1)}" fill="none" stroke="#000" stroke-opacity="0.28" stroke-width="0.25"/>
+        <rect x="${x + 0.6}" y="${y + 0.6}" width="${w - 1.2}" height="${h - 1.2}" rx="${Math.max(1, rx - 0.6)}" fill="none" stroke="#fff" stroke-opacity="${mat === 'plastic' ? 0.16 : 0.38}" stroke-width="0.35"/>
+        <rect x="${x + 2}" y="${y + 1.5}" width="${Math.max(1, w - 4)}" height="${Math.max(1, h * 0.22)}" rx="${Math.max(1, rx - 2)}" fill="url(#sheen_${ids.body})" pointer-events="none"/>
+        ${flatFrame}
     `;
 }
 
@@ -588,7 +631,14 @@ function renderBodyLayer(g, ids, hex) {
         out += `<rect x="${cx - 2.6}" y="${g.y + 1}" width="5.2" height="${g.h - 2}" fill="url(#${ids.rim})" stroke="#000" stroke-opacity="0.45" stroke-width="0.3"/>
             ${[0.22, 0.5, 0.78].map(function (f) { return `<rect x="${cx - 3.4}" y="${g.y + g.h * f - 3}" width="6.8" height="6" rx="1.6" fill="${shadeHex('#808080', 10)}" stroke="#000" stroke-opacity="0.45" stroke-width="0.3"/>`; }).join('')}`;
     }
-    if (g.hinge) {
+    if (g.hinge && g.book) {
+        // Tulang engsel vertikal (gaya buku): strip logam di sisi kiri dengan sendi atas-bawah.
+        const sy = g.y + g.h * 0.08, sh = g.h * 0.84;
+        out += `<rect x="${g.x - 1.4}" y="${sy}" width="3.2" height="${sh}" rx="1.5" fill="url(#${ids.rim})" stroke="#000" stroke-opacity="0.4" stroke-width="0.25"/>
+            <rect x="${g.x - 0.5}" y="${sy + 1.5}" width="0.8" height="${sh - 3}" rx="0.4" fill="#000" opacity="0.35"/>
+            <rect x="${g.x - 1.7}" y="${g.y + g.h * 0.25 - 1.6}" width="3.8" height="3.2" rx="1" fill="url(#${ids.rim})" stroke="#000" stroke-opacity="0.45" stroke-width="0.25"/>
+            <rect x="${g.x - 1.7}" y="${g.y + g.h * 0.75 - 1.6}" width="3.8" height="3.2" rx="1" fill="url(#${ids.rim})" stroke="#000" stroke-opacity="0.45" stroke-width="0.25"/>`;
+    } else if (g.hinge) {
         const cy = g.y + g.h / 2;
         out += `<rect x="${g.x - 0.9}" y="${cy - 3.2}" width="2.2" height="6.4" rx="0.9" fill="url(#${ids.rim})" stroke="#000" stroke-opacity="0.4" stroke-width="0.25"/>
             <rect x="${g.x + g.w - 1.3}" y="${cy - 3.2}" width="2.2" height="6.4" rx="0.9" fill="url(#${ids.rim})" stroke="#000" stroke-opacity="0.4" stroke-width="0.25"/>`;
@@ -858,7 +908,7 @@ function renderHomeLayer(spec, g, scr) {
 }
 
 function renderReflectionLayer(scr, uid, yr) {
-    const a = yr < 2007 ? 0.07 : 0.15;
+    const a = yr < 2007 ? 0.07 : (yr >= 2017 ? 0.05 : 0.15);
     return `
         <defs>
             <linearGradient id="refl_${uid}" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -868,11 +918,12 @@ function renderReflectionLayer(scr, uid, yr) {
             </linearGradient>
         </defs>
         <rect x="${scr.x}" y="${scr.y}" width="${scr.w}" height="${scr.h * 0.6}" rx="${scr.cornerRadius}" fill="url(#refl_${uid})" pointer-events="none"/>
+        <path d="M${scr.x + scr.w * 0.12} ${scr.y} L${scr.x + scr.w * 0.34} ${scr.y} L${scr.x + scr.w * 0.12} ${scr.y + scr.h * 0.5} L${scr.x} ${scr.y + scr.h * 0.5} Z" fill="#fff" opacity="${yr < 2007 ? 0.04 : (yr >= 2017 ? 0.025 : 0.07)}" pointer-events="none"/>
     `;
 }
 
 function renderCrease(g, scr) {
-    if (!g.crease) return '';
+    if (!g.crease || g.book) return '';
     const cy = scr.y + scr.h / 2;
     return `<rect x="${scr.x}" y="${cy - 0.5}" width="${scr.w}" height="1" fill="#000" opacity="0.28"/>
         <rect x="${scr.x}" y="${cy + 0.5}" width="${scr.w}" height="0.4" fill="#fff" opacity="0.08"/>`;
@@ -931,6 +982,25 @@ function lensSvg(cx, cy, r) {
         <circle cx="${cx - r * 0.22}" cy="${cy - r * 0.22}" r="${r * 0.14}" fill="#fff" opacity="0.75"/>`;
 }
 
+// Lensa premium: cincin logam di luar lensa biasa.
+function lensRing(cx, cy, r) {
+    return `<circle cx="${cx}" cy="${cy}" r="${r * 1.2}" fill="#0a0b0f" stroke="#c9ced6" stroke-opacity="0.85" stroke-width="${r * 0.16}"/>` +
+        lensSvg(cx, cy, r) +
+        `<circle cx="${cx}" cy="${cy}" r="${r * 0.82}" fill="none" stroke="#6ea8ff" stroke-opacity="0.35" stroke-width="${r * 0.08}"/>`;
+}
+
+// Kotak modul kamera belakang per era (dipakai kamera & sensor LiDAR).
+function cameraBox(T, n, yr) {
+    const k = Math.max(1, Math.min(4, n));
+    if (yr >= 2025) return { x: T.x + 3, y: T.y + 6, w: T.w - 6, h: 13 };
+    if (yr >= 2022) {
+        const s = T.w * ({ 1: 0.42, 2: 0.48, 3: 0.56, 4: 0.6 })[k];
+        return { x: T.x + 5, y: T.y + 5, w: s, h: s };
+    }
+    const s = T.w * ({ 1: 0.30, 2: 0.36, 3: 0.42, 4: 0.44 })[k];
+    return { x: T.x + 7, y: T.y + 7, w: s, h: s };
+}
+
 function flashSvg(cx, cy, r) {
     return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#fff4d1" stroke="#aaa" stroke-width="0.25"/>`;
 }
@@ -972,6 +1042,39 @@ function renderRearCamera(T, n, yr, hex, spec) {
             lensSvg(L + 4.8, Tp + 4.8, 3.1) + (n >= 2 ? lensSvg(L + 4.8, Tp + 15.2, 3.1) : '') +
             (flash ? flashSvg(L + 13.2, Tp + 4.8, 1.2) : '');
     }
+    // 2022-2023: pelat kaca frosted besar, lensa bercincin logam.
+    if (yr >= 2022 && yr < 2025) {
+        const bx = cameraBox(T, n, yr);
+        const lightB = lum(hex) > 140;
+        const glassC = lightB ? shadeHex(hex, -16) : shadeHex(hex, 20);
+        const inner = lightB ? shadeHex(hex, -6) : shadeHex(hex, 8);
+        const k = Math.max(1, Math.min(4, n));
+        const posS = k === 1 ? [[0.5, 0.5]] : k === 2 ? [[0.5, 0.3], [0.5, 0.7]] :
+            k === 3 ? [[0.3, 0.3], [0.3, 0.7], [0.7, 0.5]] : [[0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]];
+        const rr = bx.w * (k === 1 ? 0.24 : k >= 4 ? 0.15 : 0.18);
+        return `<rect x="${bx.x}" y="${bx.y}" width="${bx.w}" height="${bx.h}" rx="${bx.w * 0.26}" fill="${glassC}" stroke="${shadeHex(glassC, 30)}" stroke-width="0.45"/>` +
+            `<rect x="${bx.x + 1}" y="${bx.y + 1}" width="${bx.w - 2}" height="${bx.h - 2}" rx="${bx.w * 0.22}" fill="${inner}" opacity="0.9"/>` +
+            `<path d="M ${bx.x + bx.w * 0.26} ${bx.y} H ${bx.x + bx.w * 0.74} Q ${bx.x + bx.w} ${bx.y} ${bx.x + bx.w} ${bx.y + bx.w * 0.26} V ${bx.y + bx.h * 0.42} H ${bx.x} V ${bx.y + bx.w * 0.26} Q ${bx.x} ${bx.y} ${bx.x + bx.w * 0.26} ${bx.y} Z" fill="#fff" opacity="${lightB ? 0.2 : 0.09}"/>` +
+            posS.map(function (p) { return lensRing(bx.x + bx.w * p[0], bx.y + bx.h * p[1], rr); }).join('') +
+            (flash ? flashSvg(bx.x + bx.w - 3.2, bx.y + bx.h + 3.2, 1.3) : '');
+    }
+    // 2025+: "visor" kamera selebar bodi, lensa berjajar rapi.
+    if (yr >= 2025) {
+        const bx = cameraBox(T, n, yr);
+        const k = Math.max(1, Math.min(4, n));
+        const lightB = lum(hex) > 140;
+        const bar = lightB ? '#15161b' : shadeHex(hex, -26);
+        const rr = k === 1 ? 4.6 : 3.5;
+        const step = 11.4;
+        let o = `<rect x="${bx.x}" y="${bx.y}" width="${bx.w}" height="${bx.h}" rx="${bx.h / 2}" fill="${bar}" stroke="${shadeHex(bar, 40)}" stroke-width="0.4"/>` +
+            `<rect x="${bx.x + 1.2}" y="${bx.y + 0.9}" width="${bx.w - 2.4}" height="${bx.h * 0.38}" rx="${bx.h * 0.19}" fill="#fff" opacity="0.1"/>`;
+        for (let i = 0; i < k; i++) {
+            o += lensRing(bx.x + bx.w / 2 + (i - (k - 1) / 2) * step, bx.y + bx.h / 2, rr);
+        }
+        o += `<circle cx="${bx.x + 5.2}" cy="${bx.y + bx.h / 2}" r="0.8" fill="#000" opacity="0.7"/>`;
+        if (flash) o += flashSvg(bx.x + bx.w - 6, bx.y + bx.h / 2, 1.5);
+        return o;
+    }
     const scale = { 1: 0.30, 2: 0.36, 3: 0.42, 4: 0.44 }[n] * (yr >= 2023 ? 1.05 : 1);
     const size = T.w * scale;
     const light = lum(hex) > 140;
@@ -981,7 +1084,9 @@ function renderRearCamera(T, n, yr, hex, spec) {
         n === 3 ? [[0.32, 0.30], [0.32, 0.70], [0.70, 0.5]] :
                   [[0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]];
     const r = size * (n === 1 ? 0.28 : n === 4 ? 0.17 : 0.2);
+    // Modul kaca modern: plat dengan kilau atas (glass sheen) dan tepi halus.
     return `<rect x="${L}" y="${Tp}" width="${size}" height="${size}" rx="${size * 0.24}" fill="${plate}" stroke="${shadeHex(plate, 25)}" stroke-width="0.4"/>` +
+        `<path d="M ${L + size * 0.24} ${Tp} H ${L + size * 0.76} Q ${L + size} ${Tp} ${L + size} ${Tp + size * 0.24} V ${Tp + size * 0.5} H ${L} V ${Tp + size * 0.24} Q ${L} ${Tp} ${L + size * 0.24} ${Tp} Z" fill="#fff" opacity="${light ? 0.22 : 0.10}"/>` +
         pos.map(function (p) { return lensSvg(L + size * p[0], Tp + size * p[1], r); }).join('') +
         (flash ? flashSvg(L + size + 3.4, Tp + 3.4, 1.3) + `<circle cx="${L + size + 3.4}" cy="${Tp + 8}" r="0.7" fill="#111"/>` : '');
 }
@@ -1000,11 +1105,9 @@ function renderRearSensors(T, yr, n, sensors) {
         let cx, cy;
         if (yr >= 2019) {
             // modul kamera modern: LiDAR di bawah modul, sejajar sisi kiri
-            const L = T.x + 7, Tp = T.y + 7;
-            const scale = ({ 1: 0.30, 2: 0.36, 3: 0.42, 4: 0.44 })[Math.max(1, n)] * (yr >= 2023 ? 1.05 : 1);
-            const size = T.w * scale;
-            cx = L + size * 0.5;
-            cy = Tp + size + 5;
+            const bx = cameraBox(T, n, yr);
+            cx = bx.x + (yr >= 2025 ? 5 : bx.w * 0.5);
+            cy = bx.y + bx.h + 5.5;
         } else {
             cx = T.x + T.w / 2;
             cy = T.y + 22;
@@ -1041,7 +1144,9 @@ function renderBackView(g, spec, ids, hex, brand, n, sensors) {
     if (mat === 'glass' || mat === 'titanium') {
         out += `<path d="M ${T.x + 4} ${T.y + 2} L ${T.x + T.w * 0.62} ${T.y + 2} L ${T.x + 3} ${T.y + T.h * 0.5} Z" fill="#fff" opacity="${mat === 'glass' ? 0.1 : 0.05}"/>`;
     }
-    if (g.kind === 'flip' || g.kind === 'slider' || g.hinge) {
+    if (g.book) {
+        out += `<rect x="${T.x + 4}" y="${T.y + 3}" width="1" height="${T.h - 6}" fill="#000" opacity="0.3"/>`;
+    } else if (g.kind === 'flip' || g.kind === 'slider' || g.hinge) {
         out += `<rect x="${T.x + 2}" y="${T.y + T.h * 0.5 - 0.5}" width="${T.w - 4}" height="1" fill="#000" opacity="0.3"/>`;
     }
     if (g.kind === 'dual' || g.kind === 'fold' || g.kind === 'trifold') {
@@ -1050,10 +1155,11 @@ function renderBackView(g, spec, ids, hex, brand, n, sensors) {
     if (g.kind === 'communicator') {
         out += `<rect x="${T.x + 2}" y="${T.y + 30.5}" width="${T.w - 4}" height="1" fill="#000" opacity="0.3"/>`;
     }
-    if (g.hinge) {
-        // layar cover mungil di sisi luar (flip lipat vertikal)
-        out += `<rect x="${T.x + T.w - 17}" y="${T.y + 5}" width="12" height="14" rx="3.2" fill="#07090f" stroke="#555" stroke-width="0.3"/>
-            <text x="${T.x + T.w - 11}" y="${T.y + 13}" text-anchor="middle" font-size="3.4" font-family="sans-serif" font-weight="700" fill="#cfe3ff">12:30</text>`;
+    if (g.hinge && !g.book) {
+        // layar cover mungil di sisi luar (flip lipat vertikal); 2025+ di bawah visor kamera
+        const cvY = yr >= 2025 ? T.y + 22 : T.y + 5;
+        out += `<rect x="${T.x + T.w - 17}" y="${cvY}" width="12" height="14" rx="3.2" fill="#07090f" stroke="#555" stroke-width="0.3"/>
+            <text x="${T.x + T.w - 11}" y="${cvY + 8}" text-anchor="middle" font-size="3.4" font-family="sans-serif" font-weight="700" fill="#cfe3ff">${phoneClockText()}</text>`;
     }
     out += renderRearCamera(T, n, yr, hex, spec);
     out += renderRearSensors(T, yr, n, sensors);
@@ -1383,9 +1489,14 @@ export function renderPhoneMockup(config, opts) {
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}">
             <defs>
                 <linearGradient id="${ids.body}" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="${shadeHex(bodyHex, 15)}"/>
-                    <stop offset="45%" stop-color="${bodyHex}"/>
-                    <stop offset="100%" stop-color="${shadeHex(bodyHex, -35)}"/>
+                    <stop offset="0%" stop-color="${shadeHex(bodyHex, 22)}"/>
+                    <stop offset="30%" stop-color="${shadeHex(bodyHex, 6)}"/>
+                    <stop offset="62%" stop-color="${bodyHex}"/>
+                    <stop offset="100%" stop-color="${shadeHex(bodyHex, -38)}"/>
+                </linearGradient>
+                <linearGradient id="sheen_${ids.body}" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#fff" stop-opacity="0.22"/>
+                    <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
                 </linearGradient>
                 <linearGradient id="${ids.rim}" x1="0%" y1="0%" x2="100%" y2="0%">
                     ${rs.map(function (c, i) { return '<stop offset="' + Math.round(i / (rs.length - 1) * 100) + '%" stop-color="' + c + '"/>'; }).join('')}
@@ -1395,7 +1506,8 @@ export function renderPhoneMockup(config, opts) {
                     <stop offset="100%" stop-color="#000" stop-opacity="0"/>
                 </radialGradient>
             </defs>
-            <ellipse cx="50" cy="${GROUND + 5}" rx="${Math.min(46, g.w * 0.62)}" ry="3.2" fill="url(#sh_${uid})"/>
+            <ellipse cx="50" cy="${GROUND + 6}" rx="${Math.min(50, g.w * 0.8)}" ry="6" fill="url(#sh_${uid})" opacity="0.45"/>
+            <ellipse cx="50" cy="${GROUND + 1.2}" rx="${Math.min(40, g.w * 0.56)}" ry="2.2" fill="url(#sh_${uid})"/>
             ${layers}
         </svg>
     `;

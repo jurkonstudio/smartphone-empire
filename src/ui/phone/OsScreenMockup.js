@@ -10,6 +10,7 @@ import { state } from '../../core/GameState.js';
 import { getDesignEraForYear } from '../../data/era-design.data.js';
 import { resolveSpec } from '../../data/phone-specs.data.js';
 import { t as _tr, LanguageService } from '../../core/LanguageService.js';
+import { phoneClockText } from './PhoneMockup.js';
 
 
 // [i18n] Teks SVG diterjemahkan saat render (bukan saat import) dan di-escape untuk SVG/HTML.
@@ -233,7 +234,7 @@ function renderMono(featureIds, osState, w, h, size) {
     svg += '<rect x="' + (w - 21) + '" y="5" width="10" height="5" fill="' + light + '"/>';
     svg += '<rect x="' + (w - 7) + '" y="6" width="1.5" height="3" fill="' + light + '"/>';
     // Clock
-    svg += '<text x="' + (w/2) + '" y="10" text-anchor="middle" font-size="6" font-family="monospace" fill="' + light + '">08:15</text>';
+    svg += '<text x="' + (w/2) + '" y="10" text-anchor="middle" font-size="6" font-family="monospace" fill="' + light + '">' + phoneClockText() + '</text>';
 
     // Title
     svg += '<rect x="0" y="14" width="' + w + '" height="11" fill="' + mid + '"/>';
@@ -307,7 +308,7 @@ function renderSymbianGrid(featureIds, osState, w, h, size) {
     // Status bar
     svg += '<rect x="0" y="0" width="' + w + '" height="11" fill="' + headerDark + '"/>';
     svg += '<text x="4" y="7.5" font-size="5" font-family="sans-serif" font-weight="700" fill="' + dim + '">' + (has('net_gsm') ? 'GSM' : '—') + '</text>';
-    svg += '<text x="' + (w/2) + '" y="7.5" text-anchor="middle" font-size="5" font-family="sans-serif" fill="' + dim + '">08:15</text>';
+    svg += '<text x="' + (w/2) + '" y="7.5" text-anchor="middle" font-size="5" font-family="sans-serif" fill="' + dim + '">' + phoneClockText() + '</text>';
     svg += '<text x="' + (w - 4) + '" y="7.5" text-anchor="end" font-size="5" font-family="sans-serif" fill="' + dim + '">◼◼◼</text>';
 
     // Header
@@ -364,7 +365,7 @@ function renderWindowsMobile(featureIds, osState, w, h, size) {
     // Status bar
     svg += '<rect x="0" y="0" width="' + w + '" height="10" fill="#e8e8e8"/>';
     svg += '<text x="4" y="7" font-size="5" font-family="Tahoma, sans-serif" font-weight="700" fill="' + text + '">' + (has('net_gsm') ? 'GSM' : '—') + '</text>';
-    svg += '<text x="' + (w/2) + '" y="7" text-anchor="middle" font-size="5" font-family="Tahoma, sans-serif" fill="' + text + '">08:15</text>';
+    svg += '<text x="' + (w/2) + '" y="7" text-anchor="middle" font-size="5" font-family="Tahoma, sans-serif" fill="' + text + '">' + phoneClockText() + '</text>';
     svg += '<text x="' + (w - 4) + '" y="7" text-anchor="end" font-size="4.5" font-family="Tahoma, sans-serif" fill="' + text + '">' + T('osm.battery') + ' 87%</text>';
 
     // Title bar (blue)
@@ -410,7 +411,7 @@ function renderWindowsMobile(featureIds, osState, w, h, size) {
     svg += '<rect x="6" y="' + (h - 7) + '" width="6" height="6" fill="#00a4ef"/>';
     svg += '<rect x="13" y="' + (h - 7) + '" width="6" height="6" fill="#ffb900"/>';
     svg += '<text x="24" y="' + (h - 5) + '" font-size="5.5" font-family="Tahoma, sans-serif" fill="#ffffff">' + T('osm.start') + '</text>';
-    svg += '<text x="' + (w - 6) + '" y="' + (h - 5) + '" text-anchor="end" font-size="5" font-family="Tahoma, sans-serif" fill="#ffffff">08:15</text>';
+    svg += '<text x="' + (w - 6) + '" y="' + (h - 5) + '" text-anchor="end" font-size="5" font-family="Tahoma, sans-serif" fill="#ffffff">' + phoneClockText() + '</text>';
 
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' ' + h + '" width="' + size + '" height="' + Math.round(size * 2) + '" preserveAspectRatio="xMidYMid meet">' + svg + '</svg>';
 }
@@ -425,7 +426,7 @@ function renderEarlyIos(featureIds, osState, w, h, size) {
     let svg = '<rect x="0" y="0" width="' + w + '" height="' + h + '" fill="' + bg + '"/>';
 
     // Status bar (iPhone OS style)
-    svg += '<text x="6" y="8" font-size="5.5" font-family="-apple-system, sans-serif" font-weight="700" fill="#ffffff">9:41</text>';
+    svg += '<text x="6" y="8" font-size="5.5" font-family="-apple-system, sans-serif" font-weight="700" fill="#ffffff">' + phoneClockText() + '</text>';
     svg += '<text x="' + (w - 6) + '" y="8" text-anchor="end" font-size="5.5" font-family="-apple-system, sans-serif" fill="#ffffff">▮▮▮ ▬▬ 87%</text>';
 
     // Nav bar (glossy blue gradient)
@@ -517,7 +518,7 @@ function renderSkeuomorphic(featureIds, osState, w, h, size) {
 
     // Status bar (dark translucent)
     svg += '<rect x="0" y="0" width="' + w + '" height="10" fill="#333333"/>';
-    svg += '<text x="6" y="7" font-size="5.5" font-family="-apple-system, sans-serif" font-weight="700" fill="#ffffff">9:41</text>';
+    svg += '<text x="6" y="7" font-size="5.5" font-family="-apple-system, sans-serif" font-weight="700" fill="#ffffff">' + phoneClockText() + '</text>';
     svg += '<text x="' + (w - 6) + '" y="7" text-anchor="end" font-size="5.5" font-family="-apple-system, sans-serif" fill="#ffffff">▮▮▮ ▬▬ 87%</text>';
 
     // Nav bar with linen texture
@@ -610,7 +611,7 @@ function renderFlatMaterial(featureIds, osState, w, h, size) {
     let svg = '<rect x="0" y="0" width="' + w + '" height="' + h + '" fill="' + bg + '"/>';
 
     // Status bar (iOS 7 style with dark text)
-    svg += '<text x="6" y="8" font-size="5.5" font-family="-apple-system, sans-serif" font-weight="600" fill="' + text + '">9:41</text>';
+    svg += '<text x="6" y="8" font-size="5.5" font-family="-apple-system, sans-serif" font-weight="600" fill="' + text + '">' + phoneClockText() + '</text>';
     svg += '<text x="' + (w - 6) + '" y="8" text-anchor="end" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + text + '">▮▮▮ ▬▬ 87%</text>';
 
     // Nav bar (transparent with title)
@@ -703,7 +704,7 @@ function renderGroupedModern(featureIds, osState, w, h, size) {
     let svg = '<rect x="0" y="0" width="' + w + '" height="' + h + '" fill="' + bg + '"/>';
 
     // Status bar
-    svg += '<text x="6" y="8" font-size="5.5" font-family="-apple-system, sans-serif" font-weight="600" fill="' + text + '">9:41</text>';
+    svg += '<text x="6" y="8" font-size="5.5" font-family="-apple-system, sans-serif" font-weight="600" fill="' + text + '">' + phoneClockText() + '</text>';
     svg += '<text x="' + (w - 6) + '" y="8" text-anchor="end" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + text + '">▮▮▮ ▬▬ 87%</text>';
 
     // Big header
@@ -789,7 +790,7 @@ function renderMaterialYou(featureIds, osState, w, h, size) {
     let svg = '<rect x="0" y="0" width="' + w + '" height="' + h + '" fill="' + pal.bg + '"/>';
 
     // Status bar
-    svg += '<text x="6" y="8" font-size="5.5" font-family="-apple-system, sans-serif" font-weight="700" fill="' + pal.text + '">9:41</text>';
+    svg += '<text x="6" y="8" font-size="5.5" font-family="-apple-system, sans-serif" font-weight="700" fill="' + pal.text + '">' + phoneClockText() + '</text>';
     svg += '<text x="' + (w - 6) + '" y="8" text-anchor="end" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + pal.text + '">5G ▮▮ 87%</text>';
 
     // Big header
@@ -889,7 +890,7 @@ function renderAiModern(featureIds, osState, w, h, size) {
     }
 
     // Status bar
-    svg += '<text x="6" y="8" font-size="5.5" font-family="-apple-system, sans-serif" font-weight="700" fill="' + pal.text + '">9:41</text>';
+    svg += '<text x="6" y="8" font-size="5.5" font-family="-apple-system, sans-serif" font-weight="700" fill="' + pal.text + '">' + phoneClockText() + '</text>';
     svg += '<text x="' + (w - 6) + '" y="8" text-anchor="end" font-size="5.5" font-family="-apple-system, sans-serif" fill="' + pal.text + '">6G ▮▮ 87%</text>';
 
     // Big header
