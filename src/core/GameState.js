@@ -140,7 +140,9 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             initialized: false,
             // [v2027.5] Aksi dinamis kompetitor (CompetitorActionSystem).
             actionMods: {},       // { [brandId]: { modifier, untilTick, lastAction } }
-            threatActive: false   // anti-spam competitor:threat (histeresis)
+            threatActive: false,  // anti-spam competitor:threat (histeresis)
+            withdrawn: {},        // [paket kompetitor] { [brandId]: tahun menarik diri }
+            lowShareYears: {}     // [paket kompetitor] hitung tahun berturut-turut di bawah ambang
         },
 
         feedback: {
@@ -495,7 +497,9 @@ class GameState {
                 entities: { ...base.competitorState.entities, ...((incoming.competitorState && incoming.competitorState.entities) || {}) },
                 // [v2027.5] Save lama tanpa field ini -> default {} / false.
                 actionMods: { ...((incoming.competitorState && incoming.competitorState.actionMods) || {}) },
-                threatActive: !!(incoming.competitorState && incoming.competitorState.threatActive)
+                threatActive: !!(incoming.competitorState && incoming.competitorState.threatActive),
+                withdrawn: { ...((incoming.competitorState && incoming.competitorState.withdrawn) || {}) },
+                lowShareYears: { ...((incoming.competitorState && incoming.competitorState.lowShareYears) || {}) }
             },
             feedback: {
                 ...base.feedback, ...(incoming.feedback || {}),
