@@ -15,6 +15,7 @@ import { LanguageService } from '../../core/LanguageService.js';
 import { PLANT_TYPES, PLANT_MIN_ORDER, INFRA_TAX_RATE_MONTHLY, getPlantTypeById, getPlantLevelInfo, getPlantYield, getPlantCapital, getPlantMaintenance } from '../../data/material-plants.data.js';
 import { plantName, plantDesc, plantLevelName } from '../../data/i18n/research-localize.js';
 import { fmtMoney, clamp } from '../office/OfficeConfig.js';
+import { COMPONENTS } from '../../data/components.data.js';
 
 // ============================================================
 // DENAH — pusat petak (x, z), ukuran (w x d). Kamera isometrik melihat dari +x,+z.
@@ -58,6 +59,7 @@ var TX = {
         'lock.year': 'Tersedia mulai tahun {y}.',
         'lock.fab': 'Butuh Fab Chip yang sudah berdiri.',
         'lock.research': 'Butuh riset: Konstruksi Fab.',
+        'lock.components': 'Selesaikan riset komponen dulu.',
         cost: 'Biaya bangun {v} · {n} hari',
         level: 'Level {n} · {name}',
         capacity: 'Kapasitas {n}/bulan', discount: 'Diskon harga internal {n}%', yield: 'Yield {n}%',
@@ -100,6 +102,7 @@ var TX = {
         'lock.year': 'Available from {y}.',
         'lock.fab': 'Requires a built Chip Fab.',
         'lock.research': 'Requires research: Fab Construction.',
+        'lock.components': 'Finish component research first.',
         cost: 'Build cost {v} · {n} days',
         level: 'Level {n} · {name}',
         capacity: 'Capacity {n}/month', discount: 'Internal price discount {n}%', yield: 'Yield {n}%',
@@ -171,6 +174,18 @@ function fabResearched(d) {
     var c = d && d.research && d.research.completed;
     return Array.isArray(c) && c.indexOf('fab_construction') >= 0;
 }
+// Salinan logika ComponentPlantSystem.getEligibleComponents (UI tidak punya akses ke instance sistem).
+function hasProducibleComponents(typeId, d) {
+    var pt = getPlantTypeById(typeId);
+    if (!pt) return false;
+    var year = (d && d.time && d.time.currentYear) || 0;
+    var completed = (d && d.research && d.research.completed) || [];
+    return COMPONENTS.some(function (c) {
+        return c.category === pt.category
+            && (c.minYear || 0) <= year
+            && (!c.requiresResearch || completed.indexOf(c.requiresResearch) !== -1);
+    });
+}
 function progressOf(u) {
     if (!u) return null;
     var dur = Math.max(1, u.durationDays || 1);
@@ -191,6 +206,7 @@ export function unlockOf(id, d) {
     var year = (d && d.time && d.time.currentYear) || 0;
     if (year < pt.unlockYear) return { ok: false, key: 'lock.year', vars: { y: pt.unlockYear } };
     if (pt.requiresFab && !fabRaw(d).built) return { ok: false, key: 'lock.fab' };
+    if (!hasProducibleComponents(id, d)) return { ok: false, key: 'lock.components' };
     return { ok: true };
 }
 
