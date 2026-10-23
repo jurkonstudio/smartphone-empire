@@ -67,7 +67,20 @@ function _getLocalizedHeadline(year, month) {
 
     // Fallback ke data lama (2000-2017)
     var base = getHeadlineForMonth(year, month);
-    if (!base) return null;
+    if (!base) {
+        // Tidak ada berita dasar untuk bulan ini (mis. 2006-2017): pakai entri bahasa Inggris.
+        var fallbackEn = MONTHLY_HEADLINES_EN[key];
+        if (!fallbackEn || !fallbackEn.headline) return null;
+        return {
+            headline: fallbackEn.headline,
+            text: fallbackEn.text || '',
+            source: 'TechPulse Global',
+            sourceId: 'techpulse_us',
+            tone: 'mixed',
+            era: 'smartphone_modern',
+            tags: []
+        };
+    }
     if (_currentLang() !== 'en') return base;
 
     var en = MONTHLY_HEADLINES_EN[key];
