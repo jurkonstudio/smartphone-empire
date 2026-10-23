@@ -15,13 +15,13 @@ import { resolveSpec } from '../../data/phone-specs.data.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
 import { WalletService } from '../../systems/WalletService.js';
-import { resolveComponentCost } from '../../data/material-plants.data.js';
+import { resolveComponentCost, getBuiltPlantEffect } from '../../data/material-plants.data.js';
 import { BALANCE } from '../../data/balance.data.js';
 
 let _wizardState = null;
 let _wizardView = 'front';
 
-const OPTIONAL_CATEGORIES = ['camera'];
+const OPTIONAL_CATEGORIES = ['camera', 'ram'];
 let _phoneShown = false;
 
 function _isEn() {
@@ -312,7 +312,7 @@ function _injectStyles() {
 
 function defaultState() {
     return {
-        step: 1, name: '', nameAuto: '', formFactorManual: false, formFactorId: null, displayId: null, cameraId: 'none',
+        step: 1, name: '', nameAuto: '', formFactorManual: false, formFactorId: null, displayId: null, cameraId: 'none', ramId: 'none',
         batteryId: null, chipId: null, networkId: null, osOptionId: null,
         bodyId: null, bodyColorId: null, price: 100, priceManuallyEdited: false, productionQty: 5000
     };
@@ -389,13 +389,14 @@ function _autoFillBest(s) {
         if (bestFf) s.formFactorId = bestFf.id;
     }
 
-    const catMap = { display: 'displayId', camera: 'cameraId', battery: 'batteryId', chip: 'chipId', network: 'networkId' };
+    const catMap = { display: 'displayId', camera: 'cameraId', battery: 'batteryId', chip: 'chipId', ram: 'ramId', network: 'networkId' };
     for (const catId in catMap) {
         const list = filterComponentsByEra(catId);
         const best = _pickMostExpensive(list);
         if (best) s[catMap[catId]] = best.id;
     }
     if (!s.cameraId) s.cameraId = 'none';
+    if (!s.ramId) s.ramId = 'none';
 
     const osOptions = (window.__game && window.__game.os && window.__game.os.getOsOptionsForPhone)
         ? window.__game.os.getOsOptionsForPhone()
@@ -787,6 +788,7 @@ function _confirm() {
         formFactorId: s.formFactorId,
         displayId: s.displayId,
         cameraId: (s.cameraId && s.cameraId !== 'none') ? s.cameraId : null,
+        ramId: (s.ramId && s.ramId !== 'none') ? s.ramId : null,
         batteryId: s.batteryId,
         chipId: s.chipId,
         networkId: s.networkId,
@@ -892,8 +894,8 @@ function _step1(s) {
 }
 
 function _step2(s) {
-    const cats = ['display', 'camera', 'battery', 'chip', 'network'];
-    const stateKeys = { display: 'displayId', camera: 'cameraId', battery: 'batteryId', chip: 'chipId', network: 'networkId' };
+    const cats = ['display', 'camera', 'battery', 'chip', 'ram', 'network'];
+    const stateKeys = { display: 'displayId', camera: 'cameraId', battery: 'batteryId', chip: 'chipId', ram: 'ramId', network: 'networkId' };
 
     const groups = cats.map(function (catId) {
         const cat = COMPONENT_CATEGORIES.find(function (c) { return c.id === catId; });
@@ -912,8 +914,8 @@ function _step2(s) {
         }).join('');
 
         if (isOptional) {
-            const noneLabel = catId === 'camera' ? t('wiz.step2.no_camera') : t('wiz.step2.no_item', { name: _catName(cat) });
-            const noneMeta = catId === 'camera' ? t('wiz.step2.no_camera_hint') : t('wiz.step2.optional');
+            const noneLabel = catId === 'camera' ? t('wiz.step2.no_camera') : catId === 'ram' ? _tf('wiz.step2.no_ram', 'RAM Standar') : t('wiz.step2.no_item', { name: _catName(cat) });
+            const noneMeta = catId === 'camera' ? t('wiz.step2.no_camera_hint') : catId === 'ram' ? _tf('wiz.step2.no_ram_hint', 'Memori bawaan chip, tanpa biaya tambahan') : t('wiz.step2.optional');
             const isNoneSelected = (!selected || selected === 'none');
             options = '<button class="wiz-option ' + (isNoneSelected ? 'selected' : '') + '" data-wiz-pick="' + stateKey + ':none">' +
                 '<div class="wiz-opt-name">' + noneLabel + '</div>' +
@@ -1112,7 +1114,7 @@ function _computeStats(s) {
     const stat = { display: 0, camera: 0, battery: 0, performance: 0, connectivity: 0, quality: 0, design: 0, usability: 0 };
     const map = {
         displayId: 'display', cameraId: 'camera', batteryId: 'battery',
-        chipId: 'performance', networkId: 'connectivity', bodyId: 'quality',
+        chipId: 'performance', ramId: 'performance', networkId: 'connectivity', bodyId: 'quality',
         formFactorId: 'usability'
     };
     for (const k in map) {
@@ -1194,6 +1196,15 @@ function _previewHtml(s) {
         // designUnitCost * qty + setup = totalCost, sehingga angka di pratinjau bisa dicocokkan.
         const plantPartCost = Math.max(0, unitCost - designUnitCost);
         const noCamera = !s.cameraId || s.cameraId === 'none';
+        const _gd = state.get();
+        const _fx = [
+            ['battery', 'batteryLife', _pick('Baterai', 'Battery')], ['display', 'displayQuality', _pick('Layar', 'Display')],
+            ['soc', 'performance', _pick('Performa', 'Performance')], ['camera', 'cameraQuality', _pick('Kamera', 'Camera')],
+            ['ram', 'usability', _pick('Kelancaran', 'Smoothness')]
+        ].map(function (x) { const v = getBuiltPlantEffect(_gd, x[0], x[1]); return v > 0 ? x[2] + ' +' + Math.round(v * 100) + '%' : ''; }).filter(Boolean);
+        const plantFxHtml = _fx.length
+            ? '<div class="preview-row"><span>' + _tf('wiz.preview.plant_fx', _pick('Bonus pabrik', 'Plant bonus')) + '</span><b>' + escapeHtml(_fx.join(', ')) + '</b></div>'
+            : '';
 
         const warnings = [];
         if (stats.performance > 60 && stats.battery < 40) warnings.push(t('wiz.preview.warn_chip_bat'));
@@ -1211,7 +1222,8 @@ function _previewHtml(s) {
         return `
             <div class="preview-row"><span>${t('wiz.preview.quality')}</span><b>${stats.qualityScore || 0}/100</b></div>
             <div class="preview-row"><span>${_tf('wiz.preview.unit_design', _pick('Biaya desain per unit', 'Design cost per unit'))}</span><b>$${designUnitCost}</b></div>
-            <div class="preview-row"><span>${_tf('wiz.preview.unit_parts', _pick('Baterai & layar (saat produksi)', 'Battery & screen (at production)'))}</span><b>$${plantPartCost}</b></div>
+            <div class="preview-row"><span>${_tf('wiz.preview.unit_parts', _pick('Komponen pabrik (saat produksi)', 'Factory parts (at production)'))}</span><b>$${plantPartCost}</b></div>
+            ${plantFxHtml}
             <div class="preview-row"><span>${t('wiz.preview.total_cost')}</span><b>$${totalCost.toLocaleString('en-US')}</b></div>
             <div class="preview-row"><span>${t('wiz.preview.margin')}</span><b style="color:${margin >= 0 ? 'var(--success)' : 'var(--danger)'};">$${margin} (${marginPct}%)</b></div>
             <div class="preview-row"><span>${t('wiz.preview.demand')}</span><b>${t('wiz.preview.demand_unit', { n: demand.toLocaleString('en-US') })}</b></div>
@@ -1242,6 +1254,7 @@ function _openDetailModal() {
         { labelKey: 'wiz.detail.spec_camera', id: (s.cameraId && s.cameraId !== 'none') ? s.cameraId : null },
         { labelKey: 'wiz.detail.spec_battery', id: s.batteryId },
         { labelKey: 'wiz.detail.spec_chip', id: s.chipId },
+        { labelKey: 'wiz.detail.spec_ram', id: (s.ramId && s.ramId !== 'none') ? s.ramId : null },
         { labelKey: 'wiz.detail.spec_network', id: s.networkId },
         { labelKey: 'wiz.detail.spec_body', id: s.bodyId }
     ];

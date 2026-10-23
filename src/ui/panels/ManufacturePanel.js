@@ -2,7 +2,7 @@
 // Sub-tab "Manufaktur" dalam tab Riset.
 //
 // Bagian 1 — Pabrik Komponen (BARU): bangun, upgrade, dan jalankan produksi
-//   bahan baku ponsel sendiri (baterai, layar). Harga internal di sini
+//   bahan baku ponsel sendiri (baterai, layar, SoC, kamera, RAM). Harga internal di sini
 //   otomatis dipakai oleh Desain ponsel setelah pabrik dibangun.
 // Bagian 2 — Riset Manufaktur Chip (tidak berubah): node fabrikasi yang
 //   bisa dibuka dengan uang game mulai FAB_UNLOCK_YEAR.
@@ -11,7 +11,7 @@ import { FAB_UNLOCK_YEAR, FAB_UNLOCK_CATEGORIES, FAB_MAX_EARLY_YEARS } from '../
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
 import { plantName, plantDesc, plantLevelName } from '../../data/i18n/research-localize.js';
-import { PLANT_MIN_ORDER } from '../../data/material-plants.data.js';
+import { PLANT_MIN_ORDER, getPlantYield } from '../../data/material-plants.data.js';
 
 // Ukuran batch default untuk tombol "Produksi" (dibatasi kapasitas pabrik).
 var DEFAULT_BATCH = 50000;
@@ -46,7 +46,21 @@ function _renderPlantSection(sys) {
             '<span>' + esc(_tf('mf.plant.total_made', 'Total dibuat')) + ' <b>' + _num((data.componentPlants && data.componentPlants.totalProduced) || 0) + '</b></span>' +
         '</div></div>';
 
-    var cards = sys.getSummary().map(function (s) { return _renderPlantCard(sys, s, cash); }).join('');
+    var summary = sys.getSummary();
+    var builtList = summary.filter(function (s) { return s.built; });
+    var upkeep = builtList.reduce(function (a, s) { return a + (s.maintenanceMonthly || 0); }, 0);
+    var unpaid = builtList.reduce(function (a, s) { return a + (s.unpaid || 0); }, 0);
+    var stock = 0;
+    var inv = (data.componentPlants && data.componentPlants.inventory) || {};
+    Object.keys(inv).forEach(function (k) { stock += inv[k] || 0; });
+    head = head.replace('</div></div>',
+        '<span>' + esc(_tf('mf.plant.stat.built', 'Pabrik berdiri')) + ' <b>' + builtList.length + '/' + summary.length + '</b></span>' +
+        '<span>' + esc(_tf('mf.plant.stat.upkeep', 'Perawatan/bulan')) + ' <b>' + _money(upkeep) + '</b></span>' +
+        (unpaid > 0 ? '<span style="color:var(--danger);">' + esc(_tf('mf.plant.stat.unpaid', 'Tunggakan')) + ' <b>' + _money(unpaid) + '</b></span>' : '') +
+        '<span>' + esc(_tf('mf.plant.stat.stock', 'Total stok')) + ' <b>' + _num(stock) + '</b></span>' +
+        '</div></div>');
+
+    var cards = summary.map(function (s) { return _renderPlantCard(sys, s, cash); }).join('');
     return head + cards;
 }
 
@@ -77,6 +91,11 @@ function _renderPlantCard(sys, s, cash) {
         var li = s.levelInfo;
         status = 'Level ' + s.level + ' · ' + plantLevelName(pt, s.level, li.name) + ' · ' + _tf('mf.plant.capacity', 'Kapasitas') + ' ' + _num(li.capacityMonthly) + '/' + _tf('mf.plant.month', 'bulan') +
             ' · ' + _tf('mf.plant.discount', 'Diskon') + ' ' + Math.round(li.discount * 100) + '%';
+        status += ' · ' + _tf('mf.plant.yield', 'Yield') + ' ' + Math.round(getPlantYield(s.level) * 100) + '%' +
+            ' · ' + _tf('mf.plant.upkeep', 'Perawatan') + ' ' + _money(s.maintenanceMonthly) + '/' + _tf('mf.plant.month', 'bulan');
+        var fx = _effectText(li.effects);
+        if (fx) status += ' · ' + fx;
+        if (s.unpaid > 0) status += ' · ' + _tf('mf.plant.stat.unpaid', 'Tunggakan') + ' ' + _money(s.unpaid);
         if (s.nextInfo) {
             var canUp = cash >= s.nextInfo.cost && !s.upgrade;
             action = '<button class="btn-primary mf-buy-btn" data-mf-action="upgrade" data-mf-plant="' + id + '"' + (canUp ? '' : ' disabled') + '>' +
@@ -211,6 +230,21 @@ function _renderChipManufacture(params) {
     }
 
     return head + (groups || (future.length ? '' : _empty())) + futureRow;
+}
+
+var EFFECT_LABELS = {
+    batteryLife:    ['mf.fx.batteryLife', 'Daya tahan baterai'],
+    displayQuality: ['mf.fx.displayQuality', 'Kualitas layar'],
+    performance:    ['mf.fx.performance', 'Performa'],
+    cameraQuality:  ['mf.fx.cameraQuality', 'Kualitas kamera'],
+    usability:      ['mf.fx.usability', 'Kelancaran']
+};
+function _effectText(effects) {
+    if (!effects) return '';
+    return Object.keys(effects).map(function (k) {
+        var l = EFFECT_LABELS[k];
+        return (l ? _tf(l[0], l[1]) : k) + ' +' + Math.round(effects[k] * 100) + '%';
+    }).join(', ');
 }
 
 function _empty() {
