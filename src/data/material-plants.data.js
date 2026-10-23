@@ -25,6 +25,17 @@ export const PLANT_YIELD_BASE = 0.80;         // yield dasar (unit bagus / unit 
 export const PLANT_YIELD_PER_LEVEL = 0.04;    // tambahan yield per level pabrik
 export const PLANT_YIELD_CAP = 0.97;
 
+// --- Pajak infrastruktur & penjualan eksternal (realisme margin) ---
+// Pajak properti + utilitas dasar: % per bulan dari modal terpasang (total biaya
+// bangun + upgrade sampai level sekarang). Berlaku juga untuk fab chip.
+export const INFRA_TAX_RATE_MONTHLY = 0.002;
+// Stok surplus bisa dijual ke pabrikan lain (grosir) dengan harga pasar x rasio ini.
+export const EXTERNAL_PRICE_RATE = 0.92;
+// Kuota jual eksternal per bulan = rasio x kapasitas bulanan level pabrik.
+export const EXTERNAL_QUOTA_RATIO = 0.4;
+// Harga turun sampai sekian persen saat kuota bulanan terpakai penuh (pasar jenuh).
+export const EXTERNAL_PRICE_DECAY = 0.35;
+
 export const PLANT_TYPES = [
     {
         id: 'battery',
@@ -135,6 +146,13 @@ export function getPlantTypeById(id) {
 
 export function getPlantTypeForCategory(category) {
     return PLANT_TYPES.find(function (p) { return p.category === category; }) || null;
+}
+
+// Modal terpasang pabrik: total biaya level 1..level.
+export function getPlantCapital(typeId, level) {
+    var pt = getPlantTypeById(typeId);
+    if (!pt || !level) return 0;
+    return pt.levels.reduce(function (a, l) { return l.level <= level ? a + l.cost : a; }, 0);
 }
 
 // Info level pabrik. level 1 = biaya bangun; level berikutnya = biaya upgrade.
