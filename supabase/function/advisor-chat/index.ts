@@ -8,7 +8,7 @@
 // Kontrol biaya: batas per-sesi ada di klien, tetapi klien bisa dilewati. Untuk perlindungan
 // sungguhan, tambahkan rate limit per pengguna di sini (mis. tabel Supabase) sebelum dipublikasikan luas.
 
-const MODEL = 'claude-haiku-5-5';
+const MODEL = 'claude-sonnet-5-5';
 const MAX_BODY = 12_000;
 
 const CORS = {
