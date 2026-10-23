@@ -1,4 +1,4 @@
-// FILE: supabase/functions/advisor-chat/index.ts
+// FILE: supabase/function/advisor-chat/index.ts
 // Edge Function OPSIONAL untuk Asisten Bisnis (mode AI). BELUM DIUJI di lingkungan Supabase kamu.
 // Kunci API hanya hidup di secret server:
 //   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
