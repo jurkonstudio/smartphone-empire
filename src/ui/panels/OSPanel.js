@@ -263,6 +263,8 @@ function _heroMockupOpts(os) {
         mk.screen = 'patch';
         mk.progress = _patchPercent(patching, nowMin);
         mk.bugName = patching.name;
+    } else if (_doneKind && Date.now() < _doneUntil) {
+        mk.done = _doneKind;   // tick di ponsel (era 2000-2002) beberapa detik setelah fix/update selesai
     }
     return mk;
 }
@@ -271,23 +273,41 @@ function _heroMockupOpts(os) {
 // dan hanya bila layar/persentasenya berubah. Aman dipanggil berkali-kali (terikat sekali).
 var _heroLiveBound = false;
 var _heroLiveKey = '';
+var _doneKind = '';
+var _doneUntil = 0;
+var DONE_SHOW_MS = 12000;
+
+function _updateHero() {
+    var el = document.querySelector('.os-hero-screen');
+    if (!el) { _heroLiveKey = ''; return; }
+    try {
+        var os = window.__game.state.get().os;
+        if (!os || !os.name) return;
+        var mk = _heroMockupOpts(os);
+        var key = (mk.screen || 'home') + '|' + (mk.progress || 0) + '|' + (mk.toVersion || '') + '|' + (mk.bugName || '') + '|' + (mk.done || '');
+        if (key === _heroLiveKey) return;
+        _heroLiveKey = key;
+        el.innerHTML = renderOsScreenMockup(mk);
+    } catch (e) { /* abaikan: panel akan dirender ulang normal */ }
+}
+
+function _markDone(kind) {
+    _doneKind = kind;
+    _doneUntil = Date.now() + DONE_SHOW_MS;
+    setTimeout(_updateHero, 80);
+    setTimeout(_updateHero, DONE_SHOW_MS + 100);   // hapus tick walau game sedang pause
+}
+
 function _ensureHeroLive() {
     if (_heroLiveBound) return;
     _heroLiveBound = true;
-    bus.on('time:tick', function () {
-        var el = document.querySelector('.os-hero-screen');
-        if (!el) { _heroLiveKey = ''; return; }
-        try {
-            var os = window.__game.state.get().os;
-            if (!os || !os.name) return;
-            var mk = _heroMockupOpts(os);
-            var key = (mk.screen || 'home') + '|' + (mk.progress || 0) + '|' + (mk.toVersion || '') + '|' + (mk.bugName || '');
-            if (key === _heroLiveKey) return;
-            _heroLiveKey = key;
-            el.innerHTML = renderOsScreenMockup(mk);
-        } catch (e) { /* abaikan: panel akan dirender ulang normal */ }
-    });
+    bus.on('time:tick', _updateHero);
+    bus.on('os:bug-patched', function () { _markDone('patch'); });
+    bus.on('os:version-released', function () { _markDone('update'); });   // selesai dari "Rancang Update" / Kembangkan Versi Baru
+    bus.on('os:updated', function () { _markDone('update'); });            // update didorong ke ponsel
 }
+// Pasang pendengar sejak modul dimuat (bukan menunggu tab OS dibuka) agar centang tidak terlewat.
+try { _ensureHeroLive(); } catch (e) { /* bus belum siap: akan terpasang saat panel dirender */ }
 
 function _renderHero(os, currentVersion, osSystem) {
     let mockupHtml = '';
