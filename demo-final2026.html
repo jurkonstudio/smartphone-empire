@@ -11,9 +11,6 @@
 <meta property="og:title" content="Smartphone Empire — Bangun kerajaan ponselmu">
 <meta property="og:description" content="Mulai 1 Januari 2000, lawan Nokia, Apple, Samsung dan 22 kompetitor lain. Gratis di browser dan Android.">
 <meta property="og:image" content="https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/assets/img/loading-screen.jpg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="icon" type="image/png" sizes="32x32" href="./assets/icon/favicon-32.png">
 <link rel="apple-touch-icon" href="./assets/icon/apple-touch-icon.png">
 <script>
@@ -43,7 +40,7 @@
   --g1:rgba(0,113,227,.17); --g2:rgba(90,200,250,.22); --g3:rgba(175,82,222,.13);
   --phone-sh:0 0 0 1px rgba(0,0,0,.12),0 28px 56px rgba(20,30,60,.28);
   --err-bg:rgba(215,0,21,.09); --err-tx:#c4160a; --ok-bg:rgba(36,138,61,.11); --ok-tx:#1d7f37; --info-bg:rgba(0,113,227,.09); --info-tx:#0057b8;
-  --font:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Inter","Segoe UI",Roboto,system-ui,sans-serif;
   --r:22px; --ease:cubic-bezier(.2,.8,.2,1);
 }
 :root[data-theme="dark"]{
@@ -62,7 +59,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
 html{background:var(--bg);overflow-x:clip;scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:68px}
-body{background:var(--bg);color:var(--text);font-family:var(--font);font-feature-settings:"cv11";line-height:1.5;letter-spacing:-.011em;overflow-x:hidden;
+body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.5;letter-spacing:-.011em;overflow-x:hidden;
   padding-bottom:max(0px,env(safe-area-inset-bottom))}
 .tt,.tt *{transition:background-color .35s ease,color .35s ease,border-color .35s ease,box-shadow .35s ease!important}
 [hidden]{display:none!important}
@@ -78,7 +75,7 @@ main,header,footer{position:relative;z-index:1}
 /* NAV (gaya bilah iCloud: tipis, transparan, tautan kecil) */
 .nav{position:sticky;top:0;z-index:50;background:var(--nav);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--line)}
 .nav-in{display:flex;align-items:center;gap:10px;height:56px}
-.brand{display:flex;align-items:center;gap:9px;text-decoration:none;font-weight:700;letter-spacing:-.02em;font-size:1.02rem;white-space:nowrap}
+.brand{display:flex;align-items:center;gap:9px;text-decoration:none;font-weight:700;letter-spacing:-.03em;font-size:1.02rem;white-space:nowrap}
 .brand img{width:28px;height:28px;border-radius:8px}
 .nav-links{display:none;gap:2px;margin-left:14px}
 .nav-links a{text-decoration:none;color:var(--text2);font-size:.84rem;font-weight:500;padding:7px 12px;border-radius:999px;transition:.2s}
@@ -117,7 +114,7 @@ main,header,footer{position:relative;z-index:1}
 .hero{padding:76px max(20px,env(safe-area-inset-left)) 8px;display:flex;flex-direction:column;align-items:center;text-align:center}
 .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.8rem;font-weight:600;color:var(--text2);padding:6px 14px 6px 7px;border-radius:999px;background:var(--card);box-shadow:var(--shadow),inset 0 0 0 1px var(--line);margin-bottom:22px}
 .eyebrow b{background:var(--blue);color:#fff;border-radius:999px;padding:2px 9px;font-size:.72rem}
-h1.title{font-size:clamp(2.6rem,8.2vw,5.6rem);font-weight:700;letter-spacing:-.04em;line-height:1.02;max-width:12.5em}
+h1.title{font-size:clamp(2.6rem,8.2vw,5.6rem);font-weight:700;letter-spacing:-.058em;line-height:1.02;max-width:12.5em}
 h1.title em{font-style:normal;background:linear-gradient(95deg,#0a84ff 0%,#32ade6 48%,#5e5ce6 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
 .lede{margin:22px auto 0;font-size:clamp(1.05rem,2.4vw,1.3rem);color:var(--text2);max-width:34em;font-weight:400;line-height:1.45}
 .cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px;justify-content:center}
@@ -136,14 +133,14 @@ h1.title em{font-style:normal;background:linear-gradient(95deg,#0a84ff 0%,#32ade
 .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border-radius:var(--r);overflow:hidden;margin:40px 0 0;box-shadow:var(--shadow),0 0 0 1px var(--line)}
 .stat{background:var(--card);padding:22px 18px;min-width:0;text-align:center}
 @media(max-width:759px){.stat:last-child{grid-column:1/-1}}
-.stat b{display:block;font-size:clamp(1.8rem,4.6vw,2.6rem);font-weight:700;letter-spacing:-.035em;line-height:1.05}
+.stat b{display:block;font-size:clamp(1.8rem,4.6vw,2.6rem);font-weight:700;letter-spacing:-.05em;line-height:1.05}
 .stat span{font-size:.84rem;color:var(--text3);font-weight:500;display:block;margin-top:2px}
 @media(min-width:760px){.stats{grid-template-columns:repeat(5,1fr)}}
 
 /* SECTIONS */
 section{padding:96px 0 0}
 .kicker{font-size:.84rem;font-weight:600;color:var(--blue);letter-spacing:.01em;margin-bottom:10px;text-align:center}
-h2.h{font-size:clamp(2rem,5.4vw,3.2rem);font-weight:700;letter-spacing:-.034em;line-height:1.06;max-width:17em;margin-inline:auto;text-align:center}
+h2.h{font-size:clamp(2rem,5.4vw,3.2rem);font-weight:700;letter-spacing:-.052em;line-height:1.06;max-width:17em;margin-inline:auto;text-align:center}
 .sub{margin:16px auto 0;color:var(--text2);font-size:1.08rem;max-width:40em;font-weight:400;text-align:center}
 
 /* BENTO */
@@ -152,12 +149,12 @@ h2.h{font-size:clamp(2rem,5.4vw,3.2rem);font-weight:700;letter-spacing:-.034em;l
 .tile:hover{transform:translateY(-3px);box-shadow:var(--shadow-h),inset 0 0 0 1px var(--line2)}
 .tile .ic{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;margin-bottom:18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 4px 10px rgba(0,0,0,.14)}
 .tile .ic svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.tile h3{font-size:1.28rem;font-weight:700;letter-spacing:-.02em;margin-bottom:8px;overflow-wrap:anywhere}
+.tile h3{font-size:1.28rem;font-weight:700;letter-spacing:-.035em;margin-bottom:8px;overflow-wrap:anywhere}
 .tile p{color:var(--text2);font-size:.96rem}
 .tile ul{list-style:none;margin-top:14px;display:grid;gap:8px}
 .tile li{font-size:.9rem;color:var(--text2);padding-left:20px;position:relative}
 .tile li::before{content:"";position:absolute;left:2px;top:.55em;width:8px;height:8px;border-radius:50%;background:var(--c,var(--blue))}
-.tile .big{font-size:2.8rem;font-weight:700;letter-spacing:-.04em;line-height:1;margin-bottom:4px}
+.tile .big{font-size:2.8rem;font-weight:700;letter-spacing:-.06em;line-height:1;margin-bottom:4px}
 .c-blue{--c:#0a84ff}.c-blue .ic{background:linear-gradient(180deg,#2b96ff,#0a5fe0)}
 .c-violet{--c:#bf5af2}.c-violet .ic{background:linear-gradient(180deg,#c97bf5,#8b2fc9)}
 .c-green{--c:#30d158}.c-green .ic{background:linear-gradient(180deg,#3ddc68,#139a3c)}
@@ -178,7 +175,7 @@ h2.h{font-size:clamp(2rem,5.4vw,3.2rem);font-weight:700;letter-spacing:-.034em;l
 .tab{flex:none;min-height:40px;padding:0 18px;border-radius:999px;font-weight:600;font-size:.9rem;color:var(--text2);background:var(--fill);transition:.2s}
 .tab:hover{background:var(--fill2)}
 .tab[aria-selected=true]{background:var(--inv);color:var(--inv-tx)}
-.show-copy h3{font-size:1.8rem;font-weight:700;letter-spacing:-.028em;margin:6px 0 10px;line-height:1.1}
+.show-copy h3{font-size:1.8rem;font-weight:700;letter-spacing:-.045em;margin:6px 0 10px;line-height:1.1}
 .show-copy p{color:var(--text2);font-size:1.04rem}
 .show-copy ul{list-style:none;margin-top:16px;display:grid;gap:9px}
 .show-copy li{padding:13px 14px 13px 46px;background:var(--card);border-radius:14px;box-shadow:var(--shadow),inset 0 0 0 1px var(--line);font-size:.93rem;color:var(--text2);position:relative}
@@ -258,7 +255,7 @@ h2.h{font-size:clamp(2rem,5.4vw,3.2rem);font-weight:700;letter-spacing:-.034em;l
 .pkg:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 1px var(--line2)}
 .pkg[aria-checked=true]{background:rgba(0,113,227,.09);box-shadow:inset 0 0 0 2px var(--blue)}
 .pkg .g{font-size:1.3rem}
-.pkg .amt{font-size:1.7rem;font-weight:700;letter-spacing:-.03em;line-height:1.05}
+.pkg .amt{font-size:1.7rem;font-weight:700;letter-spacing:-.05em;line-height:1.05}
 .pkg .amt small{font-size:.8rem;font-weight:600;color:var(--text3);margin-left:3px;letter-spacing:0}
 .pkg .bn{font-size:.78rem;font-weight:700;color:var(--green);min-height:1.2em}
 .pkg .pr{margin-top:auto;font-weight:600;font-size:.95rem;color:var(--text2)}
@@ -291,7 +288,7 @@ h2.h{font-size:clamp(2rem,5.4vw,3.2rem);font-weight:700;letter-spacing:-.034em;l
 .sc{border-radius:var(--r);padding:26px;color:#fff;position:relative;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 14px 34px rgba(0,0,0,.16)}
 .sc::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 70% at 0% 0%,rgba(255,255,255,.2),transparent 55%)}
 .sc>*{position:relative;z-index:1}
-.sc h3{font-size:1.4rem;font-weight:700;letter-spacing:-.025em;margin-bottom:8px}
+.sc h3{font-size:1.4rem;font-weight:700;letter-spacing:-.04em;margin-bottom:8px}
 .sc p{font-size:.94rem;color:rgba(255,255,255,.93);font-weight:400}
 .sc .bd{display:inline-block;font-size:.72rem;font-weight:700;padding:4px 11px;border-radius:999px;background:rgba(0,0,0,.28);box-shadow:inset 0 0 0 1px rgba(255,255,255,.3);margin:14px 6px 0 0}
 .sc.b{background:linear-gradient(135deg,#0a84ff,#0040dd)}
@@ -342,7 +339,7 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
 @keyframes up{from{transform:translateY(30px);opacity:0}}
 @media(min-width:560px){.ovl{align-items:center;padding:20px}.sheet{border-radius:26px}}
 .sh-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.sh-head h3{font-size:1.4rem;font-weight:700;letter-spacing:-.025em}
+.sh-head h3{font-size:1.4rem;font-weight:700;letter-spacing:-.04em}
 .x{width:36px;height:36px;border-radius:50%;background:var(--fill);display:grid;place-items:center;font-size:1.2rem;line-height:1}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:14px;background:var(--fill);margin:16px 0}
 .seg button{min-height:40px;border-radius:11px;font-weight:600;font-size:.9rem;color:var(--text2)}
@@ -573,6 +570,7 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
           <button class="btn btn-blue" type="button" id="coBtn" disabled>Top up sekarang</button>
         </div>
         <p class="fine" data-en="QRIS and GoPay payments are confirmed manually by an admin. Once approved, the SIL balance is added to your account. Include the Order ID in the transfer note. Maximum 5 orders awaiting approval.">Pembayaran lewat QRIS dan GoPay dikonfirmasi manual oleh admin. Setelah disetujui, saldo SIL masuk ke akunmu. Sertakan Order ID di berita transfer. Maksimal 5 pesanan menunggu persetujuan.</p>
+        <div class="orders" id="orders" hidden><h4 data-en="Recent orders">Pesanan terakhir</h4><div id="ordList"></div></div>
       </div>
     </div>
   </div>
@@ -966,6 +964,7 @@ function renderAcct() {
     nav.className = 'btn btn-ghost btn-sm'; nav.textContent = t('signIn'); nav.dataset.mode = 'in';
     box.innerHTML = `<div class="acct-row"><div class="av">?</div><div><div class="nm">${t('accNone')}</div><div class="mt">${t('accNoneSub')}</div></div></div>
       <div class="acct-act"><button class="btn btn-blue btn-sm" type="button" data-open-auth>${t('signIn')}</button><button class="btn btn-ghost btn-sm" type="button" data-open-auth="up">${t('signUp')}</button></div>`;
+    $('#orders').hidden = true;
     return;
   }
   nav.className = 'acct-chip'; nav.dataset.mode = 'acct';
@@ -992,12 +991,7 @@ async function loadAccount() {
   loadOrders();
 }
 function renderOrders() {
-  // Daftar 'Pesanan terakhir' sudah dihapus dari halaman; fungsi ini sengaja dikosongkan.
-  return;
-}
-function _renderOrdersLegacy() {
   const rows = lastOrders;
-  if (!$('#orders') || !$('#ordList')) return;
   $('#orders').hidden = !user || rows.length === 0;
   $('#orders h4').textContent = t('ordTitle');
   $('#ordList').innerHTML = '';
