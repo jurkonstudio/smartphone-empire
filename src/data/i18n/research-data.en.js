@@ -121,6 +121,21 @@ export const RESEARCH_DATA_EN = {
             name: 'Display Plant',
             description: 'In-house LCD, TFT, and AMOLED panels. Requires an established chip fab.',
             levels: { 1: 'Pilot Line', 2: 'Production Line', 3: 'Large Display Fab', 4: 'Industrial Display Fab' }
+        },
+        soc: {
+            name: 'SoC Plant',
+            description: 'In-house SoC / mobile processor packaging and production. Requires an established chip fab. Cuts the biggest cost in the bill of materials and raises the performance of every phone.',
+            levels: { 1: 'Pilot Line', 2: 'Production Line', 3: 'Large SoC Fab', 4: 'Industrial SoC Fab' }
+        },
+        camera: {
+            name: 'Camera Plant',
+            description: 'In-house camera modules, lenses, and image sensors. Lowers camera cost and raises photo quality on every phone you design.',
+            levels: { 1: 'Pilot Line', 2: 'Production Line', 3: 'Large Optics Plant', 4: 'Industrial Optics Plant' }
+        },
+        ram: {
+            name: 'RAM Plant',
+            description: 'In-house LPDDR memory modules. Requires an established chip fab. Lowers RAM cost and makes phones feel smoother (usability).',
+            levels: { 1: 'Pilot Line', 2: 'Production Line', 3: 'Large Memory Fab', 4: 'Industrial Memory Fab' }
         }
     },
 
