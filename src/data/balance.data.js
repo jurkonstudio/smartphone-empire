@@ -42,6 +42,14 @@ export const BALANCE = {
     gameOverNegativeMonths: 2,
     burnRateWarnThreshold: 2,
 
+    // [v2030] Runway: batas bulan kas bertahan (bersih = biaya - rata-rata pendapatan 3 bulan).
+    // safeMonths: di bawah ini rekrutmen minta konfirmasi. dangerMonths: badge merah.
+    // Sulit lebih ketat karena biaya 1.3x.
+    runway: {
+        safeMonths:   { santai: 3,   normal: 4, sulit: 6 },
+        dangerMonths: { santai: 1.5, normal: 2, sulit: 3 }
+    },
+
     maxLogEntries: 100,
     maxMilestones: 200,
 
