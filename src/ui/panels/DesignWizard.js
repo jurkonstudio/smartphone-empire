@@ -22,7 +22,7 @@ import { isFaiActive, getFaiDesignAdvice } from '../../systems/FutureEffects.js'
 let _wizardState = null;
 let _wizardView = 'front';
 
-const OPTIONAL_CATEGORIES = ['camera', 'ram'];
+const OPTIONAL_CATEGORIES = ['camera', 'ram', 'storage'];
 let _phoneShown = false;
 
 function _isEn() {
@@ -327,7 +327,7 @@ function _injectStyles() {
 
 function defaultState() {
     return {
-        step: 1, name: '', nameAuto: '', formFactorManual: false, formFactorId: null, displayId: null, cameraId: 'none', ramId: 'none',
+        step: 1, name: '', nameAuto: '', formFactorManual: false, formFactorId: null, displayId: null, cameraId: 'none', ramId: 'none', storageId: 'none',
         batteryId: null, chipId: null, networkId: null, osOptionId: null,
         bodyId: null, bodyColorId: null, price: 100, priceManuallyEdited: false, productionQty: 5000
     };
@@ -412,6 +412,7 @@ function _autoFillBest(s) {
     }
     if (!s.cameraId) s.cameraId = 'none';
     if (!s.ramId) s.ramId = 'none';
+    if (!s.storageId) s.storageId = 'none';
 
     const osOptions = (window.__game && window.__game.os && window.__game.os.getOsOptionsForPhone)
         ? window.__game.os.getOsOptionsForPhone()
@@ -807,6 +808,7 @@ function _confirm() {
         displayId: s.displayId,
         cameraId: (s.cameraId && s.cameraId !== 'none') ? s.cameraId : null,
         ramId: (s.ramId && s.ramId !== 'none') ? s.ramId : null,
+        storageId: (s.storageId && s.storageId !== 'none') ? s.storageId : null,
         batteryId: s.batteryId,
         chipId: s.chipId,
         networkId: s.networkId,
@@ -912,12 +914,13 @@ function _step1(s) {
 }
 
 function _step2(s) {
-    const cats = ['display', 'camera', 'battery', 'chip', 'ram', 'network'];
-    const stateKeys = { display: 'displayId', camera: 'cameraId', battery: 'batteryId', chip: 'chipId', ram: 'ramId', network: 'networkId' };
+    const cats = ['display', 'camera', 'battery', 'chip', 'ram', 'storage', 'network'];
+    const stateKeys = { display: 'displayId', camera: 'cameraId', battery: 'batteryId', chip: 'chipId', ram: 'ramId', storage: 'storageId', network: 'networkId' };
 
     const groups = cats.map(function (catId) {
         const cat = COMPONENT_CATEGORIES.find(function (c) { return c.id === catId; });
         const list = filterComponentsByEra(catId);
+        if (catId === 'storage' && list.length === 0) return '';
         const stateKey = stateKeys[catId];
         const selected = s[stateKey];
         const isOptional = OPTIONAL_CATEGORIES.indexOf(catId) !== -1;
@@ -932,8 +935,8 @@ function _step2(s) {
         }).join('');
 
         if (isOptional) {
-            const noneLabel = catId === 'camera' ? t('wiz.step2.no_camera') : catId === 'ram' ? _tf('wiz.step2.no_ram', 'RAM Standar') : t('wiz.step2.no_item', { name: _catName(cat) });
-            const noneMeta = catId === 'camera' ? t('wiz.step2.no_camera_hint') : catId === 'ram' ? _tf('wiz.step2.no_ram_hint', 'Memori bawaan chip, tanpa biaya tambahan') : t('wiz.step2.optional');
+            const noneLabel = catId === 'camera' ? t('wiz.step2.no_camera') : catId === 'ram' ? _tf('wiz.step2.no_ram', 'RAM Standar') : catId === 'storage' ? _tf('wiz.step2.no_storage', 'Tanpa kartu memori') : t('wiz.step2.no_item', { name: _catName(cat) });
+            const noneMeta = catId === 'camera' ? t('wiz.step2.no_camera_hint') : catId === 'ram' ? _tf('wiz.step2.no_ram_hint', 'Memori bawaan chip, tanpa biaya tambahan') : catId === 'storage' ? _tf('wiz.step2.no_storage_hint', 'Hanya memori internal ponsel') : t('wiz.step2.optional');
             const isNoneSelected = (!selected || selected === 'none');
             options = '<button class="wiz-option ' + (isNoneSelected ? 'selected' : '') + '" data-wiz-pick="' + stateKey + ':none">' +
                 '<div class="wiz-opt-name">' + noneLabel + '</div>' +
@@ -1146,7 +1149,7 @@ function _computeStats(s) {
     const stat = { display: 0, camera: 0, battery: 0, performance: 0, connectivity: 0, quality: 0, design: 0, usability: 0 };
     const map = {
         displayId: 'display', cameraId: 'camera', batteryId: 'battery',
-        chipId: 'performance', ramId: 'performance', networkId: 'connectivity', bodyId: 'quality',
+        chipId: 'performance', ramId: 'performance', storageId: 'usability', networkId: 'connectivity', bodyId: 'quality',
         formFactorId: 'usability'
     };
     for (const k in map) {
@@ -1287,6 +1290,7 @@ function _openDetailModal() {
         { labelKey: 'wiz.detail.spec_battery', id: s.batteryId },
         { labelKey: 'wiz.detail.spec_chip', id: s.chipId },
         { labelKey: 'wiz.detail.spec_ram', id: (s.ramId && s.ramId !== 'none') ? s.ramId : null },
+        { labelKey: 'wiz.detail.spec_storage', id: (s.storageId && s.storageId !== 'none') ? s.storageId : null },
         { labelKey: 'wiz.detail.spec_network', id: s.networkId },
         { labelKey: 'wiz.detail.spec_body', id: s.bodyId }
     ];

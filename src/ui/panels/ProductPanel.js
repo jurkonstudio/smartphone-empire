@@ -465,6 +465,7 @@ export function openProductDetailModal(params) {
             [t('prod.detail.spec_battery'), p.config.batteryId, 'comp'],
             [t('prod.detail.spec_chip'), p.config.chipId, 'comp'],
             [t('prod.detail.spec_ram'), p.config.ramId, 'comp'],
+            [t('prod.detail.spec_storage'), p.config.storageId, 'comp'],
             [t('prod.detail.spec_network'), p.config.networkId, 'comp'],
             [t('prod.detail.spec_body'), p.config.bodyId, 'comp'],
             [t('prod.detail.spec_os'), p.config.osOptionId, 'os'] // [FIX] Tandai baris ini sebagai OS
