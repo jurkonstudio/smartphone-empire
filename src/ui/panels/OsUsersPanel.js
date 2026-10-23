@@ -4,15 +4,16 @@
 //   - renderOsKpiRow : baris ringkasan di tab Status OS.
 //   - renderOsUsersTab : tab "Pengguna" (tren, rincian versi, ponsel teratas,
 //     dampak ke ekosistem aplikasi).
+// Teks lewat t() (kamus os-panel.i18n.js: key osp.*).
 // Datanya dari OsAdoptionModel.js (computeOsAdoption) lewat osSystem.getAdoption().
 // ============================================================
 import { renderIcon } from '../icons/FeatureIcons.js';
+import { t, LanguageService } from '../../core/LanguageService.js';
 import { escapeHtml } from '../../utils/html.js';
 import { formatUsers, ADOPTION_CONFIG } from '../../systems/OsAdoptionModel.js';
 import { renderOsCountryPreview, ensureCountryHandlers } from './CountryPanels.js';
 
-var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-var TIER_LABEL = { current: 'Terbaru', previous: 'Sebelumnya', older: 'Lama' };
+var TIER_KEY = { current: 'osp.users.tier.current', previous: 'osp.users.tier.previous', older: 'osp.users.tier.older' };
 
 var _stylesInjected = false;
 
@@ -25,11 +26,11 @@ export function renderOsKpiRow(osSystem, data) {
     var features = cur && cur.features ? cur.features.length : 0;
     var bugs = (os.bugs || []).filter(function (b) { return b.status === 'active' || b.status === 'patching'; }).length;
     var chips = [
-        { ico: 'users',  label: 'Pengguna aktif', val: formatUsers(a.activeUsers), tap: true },
-        { ico: 'cpu',    label: 'Versi',          val: cur ? cur.versionString : '-' },
-        { ico: 'layers', label: 'Fitur di versi', val: String(features) },
-        { ico: 'blocks', label: 'Apps pihak ketiga', val: String(os.apps ? os.apps.thirdParty : 0) },
-        { ico: 'warn',   label: 'Bug aktif',      val: String(bugs), tone: bugs >= 3 ? 'down' : '' }
+        { ico: 'users',  label: t('osp.kpi.active_users'), val: formatUsers(a.activeUsers), tap: true },
+        { ico: 'cpu',    label: t('osp.kpi.version'),      val: cur ? cur.versionString : '-' },
+        { ico: 'layers', label: t('osp.kpi.features'),     val: String(features) },
+        { ico: 'blocks', label: t('osp.kpi.apps3p'),       val: String(os.apps ? os.apps.thirdParty : 0) },
+        { ico: 'warn',   label: t('osp.kpi.bugs'),         val: String(bugs), tone: bugs >= 3 ? 'down' : '' }
     ];
     return '<div class="ou-kpis">' + chips.map(function (c) {
         var tapAttr = c.tap ? ' data-os-countries role="button" tabindex="0"' : '';
@@ -45,32 +46,31 @@ export function renderOsUsersTab(osSystem, data) {
     var a = osSystem.getAdoption();
 
     if (!a.hasOs) {
-        return '<div class="empty"><div class="empty-title">Belum ada pengguna OS</div>' +
-            '<div class="empty-desc">Rilis versi OS pertama, lalu luncurkan ponsel yang memakai OS-mu. Pengguna dihitung dari unit ponsel tersebut yang terjual.</div></div>';
+        return '<div class="empty"><div class="empty-title">' + escapeHtml(t('osp.users.empty_title')) + '</div>' +
+            '<div class="empty-desc">' + escapeHtml(t('osp.users.empty_desc')) + '</div></div>';
     }
 
     var header = '<div class="ou-hero" data-os-countries role="button" tabindex="0">' +
-        '<div class="ou-hero-top"><div><div class="ou-hero-label">Total pengguna aktif</div>' +
+        '<div class="ou-hero-top"><div><div class="ou-hero-label">' + escapeHtml(t('osp.users.total_active')) + '</div>' +
         '<div class="ou-hero-big">' + escapeHtml(formatUsers(a.activeUsers)) + '</div></div>' +
-        '<div class="ou-hero-side"><div>Unit terjual <b>' + escapeHtml(formatUsers(a.shippedUnits)) + '</b></div>' +
-        '<div>Retensi <b>' + Math.round(a.retentionRate * 100) + '%</b></div>' +
-        '<div>Ponsel ber-OS <b>' + a.phoneCount + '</b></div></div></div>' +
-        (a.licensedUnits > 0 ? '<div class="ou-note">Ponsel berlisensi OS pihak ketiga terjual ' + escapeHtml(formatUsers(a.licensedUnits)) + ' unit (tidak dihitung sebagai pengguna OS-mu).</div>' : '') +
+        '<div class="ou-hero-side"><div>' + escapeHtml(t('osp.users.shipped')) + ' <b>' + escapeHtml(formatUsers(a.shippedUnits)) + '</b></div>' +
+        '<div>' + escapeHtml(t('osp.users.retention')) + ' <b>' + Math.round(a.retentionRate * 100) + '%</b></div>' +
+        '<div>' + escapeHtml(t('osp.users.os_phones')) + ' <b>' + a.phoneCount + '</b></div></div></div>' +
+        (a.licensedUnits > 0 ? '<div class="ou-note">' + escapeHtml(t('osp.users.licensed_note', { units: formatUsers(a.licensedUnits) })) + '</div>' : '') +
         '</div>';
 
     var trend = _renderTrend(a.history);
 
-    var versions = '<div class="section-label"><span class="section-label-text">Pengguna per versi</span><span class="section-label-line"></span></div>' +
-        '<div class="ou-list">' + (a.versions.length ? a.versions.slice().reverse().map(_renderVersionRow).join('') : '<div class="ou-empty-row">Belum ada versi.</div>') + '</div>';
+    var versions = '<div class="section-label"><span class="section-label-text">' + escapeHtml(t('osp.users.by_version')) + '</span><span class="section-label-line"></span></div>' +
+        '<div class="ou-list">' + (a.versions.length ? a.versions.slice().reverse().map(_renderVersionRow).join('') : '<div class="ou-empty-row">' + escapeHtml(t('osp.users.no_versions')) + '</div>') + '</div>';
 
-    var phones = '<div class="section-label"><span class="section-label-text">Ponsel dengan pengguna terbanyak</span><span class="section-label-line"></span></div>' +
-        '<div class="ou-list">' + (a.topPhones.length ? a.topPhones.map(_renderPhoneRow).join('') : '<div class="ou-empty-row">Belum ada ponsel ber-OS sendiri yang terjual.</div>') + '</div>';
+    var phones = '<div class="section-label"><span class="section-label-text">' + escapeHtml(t('osp.users.top_phones')) + '</span><span class="section-label-line"></span></div>' +
+        '<div class="ou-list">' + (a.topPhones.length ? a.topPhones.map(_renderPhoneRow).join('') : '<div class="ou-empty-row">' + escapeHtml(t('osp.users.no_phones')) + '</div>') + '</div>';
 
-    var eco = '<div class="section-label"><span class="section-label-text">Dampak ke ekosistem</span><span class="section-label-line"></span></div>' +
+    var eco = '<div class="section-label"><span class="section-label-text">' + escapeHtml(t('osp.users.ecosystem')) + '</span><span class="section-label-line"></span></div>' +
         '<div class="ou-eco">' +
-        '<div class="ou-eco-row"><span>Bonus aplikasi pihak ketiga</span><b>+' + a.appBonusPerMonth + ' / bulan</b></div>' +
-        '<div class="ou-eco-note">Setiap ' + formatUsers(ADOPTION_CONFIG.appsUsersPerBonus) + ' pengguna aktif menambah 1 aplikasi per bulan (maks. +' + ADOPTION_CONFIG.appsBonusMax + ').' +
-        ' Semakin banyak pengguna, semakin ramai App Store-mu.</div>' +
+        '<div class="ou-eco-row"><span>' + escapeHtml(t('osp.users.app_bonus')) + '</span><b>' + escapeHtml(t('osp.users.per_month', { n: a.appBonusPerMonth })) + '</b></div>' +
+        '<div class="ou-eco-note">' + escapeHtml(t('osp.users.eco_note', { users: formatUsers(ADOPTION_CONFIG.appsUsersPerBonus), max: ADOPTION_CONFIG.appsBonusMax })) + '</div>' +
         '</div>';
 
     return header + renderOsCountryPreview(data) + trend + versions + phones + eco;
@@ -80,7 +80,7 @@ function _renderVersionRow(v) {
     var pct = Math.round(v.share * 100);
     return '<div class="ou-row">' +
         '<div class="ou-row-top"><span class="ou-row-name">' + escapeHtml(v.versionString) + '</span>' +
-        '<span class="ou-tier ou-tier-' + v.tier + '">' + TIER_LABEL[v.tier] + '</span>' +
+        '<span class="ou-tier ou-tier-' + v.tier + '">' + escapeHtml(t(TIER_KEY[v.tier] || TIER_KEY.older)) + '</span>' +
         '<span class="ou-row-val">' + escapeHtml(formatUsers(v.active)) + ' · ' + pct + '%</span></div>' +
         '<div class="ou-bar"><div class="ou-bar-fill" style="width:' + pct + '%"></div></div>' +
         '</div>';
@@ -89,16 +89,16 @@ function _renderVersionRow(v) {
 function _renderPhoneRow(p) {
     return '<div class="ou-row ou-row-flat">' +
         '<div class="ou-row-top"><span class="ou-row-name">' + escapeHtml(p.name) + '</span>' +
-        '<span class="ou-row-val">' + escapeHtml(formatUsers(p.active)) + ' aktif</span></div>' +
-        '<div class="ou-row-meta">' + escapeHtml(p.versionString) + ' · terjual ' + escapeHtml(formatUsers(p.shipped)) + '</div>' +
+        '<span class="ou-row-val">' + escapeHtml(t('osp.users.phone_active', { n: formatUsers(p.active) })) + '</span></div>' +
+        '<div class="ou-row-meta">' + escapeHtml(t('osp.users.phone_meta', { v: p.versionString, n: formatUsers(p.shipped) })) + '</div>' +
         '</div>';
 }
 
 // Grafik tren pengguna aktif per bulan (SVG sederhana, tanpa library).
 function _renderTrend(history) {
-    var head = '<div class="section-label"><span class="section-label-text">Tren pengguna aktif</span><span class="section-label-line"></span></div>';
+    var head = '<div class="section-label"><span class="section-label-text">' + escapeHtml(t('osp.users.trend')) + '</span><span class="section-label-line"></span></div>';
     if (!history || history.length < 2) {
-        return head + '<div class="ou-trend-empty">Tren akan terlihat setelah pergantian bulan kedua.</div>';
+        return head + '<div class="ou-trend-empty">' + escapeHtml(t('osp.users.trend_empty')) + '</div>';
     }
     var W = 320, H = 96, PAD = 10;
     var max = 1;
@@ -112,7 +112,7 @@ function _renderTrend(history) {
     var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ');
     var area = line + ' L' + pts[n - 1][0].toFixed(1) + ',' + (H - 14) + ' L' + pts[0][0].toFixed(1) + ',' + (H - 14) + ' Z';
     var first = history[0], last = history[n - 1];
-    var svg = '<svg class="ou-trend" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Tren pengguna aktif">' +
+    var svg = '<svg class="ou-trend" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="' + escapeHtml(t('osp.users.trend')) + '">' +
         '<path d="' + area + '" class="ou-trend-area"/>' +
         '<path d="' + line + '" class="ou-trend-line" fill="none"/>' +
         '</svg>';
@@ -122,7 +122,10 @@ function _renderTrend(history) {
 }
 
 function _mlabel(h) {
-    var m = MONTHS[(h.month || 1) - 1] || '';
+    var m = '';
+    try {
+        m = new Date(2000, (h.month || 1) - 1, 1).toLocaleString(LanguageService.getLang(), { month: 'short' });
+    } catch (e) { m = String(h.month || ''); }
     return m + ' ' + (h.year || '');
 }
 

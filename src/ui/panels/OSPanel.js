@@ -21,6 +21,17 @@ import { renderUpdateCardsTab, resetUpdateDraft } from './OsUpdateCards.js';
 import { TIME_CONFIG } from '../../config/time.config.js';
 import { getOsFeatureCost, currentGameData } from '../../systems/FutureEffects.js';
 
+// Terjemahan dengan fallback ke teks data asli bila key belum ada (mis. nama bug berbahasa Indonesia).
+function _tx(key, fallback, vars) {
+    var v = t(key, vars);
+    return (v && v !== key) ? v : fallback;
+}
+function _featName(f) { return _tx('osuc.feat.' + f.id + '.name', f.name); }
+function _featDesc(f) { return _tx('osuc.feat.' + f.id + '.desc', f.description || ''); }
+function _eraName(era, fallback) { return era ? _tx('osuc.era.' + era.id, era.name) : fallback; }
+function _bugName(b) { return _tx('osp.bug.' + (b.templateId || ''), b.name); }
+function _days(n) { return t('osuc.days', { n: n }); }
+
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
 
@@ -53,10 +64,10 @@ export function renderOSPanel(params) {
         <div class="os-subtabs">
             <button class="os-subtab-btn ${_osActiveTab === 'status' ? 'active' : ''}" data-os-tab="status">${t('osrd.tab.status')}</button>
             <button class="os-subtab-btn ${_osActiveTab === 'rancang' ? 'active' : ''}" data-os-tab="rancang">${t('osuc.subtab')}</button>
-            <button class="os-subtab-btn ${_osActiveTab === 'pengguna' ? 'active' : ''}" data-os-tab="pengguna">Pengguna</button>
-            <button class="os-subtab-btn ${_osActiveTab === 'fitur' ? 'active' : ''}" data-os-tab="fitur">Fitur</button>
-            <button class="os-subtab-btn ${_osActiveTab === 'bug' ? 'active' : ''}" data-os-tab="bug">Bug</button>
-            <button class="os-subtab-btn ${_osActiveTab === 'apps' ? 'active' : ''}" data-os-tab="apps">Apps & Lisensi</button>
+            <button class="os-subtab-btn ${_osActiveTab === 'pengguna' ? 'active' : ''}" data-os-tab="pengguna">${t('osp.tab.users')}</button>
+            <button class="os-subtab-btn ${_osActiveTab === 'fitur' ? 'active' : ''}" data-os-tab="fitur">${t('osp.tab.features')}</button>
+            <button class="os-subtab-btn ${_osActiveTab === 'bug' ? 'active' : ''}" data-os-tab="bug">${t('osp.tab.bugs')}</button>
+            <button class="os-subtab-btn ${_osActiveTab === 'apps' ? 'active' : ''}" data-os-tab="apps">${t('osp.tab.apps')}</button>
         </div>
     `;
 
@@ -80,7 +91,7 @@ export function renderOSPanel(params) {
         bodyHtml = _renderFeaturesSection(osSystem);
     } 
     else if (_osActiveTab === 'bug') {
-        bodyHtml = _renderBugsSection(os.bugs, data.time.elapsedGameMinutes) || '<div class="empty"><div class="empty-title">Tidak ada bug aktif saat ini.</div></div>';
+        bodyHtml = _renderBugsSection(os.bugs, data.time.elapsedGameMinutes) || '<div class="empty"><div class="empty-title">' + escapeHtml(t('osp.bugs.none')) + '</div></div>';
     } 
     else if (_osActiveTab === 'apps') {
         bodyHtml = _renderAppsSection(osSystem, os) + _renderLicensesSection(data);
@@ -107,11 +118,11 @@ function _ensureOsTabHandlers() {
 // ============================================================
 function _renderPlatformSection(osSystem, data) {
     if (typeof osSystem.getPlatformInfo !== 'function') return '';
-    var STAT_LABEL = { stability: 'Stabilitas', speed: 'Kecepatan', features: 'Fitur', security: 'Keamanan', design: 'Desain' };
+    var STAT_LABEL = { stability: t('os.stat.stability'), speed: t('os.stat.speed'), features: t('os.stat.features'), security: t('os.stat.security'), design: t('os.stat.design') };
 
     if (!data.os.versions || !data.os.versions.length) {
-        return '<div class="rnd-ov" data-osp-root><div class="rnd-ov-title">R&amp;D Platform OS</div>' +
-            '<div class="rnd-verdict">Rilis versi OS pertama untuk membuka R&amp;D platform: tiap level menambah stat OS ke semua ponsel ber-OS sendiri.</div></div>';
+        return '<div class="rnd-ov" data-osp-root><div class="rnd-ov-title">' + escapeHtml(t('osp.platform.title')) + '</div>' +
+            '<div class="rnd-verdict">' + escapeHtml(t('osp.platform.locked_intro')) + '</div></div>';
     }
 
     var levels = osSystem.getPlatformLevels();
@@ -131,16 +142,16 @@ function _renderPlatformSection(osSystem, data) {
     var diff = Math.round(own - bestLic);
     var tone = diff > 0 ? 'up' : (diff < 0 ? 'down' : 'flat');
     var verdict = diff >= 0
-        ? 'OS-mu unggul ' + diff + ' poin dari lisensi OS terbaik tahun ini — ponselmu lebih menarik.'
-        : 'OS-mu tertinggal ' + Math.abs(diff) + ' poin dari lisensi OS terbaik tahun ini (lisensi pihak ketiga terus diperbarui).';
+        ? t('osp.platform.verdict_ahead', { n: diff })
+        : t('osp.platform.verdict_behind', { n: Math.abs(diff) });
 
     var overview = '<div class="rnd-ov" data-osp-root>' +
-        '<div class="rnd-ov-head"><div class="rnd-ov-title">R&amp;D Platform OS</div>' +
+        '<div class="rnd-ov-head"><div class="rnd-ov-title">' + escapeHtml(t('osp.platform.title')) + '</div>' +
         '<div class="rnd-ov-slots">' + (data.os.platform && data.os.platform.developing ? '1/1' : '0/1') + '</div></div>' +
         '<div class="rnd-ov-grid">' +
-            '<div class="rnd-chip"><span>Level rata-rata</span><b>' + avg.toFixed(1) + '</b></div>' +
-            '<div class="rnd-chip"><span>Skor OS</span><b>' + Math.round(own) + '</b></div>' +
-            '<div class="rnd-chip rnd-' + tone + '"><span>vs lisensi</span><b>' + (diff > 0 ? '+' : '') + diff + '</b></div>' +
+            '<div class="rnd-chip"><span>' + escapeHtml(t('osp.platform.avg_level')) + '</span><b>' + avg.toFixed(1) + '</b></div>' +
+            '<div class="rnd-chip"><span>' + escapeHtml(t('osp.platform.os_score')) + '</span><b>' + Math.round(own) + '</b></div>' +
+            '<div class="rnd-chip rnd-' + tone + '"><span>' + escapeHtml(t('osp.platform.vs_license')) + '</span><b>' + (diff > 0 ? '+' : '') + diff + '</b></div>' +
         '</div>' +
         '<div class="rnd-verdict rnd-' + tone + '">' + escapeHtml(verdict) + '</div></div>';
 
@@ -151,7 +162,7 @@ function _renderPlatformSection(osSystem, data) {
     }).join('');
 
     return '<details class="section-collapsible rnd-card" open>' +
-        '<summary class="section-summary"><span class="section-summary-text">R&amp;D Platform</span><span class="section-summary-line"></span></summary>' +
+        '<summary class="section-summary"><span class="section-summary-text">' + escapeHtml(t('osp.platform.section')) + '</span><span class="section-summary-line"></span></summary>' +
         overview + 
         '<div class="rnd-carousel-container">' + rows + '</div>' + // CAROUSEL WRAPPER
         '</details>';
@@ -171,7 +182,7 @@ function _ensureOsPlatformHandlers(osSystem) {
         var sid = b.getAttribute('data-rnd-id');
         var res = act === 'cancel' ? _osPlatformSys.cancelPlatformUpgrade() : _osPlatformSys.startPlatformUpgrade(sid);
         if (!res.ok) ToastService.error(res.reason);
-        else ToastService.success(act === 'cancel' ? 'R&D dibatalkan.' : 'R&D platform dimulai.');
+        else ToastService.success(act === 'cancel' ? t('osp.platform.toast_cancelled') : t('osp.platform.toast_started'));
         if (window.__game && window.__game.renderSoft) window.__game.renderSoft();
     });
     bus.on('os:platform-progress', function (d) {
@@ -333,16 +344,16 @@ function _renderVersionHistory(os, currentVersion, adoption) {
     const versions = [...os.versions].reverse();
     const rows = versions.map(v => {
         const isCurrent = currentVersion && v.id === currentVersion.id;
-        const dateStr = v.releasedAt ? `${v.releasedAt.month}/${v.releasedAt.year}` : 'Unknown';
-        const featureNames = v.features.slice(0, 3).map(fid => { const f = getOsFeatureById(fid); return f ? f.name : fid; });
+        const dateStr = v.releasedAt ? `${v.releasedAt.month}/${v.releasedAt.year}` : t('osp.hist.unknown');
+        const featureNames = v.features.slice(0, 3).map(fid => { const f = getOsFeatureById(fid); return f ? _featName(f) : fid; });
         const moreCount = v.features.length - 3;
-        const featureText = featureNames.join(', ') + (moreCount > 0 ? ` +${moreCount} lainnya` : '');
+        const featureText = featureNames.join(', ') + (moreCount > 0 ? ' ' + t('osp.hist.more', { n: moreCount }) : '');
         return `<div class="os-row" style="align-items: flex-start; ${isCurrent ? 'background: var(--accent-soft);' : ''}">
-            <div class="os-row-main"><div class="os-row-title" style="display:flex; justify-content:space-between;"><span>${escapeHtml(v.versionString)}</span><span style="font-size:10px; color:var(--text-tertiary); font-weight:normal;">${dateStr}${' · ' + formatUsers(usersOf(v.id)) + ' pengguna'}</span></div>
+            <div class="os-row-main"><div class="os-row-title" style="display:flex; justify-content:space-between;"><span>${escapeHtml(v.versionString)}</span><span style="font-size:10px; color:var(--text-tertiary); font-weight:normal;">${dateStr}${' · ' + t('osp.hist.users', { n: formatUsers(usersOf(v.id)) })}</span></div>
             <div class="os-row-meta" style="margin-top:4px; line-height:1.4;">${escapeHtml(featureText)}</div></div>
-            <div class="os-row-actions">${isCurrent ? '<span class="os-status-badge os-status-owned">Aktif</span>' : '<span class="os-status-badge os-status-locked">Usang</span>'}</div></div>`;
+            <div class="os-row-actions">${isCurrent ? '<span class="os-status-badge os-status-owned">' + escapeHtml(t('osp.hist.active')) + '</span>' : '<span class="os-status-badge os-status-locked">' + escapeHtml(t('osp.hist.obsolete')) + '</span>'}</div></div>`;
     }).join('');
-    return '<details class="section-collapsible" open><summary class="section-summary"><span class="section-summary-text">Riwayat Versi · ' + os.versions.length + '</span><span class="section-summary-line"></span></summary><div class="os-list" style="margin-top:8px;">' + rows + '</div></details>';
+    return '<details class="section-collapsible" open><summary class="section-summary"><span class="section-summary-text">' + escapeHtml(t('osp.hist.title', { n: os.versions.length })) + '</span><span class="section-summary-line"></span></summary><div class="os-list" style="margin-top:8px;">' + rows + '</div></details>';
 }
 
 function _renderDevStrip(developing) {
@@ -368,8 +379,8 @@ function _renderBugsSection(bugs, nowMinute) {
         const bar = isPatching
             ? '<div class="os-patch-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '"><span style="width:' + pct + '%"></span></div>'
             : '';
-        return '<div class="os-row os-bug-row"><div class="os-row-main"><div class="os-row-title"><span class="os-bug-dot" aria-hidden="true"></span>' + escapeHtml(b.name) + '</div>' +
-            '<div class="os-row-meta"><span class="os-bug-sev">' + t('os.bug.severity', { n: b.severity }) + '</span><span class="os-row-dot">·</span><span>$' + b.patchCost.toLocaleString('en-US') + '</span><span class="os-row-dot">·</span><span>' + b.patchDays + ' </span></div>' +
+        return '<div class="os-row os-bug-row"><div class="os-row-main"><div class="os-row-title"><span class="os-bug-dot" aria-hidden="true"></span>' + escapeHtml(_bugName(b)) + '</div>' +
+            '<div class="os-row-meta"><span class="os-bug-sev">' + t('os.bug.severity', { n: b.severity }) + '</span><span class="os-row-dot">·</span><span>$' + b.patchCost.toLocaleString('en-US') + '</span><span class="os-row-dot">·</span><span>' + escapeHtml(_days(b.patchDays)) + '</span></div>' +
             bar + '</div>' +
             '<div class="os-row-actions">' + actions + '</div></div>';
     }).join('');
@@ -406,15 +417,15 @@ function _renderFeatureGroupCollapsible(label, items, status) {
 }
 
 function _renderFeatureRow(feature, status) {
-    var era = OS_ERAS.find(function (e) { return e.id === feature.era; }); var eraName = era ? era.name : feature.era;
+    var era = OS_ERAS.find(function (e) { return e.id === feature.era; }); var eraName = _eraName(era, feature.era);
     var se = feature.statEffects || {};
     var statChips = STAT_ORDER.map(function (k) { var v = se[k] || 0; if (v <= 0) return ''; return '<span class="os-stat-chip">+' + v + ' ' + t(STAT_SHORT_KEYS[k]) + '</span>'; }).filter(s => s).join('');
     var badgeCls = 'os-status-badge os-status-' + status;
     var badgeLabel = status === 'owned' ? t('os.feature.badge_owned') : status === 'developing' ? t('os.feature.badge_deving') : status === 'available' ? t('os.feature.badge_available') : t('os.feature.badge_locked');
     return '<div class="os-row os-feat-row os-feat-' + status + '" data-os-action="feature-detail" data-feature-id="' + feature.id + '"><div class="os-row-main">' +
-        '<div class="os-row-title">' + escapeHtml(feature.name) + '<span class="os-row-year">' + feature.minYear + '</span></div>' +
+        '<div class="os-row-title">' + escapeHtml(_featName(feature)) + '<span class="os-row-year">' + feature.minYear + '</span></div>' +
         '<div class="os-row-meta"><span>' + escapeHtml(eraName) + '</span>' + (statChips ? '<span class="os-row-dot">·</span>' + statChips : '') + '</div>' +
-        '<div class="os-row-foot"><span class="os-row-cost">$' + getOsFeatureCost(feature, currentGameData()).toLocaleString('en-US') + '</span><span class="os-row-dot">·</span><span class="os-row-dur">' + feature.devDays + '</span></div></div>' +
+        '<div class="os-row-foot"><span class="os-row-cost">$' + getOsFeatureCost(feature, currentGameData()).toLocaleString('en-US') + '</span><span class="os-row-dot">·</span><span class="os-row-dur">' + escapeHtml(_days(feature.devDays)) + '</span></div></div>' +
         '<div class="os-row-actions"><span class="' + badgeCls + '">' + badgeLabel + '</span></div></div>';
 }
 
@@ -427,10 +438,10 @@ function _renderAppsSection(osSystem, os) {
         if (isOwned) statusHtml = '<span class="os-status-badge os-status-owned">' + t('os.apps.owned_badge') + '</span>';
         else if (!hasFeature) statusHtml = '<span class="os-status-badge os-status-locked">' + t('os.apps.locked_badge') + '</span>';
         else statusHtml = '<button class="os-mini-btn os-mini-btn-primary" data-os-action="start-app" data-app-id="' + a.id + '">' + t('os.apps.build') + '</button>';
-        return '<div class="os-row os-app-row"><div class="os-row-main"><div class="os-row-title">' + escapeHtml(a.name) + '</div><div class="os-row-meta"><span>$' + a.devCost.toLocaleString('en-US') + '</span><span class="os-row-dot">·</span><span>' + t('os.apps.appeal_bonus', { n: a.appealBonus }) + '</span></div></div><div class="os-row-actions">' + statusHtml + '</div></div>';
+        return '<div class="os-row os-app-row"><div class="os-row-main"><div class="os-row-title">' + escapeHtml(_tx('osp.app.' + a.id, a.name)) + '</div><div class="os-row-meta"><span>$' + a.devCost.toLocaleString('en-US') + '</span><span class="os-row-dot">·</span><span>' + t('os.apps.appeal_bonus', { n: a.appealBonus }) + '</span></div></div><div class="os-row-actions">' + statusHtml + '</div></div>';
     }).join('');
     return '<div class="section-label"><span class="section-label-text">' + t('os.apps.section', { owned: owned.length, total: total }) + '</span><span class="section-label-line"></span></div>' +
-        '<div class="os-apps-summary"><span>' + t('os.apps.third_party', { n: thirdParty }) + '</span><span> · +' + osSystem.getAdoption().appBonusPerMonth + ' dari pengguna OS / bulan</span></div><div class="os-list">' + rows + '</div>' +
+        '<div class="os-apps-summary"><span>' + t('os.apps.third_party', { n: thirdParty }) + '</span><span>' + escapeHtml(t('osp.apps.from_users', { n: osSystem.getAdoption().appBonusPerMonth })) + '</span></div><div class="os-list">' + rows + '</div>' +
         '<button class="btn-secondary os-apps-invite" data-os-action="invite-devs">' + t('os.apps.invite') + '</button>';
 }
 
@@ -476,11 +487,11 @@ export function openFeatureDetailModal(params) {
     const f = OS_FEATURES.find(x => x.id === featureId); if (!f) return;
     const st = osSystem.getFeatureStatus(featureId);
     let actionBtn = '';
-    if (st.status === 'locked' && st.missingResearch && st.missingResearch.length > 0) actionBtn = `<button class="btn-secondary" data-nav="research" style="width:100%;margin-top:8px;background:var(--accent-soft);color:var(--accent);border-color:var(--accent);">👉 Buka Tab Riset</button>`;
+    if (st.status === 'locked' && st.missingResearch && st.missingResearch.length > 0) actionBtn = `<button class="btn-secondary" data-nav="research" style="width:100%;margin-top:8px;background:var(--accent-soft);color:var(--accent);border-color:var(--accent);">${t('osp.feature.open_research')}</button>`;
     const html = `
-        <div class="modal-title">${escapeHtml(f.name)}</div><div class="modal-sub">${escapeHtml(f.description)}</div>
-        <div class="sum-row"><span>${t('os.feature_detail.era')}</span><b>${f.era}</b></div><div class="sum-row"><span>${t('os.feature_detail.min_year')}</span><b>${f.minYear}</b></div>
-        <div class="sum-row"><span>${t('os.feature_detail.cost')}</span><b>$${getOsFeatureCost(f, currentGameData()).toLocaleString('en-US')}</b></div><div class="sum-row"><span>${t('os.feature_detail.duration')}</span><b>${f.devDays}</b></div>
+        <div class="modal-title">${escapeHtml(_featName(f))}</div><div class="modal-sub">${escapeHtml(_featDesc(f))}</div>
+        <div class="sum-row"><span>${t('os.feature_detail.era')}</span><b>${escapeHtml(_eraName(OS_ERAS.find(function (e) { return e.id === f.era; }), f.era))}</b></div><div class="sum-row"><span>${t('os.feature_detail.min_year')}</span><b>${f.minYear}</b></div>
+        <div class="sum-row"><span>${t('os.feature_detail.cost')}</span><b>$${getOsFeatureCost(f, currentGameData()).toLocaleString('en-US')}</b></div><div class="sum-row"><span>${t('os.feature_detail.duration')}</span><b>${escapeHtml(_days(f.devDays))}</b></div>
         <div class="card-title" style="margin-top:12px;">${t('os.feature_detail.effects')}</div>
         ${renderOsStatBar({ stability: f.statEffects.stability || 0, speed: f.statEffects.speed || 0, features: f.statEffects.features || 0, security: f.statEffects.security || 0, design: f.statEffects.design || 0 }, { compact: true })}
         <div class="sum-row" style="margin-top:12px;"><span>${t('os.feature_detail.status')}</span><b>${_statusLabel(st)}</b></div>${actionBtn}

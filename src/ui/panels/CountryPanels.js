@@ -13,8 +13,9 @@ import { LanguageService } from '../../core/LanguageService.js';
 import { computeSupplyTable, computeOsCountryUsage } from '../../systems/CountryMarketModel.js';
 import { formatUsers } from '../../systems/OsAdoptionModel.js';
 
-function L(id, en) { return LanguageService.getLang() === 'en' ? en : id; }
-function cname(c) { return LanguageService.getLang() === 'en' ? c.en_name : c.id_name; }
+// Indonesia hanya untuk bahasa 'id'; semua bahasa lain (en, zh, ja, ...) memakai Inggris.
+function L(id, en) { return LanguageService.getLang() === 'id' ? id : en; }
+function cname(c) { return LanguageService.getLang() === 'id' ? c.id_name : c.en_name; }
 function pct(x) { return (x * 100 >= 10 ? Math.round(x * 100) : (Math.round(x * 1000) / 10)) + '%'; }
 function units(n) { return formatUsers(n); }
 
