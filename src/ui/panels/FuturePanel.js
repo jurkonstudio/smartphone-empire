@@ -4,7 +4,7 @@
 // Datanya ada di src/data/future-panels.data.js.
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
-import { futureName, futureDesc, futureSystemLabel } from '../../data/i18n/research-localize.js';
+import { futureName, futureDesc, futureSystemLabel, nodeNameById } from '../../data/i18n/research-localize.js';
 import {
     FUTURE_PANELS, FUTURE_SYSTEM_LABELS,
     getFutureUnlockState
@@ -52,11 +52,23 @@ export function renderFuturePanel() {
             '<div class="fp-name">' + esc(futureName(p)) + '</div>' +
             '<div class="fp-desc">' + esc(futureDesc(p)) + '</div>' +
             '<div class="fp-links">' + links + '</div>' +
-            '<div class="fp-status">' + esc(st.unlocked ? t('future.status.open') : (st.reasonKey ? t(st.reasonKey, st.reasonVars) : st.reason)) + '</div>' +
+            '<div class="fp-status">' + esc(_statusText(p, st)) + '</div>' +
             '</div>';
     }).join('');
 
     return head + '<div class="fp-grid">' + cards + '</div>';
+}
+
+// Teks status kartu: terkunci -> alasan; terbuka -> "Terbuka" (+ efek menyusul bila belum terhubung).
+function _statusText(p, st) {
+    if (st.unlocked) {
+        var base = t('future.status.open');
+        return (p.connected && p.connected.length) ? base : base + '. ' + t('future.status.open_soon');
+    }
+    if (!st.reasonKey) return st.reason;
+    var vars = st.reasonVars;
+    if (vars && vars.nodeId) vars = { id: nodeNameById(vars.nodeId, vars.id) };   // nama riset sesuai bahasa
+    return t(st.reasonKey, vars);
 }
 
 function _ensureStyles() {
