@@ -12,7 +12,7 @@ import { CloudService } from '../services/CloudService.js';
 import { SiliconService } from './SiliconService.js';
 import { validateCompanyName } from '../data/name-blocklist.data.js';
 import { TIME_CONFIG } from '../config/time.config.js';
-import { PlayerProgression, readComponents, readCompanyComponents, setServerCompany } from './PlayerProgression.js';
+import { PlayerProgression, readComponents } from './PlayerProgression.js';
 
 export var NAME_RULES = { free: 2, silCost: 150, min: 2, max: 24 };
 var AVATAR = { size: 256, quality: 0.82, maxBytes: 8 * 1024 * 1024 };
@@ -255,10 +255,8 @@ export async function pushToCloud(opts) {
             p_sentiment: comp.sentiment,
             p_game_minutes: comp.gameMinutes
         });
-        if (res && res.ok) {
-            _lastPush = Date.now();
-            await _pushCompanyLevel();   // level perusahaan dihitung server dari statistik yang baru disinkron
-        } else if (res && res.code === 'db_setup' && !_warnedDb) {
+        if (res && res.ok) _lastPush = Date.now();
+        else if (res && res.code === 'db_setup' && !_warnedDb) {
             _warnedDb = true;
             console.warn('[PlayerProfile] Jalankan supabase/player-profile.sql di Supabase.');
         }
@@ -342,12 +340,3 @@ export const PlayerProfileService = {
 };
 
 PlayerProfileService.init();
-
-// Kirim komponen yang hanya dimiliki klien (staf, moral, riset) ke server; simpan hasil level perusahaan.
-async function _pushCompanyLevel() {
-    try {
-        var cc = readCompanyComponents();
-        var r = await CloudService.syncCompanyLevel({ p_staff: cc.staff, p_morale: cc.morale, p_research: cc.research });
-        if (r && r.ok && r.data) setServerCompany(r.data);
-    } catch (e) {}
-}
