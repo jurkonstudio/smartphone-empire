@@ -44,7 +44,9 @@ export const FUTURE_PANELS = [
         icon: 'code',
         description: 'SDK dan toolkit untuk developer aplikasi pihak ketiga. Menghubungkan OS dengan ekosistem aplikasinya.',
         linksTo: ['os', 'products'],
-        unlock: { enabled: false, year: null, research: null }
+        connected: ['os', 'products'],   // os: diskon fitur ekosistem (FutureEffects.js); products: bonus permintaan untuk OS milik pemain.
+        // Terbuka: tahun 2008 ke atas DAN riset 4G LTE (net_4g) selesai. Riset itu juga membuka App Store.
+        unlock: { enabled: true, year: 2008, research: 'net_4g' }
     },
     {
         id: 'game_engine',
