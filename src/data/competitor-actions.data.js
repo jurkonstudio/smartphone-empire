@@ -23,10 +23,10 @@ export const COMPETITOR_ACTIONS = {
     //         x (1 + recessionGain bila resesi); a = agresivitas 0..1,
     //         p = tekanan pasar 0..1 (lihat `market`).
     pool: {
-        price_cut:      { weight: 1.0, aggressionGain:  0.6, pressureGain:  1.0, recessionGain: 0.5, relEffect:  0.10, durationTicks: 4 },
-        marketing_push: { weight: 1.0, aggressionGain:  0.5, pressureGain:  1.0, recessionGain: 0,   relEffect:  0.08, durationTicks: 6 },
+        price_cut:      { weight: 1.0, aggressionGain:  0.6, pressureGain:  1.0, recessionGain: 0.5, crunchGain: -0.40, relEffect:  0.10, durationTicks: 4 },
+        marketing_push: { weight: 1.0, aggressionGain:  0.5, pressureGain:  1.0, recessionGain: 0,   crunchGain: -0.15, relEffect:  0.08, durationTicks: 6 },
         research:       { weight: 0.8, aggressionGain: -0.3, pressureGain:  0,   recessionGain: 0,   relEffect: -0.06, durationTicks: 3 },
-        idle:           { weight: 1.5, aggressionGain: -0.7, pressureGain: -0.5, recessionGain: 0,   relEffect:  0,    durationTicks: 0 }
+        idle:           { weight: 1.5, aggressionGain: -0.7, pressureGain: -0.5, recessionGain: 0,   crunchGain:  0.30, relEffect:  0,    durationTicks: 0 }
     },
 
     // ---- Rilis produk: dipicu rilis 8-bulanan CompetitorSystem ----
@@ -54,6 +54,24 @@ export const COMPETITOR_ACTIONS = {
     threat: {
         threshold: 0.05,     // share pemain turun melewati ini -> competitor:threat
         rearmMargin: 0.01    // aktif lagi hanya bila share > threshold + margin
+    },
+
+    // ---- [paket kompetitor] Krisis memori (indeks RAM >= MEMORY_CRUNCH_THRESHOLD) ----
+    // Saat krisis: bobot tiap aksi dikali (1 + crunchGain) (price_cut/marketing lebih jarang,
+    // idle lebih sering). Merek kecil (pangsa historis < smallBrandShareBelow) tambah condong diam.
+    memoryCrunch: {
+        smallBrandShareBelow: 0.02,
+        smallBrandIdleGain: 0.60
+    },
+
+    // ---- [paket kompetitor, SPEKULATIF] Penarikan merek emergent (simulasi) ----
+    // Merek non-ekosistem keluar bila pangsa (historis + modifier) < shareBelow selama
+    // consecutiveYears tahun berturut-turut, mulai fromYear. Tanpa skrip "merek X bangkrut".
+    withdrawal: {
+        enabled: true,
+        fromYear: 2027,
+        shareBelow: 0.003,
+        consecutiveYears: 2
     },
 
     // ---- Log ----

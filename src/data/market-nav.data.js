@@ -4,7 +4,7 @@
 //   1. SEGMENTS    : 8 segmen konsumen (selera, daya beli, porsi per tahun)
 //   2. SUBREGIONS  : 8 sub-wilayah di bawah Asia / Eropa / Amerika & Lainnya
 //   3. EXT_TRENDS  : dimensi tren tambahan (tren inti 5 dimensi tetap di MacroModel)
-//   4. TREND_WAVES : 15 "gelombang tren" historis (naik -> puncak -> surut)
+//   4. TREND_WAVES : 18 "gelombang tren" (15 historis + 3 skenario 2027-29) (naik -> puncak -> surut)
 //   5. VIRAL_EXT   : 16 event viral tambahan (dwibahasa) + terjemahan EN event lama
 //   6. PERSONAS    : suara pengulas per segmen (dwibahasa)
 // Teks pakai pasangan { id, en }. Angka = perkiraan pembulatan tren publik,
@@ -203,7 +203,21 @@ export const TREND_WAVES = [
     { id: 'ai_phone', icon: '🤖', from: 2023, peak: 2026, to: 2028, strength: 0.20,
       boost: { performance: .5, usability: .3, camera: .2 }, segs: { premium: 1.20, pro: 1.15, creator: 1.15 },
       name: { id: 'Demam Ponsel AI', en: 'AI Phone Hype' },
-      desc: { id: 'Fitur AI di perangkat jadi sorotan promosi.', en: 'On-device AI features dominate marketing.' } }
+      desc: { id: 'Fitur AI di perangkat jadi sorotan promosi.', en: 'On-device AI features dominate marketing.' } },
+
+    // ---- [paket 2027-28] Gelombang masa depan. SPEKULATIF: skenario permainan, bukan fakta. ----
+    { id: 'memory_crunch', icon: '🧠', from: 2027, peak: 2028, to: 2029.5, strength: 0.20, speculative: true,
+      boost: { quality: .4, battery: .3, usability: .3 }, segs: { value: 0.85, premium: 1.10 },
+      name: { id: 'Krisis Memori: Harga Naik', en: 'Memory Crunch: Prices Rise' },
+      desc: { id: 'Pasokan memori seret, harga ponsel naik. Pembeli hemat menunda, kelas atas bertahan. (skenario)', en: 'Memory supply runs short and phone prices rise. Budget buyers wait, the high end holds up. (scenario)' } },
+    { id: 'agentic_ai', icon: '🕹️', from: 2027, peak: 2029, to: 2031, strength: 0.22, speculative: true,
+      boost: { performance: .5, usability: .35, connectivity: .15 }, segs: { premium: 1.20, pro: 1.20, creator: 1.10 },
+      name: { id: 'Ponsel Agen AI', en: 'Agentic AI Phones' },
+      desc: { id: 'Ponsel yang menjalankan tugas rumit lewat satu perintah jadi nilai jual baru. (skenario)', en: 'Phones that run complex tasks from a single command become a new selling point. (scenario)' } },
+    { id: 'eu_battery_rule', icon: '🔋', from: 2027, peak: 2027.5, to: 2029, strength: 0.16, speculative: true,
+      boost: { battery: .5, quality: .3, usability: .2 }, regs: { west_europe: 1.15 },
+      name: { id: 'Aturan Baterai Uni Eropa', en: 'EU Battery Rule' },
+      desc: { id: 'Aturan baterai yang mudah diganti menguji desain bodi di Eropa. (skenario; rincian aturan tidak dimodelkan)', en: 'Rules for user-replaceable batteries test body designs in Europe. (scenario; rule details not modeled)' } }
 ];
 
 // ------------------------------------------------------------

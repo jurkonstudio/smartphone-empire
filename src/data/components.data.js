@@ -919,7 +919,15 @@ export const COMPONENTS = [
       name: 'LPDDR5X 16GB', icon: 'layers',
       description: 'Memori puncak untuk model AI lokal.',
       costPerUnit: 55, stats: { performance: 11, usability: 10 },
-      realReference: 'ROG Phone 8 (2024)', milestone: false }
+      realReference: 'ROG Phone 8 (2024)', milestone: false },
+
+    // [paket 2027-28, SPEKULATIF] RAM generasi berikutnya untuk AI agen di perangkat.
+    // Harga dasar 70; harga nyata mengikuti indeks krisis memori (supply-shock.data.js).
+    { id: 'ram_lpddr6_24g', category: 'ram', tier: 5, minYear: 2027,
+      name: 'LPDDR6 24GB', icon: 'layers',
+      description: 'Memori generasi baru untuk AI agen di perangkat. Harga mengikuti krisis pasokan memori.',
+      costPerUnit: 70, stats: { performance: 13, usability: 12 },
+      realReference: 'Spekulatif (skenario 2027)', milestone: false, speculative: true }
 ];
 
 // Warna bodi

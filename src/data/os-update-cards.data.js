@@ -30,13 +30,13 @@ export const OS_UPDATE_TRACKS = [
     { id: 'connectivity', name: 'Jaringan & Peta',     icon: 'signal',  hint: 'Browser, Bluetooth, GPS, dan ekosistem',
       features: ['fw_wap_browser', 'fw_bt_basic', 'fw_browser_mobile', 'fw_gps', 'fw_ecosystem'] },
     { id: 'security',     name: 'Keamanan & Akun',     icon: 'shield',  hint: 'Biometrik, privasi, dan akun terpadu',
-      features: ['fw_biometric', 'fw_fingerprint', 'fw_sign_in', 'fw_privacy'] },
+      features: ['fw_biometric', 'fw_fingerprint', 'fw_sign_in', 'fw_privacy', 'fw_agent_guard'] },
     { id: 'performance',  name: 'Performa & Baterai',  icon: 'battery', hint: 'Multitasking, hemat daya, dan kesehatan digital',
       features: ['fw_multitasking', 'fw_low_power', 'fw_digital_wellbeing'] },
     { id: 'platform',     name: 'Platform & Aplikasi', icon: 'store',   hint: 'Runtime aplikasi, toko, dan sinkronisasi',
-      features: ['fw_j2me', 'fw_appstore', 'fw_cloud_sync'] },
+      features: ['fw_j2me', 'fw_appstore', 'fw_cloud_sync', 'fw_agent_store'] },
     { id: 'ai',           name: 'Asisten & AI',        icon: 'brain',   hint: 'Asisten suara, AI on-device, dan agen',
-      features: ['fw_voice_assistant', 'fw_siri', 'fw_ai_on_device', 'fw_ondevice_llm', 'fw_ai_agent'] }
+      features: ['fw_voice_assistant', 'fw_siri', 'fw_ai_on_device', 'fw_ondevice_llm', 'fw_ai_agent', 'fw_agentic_os'] }
 ];
 
 // Biaya rilis per build (dibayar sekali setiap kali build OS dimulai).

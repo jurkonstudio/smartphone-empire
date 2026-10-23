@@ -221,6 +221,12 @@ export const RESEARCH_NODES = [
       description: 'Fabrikasi paling canggih dengan performa maksimal.',
       cost: 480000, durationDays: 120, prerequisites: ['chip_5nm'],
       effects: { unlocksComponents: ['chip_3nm'], statBonuses: { performance: 100 }, unlocksOsFeatures: [] } },
+    // [paket 2027-28, SPEKULATIF] Runtime agen AI di perangkat; membuka fitur OS agentik.
+    { id: 'ai_agentic_runtime', category: 'chip', tier: 5, minYear: 2027,
+      name: 'Runtime Agen AI',
+      description: 'Lapisan runtime agar agen AI menjalankan tugas berantai di perangkat. Membuka fitur OS agentik.',
+      cost: 650000, durationDays: 140, prerequisites: ['chip_npu', 'chip_3nm'],
+      effects: { unlocksComponents: [], statBonuses: { performance: 6 }, unlocksOsFeatures: ['fw_agentic_os', 'fw_agent_guard', 'fw_agent_store'] }, speculative: true },
 
     // ==================== JARINGAN (Asli + Tambahan) ====================
     { id: 'net_gsm', category: 'network', tier: 1, minYear: 2000,

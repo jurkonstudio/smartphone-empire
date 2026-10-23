@@ -92,7 +92,15 @@ export const OS_FEATURES = [
     { id: 'fw_ondevice_llm', name: 'LLM On-Device', description: 'Model bahasa besar berjalan di perangkat.', era: 'future', minYear: 2026, devCost: 90000, devDays: 28,
       statEffects: { stability: 0, speed: 2, features: 14, security: 3, design: 1 }, requiresFeatures: ['fw_ai_on_device'], requiresResearch: [] },
     { id: 'fw_ai_agent', name: 'AI Agent', description: 'Agen AI yang menjalankan tugas otomatis.', era: 'future', minYear: 2026, devCost: 110000, devDays: 32,
-      statEffects: { stability: -1, speed: 1, features: 16, security: 2, design: 2 }, requiresFeatures: ['fw_ondevice_llm'], requiresResearch: [] }
+      statEffects: { stability: -1, speed: 1, features: 16, security: 2, design: 2 }, requiresFeatures: ['fw_ondevice_llm'], requiresResearch: [] },
+
+    // [paket 2027-28, SPEKULATIF] Fitur OS era Agentic AI.
+    { id: 'fw_agentic_os', name: 'OS Agentik', description: 'Sistem operasi berpusat agen: satu perintah menjalankan banyak aplikasi.', era: 'future', minYear: 2027, devCost: 150000, devDays: 36,
+      statEffects: { stability: -1, speed: 1, features: 18, security: 1, design: 3 }, requiresFeatures: ['fw_ai_agent'], requiresResearch: ['ai_agentic_runtime'], speculative: true },
+    { id: 'fw_agent_guard', name: 'Pagar Agen', description: 'Izin berlapis dan jejak audit untuk tindakan agen AI.', era: 'future', minYear: 2027, devCost: 90000, devDays: 24,
+      statEffects: { stability: 1, speed: 0, features: 4, security: 16, design: 1 }, requiresFeatures: ['fw_ai_agent', 'fw_privacy'], requiresResearch: ['ai_agentic_runtime'], speculative: true },
+    { id: 'fw_agent_store', name: 'Toko Agen', description: 'Toko agen dan skill AI pihak ketiga di atas OS agentik.', era: 'future', minYear: 2028, devCost: 120000, devDays: 30,
+      statEffects: { stability: 0, speed: 0, features: 14, security: 0, design: 2 }, requiresFeatures: ['fw_agentic_os', 'fw_appstore'], requiresResearch: ['ai_agentic_runtime'], speculative: true }
 ];
 
 // Lisensi OS pihak ketiga (biaya per unit ponsel).
@@ -227,5 +235,6 @@ export const BUG_TEMPLATES = [
     { id: 'bug_esim_activation', name: 'eSIM Gagal Aktivasi', severity: 3, satisfactionHit: 7, reputationHit: 4, patchCost: 22000, patchDays: 14, minYear: 2023, maxYear: 2026, requiresFeature: 'fw_ecosystem' }, // assuming ecosystem feature covers eSIM
     { id: 'bug_ai_hallucination', name: 'AI Berhalusinasi (Bug)', severity: 3, satisfactionHit: 9, reputationHit: 6, patchCost: 35000, patchDays: 20, minYear: 2024, maxYear: 2026, requiresFeature: 'fw_ondevice_llm' },
     { id: 'bug_ai_agent_fail', name: 'AI Agent Gagal Eksekusi', severity: 4, satisfactionHit: 12, reputationHit: 8, patchCost: 50000, patchDays: 30, minYear: 2026, maxYear: 9999, requiresFeature: 'fw_ai_agent' },
+    { id: 'bug_agent_permission_leak', name: 'Agen AI Bocorkan Izin Akses', severity: 4, satisfactionHit: 13, reputationHit: 9, patchCost: 55000, patchDays: 24, minYear: 2027, maxYear: 9999, requiresFeature: 'fw_agentic_os' },
     { id: 'bug_zero_day', name: 'Celah Keamanan Kritis (Zero-Day)', severity: 4, satisfactionHit: 15, reputationHit: 10, patchCost: 60000, patchDays: 10, minYear: 2010, maxYear: 9999, requiresFeature: 'fw_privacy' } // Security bug dari era modern
 ];

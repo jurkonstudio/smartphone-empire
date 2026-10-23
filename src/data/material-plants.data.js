@@ -19,6 +19,8 @@
 //     Besarnya 0,5% dari biaya bangun per bulan (dihitung per level).
 // ============================================================
 
+import { getComponentCostIndexForTime } from './supply-shock.data.js';
+
 export const PLANT_MIN_ORDER = 1000;          // minimal unit per order produksi
 export const PLANT_CYCLE_DAYS = 30;           // kapasitas dihitung per bulan
 export const PLANT_YIELD_BASE = 0.80;         // yield dasar (unit bagus / unit diproduksi)
@@ -201,9 +203,16 @@ export function getBuiltPlantEffect(data, typeId, key) {
 // Mengembalikan harga per unit yang dipakai untuk menghitung biaya produk.
 // Jika pabrik untuk kategori ini belum dibangun, harga pasar tetap dipakai.
 // ============================================================
+export function getMarketPrice(data, comp) {
+    if (!comp) return 0;
+    var base = comp.costPerUnit || 0;
+    var idx = getComponentCostIndexForTime(comp.category, data && data.time);
+    return Math.round(base * idx * 100) / 100;
+}
+
 export function resolveComponentCost(data, comp) {
     if (!comp) return 0;
-    var market = comp.costPerUnit || 0;
+    var market = getMarketPrice(data, comp); // [paket 2027-28] harga pasar x indeks krisis
     var pt = getPlantTypeForCategory(comp.category);
     if (!pt || !data || !data.componentPlants || !data.componentPlants.plants) return market;
     var ps = data.componentPlants.plants[pt.id];
