@@ -8,7 +8,7 @@ Proyek ini di-deploy sebagai satu versi live, jadi perbaikan keamanan hanya dite
 
 | Versi | Didukung |
 | ----- | -------- |
-| 0.2.x (terbaru, saat ini 0.2.1) | ✅ |
+| 0.2.x (terbaru, saat ini 0.2.2) | ✅ |
 | < 0.2 | ❌ |
 
 ## Cara melapor celah keamanan
@@ -33,7 +33,7 @@ Tidak boleh: mengakses, mengubah, atau menghapus data pemain lain; mengganggu la
 
 ## Di dalam cakupan
 
-- Kode di repo ini (`src/`, `index.html`, `web.html` (landing page), `031411/` panel admin).
+- Kode di repo ini (`src/`, `index.html`, `web.html` (landing page), `031411/` panel admin). Folder `tools/` berisi skrip uji lokal dan tidak dimuat game, jadi bukan permukaan serangan produksi.
 - Skema dan fungsi SQL di `supabase/` (termasuk `12` dan `15` untuk level dan reward) serta Edge Function `supabase/function/advisor-chat`.
 - Layanan Supabase milik proyek ini yang dipakai game.
 
@@ -80,7 +80,8 @@ Kami mencantumkannya terbuka agar peneliti tidak membuang waktu pada hal yang su
 8. **Belum ada pemindaian otomatis untuk XSS.** Kode memiliki puluhan titik `innerHTML` dan aturan `escapeHtml`, tetapi belum ada linter atau test yang memeriksanya. Komponen baru yang menampilkan teks pemain perlu diperiksa manual.
 9. **Panel admin (`031411/`) punya konsol RPC bebas.** Admin bisa memanggil fungsi apa pun dengan argumen JSON. Pengamannya hanya `is_admin()` di server, jadi akun admin wajib memakai password kuat dan 2FA.
 10. `supabase/BACA-DULU.md` belum memuat file SQL 10–13. Proyek yang melewatkan file tertentu bisa kehilangan perlindungannya (misalnya validasi nama unik di `14`, validasi leaderboard di `11`, atau perhitungan level di server pada `12` dan `15`).
-11. Komentar di `src/core/Integrity.js` masih merujuk `supabase/hardening.sql`, yang sudah digabung ke file bernomor.
+11. **Data dan logika game ada di klien.** Paket skenario 2027–2030 (indeks biaya komponen, pangsa merek, penarikan merek, berita) seluruhnya dihitung di browser dan tersimpan di save lokal (`competitorState.withdrawn`, `lowShareYears`). Seperti save lain, ia dilindungi tanda tangan integritas yang bukan enkripsi, jadi nilainya bisa diubah pemain. Tidak ada saldo SIL atau data akun yang bergantung padanya, dan skor leaderboard tetap mewarisi batas yang dijelaskan di atas.
+12. Komentar di `src/core/Integrity.js` masih merujuk `supabase/hardening.sql`, yang sudah digabung ke file bernomor.
 
 ## Panduan untuk yang menjalankan proyek sendiri
 

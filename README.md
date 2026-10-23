@@ -4,7 +4,7 @@
 
 ### Smartphone Empire
 
-**Bangun perusahaan ponsel dari nol. Mulai 1 Januari 2000, lawan Nokia, Apple, Samsung, dan 23 kompetitor lain, sampai era AI dan foldable.**
+**Bangun perusahaan ponsel dari nol. Mulai 1 Januari 2000, lawan Nokia, Apple, Samsung, dan 24 kompetitor lain, sampai era AI dan foldable, lalu masuk skenario spekulatif 2027–2030.**
 
 Dibuat oleh **Kalfin Agus Setiawan** di bawah bendera **Jurkon Studio**.
 
@@ -36,6 +36,8 @@ Tugasmu:
 - Jangan sampai bangkrut. Kas negatif **2 bulan berturut-turut** = game over
 
 Waktu berjalan real-time: **1 hari game = 60 detik**. Bisa dipause atau dipercepat 2x, 5x, atau 10x. Selama kamu bekerja, kompetitor juga bergerak: merilis produk, naik tier riset, dan merebut pangsa pasar. Ada juga **life events historis** yang mengubah permainan. Tahun 2007, iPhone muncul dan Nokia mulai goyah. Kalau kamu di posisi Nokia, apa yang akan kamu lakukan?
+
+Dunia nyata di game berhenti di 2026. Sesudahnya (2027–2030) permainan memakai **skenario spekulatif**: krisis memori dan kenaikan harga, ponsel Agentic AI, aturan baterai UE, dan pendatang fiktif. Semua konten skenario ditandai `speculative` di data dan bukan fakta atau prediksi resmi.
 
 Satu musim berakhir saat tanggal game memasuki **2051** (batas `endYear` 2050 di `src/config/endgame.config.js`). Skor akhir dihitung dari milestone, produk di katalog, riset selesai, staf aktif, dan kekayaan bersih.
 
@@ -71,21 +73,21 @@ Bar bawah: **Home · HQ · Riset · Produk · Pasar · Setelan**.
 
 ### 🔬 Riset dan OS
 
-- **Tech tree**: **70 node** dalam **8 kategori** (display, kamera, baterai, chip, jaringan, bodi, sensor, audio), dari 2000 sampai 2025. Antrian riset berjalan paralel, dan makin banyak engineer makin banyak slot. Termasuk riset kabel USB Tipe-C.
-- **OS sendiri**: **35 fitur OS** dalam **5 era** (Firmware Dasar, Era Layar Sentuh, Smartphone Modern, AI & Ekosistem, AI On-Device). Ada versi OS, bug acak (**45 template** bug, lengkap dengan patch), **7 aplikasi bawaan**, dan ekosistem aplikasi pihak ketiga.
+- **Tech tree**: **71 node** dalam **8 kategori** (display, kamera, baterai, chip, jaringan, bodi, sensor, audio), dari 2000 sampai 2027 (node terakhir, Runtime Agen AI, adalah skenario spekulatif). Antrian riset berjalan paralel, dan makin banyak engineer makin banyak slot. Termasuk riset kabel USB Tipe-C.
+- **OS sendiri**: **38 fitur OS** dalam **5 era** (Firmware Dasar, Era Layar Sentuh, Smartphone Modern, AI & Ekosistem, AI On-Device). Tiga fitur terbaru (OS Agentik, Pagar Agen, Toko Agen) terbuka dari 2027 lewat riset Runtime Agen AI. Ada versi OS, bug acak (**46 template** bug, lengkap dengan patch), **7 aplikasi bawaan**, dan ekosistem aplikasi pihak ketiga.
 - **Lisensi OS**: **5 paket** kalau kamu tidak mau membangun OS sendiri.
 - **Fitur ponsel**: **59 fitur** dalam 10 grup (konektivitas, keamanan, audio, kamera tambahan, daya tahan, daya, sensor, UX, penyimpanan, AI).
 
 ### 📱 Produk dan Penjualan
 
-- **Wizard desain ponsel** dengan preview real-time. Ada **127 komponen** dalam **10 kategori** (display, kamera, baterai, chip, RAM, jaringan, bodi, sensor, audio, bentuk) dan **8 warna bodi**. Pilihan mengikuti tahun, jadi tidak ada layar OLED di tahun 2001. RAM bersifat opsional (default "RAM Standar", tanpa biaya).
+- **Wizard desain ponsel** dengan preview real-time. Ada **128 komponen** dalam **10 kategori** (display, kamera, baterai, chip, RAM, jaringan, bodi, sensor, audio, bentuk) dan **8 warna bodi**. Pilihan mengikuti tahun, jadi tidak ada layar OLED di tahun 2001. RAM bersifat opsional (default "RAM Standar", tanpa biaya). Mulai 2027 tersedia RAM LPDDR6 24GB, dan harga pasar RAM mengikuti indeks krisis memori (×1,35 di 2027, ×1,5 di 2028, ×1,2 di 2029, ×1,05 di 2030) yang memengaruhi biaya desain, tagihan produksi, dan harga jual pabrik RAM sendiri.
 - **Mockup ponsel 3 tampilan**: depan, belakang, dan **kemasan retail** (kotak yang mengikuti era, lengkap dengan isi kotak seperti kabel, charger, dan earphone). Tampak belakang menampilkan lencana **Internal** untuk komponen dari pabrikmu sendiri.
 - **Pengembangan 4 fase**: Desain → Prototipe → Produksi → Rilis.
 - **Rumus permintaan yang transparan**: kualitas × harga × reputasi × pemasaran × OS × tren × kompetitor × lifecycle × kondisi makro.
 - **Lifecycle produk**: naik → puncak → turun → mati. Ada stok gudang, restock otomatis, dan maksimal **5 produk aktif**.
 - **Pemasaran**: **5 jenis kampanye** (Iklan Online, Sponsor Event, Peluncuran Produk, Billboard Kota, Kampanye Influencer).
 - **Promosi**: **18 paket**: 12 paket regional (Global, Asia, Eropa, Amerika & Lainnya, masing-masing 3 paket) dan 6 paket per segmen konsumen. Ada **12 event musiman** seperti Imlek, 618, Singles Day 11.11, Golden Week/Diwali, Karnaval, Back to School, Summer Sales, Black Friday, dan Natal. Maksimal 3 kampanye promosi aktif per produk.
-- **Navigasi Pasar**: pasar dibaca per **8 segmen konsumen** (value, mainstream, premium, gamer, creator, pro, youth, senior) dan **8 sub-wilayah**. Ada **16 gelombang tren** ditambah 4 tren tambahan, dan faktor ini ikut masuk ke rumus permintaan. Tab **Pasar** menampilkan kartu Peluang Terbaik, Segmen, Sub-Wilayah, Gelombang Tren, Reaksi per segmen, dan Riwayat Viral. Datanya juga bisa dibaca lewat `window.__game.marketNav`.
+- **Navigasi Pasar**: pasar dibaca per **8 segmen konsumen** (value, mainstream, premium, gamer, creator, pro, youth, senior) dan **8 sub-wilayah**. Ada **19 gelombang tren** (16 historis ditambah 3 gelombang skenario 2027–2029: Krisis Memori, Ponsel Agen AI, Aturan Baterai UE) ditambah 4 tren tambahan, dan faktor ini ikut masuk ke rumus permintaan. Tab **Pasar** menampilkan kartu Peluang Terbaik, Segmen, Sub-Wilayah, Gelombang Tren, Reaksi per segmen, dan Riwayat Viral. Datanya juga bisa dibaca lewat `window.__game.marketNav`.
 
 ### 🧠 Chip, Fab, dan Manufaktur
 
@@ -99,14 +101,16 @@ Bar bawah: **Home · HQ · Riset · Produk · Pasar · Setelan**.
 
 ### 🌍 Kompetitor dan Pasar
 
-- **26 perusahaan** dengan kepribadian (dominant, aggressive, premium, follower, innovator, declining). Contoh: Nokia, Motorola, Sony Ericsson, Siemens, Palm, BlackBerry, Samsung, LG, HTC, Apple, Android, Huawei, Oppo, Vivo, Microsoft Lumia, Honor, OnePlus, Nothing, Asus, Sony Mobile, Realme, Meizu, Lenovo, Tecno, ZTE, dan Xiaomi.
+- **27 perusahaan** dengan kepribadian (dominant, aggressive, premium, follower, innovator, declining). Contoh: Nokia, Motorola, Sony Ericsson, Siemens, Palm, BlackBerry, Samsung, LG, HTC, Apple, Android, Huawei, Oppo, Vivo, Microsoft Lumia, Honor, OnePlus, Nothing, Asus, Sony Mobile, Realme, Meizu, Lenovo, Tecno, ZTE, dan Xiaomi, ditambah **Novamind**, pendatang fiktif AI-native yang masuk pasar pada 2028 (skenario).
+  - Pangsa pasar tiap merek diteruskan sampai 2030 sebagai arah skenario: Samsung dan Apple naik tipis, merek Tiongkok turun lalu pulih sebagian, merek kecil turun sekitar separuh pada 2028.
   - Setiap perusahaan punya tahun aktif, pangsa pasar historis per tahun, produk ikonik, milestone, dan life events.
   - Ada penanda tingkat faktualitas dan catatan sumber, supaya jelas mana yang fakta dan mana yang disederhanakan.
 - **Mode nama**: pakai nama asli atau nama parodi fiktif (misalnya "Nokio", "Apel", "Samsul").
-- **Aksi dinamis kompetitor**: mereka bisa agresif, menekan harga, atau melemah, tergantung kepribadian dan tingkat kesulitan.
-- **Pangsa pasar** dihitung bulanan dengan riwayat 24 bulan. Model makro (GDP, inflasi, suku bunga, 2000–2026) memengaruhi permintaan.
+- **Aksi dinamis kompetitor**: mereka bisa agresif, menekan harga, atau melemah, tergantung kepribadian dan tingkat kesulitan. Saat krisis memori aktif, merek lebih jarang banting harga dan merek kecil lebih sering diam.
+- **Penarikan merek emergent** (mulai 2027): merek non-ekosistem keluar dari simulasi bila pangsanya di bawah 0,3% selama 2 tahun berturut-turut. Ini hasil ambang di data, bukan skrip. Pada simulasi uji, yang keluar adalah Meizu (2028), Lenovo (2029), dan Asus (2030). Ambangnya bisa disetel di `src/data/competitor-actions.data.js`.
+- **Pangsa pasar** dihitung bulanan dengan riwayat 24 bulan. Model makro (GDP, inflasi, suku bunga, 2000–2026) memengaruhi permintaan. Anchor ukuran pasar dan harga rata-rata diteruskan sampai 2030 (turun di puncak krisis memori 2028, lalu pulih).
 - **Opini publik**: sentimen per **11 aspek** (desain, kamera, baterai, performa, harga, keandalan, OS, support, layar, konektivitas, kemudahan pakai), feed ulasan yang makin beragam dari era ke era, dan **26 viral event** yang bisa kamu tanggapi (minta maaf, recall, klarifikasi, atau diabaikan; "Abaikan" hanya bisa sekali per event). Efek viral memengaruhi penjualan harian.
-- **Berita**: headline otomatis dari **20 media**, dengan jurnalis dan dateline per negara. Ada **72 headline bulanan** dan template berita yang menyoroti rilis produk, milestone, dan kejadian industri.
+- **Berita**: headline otomatis dari **20 media**, dengan jurnalis dan dateline per negara. Ada **72 headline bulanan** (2000–2005), **33 headline** 2018–2026, dan **9 berita skenario** 2027–2029 (berlabel spekulatif, sumber generik), serta template berita yang menyoroti rilis produk, milestone, dan kejadian industri.
 
 ### 💰 Keuangan
 
@@ -167,6 +171,8 @@ Bar bawah: **Home · HQ · Riset · Produk · Pasar · Setelan**.
 - **Catatan rilis belum lengkap.** `patches.json` sekarang memuat 0.2.2 (dan 0.2.1). Beberapa entri di bagian Versi di bawah belum dipindahkan ke `patches.json`.
 - **Screenshot di landing page** (`assets/img/landing/`) perlu diambil ulang. Gambar HQ masih menampilkan tab Kantor dan tata letak Ringkasan yang lama.
 - **Gate admin di sisi klien hanya kosmetik.** Admin yang sebenarnya diverifikasi di server lewat `is_admin()`.
+- **Konten 2027–2030 bersifat spekulatif.** Angka harga, indeks RAM, pangsa merek, dan ambang penarikan merek adalah skenario permainan yang masih perlu dikalibrasi lewat bermain. Rincian aturan baterai UE tidak dimodelkan (hanya efek tren dan berita). Nama merek nyata bisa "menarik diri" di simulasi lewat ambang pangsa, dan itu bukan klaim tentang perusahaan nyata.
+- **Nama dan deskripsi komponen** baru (LPDDR6) masih dalam bahasa Indonesia, sama seperti komponen lain.
 - **Office 3D Map** belum menampilkan dampak rekrut dan bonus trait dari `TeamSystem`. Ringkasan di peta masih dihitung sendiri.
 
 ---
@@ -195,8 +201,8 @@ Lalu buka `http://localhost:8000`. Tidak ada langkah build dan tidak ada `npm in
 - **Three.js 0.160.0** (versi dipin, dimuat lazy dari CDN) untuk Peta Kampus, Office 3D Map, dan peta Manufaktur. Kalau WebGL atau CDN gagal, game tetap jalan dengan tampilan cadangan.
 - **Supabase** (`supabase-js` 2.49.4 dari CDN) untuk auth, cloud save, profil, pesan, dan storage avatar.
 - Komunikasi antar sistem lewat **event bus** (`src/core/EventBus.js`). Daftar event ada di `src/config/event.md`.
-- Ukuran kode: **286 file JS** dengan sekitar **79 ribu baris** di `src/`.
-- Belum ada test otomatis resmi, linter, atau `package.json`. Folder `tools/` berisi 12 skrip uji manual (Node, ES Modules) untuk kalibrasi, simulasi permintaan, penahan ekonomi, promosi, dan render panel; skrip ini tidak dimuat game. Contoh: `node --experimental-default-type=module tools/sim.mjs src`.
+- Ukuran kode: **296 file JS** dengan sekitar **82 ribu baris** di `src/`.
+- Belum ada test otomatis resmi, linter, atau `package.json`. Folder `tools/` berisi 13 skrip uji manual (Node, ES Modules) untuk kalibrasi, simulasi permintaan, penahan ekonomi, promosi, render panel, dan paket 2027–2030 (`paket2027.mjs`: indeks biaya RAM, riset dan fitur OS baru, berita, serta simulasi kompetitor 2027–2031); skrip ini tidak dimuat game. Contoh: `node --experimental-default-type=module tools/sim.mjs src` dan `node tools/paket2027.mjs src`.
 
 ### Struktur folder
 
@@ -254,6 +260,7 @@ Proyek ini masih berjalan. Catatan roadmap:
 - ✅ **Manufaktur**: pabrik komponen (Baterai, Layar, SoC, Kamera, RAM), jual grosir, pajak infrastruktur, dan jembatan Kampus ↔ Pulau Manufaktur
 - ✅ **Penahan ekonomi dan tab Investasi**
 - ✅ **Bursa saham v2**: dampak transaksi pemain, lebih banyak emiten dan indeks dunia/IDX, tier emiten
+- ✅ **Paket 2027–2030 (skenario spekulatif)**: anchor pasar, indeks biaya RAM, tren, berita, fitur OS Agentic AI, pendatang fiktif Novamind, dan penarikan merek emergent
 - ✅ **Kemasan retail di mockup** dan riset USB Tipe-C
 - ✅ **12 bahasa** (Indonesia dan English penuh, 10 lainnya kamus inti)
 - ✅ **Level pemain dan perusahaan di server**, Pesan, dan hadiah
@@ -280,6 +287,7 @@ Perubahan yang sudah ada di kode tetapi belum masuk `patches.json`:
 - 12 bahasa dan perbaikan teks mentah.
 - Perombakan HQ → Ringkasan, tab Kantor dipindah ke sakelar di Home, dan ID Pemain dipindah ke Profil Pemain.
 - Top-up Silicon ditutup sementara.
+- Paket 2027–2030: pasar, indeks biaya RAM, tren skenario, berita, fitur OS Agentic AI (OS Agentik, Pagar Agen, Toko Agen), pendatang fiktif Novamind, dan penarikan merek emergent (lihat `CHANGES-2027-kompetitor.md`).
 - Loading screen per bahasa (Indonesia dan English).
 
 ---
