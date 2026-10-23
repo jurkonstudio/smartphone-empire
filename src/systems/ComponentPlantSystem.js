@@ -117,6 +117,9 @@ export class ComponentPlantSystem {
         if (pt.requiresFab && !(data.fab && data.fab.built)) {
             return { ok: false, reason: 'Butuh fab chip yang sudah berdiri.', reasonKey: 'pl.unlock.fab' };
         }
+        if (this.getEligibleComponents(typeId).length === 0) {
+            return { ok: false, reason: 'Belum ada komponen yang bisa diproduksi. Selesaikan riset dulu.', reasonKey: 'pl.unlock.components' };
+        }
         return { ok: true };
     }
 

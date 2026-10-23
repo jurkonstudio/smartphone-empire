@@ -165,46 +165,54 @@ export class MarketSystem {
     // ============================================================
     _updateCompetitorPressure() {
         const data = this.state.data;
-        const cfg = BALANCE.competitors.pressure;
         const catalog = (data.products && data.products.catalog) || [];
-        if (!cfg || !catalog.length) return;
+        if (!BALANCE.competitors.pressure || !catalog.length) return;
+
+        catalog.forEach(p => {
+            if (p.status !== 'selling' || !p.stats) return;
+            p.competitorPressure = this.estimatePressure(p.stats, p.price);
+        });
+    }
+
+    // Tekanan kompetitor untuk satu produk hipotetis (dipakai juga oleh wizard desain).
+    estimatePressure(stats, price) {
+        const data = this.state.data;
+        const cfg = BALANCE.competitors.pressure;
+        if (!cfg || !stats) return 0;
 
         const aggrMap = BALANCE.market.competitorAggressionMultiplier || {};
         const aggr = aggrMap[data.difficulty] || 1.0;
         const entities = (data.competitorState && data.competitorState.entities) || {};
         const comps = data.market.competitors || [];
 
-        catalog.forEach(p => {
-            if (p.status !== 'selling' || !p.stats) return;
-            let pressure = cfg.base;
-            
-            // Kalkulasi Value for Money pemain
-            const refPrice = getMacro(data.time, BALANCE.macro).priceRef;
-            const expectedPrice = refPrice * Math.pow(Math.max(10, p.stats.qualityScore) / 50, 1.3);
-            const priceRatio = p.price / expectedPrice;
-            
-            // Jika overpriced (>1.2), tekanan kompetitor naik drastis
-            let pricePressureMod = 1.0;
-            if (priceRatio > 1.2) {
-                pricePressureMod = 1.0 + (priceRatio - 1.2) * 2.0;
-            } else if (priceRatio < 0.7) {
-                pricePressureMod = 0.5; // Jika murah meriah, tekanan kompetitor berkurang
-            }
+        let pressure = cfg.base;
 
-            comps.forEach(c => {
-                const e = entities[c.id];
-                const tier = e ? e.currentTier : 1;
-                const compQuality = tier * cfg.tierToQuality + cfg.tierOffset;
-                const gap = Math.max(0, Math.min(cfg.maxGap, (compQuality - p.stats.qualityScore) / cfg.gapDivisor));
-                
-                const rw = this._econ ? this._econ.rivalWeight(c.id) : 1; // rival yang diakuisisi menekan lebih lemah
-                pressure += c.share * gap * cfg.gainPerShare * pricePressureMod * rw;
-            });
-            
-            // [v2029.1] Rival bereaksi saat pemain mendekati plafon pasar.
-            const reaction = this._econ ? this._econ.rivalResponse() : 1;
-            p.competitorPressure = Math.min(cfg.maxPressure, pressure * aggr * reaction);
+        // Kalkulasi Value for Money
+        const refPrice = getMacro(data.time, BALANCE.macro).priceRef;
+        const expectedPrice = refPrice * Math.pow(Math.max(10, stats.qualityScore) / 50, 1.3);
+        const priceRatio = price / expectedPrice;
+
+        // Jika overpriced (>1.2), tekanan kompetitor naik drastis
+        let pricePressureMod = 1.0;
+        if (priceRatio > 1.2) {
+            pricePressureMod = 1.0 + (priceRatio - 1.2) * 2.0;
+        } else if (priceRatio < 0.7) {
+            pricePressureMod = 0.5; // Jika murah meriah, tekanan kompetitor berkurang
+        }
+
+        comps.forEach(c => {
+            const e = entities[c.id];
+            const tier = e ? e.currentTier : 1;
+            const compQuality = tier * cfg.tierToQuality + cfg.tierOffset;
+            const gap = Math.max(0, Math.min(cfg.maxGap, (compQuality - stats.qualityScore) / cfg.gapDivisor));
+
+            const rw = this._econ ? this._econ.rivalWeight(c.id) : 1; // rival yang diakuisisi menekan lebih lemah
+            pressure += c.share * gap * cfg.gainPerShare * pricePressureMod * rw;
         });
+
+        // [v2029.1] Rival bereaksi saat pemain mendekati plafon pasar.
+        const reaction = this._econ ? this._econ.rivalResponse() : 1;
+        return Math.min(cfg.maxPressure, pressure * aggr * reaction);
     }
 
     _driftTrends() {

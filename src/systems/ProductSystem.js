@@ -34,10 +34,20 @@ export class ProductSystem {
         this._promotion = null;
         this._componentPlants = null;
         this._nav = null;
+        this._market = null;
     }
 
     // Navigasi pasar (MarketNavSystem): segmen, wilayah, gelombang tren, dan efek viral ke permintaan.
     setMarketNav(nav) { this._nav = nav; }
+
+    // Sistem pasar: dipakai untuk memperkirakan tekanan kompetitor di wizard.
+    setMarketSystem(market) { this._market = market; }
+
+    _getCompetitorFactor(stats, price) {
+        if (!this._market || typeof this._market.estimatePressure !== 'function') return 0.8;
+        var pressure = this._market.estimatePressure(stats, price);
+        return Math.max(0.4, 1 / (1 + (pressure || 0)));
+    }
 
     // Promosi regional (PromotionSystem) menambah lift ke faktor pemasaran.
     setPromotionSystem(ps) { this._promotion = ps; }
@@ -150,7 +160,8 @@ export class ProductSystem {
         // [Pabrik] SoC (performa), Kamera (kualitas foto), RAM (kelancaran/kegunaan).
         stats.performance = stats.performance * (1 + getBuiltPlantEffect(this.state.data, 'soc', 'performance'));
         stats.camera = stats.camera * (1 + getBuiltPlantEffect(this.state.data, 'camera', 'cameraQuality'));
-        stats.usability = stats.usability * (1 + getBuiltPlantEffect(this.state.data, 'ram', 'usability'));
+        // RAM: efek berupa poin tambahan pada skala 0–100 (L1 +2 … L4 +8), bukan perkalian.
+        stats.usability = stats.usability + getBuiltPlantEffect(this.state.data, 'ram', 'usability') * 100;
 
         ['display','camera','battery','performance','connectivity','quality','design','usability'].forEach(function (k) {
             stats[k] = Math.max(0, Math.min(100, Math.round(stats[k])));
@@ -202,7 +213,7 @@ export class ProductSystem {
         var marketingF = 1.0;
         var osFactor = this._getOsFactor(config);
         var trendF = this._getTrendFactor(stats);
-        var competitorF = 0.8;
+        var competitorF = this._getCompetitorFactor(stats, config.price);
         var lifecycleF = 1.0;
         var techF = this._getTechFactor(null);
         var navF = this._nav ? this._nav.estimateFactor(stats, config.price, config) : 1.0;
