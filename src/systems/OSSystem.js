@@ -21,6 +21,7 @@ import {
 import { WalletService } from './WalletService.js';
 import { computeOsAdoption, getEcosystemAppBonus, ADOPTION_CONFIG } from './OsAdoptionModel.js';
 import { getUpdateBuildFee } from '../data/os-update-cards.data.js';
+import { getOsFeatureCost } from './FutureEffects.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -365,7 +366,7 @@ export class OSSystem {
             const st = this.getFeatureStatus(fid);
             if (st.status !== 'available') return { ok: false, reason: 'Fitur tidak tersedia: ' + (st.reason || fid) };
             const f = getOsFeatureById(fid);
-            totalCost += f.devCost;
+            totalCost += getOsFeatureCost(f, data);
             totalDays += f.devDays;
         }
         const buildFee = getUpdateBuildFee(ids, data.time.currentYear);
@@ -433,7 +434,7 @@ export class OSSystem {
     previewUpdate(featureIds) {
         const ids = Array.isArray(featureIds) ? featureIds.slice() : [];
         let featureCost = 0, days = 0;
-        ids.forEach(fid => { const f = getOsFeatureById(fid); if (f) { featureCost += f.devCost; days += f.devDays; } });
+        ids.forEach(fid => { const f = getOsFeatureById(fid); if (f) { featureCost += getOsFeatureCost(f, this.state.data); days += f.devDays; } });
         const buildFee = ids.length ? getUpdateBuildFee(ids, this.state.data.time.currentYear) : 0;
         return { featureCost, buildFee, total: featureCost + buildFee, days, stats: this.previewStats(ids) };
     }

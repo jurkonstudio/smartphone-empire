@@ -1,0 +1,60 @@
+// FILE: src/systems/FutureEffects.js  (BARU)
+// Efek panel Future ke sistem game. Satu-satunya tempat angka bonus F-AI.
+// Semua hitungan biaya OS (sistem + UI) harus lewat helper ini supaya angkanya cocok.
+import { getFutureUnlockState, getFuturePanelById } from '../data/future-panels.data.js';
+
+export const FAI_CONFIG = {
+    // Diskon biaya pengembangan fitur OS berbasis AI (0.20 = 20%). Ubah di sini untuk menyeimbangkan.
+    osAiDiscount: 0.20,
+    // Fitur OS yang kena diskon.
+    osAiFeatures: ['fw_ai_on_device', 'fw_ondevice_llm', 'fw_ai_agent'],
+    // Saran desain: markup harga = designMarkupBase + (skor mutu / 100) * designMarkupSpan.
+    // Skor mutu 0 -> x1.35, skor 100 -> x2.10 dari biaya produksi per unit.
+    designMarkupBase: 1.35,
+    designMarkupSpan: 0.75
+};
+
+// True bila F-AI terbuka (tahun >= 2022 dan riset chip_npu selesai).
+export function isFaiActive(data) {
+    try { return getFutureUnlockState(getFuturePanelById('f_ai'), data).unlocked === true; }
+    catch (e) { return false; }
+}
+
+// Biaya fitur OS setelah efek F-AI. f = objek fitur dari os.data.js.
+export function getOsFeatureCost(f, data) {
+    if (!f) return 0;
+    var base = f.devCost || 0;
+    if (FAI_CONFIG.osAiFeatures.indexOf(f.id) !== -1 && isFaiActive(data)) {
+        return Math.round(base * (1 - FAI_CONFIG.osAiDiscount));
+    }
+    return base;
+}
+
+// True bila fitur ini sedang mendapat diskon F-AI (untuk label di UI).
+export function hasFaiOsDiscount(f, data) {
+    return !!f && FAI_CONFIG.osAiFeatures.indexOf(f.id) !== -1 && isFaiActive(data);
+}
+
+export function currentGameData() {
+    try { return window.__game.state.get(); } catch (e) { return {}; }
+}
+
+// Saran desain F-AI: harga yang disarankan dan komponen terlemah.
+// stats = hasil computeStats (display, camera, ..., qualityScore); unitCost = biaya per unit;
+// limits = { min, max } batas harga; skipStats = stat yang tidak dihitung (mis. ['camera'] bila tanpa kamera).
+// Mengembalikan { price, weakKey, weakVal }. Tidak mengubah state.
+export function getFaiDesignAdvice(stats, unitCost, limits, skipStats) {
+    stats = stats || {};
+    var q = Math.max(0, Math.min(100, stats.qualityScore || 0));
+    var mult = FAI_CONFIG.designMarkupBase + (q / 100) * FAI_CONFIG.designMarkupSpan;
+    var price = Math.ceil((unitCost * mult) / 5) * 5;
+    if (limits) price = Math.max(limits.min, Math.min(limits.max, price));
+    var keys = ['display', 'camera', 'battery', 'performance', 'connectivity', 'design', 'usability'];
+    var weakKey = null, weakVal = Infinity;
+    keys.forEach(function (k) {
+        if (skipStats && skipStats.indexOf(k) !== -1) return;
+        if (typeof stats[k] !== 'number') return;
+        if (stats[k] < weakVal) { weakKey = k; weakVal = stats[k]; }
+    });
+    return { price: price, weakKey: weakKey, weakVal: weakKey ? weakVal : 0 };
+}
