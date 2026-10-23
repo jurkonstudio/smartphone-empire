@@ -12,7 +12,8 @@ export const FICTIONAL_NAMES = {
     oppo: 'Opoh', vivo: 'Viva', microsoft_nokia: 'Microkia',
     honor: 'Honour', oneplus: 'OnePlusX', nothing: 'Somewhat',
     asus: 'Asos', sony_mobile: 'Soni Mobile', realme: 'Realmi',
-    meizu: 'MeizuX', lenovo: 'Lenovu', tecno: 'Tekno', zte: 'ZetE'
+    meizu: 'MeizuX', lenovo: 'Lenovu', tecno: 'Tekno', zte: 'ZetE',
+    novamind: 'Novamind'
 };
 
 export function getFictionalName(id) {

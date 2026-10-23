@@ -28,7 +28,8 @@ export const meizu = {
     ],
     shareByYear: {
         2008: 0.001, 2011: 0.005, 2013: 0.01, 2015: 0.015, 2017: 0.008,
-        2019: 0.004, 2021: 0.002, 2024: 0.001, 2026: 0.001
+        2019: 0.004, 2021: 0.002, 2024: 0.001, 2026: 0.001, // [paket kompetitor, SPEKULATIF] arah skenario 2027-2030
+        2027: 0.0008, 2028: 0.0005, 2029: 0.0005, 2030: 0.0005
     },
     signatureProducts: [
         { name: 'Meizu M8',           year: 2008, tier: 2, shareBoost: 0.01 },

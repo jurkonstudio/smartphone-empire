@@ -27,7 +27,8 @@ export const tecno = {
     ],
     shareByYear: {
         2006: 0.001, 2010: 0.005, 2014: 0.01, 2018: 0.015, 2020: 0.02,
-        2022: 0.025, 2024: 0.025, 2026: 0.025
+        2022: 0.025, 2024: 0.025, 2026: 0.025, // [paket kompetitor, SPEKULATIF] arah skenario 2027-2030
+        2027: 0.023, 2028: 0.02, 2029: 0.022, 2030: 0.024
     },
     signatureProducts: [
         { name: 'Tecno Camon',        year: 2015, tier: 2, shareBoost: 0.01 },

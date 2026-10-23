@@ -28,7 +28,8 @@ export const xiaomi = {
     shareByYear: {
         2011: 0.001, 2013: 0.010, 2014: 0.040, 2015: 0.045, 2016: 0.035,
         2017: 0.060, 2018: 0.085, 2020: 0.105, 2021: 0.130, 2022: 0.125,
-        2024: 0.130, 2026: 0.130
+        2024: 0.130, 2026: 0.130, // [paket kompetitor, SPEKULATIF] arah skenario 2027-2030
+        2027: 0.122, 2028: 0.115, 2029: 0.122, 2030: 0.127
     },
     signatureProducts: [
         { name: 'Xiaomi Mi 1',        year: 2011, tier: 3, shareBoost: 0.00 },

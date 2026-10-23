@@ -35,12 +35,15 @@ import { lenovo } from './lenovo.js';
 import { tecno } from './tecno.js';
 import { zte } from './zte.js';
 import { xiaomi } from './xiaomi.js';
+// [paket kompetitor] Pendatang fiktif spekulatif.
+import { novamind } from './novamind.js';
 
 export const COMPETITORS = [
     nokia, motorola, sony_ericsson, siemens, palm,
     blackberry, samsung, lg, htc, apple, google_android, huawei,
     oppo, vivo, microsoft_nokia, honor, oneplus, nothing,
-    asus, sony_mobile, realme, meizu, lenovo, tecno, zte, xiaomi
+    asus, sony_mobile, realme, meizu, lenovo, tecno, zte, xiaomi,
+    novamind
 ];
 
 export { FICTIONAL_NAMES, getFictionalName };

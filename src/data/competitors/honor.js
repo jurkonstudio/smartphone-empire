@@ -26,7 +26,8 @@ export const honor = {
     ],
     shareByYear: {
         2013: 0.002, 2015: 0.005, 2018: 0.02, 2020: 0.01, 2022: 0.03,
-        2024: 0.04, 2026: 0.05
+        2024: 0.04, 2026: 0.05, // [paket kompetitor, SPEKULATIF] arah skenario 2027-2030
+        2027: 0.05, 2028: 0.05, 2029: 0.05, 2030: 0.05
     },
     signatureProducts: [
         { name: 'Honor 6',            year: 2014, tier: 3, shareBoost: 0.01 },

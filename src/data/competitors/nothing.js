@@ -33,7 +33,8 @@ export const nothing = {
         'Carl Pei mendirikan Nothing setelah keluar dari OnePlus pada 2020.'
     ],
     shareByYear: {
-        2022: 0.001, 2023: 0.003, 2024: 0.004, 2026: 0.005
+        2022: 0.001, 2023: 0.003, 2024: 0.004, 2026: 0.005, // [paket kompetitor, SPEKULATIF] arah skenario 2027-2030
+        2027: 0.005, 2028: 0.005, 2029: 0.006, 2030: 0.006
     },
     signatureProducts: [
         { name: 'Nothing Phone (1)',  year: 2022, tier: 5, shareBoost: 0.02 },

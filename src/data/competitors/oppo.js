@@ -27,7 +27,8 @@ export const oppo = {
     ],
     shareByYear: {
         2008: 0.003, 2011: 0.005, 2013: 0.01, 2016: 0.06, 2018: 0.08,
-        2020: 0.09, 2022: 0.10, 2024: 0.09, 2026: 0.09
+        2020: 0.09, 2022: 0.10, 2024: 0.09, 2026: 0.09, // [paket kompetitor, SPEKULATIF] arah skenario 2027-2030
+        2027: 0.085, 2028: 0.078, 2029: 0.083, 2030: 0.087
     },
     signatureProducts: [
         { name: 'OPPO Finder',        year: 2012, tier: 3, shareBoost: 0.02 },

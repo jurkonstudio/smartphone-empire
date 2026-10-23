@@ -40,7 +40,8 @@ export const realme = {
         2022: 0.035,
         2023: 0.03,
         2024: 0.03,
-        2026: 0.03
+        2026: 0.03, // [paket kompetitor, SPEKULATIF] arah skenario 2027-2030
+        2027: 0.028, 2028: 0.024, 2029: 0.026, 2030: 0.028
     },
     signatureProducts: [
         { name: 'Realme 1',       year: 2018, tier: 3, shareBoost: 0.01 },

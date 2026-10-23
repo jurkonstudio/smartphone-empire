@@ -28,7 +28,8 @@ export const lenovo = {
     ],
     shareByYear: {
         2012: 0.003, 2014: 0.005, 2016: 0.008, 2018: 0.008, 2020: 0.007,
-        2022: 0.006, 2024: 0.005, 2026: 0.005
+        2022: 0.006, 2024: 0.005, 2026: 0.005, // [paket kompetitor, SPEKULATIF] arah skenario 2027-2030
+        2027: 0.0045, 2028: 0.0025, 2029: 0.0025, 2030: 0.0025
     },
     signatureProducts: [
         { name: 'Lenovo Vibe Z',      year: 2013, tier: 3, shareBoost: 0.01 },

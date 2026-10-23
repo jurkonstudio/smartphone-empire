@@ -27,7 +27,8 @@ export const oneplus = {
     ],
     shareByYear: {
         2014: 0.002, 2016: 0.005, 2018: 0.008, 2020: 0.010, 2022: 0.012,
-        2024: 0.010, 2026: 0.010
+        2024: 0.010, 2026: 0.010, // [paket kompetitor, SPEKULATIF] arah skenario 2027-2030
+        2027: 0.01, 2028: 0.009, 2029: 0.009, 2030: 0.01
     },
     signatureProducts: [
         { name: 'OnePlus One',        year: 2014, tier: 4, shareBoost: 0.02 },

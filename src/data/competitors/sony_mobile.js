@@ -28,7 +28,8 @@ export const sony_mobile = {
     ],
     shareByYear: {
         2012: 0.02, 2014: 0.03, 2016: 0.02, 2018: 0.01, 2020: 0.01,
-        2022: 0.008, 2024: 0.007, 2026: 0.007
+        2022: 0.008, 2024: 0.007, 2026: 0.007, // [paket kompetitor, SPEKULATIF] arah skenario 2027-2030
+        2027: 0.006, 2028: 0.0035, 2029: 0.0035, 2030: 0.0035
     },
     signatureProducts: [
         { name: 'Sony Xperia S',       year: 2012, tier: 3, shareBoost: 0.02 },

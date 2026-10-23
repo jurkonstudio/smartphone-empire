@@ -27,7 +27,8 @@ export const asus = {
     ],
     shareByYear: {
         2014: 0.002, 2016: 0.005, 2018: 0.004, 2020: 0.003, 2022: 0.004,
-        2024: 0.004, 2026: 0.004
+        2024: 0.004, 2026: 0.004, // [paket kompetitor, SPEKULATIF] arah skenario 2027-2030
+        2027: 0.004, 2028: 0.003, 2029: 0.002, 2030: 0.002
     },
     signatureProducts: [
         { name: 'Asus Zenfone 2',     year: 2015, tier: 3, shareBoost: 0.01 },
