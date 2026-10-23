@@ -34,6 +34,7 @@ import { AdvisorSystem } from './systems/AdvisorSystem.js';
 import { StockSystem } from './systems/StockSystem.js';
 import { PromotionSystem } from './systems/PromotionSystem.js';
 import { BankSystem } from './systems/BankSystem.js';
+import { EconBrakeSystem } from './systems/EconBrakeSystem.js';
 import { bindRegionalActions } from './ui/panels/RegionalBindings.js';
 import { SiliconService } from './systems/SiliconService.js';
 import { renderHeader } from './ui/layout/Header.js';
@@ -120,12 +121,17 @@ var advisor           = new AdvisorSystem(state, { research: research });
 var stockSystem       = new StockSystem(state);
 var promotion         = new PromotionSystem(state);
 var bank              = new BankSystem(state);
+var econBrakes        = new EconBrakeSystem(state);
 
 market.setCompetitorSystem(competitors);
 products.setPromotionSystem(promotion);
 products.setComponentPlantSystem(componentPlants);
 bank.setPromotionSystem(promotion);
 economy.setBank(bank);
+// [v2029.1] penahan ekonomi: biaya volume, plafon pasar, respons rival, sink dana.
+products.setEconBrakes(econBrakes);
+market.setEconBrakes(econBrakes);
+economy.setEconBrakes(econBrakes);
 
 // ============ STATE UI ============
 var activeView = 'dashboard';
@@ -925,6 +931,23 @@ function bindGlobalClicks() {
             else { ToastService.success(tr('main.toast.campaign_started')); Modal.close('campaign-pick', true); renderAll(); }
             return;
         }
+        // [v2029.1] Investasi pabrik & akuisisi (tab HQ > Investasi).
+        var econEff = e.target.closest('[data-econ-eff]');
+        if (econEff) {
+            e.preventDefault(); vibrate(8);
+            var er = econBrakes.buyEfficiency();
+            if (!er.ok) ToastService.error(er.reason); else ToastService.success('Investasi pabrik level ' + er.level + ' selesai.');
+            renderAll();
+            return;
+        }
+        var econAcq = e.target.closest('[data-econ-acq]');
+        if (econAcq) {
+            e.preventDefault(); vibrate(8);
+            var ar = econBrakes.acquire(econAcq.dataset.econAcq);
+            if (!ar.ok) ToastService.error(ar.reason); else ToastService.success('Akuisisi ' + ar.target.name + ' selesai.');
+            renderAll();
+            return;
+        }
         var orderConfirm = e.target.closest('[data-order-confirm]');
         if (orderConfirm) {
             e.preventDefault();
@@ -1291,6 +1314,7 @@ async function boot() {
         stockSystem.start();
         promotion.start();
         bank.start();
+        econBrakes.start();
         bindRegionalActions();
         mountAdvisorButton(advisor);
         splash(96);
@@ -1337,7 +1361,7 @@ async function boot() {
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, marketNav: marketNav, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, plants: componentPlants, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
-            silicon: SiliconService, promotion: promotion, bank: bank, payment: PaymentService,
+            silicon: SiliconService, promotion: promotion, bank: bank, econ: econBrakes, payment: PaymentService,
             openSiliconStore: openSiliconStoreModal, LanguageService: LanguageService,
             SaveService: SaveService, ToastService: ToastService, Modal: Modal, navigate: navigate, render: renderAll, renderSoft: renderSoft,
             modules: { marketing: marketingModule, feedbackData: feedbackModule },
