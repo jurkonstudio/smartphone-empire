@@ -826,7 +826,7 @@ export const COMPONENTS = [
       baseDemandMultiplier: 1.20,
       realReference: 'Vivo NEX (2018)', milestone: false, requiresResearch: null },
 
-    { id: 'ff_dual', category: 'form_factor', tier: 4, minYear: 2019, maxYear: 2023,
+    { id: 'ff_dual', category: 'form_factor', tier: 4, minYear: 2019,
       name: 'Dual Screen', icon: 'phone',
       description: 'Dua layar terpisah yang dihubungkan engsel — multitasking seperti buku tanpa layar lipat.',
       costPerUnit: 45, stats: { usability: 58, design: 78 },
@@ -931,7 +931,18 @@ export const BODY_COLORS = [
     { id: 'color_red',      name: 'Merah',    hex: '#e53935', designBonus: 6 },
     { id: 'color_gold',     name: 'Emas',     hex: '#ffd700', designBonus: 9 },
     { id: 'color_green',    name: 'Hijau',    hex: '#43a047', designBonus: 5 },
-    { id: 'color_titanium', name: 'Titanium', hex: '#8a8a8a', designBonus: 10 }
+    { id: 'color_titanium', name: 'Titanium', hex: '#8a8a8a', designBonus: 10 },
+    // --- Warna tambahan (nama & nuansa orisinal) ---
+    { id: 'color_orange',   name: 'Oranye',        hex: '#ff8a3d', designBonus: 6 },
+    { id: 'color_mint',     name: 'Mint',          hex: '#7fe0c3', designBonus: 6 },
+    { id: 'color_teal',     name: 'Toska',         hex: '#14a3a3', designBonus: 7 },
+    { id: 'color_rose',     name: 'Rose',          hex: '#f08cae', designBonus: 7 },
+    { id: 'color_sand',     name: 'Pasir',         hex: '#d9c3a0', designBonus: 6 },
+    { id: 'color_graphite', name: 'Grafit',        hex: '#3b3f46', designBonus: 8 },
+    { id: 'color_midnight', name: 'Tengah Malam',  hex: '#1e2a4a', designBonus: 8 },
+    { id: 'color_violet',   name: 'Ungu',          hex: '#7c5cff', designBonus: 7 },
+    { id: 'color_lavender', name: 'Lavender',      hex: '#b9a7ee', designBonus: 7 },
+    { id: 'color_wine',     name: 'Merah Anggur',  hex: '#7a1f3a', designBonus: 8 }
 ];
 
 // Utilitas

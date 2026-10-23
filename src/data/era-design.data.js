@@ -36,7 +36,7 @@ export const DESIGN_ERAS = [
         description: 'Layar warna pertama; candybar, flip, slider, PDA stylus, QWERTY, dan swivel bersaing.',
         screenStyle: 'color_tft',
         uiTheme: 'retro-color',
-        bodyColors: ['color_black', 'color_silver', 'color_white', 'color_blue', 'color_red'],
+        bodyColors: ['color_black', 'color_silver', 'color_white', 'color_blue', 'color_red', 'color_orange'],
         formFactors: ['ff_candybar', 'ff_flip', 'ff_slider', 'ff_communicator', 'ff_pda', 'ff_qwerty', 'ff_swivel'],
         aesthetic: {
             primary: '#3a5a7a',
@@ -57,7 +57,7 @@ export const DESIGN_ERAS = [
         description: 'Layar sentuh kapasitif, OS glossy; keypad, QWERTY, dan layar penuh berebut pasar.',
         screenStyle: 'glossy',
         uiTheme: 'glossy',
-        bodyColors: ['color_black', 'color_white', 'color_silver', 'color_blue', 'color_red'],
+        bodyColors: ['color_black', 'color_white', 'color_silver', 'color_blue', 'color_red', 'color_orange', 'color_graphite', 'color_teal'],
         formFactors: ['ff_candybar', 'ff_flip', 'ff_slider', 'ff_communicator', 'ff_pda', 'ff_qwerty', 'ff_swivel', 'ff_fullscreen', 'ff_touch_slider'],
         aesthetic: {
             primary: '#1a3050',
@@ -78,7 +78,7 @@ export const DESIGN_ERAS = [
         description: 'Material flat, layar besar, dual-core menjadi standar.',
         screenStyle: 'flat',
         uiTheme: 'material',
-        bodyColors: ['color_black', 'color_white', 'color_silver', 'color_gold'],
+        bodyColors: ['color_black', 'color_white', 'color_silver', 'color_gold', 'color_rose', 'color_mint', 'color_graphite'],
         formFactors: ['ff_flip', 'ff_slider', 'ff_qwerty', 'ff_fullscreen', 'ff_touch_slider', 'ff_bezel'],
         aesthetic: {
             primary: '#20262e',
@@ -99,7 +99,7 @@ export const DESIGN_ERAS = [
         description: 'Bodi kaca & aluminium, bezel tipis, kamera ganda.',
         screenStyle: 'amoled',
         uiTheme: 'premium',
-        bodyColors: ['color_black', 'color_white', 'color_gold', 'color_silver', 'color_green'],
+        bodyColors: ['color_black', 'color_white', 'color_gold', 'color_silver', 'color_green', 'color_midnight', 'color_rose', 'color_teal', 'color_sand'],
         formFactors: ['ff_qwerty', 'ff_fullscreen', 'ff_bezel', 'ff_edge', 'ff_popup'],
         aesthetic: {
             primary: '#1a1a1a',
@@ -120,7 +120,7 @@ export const DESIGN_ERAS = [
         description: 'Notch / punch-hole, AI on-device, 5G, refresh rate tinggi.',
         screenStyle: 'hdr',
         uiTheme: 'modern',
-        bodyColors: ['color_black', 'color_white', 'color_gold', 'color_green', 'color_red'],
+        bodyColors: ['color_black', 'color_white', 'color_gold', 'color_green', 'color_red', 'color_violet', 'color_mint', 'color_midnight', 'color_orange', 'color_lavender', 'color_rose', 'color_sand'],
         formFactors: ['ff_fullscreen', 'ff_bezel', 'ff_edge', 'ff_popup', 'ff_dual', 'ff_fold', 'ff_flip_fold'],
         aesthetic: {
             primary: '#0f1420',
@@ -141,7 +141,7 @@ export const DESIGN_ERAS = [
         description: 'Layar lipat, titanium, AI generatif, satelit.',
         screenStyle: 'flexible',
         uiTheme: 'futuristic',
-        bodyColors: ['color_black', 'color_titanium', 'color_green', 'color_white'],
+        bodyColors: ['color_black', 'color_titanium', 'color_green', 'color_white', 'color_violet', 'color_graphite', 'color_wine', 'color_lavender', 'color_midnight', 'color_sand', 'color_teal', 'color_mint'],
         formFactors: ['ff_fullscreen', 'ff_bezel', 'ff_edge', 'ff_dual', 'ff_fold', 'ff_flip_fold', 'ff_tri_fold'],
         aesthetic: {
             primary: '#080810',
