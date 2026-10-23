@@ -122,7 +122,7 @@ export class ProductSystem {
         var map = {
             display: config.displayId, camera: config.cameraId,
             battery: config.batteryId, chip: config.chipId,
-            network: config.networkId, body: config.bodyId,
+            network: config.networkId, body: config.bodyId, ram: config.ramId,
             form_factor: config.formFactorId
         };
         for (var k in map) {
@@ -147,6 +147,10 @@ export class ProductSystem {
         var plantDisp = getBuiltPlantEffect(this.state.data, 'display', 'displayQuality');
         stats.battery = stats.battery * (1 + plantBat);
         stats.display = stats.display * (1 + plantDisp);
+        // [Pabrik] SoC (performa), Kamera (kualitas foto), RAM (kelancaran/kegunaan).
+        stats.performance = stats.performance * (1 + getBuiltPlantEffect(this.state.data, 'soc', 'performance'));
+        stats.camera = stats.camera * (1 + getBuiltPlantEffect(this.state.data, 'camera', 'cameraQuality'));
+        stats.usability = stats.usability * (1 + getBuiltPlantEffect(this.state.data, 'ram', 'usability'));
 
         ['display','camera','battery','performance','connectivity','quality','design','usability'].forEach(function (k) {
             stats[k] = Math.max(0, Math.min(100, Math.round(stats[k])));
@@ -166,11 +170,11 @@ export class ProductSystem {
         return stats;
     }
 
-    // excludePlantParts=true: hanya komponen non-pabrik (baterai & layar ditangani stok pabrik).
+    // excludePlantParts=true: hanya komponen non-pabrik (baterai, layar, SoC, kamera & RAM ditangani stok pabrik).
     computeUnitCost(config, excludePlantParts) {
         var cost = 0;
         var ids = [config.displayId, config.cameraId, config.batteryId,
-                   config.chipId, config.networkId, config.bodyId, config.formFactorId];
+                   config.chipId, config.networkId, config.bodyId, config.formFactorId, config.ramId];
         var self = this;
         ids.forEach(function (id) {
             var c = getComponentById(id);
@@ -294,6 +298,7 @@ export class ProductSystem {
         if (data.products.development) return { ok: false, reason: 'Ada produk yang sedang dikembangkan.' };
 
         if (config.cameraId === 'none') config.cameraId = null;
+        if (config.ramId === 'none') config.ramId = null;
 
         var required = ['displayId', 'batteryId', 'chipId', 'networkId', 'formFactorId', 'bodyId'];
         for (var i = 0; i < required.length; i++) {
@@ -442,13 +447,13 @@ export class ProductSystem {
         }
     }
 
-    // [Pabrik] Baterai & layar: stok pabrik dipakai dulu. Kekurangan dibeli harga pasar.
+    // [Pabrik] Baterai, layar, SoC, kamera & RAM: stok pabrik dipakai dulu. Kekurangan dibeli harga pasar.
     // _quoteComponents hanya menghitung (tanpa mengurangi stok); _settleComponents
     // mengurangi stok dan mengembalikan tagihan. Penagihan dilakukan pemanggil.
     _quoteComponents(cfg, qty) {
         var cps = this._componentPlants;
         var bill = 0;
-        [cfg.batteryId, cfg.displayId].forEach(function (id) {
+        [cfg.batteryId, cfg.displayId, cfg.chipId, cfg.cameraId, cfg.ramId].forEach(function (id) {
             var comp = getComponentById(id);
             if (!comp) return;
             var have = cps ? cps.getInventory(id) : 0;
@@ -461,7 +466,7 @@ export class ProductSystem {
         var cps = this._componentPlants;
         if (!cps) return 0;
         var self = this, bill = 0;
-        [cfg.batteryId, cfg.displayId].forEach(function (id) {
+        [cfg.batteryId, cfg.displayId, cfg.chipId, cfg.cameraId, cfg.ramId].forEach(function (id) {
             var comp = getComponentById(id);
             if (!comp) return;
             var r = cps.consumeForProduct(id, qty);
