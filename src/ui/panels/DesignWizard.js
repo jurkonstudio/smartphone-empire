@@ -190,7 +190,8 @@ function _affordInfo(s) {
     // Sama dengan ProductSystem.confirmDesign: baterai & layar tidak ditagih saat desain.
     let designUnitCost = 0;
     try { designUnitCost = ps && ps.computeUnitCost ? ps.computeUnitCost(s, true) : 0; } catch (e) {}
-    const cost = designUnitCost * (s.productionQty || 0) + BALANCE.products.productionSetupCost;
+    let cost = designUnitCost * (s.productionQty || 0) + BALANCE.products.productionSetupCost;
+    try { if (ps && ps.quoteDesign) cost = ps.quoteDesign(s).total; } catch (e) {}
     let cash = 0;
     try { cash = state.get().cash || 0; } catch (e) {}
     let power = cash;
@@ -1183,7 +1184,9 @@ function _previewHtml(s) {
         const unitCost = ps.computeUnitCost ? ps.computeUnitCost(s) : 0;
         // Tagihan desain: tanpa baterai & layar (sama dengan confirmDesign).
         const designUnitCost = ps.computeUnitCost ? ps.computeUnitCost(s, true) : 0;
-        const totalCost = designUnitCost * (s.productionQty || 0) + BALANCE.products.productionSetupCost;
+        let totalCost = designUnitCost * (s.productionQty || 0) + BALANCE.products.productionSetupCost;
+        let volMult = 1;
+        if (ps.quoteDesign) { const q = ps.quoteDesign(s); totalCost = q.total; volMult = q.volMult; }
         const demand = ps.estimateDemand ? ps.estimateDemand(s) : 0;
         const margin = (s.price || 0) - unitCost;
         const marginPct = s.price > 0 ? Math.round((margin / s.price) * 100) : 0;
@@ -1196,6 +1199,7 @@ function _previewHtml(s) {
         if (stats.performance > 60 && stats.battery < 40) warnings.push(t('wiz.preview.warn_chip_bat'));
         if (stats.camera > 60 && stats.display < 40) warnings.push(t('wiz.preview.warn_cam_disp'));
         if (margin < 0) warnings.push(t('wiz.preview.warn_margin'));
+        if (volMult > 1.02) warnings.push(_tf('wiz.warn.volume_cost', _pick('Volume besar: biaya komponen +{pct}% (pasokan menipis). Pecah produksi tidak membantu: unit 30 hari terakhir ikut dihitung.', 'Large volume: component cost +{pct}% (supply is tight). Splitting orders does not help: units from the last 30 days count too.'), { pct: Math.round((volMult - 1) * 100) }));
         const afford = _affordInfo(s);
         if (!afford.ok) {
             warnings.push(_tf('wiz.cash.short_detail',

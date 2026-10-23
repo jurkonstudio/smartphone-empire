@@ -4,6 +4,7 @@ import { renderDashboard } from './DashboardPanel.js';
 import { renderTeamPanel } from './TeamPanel.js';
 import { renderExchangePanel } from './ExchangePanel.js';
 import { renderBankPanel } from './BankPanel.js';
+import { renderInvestPanel } from './InvestPanel.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { renderCompanyHistoryPanel } from './CompanyHistoryPanel.js';
 
@@ -21,6 +22,7 @@ const HQ_TABS = [
     { id: 'team',     key: 'hq.tab.team',     icon: 'users' },
     { id: 'exchange', key: 'hq.tab.exchange', icon: 'trending-up' },
     { id: 'bank',     key: 'hq.tab.bank',     icon: 'coin' },
+    { id: 'invest',   key: 'hq.tab.invest',   icon: 'trending-up', fallback: 'Investasi' },
     { id: 'history',  key: 'hq.tab.history',  icon: 'library', fallback: 'Riwayat' }
 ];
 
@@ -44,6 +46,8 @@ export function renderHqPanel({ subtab, state, timeSnapshot, researchSystem, tea
         body = renderExchangePanel({ stockSystem: stockSystem });
     } else if (subtab === 'bank') {
         body = renderBankPanel();
+    } else if (subtab === 'invest') {
+        body = renderInvestPanel();
     } else if (subtab === 'history') {
         body = renderCompanyHistoryPanel();
     } else {

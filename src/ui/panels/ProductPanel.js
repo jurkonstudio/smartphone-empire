@@ -565,6 +565,7 @@ export function openOrderProductionModal(params) {
             '<input class="field-input" data-order-qty type="number" min="100" step="100" value="' + (params && params.qty != null && params.qty !== '' ? escapeHtml(String(params.qty)) : '1000') + '" />' +
             '<div class="sum-row" style="margin-top:8px;"><span>' + t('prod.order.cost_unit') + '</span><b>$' + p.unitCost + '</b></div>' +
             '<div class="sum-row"><span>' + t('prod.order.setup') + '</span><b>$2,000</b></div>' +
+            '<div class="sum-row"><span>' + tx('prod.order.vol', 'Pengali volume') + '</span><b data-order-vol>x1.00</b></div>' +
             '<div class="sum-row"><span>' + t('prod.order.total') + '</span><b data-order-total>$0</b></div>' +
             '<div class="sum-row"><span>' + t('prod.order.lead') + '</span><b data-order-lead>-</b></div>' +
             '<button class="btn-primary" data-order-confirm data-prod-id="' + productId + '" style="width:100%;margin-top:12px;">' + t('prod.order.submit') + '</button>' +
@@ -578,9 +579,13 @@ export function openOrderProductionModal(params) {
         var qtyInput = root.querySelector('[data-order-qty]');
         var totalEl = root.querySelector('[data-order-total]');
         var leadEl = root.querySelector('[data-order-lead]');
+        var volEl = root.querySelector('[data-order-vol]');
         function refresh() {
             var q = parseInt(qtyInput.value, 10) || 0;
-            totalEl.textContent = '$' + ((q * p.unitCost) + 2000).toLocaleString('en-US');
+            var ps = window.__game && window.__game.products;
+            var quote = (ps && ps.quoteProduction) ? ps.quoteProduction(p.config, q) : null;
+            totalEl.textContent = '$' + (quote ? quote.total : ((q * p.unitCost) + 2000)).toLocaleString('en-US');
+            if (volEl) volEl.textContent = 'x' + (quote ? quote.volMult : 1).toFixed(2);
             var days = Math.max(1, Math.min(10, 2 + Math.floor(q / 2500))); // sinkron dgn BALANCE.products.manualRestock
             leadEl.textContent = days + ' ' + t('prod.order.days');
         }
