@@ -266,6 +266,60 @@ export const BALANCE = {
         }
     },
 
+    // ============================================================
+    // [v2029.1] PENAHAN EKONOMI (lihat systems/EconBrakeSystem.js)
+    // Tujuan: kas tidak bisa menumpuk tanpa batas. Tiga rem + satu sink.
+    //  1) volume   : biaya komponen per unit naik seiring ukuran pesanan
+    //                (+ unit yang diproduksi 30 hari terakhir, jadi memecah
+    //                pesanan tidak menghindari kurva).
+    //  2) pasar    : total penjualan semua produk jenuh di plafon yang
+    //                mengikuti ukuran pasar zaman itu (bukan per produk).
+    //  3) kompetitor: makin dekat ke plafon, makin keras tekanan rival.
+    //  4) sink     : investasi efisiensi pabrik + akuisisi merek rival,
+    //                dengan biaya yang ikut skala pendapatan (kas selalu
+    //                punya fungsi) dan biaya pemeliharaan bulanan.
+    // ============================================================
+    econ: {
+        volume: {
+            refDemandShare: 0.5,        // q0 = refDemandShare x permintaan dasar/hari (zaman itu)
+            slope: 0.12,                // +12% biaya per penggandaan volume di atas q0
+            maxMult: 2.2,               // batas atas pengali
+            windowDays: 30              // jendela unit yang dihitung ikut volume
+        },
+        cap: {
+            mult:   { santai: 0.45, normal: 0.35, sulit: 0.28 }, // plafon = mult x permintaan dasar/hari (produk top ~0.9x, rata-rata ~0.15x)
+            sharpness: 3,               // p pada saturasi; makin besar makin "patah" di plafon
+            smoothing: 0.9              // EMA utilisasi harian (0 = langsung, 0.9 = lambat)
+        },
+        rival: {
+            startUtil: 0.6,             // utilisasi plafon saat rival mulai bereaksi
+            gain: 0.6,                  // tambahan tekanan maksimum (x agresivitas) di utilisasi 1.0
+            maxMult: 1.8                // batas pengali tekanan
+        },
+        efficiency: {                   // "Investasi Pabrik"
+            maxLevel: 5,
+            floorCost: [150000, 400000, 1000000, 3000000, 8000000],  // x CPI (L1 > modal awal Normal/Sulit: bukan jebakan di awal)
+            revMonths: [1.0, 1.5, 2.5, 4.0, 6.0],                   // atau x rata-rata pendapatan bulanan
+            slopeCutPerLevel: 0.15,     // kurva volume melandai 15% per level
+            partsCutPerLevel: 0.02,     // biaya dasar komponen -2% per level
+            upkeepRate: 0.012           // pemeliharaan bulanan = 1,2% dari harga level aktif
+        },
+        acquisition: {
+            minYear: 2003,
+            maxOwned: 5,
+            cooldownMonths: 6,
+            floorCost: 500000,          // x CPI
+            annualRevBase: 0.25,        // harga = pendapatan tahunan x (base + perShare x pangsa rival)
+            annualRevPerShare: 4.0,
+            capBonusBase: 0.15,         // plafon pasar +15% + 80% x pangsa rival
+            capBonusPerShare: 0.8,
+            rivalPressureWeight: 0.25,  // bobot tekanan rival yang sudah diakuisisi
+            reputation: 2,
+            upkeepRate: 0.004           // 0,4% harga akuisisi per bulan (integrasi)
+        },
+        revenueWindowMonths: 6          // rata-rata pendapatan untuk skala biaya sink
+    },
+
     // [v2027.3] Parameter efek makro-ekonomi dunia nyata (lihat core/MacroModel.js).
     macro: {
         cycleElasticity: 0.045,        // 1 poin PDB di bawah tren -> permintaan -4.5%
