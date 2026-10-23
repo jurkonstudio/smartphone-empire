@@ -133,6 +133,7 @@ economy.setBank(bank);
 products.setEconBrakes(econBrakes);
 market.setEconBrakes(econBrakes);
 economy.setEconBrakes(econBrakes);
+economy.setPlants(componentPlants);
 
 // ============ STATE UI ============
 var activeView = 'dashboard';
@@ -852,6 +853,7 @@ function bindGlobalClicks() {
             else if (mfA === 'cancel-upgrade') mfR = componentPlants.cancelUpgrade(mfP);
             else if (mfA === 'order') mfR = componentPlants.orderProduction(mfP, mfAction.dataset.mfComp, parseInt(mfAction.dataset.mfQty, 10) || 0);
             else if (mfA === 'cancel-prod') mfR = componentPlants.cancelProduction(mfP);
+            else if (mfA === 'sell') mfR = componentPlants.sellExternal(mfP, mfAction.dataset.mfComp, parseInt(mfAction.dataset.mfQty, 10) || 0);
             if (mfR && !mfR.ok) ToastService.error(mfR.reason);
             else if (mfR) renderAll();
             return;
