@@ -54,7 +54,6 @@ import { SeasonEndSystem } from './systems/SeasonEndSystem.js';
 import { Modal } from './ui/modal.js';
 import { mountAdvisorButton } from './ui/panels/AdvisorPanel.js';
 import { renderResearchPanel, setFilterCategory, setTimelineFilter, getChipResearchFilter, setChipResearchFilter, openNodeDetailModal, openOsWizardModal, openCreateOsModal, openFeatureDetailModal, openChipNodeModal } from './ui/panels/ResearchPanel.js';
-import { initLiveCounters } from './ui/live/LiveCounters.js';
 import { renderProductPanel, setCatalogView, openProductDetailModal, openCampaignModal, openOrderProductionModal } from './ui/panels/ProductPanel.js';
 import { openDesignWizard } from './ui/panels/DesignWizard.js';
 import { renderMarketPanel, drawShareChart } from './ui/panels/MarketPanel.js';
@@ -1384,7 +1383,6 @@ async function boot() {
         bindGlobalClicks();
         bindTimeEvents();
         bindStateEvents();
-        initLiveCounters();
         bindProgressEvents();
         initAdvisorChat(); // <-- INISIALISASI CHAT ADVISOR
         updateTitle();
