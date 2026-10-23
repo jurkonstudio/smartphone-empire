@@ -258,7 +258,7 @@ export async function pushToCloud(opts) {
         if (res && res.ok) _lastPush = Date.now();
         else if (res && res.code === 'db_setup' && !_warnedDb) {
             _warnedDb = true;
-            console.warn('[PlayerProfile] Jalankan supabase/player-profile.sql di Supabase.');
+            console.warn('[PlayerProfile] Database belum lengkap: jalankan SQL 03, 11, 12, 14, 15 di Supabase (supabase/BACA-DULU.md).');
         }
         return res;
     } catch (e) {
