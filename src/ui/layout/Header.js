@@ -5,13 +5,51 @@
 import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 ensureIconStyles();
 import { generateLogo } from '../avatars/AvatarGenerator.js';
-import { t } from '../../core/LanguageService.js';
+import { t, LanguageService } from '../../core/LanguageService.js';
 import { SiliconService } from '../../systems/SiliconService.js';
 import { formatCurrency } from '../../utils/format.js';
 import { getUnreadCount, isNotificationPanelOpen } from '../notifications/NotificationRenderer.js';
 import { InboxService } from '../../services/InboxService.js';
 
-export function renderHeader({ state, timeSnapshot, warning }) {
+// [v2030] Chip runway permanen di header. Kecil agar muat di layar HP.
+let _runwayCss = false;
+function _ensureRunwayCss() {
+    if (_runwayCss || typeof document === 'undefined' || !document.head) return;
+    _runwayCss = true;
+    const s = document.createElement('style');
+    s.id = 'runway-chip-style';
+    s.textContent = [
+        '.header-runway{display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-2xs,11px);font-weight:700;',
+        'padding:2px 7px;border-radius:999px;margin-right:4px;flex-shrink:0;white-space:nowrap;',
+        'background:var(--bg-3,#222);color:var(--success,#30a46c);border:1px solid var(--border,#444);font-variant-numeric:tabular-nums;}',
+        '.header-runway.lvl-low{background:var(--warn,#f5b400);color:#1a1a1a;border-color:transparent;}',
+        '.header-runway.lvl-danger{background:var(--danger,#e5484d);color:#fff;border-color:transparent;}'
+    ].join('');
+    document.head.appendChild(s);
+}
+
+function _rwL(id, en) {
+    return LanguageService.getLang() === 'en' ? en : id;
+}
+
+export function renderRunwayChip(rw) {
+    if (!rw) return '';
+    _ensureRunwayCss();
+    const m = rw.months;
+    const unit = _rwL('bln', 'mo');
+    const label = (m === Infinity) ? _rwL('aman', 'safe')
+                : (m < 1 ? '&lt;1 ' + unit : Math.floor(m) + ' ' + unit);
+    const cons = (rw.monthsConservative === Infinity) ? _rwL('aman', 'safe')
+               : Math.max(0, Math.floor(rw.monthsConservative)) + ' ' + unit;
+    const tip = _rwL(
+        'Runway (bersih): ' + label + '. Tanpa pendapatan: ' + cons + '.',
+        'Runway (net): ' + label + '. Without income: ' + cons + '.'
+    );
+    const lvl = rw.level === 'danger' ? 'lvl-danger' : (rw.level === 'low' ? 'lvl-low' : 'lvl-ok');
+    return '<span class="header-runway ' + lvl + '" data-runway title="' + tip + '" aria-label="' + tip + '">⏳ ' + label + '</span>';
+}
+
+export function renderHeader({ state, timeSnapshot, warning, runway }) {
     const time = timeSnapshot;
     const hh = String(Math.floor(time.currentHour)).padStart(2, '0');
     const mm = String(Math.floor(time.currentMinute)).padStart(2, '0');
@@ -23,7 +61,8 @@ export function renderHeader({ state, timeSnapshot, warning }) {
     const monthLabel = (mShort === mKey) ? String(time.currentMonth || 1) : mShort;
     const dateStr = t('header.day_prefix') + ' ' + time.currentDay + ' ' + monthLabel + ' ' + time.currentYear;
 
-    const warnBadge = warning ? `<span class="header-warn">⚠ ${warning}</span>` : '';
+    // Chip runway menggantikan badge burn rate lama bila tersedia.
+    const warnBadge = runway ? renderRunwayChip(runway) : (warning ? `<span class="header-warn">⚠ ${warning}</span>` : '');
     const pauseAria = time.isPaused ? t('header.play_aria') : t('header.pause_aria');
 
     const unread = getUnreadCount();
