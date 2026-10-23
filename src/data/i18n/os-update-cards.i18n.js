@@ -132,6 +132,12 @@ export const OS_UPDATE_CARDS_I18N = {
         "osuc.feat.fw_ondevice_llm.desc": "Model bahasa besar berjalan di perangkat.",
         "osuc.feat.fw_ai_agent.name": "AI Agent",
         "osuc.feat.fw_ai_agent.desc": "Agen AI yang menjalankan tugas otomatis.",
+        "osuc.feat.fw_agentic_os.name": "OS Agentik",
+        "osuc.feat.fw_agentic_os.desc": "Sistem operasi berpusat agen: satu perintah menjalankan banyak aplikasi. (skenario)",
+        "osuc.feat.fw_agent_guard.name": "Pagar Agen",
+        "osuc.feat.fw_agent_guard.desc": "Izin berlapis dan jejak audit untuk tindakan agen AI. (skenario)",
+        "osuc.feat.fw_agent_store.name": "Toko Agen",
+        "osuc.feat.fw_agent_store.desc": "Toko agen dan skill AI pihak ketiga di atas OS agentik. (skenario)",
     },
     en: {
         "osuc.kicker": "Design Update",
@@ -262,5 +268,11 @@ export const OS_UPDATE_CARDS_I18N = {
         "osuc.feat.fw_ondevice_llm.desc": "Large language model running on the device.",
         "osuc.feat.fw_ai_agent.name": "AI Agent",
         "osuc.feat.fw_ai_agent.desc": "AI agent that runs tasks automatically.",
+        "osuc.feat.fw_agentic_os.name": "Agentic OS",
+        "osuc.feat.fw_agentic_os.desc": "Agent-centered operating system: one command runs many apps. (scenario)",
+        "osuc.feat.fw_agent_guard.name": "Agent Guard",
+        "osuc.feat.fw_agent_guard.desc": "Layered permissions and audit trail for AI agent actions. (scenario)",
+        "osuc.feat.fw_agent_store.name": "Agent Store",
+        "osuc.feat.fw_agent_store.desc": "A store for third-party AI agents and skills on top of the agentic OS. (scenario)",
     }
 };

@@ -75,6 +75,7 @@ export const RESEARCH_DATA_EN = {
         chip_npu: { name: 'AI NPU', description: 'Neural Processing Unit for on-device AI.' },
         chip_5nm: { name: '5nm Process', description: '5nm fabrication for high power efficiency.' },
         chip_3nm: { name: '3nm Process', description: 'The most advanced fabrication for maximum performance.' },
+        ai_agentic_runtime: { name: 'AI Agent Runtime', description: 'A runtime layer so AI agents can chain tasks on the device. Unlocks agentic OS features.' },
 
         net_gsm: { name: 'GSM', description: '2G cellular network for calls and SMS.' },
         net_gprs: { name: 'GPRS', description: 'The first 2.5G packet data for phones.' },

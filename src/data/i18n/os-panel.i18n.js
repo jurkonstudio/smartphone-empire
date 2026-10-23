@@ -259,6 +259,7 @@ export const OS_PANEL_I18N = {
         'osp.bug.bug_esim_activation': 'eSIM Activation Fails',
         'osp.bug.bug_ai_hallucination': 'AI Hallucinates (Bug)',
         'osp.bug.bug_ai_agent_fail': 'AI Agent Fails to Execute',
+        'osp.bug.bug_agent_permission_leak': 'AI Agent Leaks Access Permissions',
         'osp.bug.bug_zero_day': 'Critical Security Hole (Zero-Day)'
     }
 };
