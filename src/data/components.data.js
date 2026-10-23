@@ -9,6 +9,7 @@ export const COMPONENT_CATEGORIES = [
     { id: 'camera',      name: 'Kamera',   icon: 'camera' },
     { id: 'battery',     name: 'Baterai',  icon: 'battery' },
     { id: 'chip',        name: 'Chip',     icon: 'cpu' },
+    { id: 'ram',         name: 'RAM',      icon: 'layers' },
     { id: 'network',     name: 'Jaringan', icon: 'signal' },
     { id: 'body',        name: 'Bodi',     icon: 'layers' },
     { id: 'sensor',      name: 'Sensor',   icon: 'shield' },
@@ -855,7 +856,70 @@ export const COMPONENTS = [
       costPerUnit: 100, stats: { usability: 70, design: 95 },
       specs: { type: 'Tri-Fold', foldCount: 2, hasKeyboard: false, sizeUnfoldedCm: '21.0 x 14.0 x 0.45', weightG: 320, ergonomics: 'two_hand' },
       baseDemandMultiplier: 1.35,
-      realReference: 'Huawei Mate XT (2024)', milestone: true, requiresResearch: 'layar_foldable' }
+      realReference: 'Huawei Mate XT (2024)', milestone: true, requiresResearch: 'layar_foldable' },
+
+    // ============================================================
+    // RAM — 10 komponen (opsional di Desain; bisa dibuat di Pabrik RAM)
+    // ============================================================
+    { id: 'ram_sram', category: 'ram', tier: 1, minYear: 2000,
+      name: 'Memori SRAM 512KB', icon: 'layers',
+      description: 'Memori kerja mungil bawaan ponsel fitur awal.',
+      costPerUnit: 1, stats: { performance: 2, usability: 1 },
+      realReference: 'Nokia 3310 (2000)', milestone: false },
+
+    { id: 'ram_sdram_16', category: 'ram', tier: 1, minYear: 2003,
+      name: 'SDRAM 16MB', icon: 'layers',
+      description: 'Cukup untuk menu berwarna dan Java ME.',
+      costPerUnit: 2, stats: { performance: 3, usability: 2 },
+      realReference: 'Nokia 6600 (2003)', milestone: false },
+
+    { id: 'ram_mddr_64', category: 'ram', tier: 2, minYear: 2006,
+      name: 'Mobile DDR 64MB', icon: 'layers',
+      description: 'Memori kerja untuk multitasking ringan.',
+      costPerUnit: 3, stats: { performance: 4, usability: 3 },
+      realReference: 'Nokia N95 (2007)', milestone: false },
+
+    { id: 'ram_lpddr_256', category: 'ram', tier: 3, minYear: 2009,
+      name: 'LPDDR 256MB', icon: 'layers',
+      description: 'Memori era smartphone layar sentuh.',
+      costPerUnit: 5, stats: { performance: 5, usability: 4 },
+      realReference: 'iPhone 3GS (2009)', milestone: false },
+
+    { id: 'ram_lpddr2_1g', category: 'ram', tier: 3, minYear: 2011,
+      name: 'LPDDR2 1GB', icon: 'layers',
+      description: 'Ponsel dual-core mulai lancar membuka banyak aplikasi.',
+      costPerUnit: 8, stats: { performance: 6, usability: 5 },
+      realReference: 'Galaxy S II (2011)', milestone: false },
+
+    { id: 'ram_lpddr3_2g', category: 'ram', tier: 4, minYear: 2013,
+      name: 'LPDDR3 2GB', icon: 'layers',
+      description: 'Standar flagship era 64-bit.',
+      costPerUnit: 12, stats: { performance: 7, usability: 6 },
+      realReference: 'Galaxy S5 (2014)', milestone: false },
+
+    { id: 'ram_lpddr4_4g', category: 'ram', tier: 4, minYear: 2016,
+      name: 'LPDDR4 4GB', icon: 'layers',
+      description: 'Multitasking berat dan game 3D.',
+      costPerUnit: 18, stats: { performance: 8, usability: 7 },
+      realReference: 'Galaxy S7 (2016)', milestone: false },
+
+    { id: 'ram_lpddr4x_8g', category: 'ram', tier: 5, minYear: 2019,
+      name: 'LPDDR4X 8GB', icon: 'layers',
+      description: 'Flagship modern: banyak aplikasi tetap hidup di latar.',
+      costPerUnit: 28, stats: { performance: 9, usability: 8 },
+      realReference: 'OnePlus 7 Pro (2019)', milestone: false },
+
+    { id: 'ram_lpddr5_12g', category: 'ram', tier: 5, minYear: 2021,
+      name: 'LPDDR5 12GB', icon: 'layers',
+      description: 'Kecepatan tinggi untuk gaming dan AI di perangkat.',
+      costPerUnit: 40, stats: { performance: 10, usability: 9 },
+      realReference: 'Galaxy S21 Ultra (2021)', milestone: false },
+
+    { id: 'ram_lpddr5x_16g', category: 'ram', tier: 5, minYear: 2024,
+      name: 'LPDDR5X 16GB', icon: 'layers',
+      description: 'Memori puncak untuk model AI lokal.',
+      costPerUnit: 55, stats: { performance: 11, usability: 10 },
+      realReference: 'ROG Phone 8 (2024)', milestone: false }
 ];
 
 // Warna bodi

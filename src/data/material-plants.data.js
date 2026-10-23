@@ -1,10 +1,10 @@
 // FILE: src/data/material-plants.data.js  (Tahap 1 + Tahap 1b: efek & biaya perawatan pabrik)
 // ============================================================
 // Pabrik komponen internal: perusahaan membuat bahan baku ponsel sendiri
-// (baterai, layar) alih-alih membelinya dari pemasok.
+// (baterai, layar, SoC, kamera, RAM) alih-alih membelinya dari pemasok.
 //
 // Tiap tipe pabrik memproduksi SATU kategori komponen dari components.data.js
-// (battery -> baterai, display -> layar). Komponen yang boleh diproduksi
+// (battery, display, chip=SoC, camera, ram). Komponen yang boleh diproduksi
 // mengikuti aturan yang sama dengan Desain ponsel: tahun minYear dan riset
 // (requiresResearch) harus terpenuhi.
 //
@@ -65,6 +65,66 @@ export const PLANT_TYPES = [
               maintenanceMonthly: 900000,  effects: { displayQuality: 0.10 } },
             { level: 4, name: 'Fab Layar Industri', cost: 500000000, durationDays: 360, capacityMonthly: 3000000, discount: 0.33,
               maintenanceMonthly: 2500000, effects: { displayQuality: 0.14 } }
+        ]
+    },
+    {
+        id: 'soc',
+        name: 'Pabrik SoC',
+        icon: 'cpu',
+        category: 'chip',
+        unlockYear: 2004,
+        requiresFab: true,   // wafer SoC jelas butuh fab chip yang sudah berdiri
+        description: 'Packaging dan produksi SoC / prosesor ponsel sendiri. Butuh fab chip yang sudah berdiri. Memangkas biaya chip terbesar di BOM dan menaikkan performa setiap ponsel.',
+        effectKeys: ['performance'],
+        levels: [
+            { level: 1, name: 'Lini Pilot',        cost: 40000000,   durationDays: 180, capacityMonthly: 20000,   discount: 0.08,
+              maintenanceMonthly: 200000,   effects: { performance: 0.02 } },
+            { level: 2, name: 'Lini Produksi',     cost: 120000000,  durationDays: 240, capacityMonthly: 120000,  discount: 0.15,
+              maintenanceMonthly: 600000,   effects: { performance: 0.04 } },
+            { level: 3, name: 'Fab SoC Besar',     cost: 400000000,  durationDays: 330, capacityMonthly: 700000,  discount: 0.22,
+              maintenanceMonthly: 2000000,  effects: { performance: 0.06 } },
+            { level: 4, name: 'Fab SoC Industri',  cost: 1200000000, durationDays: 420, capacityMonthly: 2500000, discount: 0.30,
+              maintenanceMonthly: 6000000,  effects: { performance: 0.09 } }
+        ]
+    },
+    {
+        id: 'camera',
+        name: 'Pabrik Kamera',
+        icon: 'camera',
+        category: 'camera',
+        unlockYear: 2005,
+        requiresFab: false,
+        description: 'Modul kamera, lensa, dan sensor gambar buatan sendiri. Menurunkan biaya kamera dan menaikkan kualitas foto setiap ponsel yang kamu desain.',
+        effectKeys: ['cameraQuality'],
+        levels: [
+            { level: 1, name: 'Lini Pilot',         cost: 10000000,  durationDays: 120, capacityMonthly: 30000,   discount: 0.10,
+              maintenanceMonthly: 50000,   effects: { cameraQuality: 0.03 } },
+            { level: 2, name: 'Lini Produksi',      cost: 35000000,  durationDays: 180, capacityMonthly: 200000,  discount: 0.18,
+              maintenanceMonthly: 175000,  effects: { cameraQuality: 0.06 } },
+            { level: 3, name: 'Pabrik Optik Besar', cost: 120000000, durationDays: 270, capacityMonthly: 1000000, discount: 0.27,
+              maintenanceMonthly: 600000,  effects: { cameraQuality: 0.10 } },
+            { level: 4, name: 'Pabrik Optik Industri', cost: 380000000, durationDays: 360, capacityMonthly: 4000000, discount: 0.35,
+              maintenanceMonthly: 1900000, effects: { cameraQuality: 0.14 } }
+        ]
+    },
+    {
+        id: 'ram',
+        name: 'Pabrik RAM',
+        icon: 'layers',
+        category: 'ram',
+        unlockYear: 2004,
+        requiresFab: true,   // die DRAM butuh fondasi proses fab chip
+        description: 'Modul memori LPDDR buatan sendiri. Butuh fab chip yang sudah berdiri. Menurunkan biaya RAM dan membuat ponsel terasa lebih lancar (kegunaan).',
+        effectKeys: ['usability'],
+        levels: [
+            { level: 1, name: 'Lini Pilot',        cost: 20000000,  durationDays: 150, capacityMonthly: 40000,   discount: 0.08,
+              maintenanceMonthly: 100000,  effects: { usability: 0.02 } },
+            { level: 2, name: 'Lini Produksi',     cost: 70000000,  durationDays: 210, capacityMonthly: 250000,  discount: 0.16,
+              maintenanceMonthly: 350000,  effects: { usability: 0.04 } },
+            { level: 3, name: 'Fab Memori Besar',  cost: 240000000, durationDays: 300, capacityMonthly: 1200000, discount: 0.24,
+              maintenanceMonthly: 1200000, effects: { usability: 0.06 } },
+            { level: 4, name: 'Fab Memori Industri', cost: 700000000, durationDays: 390, capacityMonthly: 4500000, discount: 0.32,
+              maintenanceMonthly: 3500000, effects: { usability: 0.08 } }
         ]
     }
 ];

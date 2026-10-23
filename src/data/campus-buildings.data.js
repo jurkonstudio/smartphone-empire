@@ -185,7 +185,7 @@ export const CAMPUS_REGISTRY = [
     {
         id: 'pcplant', kind: 'slot', slot: [5.4, 11.4], fp: [-2.7, 1.8, -1.2, 1.53], category: 'industry', icon: 'battery', emoji: '🔩', variant: 1,
         name: ['Pabrik Komponen', 'Component Plant'],
-        desc: ['Baterai & layar buatan sendiri. Naik seiring level pabrik komponen.', 'Your own batteries and displays. Grows with plant levels.'],
+        desc: ['Baterai, layar, SoC, kamera & RAM buatan sendiri. Naik seiring level pabrik komponen.', 'Your own batteries, displays, SoCs, cameras and RAM. Grows with plant levels.'],
         unit: ['level pabrik', 'plant levels'],
         nav: { view: 'research', sub: 'manufaktur', label: ['Manufaktur', 'Manufacturing'] },
         roofAlt: true,
