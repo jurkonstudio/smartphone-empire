@@ -6,10 +6,10 @@
 <meta name="theme-color" content="#fbfbfd" id="metaTheme">
 <meta name="color-scheme" content="light dark">
 <title>Smartphone Empire — Jurkon Studio</title>
-<meta name="description" id="metaDesc" content="Smartphone Empire: game simulasi bisnis ponsel dari tahun 2000 sampai era AI dan foldable. Mainkan gratis di browser, download APK Android, masuk akun, dan top up Silicon.">
+<meta name="description" id="metaDesc" content="Smartphone Empire: game simulasi bisnis ponsel dari tahun 2000 sampai era AI dan foldable. Mainkan gratis di browser, download APK Android, masuk akun, dan kelola saldo Silicon.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Smartphone Empire — Bangun kerajaan ponselmu">
-<meta property="og:description" content="Mulai 1 Januari 2000, lawan Nokia, Apple, Samsung dan 22 kompetitor lain. Gratis di browser dan Android.">
+<meta property="og:description" content="Mulai 1 Januari 2000, lawan Nokia, Apple, Samsung dan 23 kompetitor lain. Gratis di browser dan Android.">
 <meta property="og:image" content="https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/assets/img/loading-screen.jpg">
 <link rel="icon" type="image/png" sizes="32x32" href="./assets/icon/favicon-32.png">
 <link rel="apple-touch-icon" href="./assets/icon/apple-touch-icon.png">
@@ -164,7 +164,7 @@ h2.h{font-size:clamp(2rem,5.4vw,3.2rem);font-weight:700;letter-spacing:-.052em;l
 .tile.hl{background:radial-gradient(120% 90% at 0% 0%,rgba(10,132,255,.13),transparent 60%),var(--card)}
 :root[data-theme="dark"] .tile.hl{background:radial-gradient(120% 90% at 0% 0%,rgba(10,132,255,.22),transparent 60%),var(--card)}
 @media(min-width:720px){.bento{grid-template-columns:repeat(2,minmax(0,1fr))}.tile.hl,.tile:last-child{grid-column:1/-1}}
-@media(min-width:1000px){.bento{grid-template-columns:repeat(6,minmax(0,1fr))}.tile{grid-column:span 2}.tile.w3{grid-column:span 3}.tile.w4{grid-column:span 4}}
+@media(min-width:1000px){.bento{grid-template-columns:repeat(6,minmax(0,1fr))}.tile{grid-column:span 2}.tile.w3{grid-column:span 3}.tile.w4{grid-column:span 4}.tile.w6{grid-column:span 6}}
 
 /* SHOWCASE */
 .show{display:grid;gap:28px;margin-top:36px;align-items:center}
@@ -270,6 +270,9 @@ h2.h{font-size:clamp(2rem,5.4vw,3.2rem);font-weight:700;letter-spacing:-.052em;l
 .checkout .sm{font-size:.82rem;color:var(--text3);font-weight:600}
 .checkout .tt{font-size:1.2rem;font-weight:700;letter-spacing:-.03em}
 .fine{margin-top:12px;font-size:.8rem;color:var(--text3);line-height:1.5}
+.lock-note{margin:0 0 14px;padding:13px 15px;border-radius:14px;background:rgba(255,159,10,.14);box-shadow:inset 0 0 0 1px rgba(255,159,10,.35);color:var(--text);font-size:.9rem;line-height:1.5}
+.lock-note[hidden]{display:none}
+.sil-locked .pkgs,.sil-locked .methods{opacity:.5;pointer-events:none}
 .orders{margin-top:22px}
 .orders h4{font-size:.82rem;font-weight:700;color:var(--text3);margin-bottom:8px}
 .ord{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;background:var(--inner);margin-bottom:6px;font-size:.86rem}
@@ -398,7 +401,7 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
 <header id="top" class="wrap hero">
   <div class="eyebrow"><b>v0.2.1</b> <span data-en="Jurkon Studio · Independent simulation game">Jurkon Studio · Game simulasi independen</span></div>
   <h1 class="title" data-en="Build your <em>phone</em> empire.<br>From 2000 to the AI era.">Bangun kerajaan <em>ponselmu</em>.<br>Dari 2000 sampai era AI.</h1>
-  <p class="lede" data-en="You’re the CEO of a phone company founded on January 1, 2000. Hire a team, research technology, design phones, then take on Nokia, Apple, Samsung, and 22 other competitors all the way to the foldable era.">Kamu CEO perusahaan ponsel yang baru berdiri pada 1 Januari 2000. Rekrut tim, riset teknologi, rancang ponsel, lalu lawan Nokia, Apple, Samsung, dan 22 kompetitor lain sampai era foldable.</p>
+  <p class="lede" data-en="You’re the CEO of a phone company founded on January 1, 2000. Hire a team, research technology, design phones, then take on Nokia, Apple, Samsung, and 23 other competitors all the way to the foldable era.">Kamu CEO perusahaan ponsel yang baru berdiri pada 1 Januari 2000. Rekrut tim, riset teknologi, rancang ponsel, lalu lawan Nokia, Apple, Samsung, dan 23 kompetitor lain sampai era foldable.</p>
   <div class="cta">
     <a class="btn btn-blue" href="./index.html">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span data-en="Play for free">Mainkan gratis</span></a>
@@ -419,7 +422,7 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
   <div class="stats rv" role="list">
     <div class="stat" role="listitem"><b>26</b><span data-en="Competitor companies">Perusahaan kompetitor</span></div>
     <div class="stat" role="listitem"><b>70</b><span data-en="Tech tree nodes">Node tech tree</span></div>
-    <div class="stat" role="listitem"><b>117</b><span data-en="Phone components">Komponen ponsel</span></div>
+    <div class="stat" role="listitem"><b>127</b><span data-en="Phone components">Komponen ponsel</span></div>
     <div class="stat" role="listitem"><b>84</b><span data-en="Stocks on the exchange">Saham di bursa</span></div>
     <div class="stat" role="listitem"><b>12</b><span data-en="Languages · ID and EN complete">Bahasa · ID dan EN penuh</span></div>
   </div>
@@ -434,10 +437,10 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
     <article class="tile hl w4 c-blue rv">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg></div>
       <h3 data-en="3D Campus, Office, and Team">Kampus 3D, Kantor, dan Tim</h3>
-      <p data-en="The 3D campus map grows with your progress. At HQ there’s an isometric office with 9 rooms wired to game data: staff sit at desks, the lab shows active research, the showroom shows the products you sell.">Peta kampus 3D tumbuh seiring progres. Di HQ ada kantor isometrik dengan 9 ruangan yang terhubung ke data game: staf duduk di meja, lab menampilkan riset aktif, showroom menampilkan produk yang dijual.</p>
+      <p data-en="The 3D campus map grows with your progress. On Home, switch to an isometric office with 9 rooms wired to game data: staff sit at desks, the lab shows active research, the showroom shows the products you sell.">Peta kampus 3D tumbuh seiring progres. Di Home kamu bisa beralih ke kantor isometrik dengan 9 ruangan yang terhubung ke data game: staf duduk di meja, lab menampilkan riset aktif, showroom menampilkan produk yang dijual.</p>
       <ul>
         <li data-en="3 roles: Engineer, Designer, Marketer, with 5 skill levels and 8 traits">Tim 3 peran: Engineer, Designer, Marketer, 5 tingkat skill dan 8 trait</li>
-        <li data-en="Candidates from 7 countries, headhunters, and salary negotiation">Kandidat dari 7 negara, headhunter, dan tawar gaji</li>
+        <li data-en="Candidates from 9 regions, headhunters, and salary negotiation">Kandidat dari 9 wilayah, headhunter, dan tawar gaji</li>
         <li data-en="Build or upgrade a Fab and train staff right from the office map">Bangun atau upgrade Fab dan latih staf langsung dari peta kantor</li>
       </ul>
     </article>
@@ -450,7 +453,7 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
     <article class="tile c-orange rv">
       <div class="ic"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg></div>
       <h3 data-en="Phone design wizard">Wizard desain ponsel</h3>
-      <p data-en="Real-time preview with 117 components in 9 categories and 8 body colors. Choices follow the year: no OLED screens in 2001.">Preview real-time dengan 117 komponen di 9 kategori dan 8 warna bodi. Pilihan mengikuti tahun: tidak ada layar OLED di 2001.</p>
+      <p data-en="Real-time preview with 127 components in 10 categories and 8 body colors. See the phone from the front, the back, and in its retail box. Choices follow the year: no OLED screens in 2001.">Preview real-time dengan 127 komponen di 10 kategori dan 8 warna bodi. Lihat ponselmu dari depan, belakang, dan dalam kemasan retail. Pilihan mengikuti tahun: tidak ada layar OLED di 2001.</p>
     </article>
     <article class="tile c-green rv">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 17l5-5 4 4 8-9"/><path d="M15 7h5v5"/></svg></div>
@@ -470,7 +473,7 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
     <article class="tile w3 c-orange rv">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 9l9-6 9 6M5 9v10M19 9v10M9 19v-6M15 19v-6M3 21h18"/></svg></div>
       <h3 data-en="Finance and stock exchange">Keuangan dan bursa</h3>
-      <p data-en="Three banks with loans, deposits, and credit ratings from AAA to D. An exchange with 84 stocks, 9 indices, and 5 currencies with historical rates. Two months of negative cash in a row means game over.">Tiga bank dengan pinjaman, deposito, dan credit rating AAA sampai D. Bursa dengan 84 saham, 9 indeks, dan 5 mata uang dengan kurs historis. Kas negatif 2 bulan berturut-turut berarti game over.</p>
+      <p data-en="Three banks with loans, deposits, and credit ratings from AAA to D. An exchange with 84 stocks in 12 categories, 9 world indices, and 5 currencies with historical rates, where your own trades move prices. Two months of negative cash in a row means game over.">Tiga bank dengan pinjaman, deposito, dan credit rating AAA sampai D. Bursa dengan 84 saham di 12 kategori, 9 indeks dunia, dan 5 mata uang dengan kurs historis, tempat transaksimu ikut menggerakkan harga. Kas negatif 2 bulan berturut-turut berarti game over.</p>
     </article>
     <article class="tile w3 c-blue rv">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H4zM8 21h8M12 16v5"/></svg></div>
@@ -481,6 +484,16 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.4 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/></svg></div>
       <h3 data-en="Universal Wallet">Dompet Universal</h3>
       <p data-en="Money ($) and Silicon (SIL) can cover each other for almost any cost. Pick a pay mode: Automatic, Money first, SIL first, or Separate.">Uang ($) dan Silicon (SIL) bisa saling menutup untuk hampir semua biaya. Pilih mode bayar: Otomatis, Uang dulu, SIL dulu, atau Terpisah.</p>
+    </article>
+    <article class="tile w6 c-green rv">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 21V10l6 3V9l6 3V6h6v15zM7 21v-3M12 21v-3M17 21v-3"/></svg></div>
+      <h3 data-en="Manufacturing and investment">Manufaktur dan investasi</h3>
+      <p data-en="Build your own component plants on the Manufacturing island, connected to the campus by a bridge. Spend spare cash where it counts, because costs rise with volume and the market has a ceiling.">Bangun pabrik komponen sendiri di Pulau Manufaktur yang terhubung ke kampus lewat jembatan. Belanjakan kas berlebih dengan tepat, karena biaya naik seiring volume dan pasar punya plafon.</p>
+      <ul>
+        <li data-en="5 plant types (battery, display, SoC, camera, RAM), 4 levels each, with discounts, yield, and spec bonuses">5 jenis pabrik (baterai, layar, SoC, kamera, RAM), masing-masing 4 level, dengan diskon, yield, dan bonus spesifikasi</li>
+        <li data-en="Sell surplus stock wholesale, but watch the upkeep and infrastructure tax">Jual surplus stok secara grosir, tapi perhatikan biaya perawatan dan pajak infrastruktur</li>
+        <li data-en="HQ Investment tab: factory efficiency upgrades and acquisitions of rival brands">Tab Investasi di HQ: peningkatan efisiensi pabrik dan akuisisi merek rival</li>
+      </ul>
     </article>
   </div>
 </div></section>
@@ -547,8 +560,8 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
 <section id="silicon"><div class="wrap">
   <div class="sil">
     <div class="kicker">Silicon (SIL)</div>
-    <h2 class="h" data-en="Account, balance, and Silicon top-up.">Akun, saldo, dan top up Silicon.</h2>
-    <p class="sub" data-en="SIL is a premium currency for speeding up time and research. Sign in with the same account you use in the game, then top up from here.">SIL adalah mata uang premium untuk mempercepat waktu dan riset. Masuk dengan akun yang sama dengan di game, lalu top up dari sini.</p>
+    <h2 class="h" data-en="Account, balance, and Silicon.">Akun, saldo, dan Silicon.</h2>
+    <p class="sub" data-en="SIL is a premium currency for speeding up time and research. Sign in with the same account you use in the game to see your balance and orders. Top-up is temporarily closed.">SIL adalah mata uang premium untuk mempercepat waktu dan riset. Masuk dengan akun yang sama dengan di game untuk melihat saldo dan pesananmu. Top up sedang ditutup sementara.</p>
     <div class="sil-grid">
       <div>
         <div class="acct" id="acct"></div>
@@ -560,6 +573,7 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
         </ul>
       </div>
       <div id="shop">
+        <div class="lock-note" id="lockNote" role="status" data-en="<b>Top-up is temporarily closed.</b> Your balance, daily login bonus, and quest rewards keep working as usual."><b>Top up sedang ditutup sementara.</b> Saldo, bonus login harian, dan reward quest tetap berjalan seperti biasa.</div>
         <div class="pkgs" role="radiogroup" aria-label="Paket Silicon" data-en-aria="Silicon packages" id="pkgs"></div>
         <div class="methods" role="radiogroup" aria-label="Metode pembayaran" data-en-aria="Payment method" id="methods">
           <button class="method" type="button" role="radio" aria-checked="true" data-m="qris">QRIS</button>
@@ -569,7 +583,7 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
           <div><div class="sm" id="coLabel">Pilih paket</div><div class="tt" id="coTotal">—</div></div>
           <button class="btn btn-blue" type="button" id="coBtn" disabled>Top up sekarang</button>
         </div>
-        <p class="fine" data-en="QRIS and GoPay payments are confirmed manually by an admin. Once approved, the SIL balance is added to your account. Include the Order ID in the transfer note. Maximum 5 orders awaiting approval.">Pembayaran lewat QRIS dan GoPay dikonfirmasi manual oleh admin. Setelah disetujui, saldo SIL masuk ke akunmu. Sertakan Order ID di berita transfer. Maksimal 5 pesanan menunggu persetujuan.</p>
+        <p class="fine" data-en="This page will be updated when top-up reopens. Until then, packages are shown for reference only. Once reopened, QRIS and GoPay payments will still be confirmed manually by an admin, with the Order ID in the transfer note and a maximum of 5 orders awaiting approval.">Halaman ini akan diperbarui saat top up dibuka kembali. Sampai saat itu, paket hanya ditampilkan sebagai referensi. Setelah dibuka, pembayaran lewat QRIS dan GoPay tetap dikonfirmasi manual oleh admin, dengan Order ID di berita transfer dan maksimal 5 pesanan menunggu persetujuan.</p>
         <div class="orders" id="orders" hidden><h4 data-en="Recent orders">Pesanan terakhir</h4><div id="ordList"></div></div>
       </div>
     </div>
@@ -603,11 +617,13 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
   <div class="kicker">Roadmap</div>
   <h2 class="h" data-en="What’s done and what’s in progress.">Yang sudah jalan dan yang sedang dikerjakan.</h2>
   <div class="road">
-    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Office 3D Map, stage 3">Office 3D Map tahap 3</b><span data-en="Build or upgrade a Fab and train staff right from the map.">Bangun atau upgrade Fab dan latih staf langsung dari peta.</span></div></div>
-    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Office and Team integration">Integrasi Office dan Tim</b><span data-en="From a staff card to staff details, and “View in office”.">Dari kartu staf ke detail staf, dan “Lihat di kantor”.</span></div></div>
+    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Office 3D Map and Team integration">Office 3D Map dan integrasi Tim</b><span data-en="Build a Fab and train staff from the map, open staff details, and use “View in office”.">Bangun Fab dan latih staf dari peta, buka detail staf, dan “Lihat di kantor”.</span></div></div>
+    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Market Navigation panel">Panel Navigasi Pasar</b><span data-en="Segment, region, opportunity, and trend-wave cards in the Market tab.">Kartu segmen, wilayah, peluang, dan gelombang tren di tab Pasar.</span></div></div>
+    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Manufacturing, investment, and stock exchange v2">Manufaktur, investasi, dan bursa v2</b><span data-en="Component plants, economic brakes, rival-brand acquisitions, and stocks that react to your trades.">Pabrik komponen, penahan ekonomi, akuisisi merek rival, dan saham yang bereaksi pada transaksimu.</span></div></div>
+    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="12 languages">12 bahasa</b><span data-en="Indonesian and English are complete; 10 more use a core dictionary.">Indonesia dan English penuh; 10 bahasa lain memakai kamus inti.</span></div></div>
+    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Translation polish">Penyempurnaan terjemahan</b><span data-en="Replace the last hardcoded texts and translate component names and descriptions.">Mengganti sisa teks hardcoded dan menerjemahkan nama serta deskripsi komponen.</span></div></div>
     <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Random events with choices">Event acak dengan pilihan</b><span data-en="Plus per-era screen transitions and UI polish.">Plus transisi layar per era dan polish UI.</span></div></div>
-    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Automatic Silicon payments">Pembayaran Silicon otomatis</b><span data-en="Top-ups are currently confirmed manually by an admin.">Saat ini top up dikonfirmasi manual oleh admin.</span></div></div>
-    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Market Navigation panel UI">Panel UI Navigasi Pasar</b><span data-en="Segment, region, opportunity, and trend-wave cards in the Market tab.">Kartu segmen, wilayah, peluang, dan gelombang tren di tab Pasar.</span></div></div>
+    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Reopen Silicon top-up">Membuka kembali top up Silicon</b><span data-en="Reopening with automatic payments and a server-side switch.">Dibuka kembali dengan pembayaran otomatis dan sakelar di sisi server.</span></div></div>
     <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Fully bilingual news">Berita bilingual penuh</b><span data-en="English headlines are in; some review templates are still Indonesian.">Headline English sudah ada; sebagian template ulasan masih berbahasa Indonesia.</span></div></div>
   </div>
 </div></section>
@@ -618,10 +634,11 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
   <h2 class="h" data-en="Frequently asked questions.">Pertanyaan yang sering muncul.</h2>
   <div class="faq">
     <details><summary data-en="Is the game free?">Apakah game ini gratis?</summary><p data-en="Yes. You can play for free in the browser and through the Android APK. Silicon is an optional premium currency.">Ya. Game bisa dimainkan gratis di browser dan lewat APK Android. Silicon adalah mata uang premium opsional.</p></details>
-    <details><summary data-en="Do I need an account to play?">Perlu akun untuk bermain?</summary><p data-en="No. Local saves are automatic. An account is needed for cloud save (1 slot), the player profile, the leaderboard, and a server-side SIL balance.">Tidak. Save lokal otomatis. Akun dibutuhkan untuk cloud save (1 slot), profil pemain, leaderboard, dan saldo SIL yang tersimpan di server.</p></details>
+    <details><summary data-en="Do I need an account to play?">Perlu akun untuk bermain?</summary><p data-en="No. Local saves are automatic. An account is needed for cloud save (1 slot), the player profile and Player ID, the leaderboard, messages, and a server-side SIL balance.">Tidak. Save lokal otomatis. Akun dibutuhkan untuk cloud save (1 slot), profil pemain dan ID Pemain, leaderboard, pesan, dan saldo SIL yang tersimpan di server.</p></details>
     <details><summary data-en="Which languages are supported?">Bahasa apa saja yang didukung?</summary><p data-en="12 languages: English, Bahasa Indonesia, Chinese (Simplified), Korean, Japanese, French, German, Spanish, Italian, Russian, Polish, and Hindi. Indonesian and English are complete; the rest use a core dictionary and fall back to English for untranslated text. Change it anytime in Settings.">12 bahasa: English, Bahasa Indonesia, Mandarin (Sederhana), Korea, Jepang, Prancis, Jerman, Spanyol, Italia, Rusia, Polandia, dan Hindi. Indonesia dan English tersedia penuh; sisanya memakai kamus inti dan kembali ke English untuk teks yang belum diterjemahkan. Bisa diganti kapan saja di Setelan.</p></details>
-    <details><summary data-en="How long does a top-up take?">Berapa lama top up diproses?</summary><p data-en="Orders are confirmed manually by an admin, so it isn’t instant. You can check your order status on this page or in the game. Once approved, the SIL balance is added automatically.">Pesanan dikonfirmasi manual oleh admin, jadi waktunya tidak instan. Status pesananmu bisa dicek di halaman ini atau di dalam game. Setelah disetujui, saldo SIL masuk otomatis.</p></details>
-    <details><summary data-en="Is the leaderboard official yet?">Apakah leaderboard sudah resmi?</summary><p data-en="Not yet. Leaderboard stats are currently reported from the player’s device, so they can’t be treated as official rankings. Server-side validation is still in progress.">Belum. Statistik leaderboard saat ini dilaporkan dari perangkat pemain, jadi belum bisa dianggap peringkat resmi. Validasi server masih dalam pengerjaan.</p></details>
+    <details><summary data-en="Can I top up Silicon right now?">Bisa top up Silicon sekarang?</summary><p data-en="Not for now. Top-up is temporarily closed in the game and on this page. Your balance, daily login bonus, and quest rewards keep working. When it reopens, orders will still be confirmed manually by an admin until an automatic payment provider is connected, so it won’t be instant.">Untuk sementara belum. Top up ditutup sementara di game dan di halaman ini. Saldo, bonus login harian, dan reward quest tetap berjalan. Setelah dibuka kembali, pesanan tetap dikonfirmasi manual oleh admin sampai provider pembayaran otomatis terhubung, jadi tidak instan.</p></details>
+    <details><summary data-en="Is the leaderboard official yet?">Apakah leaderboard sudah resmi?</summary><p data-en="Not yet. Leaderboard stats are still reported from the player’s device. The server limits how often they sync, rejects impossible numbers, and calculates levels and scores itself, but believable numbers can still be faked, so they can’t be treated as official rankings.">Belum. Statistik leaderboard masih dikirim dari perangkat pemain. Server membatasi frekuensi sinkron, menolak angka yang mustahil, dan menghitung level serta skor sendiri, tetapi angka yang masuk akal tetap bisa dipalsukan, jadi belum bisa dianggap peringkat resmi.</p></details>
+    <details><summary data-en="Can I play on a PC as well as a phone?">Bisa dimainkan di PC dan HP?</summary><p data-en="Yes. The game runs in phone and PC browsers, with its own desktop layout. You can install it as a PWA, and the Android APK is a wrapper around the same web version.">Bisa. Game berjalan di browser HP maupun PC dengan tata letak desktop tersendiri. Kamu bisa memasangnya sebagai PWA, dan APK Android adalah pembungkus dari versi web yang sama.</p></details>
     <details><summary data-en="Is this an official Nokia, Apple, or Samsung product?">Apakah ini produk resmi Nokia, Apple, atau Samsung?</summary><p data-en="No. This is a fan project with no affiliation to any company. Names and brands are used for educational and entertainment purposes, and there’s a parody-name mode.">Bukan. Ini fan project tanpa afiliasi dengan perusahaan mana pun. Nama dan merek dipakai untuk tujuan edukasi dan hiburan, dan ada mode nama parodi.</p></details>
   </div>
 </div></section>
@@ -693,13 +710,14 @@ let lang = document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'id';
 const loc = () => (lang === 'en' ? 'en-US' : 'id-ID');
 const rp = n => 'Rp' + Number(n).toLocaleString('id-ID');
 const nf = n => Number(n).toLocaleString(loc());
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /* ---------- kamus teks dinamis (teks statis memakai atribut data-en) ---------- */
 const T = {
   id: {
     signIn: 'Masuk', signUp: 'Daftar', signOut: 'Keluar', pickPkg: 'Pilih paket', topup: 'Top up sekarang', creating: 'Membuat pesanan…',
     popular: 'POPULER', best: 'TERBAIK', bonus: 'bonus', show: 'Lihat', hide: 'Sembunyi',
-    accNone: 'Belum masuk', accNoneSub: 'Masuk untuk top up dan melihat saldo SIL', accBal: 'Saldo SIL', accPid: 'ID Pemain', player: 'Pemain',
+    accNone: 'Belum masuk', accNoneSub: 'Masuk untuk melihat saldo SIL dan pesananmu', accBal: 'Saldo SIL', accPid: 'ID Pemain', player: 'Pemain',
     cont: 'Lanjut main', start: 'Mulai main', yourCo: 'Perusahaanmu',
     saveYear: (co, y) => `${co} · Save cloud tahun ${y}`, noSave: co => `${co} · Belum ada save cloud`, linked: 'Akun game terhubung · belum ada save cloud',
     ordTitle: 'Pesanan terakhir', pending: 'Menunggu', approved: 'Disetujui', rejected: 'Ditolak', viewQr: 'Lihat QR',
@@ -716,15 +734,15 @@ const T = {
     e_auth: 'Sesi login berakhir. Masuk lagi lalu coba lagi.', e_net: 'Tidak bisa terhubung ke server. Cek koneksi internetmu.', e_cfg: 'Login belum tersedia di halaman ini.',
     e_gen: m => 'Terjadi masalah' + (m ? ' (' + m + ')' : '') + '. Coba lagi.',
     themeToDark: 'Ganti ke mode gelap', themeToLight: 'Ganti ke mode terang',
-    full: 'Penuh', core: 'Inti',
-    desc: 'Smartphone Empire: game simulasi bisnis ponsel dari tahun 2000 sampai era AI dan foldable. Mainkan gratis di browser, download APK Android, masuk akun, dan top up Silicon.',
-    ogT: 'Smartphone Empire — Bangun kerajaan ponselmu', ogD: 'Mulai 1 Januari 2000, lawan Nokia, Apple, Samsung dan 22 kompetitor lain. Gratis di browser dan Android.',
+    full: 'Penuh', core: 'Inti', topLocked: 'Top up ditutup sementara',
+    desc: 'Smartphone Empire: game simulasi bisnis ponsel dari tahun 2000 sampai era AI dan foldable. Mainkan gratis di browser, download APK Android, masuk akun, dan kelola saldo Silicon.',
+    ogT: 'Smartphone Empire — Bangun kerajaan ponselmu', ogD: 'Mulai 1 Januari 2000, lawan Nokia, Apple, Samsung dan 23 kompetitor lain. Gratis di browser dan Android.',
     accent: { blue: 'Biru', emerald: 'Emerald', violet: 'Violet', amber: 'Amber', rose: 'Rose', cyan: 'Cyan' }
   },
   en: {
     signIn: 'Sign in', signUp: 'Sign up', signOut: 'Sign out', pickPkg: 'Choose a package', topup: 'Top up now', creating: 'Creating order…',
     popular: 'POPULAR', best: 'BEST VALUE', bonus: 'bonus', show: 'Show', hide: 'Hide',
-    accNone: 'Not signed in', accNoneSub: 'Sign in to top up and see your SIL balance', accBal: 'SIL balance', accPid: 'Player ID', player: 'Player',
+    accNone: 'Not signed in', accNoneSub: 'Sign in to see your SIL balance and orders', accBal: 'SIL balance', accPid: 'Player ID', player: 'Player',
     cont: 'Continue playing', start: 'Start playing', yourCo: 'Your company',
     saveYear: (co, y) => `${co} · Cloud save, year ${y}`, noSave: co => `${co} · No cloud save yet`, linked: 'Game account linked · no cloud save yet',
     ordTitle: 'Recent orders', pending: 'Pending', approved: 'Approved', rejected: 'Rejected', viewQr: 'View QR',
@@ -741,9 +759,9 @@ const T = {
     e_auth: 'Your session expired. Sign in again and retry.', e_net: 'Can’t reach the server. Check your internet connection.', e_cfg: 'Sign-in isn’t available on this page.',
     e_gen: m => 'Something went wrong' + (m ? ' (' + m + ')' : '') + '. Please try again.',
     themeToDark: 'Switch to dark mode', themeToLight: 'Switch to light mode',
-    full: 'Full', core: 'Core',
-    desc: 'Smartphone Empire: a phone-business simulation game from the year 2000 to the AI and foldable era. Play free in your browser, download the Android APK, sign in, and top up Silicon.',
-    ogT: 'Smartphone Empire — Build your phone empire', ogD: 'Starting January 1, 2000, take on Nokia, Apple, Samsung and 22 other competitors. Free in the browser and on Android.',
+    full: 'Full', core: 'Core', topLocked: 'Top-up temporarily closed',
+    desc: 'Smartphone Empire: a phone-business simulation game from the year 2000 to the AI and foldable era. Play free in your browser, download the Android APK, sign in, and manage your Silicon balance.',
+    ogT: 'Smartphone Empire — Build your phone empire', ogD: 'Starting January 1, 2000, take on Nokia, Apple, Samsung and 23 other competitors. Free in the browser and on Android.',
     accent: { blue: 'Blue', emerald: 'Emerald', violet: 'Violet', amber: 'Amber', rose: 'Rose', cyan: 'Cyan' }
   }
 };
@@ -795,19 +813,19 @@ const SHOTS = [
     tab: { id: 'HQ', en: 'HQ' },
     alt: { id: 'Cuplikan layar HQ Smartphone Empire', en: 'Smartphone Empire HQ screenshot' },
     h: { id: 'Pusat kendali perusahaan', en: 'Your company control center' },
-    p: { id: 'Ringkasan kas, burn rate, reputasi, sentimen, tim, dan era dalam satu layar, plus tab Office, Team, Exchange, Bank, dan History.', en: 'Cash, burn rate, reputation, sentiment, team, and era on one screen, plus the Office, Team, Exchange, Bank, and History tabs.' },
-    li: { id: ['<b>Kas dan burn-rate</b> dengan laporan bulanan', '<b>Reputasi dan sentimen</b> publik', '<b>Bank dan bursa</b> hanya satu ketukan'], en: ['<b>Cash and burn rate</b> with monthly reports', '<b>Reputation and public sentiment</b>', '<b>Bank and exchange</b> are one tap away'] } },
+    p: { id: 'Ringkasan kas, burn rate, reputasi, sentimen, tim, dan era dalam satu layar, plus tab Tim, Bursa, Bank, Investasi, dan Riwayat.', en: 'Cash, burn rate, reputation, sentiment, team, and era on one screen, plus the Team, Exchange, Bank, Investment, and History tabs.' },
+    li: { id: ['<b>Kas dan burn-rate</b> dengan laporan bulanan', '<b>Reputasi dan sentimen</b> publik', '<b>Bank, bursa, dan investasi</b> hanya satu ketukan'], en: ['<b>Cash and burn rate</b> with monthly reports', '<b>Reputation and public sentiment</b>', '<b>Bank, exchange, and investments</b> are one tap away'] } },
   { id: 'peta', img: 'peta.jpg', r: 1,
     tab: { id: 'Peta kampus', en: 'Campus map' },
     alt: { id: 'Cuplikan peta kampus 3D di layar Home: Kantor Pusat, Lab R&D, Toko Flagship, billboard, dan pelabuhan logistik', en: '3D campus map on the Home screen: HQ, R&D Lab, Flagship Store, billboards, and a logistics port' },
     h: { id: 'Kampus 3D yang tumbuh', en: 'A 3D campus that grows' },
-    p: { id: 'Peta kampus di Home berkembang mengikuti progres perusahaanmu. Tiap gedung punya aturan tumbuh sendiri, dan dekorasi kota muncul sesuai era desain.', en: 'The campus map on Home evolves with your company’s progress. Each building has its own growth rules, and city decor appears to match the design era.' },
+    p: { id: 'Peta kampus di Home berkembang mengikuti progres perusahaanmu. Tiap gedung punya aturan tumbuh sendiri, dan dekorasi kota muncul sesuai era desain. Dari sini kamu juga bisa menyeberang ke Pulau Manufaktur.', en: 'The campus map on Home evolves with your company’s progress. Each building has its own growth rules, and city decor appears to match the design era. From here you can also cross over to the Manufacturing island.' },
     li: { id: ['<b>Kantor Pusat</b> tumbuh seiring jumlah staf', '<b>Lab R&amp;D</b> tumbuh seiring riset yang selesai', '<b>Toko Flagship</b> makin megah seiring produk dirilis', '<b>Billboard</b> menyala saat kampanye aktif'], en: ['<b>Headquarters</b> grows with your headcount', '<b>R&amp;D Lab</b> grows as research completes', '<b>Flagship Store</b> gets grander as products launch', '<b>Billboards</b> light up during active campaigns'] } },
   { id: 'kantor', img: 'kantor.jpg', r: 1,
     tab: { id: 'Kantor 3D', en: '3D office' },
-    alt: { id: 'Cuplikan kantor 3D isometrik di tab HQ', en: 'Isometric 3D office in the HQ tab' },
+    alt: { id: 'Cuplikan kantor 3D isometrik di layar Home', en: 'Isometric 3D office on the Home screen' },
     h: { id: 'Kantor isometrik yang hidup', en: 'A living isometric office' },
-    p: { id: 'Di HQ ada kantor dengan 9 ruangan yang terhubung ke data game. Staf duduk di meja, dan Fab bisa dibangun atau di-upgrade dari peta.', en: 'HQ has an office with 9 rooms wired to game data. Staff sit at their desks, and you can build or upgrade a Fab from the map.' },
+    p: { id: 'Di Home, geser sakelar Kampus | Kantor untuk melihat kantor dengan 9 ruangan yang terhubung ke data game. Staf duduk di meja, dan Fab bisa dibangun atau di-upgrade dari peta.', en: 'On Home, flip the Campus | Office switch to see an office with 9 rooms wired to game data. Staff sit at their desks, and you can build or upgrade a Fab from the map.' },
     li: { id: ['<b>9 ruangan</b> terhubung ke data game', '<b>Staf</b> duduk di meja masing-masing', '<b>Bangun dan latih</b> langsung dari peta kantor'], en: ['<b>9 rooms</b> connected to game data', '<b>Staff</b> sit at their own desks', '<b>Build and train</b> right from the office map'] } },
   { id: 'riset', img: 'riset.jpg',
     tab: { id: 'Riset', en: 'Research' },
@@ -819,14 +837,14 @@ const SHOTS = [
     tab: { id: 'Desain', en: 'Design' },
     alt: { id: 'Cuplikan layar wizard desain ponsel', en: 'Phone design wizard screenshot' },
     h: { id: 'Wizard desain dengan preview real-time', en: 'A design wizard with real-time preview' },
-    p: { id: 'Pilih form factor, komponen, warna, dan OS. Pilihan mengikuti tahun, dan mockup berubah mengikuti era.', en: 'Pick the form factor, components, color, and OS. Choices follow the year, and the mockup changes with the era.' },
-    li: { id: ['<b>117 komponen</b> di 9 kategori', '<b>Auto-fill rekomendasi</b> untuk pemula', '<b>4 fase</b>: desain, prototipe, produksi, rilis'], en: ['<b>117 components</b> in 9 categories', '<b>Recommended auto-fill</b> for beginners', '<b>4 phases</b>: design, prototype, production, release'] } },
+    p: { id: 'Pilih form factor, komponen, warna, dan OS. Pilihan mengikuti tahun, dan mockup (depan, belakang, kemasan) berubah mengikuti era.', en: 'Pick the form factor, components, color, and OS. Choices follow the year, and the mockup (front, back, retail box) changes with the era.' },
+    li: { id: ['<b>127 komponen</b> di 10 kategori', '<b>Auto-fill rekomendasi</b> untuk pemula', '<b>4 fase</b>: desain, prototipe, produksi, rilis'], en: ['<b>127 components</b> in 10 categories', '<b>Recommended auto-fill</b> for beginners', '<b>4 phases</b>: design, prototype, production, release'] } },
   { id: 'pasar', img: 'pasar.jpg',
     tab: { id: 'Pasar', en: 'Market' },
     alt: { id: 'Cuplikan layar Pasar', en: 'Market screenshot' },
     h: { id: 'Baca pasar sebelum bersaing', en: 'Read the market before you compete' },
     p: { id: 'Pangsa pasar, kompetitor, tren, promosi, dan opini publik. Segmen konsumen dan wilayah menunjukkan peluang yang belum kamu garap.', en: 'Market share, competitors, trends, promotions, and public opinion. Consumer segments and regions show the opportunities you haven’t tapped yet.' },
-    li: { id: ['<b>Pangsa pasar</b> dengan riwayat 24 bulan', '<b>Promosi regional</b> dan 8 event musiman', '<b>Peluang terbaik</b> per segmen dan wilayah'], en: ['<b>Market share</b> with 24 months of history', '<b>Regional promotions</b> and 8 seasonal events', '<b>Best opportunities</b> by segment and region'] } },
+    li: { id: ['<b>Pangsa pasar</b> dengan riwayat 24 bulan', '<b>Promosi regional</b> dan 12 event musiman', '<b>Peluang terbaik</b> per segmen dan wilayah'], en: ['<b>Market share</b> with 24 months of history', '<b>Regional promotions</b> and 12 seasonal events', '<b>Best opportunities</b> by segment and region'] } },
   { id: 'setelan', img: 'setelan.jpg',
     tab: { id: 'Setelan', en: 'Settings' },
     alt: { id: 'Cuplikan layar Pengaturan', en: 'Settings screenshot' },
@@ -866,11 +884,15 @@ let PACKAGES = [
   { id: 'pkg_xl', sil: 700, bonus: 140, priceIdr: 169000, tag: null },
   { id: 'pkg_xxl', sil: 1500, bonus: 400, priceIdr: 329000, tag: 'best' }
 ];
+/* Top Up ditutup sementara (sama dengan TOPUP_LOCKED di SiliconStorePanel.js pada game).
+   Ini hanya penguncian tampilan; penguncian sungguhan harus ada di fungsi server create_payment_order.
+   Ubah ke false untuk membuka kembali. */
+const TOPUP_LOCKED = true;
 let selPkg = null, selMethod = 'qris', coBusy = false;
 
 function renderPkgs() {
   $('#pkgs').innerHTML = PACKAGES.map(p => `
-    <button class="pkg" type="button" role="radio" aria-checked="${selPkg === p.id}" data-id="${p.id}">
+    <button class="pkg" type="button" role="radio" aria-checked="${selPkg === p.id}" data-id="${p.id}"${TOPUP_LOCKED ? ' disabled aria-disabled="true"' : ''}>
       ${p.tag ? `<span class="tg ${p.tag === 'best' ? 'best' : ''}">${p.tag === 'best' ? t('best') : t('popular')}</span>` : ''}
       <span class="g">💎</span>
       <span class="amt">${nf(p.sil)}<small>SIL</small></span>
@@ -882,16 +904,20 @@ function renderPkgs() {
 function updateCheckout() {
   const p = PACKAGES.find(x => x.id === selPkg);
   $('#coLabel').textContent = p ? `${nf(p.sil + p.bonus)} SIL` : t('pickPkg');
-  $('#coTotal').textContent = p ? rp(p.priceIdr) : '—';
-  $('#coBtn').disabled = !p || coBusy;
-  $('#coBtn').textContent = coBusy ? t('creating') : t('topup');
+  $('#coTotal').textContent = p && !TOPUP_LOCKED ? rp(p.priceIdr) : '—';
+  $('#coBtn').disabled = TOPUP_LOCKED || !p || coBusy;
+  $('#coBtn').textContent = TOPUP_LOCKED ? t('topLocked') : (coBusy ? t('creating') : t('topup'));
 }
-$('#pkgs').addEventListener('click', e => { const b = e.target.closest('.pkg'); if (!b) return; selPkg = b.dataset.id; renderPkgs(); });
+$('#pkgs').addEventListener('click', e => { if (TOPUP_LOCKED) return; const b = e.target.closest('.pkg'); if (!b) return; selPkg = b.dataset.id; renderPkgs(); });
 $('#methods').addEventListener('click', e => {
+  if (TOPUP_LOCKED) return;
   const b = e.target.closest('.method'); if (!b) return; selMethod = b.dataset.m;
   $$('.method').forEach(m => m.setAttribute('aria-checked', m === b));
 });
 selPkg = 'pkg_l';
+$('#shop').classList.toggle('sil-locked', TOPUP_LOCKED);
+$('#lockNote').hidden = !TOPUP_LOCKED;
+$$('.method').forEach(m => { m.disabled = TOPUP_LOCKED; });
 
 /* ---------- Supabase ---------- */
 let cfg = null, client = null, user = null, publicId = null, balance = null, cloudErr = null;
@@ -968,9 +994,9 @@ function renderAcct() {
     return;
   }
   nav.className = 'acct-chip'; nav.dataset.mode = 'acct';
-  nav.innerHTML = `<span>${balance == null ? '💎' : '💎 ' + nf(balance)}</span><span class="av">${initial(user)}</span>`;
-  box.innerHTML = `<div class="acct-row"><div class="av">${initial(user)}</div><div style="min-width:0"><div class="nm"></div><div class="mt"></div></div></div>
-    <div class="acct-kpi"><div class="kpi"><span>${t('accBal')}</span><b>💎 ${balance == null ? '…' : nf(balance)}</b></div><div class="kpi"><span>${t('accPid')}</span><b>${publicId == null ? '—' : publicId}</b></div></div>
+  nav.innerHTML = `<span>${balance == null ? '💎' : '💎 ' + nf(balance)}</span><span class="av">${esc(initial(user))}</span>`;
+  box.innerHTML = `<div class="acct-row"><div class="av">${esc(initial(user))}</div><div style="min-width:0"><div class="nm"></div><div class="mt"></div></div></div>
+    <div class="acct-kpi"><div class="kpi"><span>${t('accBal')}</span><b>💎 ${balance == null ? '…' : nf(balance)}</b></div><div class="kpi"><span>${t('accPid')}</span><b>${publicId == null ? '—' : esc(publicId)}</b></div></div>
     <div class="acct-act"><a class="btn btn-blue btn-sm" href="./index.html" id="goPlay"></a><button class="btn btn-ghost btn-sm" type="button" id="logout">${t('signOut')}</button></div>`;
   $('.nm', box).textContent = user.email || t('player');
   const co = profile && profile.company_name;
@@ -1002,7 +1028,7 @@ function renderOrders() {
     $('b', d).textContent = `${nf(o.sil_amount)} SIL · ${rp(o.amount)}`;
     $('.o1 span', d).textContent = `${when} · ${o.id}`;
     $('.st', d).textContent = t(o.status) || o.status;
-    if (o.status === 'pending') {
+    if (o.status === 'pending' && !TOPUP_LOCKED) {
       const a = document.createElement('button'); a.type = 'button'; a.className = 'lnk'; a.textContent = t('viewQr');
       a.addEventListener('click', () => openQr({ id: o.id, amount: o.amount, sil: o.sil_amount, packageId: o.package_id }));
       d.insertBefore(a, $('.st', d).nextSibling);
@@ -1120,6 +1146,7 @@ let qr = { order: null, timer: null, poll: null, until: 0 };
 const newId = () => 'ord_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
 $('#coBtn').addEventListener('click', async () => {
+  if (TOPUP_LOCKED) return;
   const p = PACKAGES.find(x => x.id === selPkg); if (!p) return;
   if (!user) { openAuth('in', () => $('#coBtn').click()); return; }
   coBusy = true; updateCheckout();
@@ -1136,6 +1163,7 @@ $('#coBtn').addEventListener('click', async () => {
 function fmtT(s) { s = Math.max(0, s); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
 function stopQr() { clearInterval(qr.timer); clearInterval(qr.poll); qr.timer = qr.poll = null; }
 function openQr(order) {
+  if (TOPUP_LOCKED) return;
   stopQr(); qr.order = order; qr.until = Date.now() + 15 * 60 * 1000;
   $('#qrAmt').textContent = rp(order.amount);
   $('#qrPkg').textContent = `${nf(order.sil)} SIL · ${selMethod === 'gopay' ? 'GoPay' : 'QRIS'}`;
