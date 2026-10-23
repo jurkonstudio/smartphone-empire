@@ -202,6 +202,24 @@ function getGeom(formFactor, spec) {
     return mk('bar', (100 - w) / 2, GROUND - h, w, h, rx, yr, mat);
 }
 
+// Pose TERBUKA untuk ponsel lipat: buku (fold) jadi layar nyaris persegi, tri-fold jadi layar lebar 3 panel.
+// Bentuk lain tidak punya pose terbuka (mengembalikan null -> jatuh ke tampak depan).
+function getOpenGeom(formFactor, spec) {
+    const yr = spec.fromYear, mat = spec.material || 'plastic';
+    const rx = yr >= 2024 ? 9 : 7;
+    if (formFactor === 'ff_fold' || formFactor === 'ff_foldable') {
+        const g = mk('open', 6, GROUND - 112, 88, 112, rx, yr, mat);
+        g.splits = 1;
+        return g;
+    }
+    if (formFactor === 'ff_tri_fold') {
+        const g = mk('open', 3, GROUND - 66, 94, 66, 6, yr, mat);
+        g.splits = 2;
+        return g;
+    }
+    return null;
+}
+
 // Bezel modern (satuan viewBox): makin tahun makin tipis & seragam.
 // 2017-18 masih berdagu (notch), 2019-21 punch-hole, 2022-23 bingkai datar, 2024+ nyaris tanpa bezel.
 function modernBezel(yr) {
@@ -226,6 +244,7 @@ function _baseScreenRect(spec, g) {
     if (g.kind === 'pda') return { x: g.x + 4.5, y: g.y + 12, w: g.w - 9, h: g.h * 0.56, cornerRadius: 2 };
     if (g.kind === 'swivel') return { x: g.x + 5, y: g.y + 9, w: g.w - 10, h: g.h - 18, cornerRadius: 2 };
     if (g.kind === 'dual') return { x: g.x + 3, y: g.y + 3, w: g.w - 6, h: g.h - 6, cornerRadius: 4 };
+    if (g.kind === 'open') return { x: g.x + 2.4, y: g.y + 2.4, w: g.w - 4.8, h: g.h - 4.8, cornerRadius: 3.4 };
     if (g.kind === 'slider' && g.touch) return { x: g.x + 5, y: g.y + 8, w: g.w - 10, h: g.h - 20, cornerRadius: 3.5 };
     if (g.kind === 'qwerty') {
         return { x: g.x + 5, y: g.y + 11, w: g.w - 10, h: g.h * (g.yr >= 2007 ? 0.40 : 0.35), cornerRadius: 2.5 };
@@ -1073,6 +1092,12 @@ function renderReflectionLayer(scr, uid, yr) {
 }
 
 function renderCrease(g, scr) {
+    if (g.kind === 'trifold') {
+        return [1, 2].map(function (i) {
+            const x = scr.x + scr.w * i / 3;
+            return `<rect x="${x - 0.5}" y="${scr.y}" width="1" height="${scr.h}" fill="#000" opacity="0.32"/><rect x="${x + 0.5}" y="${scr.y}" width="0.4" height="${scr.h}" fill="#fff" opacity="0.1"/>`;
+        }).join('');
+    }
     if (!g.crease || g.book) return '';
     const cy = scr.y + scr.h / 2;
     return `<rect x="${scr.x}" y="${cy - 0.5}" width="${scr.w}" height="1" fill="#000" opacity="0.28"/>
@@ -1360,6 +1385,41 @@ function renderNetworkLabel(scr, label) {
     return `<text x="${scr.x + 10.5}" y="${scr.y + 4.6}" font-size="3" font-family="sans-serif" font-weight="700" fill="#ffffff" fill-opacity="0.85">${_esc(label)}</text>`;
 }
 
+// Tulang engsel dual-screen: batang logam satin + tiga sendi, digambar di atas celah antar layar.
+function dualSpine(scr, uid) {
+    const cx = scr.x + scr.w / 2, y0 = scr.y - 1.6, h = scr.h + 3.2;
+    const caps = [0.16, 0.5, 0.84].map(function (f) {
+        return `<rect x="${cx - 1.9}" y="${y0 + h * f - 2.6}" width="3.8" height="5.2" rx="1.4" fill="url(#spn_${uid})" stroke="#000" stroke-opacity="0.45" stroke-width="0.25"/><rect x="${cx - 0.3}" y="${y0 + h * f - 1.5}" width="0.6" height="3" rx="0.3" fill="#000" opacity="0.3"/>`;
+    }).join('');
+    return `<defs><linearGradient id="spn_${uid}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5f646d"/><stop offset="0.35" stop-color="#e4e7ec"/><stop offset="0.6" stop-color="#a9aeb8"/><stop offset="1" stop-color="#4b4f57"/></linearGradient></defs>` +
+        `<rect x="${cx - 1.15}" y="${y0}" width="2.3" height="${h}" rx="1.1" fill="url(#spn_${uid})" stroke="#000" stroke-opacity="0.4" stroke-width="0.25"/>` + caps;
+}
+
+// Pose terbuka (fold / tri-fold): satu layar menerus dengan lipatan halus + engsel logam + kamera punch-hole.
+function renderOpenScreen(g, scr, era, uid, brand, displayId, netLabel) {
+    const n = g.splits + 1;
+    let creases = '';
+    for (let i = 1; i < n; i++) {
+        const x = scr.x + scr.w * i / n;
+        creases += `<rect x="${x - 3.2}" y="${scr.y}" width="6.4" height="${scr.h}" fill="url(#cr_${uid})"/>` +
+            `<rect x="${x - 0.35}" y="${scr.y}" width="0.7" height="${scr.h}" fill="#000" opacity="0.3"/><rect x="${x + 0.35}" y="${scr.y}" width="0.3" height="${scr.h}" fill="#fff" opacity="0.12"/>`;
+    }
+    let hinge = '';
+    for (let i = 1; i < n; i++) {
+        const x = g.x + g.w * i / n;
+        [g.y - 0.2, g.y + g.h - 2.2].forEach(function (yy) {
+            hinge += `<rect x="${x - 3}" y="${yy}" width="6" height="2.4" rx="1" fill="url(#spn_${uid})" stroke="#000" stroke-opacity="0.4" stroke-width="0.25"/>`;
+        });
+    }
+    const hole = `<circle cx="${scr.x + scr.w - 5.2}" cy="${scr.y + 4.4}" r="1.15" fill="#000" stroke="#2a2d34" stroke-width="0.3"/>`;
+    return `<defs><linearGradient id="cr_${uid}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="0.5" stop-color="#000" stop-opacity="0.26"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>` +
+        `<linearGradient id="spn_${uid}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5f646d"/><stop offset="0.35" stop-color="#e4e7ec"/><stop offset="0.6" stop-color="#a9aeb8"/><stop offset="1" stop-color="#4b4f57"/></linearGradient>` +
+        `<clipPath id="screenclip_${uid}"><rect x="${scr.x}" y="${scr.y}" width="${scr.w}" height="${scr.h}" rx="${scr.cornerRadius}"/></clipPath></defs>` +
+        `<rect x="${scr.x}" y="${scr.y}" width="${scr.w}" height="${scr.h}" rx="${scr.cornerRadius}" fill="#050505"/>` +
+        `<g clip-path="url(#screenclip_${uid})">${screenContent(era.screenStyle, scr, uid, brand, displayId, g.yr)}${creases}</g>` +
+        hole + renderNetworkLabel(scr, netLabel) + renderReflectionLayer(scr, uid, g.yr) + hinge;
+}
+
 function renderScreens(g, scr, era, uid, brand, displayId, netLabel) {
     if (g.kind === 'dual') {
         const gap = 6.2, hw = (scr.w - gap) / 2;
@@ -1370,7 +1430,7 @@ function renderScreens(g, scr, era, uid, brand, displayId, netLabel) {
                 <clipPath id="screenclip_${id}"><rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="${r.cornerRadius}"/></clipPath>
                 <g clip-path="url(#screenclip_${id})">${screenContent(era.screenStyle, r, id, brand, displayId, g.yr)}</g>
                 ${renderReflectionLayer(r, id, g.yr)}`;
-        }).join('');
+        }).join('') + dualSpine(scr, uid);
     }
     const content = g.kind === 'communicator'
         ? screenWide(scr, uid, brand, era.screenStyle)
@@ -1434,15 +1494,83 @@ function packContents(spec, year, completed, config) {
     };
 }
 
-function packStyle(year, hex) {
+// Gaya kotak per era desain (2019+), selaras dengan bahasa desain layar/kamera. Orisinal, tanpa merek nyata.
+export const PACK_STYLES = ['auto', 'kraft', 'gloss', 'dark', 'eco', 'tiles', 'bloom', 'aurora', 'prism'];
+const PACK_ERA = {
+    tiles:  { front: '#0b1220', side: '#070c16', top: '#16213a', ink: '#e6f4ff', accent: '#38bdf8', gloss: true },
+    bloom:  { front: '#fbe9ee', side: '#ecd0d9', top: '#fff5f8', ink: '#4a1d33', accent: '#ff6aa2', gloss: false },
+    aurora: { front: '#062a22', side: '#041c17', top: '#0c3d32', ink: '#d9fff1', accent: '#34d399', gloss: true },
+    prism:  { front: '#14102b', side: '#0c091d', top: '#221a45', ink: '#efeaff', accent: '#a78bfa', gloss: true }
+};
+function packEraKey(yr) { return yr >= 2026 ? 'prism' : yr >= 2024 ? 'aurora' : yr >= 2022 ? 'bloom' : 'tiles'; }
+
+function packStyle(year, hex, yr, force) {
     var accent = lum(hex) < 55 ? '#9aa0ab' : hex;
-    if (year <= 2004) return { kind: 'kraft', front: '#c8a46a', side: '#a9884f', top: '#d8b97f', ink: '#3b2a12', accent: accent, gloss: false };
-    if (year <= 2013) return { kind: 'gloss', front: '#f3f3f1', side: '#d5d5d2', top: '#ffffff', ink: '#1d1d1f', accent: accent, gloss: true };
-    if (year <= 2019) return { kind: 'dark', front: '#17181c', side: '#0d0e11', top: '#26282e', ink: '#e8e9ec', accent: accent, gloss: true };
+    var k = force && force !== 'auto' ? force : null;
+    if (!k) {
+        if (yr >= 2019) k = packEraKey(yr);
+        else if (year <= 2004) k = 'kraft';
+        else if (year <= 2013) k = 'gloss';
+        else if (year <= 2019) k = 'dark';
+        else k = 'eco';
+    }
+    if (PACK_ERA[k]) { var e = PACK_ERA[k]; return { kind: k, front: e.front, side: e.side, top: e.top, ink: e.ink, accent: e.accent, gloss: e.gloss, era: true }; }
+    if (k === 'kraft') return { kind: 'kraft', front: '#c8a46a', side: '#a9884f', top: '#d8b97f', ink: '#3b2a12', accent: accent, gloss: false };
+    if (k === 'gloss') return { kind: 'gloss', front: '#f3f3f1', side: '#d5d5d2', top: '#ffffff', ink: '#1d1d1f', accent: accent, gloss: true };
+    if (k === 'dark') return { kind: 'dark', front: '#17181c', side: '#0d0e11', top: '#26282e', ink: '#e8e9ec', accent: accent, gloss: true };
     return { kind: 'eco', front: '#e8e3d6', side: '#cfc9ba', top: '#f1ede2', ink: '#2a2a26', accent: accent, gloss: false };
 }
 
-function packPhoneArt(year, hex, uid, cx) {
+// Hiasan latar depan kotak per era (koordinat di dalam x6..56, y50..164)
+function packEraDecor(k, a, uid) {
+    var o = '<clipPath id="pkclip_' + uid + '"><rect x="6" y="50" width="50" height="114"/></clipPath><g clip-path="url(#pkclip_' + uid + ')">';
+    if (k === 'tiles') {
+        var pos = [[8,70],[19,70],[41,70],[8,81],[47,92],[8,128],[44,121],[47,132]];
+        for (var i = 0; i < pos.length; i++) o += '<rect x="' + pos[i][0] + '" y="' + pos[i][1] + '" width="8" height="8" rx="2" fill="' + a + '" opacity="' + (0.10 + (i % 3) * 0.06) + '" stroke="' + a + '" stroke-opacity=".35" stroke-width=".25"/>';
+    } else if (k === 'bloom') {
+        o += '<circle cx="14" cy="88" r="15" fill="' + a + '" opacity=".22"/><circle cx="50" cy="120" r="17" fill="#ffb86b" opacity=".25"/>' +
+            '<circle cx="48" cy="82" r="9" fill="none" stroke="' + a + '" stroke-width="1.2" opacity=".5"/><circle cx="48" cy="82" r="5.5" fill="none" stroke="' + a + '" stroke-width=".8" opacity=".4"/>';
+    } else if (k === 'aurora') {
+        o += '<path d="M6 92 C 18 80, 30 104, 56 88" stroke="' + a + '" stroke-width="5" fill="none" opacity=".30" stroke-linecap="round"/>' +
+            '<path d="M6 112 C 20 98, 34 124, 56 106" stroke="#7dd3fc" stroke-width="4" fill="none" opacity=".24" stroke-linecap="round"/>' +
+            '<path d="M6 128 C 22 118, 36 140, 56 124" stroke="' + a + '" stroke-width="3" fill="none" opacity=".2" stroke-linecap="round"/>';
+    } else if (k === 'prism') {
+        o += '<polygon points="6,70 26,66 14,92" fill="' + a + '" opacity=".16"/><polygon points="56,100 40,126 56,138" fill="#fff" opacity=".07"/>' +
+            '<polygon points="6,130 22,118 30,140" fill="' + a + '" opacity=".12"/>' +
+            '<ellipse cx="31" cy="101" rx="25" ry="9" fill="none" stroke="' + a + '" stroke-width=".5" opacity=".4" transform="rotate(-24 31 101)"/>' +
+            '<circle cx="50" cy="90" r="1.3" fill="' + a + '"/>';
+    }
+    return o + '</g>';
+}
+
+// Ponsel (tampak belakang) bergaya era 2019+: modul kamera sesuai bahasa desain era
+function packEraPhoneArt(yr, hex, cx) {
+    var edge = shadeHex(hex, -35), xs = cx - 11, y0 = 74, a = eraAccent(yr);
+    var lens = function (x, y, r) { return '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="#0a0d14" stroke="#9aa3b2" stroke-width=".3"/><circle cx="' + (x - r * 0.3) + '" cy="' + (y - r * 0.3) + '" r="' + (r * 0.25) + '" fill="#fff" opacity=".5"/>'; };
+    var body = '<rect x="' + xs + '" y="' + y0 + '" width="22" height="54" rx="5" fill="' + hex + '" stroke="' + edge + '" stroke-width=".5"/>' +
+        '<rect x="' + (xs + 22) + '" y="' + (y0 + 14) + '" width="0.9" height="7" rx=".4" fill="' + a + '"/>';
+    var m = '';
+    if (yr >= 2026) {
+        m = '<circle cx="' + (xs + 7.2) + '" cy="' + (y0 + 7.2) + '" r="5.4" fill="#12121c" stroke="' + a + '" stroke-width=".5"/>' +
+            '<ellipse cx="' + (xs + 7.2) + '" cy="' + (y0 + 7.2) + '" rx="6.6" ry="2.4" fill="none" stroke="' + a + '" stroke-width=".35" transform="rotate(-30 ' + (xs + 7.2) + ' ' + (y0 + 7.2) + ')"/>' +
+            lens(xs + 7.2, y0 + 7.2, 2.4) + '<circle cx="' + (xs + 12) + '" cy="' + (y0 + 4) + '" r=".8" fill="' + a + '"/>';
+    } else if (yr >= 2024) {
+        m = '<rect x="' + (xs + 2.2) + '" y="' + (y0 + 2.2) + '" width="6" height="16" rx="3" fill="#12171c" stroke="' + a + '" stroke-width=".4"/>' +
+            lens(xs + 5.2, y0 + 6, 1.8) + lens(xs + 5.2, y0 + 11, 1.8) + '<circle cx="' + (xs + 5.2) + '" cy="' + (y0 + 15.6) + '" r=".8" fill="' + a + '"/>';
+    } else if (yr >= 2022) {
+        m = '<circle cx="' + (xs + 6.8) + '" cy="' + (y0 + 6.8) + '" r="5.2" fill="#15151d" stroke="#aeb4c0" stroke-width=".4"/>' +
+            '<circle cx="' + (xs + 6.8) + '" cy="' + (y0 + 6.8) + '" r="4" fill="none" stroke="' + a + '" stroke-width=".3"/>' +
+            lens(xs + 5.4, y0 + 5.4, 1.7) + lens(xs + 8.6, y0 + 8.4, 1.5);
+    } else {
+        var hx = xs + 6.5, hy = y0 + 6.5, pts = [];
+        for (var i = 0; i < 6; i++) { var an = Math.PI / 3 * i + Math.PI / 6; pts.push((hx + 5 * Math.cos(an)).toFixed(2) + ',' + (hy + 5 * Math.sin(an)).toFixed(2)); }
+        m = '<polygon points="' + pts.join(' ') + '" fill="#14161c" stroke="#aeb4c0" stroke-width=".4"/>' + lens(hx - 1.4, hy - 1, 1.6) + lens(hx + 1.8, hy + 1.6, 1.4);
+    }
+    return body + m + '<text x="' + cx + '" y="' + (y0 + 40) + '" text-anchor="middle" font-size="2.2" font-weight="700" fill="' + (lum(hex) > 150 ? '#222' : '#fff') + '" opacity=".35" font-family="system-ui,sans-serif">' + '</text>';
+}
+
+function packPhoneArt(year, hex, uid, cx, yr, eraStyle) {
+    if (eraStyle) return packEraPhoneArt(yr, hex, cx);
     var edge = shadeHex(hex, -35);
     if (year < 2007) {
         var x = cx - 10;
@@ -1482,7 +1610,7 @@ function packCableEnd(type, x, y) {
 }
 
 function renderPackagingLayers(o) {
-    var st = packStyle(o.year, o.hex);
+    var st = packStyle(o.year, o.hex, o.yr || 0, o.force);
     var pc = o.contents;
     var ink = st.ink;
     var font = 'font-family="system-ui,-apple-system,Segoe UI,Arial,sans-serif"';
@@ -1500,6 +1628,8 @@ function renderPackagingLayers(o) {
     svg += '<rect x="6" y="50" width="50" height="114" fill="' + st.front + '" stroke="#000" stroke-opacity=".18" stroke-width="0.3"/>';
     if (st.gloss) svg += '<rect x="6" y="50" width="50" height="114" fill="url(#pkgl_' + o.uid + ')"/>';
 
+    if (st.era) svg += packEraDecor(st.kind, st.accent, o.uid);
+
     // Tutup/pita pembuka
     svg += '<rect x="6" y="50" width="50" height="1.2" fill="#000" opacity="0.12"/>';
     if (st.kind === 'kraft') svg += '<rect x="26" y="50" width="10" height="114" fill="#000" opacity="0.05"/>';
@@ -1509,7 +1639,7 @@ function renderPackagingLayers(o) {
     svg += '<rect x="6" y="65" width="50" height="1.4" fill="' + st.accent + '"/>';
 
     // Ilustrasi ponsel
-    svg += packPhoneArt(o.year, o.hex, o.uid, cx);
+    svg += packPhoneArt(o.year, o.hex, o.uid, cx, o.yr || 0, !!st.era);
 
     // Stiker
     svg += '<circle cx="49" cy="76" r="5" fill="' + st.accent + '"/>' +
@@ -1599,12 +1729,14 @@ export function renderPhoneMockup(config, opts) {
     const bodyColorId = (config && config.bodyColorId) || 'color_black';
     const cameraId = (config && config.cameraId) || 'cam_vga';
     const displayId = (config && config.displayId) || '';
-    const view = opts.view === 'back' ? 'back' : (opts.view === 'box' ? 'box' : 'front');
+    let view = opts.view === 'back' ? 'back' : (opts.view === 'box' ? 'box' : (opts.view === 'open' ? 'open' : 'front'));
+    const openG = view === 'open' ? getOpenGeom(formFactor, spec) : null;
+    if (view === 'open' && !openG) view = 'front';
 
     const bodyColor = getBodyColorById(bodyColorId);
     const bodyHex = bodyColor ? bodyColor.hex : '#1a1a1a';
 
-    const g = getGeom(formFactor, spec);
+    const g = openG || getGeom(formFactor, spec);
     const scr = getScreenRect(spec, g);
     const uid = Math.random().toString(36).slice(2, 8);
     const ids = { body: 'bodygrad_' + uid, rim: 'rim_' + uid };
@@ -1614,9 +1746,11 @@ export function renderPhoneMockup(config, opts) {
     let layers;
     const pack = view === 'box' ? packContents(spec, year, completed, config) : null;
     if (view === 'box') {
-        layers = renderPackagingLayers({ year: year, hex: bodyHex, brand: brand, uid: uid, label: spec.label, contents: pack });
+        layers = renderPackagingLayers({ year: year, yr: spec.fromYear, force: opts.packStyle, hex: bodyHex, brand: brand, uid: uid, label: spec.label, contents: pack });
     } else if (view === 'back') {
         layers = renderBackView(g, spec, ids, bodyHex, brand, n, sensors);
+    } else if (view === 'open') {
+        layers = renderBodyLayer(g, ids, bodyHex) + renderOpenScreen(g, scr, era, uid, brand, displayId, netLabel);
     } else if (g.kind === 'swivel') {
         layers = renderSwivelFront(g, scr, spec, bodyHex, brand, ids, era, uid, displayId);
     } else {
@@ -1627,7 +1761,7 @@ export function renderPhoneMockup(config, opts) {
             ${renderFace(g, scr, spec, bodyHex, brand)}
             ${renderKeysForKind(g, scr, bodyHex, spec)}
             ${renderScreens(g, scr, era, uid, brand, displayId, netLabel)}
-            ${renderInDisplayFingerprint(scr, sensors)}
+            ${g.kind === 'dual' ? '' : renderInDisplayFingerprint(scr, sensors)}
             ${renderEdgeLayer(g, scr, uid)}
             ${renderNotchLayer(spec, scr, g)}
             ${renderHomeLayer(spec, g, scr)}
