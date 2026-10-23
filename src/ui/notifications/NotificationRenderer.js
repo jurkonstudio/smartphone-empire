@@ -6,7 +6,7 @@ import { t } from '../../core/LanguageService.js';
 import { bus } from '../../core/EventBus.js';
 import { NotificationPrefs } from '../../core/NotificationPrefs.js';
 
-var MAX_ACTIVE = 2;
+var MAX_ACTIVE = 1;
 var MAX_NEWS = 1;
 var MIN_MS = 2800;
 var MAX_MS = 9000;
@@ -61,6 +61,7 @@ function ensureStyle() {
         'top:calc(max(var(--ni-top,0px),env(safe-area-inset-top,0px)) + 8px)!important;',
         'max-height:calc(100dvh - max(var(--ni-top,0px),env(safe-area-inset-top,0px)) - 16px);overflow:visible}',
         '.ni{flex:0 0 auto}',
+        '.ni.ni-out{position:absolute!important;top:0;left:0;right:0;z-index:-1}',
         '.ni.ni-collapse{max-height:0!important;margin-top:0!important;margin-bottom:-8px!important;padding-top:0!important;',
         'padding-bottom:0!important;border-width:0!important;box-shadow:none!important;',
         'transition:max-height .26s ease,margin .26s ease,padding .26s ease,border-width .26s ease,opacity .24s ease,transform .24s ease}',
