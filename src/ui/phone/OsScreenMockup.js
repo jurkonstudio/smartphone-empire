@@ -109,7 +109,7 @@ function buildMenuData(featureIds, osState) {
         ver: ver,
         groups: [
             { title: T('osm.sec.connections'), items: [
-                { icon: 'wifi',   label: 'Wi-Fi',           value: has('fw_browser_mobile') || has('fw_wap_browser') ? T('osm.active') : '—', detail: null },
+                { icon: 'wifi',   label: 'Wi-Fi',           value: has('fw_wifi') ? T('osm.active') : '—', detail: null },
                 { icon: 'signal', label: T('osm.cellular_network'), value: netGen, detail: null },
                 { icon: 'cloud',  label: 'Bluetooth',        value: has('fw_bt_basic') ? T('osm.active') : T('osm.inactive'), detail: null },
                 { icon: 'globe',  label: T('osm.cellular_data'),     value: has('net_gprs') ? T('osm.active') : '—', detail: null }
@@ -534,7 +534,7 @@ function renderSkeuomorphic(featureIds, osState, w, h, size) {
     const rowH = 24;
     const groups = [
         { title: T('osm.sec.connections'), rows: [
-            { label: 'Wi-Fi', value: has('fw_browser_mobile') ? 'Home-Net' : T('osm.inactive') },
+            { label: 'Wi-Fi', value: has('fw_wifi') ? 'Home-Net' : T('osm.inactive') },
             { label: 'Bluetooth', value: rv(['audio_bt'], has('fw_bt_basic') ? T('osm.active') : T('osm.inactive')) },
             { label: T('osm.cellular_data'), value: rv(['net_gprs', 'net_3g'], has('net_3g') ? T('osm.net_3g_on') : has('net_gprs') ? 'GPRS' : T('osm.inactive')) }
         ]},
@@ -631,7 +631,7 @@ function renderFlatMaterial(featureIds, osState, w, h, size) {
     curY += 3;
 
     const group1 = [
-        { icon: 'wifi',   label: 'Wi-Fi',           value: has('fw_browser_mobile') ? 'Home-Net' : T('osm.inactive') },
+        { icon: 'wifi',   label: 'Wi-Fi',           value: has('fw_wifi') ? 'Home-Net' : T('osm.inactive') },
         { icon: 'signal', label: T('osm.cellular_data'),    value: rv(['net_gprs', 'net_3g'], has('net_3g') ? T('osm.net_3g_on') : T('osm.inactive')) },
         { icon: 'cloud',  label: 'Bluetooth',       value: rv(['audio_bt'], has('fw_bt_basic') ? T('osm.active') : T('osm.inactive')) }
     ];
@@ -727,7 +727,7 @@ function renderGroupedModern(featureIds, osState, w, h, size) {
 
     const sections = [
         { items: [
-            { icon: 'wifi',   label: 'Wi-Fi',           value: has('fw_browser_mobile') ? 'Home-Net' : T('osm.inactive'),    bg: '#007aff' },
+            { icon: 'wifi',   label: 'Wi-Fi',           value: has('fw_wifi') ? 'Home-Net' : T('osm.inactive'),    bg: '#007aff' },
             { icon: 'cloud',  label: 'Bluetooth',       value: rv(['audio_bt'], has('fw_bt_basic') ? T('osm.active') : T('osm.inactive')),            bg: '#007aff' },
             { icon: 'signal', label: T('osm.cellular_data'),    value: rv(['net_4g', 'net_3g'], has('net_4g') ? '4G' : has('net_3g') ? '3G' : T('osm.inactive')), bg: '#34c759' },
             { icon: 'globe',  label: T('osm.hotspot'), value: T('osm.inactive'),                                             bg: '#34c759' }
@@ -819,7 +819,7 @@ function renderMaterialYou(featureIds, osState, w, h, size) {
 
     const sections = [
         [
-            { icon: 'wifi',   label: 'Wi-Fi',              value: has('fw_browser_mobile') ? 'Home-Net' : T('osm.inactive'),   bg: '#007aff' },
+            { icon: 'wifi',   label: 'Wi-Fi',              value: has('fw_wifi') ? 'Home-Net' : T('osm.inactive'),   bg: '#007aff' },
             { icon: 'cloud',  label: 'Bluetooth',          value: rv(['audio_bt'], has('fw_bt_basic') ? T('osm.active') : T('osm.inactive')),           bg: '#007aff' },
             { icon: 'signal', label: T('osm.cellular_network'),   value: has('net_5g') ? '5G' : has('net_4g') ? 'LTE' : '—', bg: '#34c759' }
         ],
