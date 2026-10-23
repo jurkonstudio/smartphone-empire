@@ -401,7 +401,115 @@ window.addEventListener('unhandledrejection', function (e) {
 
     <div id="error-message" class="error-message" role="alert"></div>
 
-    <script type="module" src="./src/main.js"></script>
+    <!-- ============================================================
+         BOOT LOADER AMAN
+         Memuat ./src/main.js lewat import(). Jika ada modul di rantai import yang gagal diunduh
+         (jaringan putus, cache basah, file hilang / tipe file salah), loader memeriksa semua modul,
+         menyegarkan cache browser, mencoba ulang otomatis (maks. 2x), lalu menampilkan NAMA FILE
+         yang bermasalah beserta statusnya, bukan hanya "Gagal memuat main.js".
+         ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        var ENTRY = './src/main.js';
+        var RETRY_KEY = 'se_boot_retry', MAX_RETRY = 2, MAX_FILES = 600, PARALLEL = 6;
+        var ld = document.getElementById('loading-screen');
+        var er = document.getElementById('error-message');
+
+        function getRetry() { try { return Number(sessionStorage.getItem(RETRY_KEY)) || 0; } catch (e) { return 0; } }
+        function setRetry(n) { try { if (n) sessionStorage.setItem(RETRY_KEY, String(n)); else sessionStorage.removeItem(RETRY_KEY); } catch (e) {} }
+
+        function showError(lines, withButton) {
+            if (ld) ld.style.display = 'none';
+            if (!er) return;
+            er.style.display = 'block';
+            er.textContent = '';
+            lines.forEach(function (t, i) {
+                var d = document.createElement('div');
+                d.textContent = t;
+                d.style.cssText = 'margin-bottom:6px;word-break:break-word;' + (i === 0 ? 'font-weight:700;' : 'font-size:13px;opacity:.95;');
+                er.appendChild(d);
+            });
+            if (withButton) {
+                var b = document.createElement('button');
+                b.type = 'button';
+                b.textContent = 'Coba lagi';
+                b.style.cssText = 'margin-top:8px;padding:8px 16px;border:0;border-radius:8px;font:inherit;font-weight:700;color:#111;background:#fff;cursor:pointer;';
+                b.onclick = function () { setRetry(0); location.reload(); };
+                er.appendChild(b);
+            }
+        }
+        function showProgress(done, total) {
+            if (!er) return;
+            er.style.display = 'block';
+            er.textContent = 'Memeriksa file game… ' + done + '/' + total;
+        }
+
+        // ---- cari import statis relatif dalam satu modul (komentar dibuang dulu) ----
+        function staticImports(src) {
+            var s = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/mg, '');
+            var out = [], m;
+            var re = /\b(?:import|export)\b[^'"`;()]*?\bfrom\s*(['"])([^'"]+)\1|(?:^|[;\s}])import\s*(['"])([^'"]+)\3/g;
+            while ((m = re.exec(s))) out.push(m[2] || m[4]);
+            return out.filter(function (p) { return p && (p.charAt(0) === '.' || p.charAt(0) === '/'); });
+        }
+
+        // ---- unduh ulang semua modul (menyegarkan cache) & kumpulkan yang bermasalah ----
+        function diagnose() {
+            return new Promise(function (resolveAll) {
+                var seen = {}, queue = [], bad = [], active = 0, done = 0, total = 0;
+                function add(u) { if (seen[u] || total >= MAX_FILES) return; seen[u] = 1; total++; queue.push(u); }
+                function pump() {
+                    while (active < PARALLEL && queue.length) one(queue.shift());
+                    if (!active && !queue.length) resolveAll(bad);
+                }
+                function one(u) {
+                    active++;
+                    fetch(u, { cache: 'reload', credentials: 'same-origin' }).then(function (r) {
+                        if (!r.ok) { bad.push({ url: u, why: 'HTTP ' + r.status }); return null; }
+                        var ct = r.headers.get('content-type') || '';
+                        if (!/javascript|ecmascript/i.test(ct)) { bad.push({ url: u, why: 'tipe file salah (' + (ct || 'kosong') + ')' }); return null; }
+                        return r.text();
+                    }).then(function (src) {
+                        if (!src) return;
+                        staticImports(src).forEach(function (p) { try { add(new URL(p, u).href); } catch (e) {} });
+                    }).catch(function () {
+                        bad.push({ url: u, why: 'koneksi gagal' });
+                    }).then(function () { active--; done++; showProgress(done, total); pump(); });
+                }
+                add(new URL(ENTRY, location.href).href);
+                pump();
+            });
+        }
+
+        function short(u) { try { var x = new URL(u); return x.pathname + x.search; } catch (e) { return u; } }
+        var NET_RE = /dynamically imported module|importing a module script|error loading|failed to fetch|networkerror|load failed/i;
+
+        function onFail(err) {
+            var msg = (err && err.message) ? err.message : String(err);
+            try { console.error('[boot]', err); } catch (e) {}
+            if (!NET_RE.test(msg)) {                       // bukan masalah unduh (mis. error saat eksekusi / syntax)
+                showError(['Game gagal dimulai.', msg], true);
+                return;
+            }
+            diagnose().then(function (bad) {
+                if (bad.length) {
+                    var lines = ['Ada file game yang gagal dimuat.'];
+                    bad.slice(0, 6).forEach(function (b) { lines.push(short(b.url) + ' — ' + b.why); });
+                    if (bad.length > 6) lines.push('…dan ' + (bad.length - 6) + ' file lain.');
+                    lines.push('Pastikan semua file di folder src/ ter-upload lengkap ke server, lalu coba lagi.');
+                    showError(lines, true);
+                    return;
+                }
+                var tries = getRetry();                     // semua file bisa diunduh: cache sudah disegarkan -> muat ulang
+                if (tries < MAX_RETRY) { setRetry(tries + 1); location.reload(); return; }
+                showError(['Game gagal dimulai.', msg], true);
+            });
+        }
+
+        import(ENTRY).then(function () { setRetry(0); }).catch(onFail);
+    })();
+    </script>
 
     <script>
     window.addEventListener('error', function (e) {
