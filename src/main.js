@@ -112,6 +112,7 @@ var competitorActions = new CompetitorActionSystem(state);
 var opinion           = new PublicOpinionSystem(state);
 var marketNav         = new MarketNavSystem(state);
 products.setMarketNav(marketNav);
+products.setMarketSystem(market);
 var eraSystem         = new EraSystem(state);
 var seasonEnd         = new SeasonEndSystem(state);
 var teamSystem        = new TeamSystem(state);
