@@ -1,4 +1,6 @@
-// FILE: src/ui/campus/CampusOfficeBridge.js  (BARU — v2027.63)
+// FILE: src/ui/campus/CampusOfficeBridge.js  (REPLACE — v2027.65: sakelar Kampus | Kantor di Home)
+// v2027.65 — Home punya sakelar "Kampus | Kantor" tepat di atas peta (markup dari HomePanel.js, gaya & logika di sini).
+//   Satu bagian Home, dua tampilan: ketuk sakelar atau gedung HQ untuk berpindah. Tombol "← Kampus" di dalam peta dihapus.
 // Jembatan Kampus <-> Kantor: ketuk gedung HQ di peta kampus -> "Masuk Kantor" -> peta kampus memudar,
 // Office 3D tampil di kotak yang SAMA (#campus-map di Home); tombol "← Kampus" membawa kembali.
 //
@@ -20,13 +22,17 @@ var CSS = [
     '.cof-fade canvas{transform:scale(1.14);transition:transform .26s ease;}',
     '.cof-in{animation:cofIn .3s ease both;}',
     '@keyframes cofIn{from{opacity:0;transform:scale(.97);}to{opacity:1;transform:none;}}',
-    '.cof-back{position:absolute;left:8px;top:52px;z-index:5;display:inline-flex;align-items:center;gap:6px;',
-    'min-height:34px;padding:0 12px 0 10px;border-radius:999px;cursor:pointer;font:inherit;font-size:12px;font-weight:700;',
-    'color:var(--text-primary);background:var(--bg-2);border:1px solid var(--border-strong);',
-    'box-shadow:0 2px 8px rgba(0,0,0,.18);-webkit-tap-highlight-color:transparent;}',
-    '.cof-back:active{transform:scale(.96);}',
     '@media (prefers-reduced-motion:reduce){.cof-fade,.cof-fade canvas,.cof-in{transition:none;animation:none;}}',
-    'html[data-perf="lite"] .cof-fade,html[data-perf="lite"] .cof-fade canvas,html[data-perf="lite"] .cof-in{transition:none;animation:none;}'
+    'html[data-perf="lite"] .cof-fade,html[data-perf="lite"] .cof-fade canvas,html[data-perf="lite"] .cof-in{transition:none;animation:none;}',
+    /* sakelar Kampus | Kantor */
+    '.home-switch{flex:0 0 auto;display:flex;gap:4px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:14px;}',
+    '.home-switch-btn{flex:1 1 0;min-width:0;min-height:36px;display:inline-flex;align-items:center;justify-content:center;gap:7px;',
+    'border:0;border-radius:11px;background:transparent;color:var(--text-tertiary);font:inherit;font-size:12.5px;font-weight:700;',
+    'cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .18s ease,color .18s ease,transform .12s ease;}',
+    '.home-switch-btn svg{flex:0 0 auto;width:17px;height:17px;display:block;}',
+    '.home-switch-btn.active{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent-soft);}',
+    '.home-switch-btn:active{transform:scale(.96);}',
+    '.home-switch-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}'
 ].join('');
 
 var _inOffice = false;      // true = Home menampilkan Office, bukan peta kampus
@@ -77,17 +83,14 @@ function fadeIn(el) {
     later(function () { el.classList.remove('cof-in'); }, 360);
 }
 
-function addBackButton(el) {
-    if (!el || !el.isConnected || el.querySelector('.cof-back')) return;
-    var b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'cof-back';
-    b.textContent = '← ' + getBridgeStrings().backCampus;
-    b.setAttribute('aria-label', b.textContent);
-    // sentuhan di tombol tidak boleh menggeser peta office di belakangnya
-    b.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
-    b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); exitOffice(el); });
-    el.appendChild(b);
+// Sinkronkan status aktif sakelar Kampus | Kantor di Home dengan mode saat ini.
+function syncSwitch() {
+    var btns = document.querySelectorAll('.home-switch-btn');
+    for (var i = 0; i < btns.length; i++) {
+        var on = (btns[i].getAttribute('data-home-switch') === 'office') === _inOffice;
+        btns[i].classList.toggle('active', on);
+        btns[i].setAttribute('aria-selected', on ? 'true' : 'false');
+    }
 }
 
 async function mountOfficeInto(el, data) {
@@ -95,8 +98,6 @@ async function mountOfficeInto(el, data) {
     el.classList.add('office-map');             // menonaktifkan vinyet kampus (.home-map:not(.office-map)::after)
     el.innerHTML = renderOfficeLoading();
     await mountOfficeMap(el, data);
-    if (tok !== _tok || !_inOffice || !el.isConnected) return;
-    addBackButton(el);
 }
 
 // ---------------- API publik ----------------
@@ -104,6 +105,9 @@ async function mountOfficeInto(el, data) {
 export function registerCampusHooks(h) { _hooks = h; }
 
 export function isOfficeMode() { return _inOffice; }
+
+// CSS sakelar dipasang sekali; HomePanel memanggilnya sebelum menggambar markup sakelar.
+export function ensureBridgeStyle() { ensureStyle(); }
 
 // Dipakai CampusMap saat Home dirender ulang sementara pemain masih di dalam kantor.
 export function resumeOffice(containerEl, gameState) {
@@ -115,6 +119,7 @@ export function enterOffice(containerEl) {
     if (!containerEl || _inOffice || !_hooks) return;
     ensureStyle();
     _inOffice = true;
+    syncSwitch();
     var tok = ++_tok;
     clearTimers();
     fadeOut(containerEl, function () {
@@ -129,6 +134,7 @@ export function exitOffice(containerEl) {
     if (!_inOffice) return;
     ensureStyle();
     _inOffice = false;
+    syncSwitch();
     var tok = ++_tok;
     clearTimers();
     fadeOut(containerEl, function () {
@@ -152,9 +158,18 @@ if (typeof document !== 'undefined') {
         e.preventDefault();
         enterOffice(box);
     });
+    // Sakelar Kampus | Kantor di atas peta Home.
+    document.addEventListener('click', function (e) {
+        var sw = e.target && e.target.closest && e.target.closest('.home-switch-btn');
+        if (!sw) return;
+        var box = document.getElementById('campus-map');
+        if (!box) return;
+        e.preventDefault();
+        if (sw.getAttribute('data-home-switch') === 'office') enterOffice(box); else exitOffice(box);
+    });
     // Pindah ke tab lain => kembali ke mode kampus (kantor ditutup oleh renderView di main.js).
     bus.on('view:changed', function (p) {
-        if (p && p.id !== 'dashboard' && _inOffice) { _inOffice = false; _tok++; clearTimers(); }
+        if (p && p.id !== 'dashboard' && _inOffice) { _inOffice = false; _tok++; clearTimers(); syncSwitch(); }
     });
 }
 

@@ -1,4 +1,5 @@
 // FILE: src/ui/campus/CampusInfo.js  (REPLACE — registri + navigasi sub-tab)
+// v2027.65 — label sakelar Kampus/Kantor di Home (getBridgeStrings).
 // v2027.63 — gedung HQ kini punya tombol "Masuk Kantor" (zoom masuk ke Office 3D di kanvas yang sama,
 // ditangani CampusOfficeBridge.js). Data registri TIDAK diubah; HQ dikenali lewat id.
 // v2027.62 — nama, ikon, deskripsi, satuan, dan tujuan tombol "Buka ..." sekarang dibaca dari
@@ -26,7 +27,7 @@ var UI = [
         open: 'Buka {view}', close: 'Tutup', built: '{name} berhasil dibangun!',
         up: '{name} naik ke Lv {lv}!', multi: '{n} bangunan berkembang!',
         bannerSub: 'Kampus Anda terus tumbuh', decor: 'Dekorasi era',
-        enterOffice: 'Masuk Kantor', backCampus: 'Kampus',
+        enterOffice: 'Masuk Kantor', backCampus: 'Kampus', tabCampus: 'Kampus', tabOffice: 'Kantor',
         blocks: 'Blok kota aktif: {n}', reset: 'Reset tampilan peta', zin: 'Perbesar peta', zout: 'Perkecil peta'
     },
     {   // en
@@ -36,7 +37,7 @@ var UI = [
         open: 'Open {view}', close: 'Close', built: '{name} is built!',
         up: '{name} reached Lv {lv}!', multi: '{n} buildings grew!',
         bannerSub: 'Your campus keeps growing', decor: 'Era decoration',
-        enterOffice: 'Enter Office', backCampus: 'Campus',
+        enterOffice: 'Enter Office', backCampus: 'Campus', tabCampus: 'Campus', tabOffice: 'Office',
         blocks: 'City blocks active: {n}', reset: 'Reset map view', zin: 'Zoom in', zout: 'Zoom out'
     }
 ];
@@ -77,7 +78,7 @@ export function getUiStrings() {
 
 // Teks untuk tombol jembatan Kampus <-> Kantor (CampusOfficeBridge.js).
 export function getBridgeStrings() {
-    return { enterOffice: _ui('enterOffice'), backCampus: _ui('backCampus') };
+    return { enterOffice: _ui('enterOffice'), backCampus: _ui('backCampus'), tabCampus: _ui('tabCampus'), tabOffice: _ui('tabOffice') };
 }
 
 export function getBuildingName(id) {
