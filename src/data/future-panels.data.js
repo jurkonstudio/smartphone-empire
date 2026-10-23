@@ -54,7 +54,9 @@ export const FUTURE_PANELS = [
         icon: 'gamepad',
         description: 'Mesin grafis dan performa untuk game di ponsel. Bergantung pada kualitas chip dan ekosistem aplikasi.',
         linksTo: ['chip', 'os'],
-        unlock: { enabled: false, year: null, research: null }
+        connected: ['products'],   // products: bonus performa sebanding performa chip, hanya bila OS milik pemain punya App Store (FutureEffects.js).
+        // Terbuka: riset Octa-core (chip_octa) selesai. Riset itu baru bisa selesai mulai 2014, jadi tanpa syarat tahun.
+        unlock: { enabled: true, year: null, research: 'chip_octa' }
     },
     {
         id: 'user_control',
