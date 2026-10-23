@@ -959,6 +959,196 @@ function renderAiModern(featureIds, osState, w, h, size) {
 }
 
 // ============================================================
+// LAYAR PROGRES OS — tampil saat memperbaiki bug (patch) atau memperbarui versi (update).
+// Satu renderer berbasis tema; tiap era memakai bahasa visual OS-nya sendiri (orisinal).
+// ============================================================
+function Lx(idText, enText) {
+    let en = false;
+    try { en = LanguageService.getLang() === 'en'; } catch (e) {}
+    return escapeHtml(en ? enText : idText);
+}
+
+const PROG_THEMES = {
+    mono:           { bg: ['#9db17c', '#8ca66a'], ink: '#1c2a10', sub: '#3d5226', accent: '#1c2a10', track: '#7d9660', font: 'Courier New, monospace', ind: 'lcd', card: 'none', icon: 'lcd', touch: false },
+    symbian_grid:   { bg: ['#2a6cb8', '#0a2a52'], ink: '#ffffff', sub: '#c3dcf7', accent: '#ffd54a', track: 'rgba(0,0,0,0.38)', font: 'Arial, sans-serif', ind: 'bar_gloss', card: 'solid', cardFill: 'rgba(255,255,255,0.10)', icon: 'square', touch: false, softkeys: true },
+    windows_mobile: { bg: ['#0c2d63', '#0c2d63'], ink: '#ffffff', sub: '#a9c2ea', accent: '#62d35f', track: 'rgba(255,255,255,0.15)', font: 'Tahoma, Arial, sans-serif', ind: 'segments', card: 'outline', icon: 'square', touch: false, titlebar: '#2a62c4', softkeys: true },
+    early_ios:      { bg: ['#4a5262', '#1b202a'], ink: '#ffffff', sub: '#aab3c2', accent: '#4aa3ff', track: 'rgba(0,0,0,0.5)', font: 'Helvetica, Arial, sans-serif', ind: 'bar_gloss', card: 'solid', cardFill: 'rgba(255,255,255,0.08)', icon: 'gloss', touch: true },
+    skeuomorphic:   { bg: ['#d9dbdf', '#b9bec6'], ink: '#2b2f36', sub: '#5b6270', accent: '#2f7de1', track: '#8d949f', font: 'Helvetica, Arial, sans-serif', ind: 'bar_stripe', card: 'emboss', cardFill: '#eef0f3', icon: 'gloss', touch: true },
+    flat_material:  { bg: ['#fafafa', '#fafafa'], ink: '#212121', sub: '#757575', accent: '#2196f3', track: '#e0e0e0', font: 'Roboto, Arial, sans-serif', ind: 'bar_thin', card: 'line', cardFill: '#ffffff', icon: 'circle', touch: true },
+    grouped_modern: { bg: ['#f2f2f7', '#f2f2f7'], ink: '#111111', sub: '#8e8e93', accent: '#0a84ff', track: '#d8d8de', font: '-apple-system, Helvetica, sans-serif', ind: 'bar_round', card: 'solid', cardFill: '#ffffff', icon: 'squircle', touch: true },
+    material_you:   { bg: ['#fdf7ff', '#f3eaff'], ink: '#1d1b20', sub: '#49454f', accent: '#6750a4', accent2: '#d0bcff', track: '#e8def8', font: 'Roboto, Arial, sans-serif', ind: 'ring', card: 'solid', cardFill: '#f3edf7', icon: 'ring', touch: true },
+    ai_modern:      { bg: ['#07070f', '#0b0b18'], ink: '#ffffff', sub: 'rgba(255,255,255,0.55)', accent: '#a855f7', accent2: '#06b6d4', track: 'rgba(255,255,255,0.10)', font: '-apple-system, Helvetica, sans-serif', ind: 'ring_glow', card: 'glass', cardFill: 'rgba(255,255,255,0.06)', icon: 'ring', touch: true, aurora: true }
+};
+
+function progGlyph(kind, color, sc, tx, ty) {
+    // kind: 'update' (panah unduh) | 'patch' (kunci pas). Grid 14x14, diskalakan.
+    const s = 'fill="none" stroke="' + color + '" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"';
+    const body = kind === 'patch'
+        ? '<path d="M9.6 1.4 a3.1 3.1 0 0 0 -2.9 4.1 L1.6 10.6 a1.35 1.35 0 0 0 1.9 1.9 L8.6 7.4 a3.1 3.1 0 0 0 4.1 -2.9 l-1.9 1.9 -1.8 -0.5 -0.5 -1.8 z" ' + s + '/>'
+        : '<path d="M7 1.2 v7.6 M3.8 5.8 L7 9 L10.2 5.8" ' + s + '/><path d="M2 12.4 h10" ' + s + '/>';
+    return '<g transform="translate(' + tx + ',' + ty + ') scale(' + sc + ')">' + body + '</g>';
+}
+
+function progSteps(kind, pct) {
+    const names = kind === 'patch'
+        ? [Lx('Analisis penyebab', 'Analyzing cause'), Lx('Terapkan perbaikan', 'Applying fix'), Lx('Uji stabilitas', 'Testing stability')]
+        : [Lx('Mengunduh paket', 'Downloading package'), Lx('Verifikasi keamanan', 'Verifying security'), Lx('Memasang & optimasi', 'Installing & optimizing')];
+    return names.map(function (n, i) {
+        const lo = i * 33.4, hi = (i + 1) * 33.4;
+        return { name: n, state: pct >= 100 || pct >= hi ? 'done' : (pct >= lo ? 'active' : 'todo') };
+    });
+}
+
+function renderOsProgress(mode, spec, w, h, size, info) {
+    const th = PROG_THEMES[mode] || PROG_THEMES.ai_modern;
+    const kind = info.kind === 'patch' ? 'patch' : 'update';
+    const pct = Math.max(0, Math.min(100, Math.round(info.pct || 0)));
+    const u = 'pg' + Math.random().toString(36).slice(2, 7);
+    const cx = w / 2;
+    const F = th.font;
+    const steps = progSteps(kind, pct);
+    let svg = '<defs>' +
+        '<linearGradient id="' + u + 'bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + th.bg[0] + '"/><stop offset="1" stop-color="' + th.bg[1] + '"/></linearGradient>' +
+        '<linearGradient id="' + u + 'ac" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + th.accent + '"/><stop offset="1" stop-color="' + (th.accent2 || th.accent) + '"/></linearGradient>' +
+        '<linearGradient id="' + u + 'gl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.55"/><stop offset="0.5" stop-color="#fff" stop-opacity="0.08"/><stop offset="0.51" stop-color="#000" stop-opacity="0.06"/><stop offset="1" stop-color="#000" stop-opacity="0.12"/></linearGradient>' +
+        '<filter id="' + u + 'bl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter>' +
+        '<clipPath id="' + u + 'bc"><rect x="20" y="0" width="' + (w - 40) + '" height="' + h + '"/></clipPath>' +
+        '</defs>';
+    svg += '<rect width="' + w + '" height="' + h + '" fill="url(#' + u + 'bg)"/>';
+
+    // Latar khusus
+    if (th.aurora) {
+        svg += '<circle cx="40" cy="70" r="90" fill="' + th.accent + '" opacity="0.22" filter="url(#' + u + 'bl)"/>' +
+            '<circle cx="170" cy="250" r="90" fill="' + th.accent2 + '" opacity="0.16" filter="url(#' + u + 'bl)"/>';
+    } else if (mode === 'skeuomorphic') {
+        for (let i = 0; i < h; i += 3) svg += '<rect x="0" y="' + i + '" width="' + w + '" height="1" fill="#000" opacity="0.025"/>';
+    } else if (mode === 'material_you') {
+        svg += '<circle cx="190" cy="40" r="70" fill="' + th.accent2 + '" opacity="0.35"/><circle cx="8" cy="330" r="80" fill="#efb8c8" opacity="0.25"/>';
+    }
+
+    // Status bar
+    const sbCol = th.ink;
+    svg += '<text x="8" y="9" font-size="6" font-family="' + F + '" font-weight="700" fill="' + sbCol + '">' + phoneClockText() + '</text>' +
+        '<text x="' + (w - 8) + '" y="9" text-anchor="end" font-size="5.5" font-family="' + F + '" fill="' + sbCol + '">▮▮▮ 87%</text>';
+    if (th.touch) svg += renderNotch(spec, w);
+    if (th.titlebar) svg += '<rect x="0" y="0" width="' + w + '" height="13" fill="' + th.titlebar + '"/><text x="8" y="9.4" font-size="6" font-family="' + F + '" font-weight="700" fill="#fff">' + phoneClockText() + '</text>';
+
+    const title = kind === 'patch' ? Lx('Memperbaiki bug', 'Fixing bug') : Lx('Memperbarui sistem', 'Updating system');
+    let sub = '';
+    if (kind === 'patch') sub = escapeHtml(String(info.bugName || '').slice(0, 28));
+    else sub = escapeHtml((info.fromVersion ? info.fromVersion + ' → ' : '') + (info.toVersion || ''));
+    const hint = kind === 'patch' ? Lx('Berjalan di latar belakang', 'Running in the background') : Lx('Jangan matikan perangkat', 'Do not power off');
+
+    let y = 40;
+    // ---------- Indikator ----------
+    if (th.ind === 'lcd') {
+        svg += '<text x="' + cx + '" y="52" text-anchor="middle" font-size="9" font-family="' + F + '" font-weight="700" fill="' + th.ink + '">' + title.toUpperCase() + '</text>' +
+            '<text x="' + cx + '" y="66" text-anchor="middle" font-size="6.5" font-family="' + F + '" fill="' + th.sub + '">' + sub + '</text>';
+        const bx = 24, bw = w - 48, n = 16, sw = bw / n;
+        svg += '<rect x="' + (bx - 2) + '" y="86" width="' + (bw + 4) + '" height="16" fill="none" stroke="' + th.ink + '" stroke-width="1"/>';
+        for (let i = 0; i < n; i++) if ((i + 1) / n * 100 <= pct + 3) svg += '<rect x="' + (bx + i * sw + 0.8) + '" y="88.5" width="' + (sw - 1.6) + '" height="11" fill="' + th.ink + '"/>';
+        svg += '<text x="' + cx + '" y="122" text-anchor="middle" font-size="12" font-family="' + F + '" font-weight="700" fill="' + th.ink + '">' + pct + '%</text>';
+        y = 142;
+        steps.forEach(function (s, i) {
+            const mark = s.state === 'done' ? '[X]' : (s.state === 'active' ? '[>]' : '[ ]');
+            svg += '<text x="24" y="' + (y + i * 14) + '" font-size="6.8" font-family="' + F + '" fill="' + th.ink + '" opacity="' + (s.state === 'todo' ? 0.45 : 1) + '">' + mark + ' ' + s.name + '</text>';
+        });
+        svg += '<text x="' + cx + '" y="' + (h - 16) + '" text-anchor="middle" font-size="6" font-family="' + F + '" fill="' + th.sub + '">' + hint + '<animate attributeName="opacity" values="1;0.3;1" dur="1.6s" repeatCount="indefinite"/></text>';
+        return svg;
+    }
+
+    const isRing = th.ind === 'ring' || th.ind === 'ring_glow';
+    if (isRing) {
+        const ry = 128, r = 38, C = 2 * Math.PI * r, sw = th.ind === 'ring_glow' ? 5 : 7;
+        svg += '<circle cx="' + cx + '" cy="' + ry + '" r="' + r + '" fill="none" stroke="' + th.track + '" stroke-width="' + sw + '"/>';
+        if (th.ind === 'ring_glow') svg += '<circle cx="' + cx + '" cy="' + ry + '" r="' + r + '" fill="none" stroke="url(#' + u + 'ac)" stroke-width="' + (sw + 5) + '" stroke-linecap="round" stroke-dasharray="' + (C * pct / 100) + ' ' + C + '" transform="rotate(-90 ' + cx + ' ' + ry + ')" opacity="0.45" filter="url(#' + u + 'bl)"/>';
+        svg += '<circle cx="' + cx + '" cy="' + ry + '" r="' + r + '" fill="none" stroke="url(#' + u + 'ac)" stroke-width="' + sw + '" stroke-linecap="round" stroke-dasharray="' + (C * pct / 100) + ' ' + C + '" transform="rotate(-90 ' + cx + ' ' + ry + ')"/>';
+        // titik orbit berputar (dekorasi)
+        svg += '<circle cx="' + cx + '" cy="' + (ry - r - 9) + '" r="1.6" fill="' + th.accent2 + '"><animateTransform attributeName="transform" type="rotate" from="0 ' + cx + ' ' + ry + '" to="360 ' + cx + ' ' + ry + '" dur="6s" repeatCount="indefinite"/></circle>';
+        svg += progGlyph(kind, th.ink, 1.25, cx - 8.75, ry - 26) +
+            '<text x="' + cx + '" y="' + (ry + 17) + '" text-anchor="middle" font-size="17" font-family="' + F + '" font-weight="800" fill="' + th.ink + '">' + pct + '<tspan font-size="8" font-weight="600" fill="' + th.sub + '">%</tspan></text>';
+        y = ry + r + 26;
+    } else {
+        const iy = 96, is = 44;
+        const ix = cx - is / 2;
+        if (th.icon === 'gloss') {
+            svg += '<rect x="' + ix + '" y="' + (iy - is / 2) + '" width="' + is + '" height="' + is + '" rx="10" fill="url(#' + u + 'ac)"/><rect x="' + ix + '" y="' + (iy - is / 2) + '" width="' + is + '" height="' + is + '" rx="10" fill="url(#' + u + 'gl)"/>';
+        } else if (th.icon === 'circle') {
+            svg += '<circle cx="' + cx + '" cy="' + iy + '" r="' + is / 2 + '" fill="' + th.accent + '"/>';
+        } else if (th.icon === 'squircle') {
+            svg += '<rect x="' + ix + '" y="' + (iy - is / 2) + '" width="' + is + '" height="' + is + '" rx="13" fill="url(#' + u + 'ac)"/>';
+        } else {
+            svg += '<rect x="' + ix + '" y="' + (iy - is / 2) + '" width="' + is + '" height="' + is + '" rx="3" fill="' + th.accent + '" stroke="rgba(0,0,0,0.35)" stroke-width="0.8"/>';
+        }
+        const gcol = (th.icon === 'square' && mode !== 'windows_mobile') ? '#1a2a44' : '#ffffff';
+        svg += progGlyph(kind, gcol, 1.9, cx - 13.3, iy - 13.3);
+        y = iy + is / 2 + 4;
+    }
+
+    svg += '<text x="' + cx + '" y="' + (y + 12) + '" text-anchor="middle" font-size="10.5" font-family="' + F + '" font-weight="700" fill="' + th.ink + '">' + title + '</text>' +
+        '<text x="' + cx + '" y="' + (y + 24) + '" text-anchor="middle" font-size="6.5" font-family="' + F + '" fill="' + th.sub + '">' + sub + '</text>';
+    y += 40;
+
+    // ---------- Bar progres ----------
+    if (!isRing) {
+        const bx = 20, bw = w - 40, fill = bw * pct / 100;
+        if (th.ind === 'segments') {
+            const n = 22, sw = bw / n;
+            for (let i = 0; i < n; i++) svg += '<rect x="' + (bx + i * sw + 0.7) + '" y="' + y + '" width="' + (sw - 1.4) + '" height="9" fill="' + ((i + 1) / n * 100 <= pct + 2 ? th.accent : th.track) + '"/>';
+            svg += '<text x="' + cx + '" y="' + (y + 21) + '" text-anchor="middle" font-size="7" font-family="' + F + '" fill="' + th.ink + '">' + pct + '%</text>';
+        } else {
+            const bh = th.ind === 'bar_thin' ? 3 : (th.ind === 'bar_round' ? 5 : 9), rr = th.ind === 'bar_thin' ? 1.5 : bh / 2;
+            svg += '<rect x="' + bx + '" y="' + y + '" width="' + bw + '" height="' + bh + '" rx="' + rr + '" fill="' + th.track + '"/>';
+            if (fill > 0) {
+                svg += '<rect x="' + bx + '" y="' + y + '" width="' + fill + '" height="' + bh + '" rx="' + rr + '" fill="' + th.accent + '"/>';
+                if (th.ind === 'bar_gloss' || th.ind === 'bar_stripe') svg += '<rect x="' + bx + '" y="' + y + '" width="' + fill + '" height="' + bh + '" rx="' + rr + '" fill="url(#' + u + 'gl)"/>';
+                if (th.ind === 'bar_stripe') { for (let sx = bx - 10; sx < bx + fill; sx += 8) svg += '<path d="M' + Math.max(bx, sx) + ' ' + (y + bh) + ' L' + Math.max(bx, sx + 5) + ' ' + y + ' L' + Math.min(bx + fill, sx + 9) + ' ' + y + ' L' + Math.min(bx + fill, sx + 4) + ' ' + (y + bh) + ' Z" fill="#fff" opacity="0.22"/>'; }
+                // kilau bergerak
+                svg += '<g clip-path="url(#' + u + 'bc)"><rect x="' + bx + '" y="' + y + '" width="14" height="' + bh + '" rx="' + rr + '" fill="#fff" opacity="0.28"><animate attributeName="x" from="' + bx + '" to="' + (bx + Math.max(0, fill - 14)) + '" dur="1.8s" repeatCount="indefinite"/></rect></g>';
+            }
+            svg += '<text x="' + bx + '" y="' + (y + bh + 11) + '" font-size="6.5" font-family="' + F + '" fill="' + th.sub + '">' + hint + '</text>' +
+                '<text x="' + (bx + bw) + '" y="' + (y + bh + 11) + '" text-anchor="end" font-size="7" font-family="' + F + '" font-weight="700" fill="' + th.ink + '">' + pct + '%</text>';
+        }
+        y += 34;
+    } else {
+        svg += '<text x="' + cx + '" y="' + (y - 6) + '" text-anchor="middle" font-size="6.2" font-family="' + F + '" fill="' + th.sub + '">' + hint + '</text>';
+        y += 6;
+    }
+
+    // ---------- Kartu langkah ----------
+    const rowH = 19, ch = steps.length * rowH + 8, cxl = 12, cw = w - 24;
+    if (th.card === 'solid' || th.card === 'glass' || th.card === 'emboss' || th.card === 'line') {
+        const stroke = th.card === 'glass' ? 'rgba(255,255,255,0.14)' : (th.card === 'emboss' ? 'rgba(0,0,0,0.18)' : (th.card === 'line' ? '#e0e0e0' : 'none'));
+        svg += '<rect x="' + cxl + '" y="' + y + '" width="' + cw + '" height="' + ch + '" rx="' + (th.card === 'line' ? 2 : 10) + '" fill="' + th.cardFill + '" stroke="' + stroke + '" stroke-width="0.6"/>';
+    } else if (th.card === 'outline') {
+        svg += '<rect x="' + cxl + '" y="' + y + '" width="' + cw + '" height="' + ch + '" fill="none" stroke="' + th.track + '" stroke-width="0.8"/>';
+    }
+    steps.forEach(function (s, i) {
+        const ry = y + 4 + i * rowH, mid = ry + rowH / 2;
+        const op = s.state === 'todo' ? 0.4 : 1;
+        if (s.state === 'done') {
+            svg += '<circle cx="26" cy="' + mid + '" r="5.2" fill="' + th.accent + '"/><path d="M23.4 ' + mid + ' l2 2 l3.4 -3.8" fill="none" stroke="' + ((mode === 'flat_material' || mode === 'grouped_modern' || mode === 'material_you') ? '#fff' : (th.accent2 ? '#fff' : '#06210a')) + '" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>';
+        } else if (s.state === 'active') {
+            svg += '<circle cx="26" cy="' + mid + '" r="5.2" fill="none" stroke="' + th.track + '" stroke-width="1.4"/><path d="M26 ' + (mid - 5.2) + ' a5.2 5.2 0 0 1 5.2 5.2" fill="none" stroke="' + th.accent + '" stroke-width="1.6" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 26 ' + mid + '" to="360 26 ' + mid + '" dur="1s" repeatCount="indefinite"/></path>';
+        } else {
+            svg += '<circle cx="26" cy="' + mid + '" r="5.2" fill="none" stroke="' + th.sub + '" stroke-width="0.9" opacity="0.6"/>';
+        }
+        svg += '<text x="38" y="' + (mid + 2.4) + '" font-size="6.8" font-family="' + F + '" font-weight="' + (s.state === 'active' ? 700 : 500) + '" fill="' + th.ink + '" opacity="' + op + '">' + s.name + '</text>';
+    });
+    y += ch;
+
+    // Softkey (Symbian / Windows Mobile)
+    if (th.softkeys) {
+        svg += '<rect x="0" y="' + (h - 18) + '" width="' + w + '" height="18" fill="rgba(0,0,0,0.45)"/>' +
+            '<text x="8" y="' + (h - 6) + '" font-size="7" font-family="' + F + '" font-weight="700" fill="#fff">' + Lx('Opsi', 'Options') + '</text>' +
+            '<text x="' + (w - 8) + '" y="' + (h - 6) + '" text-anchor="end" font-size="7" font-family="' + F + '" font-weight="700" fill="#fff">' + Lx('Sembunyikan', 'Hide') + '</text>';
+    } else {
+        svg += '<rect x="' + (cx - 30) + '" y="' + (h - 9) + '" width="60" height="2.6" rx="1.3" fill="' + th.ink + '" opacity="0.5"/>';
+    }
+    return svg;
+}
+
+// ============================================================
 // MAIN
 // ============================================================
 export function renderOsScreenMockup(opts) {
@@ -983,6 +1173,14 @@ export function renderOsScreenMockup(opts) {
     const mode = resolveOsMode(year, completed);
 
     let svgInner = '';
+    // Layar progres: memperbaiki bug (patch) atau memperbarui versi OS (update).
+    if (opts.screen === 'patch' || opts.screen === 'update') {
+        const inner = renderOsProgress(mode, spec, w, h, size, {
+            kind: opts.screen, pct: opts.progress, bugName: opts.bugName,
+            toVersion: opts.toVersion, fromVersion: getCurrentVersionString(osState)
+        });
+        return '<div class="os-screen-wrap os-screen-' + opts.screen + '"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' ' + h + '" width="' + size + '" height="' + Math.round(size * 2) + '" preserveAspectRatio="xMidYMid meet">' + inner + '</svg></div>';
+    }
     if (mode === 'mono')              svgInner = renderMono(featureIds, osState, w, h, size);
     else if (mode === 'symbian_grid') svgInner = renderSymbianGrid(featureIds, osState, w, h, size);
     else if (mode === 'windows_mobile') svgInner = renderWindowsMobile(featureIds, osState, w, h, size);
