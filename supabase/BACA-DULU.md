@@ -34,4 +34,4 @@ admin menyetujui di `/fsociety` → SIL otomatis masuk dompet (tercatat di ledge
 - Reward quest: ubah `claim_quest_silicon` di `02-sil-dompet.sql`, jalankan ulang.
 
 ## Opsional
-`functions/advisor-chat/` — Edge Function Asisten Bisnis (AI). Tidak dibutuhkan untuk game & pembayaran.
+`function/advisor-chat/` — Edge Function Asisten Bisnis (AI). Tidak dibutuhkan untuk game & pembayaran.
