@@ -34,7 +34,7 @@ export const FUTURE_PANELS = [
         icon: 'brain',
         description: 'Model AI generasi berikutnya untuk seluruh perusahaan: asisten bisnis yang lebih tajam, saran desain, dan fitur OS berbasis AI.',
         linksTo: ['advisor', 'os', 'design'],
-        connected: [],
+        connected: ['os', 'design'],   // os: diskon fitur OS berbasis AI; design: saran harga & sisi terlemah di wizard (FutureEffects.js). Asisten Bisnis menyusul.
         // Terbuka: tahun 2022 ke atas DAN riset NPU AI (chip_npu) selesai.
         unlock: { enabled: true, year: 2022, research: 'chip_npu' }
     },
