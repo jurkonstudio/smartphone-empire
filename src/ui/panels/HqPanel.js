@@ -3,7 +3,7 @@
 //   sehingga ke-7 tab (Kantor … Riwayat) selalu muat tanpa terpotong/geser; Bursa, Bank & Investasi kini punya
 //   ikon berbeda. Isi tab (kecuali Kantor 3D) dibungkus .hq-body agar kartu/baris lebih lega (lihat HqStyle.js).
 //   Atribut data-hq-subtab, class subtab-bar/subtab-btn, dan semua panel anak TIDAK berubah.
-// v2027.50a — tab Office kini memuat Office 3D Map (lihat ui/office/OfficeMap.js).
+// Tab Kantor dihapus dari HQ; Office 3D Map kini hanya lewat sakelar Kampus | Kantor di Home.
 import { renderDashboard } from './DashboardPanel.js';
 import { renderTeamPanel } from './TeamPanel.js';
 import { renderExchangePanel } from './ExchangePanel.js';
@@ -19,7 +19,6 @@ function _tabLabel(tab) {
     return (v && v !== tab.key) ? v : (tab.fallback || tab.key);
 }
 import { t } from '../../core/LanguageService.js';
-import { renderOfficeLoading } from '../office/OfficeMap.js';
 
 // Ikon khusus agar Bursa / Bank / Investasi tidak kembar (sebelumnya Bursa & Investasi sama-sama "trending-up").
 var _OWN_ICONS = {
@@ -37,7 +36,6 @@ function _tabIcon(tab) {
 }
 
 const HQ_TABS = [
-    { id: 'office',   key: 'hq.tab.office',   icon: 'building' },
     { id: 'overview', key: 'hq.tab.overview', icon: 'activity' },
     { id: 'team',     key: 'hq.tab.team',     icon: 'users' },
     { id: 'exchange', key: 'hq.tab.exchange', own: 'candles' },
@@ -64,10 +62,7 @@ export function renderHqPanel({ subtab, state, timeSnapshot, researchSystem, tea
 
     var body = '';
     var wrap = true;
-    if (subtab === 'office') {
-        body = _renderOfficeMap();
-        wrap = false;            // peta 3D mengatur tinggi sendiri; tidak dibungkus
-    } else if (subtab === 'team') {
+    if (subtab === 'team') {
         body = renderTeamPanel({ teamSystem: teamSystem });
     } else if (subtab === 'exchange') {
         body = renderExchangePanel({ stockSystem: stockSystem });
@@ -81,20 +76,4 @@ export function renderHqPanel({ subtab, state, timeSnapshot, researchSystem, tea
         body = renderDashboard(state, timeSnapshot, researchSystem, teamSystem);
     }
     return tabBar + (wrap ? '<div class="hq-body hq-sub-' + (subtab || 'overview') + '">' + body + '</div>' : body);
-}
-
-// ============================================================
-// OFFICE 3D MAP — wadah peta. main.js memanggil mountOfficeMap() pada #office-map
-// setelah HTML dipasang. Class "home-map" dipakai ulang: sudah bebas dari swipe-tab
-// (SwipeService), position:relative, overflow hidden, dan touch-action:none.
-// ============================================================
-function _renderOfficeMap() {
-    return '<div id="office-map" class="home-map office-map" style="' +
-                'flex:none;' +
-                'height:max(380px, calc(100dvh - 262px));' +
-                'margin-top:4px;' +
-                'border-radius:14px;' +
-                'border:1px solid var(--border);' +
-                'background:linear-gradient(180deg, var(--accent-soft) 0%, transparent 100%);' +
-            '">' + renderOfficeLoading() + '</div>';
 }
