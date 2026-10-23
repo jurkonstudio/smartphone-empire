@@ -24,11 +24,13 @@ import { TIME_CONFIG } from '../config/time.config.js';
 import { ToastService } from '../core/ToastService.js';
 import { LOG_TYPES } from '../config/constants.js';
 import { WalletService } from './WalletService.js';
+import { FAB_LEVELS } from './FabSystem.js';
 import { COMPONENTS, getComponentById } from '../data/components.data.js';
 import {
     PLANT_TYPES, PLANT_MIN_ORDER, PLANT_CYCLE_DAYS,
     getPlantTypeById, getPlantLevelInfo, getPlantYield, resolveComponentCost,
-    getPlantMaintenance
+    getPlantMaintenance, getPlantCapital,
+    INFRA_TAX_RATE_MONTHLY, EXTERNAL_PRICE_RATE, EXTERNAL_QUOTA_RATIO, EXTERNAL_PRICE_DECAY
 } from '../data/material-plants.data.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
@@ -75,6 +77,12 @@ export class ComponentPlantSystem {
         if (typeof cp.totalProduced !== 'number') cp.totalProduced = 0;
         if (typeof cp.totalConsumed !== 'number') cp.totalConsumed = 0;
         if (typeof cp.maintenancePaid !== 'number') cp.maintenancePaid = 0;
+        if (typeof cp.externalRevenue !== 'number') cp.externalRevenue = 0;
+        if (typeof cp.externalUnits !== 'number') cp.externalUnits = 0;
+        if (typeof cp.savings !== 'number') cp.savings = 0;
+        if (typeof cp.pendingRevenue !== 'number') cp.pendingRevenue = 0;
+        if (typeof cp.taxPaid !== 'number') cp.taxPaid = 0;
+        if (!cp.external || typeof cp.external !== 'object') cp.external = { key: '', sold: {} };
 
         PLANT_TYPES.forEach(pt => {
             const ps = cp.plants[pt.id];
@@ -136,6 +144,120 @@ export class ComponentPlantSystem {
     getInventory(componentId) {
         const cp = this.state.data.componentPlants;
         return (cp && cp.inventory && cp.inventory[componentId]) || 0;
+    }
+
+    // ============================================================
+    // PAJAK INFRASTRUKTUR (dibaca EconomySystem tiap bulan)
+    // Pajak properti + utilitas dasar = INFRA_TAX_RATE_MONTHLY x modal terpasang.
+    // Mencakup semua pabrik komponen yang berdiri dan fab chip.
+    // ============================================================
+    getPlantInfraTax(typeId) {
+        const ps = this._getPlantState(typeId);
+        if (!ps || !ps.built || !ps.level) return 0;
+        return Math.round(getPlantCapital(typeId, ps.level) * INFRA_TAX_RATE_MONTHLY);
+    }
+
+    getFabInfraTax() {
+        const f = this.state.data.fab;
+        if (!f || !f.built || !f.level) return 0;
+        const cap = FAB_LEVELS.reduce((a, l) => l.level <= f.level ? a + l.cost : a, 0);
+        return Math.round(cap * INFRA_TAX_RATE_MONTHLY);
+    }
+
+    getMonthlyInfraTax() {
+        let sum = this.getFabInfraTax();
+        PLANT_TYPES.forEach(pt => { sum += this.getPlantInfraTax(pt.id); });
+        return sum;
+    }
+
+    // Dipanggil EconomySystem saat menutup bulan: omzet penjualan eksternal bulan ini
+    // (kas sudah bertambah saat dijual; ini hanya untuk laporan & pajak laba).
+    takeMonthlyRevenue() {
+        const cp = this.state.data.componentPlants;
+        if (!cp) return 0;
+        const r = cp.pendingRevenue || 0;
+        cp.pendingRevenue = 0;
+        return r;
+    }
+
+    // ============================================================
+    // MARGIN & PENJUALAN EKSTERNAL
+    // Biaya efektif per unit bagus = biaya internal / yield. Stok surplus bisa dijual
+    // grosir (harga pasar x EXTERNAL_PRICE_RATE), dibatasi kuota bulanan dan harga
+    // turun saat kuota terpakai. Pabrik kecil (yield rendah) bisa merugi; skala = margin.
+    // ============================================================
+    _monthKey() {
+        const t = this.state.data.time;
+        return t.currentYear + '-' + t.currentMonth;
+    }
+
+    _externalState() {
+        const cp = this.state.data.componentPlants;
+        const key = this._monthKey();
+        if (!cp.external || cp.external.key !== key) cp.external = { key: key, sold: {} };
+        return cp.external;
+    }
+
+    getEffectiveUnitCost(typeId, componentId) {
+        const ps = this._getPlantState(typeId);
+        if (!ps || !ps.level) return 0;
+        const y = getPlantYield(ps.level) || 1;
+        return this.getUnitCost(componentId) / y;
+    }
+
+    // { price, effCost, marginPerUnit, marginPct, quotaLeft, stock }
+    getExternalQuote(typeId, componentId) {
+        const comp = getComponentById(componentId);
+        const ps = this._getPlantState(typeId);
+        if (!comp || !ps || !ps.built || !ps.level) return null;
+        const info = getPlantLevelInfo(typeId, ps.level);
+        const quota = Math.floor(info.capacityMonthly * EXTERNAL_QUOTA_RATIO);
+        const sold = this._externalState().sold[typeId] || 0;
+        const quotaLeft = Math.max(0, quota - sold);
+        const base = (comp.costPerUnit || 0) * EXTERNAL_PRICE_RATE;
+        const price = base * (1 - EXTERNAL_PRICE_DECAY * Math.min(1, sold / Math.max(1, quota)));
+        const effCost = this.getEffectiveUnitCost(typeId, componentId);
+        const margin = price - effCost;
+        return {
+            price: price, effCost: effCost, marginPerUnit: margin,
+            marginPct: price > 0 ? margin / price : 0,
+            quotaLeft: quotaLeft, quota: quota, stock: this.getInventory(componentId)
+        };
+    }
+
+    sellExternal(typeId, componentId, qty) {
+        const data = this.state.data;
+        const cp = data.componentPlants;
+        const pt = getPlantTypeById(typeId);
+        const q = this.getExternalQuote(typeId, componentId);
+        if (!pt || !q) return { ok: false, reason: 'Pabrik belum dibangun.' };
+        const comp = getComponentById(componentId);
+        if (!comp || comp.category !== pt.category) return { ok: false, reason: 'Komponen tidak cocok dengan pabrik ini.' };
+        qty = Math.floor(Math.min(qty || 0, q.stock, q.quotaLeft));
+        if (qty < 1) {
+            return { ok: false, reason: q.stock < 1 ? 'Stok kosong.' : 'Kuota jual bulan ini habis.' };
+        }
+        const ext = this._externalState();
+        const sold = ext.sold[typeId] || 0;
+        // Harga rata-rata batch: harga turun linear sepanjang kuota.
+        const base = (comp.costPerUnit || 0) * EXTERNAL_PRICE_RATE;
+        const midRatio = Math.min(1, (sold + qty / 2) / Math.max(1, q.quota));
+        const avgPrice = base * (1 - EXTERNAL_PRICE_DECAY * midRatio);
+        const revenue = Math.round(avgPrice * qty);
+        const cost = Math.round(q.effCost * qty);
+
+        cp.inventory[componentId] = q.stock - qty;
+        ext.sold[typeId] = sold + qty;
+        cp.externalRevenue += revenue;
+        cp.externalUnits += qty;
+        cp.pendingRevenue += revenue;
+        this.state.addCash(revenue);
+
+        this.state.addLog('Jual grosir ' + comp.name + ': ' + qty.toLocaleString('en-US') + ' unit (' + _money(revenue) + ', margin ' + _money(revenue - cost) + ').', LOG_TYPES.success);
+        ToastService.success('Terjual ' + qty.toLocaleString('en-US') + ' unit · ' + _money(revenue));
+        bus.emit('plant:external-sale', { typeId: typeId, componentId: componentId, qty: qty, revenue: revenue });
+        bus.emit('state:changed', data);
+        return { ok: true, qty: qty, revenue: revenue, margin: revenue - cost };
     }
 
     // ============================================================
@@ -312,6 +434,12 @@ export class ComponentPlantSystem {
         if (used > 0) {
             cp.inventory[componentId] = have - used;
             cp.totalConsumed = (cp.totalConsumed || 0) + used;
+            // Penghematan: selisih harga pasar vs biaya efektif internal.
+            const pt = PLANT_TYPES.find(p => p.category === comp.category);
+            if (pt) {
+                const saved = ((comp.costPerUnit || 0) - this.getEffectiveUnitCost(pt.id, componentId)) * used;
+                cp.savings = (cp.savings || 0) + saved;
+            }
             bus.emit('state:changed', this.state.data);
         }
 
@@ -470,7 +598,9 @@ export class ComponentPlantSystem {
                 unlock: this.isUnlocked(pt.id),
                 maintenanceMonthly: ps.level ? getPlantMaintenance(pt.id, ps.level) : 0,
                 unpaid: ps.unpaid || 0,
-                idleDays: ps.idleDays || 0
+                idleDays: ps.idleDays || 0,
+                infraTax: this.getPlantInfraTax(pt.id),
+                capital: ps.level ? getPlantCapital(pt.id, ps.level) : 0
             };
         });
     }

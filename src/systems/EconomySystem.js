@@ -29,6 +29,7 @@ export class EconomySystem {
 
     setBank(bank) { this.bank = bank; }
     setEconBrakes(eb) { this.econ = eb; }
+    setPlants(cps) { this.plants = cps; }
 
     start() {
         this._unsubMonth = bus.on('time:month-changed', (snapshot) => {
@@ -89,11 +90,18 @@ export class EconomySystem {
         }
         // [v2029.1] Pemeliharaan investasi pabrik & akuisisi.
         const upkeep = this.econ ? this.econ.getMonthlyUpkeep() : 0;
-        const expenseBase = salary + fixed + loanInterest + upkeep;
+        // Pajak properti/utilitas infrastruktur (fab + pabrik komponen).
+        const infraTax = this.plants ? this.plants.getMonthlyInfraTax() : 0;
+        if (this.plants && infraTax > 0) {
+            const cpd = data.componentPlants;
+            if (cpd) cpd.taxPaid = (cpd.taxPaid || 0) + infraTax;
+        }
+        const expenseBase = salary + fixed + loanInterest + upkeep + infraTax;
         const expense = Math.round(expenseBase * mul);
 
         // ---- Pemasukan (info saja, sudah masuk cash via harian) ----
-        const income = Math.round(this._monthRevenue);
+        const plantRevenue = this.plants ? this.plants.takeMonthlyRevenue() : 0;
+        const income = Math.round(this._monthRevenue + plantRevenue);
 
         // ---- Laba sebelum pajak ----
         const preTax = income - expense;
@@ -125,7 +133,7 @@ export class EconomySystem {
             net,
             cash: cashAfter,
             breakdown: {
-                salary, fixed, loanInterest, loanPrincipal, depositInterest, upkeep,
+                salary, fixed, loanInterest, loanPrincipal, depositInterest, upkeep, infraTax, plantRevenue,
                 tax,
                 expenseRaw: expenseBase
             }
