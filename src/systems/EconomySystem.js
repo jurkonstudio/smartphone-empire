@@ -25,6 +25,7 @@ export class EconomySystem {
         this._unsubMonth = null;
         this._monthRevenue = 0;
         this.bank = null;
+        this._runwayLevel = null; // [v2030] level runway terakhir (null = belum dicek)
     }
 
     setBank(bank) { this.bank = bank; }
@@ -38,6 +39,8 @@ export class EconomySystem {
         bus.on('economy:add-revenue', ({ amount }) => {
             if (typeof amount === 'number') this._monthRevenue += amount;
         });
+        // [v2030] Runway dicek tiap hari agar peringatan muncul saat ambang terlewati.
+        bus.on('time:day-changed', () => this._checkRunway());
         // Kenaikan gaji tahunan mengikuti inflasi & pertumbuhan upah dunia nyata.
         bus.on('time:year-changed', (snap) => this._applyAnnualRaise(snap));
     }
@@ -170,13 +173,83 @@ export class EconomySystem {
         bus.emit('economy:month-processed', entry);
         bus.emit('state:changed', data);
 
-        // ---- Burn rate warning ----
-        const monthlyCost = expenseBase * mul + loanPrincipal;
-        if (monthlyCost > 0 && cashAfter >= 0) {
-            const monthsLeft = cashAfter / monthlyCost;
-            if (monthsLeft < BALANCE.burnRateWarnThreshold) {
-                bus.emit('economy:warn-burnrate', { monthsLeft: Math.floor(monthsLeft) });
-            }
+        // ---- Runway (v2030) menggantikan peringatan burn rate lama ----
+        this._checkRunway();
+    }
+
+    // ============== Runway (v2030) ==============
+    // months  : kas / netBurn. netBurn = biaya bulanan dikurangi rata-rata pendapatan 3 bulan terakhir.
+    // monthsConservative : kas / biaya bulanan tanpa pendapatan (batas bawah).
+    // Opsi extraMonthlyCost (mentah, sebelum pengali kesulitan) dan extraCash dipakai
+    // untuk simulasi rekrutmen tanpa mengubah state.
+    getRunway(opts) {
+        const o = opts || {};
+        const data = this.state.data;
+        const diffKey = data.difficulty || 'normal';
+        const diff = BALANCE.difficultyMultiplier[diffKey] || BALANCE.difficultyMultiplier.normal;
+        const extraCost = Number.isFinite(o.extraMonthlyCost) ? o.extraMonthlyCost : 0;
+        const extraCash = Number.isFinite(o.extraCash) ? o.extraCash : 0;
+
+        const base = Number(this.getMonthlyCostEstimate()) || 0;
+        const burn = Math.max(0, base + extraCost * diff.expense);
+
+        const hist = (data.finance && Array.isArray(data.finance.history)) ? data.finance.history : [];
+        const recent = hist.slice(0, 3); // indeks 0 = bulan terbaru
+        const avgIncome = recent.length
+            ? recent.reduce((s, h) => s + (Number(h.income) || 0), 0) / recent.length
+            : 0;
+        const netBurn = Math.max(0, burn - avgIncome);
+
+        const cash = Math.max(0, (Number(data.cash) || 0) + extraCash);
+        const monthsOf = (b) => (b > 0 ? cash / b : Infinity);
+        const months = monthsOf(netBurn);
+        const thr = EconomySystem.runwayThresholds(diffKey);
+
+        return {
+            cash,
+            burn,
+            netBurn,
+            avgIncome,
+            months,
+            monthsConservative: monthsOf(burn),
+            safe: thr.safe,
+            danger: thr.danger,
+            level: EconomySystem.runwayLevel(months, diffKey)
+        };
+    }
+
+    static runwayThresholds(difficulty) {
+        const cfg = BALANCE.runway || {};
+        const key = difficulty || 'normal';
+        const safeMap = cfg.safeMonths || {};
+        const dangerMap = cfg.dangerMonths || {};
+        return {
+            safe: safeMap[key] != null ? safeMap[key] : (safeMap.normal != null ? safeMap.normal : 4),
+            danger: dangerMap[key] != null ? dangerMap[key] : (dangerMap.normal != null ? dangerMap.normal : 2)
+        };
+    }
+
+    // 'ok' | 'low' | 'danger'
+    static runwayLevel(months, difficulty) {
+        if (Number.isNaN(months)) return 'danger';
+        if (months === Infinity) return 'ok';
+        const thr = EconomySystem.runwayThresholds(difficulty);
+        if (months >= thr.safe) return 'ok';
+        if (months < thr.danger) return 'danger';
+        return 'low';
+    }
+
+    // Emit economy:runway-low hanya saat level naik peringkat (ok -> low, low -> danger, dst).
+    // Pengecekan pertama hanya mencatat level tanpa peringatan, supaya muatan save lama tidak langsung berbunyi.
+    _checkRunway() {
+        if (!this.state || !this.state.data || this.state.data.gameOver) return;
+        const rw = this.getRunway();
+        const prev = this._runwayLevel;
+        this._runwayLevel = rw.level;
+        if (prev === null || prev === rw.level) return;
+        const rank = { ok: 0, low: 1, danger: 2 };
+        if (rank[rw.level] > rank[prev]) {
+            bus.emit('economy:runway-low', { level: rw.level, months: rw.months });
         }
     }
 

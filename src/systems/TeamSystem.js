@@ -318,14 +318,7 @@ export class TeamSystem {
             return { ok: false, reason: 'Kapasitas ' + cand.role + ' penuh (maks ' + cap + ', termasuk yang sedang onboarding).' };
         }
 
-        const roleRecruitCost = Math.round(((BALANCE.recruitCost && BALANCE.recruitCost[cand.role]) || 2000) * this._wageScale());
-        const signingMult = (BALANCE.team && BALANCE.team.signingBonusMult) || 0.6;
-        const signingBonus = cand.signingBonus != null
-            ? cand.signingBonus
-            : Math.round(cand.salary * signingMult * 3);
-        const totalCost = cand.totalCost != null
-            ? cand.totalCost
-            : (roleRecruitCost + signingBonus);
+        const totalCost = this._hireTotalCost(cand);
 
         if (!WalletService.canAfford(totalCost)) {
             return { ok: false, reason: 'Uang tidak cukup. Butuh $' + totalCost.toLocaleString('en-US') + '.' };
@@ -502,6 +495,20 @@ export class TeamSystem {
         return { ok: true, cost };
     }
 
+    // [v2030] Biaya rekrut satu sumber kebenaran: dipakai hireCandidate dan getHireImpact
+    // agar angka di UI sama dengan tagihan nyata.
+    _hireTotalCost(cand) {
+        const roleRecruitCost = Math.round(((BALANCE.recruitCost && BALANCE.recruitCost[cand.role]) || 2000) * this._wageScale());
+        const signingMult = (BALANCE.team && BALANCE.team.signingBonusMult) || 0.6;
+        const signingBonus = cand.signingBonus != null
+            ? cand.signingBonus
+            : Math.round((cand.salary || 0) * signingMult * 3);
+        return cand.totalCost != null ? cand.totalCost : (roleRecruitCost + signingBonus);
+    }
+
+    // [v2030] Dipasang dari main.js. Dibutuhkan untuk simulasi runway saat rekrut.
+    setEconomy(eco) { this.economy = eco; }
+
     // ============ DAMPAK REKRUT (preview untuk UI) ============
     // Hitung perubahan bonus tim jika kandidat ini direkrut. Dipakai untuk menampilkan
     // "apa efeknya ke riset / produk / kampanye" sebelum pemain membayar.
@@ -517,9 +524,25 @@ export class TeamSystem {
                       : cand.role === 'designer' ? counts.designers
                       : counts.marketers;
         const cap = (BALANCE.teamCap && BALANCE.teamCap[cand.role]) || 20;
-        const totalCost = cand.totalCost != null ? cand.totalCost : (cand.salary || 0) * 3;
+        const totalCost = this._hireTotalCost(cand);
         const cash = Math.max(0, data.cash || 0);
+
+        // [v2030] Runway sebelum vs sesudah rekrut (gaji bulanan naik, kas turun sebesar biaya rekrut).
+        let runwayBefore = Infinity, runwayAfter = Infinity, safeMonths = 0, belowSafe = false;
+        if (this.economy && typeof this.economy.getRunway === 'function') {
+            const rwB = this.economy.getRunway();
+            const rwA = this.economy.getRunway({ extraMonthlyCost: cand.salary || 0, extraCash: -totalCost });
+            runwayBefore = rwB.months;
+            runwayAfter = rwA.months;
+            safeMonths = rwA.safe;
+            belowSafe = runwayAfter !== Infinity && runwayAfter < rwA.safe;
+        }
+
         return {
+            runwayBefore,
+            runwayAfter,
+            safeMonths,
+            belowSafe,
             current,
             cap,
             capped: current >= cap,
@@ -536,6 +559,15 @@ export class TeamSystem {
                 marketing: after.marketing - before.marketing
             }
         };
+    }
+
+    // Sama seperti getHireImpact, tapi memakai kandidat dari state (untuk UI yang hanya punya id).
+    getHireImpactById(candidateId) {
+        const cand = (this.state.data.candidates || []).find(c => c.id === candidateId);
+        if (!cand) return null;
+        const imp = this.getHireImpact(cand);
+        if (imp) imp.name = cand.name || '';
+        return imp;
     }
 
     static _bonusSnapshot(list) {
