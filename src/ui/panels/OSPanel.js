@@ -19,6 +19,7 @@ import { renderOsKpiRow, renderOsUsersTab } from './OsUsersPanel.js';
 import { formatUsers } from '../../systems/OsAdoptionModel.js';
 import { renderUpdateCardsTab, resetUpdateDraft } from './OsUpdateCards.js';
 import { TIME_CONFIG } from '../../config/time.config.js';
+import { getOsFeatureCost, currentGameData } from '../../systems/FutureEffects.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -351,7 +352,7 @@ function _renderFeatureRow(feature, status) {
     return '<div class="os-row os-feat-row os-feat-' + status + '" data-os-action="feature-detail" data-feature-id="' + feature.id + '"><div class="os-row-main">' +
         '<div class="os-row-title">' + escapeHtml(feature.name) + '<span class="os-row-year">' + feature.minYear + '</span></div>' +
         '<div class="os-row-meta"><span>' + escapeHtml(eraName) + '</span>' + (statChips ? '<span class="os-row-dot">·</span>' + statChips : '') + '</div>' +
-        '<div class="os-row-foot"><span class="os-row-cost">$' + feature.devCost.toLocaleString('en-US') + '</span><span class="os-row-dot">·</span><span class="os-row-dur">' + feature.devDays + '</span></div></div>' +
+        '<div class="os-row-foot"><span class="os-row-cost">$' + getOsFeatureCost(feature, currentGameData()).toLocaleString('en-US') + '</span><span class="os-row-dot">·</span><span class="os-row-dur">' + feature.devDays + '</span></div></div>' +
         '<div class="os-row-actions"><span class="' + badgeCls + '">' + badgeLabel + '</span></div></div>';
 }
 
@@ -417,7 +418,7 @@ export function openFeatureDetailModal(params) {
     const html = `
         <div class="modal-title">${escapeHtml(f.name)}</div><div class="modal-sub">${escapeHtml(f.description)}</div>
         <div class="sum-row"><span>${t('os.feature_detail.era')}</span><b>${f.era}</b></div><div class="sum-row"><span>${t('os.feature_detail.min_year')}</span><b>${f.minYear}</b></div>
-        <div class="sum-row"><span>${t('os.feature_detail.cost')}</span><b>$${f.devCost.toLocaleString('en-US')}</b></div><div class="sum-row"><span>${t('os.feature_detail.duration')}</span><b>${f.devDays}</b></div>
+        <div class="sum-row"><span>${t('os.feature_detail.cost')}</span><b>$${getOsFeatureCost(f, currentGameData()).toLocaleString('en-US')}</b></div><div class="sum-row"><span>${t('os.feature_detail.duration')}</span><b>${f.devDays}</b></div>
         <div class="card-title" style="margin-top:12px;">${t('os.feature_detail.effects')}</div>
         ${renderOsStatBar({ stability: f.statEffects.stability || 0, speed: f.statEffects.speed || 0, features: f.statEffects.features || 0, security: f.statEffects.security || 0, design: f.statEffects.design || 0 }, { compact: true })}
         <div class="sum-row" style="margin-top:12px;"><span>${t('os.feature_detail.status')}</span><b>${_statusLabel(st)}</b></div>${actionBtn}

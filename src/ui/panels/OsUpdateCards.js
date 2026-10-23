@@ -14,6 +14,7 @@ import { renderIcon } from '../icons/FeatureIcons.js';
 import { ToastService } from '../../core/ToastService.js';
 import { WalletService } from '../../systems/WalletService.js';
 import { t } from '../../core/LanguageService.js';
+import { getOsFeatureCost, currentGameData } from '../../systems/FutureEffects.js';
 
 var STAT_CHIPS = [
     { k: 'stability', key: 'osuc.stat.stability' },
@@ -146,7 +147,7 @@ function _renderCard(osSys, id, frozen) {
     if (state === 'available') attrs = ' data-uc-action="toggle" data-uc-id="' + id + '" role="button" aria-pressed="' + (selected ? 'true' : 'false') + '"';
     else if (state === 'locked') attrs = ' data-uc-action="why" data-uc-id="' + id + '" role="button"';
 
-    var cost = state === 'owned' ? _tx('osuc.free', 'Free') : _money(f.devCost);
+    var cost = state === 'owned' ? _tx('osuc.free', 'Free') : _money(getOsFeatureCost(f, currentGameData()));
     var days = f.devDays > 0 ? _tx('osuc.days', '{n} days', { n: f.devDays }) : '—';
 
     return '<div class="uc-card uc-s-' + state + (selected ? ' is-selected' : '') + '"' + attrs + '>' +

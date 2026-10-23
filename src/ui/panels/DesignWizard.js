@@ -17,6 +17,7 @@ import { t, LanguageService } from '../../core/LanguageService.js';
 import { WalletService } from '../../systems/WalletService.js';
 import { resolveComponentCost, getBuiltPlantEffect } from '../../data/material-plants.data.js';
 import { BALANCE } from '../../data/balance.data.js';
+import { isFaiActive, getFaiDesignAdvice } from '../../systems/FutureEffects.js';
 
 let _wizardState = null;
 let _wizardView = 'front';
@@ -226,6 +227,20 @@ function _getSuggestedPrices(s) {
         balanced: Math.max(15, round5(unitCost * 1.50)),
         premium:  Math.max(20, round5(unitCost * 2.20))
     };
+}
+
+// Saran F-AI (hanya bila F-AI terbuka). null bila belum aktif.
+function _getFaiAdvice(s) {
+    let data = {};
+    try { data = state.get(); } catch (e) {}
+    if (!isFaiActive(data)) return null;
+    let unitCost = 50, stats = {};
+    const ps = window.__game && window.__game.products;
+    try { unitCost = ps.computeUnitCost(s); } catch (e) {}
+    try { stats = _computeStats(s) || {}; } catch (e) {}
+    const skip = [];
+    if (!s.cameraId || s.cameraId === 'none') skip.push('camera');
+    return getFaiDesignAdvice(stats, unitCost, _getPriceLimits(s), skip);
 }
 
 const WZ_CSS = `
@@ -1017,6 +1032,18 @@ function _step4(s) {
     const limits = _getPriceLimits(s);
     const afford = _affordInfo(s);
     const prices = _getSuggestedPrices(s);
+    const fai = _getFaiAdvice(s);
+    if (fai) prices.fai = fai.price;
+    let faiBtn = '', faiTip = '';
+    if (fai) {
+        const L = STAT_LABELS[_isEn() ? 'en' : 'id'];
+        faiBtn = `<button class="wz-suggest-btn" data-wiz-suggest="fai"><b>$${fai.price}</b><span>F-AI</span></button>`;
+        if (fai.weakKey) {
+            faiTip = `<div style="font-size:11px; color:var(--text-tertiary); margin:-8px 0 14px; line-height:1.4;">${renderIcon('brain', 12)} ${escapeHtml(_pick(
+                'F-AI: harga ' + _fmtUsd(fai.price) + ' sesuai mutu ponsel ini. Sisi terlemah: ' + _statLabel(fai.weakKey, L) + ' (' + fai.weakVal + ').',
+                'F-AI: ' + _fmtUsd(fai.price) + ' fits this phone\'s quality. Weakest area: ' + _statLabel(fai.weakKey, L) + ' (' + fai.weakVal + ').'))}</div>`;
+        }
+    }
 
     return `
         <div class="wiz-price-layout">
@@ -1045,7 +1072,9 @@ function _step4(s) {
                 <b>$${prices.premium}</b>
                 <span>${_tf('wiz.price.premium', 'Premium')}</span>
             </button>
+            ${faiBtn}
         </div>
+        ${faiTip}
 
         <div>
             <div class="card-title">${t('wiz.step4.summary')}</div>
