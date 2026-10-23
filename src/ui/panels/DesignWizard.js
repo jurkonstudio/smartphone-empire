@@ -535,6 +535,8 @@ function _render() {
     const lblFront = _tf('wiz.view.front', _pick('Depan', 'Front'));
     const lblBack  = _tf('wiz.view.back', _pick('Belakang', 'Back'));
     const lblBox   = _tf('wiz.view.box', _pick('Kemasan', 'Box'));
+    const lblOpen  = _tf('wiz.view.open', _pick('Terbuka', 'Open'));
+    const canOpen  = s.formFactorId === 'ff_fold' || s.formFactorId === 'ff_tri_fold';
 
     const stepper = [1, 2, 3, 4].map(function (i) {
         const cls = i === s.step ? 'active' : (i < s.step ? 'done' : '');
@@ -555,6 +557,7 @@ function _render() {
                         <div class="wiz-view-toggle">
                             <button type="button" data-wiz-view="front" aria-pressed="${_wizardView === 'front'}" class="${_wizardView === 'front' ? 'active' : ''}">${lblFront}</button>
                             <button type="button" data-wiz-view="back" aria-pressed="${_wizardView === 'back'}" class="${_wizardView === 'back' ? 'active' : ''}">${lblBack}</button>
+                            ${canOpen ? `<button type="button" data-wiz-view="open" aria-pressed="${_wizardView === 'open'}" class="${_wizardView === 'open' ? 'active' : ''}">${lblOpen}</button>` : ''}
                             <button type="button" data-wiz-view="box" aria-pressed="${_wizardView === 'box'}" class="${_wizardView === 'box' ? 'active' : ''}">${lblBox}</button>
                         </div>
                         <button class="btn-secondary" data-wiz-detail>${t('wiz.detail.btn_show')}</button>
@@ -639,7 +642,7 @@ function _bindStep() {
 
     root.querySelectorAll('[data-wiz-view]').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            _wizardView = (btn.dataset.wizView === 'back' || btn.dataset.wizView === 'box') ? btn.dataset.wizView : 'front';
+            _wizardView = (btn.dataset.wizView === 'back' || btn.dataset.wizView === 'box' || btn.dataset.wizView === 'open') ? btn.dataset.wizView : 'front';
             root.querySelectorAll('[data-wiz-view]').forEach(function (b) {
                 b.classList.toggle('active', b.dataset.wizView === _wizardView);
                 b.setAttribute('aria-pressed', b.dataset.wizView === _wizardView ? 'true' : 'false');
