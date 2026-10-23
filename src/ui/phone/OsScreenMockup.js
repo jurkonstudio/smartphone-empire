@@ -11,6 +11,7 @@ import { getDesignEraForYear } from '../../data/era-design.data.js';
 import { resolveSpec } from '../../data/phone-specs.data.js';
 import { t as _tr, LanguageService } from '../../core/LanguageService.js';
 import { phoneClockText } from './PhoneMockup.js';
+import { renderRetroOsScene } from './RetroOsScene.js';
 
 
 // [i18n] Teks SVG diterjemahkan saat render (bukan saat import) dan di-escape untuk SVG/HTML.
@@ -1173,6 +1174,15 @@ export function renderOsScreenMockup(opts) {
     const mode = resolveOsMode(year, completed);
 
     let svgInner = '';
+    // [v2029.x] Era 2000-2002: adegan komputer jadul + ponsel (tick saat fix/update).
+    if (mode === 'mono' && !opts.plain) {
+        const botsActive = (osState.bugs || []).filter(function (b) { return b.status === 'active' || b.status === 'patching'; }).length;
+        return renderRetroOsScene({
+            name: osState.name || '', version: getCurrentVersionString(osState), bugs: botsActive,
+            screen: (opts.screen === 'patch' || opts.screen === 'update') ? opts.screen : null,
+            progress: opts.progress, bugName: opts.bugName, toVersion: opts.toVersion, done: opts.done
+        }, size);
+    }
     // Layar progres: memperbaiki bug (patch) atau memperbarui versi OS (update).
     if (opts.screen === 'patch' || opts.screen === 'update') {
         const inner = renderOsProgress(mode, spec, w, h, size, {
