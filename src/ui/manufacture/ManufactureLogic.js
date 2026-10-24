@@ -44,6 +44,68 @@ export var CHIP_ORDER = ['fab', 'soc', 'ram', 'display', 'camera', 'battery', 'a
 // Pipa wafer: [dari, ke]. Aktif (mengalir) bila kedua pabrik berdiri.
 export var PIPES = [['fab', 'soc'], ['fab', 'ram'], ['fab', 'display']];
 
+// ============================================================
+// JARINGAN JALAN, APRON & DERMAGA (data murni, tanpa THREE)
+// Koordinat dunia: x ke timur, z ke selatan. Dipakai ManufactureScene untuk menggambar jalan dan
+// menjalankan truk kontainer. ROAD_EDGES dengan draw:false hanya untuk rute (permukaannya apron).
+// ============================================================
+export var ROAD_NODES = {
+    hwW:  [-16.6, 0],      // ujung barat jalan raya (bertemu jalan akses barat)
+    socW: [-16.6, -4.0],   // akses pabrik SoC (baris utara)
+    wsw:  [-16.6, 8.95],   // persimpangan barat-selatan (jalan depan Assembly)
+    bat:  [-12, 8.95],     // akses Baterai
+    dis:  [-4, 8.95],      // akses Layar
+    asm:  [-0.5, 8.95],    // gerbang pemuatan Assembly
+    cam:  [4, 8.95],       // akses Kamera
+    hubS: [12.2, 8.95],    // persimpangan Pusat Logistik / pangkal apron
+    dock: [14.7, 10.5]     // titik bongkar di bawah crane (apron)
+};
+export var ROAD_EDGES = [
+    { a: 'hwW', b: 'socW', w: 1.5 },
+    { a: 'hwW', b: 'wsw', w: 1.5 },
+    { a: 'wsw', b: 'bat', w: 1.4 },
+    { a: 'bat', b: 'dis', w: 1.4 },
+    { a: 'dis', b: 'asm', w: 1.4 },
+    { a: 'asm', b: 'cam', w: 1.4 },
+    { a: 'cam', b: 'hubS', w: 1.4 },
+    { a: 'hubS', b: 'dock', w: 2.0, draw: false }
+];
+// Apron (lapangan beton) di bawah crane, dan dermaga yang menjorok ke laut.
+export var APRON = { x0: 12.2, x1: 17.6, z0: 9.6, z1: 11.4 };
+export var DOCK = { x: 14.7, z0: 11.4, z1: 19.5, w: 1.4, shipX: 16.6, shipZ: 17.0 };
+// Truk kontainer: setiap slot = satu truk yang berangkat dari node asal ke dermaga lalu kembali.
+export var CT_SLOTS = [
+    { id: 'assembly', origin: 'asm' },
+    { id: 'hub', origin: 'hubS' },
+    { id: 'battery', origin: 'bat' },
+    { id: 'display', origin: 'dis' },
+    { id: 'camera', origin: 'cam' },
+    { id: 'soc', origin: 'socW' }
+];
+
+// Rute terpendek (Dijkstra sederhana, graf kecil) dari node 'from' ke 'to'. Mengembalikan daftar id node, atau null.
+export function shortestRoute(from, to) {
+    var dist = {}, prev = {}, todo = Object.keys(ROAD_NODES);
+    todo.forEach(function (n) { dist[n] = Infinity; });
+    if (!(from in dist) || !(to in dist)) return null;
+    dist[from] = 0;
+    while (todo.length) {
+        todo.sort(function (p, q) { return dist[p] - dist[q]; });
+        var u = todo.shift();
+        if (dist[u] === Infinity || u === to) break;
+        ROAD_EDGES.forEach(function (e) {
+            var v = e.a === u ? e.b : (e.b === u ? e.a : null);
+            if (!v) return;
+            var A = ROAD_NODES[u], B = ROAD_NODES[v], nd = dist[u] + Math.hypot(B[0] - A[0], B[1] - A[1]);
+            if (nd < dist[v]) { dist[v] = nd; prev[v] = u; }
+        });
+    }
+    if (dist[to] === Infinity) return null;
+    var path = [to];
+    while (path[0] !== from) path.unshift(prev[path[0]]);
+    return path;
+}
+
 // Pabrik komponen yang butuh Fab (dibaca dari data, bukan ditulis ulang).
 export function plantNeedsFab(id) { var pt = getPlantTypeById(id); return !!(pt && pt.requiresFab); }
 

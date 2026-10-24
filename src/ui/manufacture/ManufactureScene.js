@@ -28,7 +28,8 @@ import { bus } from '../../core/EventBus.js';
 import { createLookRig, detectQuality } from '../campus/CampusLook.js';
 import { createCampusControls } from '../campus/CampusControls.js';
 import { BASE_VIEW, MAX_DPR, FRAME_MS, MIN_RESIZE_DELTA, NARROW_PX, clamp, tint, hexCss, readAccent, prefersReducedMotion } from '../office/OfficeConfig.js';
-import { PLOTS, PLOT_BY_ID, CHIP_ORDER, PIPES, plotState, allStates, plotSig, describePlot, plotTitle, runAction, ms } from './ManufactureLogic.js';
+import { PLOTS, PLOT_BY_ID, CHIP_ORDER, PIPES, plotState, allStates, plotSig, describePlot, plotTitle, runAction, ms,
+    ROAD_NODES, ROAD_EDGES, APRON, DOCK, CT_SLOTS, shortestRoute } from './ManufactureLogic.js';
 import { LINK, buildLinkBridge, mfBridgeCfg, buildCampusFar } from '../campus/IslandLink.js';
 
 // [terang, gelap]
@@ -60,13 +61,17 @@ function coastR(th) {
     r = r * (1 + 0.045 * Math.sin(3 * th + 0.8) + 0.03 * Math.sin(5 * th + 2.1));
     var sn = Math.sin(th);                                  // daratan tambahan di selatan untuk pabrik Assembly
     if (sn > 0) r *= 1 + 0.6 * sn * sn * (1 - smooth01((r * Math.cos(th) - 8) / 4.5));
+    var lb = (th - 0.8) / 0.55;                             // lobe tenggara: ruang apron & dermaga Pusat Logistik
+    r *= 1 + 0.16 * Math.max(0, sn) * Math.exp(-lb * lb);   // nol di th = 0 (jembatan Kampus tidak bergeser)
     return r;
 }
 function onIsland(x, z, m) { return Math.hypot(x, z) < coastR(Math.atan2(z, x)) - (m || 0); }
 function nearPlots(x, z, m) {
     m = m || 0;
     if (Math.abs(x) < 16.4 + m && Math.abs(z) < 8.9 + m) return true;
-    return x > -17.8 - m && x < 7.8 + m && z > 8.2 - m && z < 18.9 + m;      // petak Assembly + jalan akses
+    if (x > -17.8 - m && x < -15.0 + m && z > -4.8 - m && z < 9.9 + m) return true;   // jalan akses barat
+    if (x > -17.8 - m && x < 7.8 + m && z > 8.2 - m && z < 18.9 + m) return true;     // petak Assembly + jalan akses
+    return x > 7.8 - m && x < 18.2 + m && z > 8.2 - m && z < 20.2 + m;                // apron + dermaga
 }
 
 var ZC = -0.6;                       // pusat bangunan utama di dalam petak (lokal z); halaman di sisi +z
@@ -307,9 +312,8 @@ export function createManufactureScene(THREE, container, gameState) {
     // plaza + jalan raya (z = 0) + marka + trotoar
     box(shell, 'base', 33.4, 0.1, 17.9, 0, 0.05, 0);
     box(shell, 'road', 33.4, 0.03, 2.7, 0, 0.115, 0);
-    box(shell, 'road', 1.5, 0.03, 9.6, -16.6, 0.115, 4.5);          // jalan akses barat menuju Assembly
-    box(shell, 'road', 25.6, 0.03, 1.4, -4.8, 0.115, 8.95);         // jalan depan Assembly
-    for (var rl = 0; rl < 12; rl++) box(shell, 'roadLine', 0.7, 0.012, 0.07, -16.2 + rl * 2.0, 0.135, 8.95);
+    buildRoads();                                                   // jalan selatan & barat dari graf ROAD_EDGES
+    buildApron();                                                   // apron Pusat Logistik (lapangan bongkar)
     box(shell, 'curb', 33.4, 0.05, 0.1, 0, 0.125, -1.4);
     box(shell, 'curb', 33.4, 0.05, 0.1, 0, 0.125, 1.4);
     var li;
@@ -322,6 +326,10 @@ export function createManufactureScene(THREE, container, gameState) {
             lampPosts.push(sph(shell, 'lamp', 0.12, li, 1.45, zz));
         });
     }
+    [[-9.5, 9.95], [2.0, 9.95], [9.0, 9.95]].forEach(function (lp) {          // lampu jalan selatan (sisi Assembly)
+        cyl(shell, 'metal', 0.05, 1.3, lp[0], 0.75, lp[1]);
+        lampPosts.push(sph(shell, 'lamp', 0.12, lp[0], 1.45, lp[1]));
+    });
     // pipa wafer dari Fab -> SoC / RAM / Layar. Tiap pipa = rangkaian segmen sumbu-lurus + kubus wafer yang mengalir.
     function pipePath(pts, plotKey) {
         var g = new THREE.Group(), glowSegs = [], i, lens = [0], total = 0;
@@ -373,6 +381,128 @@ export function createManufactureScene(THREE, container, gameState) {
     [[ACC.fab, 1, 0.0], [ACC.battery, 1, 0.5], [ACC.camera, -1, 0.25], [ACC.display, -1, 0.75]].forEach(function (c, i) {
         truckObjs.push({ g: makeTruck(c[0], c[1]), dir: c[1], off: c[2], lane: c[1] > 0 ? 0.62 : -0.62, idx: i });
     });
+
+    // ============================================================
+    // JALAN DARI GRAF & TRUK KONTAINER
+    // Jalan digambar dari ROAD_EDGES (satu kotak per ruas + garis putus-putus). Truk kontainer berjalan di atas
+    // graf: berangkat dari pabrik/Assembly/Pusat Logistik ke dermaga, bongkar, lalu kembali. Hanya ambien.
+    // ============================================================
+    function buildRoads() {
+        ROAD_EDGES.forEach(function (e) {
+            if (e.draw === false) return;
+            var A = ROAD_NODES[e.a], B = ROAD_NODES[e.b];
+            var dx = B[0] - A[0], dz = B[1] - A[1], L = Math.hypot(dx, dz), ang = -Math.atan2(dz, dx);
+            var rd = box(shell, 'road', L + e.w, 0.03, e.w, (A[0] + B[0]) / 2, 0.115, (A[1] + B[1]) / 2);
+            rd.rotation.y = ang;
+            var n = Math.max(1, Math.floor(L / 2.2)), k;
+            for (k = 0; k < n; k++) {
+                var t = (k + 0.5) / n;
+                box(shell, 'roadLine', 0.8, 0.012, 0.07, A[0] + dx * t, 0.135, A[1] + dz * t).rotation.y = ang;
+            }
+        });
+    }
+    function buildApron() {
+        var aw = APRON.x1 - APRON.x0, ad = APRON.z1 - APRON.z0, ax = (APRON.x0 + APRON.x1) / 2, az = (APRON.z0 + APRON.z1) / 2;
+        box(shell, 'pad', aw, 0.03, ad, ax, 0.125, az);
+        box(shell, 'safety', aw - 0.4, 0.012, 0.08, ax, 0.14, APRON.z1 - 0.2);            // garis kuning tepi apron
+    }
+
+    var CT_LANE = 0.3, CT_SPEED = 1.5, CT_LOAD = 4, CT_UNLOAD = 3;     // lajur (dari tengah), kecepatan, jeda muat/bongkar (detik)
+    var ctList = [];
+    function lerpAng(a, b, t) { var d = Math.atan2(Math.sin(b - a), Math.cos(b - a)); return a + d * t; }
+    function ctSmooth(x) { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); }
+    // Jalur berlajur kanan dari daftar node. Titik di tiap simpul memakai offset 'miter' agar belokan menyambung.
+    function routePath(ids) {
+        var P = [], i, n = ids.length, nrm = [];
+        for (i = 0; i < n; i++) P.push(ROAD_NODES[ids[i]]);
+        for (i = 0; i < n - 1; i++) {
+            var dx = P[i + 1][0] - P[i][0], dz = P[i + 1][1] - P[i][1], L = Math.hypot(dx, dz) || 1;
+            nrm.push([-dz / L, dx / L]);                                  // normal kanan (sisi kanan jalan)
+        }
+        var pts = [], lens = [0];
+        for (i = 0; i < n; i++) {
+            var o;
+            if (i === 0) o = nrm[0];
+            else if (i === n - 1) o = nrm[n - 2];
+            else {
+                var a = nrm[i - 1], b = nrm[i], mx = a[0] + b[0], mz = a[1] + b[1], ml = Math.hypot(mx, mz);
+                if (ml < 1e-6) o = a;
+                else { var c = Math.max(0.5, (mx * a[0] + mz * a[1]) / ml); o = [mx / ml / c, mz / ml / c]; }
+            }
+            pts.push([P[i][0] + o[0] * CT_LANE, P[i][1] + o[1] * CT_LANE]);
+            if (i > 0) lens.push(lens[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+        }
+        return { pts: pts, lens: lens, total: lens[lens.length - 1] };
+    }
+    // Posisi dan arah pada jarak s sepanjang jalur. Arah dilicinkan di dekat simpul agar belokan tidak patah.
+    function samplePath(p, s) {
+        var n = p.lens.length, s0 = clamp(s, 0, p.total), i = 1;
+        while (i < n - 1 && s0 > p.lens[i]) i++;
+        var seg = (p.lens[i] - p.lens[i - 1]) || 1, f = clamp((s0 - p.lens[i - 1]) / seg, 0, 1);
+        var a = p.pts[i - 1], b = p.pts[i];
+        var th = Math.atan2(b[1] - a[1], b[0] - a[0]);
+        if (i > 1 && f < 0.5) {
+            var tp = Math.atan2(p.pts[i - 1][1] - p.pts[i - 2][1], p.pts[i - 1][0] - p.pts[i - 2][0]);
+            th = lerpAng(tp, th, 0.5 + 0.5 * ctSmooth(f / 0.5));
+        } else if (i < n - 1 && f > 0.5) {
+            var tn = Math.atan2(p.pts[i + 1][1] - p.pts[i][1], p.pts[i + 1][0] - p.pts[i][0]);
+            th = lerpAng(th, tn, 0.5 * ctSmooth((f - 0.5) / 0.5));
+        }
+        return { x: a[0] + (b[0] - a[0]) * f, z: a[1] + (b[1] - a[1]) * f, ang: th };
+    }
+    // Truk kontainer: kepala traktor di +x, bak datar, dan kontainer 20 ft berwarna aksen pabrik.
+    function makeContainerTruck(accent) {
+        var g = new THREE.Group();
+        box(g, 'dark', 1.0, 0.06, 0.5, 0.0, 0.1, 0);                                       // sasis
+        box(g, 'white', 0.42, 0.4, 0.5, 0.52, 0.34, 0);                                    // kabin
+        box(g, 'glass', 0.04, 0.2, 0.4, 0.74, 0.4, 0);                                     // kaca depan
+        box(g, accent, 0.06, 0.1, 0.52, 0.52, 0.56, 0);                                    // pita atap kabin
+        var cont = box(g, accent, 1.05, 0.5, 0.56, -0.45, 0.46, 0);                        // kontainer
+        box(g, 'white', 1.07, 0.04, 0.58, -0.45, 0.72, 0);                                 // pita putih kontainer
+        [-0.7, -0.4, 0.3, 0.55].forEach(function (wx) { [-0.27, 0.27].forEach(function (wz) { cyl(g, 'dark', 0.1, 0.1, wx, 0.1, wz).rotation.x = Math.PI / 2; }); });
+        g.userData.cargo = cont;
+        shell.add(g);
+        return g;
+    }
+    // Sumber truk aktif: pabrik/Assembly sedang berproduksi, Pusat Logistik punya stok.
+    function srcActive(id) {
+        var s = states[id];
+        if (!s) return false;
+        if (id === 'hub') return s.status === 'built' && s.stock > 0;
+        return !!s.producing;
+    }
+    CT_SLOTS.forEach(function (sl, i) {
+        var outIds = shortestRoute(sl.origin, 'dock');
+        if (!outIds) return;
+        var fwd = routePath(outIds), back = routePath(outIds.slice().reverse());
+        var g = makeContainerTruck(ACC[sl.id] || ACC.hub);
+        var T1 = fwd.total / CT_SPEED;
+        ctList.push({
+            slot: sl, g: g, cargo: g.userData.cargo, fwd: fwd, back: back, T1: T1,
+            cycle: CT_LOAD + T1 + CT_UNLOAD + back.total / CT_SPEED, phase: i * 7.3, active: false
+        });
+    });
+    // Pose truk pada waktu t dalam siklus. Jeda muat & bongkar berpindah halus antara lajur pergi dan pulang,
+    // sehingga tidak ada lompatan saat berbalik di dermaga atau saat siklus diulang.
+    function mixPose(a, b, u) { return { x: a.x + (b.x - a.x) * u, z: a.z + (b.z - a.z) * u, ang: lerpAng(a.ang, b.ang, u) }; }
+    function ctPose(tr, t) {
+        var LO = CT_LOAD, T1 = tr.T1, UN = CT_UNLOAD;
+        if (t < LO) return { p: mixPose(samplePath(tr.back, tr.back.total), samplePath(tr.fwd, 0), ctSmooth(t / LO)), cargo: true };
+        if (t < LO + T1) return { p: samplePath(tr.fwd, (t - LO) * CT_SPEED), cargo: true };
+        if (t < LO + T1 + UN) return { p: mixPose(samplePath(tr.fwd, tr.fwd.total), samplePath(tr.back, 0), ctSmooth((t - LO - T1) / UN)), cargo: false };
+        return { p: samplePath(tr.back, (t - LO - T1 - UN) * CT_SPEED), cargo: false };
+    }
+    function animateContainers(sec) {
+        for (var i = 0; i < ctList.length; i++) {
+            var tr = ctList[i];
+            tr.g.visible = tr.active;
+            if (!tr.active) continue;
+            var pose = ctPose(tr, ambient ? (sec + tr.phase) % tr.cycle : CT_LOAD);     // ambien mati: parkir di asal, kargo terlihat
+            tr.g.position.set(pose.p.x, 0.12, pose.p.z);
+            tr.g.rotation.y = -pose.p.ang;
+            tr.cargo.visible = pose.cargo;
+        }
+    }
 
     // jembatan jalan raya ke Pulau Kampus (timur) + siluet Pulau Kampus. Adaptor memakai geometri/material scene ini
     // (ikut tema lewat COLORS & di-dispose bersama G/M). Peta Kampus memakai jembatan yang sama dari sisi seberang.
@@ -667,9 +797,10 @@ export function createManufactureScene(THREE, container, gameState) {
         var cab = box(f, 'steel', 0.4, 0.3, 0.3, cx0, 2.6, 2.15); void cab;
         tk.push(function (sec) { hook.position.z = ambient ? 3.4 + Math.sin(sec * 0.5) * 1.0 : 3.4; hook.position.y = ambient && on ? 1.9 + Math.sin(sec * 1.0) * 0.4 : 2.0; });
         // dermaga kayu + kapal kargo
-        for (i = 0; i < 5; i++) box(f, 'wood', 1.4, 0.12, 1.55, cx0, 0.02, 3.3 + i * 1.55);
-        box(f, 'metal', 0.18, 0.5, 0.18, cx0 - 0.8, 0.2, 3.3 + 4 * 1.55 + 0.6); box(f, 'metal', 0.18, 0.5, 0.18, cx0 + 0.8, 0.2, 3.3 + 4 * 1.55 + 0.6);
-        var ship = new THREE.Group(); ship.position.set(cx0 + 1.6, -0.1, 3.3 + 4 * 1.55 + 0.9); f.add(ship);
+        var dZ0 = DOCK.z0 - 5.2, dZ1 = DOCK.z1 - 5.2, nP = 6, plk = (dZ1 - dZ0) / nP;    // koordinat lokal (origin hub = 12, 5.2)
+        for (i = 0; i < nP; i++) box(f, 'wood', DOCK.w, 0.12, plk - 0.04, cx0, 0.02, dZ0 + (i + 0.5) * plk);
+        for (i = 0; i <= nP; i += 2) [-0.6, 0.6].forEach(function (ox) { box(f, 'metal', 0.14, 0.9, 0.14, cx0 + ox, -0.25, dZ0 + i * plk); });
+        var ship = new THREE.Group(); ship.position.set(cx0 + (DOCK.shipX - DOCK.x), -0.1, DOCK.shipZ - 5.2); f.add(ship);
         box(ship, 'hull', 1.2, 0.55, 3.8, 0, 0.1, 0); box(ship, 'red', 1.22, 0.14, 3.82, 0, 0.0, 0);
         box(ship, 'white', 0.9, 0.7, 0.6, 0, 0.75, -1.3); box(ship, 'glass', 0.92, 0.18, 0.62, 0, 0.9, -1.3);
         var nShipBoxes = clamp(big, 1, 6);
@@ -1064,6 +1195,7 @@ export function createManufactureScene(THREE, container, gameState) {
     var activeTrucks = 1;
     function animateShell(sec) {
         var i, k, tr, u;
+        animateContainers(sec);
         for (i = 0; i < truckObjs.length; i++) {
             tr = truckObjs[i];
             tr.g.visible = i < activeTrucks;
@@ -1096,6 +1228,7 @@ export function createManufactureScene(THREE, container, gameState) {
         var active = 0;
         plotList.forEach(function (r) { if (r.st && r.st.producing) active++; });
         activeTrucks = clamp(1 + active, 1, truckObjs.length);
+        ctList.forEach(function (tr) { tr.active = srcActive(tr.slot.id); });
         pipeObjs.forEach(function (po) {
             var a = states[po.from], b = states[po.to];
             var on = !!(a && b && a.status === 'built' && b.status === 'built' && !a.building && !b.building);
@@ -1388,7 +1521,7 @@ export function createManufactureScene(THREE, container, gameState) {
     controls = createCampusControls(canvas, {
         unitsPerPixel: function (zoom) { return (BASE_VIEW / zoom) / Math.max(1, container.clientHeight); },
         minZoom: 0.2, maxZoom: 3,
-        bounds: { minX: -20, maxX: LINK.OFFSET - 12, minZ: -20, maxZ: 27 },   // geser ke timur sampai jembatan/Pulau Kampus
+        bounds: { minX: -22, maxX: LINK.OFFSET - 12, minZ: -20, maxZ: 27 },   // geser ke timur sampai jembatan/Pulau Kampus
         onChange: function () { applyCamera(); requestRender(); },
         onTap: handleTap
     });
