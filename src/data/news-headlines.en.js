@@ -306,56 +306,6 @@ export const MONTHLY_HEADLINES_EN = {
         text: 'Samsung closes the year with strong market share. Competition heading into 2006 is predicted to intensify.'
     },
     
-    // ==================== 2005 ====================
-    '2005-1': {
-        headline: '2005: The year Symbian ruled and the iPhone was still a secret',
-        text: 'Nokia\'s Symbian OS dominates the smartphone market with over 60% share. Meanwhile, Apple and Motorola launch the ROKR music phone, which flops. Google quietly acquires Android Inc.'
-    },
-    '2005-2': {
-        headline: 'Nokia Nseries unveiled: the multimedia phone revolution begins',
-        text: 'Nokia introduces the Nseries family, led by the N95 with a 5MP camera, GPS, and Wi-Fi. It becomes the benchmark for high-end phones for years.'
-    },
-    '2005-3': {
-        headline: 'Sony Ericsson W800 Walkman Phone goes on sale',
-        text: 'The W800 combines a phone with a digital music player, selling millions. It sparks the mobile music era and forces Apple to accelerate its own phone plans.'
-    },
-    '2005-4': {
-        headline: 'Motorola RAZR V3 becomes the best-selling clamshell of all time',
-        text: 'The ultra-thin RAZR sells over 130 million units worldwide. Its design becomes a cultural icon, but Motorola struggles to replicate its success.'
-    },
-    '2005-5': {
-        headline: 'BlackBerry pushes into consumer market with the 7100 series',
-        text: 'Research In Motion tries to move beyond corporate email. The 7100\'s SureType keyboard wins fans, but the iPhone threat looms large.'
-    },
-    '2005-6': {
-        headline: '3G networks expand across Europe and Asia',
-        text: 'Vodafone, NTT DoCoMo, and SK Telecom ramp up 3G coverage. Video calls and mobile TV begin to reach mainstream users.'
-    },
-    '2005-7': {
-        headline: 'Samsung overtakes Motorola as world\'s second-largest phone maker',
-        text: 'Samsung\'s aggressive portfolio strategy pays off. It ships over 100 million phones in 2005, cementing its place behind Nokia.'
-    },
-    '2005-8': {
-        headline: 'Mobile music downloads surge as carriers launch 3G services',
-        text: 'Operators report record music download numbers. The iPod\'s dominance is challenged by phones that can store and play thousands of songs.'
-    },
-    '2005-9': {
-        headline: 'Nokia unveils the N90: a camcorder-style phone with Carl Zeiss optics',
-        text: 'The N90\'s rotating screen and 2MP camera make it a favorite for mobile photographers. It signals Nokia\'s ambition in high-end imaging.'
-    },
-    '2005-10': {
-        headline: 'Windows Mobile 5.0 launches, but struggles against Symbian',
-        text: 'Microsoft updates its mobile OS with better push email and Office support. Adoption remains low outside enterprise.'
-    },
-    '2005-11': {
-        headline: 'Google acquires Android Inc. for $50 million',
-        text: 'The quiet acquisition sets the stage for a mobile OS revolution. Andy Rubin\'s team begins building what will become the world\'s most-used smartphone platform.'
-    },
-    '2005-12': {
-        headline: 'Global phone sales top 800 million units in 2005',
-        text: 'Nokia sells over 260 million phones. Emerging markets drive growth, while camera phones become standard even in budget devices.'
-    },
-
     // ==================== 2006 ====================
     '2006-1': {
         headline: 'Nokia N95 leaks: 5MP camera, GPS, and dual-slide design',
@@ -371,7 +321,7 @@ export const MONTHLY_HEADLINES_EN = {
     },
     '2006-4': {
         headline: 'Sony Ericsson Walkman phones dominate mobile music',
-        text: 'The W810 and W850 sell in record numbers. Sony Ericsson captures over 20% of the European phone market.'
+        text: 'The W810 and W850 sell in record numbers. Sony Ericsson gains share as music becomes a selling point.'
     },
     '2006-5': {
         headline: 'Nokia N73 and N93 launch: photography and video converge',
@@ -398,12 +348,12 @@ export const MONTHLY_HEADLINES_EN = {
         text: 'Motorola\'s reliance on the aging RAZR hurts its bottom line. CEO Ed Zander faces pressure to find a successor.'
     },
     '2006-11': {
-        headline: 'Nokia N800 Internet Tablet launches: a pre-iPad experiment',
-        text: 'The Linux-based tablet offers web browsing and email on a 4-inch screen. It\'s a niche device but hints at the future.'
+        headline: 'Microsoft launches the Zune to challenge the iPod',
+        text: 'The music player arrives with Wi-Fi sharing and a subscription store. Sales stay modest, but music is now a battleground for phone makers too.'
     },
     '2006-12': {
         headline: 'Global phone sales hit 1 billion units for the first time',
-        text: 'Nokia, Samsung, and Motorola lead the market. Camera phones outsell digital cameras for the first time.'
+        text: 'Nokia, Motorola, and Samsung lead the market. Camera phones are now far more common than dedicated digital cameras.'
     },
 
     // ==================== 2007 ====================
@@ -436,8 +386,8 @@ export const MONTHLY_HEADLINES_EN = {
         text: 'Nokia continues its Nseries dominance. The N82\'s Xenon flash makes it the best camera phone of the year.'
     },
     '2007-8': {
-        headline: 'Google announces Android: a free, open mobile OS',
-        text: 'The Open Handset Alliance is formed. Google promises "thousands of Google phones." The iPhone now has a rival ecosystem.'
+        headline: 'Rumors of a Google phone grow as talks with operators leak',
+        text: 'Reports say Google is courting carriers and chipmakers for a mobile platform. Handset makers watch closely after the iPhone launch.'
     },
     '2007-9': {
         headline: 'iPhone price cut sparks outrage; Apple offers $100 credit',
@@ -448,8 +398,8 @@ export const MONTHLY_HEADLINES_EN = {
         text: 'The N95 is praised for its camera, GPS, and multimedia features. It\'s the last Symbian phone to dominate the high-end market.'
     },
     '2007-11': {
-        headline: 'Google releases Android SDK: developers jump in',
-        text: 'The first Android developer kit is released. Over 10,000 developers sign up in the first week. A new mobile ecosystem is born.'
+        headline: 'Google unveils Android and the Open Handset Alliance',
+        text: 'Dozens of firms, including HTC, Motorola, Qualcomm, and T-Mobile, back a free open mobile OS. A developer preview follows within days.'
     },
     '2007-12': {
         headline: 'Nokia sells 437 million phones in 2007, but iPhone changes everything',

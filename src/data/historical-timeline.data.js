@@ -33,11 +33,39 @@ export const ICONIC_PHONES = [
         tags: ['durability', 'gaming', 'iconic', 'feature_phone']
     },
     {
+        year: 2000,
+        model: 'Sharp J-SH04',
+        maker: 'Sharp / J-Phone',
+        feature: 'Ponsel berkamera komersial pertama di Jepang, memulai tren kirim foto lewat ponsel.',
+        tags: ['camera', 'first', 'japan']
+    },
+    {
+        year: 2001,
+        model: 'Nokia 6310',
+        maker: 'Nokia',
+        feature: 'Ponsel bisnis dengan Bluetooth, WAP, dan GPRS; andalan eksekutif awal 2000-an.',
+        tags: ['business', 'bluetooth', 'gprs']
+    },
+    {
         year: 2002,
         model: 'Nokia 7650',
         maker: 'Nokia',
         feature: 'Ponsel Symbian pertama dengan kamera internal terintegrasi.',
         tags: ['symbian', 'camera', 'first']
+    },
+    {
+        year: 2002,
+        model: 'T-Mobile Sidekick (Danger Hiptop)',
+        maker: 'Danger / T-Mobile',
+        feature: 'Layar putar dengan keyboard penuh, populer untuk pesan instan dan email di kalangan anak muda.',
+        tags: ['keyboard', 'messaging', 'youth']
+    },
+    {
+        year: 2003,
+        model: 'Nokia 1100',
+        maker: 'Nokia',
+        feature: 'Ponsel dasar murah dan tahan banting; salah satu ponsel terlaris sepanjang masa di pasar berkembang.',
+        tags: ['budget', 'durability', 'emerging_market']
     },
     {
         year: 2004,
@@ -47,11 +75,25 @@ export const ICONIC_PHONES = [
         tags: ['design', 'thin', 'clamshell', 'iconic']
     },
     {
+        year: 2005,
+        model: 'Sony Ericsson W800 Walkman',
+        maker: 'Sony Ericsson',
+        feature: 'Ponsel Walkman pertama: pemutar musik, kartu memori, dan kamera 2MP dalam satu bodi.',
+        tags: ['music', 'camera', 'walkman']
+    },
+    {
         year: 2006,
         model: 'BlackBerry Pearl 8100',
         maker: 'BlackBerry',
         feature: 'Keyboard SureType, kamera, multimedia, mempopulerkan BBM di segmen konsumen umum.',
         tags: ['keyboard', 'business', 'bbm']
+    },
+    {
+        year: 2006,
+        model: 'LG Chocolate (KG800)',
+        maker: 'LG',
+        feature: 'Desain minimalis hitam dengan panel sentuh; membuktikan desain sebagai alasan membeli ponsel.',
+        tags: ['design', 'music', 'fashion']
     },
     {
         year: 2007,
@@ -162,6 +204,13 @@ export const OS_HISTORY = [
     },
     {
         year: 2002,
+        os: 'Java ME (J2ME / MIDP 2.0)',
+        dev: 'Sun Microsystems',
+        feature: 'Platform aplikasi dan game lintas merek ponsel; cikal bakal toko aplikasi lewat unduhan operator.',
+        tags: ['java', 'games', 'apps']
+    },
+    {
+        year: 2002,
         os: 'BlackBerry OS',
         dev: 'Research In Motion (RIM)',
         feature: 'Fokus pada keamanan data korporat, push email, dan layanan BlackBerry Messenger (BBM).',
@@ -173,6 +222,13 @@ export const OS_HISTORY = [
         dev: 'Microsoft',
         feature: 'Mengadopsi antarmuka mirip desktop Windows (Start Menu), menggunakan stylus.',
         tags: ['windows', 'microsoft', 'stylus']
+    },
+    {
+        year: 2005,
+        os: 'Windows Mobile 5.0',
+        dev: 'Microsoft',
+        feature: 'Membawa Office Mobile dan push email ke ponsel Windows; pesaing langsung BlackBerry dan Symbian.',
+        tags: ['windows', 'microsoft', 'email']
     },
     {
         year: 2007,

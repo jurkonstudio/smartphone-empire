@@ -55,7 +55,12 @@ export const QUALITY_EXPECTATION = [
 
 // Tren fitur yang dicari pasar per tahun (jangkar di titik tengah era).
 export const TREND_ANCHORS = [
+    // Gelombang tren era 2000-2007: ponsel awet (3310) -> ponsel berkamera -> desain tipis (RAZR)
+    // -> musik & multimedia -> layar sentuh (iPhone). Sebelumnya tren datar sebelum 2003.
+    [2000, { camera: 0.05, battery: 0.6, screen: 0.15, performance: 0.15, design: 0.3 }],
     [2003, { camera: 0.3, battery: 0.5, screen: 0.2, performance: 0.2, design: 0.4 }],
+    [2005, { camera: 0.45, battery: 0.4, screen: 0.25, performance: 0.25, design: 0.55 }],
+    [2007, { camera: 0.45, battery: 0.35, screen: 0.5, performance: 0.35, design: 0.6 }],
     [2010, { camera: 0.5, battery: 0.4, screen: 0.6, performance: 0.5, design: 0.6 }],
     [2016, { camera: 0.7, battery: 0.6, screen: 0.5, performance: 0.8, design: 0.5 }],
     [2022, { camera: 0.6, battery: 0.7, screen: 0.5, performance: 0.9, design: 0.5 }]

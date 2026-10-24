@@ -7,7 +7,7 @@
 // ============================================================
 export const COMPETITOR_NAMES = [
     'nokia', 'motorola', 'sony', 'ericsson', 'sonyericsson',
-    'samsung', 'lg', 'siemens', 'palm', 'blackberry', 'rim',
+    'samsung', 'lg', 'siemens', 'sagem', 'alcatel', 'sharp', 'nec', 'panasonic', 'palm', 'blackberry', 'rim',
     'apple', 'htc', 'google', 'android', 'huawei', 'xiaomi',
     'oppo', 'vivo', 'microsoft', 'lumia', 'honor', 'nothing',
     'benq', 'alcatel', 'sharp', 'panasonic', 'toshiba',

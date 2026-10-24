@@ -308,7 +308,104 @@ export const MONTHLY_HEADLINES = [
 
     { year: 2005, month: 12, source: 'Seoul Tech Daily', sourceId: 'seoultech_kr', tone: 'positive', era: 'firmware', tags: ['samsung', 'year_end'],
       headline: 'Samsung konsolidasi posisi nomor dua, ancam Nokia',
-      text: 'Samsung menutup tahun dengan pangsa pasar kuat. Persaingan menuju 2006 diprediksi makin intens.' }
+      text: 'Samsung menutup tahun dengan pangsa pasar kuat. Persaingan menuju 2006 diprediksi makin intens.' },
+
+    // ==================== 2006-2007 (Indonesia; sebelumnya hanya tersedia bahasa Inggris) ====================
+    { year: 2006, month: 1, source: 'TechPulse Global', sourceId: 'techpulse_us', tone: 'positive', era: 'firmware', tags: ['nokia', 'n95'],
+      headline: 'Nokia N95 bocor: kamera 5MP, GPS, dan desain dua arah',
+      text: 'N95 jadi ponsel paling dinanti tahun ini. Fiturnya menyaingi kamera digital dan perangkat GPS tersendiri.' },
+
+    { year: 2006, month: 2, source: 'TechPulse Global', sourceId: 'techpulse_us', tone: 'mixed', era: 'firmware', tags: ['motorola', 'q', 'windows_mobile'],
+      headline: 'Motorola Q meluncur sebagai "pembunuh BlackBerry"',
+      text: 'Perangkat Windows Mobile yang tipis ini menang penghargaan desain, tetapi gagal menggeser BlackBerry di pasar korporat.' },
+
+    { year: 2006, month: 3, source: 'MobileWeek Europe', sourceId: 'mobileweek_uk', tone: 'positive', era: 'firmware', tags: ['blackberry', 'pearl'],
+      headline: 'BlackBerry Pearl membawa trackball dan kamera ke pasar umum',
+      text: 'BlackBerry pertama RIM yang ramah konsumen terjual jutaan unit dan menandai langkah perusahaan keluar dari email korporat.' },
+
+    { year: 2006, month: 4, source: 'MobileWeek Europe', sourceId: 'mobileweek_uk', tone: 'positive', era: 'firmware', tags: ['sony_ericsson', 'walkman'],
+      headline: 'Ponsel Walkman Sony Ericsson menguasai musik mobile',
+      text: 'W810 dan W850 terjual dalam jumlah rekor. Sony Ericsson menambah pangsa pasar karena musik jadi alasan membeli ponsel.' },
+
+    { year: 2006, month: 5, source: 'Asia Mobile Review', sourceId: 'asiamobile_jp', tone: 'positive', era: 'firmware', tags: ['nokia', 'n73', 'n93'],
+      headline: 'Nokia N73 dan N93 meluncur: foto dan video menyatu',
+      text: 'Kamera 3,2MP dan perekaman video N93 menjadikannya pusat multimedia. Nokia memimpin segmen atas.' },
+
+    { year: 2006, month: 6, source: 'TechPulse Global', sourceId: 'techpulse_us', tone: 'mixed', era: 'firmware', tags: ['apple', 'rumor'],
+      headline: 'Proyek ponsel rahasia Apple memasuki tahap akhir',
+      text: 'Desas-desus ponsel Apple makin kencang dan kabarnya Cingular (AT&T) menyepakati kontrak eksklusif. Industri bersiap menghadapi gangguan besar.' },
+
+    { year: 2006, month: 7, source: 'Der Mobilfunk', sourceId: 'mobilfunk_de', tone: 'mixed', era: 'firmware', tags: ['mobile_tv', 'dvb_h'],
+      headline: 'Uji coba TV mobile dimulai di Eropa dan Asia',
+      text: 'DVB-H dan MediaFLO menjanjikan siaran TV langsung di ponsel. Operator menggelontorkan miliaran, tetapi peminatnya masih lambat.' },
+
+    { year: 2006, month: 8, source: 'Seoul Tech Daily', sourceId: 'seoultech_kr', tone: 'positive', era: 'firmware', tags: ['samsung', 'ultra_edition'],
+      headline: 'Samsung luncurkan lini Ultra Edition, ponsel tertipis dunia',
+      text: 'Ultra Edition memecahkan rekor ketebalan. Desain menjadi medan persaingan baru ponsel premium.' },
+
+    { year: 2006, month: 9, source: 'TechPulse Global', sourceId: 'techpulse_us', tone: 'positive', era: 'firmware', tags: ['nokia', 'n95'],
+      headline: 'Nokia N95 dijual: ponsel "serba bisa"',
+      text: 'N95 ludes dalam hitungan hari. Kamera 5MP, GPS, dan Wi-Fi menjadikannya ponsel dengan fitur terlengkap saat itu.' },
+
+    { year: 2006, month: 10, source: 'TechPulse Global', sourceId: 'techpulse_us', tone: 'negative', era: 'firmware', tags: ['motorola', 'razr'],
+      headline: 'Motorola meleset dari target saat penjualan RAZR melambat',
+      text: 'Ketergantungan pada RAZR yang menua menekan laba Motorola. CEO Ed Zander ditekan untuk mencari penerusnya.' },
+
+    { year: 2006, month: 11, source: 'TechPulse Global', sourceId: 'techpulse_us', tone: 'mixed', era: 'firmware', tags: ['microsoft', 'zune', 'music'],
+      headline: 'Microsoft luncurkan Zune untuk menantang iPod',
+      text: 'Pemutar musik ini hadir dengan berbagi lewat Wi-Fi dan toko langganan. Penjualan biasa saja, tetapi musik kini jadi medan tempur pabrikan ponsel juga.' },
+
+    { year: 2006, month: 12, source: 'MobileWeek Europe', sourceId: 'mobileweek_uk', tone: 'positive', era: 'firmware', tags: ['market', 'record'],
+      headline: 'Penjualan ponsel global tembus 1 miliar unit untuk pertama kali',
+      text: 'Nokia, Motorola, dan Samsung memimpin pasar. Ponsel berkamera kini jauh lebih umum daripada kamera digital tersendiri.' },
+
+    { year: 2007, month: 1, source: 'TechPulse Global', sourceId: 'techpulse_us', tone: 'positive', era: 'touch', tags: ['apple', 'iphone'],
+      headline: 'Steve Jobs perkenalkan iPhone: "produk revolusioner dan ajaib"',
+      text: 'Di Macworld, Jobs memperlihatkan iPhone dengan layar multi-sentuh dan browser web penuh. Penonton bersorak, pesaing panik.' },
+
+    { year: 2007, month: 2, source: 'MobileWeek Europe', sourceId: 'mobileweek_uk', tone: 'mixed', era: 'touch', tags: ['nokia', 'n95', 'ovi'],
+      headline: 'Nokia jawab iPhone dengan N95 8GB dan layanan Ovi',
+      text: 'Nokia bertaruh pada spesifikasi perangkat keras dan layanan. N95 8GB berkamera 5MP, tetapi era layar sentuh sudah dimulai.' },
+
+    { year: 2007, month: 3, source: 'Der Mobilfunk', sourceId: 'mobilfunk_de', tone: 'mixed', era: 'touch', tags: ['samsung', 'lg', 'cebit'],
+      headline: 'Samsung dan LG pamer pesaing iPhone di CeBIT',
+      text: 'F700 milik Samsung dan LG Prada sama-sama berlayar sentuh, tetapi belum menyamai pengalaman perangkat lunak iPhone.' },
+
+    { year: 2007, month: 4, source: 'TechPulse Global', sourceId: 'techpulse_us', tone: 'mixed', era: 'touch', tags: ['microsoft', 'iphone', 'prediction'],
+      headline: 'Ballmer (Microsoft): "iPhone tak punya peluang pangsa pasar berarti"',
+      text: 'Ballmer menilai iPhone terlalu mahal. Ucapan ini kelak jadi salah satu ramalan paling keliru dalam sejarah teknologi.' },
+
+    { year: 2007, month: 5, source: 'TechPulse Global', sourceId: 'techpulse_us', tone: 'positive', era: 'touch', tags: ['blackberry', 'curve'],
+      headline: 'RIM luncurkan BlackBerry Curve, BlackBerry terlaris sepanjang masa',
+      text: 'Curve memadukan keyboard penuh, kamera, dan pemutar media. Penjualannya melampaui puluhan juta unit.' },
+
+    { year: 2007, month: 6, source: 'TechPulse Global', sourceId: 'techpulse_us', tone: 'positive', era: 'touch', tags: ['apple', 'iphone', 'launch'],
+      headline: 'iPhone mulai dijual: antrean mengular di depan toko',
+      text: 'Ratusan orang mengantre di toko Apple dan AT&T. iPhone terjual 270.000 unit pada akhir pekan pertama. Era smartphone dimulai.' },
+
+    { year: 2007, month: 7, source: 'Asia Mobile Review', sourceId: 'asiamobile_jp', tone: 'positive', era: 'touch', tags: ['nokia', 'n81', 'n82'],
+      headline: 'Nokia umumkan N81 dan N82: fokus game dan fotografi',
+      text: 'Nseries tetap dominan. Lampu kilat xenon N82 menjadikannya ponsel kamera terbaik tahun ini.' },
+
+    { year: 2007, month: 8, source: 'MobileWeek Europe', sourceId: 'mobileweek_uk', tone: 'mixed', era: 'touch', tags: ['google', 'rumor'],
+      headline: 'Kabar ponsel Google menguat saat negosiasi dengan operator bocor',
+      text: 'Laporan menyebut Google mendekati operator dan pembuat chip untuk platform mobile. Pabrikan ponsel mengamati dengan cemas setelah iPhone.' },
+
+    { year: 2007, month: 9, source: 'TechPulse Global', sourceId: 'techpulse_us', tone: 'negative', era: 'touch', tags: ['apple', 'iphone', 'price'],
+      headline: 'Pemangkasan harga iPhone picu kemarahan; Apple beri kredit $100',
+      text: 'Apple memotong harga iPhone $200 hanya dua bulan setelah rilis. Pembeli awal protes, Jobs minta maaf dan memberi kredit toko.' },
+
+    { year: 2007, month: 10, source: 'Asia Mobile Review', sourceId: 'asiamobile_jp', tone: 'positive', era: 'touch', tags: ['nokia', 'n95', 'award'],
+      headline: 'Nokia N95 raih "Ponsel Terbaik Tahun Ini" di berbagai penghargaan',
+      text: 'N95 dipuji karena kamera, GPS, dan fitur multimedianya. Ia menjadi ponsel Symbian terakhir yang mendominasi kelas atas.' },
+
+    { year: 2007, month: 11, source: 'TechPulse Global', sourceId: 'techpulse_us', tone: 'positive', era: 'touch', tags: ['google', 'android', 'oha'],
+      headline: 'Google umumkan Android dan Open Handset Alliance',
+      text: 'Puluhan perusahaan, termasuk HTC, Motorola, Qualcomm, dan T-Mobile, mendukung OS mobile terbuka gratis. Pratinjau pengembang menyusul dalam beberapa hari.' },
+
+    { year: 2007, month: 12, source: 'Seoul Tech Daily', sourceId: 'seoultech_kr', tone: 'mixed', era: 'touch', tags: ['nokia', 'market', 'iphone'],
+      headline: 'Nokia jual 437 juta ponsel pada 2007, tetapi iPhone mengubah segalanya',
+      text: 'Pangsa Nokia mencapai puncak sekitar 40%. Analis mengingatkan: layar sentuh dan model App Store iPhone akan mengganggu industri.' }
 ];
 
 // ============================================================
