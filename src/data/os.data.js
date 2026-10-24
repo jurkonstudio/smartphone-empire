@@ -91,6 +91,8 @@ export const OS_FEATURES = [
       statEffects: { stability: 0, speed: 3, features: 0, security: 0, design: 12 }, requiresFeatures: [], requiresResearch: ['layar_amoled'] },
     { id: 'fw_notifications', name: 'Notifikasi Lanjutan', description: 'Notifikasi interaktif dan dikelompokkan.', era: 'modern', minYear: 2014, devCost: 15000, devDays: 10,
       statEffects: { stability: 0, speed: 0, features: 5, security: 0, design: 3 }, requiresFeatures: ['fw_smart_notif'], requiresResearch: [] },
+    { id: 'fw_wallet', name: 'Pembayaran NFC', description: 'Bayar lewat tempel ponsel di terminal kasir (NFC).', era: 'modern', minYear: 2017, devCost: 28000, devDays: 14,
+      statEffects: { stability: 0, speed: 0, features: 4, security: 3, design: 0 }, requiresFeatures: ['fw_biometric'], requiresResearch: ['audio_nfc'] },
     { id: 'fw_sign_in', name: 'Akun Terpadu', description: 'Satu akun untuk semua layanan dan sinkronisasi sandi.', era: 'modern', minYear: 2015, devCost: 18000, devDays: 11,
       statEffects: { stability: 0, speed: 0, features: 4, security: 4, design: 1 }, requiresFeatures: ['fw_cloud_sync'], requiresResearch: [] },
     { id: 'fw_low_power', name: 'Mode Hemat Daya', description: 'Penghematan baterai cerdas.', era: 'modern', minYear: 2015, devCost: 16000, devDays: 10,

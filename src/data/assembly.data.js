@@ -29,18 +29,32 @@ export const ASSEMBLY_ROLES = [
 // automation: 0 manual, 1 semi, 2 otomatis, 3 robotik (dipakai adegan 3D).
 export const ASSEMBLY_LEVELS = [
     { level: 1, name: 'Lini Rakit Manual',     cost: 10000000,  durationDays: 300, capacityMonthly: 60000,
-      discount: 0.05, maintenanceMonthly: 50000,
+      discount: 0.08, maintenanceMonthly: 50000,
       crew: { operator: 100, qc: 10, technician: 6, supervisor: 4 }, automation: 0 },
     { level: 2, name: 'Lini Semi-Otomatis',    cost: 30000000,  durationDays: 240, capacityMonthly: 300000,
-      discount: 0.09, maintenanceMonthly: 150000,
+      discount: 0.11, maintenanceMonthly: 150000,
       crew: { operator: 320, qc: 40, technician: 24, supervisor: 16 }, automation: 1 },
     { level: 3, name: 'Pabrik Otomatis',       cost: 100000000, durationDays: 300, capacityMonthly: 1500000,
-      discount: 0.13, maintenanceMonthly: 500000,
+      discount: 0.14, maintenanceMonthly: 500000,
       crew: { operator: 700, qc: 90, technician: 70, supervisor: 40 }, automation: 2 },
     { level: 4, name: 'Smart Factory Robotik', cost: 320000000, durationDays: 360, capacityMonthly: 6000000,
       discount: 0.17, maintenanceMonthly: 1600000,
       crew: { operator: 1100, qc: 200, technician: 120, supervisor: 80 }, automation: 3 }
 ];
+
+// Indeks upah/perawatan menurut tahun: nilai `wage` & `maintenanceMonthly` di atas adalah
+// nilai tahun 2026 (=1.0). Tahun 2002 baru ~0.35, naik ~5%/tahun. Tanpa ini Lv1 selalu rugi
+// di awal karena volume produksi pemain masih kecil (hasil simulasi tools/asm-balance.mjs).
+export const ASSEMBLY_WAGE_INDEX_BASE_YEAR = 2002;
+export const ASSEMBLY_WAGE_INDEX_BASE = 0.35;
+export const ASSEMBLY_WAGE_INDEX_GROWTH = 0.05;
+export function getAssemblyWageIndex(year) {
+    var y = Math.max(ASSEMBLY_WAGE_INDEX_BASE_YEAR, year || ASSEMBLY_WAGE_INDEX_BASE_YEAR);
+    return ASSEMBLY_WAGE_INDEX_BASE * Math.pow(1 + ASSEMBLY_WAGE_INDEX_GROWTH, y - ASSEMBLY_WAGE_INDEX_BASE_YEAR);
+}
+export function getAssemblyRoleWage(role, year) {
+    return Math.round(role.wage * getAssemblyWageIndex(year));
+}
 
 export function getAssemblyLevel(level) {
     for (var i = 0; i < ASSEMBLY_LEVELS.length; i++) if (ASSEMBLY_LEVELS[i].level === level) return ASSEMBLY_LEVELS[i];
