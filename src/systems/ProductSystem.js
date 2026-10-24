@@ -17,6 +17,7 @@ import { getLicenseById, getLicenseStatsAtYear } from '../data/os.data.js';
 import { computeTechEdge, getMasteryStatBonus, RND_TRACKS } from '../data/research.data.js';
 import { getMacro, reviewBaseScore } from '../core/MacroModel.js';
 import { WalletService } from './WalletService.js';
+import { getEraEventDemandFactor } from './EraEventSystem.js';
 import { getDevToolsDemandMult, getGameEnginePerfBonus } from './FutureEffects.js';
 
 var MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
@@ -666,6 +667,8 @@ export class ProductSystem {
         var lifecycleF = this._getLifecycleFactor(p);
         var techF = this._getTechFactor(p);
         var navF = this._nav ? this._nav.getDemandFactor(p) : 1.0;
+        // [era-event] pengali sementara dari keputusan event 2000–2002 (1.0 bila tidak ada).
+        var eventF = getEraEventDemandFactor(data, p);
 
         // Noise harian dihaluskan (AR1) supaya penjualan tidak naik-turun liar.
         var sm = BALANCE.macro.demandNoiseSmoothing;
@@ -675,7 +678,7 @@ export class ProductSystem {
 
         var demand = baseDemand * baseMult * qualityF * priceF * repF
                      * marketingF * osFactor * trendF * competitorF
-                     * lifecycleF * techF * navF * noise;
+                     * lifecycleF * techF * navF * eventF * noise;
 
         return Math.max(0, Math.round(demand));
     }
