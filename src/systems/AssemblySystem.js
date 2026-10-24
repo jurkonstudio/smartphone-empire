@@ -18,7 +18,8 @@ import { WalletService } from './WalletService.js';
 import {
     ASSEMBLY_UNLOCK_YEAR, ASSEMBLY_OPERATE_YEAR, ASSEMBLY_TRAIN_DAYS, ASSEMBLY_REFUND_UPGRADE,
     ASSEMBLY_OVERTIME_BOOST, ASSEMBLY_RECENT_DAYS, ASSEMBLY_MAX_LEAD_DAYS,
-    ASSEMBLY_ROLES, ASSEMBLY_LEVELS, getAssemblyLevel, getAssemblyWageMonthly
+    ASSEMBLY_ROLES, ASSEMBLY_LEVELS, getAssemblyLevel, getAssemblyWageMonthly,
+    getAssemblyWageIndex, getAssemblyRoleWage
 } from '../data/assembly.data.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
@@ -115,8 +116,10 @@ export class AssemblySystem {
         const used = this._raw().recent.reduce((n, r) => r.minute >= cut ? n + r.qty : n, 0);
         return used / cap;
     }
-    getMonthlyWages() { return getAssemblyWageMonthly(this._raw().workers); }
-    getMonthlyUpkeep() { const li = this.getLevelInfo(); return li ? li.maintenanceMonthly : 0; }
+    getWageIndex() { return getAssemblyWageIndex(this._year()); }
+    getRoleWage(role) { return getAssemblyRoleWage(role, this._year()); }
+    getMonthlyWages() { return Math.round(getAssemblyWageMonthly(this._raw().workers) * this.getWageIndex()); }
+    getMonthlyUpkeep() { const li = this.getLevelInfo(); return li ? Math.round(li.maintenanceMonthly * this.getWageIndex()) : 0; }
 
     // ------------------------------------------------------------
     // HUBUNGAN KE PRODUKSI PRODUK
@@ -220,7 +223,7 @@ export class AssemblySystem {
         const room = this.getHireRoom(role);
         const cnt = Math.min(Math.max(0, Math.floor(n || 0)), room);
         if (cnt <= 0) return { ok: false, reason: 'Kuota perekrutan peran ini sudah penuh.' };
-        const fee = cnt * r.wage;                        // biaya rekrut = 1 bulan gaji
+        const fee = cnt * this.getRoleWage(r);                        // biaya rekrut = 1 bulan gaji
         if (!WalletService.canAfford(fee)) return { ok: false, reason: 'Uang tidak cukup. Butuh ' + _money(fee) + '.' };
         WalletService.pay(fee, 'assembly-hire');
         a.training.push({ role: role, n: cnt, readyAtMinute: this._now() + ASSEMBLY_TRAIN_DAYS * MINUTES_PER_DAY });
@@ -324,7 +327,7 @@ export class AssemblySystem {
             upgrade: a.upgrade, workers: Object.assign({}, a.workers), training: this.getTrainingCount(),
             total: this.getWorkerTotal(), staffing: this.getStaffing(), morale: a.morale, overtime: a.overtime,
             capacity: this.getCapacityMonthly(), utilization: this.getUtilization(), defectRate: this.getDefectRate(),
-            wages: this.getMonthlyWages(), upkeep: this.getMonthlyUpkeep(), unpaid: a.unpaid,
+            wageIndex: this.getWageIndex(), wages: this.getMonthlyWages(), upkeep: this.getMonthlyUpkeep(), unpaid: a.unpaid,
             totalAssembled: a.totalAssembled, defectUnits: a.defectUnits, pending: this.getPendingUnits(),
             costFactor: this.getCostFactor()
         };
