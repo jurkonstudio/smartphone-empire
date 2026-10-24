@@ -869,6 +869,19 @@ export const COMPONENTS = [
       realReference: 'Nokia 3310 (2000)', milestone: false },
 
     // ---- Penyimpanan / kartu memori (opsional) ----
+    // Memori internal era awal (2000-2001): belum ada slot kartu, jadi kapasitas ditentukan di chip memori bawaan.
+    { id: 'stor_int_16', category: 'storage', tier: 1, minYear: 2000,
+      name: 'Memori Internal 16MB', icon: 'disc',
+      description: 'Memori flash internal untuk kontak, SMS, dan nada dering sederhana.',
+      costPerUnit: 1, stats: { usability: 1 },
+      realReference: 'Nokia 3310 (2000)', milestone: false },
+
+    { id: 'stor_int_32', category: 'storage', tier: 1, minYear: 2001,
+      name: 'Memori Internal 32MB', icon: 'disc',
+      description: 'Ruang lebih lega untuk nada dering polifonik dan game sederhana.',
+      costPerUnit: 2, stats: { usability: 2 },
+      realReference: 'Standar industri (2001)', milestone: false },
+
     { id: 'stor_mmc_16', category: 'storage', tier: 1, minYear: 2002,
       name: 'MMC 16MB', icon: 'disc',
       description: 'Slot kartu memori pertama untuk foto dan kontak tambahan.',
