@@ -81,6 +81,19 @@ function _plantLevels(d) {
 // Riset chip yang sudah selesai (node desain chip).
 function _chipDone(d) { return _len(d && d.chipResearch && d.chipResearch.completed); }
 
+// Relasi perbankan: pinjaman + simpanan/deposito + kredit modal kerja yang sedang terpakai.
+function _bankUse(d) {
+    var f = d && d.finance;
+    if (!f) return 0;
+    var n = _len(f.loans);
+    var b = f.bank;
+    if (b) {
+        n += _len(b.deposits);
+        if (b.line && typeof b.line.drawn === 'number' && b.line.drawn > 0) n += 1;
+    }
+    return n;
+}
+
 // ============================================================
 // REGISTRI
 // ============================================================
@@ -202,6 +215,26 @@ export const CAMPUS_REGISTRY = [
         rule: { base: 0, steps: [1, 5, 12], max: 3, metric: _chipDone }
     },
 
+    // ---------- GEDUNG KEUANGAN & PERMUKIMAN ----------
+    {
+        id: 'bank', kind: 'slot', slot: [4.6, -5.8], fp: [-2.0, 2.6, -2.45, 2.1], category: 'support', icon: 'wallet', emoji: '🏦', prio: 2, variant: 3,
+        name: ['Bank Kota', 'City Bank'],
+        desc: ['Cabang bank tumbuh seiring pinjaman, simpanan, dan kredit yang Anda pakai.', 'The bank branch grows with the loans, deposits and credit lines you use.'],
+        unit: ['layanan bank aktif', 'active bank services'],
+        nav: { view: 'team', sub: 'bank', label: ['Bank', 'Bank'] },
+        levelLabels: ['Belum Ada', 'Kantor Cabang', 'Bank Regional', 'Menara Keuangan'],
+        rule: { base: 1, steps: [2, 5], max: 3, metric: _bankUse }
+    },
+    {
+        id: 'housing', kind: 'slot', slot: [-11.6, 8.8], fp: [-3.7, 3.4, -4.0, 5.2], category: 'support', icon: 'building', emoji: '🏘️', prio: 3, variant: 1,
+        name: ['Perumahan Karyawan', 'Staff Housing'],
+        desc: ['Rumah para staf Anda: makin banyak staf, makin ramai permukiman dan jalannya.', 'Where your staff live: more staff, a busier neighborhood and street.'],
+        unit: ['staf', 'staff'],
+        nav: { view: 'team' },
+        levelLabels: ['Belum Ada', 'Klaster Rumah', 'Perumahan', 'Kota Mandiri'],
+        rule: { base: 0, steps: [3, 10, 25], max: 3, metric: _staff }
+    },
+
     // ---------- DEKORASI ERA (tanpa level; muncul sesuai era desain) ----------
     { id: 'wind', kind: 'decor', minEra: 4, category: 'support', icon: 'leaf', emoji: '🌬️', prio: 4,
       name: ['Ladang Angin', 'Wind Farm'],
@@ -246,6 +279,13 @@ export const CAMPUS_RESERVED = CAMPUS_REGISTRY.filter(function (e) { return !!e.
     var p = e.slot || [0, 0];
     return { id: e.id, x0: p[0] + e.fp[0], x1: p[0] + e.fp[1], z0: p[1] + e.fp[2], z1: p[1] + e.fp[3] };
 });
+
+// Jalan tambahan di luar jalan utama (selatan & barat): trotoar dan lahan pohon/semak dikosongkan di sini.
+// Jalan Permukiman: cabang dari jalan selatan ke Perumahan Karyawan (digambar bersama gedung 'housing').
+export const CAMPUS_ROADS = [
+    { id: 'jalan_permukiman', x0: -14.8, x1: -1.0, z0: 6.3, z1: 8.7 },
+    { id: 'halte_bus', x0: -3.5, x1: -2.3, z0: 8.7, z1: 9.5 }
+];
 
 // Posisi slot gedung (HQ tetap di tengah dan tidak ada di sini).
 export const CAMPUS_SLOTS = (function () {
