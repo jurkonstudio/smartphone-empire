@@ -27,7 +27,7 @@ import { BALANCE } from '../../data/balance.data.js';
 import { t } from '../../core/LanguageService.js';
 import { SHADE_DIR } from './CampusLook.js';
 import {
-    CAMPUS_RULES, CAMPUS_SLOTS, CAMPUS_SLOT_ORDER, CAMPUS_BY_ID, CAMPUS_RESERVED, campusLevelFor
+    CAMPUS_RULES, CAMPUS_SLOTS, CAMPUS_SLOT_ORDER, CAMPUS_BY_ID, CAMPUS_RESERVED, CAMPUS_ROADS, campusLevelFor
 } from '../../data/campus-buildings.data.js';
 
 // Ukuran dunia visual; koordinat inti lama tetap di tengah agar integrasi tidak bergeser.
@@ -102,6 +102,14 @@ function _onReserved(x, z, pad) {
     }
     return false;
 }
+// Jalan tambahan (Jalan Permukiman): pohon, semak, dan lampu jalan lama tidak boleh berdiri di atasnya.
+function _onRoad(x, z, pad) {
+    for (var i = 0; i < CAMPUS_ROADS.length; i++) {
+        var r = CAMPUS_ROADS[i];
+        if (x > r.x0 - pad && x < r.x1 + pad && z > r.z0 - pad && z < r.z1 + pad) return true;
+    }
+    return false;
+}
 // Zona inti yang tidak boleh dimasuki dekorasi luar (jalan, teluk, gerbang, monorail, kincir angin).
 function _inCore(x, z) { return Math.abs(x) < 16.3 && Math.abs(z) < 16.3; }
 function _inland(x, z, margin) { return Math.hypot(x, z) < islandRadius(Math.atan2(z, x)) - margin; }
@@ -133,7 +141,7 @@ export const TREE_SPOTS = (function () {
         [13.6, -9.2], [-12.8, -3.2], [8.8, -12.8], [2.8, -12.8], [-2.0, -12.8], [11.2, 2.8],
         [0.4, -12.8], [-3.2, 13.6], [-11.6, 2.8], [-10.4, 7.6], [-12.8, 7.6]
     ];
-    base = base.filter(function (p) { return !_onReserved(p[0], p[1], 0.9); });
+    base = base.filter(function (p) { return !_onReserved(p[0], p[1], 0.9) && !_onRoad(p[0], p[1], 0.6); });
     var rnd = _rng(9917), out = base.slice(), outer = [];
     function free(x, z) {
         for (var i = 0; i < HILLS.length; i++) {
@@ -636,7 +644,7 @@ export var LAMP_SPOTS = [
     [-4.6, 1.55], [-6.8, 1.55], [-9.0, 1.55], [-4.6, -1.55], [-6.8, -1.55], [-9.0, -1.55],
     [-11.2, 1.55], [-13.4, 1.55], [-11.2, -1.55], [-13.4, -1.55]
 ];
-LAMP_SPOTS = LAMP_SPOTS.filter(function (l) { return !_onReserved(l[0], l[1], 0.25); });
+LAMP_SPOTS = LAMP_SPOTS.filter(function (l) { return !_onReserved(l[0], l[1], 0.25) && !_onRoad(l[0], l[1], 0.1); });
 export var PLANTERS = [[3.1, 3.1], [3.1, -3.1], [-3.1, -3.1]];
 
 // Gerbang pintu masuk: dua tiang + balok + papan nama menyala.
@@ -942,7 +950,7 @@ export var SHRUB_SPOTS = (function () {
     var xs = [-5.2, -6.8, -8.4, -10.0, -11.6, -13.2];
     for (i = 0; i < xs.length; i++) out.push([xs[i], 2.05]);
     [-9.6, -11.2, -12.8].forEach(function (x) { out.push([x, -2.05]); });
-    return out.filter(function (p) { return !_onReserved(p[0], p[1], 0.6); });
+    return out.filter(function (p) { return !_onReserved(p[0], p[1], 0.6) && !_onRoad(p[0], p[1], 0.3); });
 })();
 
 export function buildShrubs(A, THREE) {
@@ -1545,11 +1553,213 @@ function buildChipDesign(A, THREE, level, eraIdx) {
     return g;
 }
 
+
+// ============================================================
+// BANK KOTA + PERUMAHAN KARYAWAN (jalan permukiman, halte, rumah, taman)
+// ============================================================
+
+// Bank Kota. Lv1 kantor cabang berserambi + ATM; Lv2 bank regional dengan sayap, tiang bendera, mobil lapis baja;
+// Lv3 menara keuangan dengan cincin emas dan antena berlampu. Menghadap +z (plaza).
+function buildBank(A, THREE, level, eraIdx) {
+    var g = new THREE.Group();
+    var W = [0, 2.6, 3.0, 3.4][level], H = [0, 1.2, 1.7, 1.2][level], D = [0, 1.9, 2.1, 2.2][level];
+    addBlock(g, A, THREE, W, H, D, 0, 0, level === 1 ? 1 : 2);
+    var fz = D / 2;
+    // tangga + serambi: 4 kolom, atap datar, pedimen
+    g.add(mesh(A, THREE, A.box(W * 0.78, 0.08, 0.62), 'plaza', 0, 0.1, fz + 0.36));
+    [-0.34, -0.12, 0.12, 0.34].forEach(function (k) {
+        g.add(mesh(A, THREE, A.cyl(0.055, 0.06, 0.82, 8), 'wall', W * k * 1.1, 0.55, fz + 0.52));
+    });
+    g.add(mesh(A, THREE, A.box(W * 0.8, 0.09, 0.6), 'roof', 0, 1.0, fz + 0.36));
+    var pl = mesh(A, THREE, A.box(W * 0.3, 0.05, 0.5), 'roof', -W * 0.15, 1.1, fz + 0.36);
+    pl.rotation.z = 0.35; g.add(pl);
+    var pr = mesh(A, THREE, A.box(W * 0.3, 0.05, 0.5), 'roof', W * 0.15, 1.1, fz + 0.36);
+    pr.rotation.z = -0.35; g.add(pr);
+    // pintu kaca ganda + papan nama menyala + koin emas di atas pintu
+    g.add(mesh(A, THREE, A.box(0.56, 0.7, 0.05), 'window', 0, 0.12 + 0.35, fz + 0.06));
+    g.add(mesh(A, THREE, A.box(W * 0.5, 0.17, 0.05), 'glow', 0, 1.0, fz + 0.69));
+    var coin = mesh(A, THREE, A.cyl(0.2, 0.2, 0.05, 18), 'gold', 0, 1.42, fz + 0.1);
+    coin.rotation.x = Math.PI / 2;
+    if (H > 1.3) g.add(coin);
+    // ATM di sisi kanan: bilik logam + layar menyala
+    g.add(mesh(A, THREE, A.box(0.3, 0.56, 0.24), 'metal', W / 2 - 0.25, 0.36, fz + 0.2));
+    g.add(mesh(A, THREE, A.box(0.2, 0.15, 0.02), 'glow', W / 2 - 0.25, 0.5, fz + 0.33));
+    // jendela kaca kiri
+    g.add(mesh(A, THREE, A.box(W * 0.22, Math.min(0.55, H - 0.5), 0.05), 'window', -W * 0.34, 0.12 + Math.min(0.55, H - 0.5) / 2 + 0.05, fz + 0.06));
+
+    if (level === 1) {
+        // koin di atap + unit AC
+        var c1 = mesh(A, THREE, A.cyl(0.24, 0.24, 0.06, 18), 'gold', 0, H + 0.62, 0);
+        c1.rotation.x = Math.PI / 2; g.add(c1);
+        g.add(mesh(A, THREE, A.cyl(0.03, 0.03, 0.4, 5), 'metal', 0, H + 0.36, -0.02));
+        addRoofGear(g, A, THREE, W, D, H + 0.14, 0, 0);
+    }
+    if (level >= 2) {
+        // sayap belakang + tiang bendera + mobil lapis baja (kotak putih + kabin logam)
+        addBlock(g, A, THREE, 2.0, 0.9, 1.1, -0.3, -(D / 2 + 0.6), 1, true);
+        [-0.9, 0.9].forEach(function (x) {
+            g.add(mesh(A, THREE, A.cyl(0.02, 0.02, 1.5, 5), 'metal', x, 0.8, fz + 0.95));
+            g.add(mesh(A, THREE, A.box(0.3, 0.17, 0.02), x < 0 ? 'roof' : 'glow', x + 0.17, 1.4, fz + 0.95));
+        });
+        g.add(mesh(A, THREE, A.box(0.62, 0.26, 0.3), 'wall', W / 2 + 0.55, 0.2, fz + 0.15));
+        g.add(mesh(A, THREE, A.box(0.2, 0.2, 0.29), 'metal', W / 2 + 0.95, 0.17, fz + 0.15));
+    }
+    if (level === 2) {
+        // pedimen emas besar + ventilasi
+        var c2 = mesh(A, THREE, A.cyl(0.3, 0.3, 0.07, 20), 'gold', 0, H + 0.7, 0);
+        c2.rotation.x = Math.PI / 2; g.add(c2);
+        g.add(mesh(A, THREE, A.cyl(0.04, 0.04, 0.5, 5), 'metal', 0, H + 0.42, -0.02));
+        addRoofGear(g, A, THREE, W, D, H + 0.14, 0, 0);
+    }
+    if (level >= 3) {
+        // menara kaca di belakang: kaca bergaris cahaya + cincin emas + antena
+        var up = new THREE.Group();
+        up.position.set(0.2, H + 0.14, -0.2);
+        addBlock(up, A, THREE, 1.7, 3.0, 1.3, 0, 0, 6, true);
+        [0.8, 1.6, 2.4].forEach(function (y) { up.add(mesh(A, THREE, A.box(1.76, 0.05, 1.36), 'glow', 0, y + 0.1, 0)); });
+        var ring = mesh(A, THREE, A.tor(0.45, 0.06), 'gold', 0, 3.6, 0);
+        ring.rotation.x = Math.PI / 2; up.add(ring);
+        up.add(mesh(A, THREE, A.cyl(0.03, 0.04, 0.9, 6), 'metal', 0, 3.6, 0));
+        addBeacon(up, A, THREE, 0, 4.1, 0);
+        g.add(up);
+    }
+    if (eraIdx >= 4) addSolar(g, A, THREE, W * 0.4, D * 0.35, H + 0.14, -W * 0.25, 0.25);
+    return g;
+}
+
+// Satu rumah: plinth, dinding berfasad, atap limas, pintu, cerobong, semak, jalan masuk (+ mobil parkir).
+// Menghadap +z lokal; rotY memutar. i = indeks untuk variasi.
+function addHouse(g, A, THREE, x, z, rotY, i) {
+    var hg = new THREE.Group();
+    var w = 0.92 + (i % 3) * 0.1, d = 0.82, h = 0.5 + (i % 2) * 0.12;
+    A.variantSeed = (A.variantSeed | 0) + i;
+    addContactAO(hg, A, THREE, w, d, 0, 0);
+    hg.add(mesh(A, THREE, A.box(w + 0.06, 0.1, d + 0.06), 'curb', 0, 0.05, 0));
+    hg.add(mesh(A, THREE, A.fbox(w, h, d, 1), A.facadeRole(), 0, 0.1 + h / 2, 0));
+    var roof = mesh(A, THREE, A.cone(1, 0.34, 4), (i % 2) ? 'roofAlt' : 'roof', 0, 0.1 + h + 0.17, 0);
+    roof.rotation.y = Math.PI / 4;
+    roof.scale.set((w + 0.16) / 1.414, 1, (d + 0.16) / 1.414);
+    hg.add(roof);
+    hg.add(mesh(A, THREE, A.box(0.2, 0.34, 0.05), 'window', w * 0.2, 0.1 + 0.17, d / 2 + 0.03));
+    hg.add(mesh(A, THREE, A.box(0.3, 0.03, 0.2), 'roof', w * 0.2, 0.1 + 0.38, d / 2 + 0.1));
+    hg.add(mesh(A, THREE, A.box(0.1, 0.3, 0.1), 'curb', -w * 0.25, 0.1 + h + 0.28, -d * 0.2));
+    hg.add(mesh(A, THREE, A.sph(0.13, 6, 5), 'leaf2', -w * 0.34, 0.2, d / 2 + 0.13));
+    hg.add(mesh(A, THREE, A.sph(0.1, 6, 5), 'leaf2', -w * 0.12, 0.17, d / 2 + 0.12));
+    hg.add(mesh(A, THREE, A.box(0.3, 0.02, 0.62), 'plaza', w * 0.2, 0.08, d / 2 + 0.4));
+    if (i % 2 === 0) {      // mobil parkir di jalan masuk
+        hg.add(mesh(A, THREE, A.box(0.2, 0.1, 0.34), i % 4 === 0 ? 'roof' : 'wall', w * 0.2, 0.15, d / 2 + 0.42));
+    }
+    hg.position.set(x, 0, z);
+    hg.rotation.y = rotY;
+    g.add(hg);
+}
+
+// Perumahan Karyawan + Jalan Permukiman. Koordinat lokal = dunia - slot (-11.6, 8.8).
+// Jalan menyambung ke jalan selatan di x dunia -1.0 (lokal +10.6) dan masuk ke permukiman.
+// Lv1 3 rumah; Lv2 6 rumah; Lv3 8 rumah + apartemen + taman bermain.
+function buildHousing(A, THREE, level, eraIdx) {
+    var g = new THREE.Group();
+    var RZ = -1.3;            // sumbu jalan (lokal): z dunia 7.5
+    var X0 = -3.2, X1 = 10.6; // ujung barat / timur jalan (lokal)
+    var LEN = X1 - X0, CX = (X0 + X1) / 2, i;
+
+    // badan jalan + trotoar (dua sisi) + "turunan trotoar" di pertemuan dengan jalan selatan
+    g.add(mesh(A, THREE, A.box(LEN, 0.06, 1.6), 'road', CX, 0.03, RZ));
+    g.add(mesh(A, THREE, A.box(LEN - 0.5, 0.09, 0.4), 'curb', CX - 0.25, 0.045, RZ - 1.0));
+    g.add(mesh(A, THREE, A.box(LEN - 0.5, 0.09, 0.4), 'curb', CX - 0.25, 0.045, RZ + 1.0));
+    g.add(mesh(A, THREE, A.box(0.5, 0.03, 1.6), 'road', X1 - 0.25 + 0.15, 0.095, RZ));
+    // marka tengah putus-putus + zebra cross dekat pertemuan
+    var dashes = [];
+    for (i = 0; i < 12; i++) dashes.push([X0 + 0.6 + i * 1.1, 0.065, RZ, 1, 1, 1, Math.PI / 2]);
+    g.add(instanced(A, THREE, A.box(0.1, 0.012, 0.5), 'wall', dashes));
+    var zebra = [];
+    for (i = 0; i < 4; i++) zebra.push([X1 - 1.7, 0.066, RZ - 0.6 + i * 0.4, 1, 1, 1, 0]);
+    g.add(instanced(A, THREE, A.box(0.5, 0.012, 0.22), 'wall', zebra));
+    // ujung barat jalan: putaran kecil (cul-de-sac) + bola lampu
+    g.add(mesh(A, THREE, A.cyl(1.0, 1.0, 0.06, 20), 'road', X0, 0.03, RZ));
+    g.add(mesh(A, THREE, A.cyl(0.32, 0.32, 0.08, 12), 'plaza', X0, 0.07, RZ));
+    g.add(mesh(A, THREE, A.sph(0.16, 6, 5), 'leaf2', X0, 0.2, RZ));
+
+    // lampu jalan: dunia N (-10.05, -13.45) di z 6.2 dan S (-3.4, -9.2, -12.4) di z 8.85
+    var lamps = [[1.55, RZ - 1.3], [-1.85, RZ - 1.3], [8.2, RZ + 1.35], [2.4, RZ + 1.35], [-0.8, RZ + 1.35]];
+    var poles = [], heads = [], halos = [];
+    lamps.forEach(function (l) {
+        poles.push([l[0], 0.09 + 0.7, l[1]]);
+        heads.push([l[0], 1.58, l[1]]);
+        halos.push([l[0], 0.1, l[1]]);
+    });
+    g.add(instanced(A, THREE, A.cyl(0.035, 0.045, 1.4, 6), 'metal', poles));
+    g.add(instanced(A, THREE, A.sph(0.1, 8, 6), 'lamp', heads));
+    g.add(instanced(A, THREE, A.cyl(0.8, 0.8, 0.01, 14), 'halo', halos));
+
+    // halte bus dekat pertemuan (atap, tiang, kaca, bangku)
+    g.add(mesh(A, THREE, A.box(0.9, 0.05, 0.4), 'roof', 8.7, 0.66, RZ + 1.55));
+    g.add(mesh(A, THREE, A.cyl(0.02, 0.02, 0.58, 5), 'metal', 8.3, 0.37, RZ + 1.7));
+    g.add(mesh(A, THREE, A.cyl(0.02, 0.02, 0.58, 5), 'metal', 9.1, 0.37, RZ + 1.7));
+    g.add(mesh(A, THREE, A.box(0.84, 0.4, 0.02), 'window', 8.7, 0.4, RZ + 1.72));
+    g.add(mesh(A, THREE, A.box(0.5, 0.04, 0.14), 'trunk', 8.7, 0.22, RZ + 1.62));
+
+    // rumah: baris utara (menghadap jalan: +z) dan selatan (menghadap -z)
+    A.variantSeed = 1;
+    var N = [[2.4, -3.4], [0.7, -3.4], [-1.0, -3.4], [-2.7, -3.4]];
+    var S = [[2.2, 1.8], [0.5, 1.8], [-1.2, 1.8], [-2.8, 1.8]];
+    var order = [N[0], N[1], S[0], N[2], S[1], S[2], N[3], S[3]];   // urutan tumbuh
+    var count = [0, 3, 6, 8][level];
+    for (i = 0; i < count; i++) {
+        var spot = order[i];
+        addHouse(g, A, THREE, spot[0], spot[1], spot[1] < 0 ? 0 : Math.PI, i);
+    }
+    // pohon pekarangan
+    [[1.55, -3.15], [-1.85, 1.6]].forEach(function (p, k) {
+        if (k >= (level >= 2 ? 2 : 1)) return;
+        g.add(mesh(A, THREE, A.cyl(0.04, 0.05, 0.4, 5), 'trunk', p[0], 0.2, p[1]));
+        g.add(mesh(A, THREE, A.sph(0.26, 7, 6), 'leaf', p[0], 0.55, p[1]));
+    });
+
+    if (level >= 3) {
+        // apartemen 4 lantai di tenggara + taman bermain (ayunan, perosotan, bangku, pohon)
+        A.variantSeed = 2;
+        var ap = new THREE.Group();
+        addBlock(ap, A, THREE, 1.6, 1.5, 1.1, 0, 0, 4);
+        addRoofGear(ap, A, THREE, 1.6, 1.1, 1.64, 0, 0);
+        ap.add(mesh(A, THREE, A.box(0.5, 0.05, 0.36), 'roof', 0, 0.9, 0.7));
+        ap.position.set(2.0, 0, 4.15);
+        ap.rotation.y = Math.PI;
+        g.add(ap);
+        var park = new THREE.Group();
+        park.add(mesh(A, THREE, A.box(2.6, 0.02, 1.6), 'grass2', 0, 0.01, 0));
+        // ayunan
+        park.add(mesh(A, THREE, A.box(0.9, 0.05, 0.05), 'metal', -0.6, 0.62, 0.2));
+        park.add(mesh(A, THREE, A.box(0.04, 0.62, 0.04), 'metal', -1.02, 0.31, 0.2));
+        park.add(mesh(A, THREE, A.box(0.04, 0.62, 0.04), 'metal', -0.18, 0.31, 0.2));
+        park.add(mesh(A, THREE, A.box(0.2, 0.03, 0.1), 'roof', -0.45, 0.28, 0.2));
+        park.add(mesh(A, THREE, A.box(0.2, 0.03, 0.1), 'glow', -0.8, 0.28, 0.2));
+        // perosotan
+        var sl = mesh(A, THREE, A.box(0.16, 0.03, 0.62), 'roofAlt', 0.45, 0.28, -0.1);
+        sl.rotation.x = 0.55; park.add(sl);
+        park.add(mesh(A, THREE, A.box(0.2, 0.46, 0.2), 'metal', 0.45, 0.23, -0.42));
+        // bangku + pohon
+        park.add(mesh(A, THREE, A.box(0.5, 0.05, 0.14), 'trunk', 0.95, 0.2, 0.55));
+        park.add(mesh(A, THREE, A.cyl(0.05, 0.06, 0.5, 6), 'trunk', 1.1, 0.25, -0.5));
+        park.add(mesh(A, THREE, A.sph(0.34, 7, 6), 'leaf', 1.1, 0.7, -0.5));
+        park.position.set(-0.9, 0, 4.2);
+        g.add(park);
+    }
+    if (eraIdx >= 4) {   // panel surya di sebagian atap rumah (era Premium+)
+        for (i = 0; i < Math.min(count, 4); i++) {
+            var sp = order[i];
+            g.add(mesh(A, THREE, A.box(0.4, 0.03, 0.3), 'solar', sp[0] - 0.1, 0.1 + 0.62 + 0.18, sp[1] + (sp[1] < 0 ? 0.12 : -0.12)));
+        }
+    }
+    return g;
+}
+
 var SLOT_BUILDERS = {
     lab: buildLab, factory: buildFactory, store: buildStore,
     os: buildOS, monument: buildMonument, billboard: buildBillboard,
     academy: buildAcademy, arena: buildArena, port: buildPort,
-    pcplant: buildPcPlant, chipdesign: buildChipDesign
+    pcplant: buildPcPlant, chipdesign: buildChipDesign,
+    bank: buildBank, housing: buildHousing
 };
 // Id gedung yang punya builder 3D (dipakai validateCampusRegistry).
 export var BUILDER_IDS = Object.keys(SLOT_BUILDERS).concat(['hq']);

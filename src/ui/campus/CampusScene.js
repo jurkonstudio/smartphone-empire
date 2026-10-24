@@ -252,6 +252,7 @@ export function createCampusScene(THREE, container, gameState) {
             life.setPort(lv.port);
             life.setHq(lv.hq);
             life.setRail(plan.rail);
+            life.setHousing(lv.housing);
         }
         setBuilding('hq', lv.hq, function () { return buildHQ(A, THREE, lv.hq, eraIdx); }, animate);
         SLOT_ORDER.forEach(function (id) {

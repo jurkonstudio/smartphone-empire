@@ -18,11 +18,13 @@ import { cloudLook } from './CampusWeather.js';
 import { createPeople } from './CampusPeople.js';
 
 var CAR_COLORS = [0xef4444, 0xf59e0b, 0x10b981, 0x6366f1, 0xf8fafc, 0x1f2937, 0xec4899];
-var WALK_LEN = { x: 9.9, z: 10.1 };       // panjang trotoar (satuan dunia): jarak tempuh = fraksi x panjang
+var WALK_LEN = { x: 9.9, z: 10.1, h: 11 };       // panjang trotoar (satuan dunia): jarak tempuh = fraksi x panjang
 var ROAD_Z = { from: 14.6, to: 3.6 };     // jalan selatan: x = lane, z dari tepi ke plaza
 var ROAD_X = { from: -41.0, to: -3.6 };   // jalan barat:   z = lane, x dari Pulau Manufaktur (lewat jembatan) ke plaza
+var ROAD_H = { from: -1.4, to: -13.6 };   // Jalan Permukiman (z = lane): dari jalan selatan ke Perumahan Karyawan
 var ROAD_X_BASE = 11;                     // panjang jalan barat lama -> kecepatan dunia mobil tetap sama
 var SPD_X = ROAD_X_BASE / Math.abs(ROAD_X.to - ROAD_X.from);
+var SPD_H = ROAD_X_BASE / Math.abs(ROAD_H.to - ROAD_H.from);
 var FACTORY = { x: SLOTS.factory[0], z: SLOTS.factory[1], W: [0, 3.2, 3.4, 3.6], H: [0, 1.3, 1.5, 1.8] }; // W/H sama dgn buildFactory
 var PORT = { x: 12.5, z: 11.8 };          // kapal bersandar di sisi dermaga (slot port 11.0,6.8 + BAY)
 var CURB_Y = 0.09;                        // tinggi trotoar (pejalan berdiri di atasnya)
@@ -39,6 +41,7 @@ export function createCampusLife(THREE, A, scene, trees, link) {
     var chimneys = [];
     var factoryBusy = false;     // Fab sedang produksi -> asap penuh; idle -> asap tipis
     var droneOn = false;
+    var housingLv = 0;
     var portLvl = 0, railOn = false, heliOn = false, windRotors = null;
 
     function mk(color, opts) {
@@ -92,6 +95,16 @@ export function createCampusLife(THREE, A, scene, trees, link) {
     addCar('x', -0.5, false, 0.16, 0.10, 4);
     addCar('x', -0.5, false, 0.16, 0.38, 5);
     addCar('x', -0.5, false, 0.16, 0.65, 6);
+    // Jalan Permukiman (muncul bersama Perumahan Karyawan): lajur utara = ke barat, selatan = ke timur (lalu lintas kanan)
+    function addHomeCar(lane, inbound, speed, s0, ci, minLv) {
+        addCar('h', lane, inbound, speed, s0, ci);
+        cars[cars.length - 1].minLv = minLv;
+        cars[cars.length - 1].g.visible = false;
+    }
+    addHomeCar(7.1, true,  0.2,  0.15, 1, 1);
+    addHomeCar(7.9, false, 0.18, 0.55, 4, 1);
+    addHomeCar(7.1, true,  0.2,  0.65, 2, 2);
+    addHomeCar(7.9, false, 0.18, 0.1,  6, 3);
     // jalan lebih panjang (jembatan) -> tambahan lalu lintas supaya tidak sepi
     addCar('x',  0.5, true,  0.18, 0.45, 5);
     addCar('x',  0.5, true,  0.18, 0.95, 'bus');
@@ -114,6 +127,16 @@ export function createCampusLife(THREE, A, scene, trees, link) {
     addWalker('x',  1.22, 0.048, 0.5, 7);
     addWalker('z',  1.22, 0.043, 0.8, 8);
     addWalker('z', -1.22, 0.047, 1.5, 9);
+    // penghuni Perumahan Karyawan (trotoar Jalan Permukiman; tampil sesuai level)
+    function addResident(side, speed, s0, idx, minLv) {
+        var p = people.add({ axis: 'h', side: side, speed: speed, s0: s0, index: idx });
+        p.minLv = minLv; p.g.visible = false;
+        walkers.push(p);
+    }
+    addResident(6.5, 0.04, 0.3, 10, 1);
+    addResident(8.5, 0.045, 1.2, 11, 2);
+    addResident(8.5, 0.038, 0.7, 12, 3);
+    addResident(6.5, 0.042, 1.6, 13, 3);
 
     // ---------- awan + bayangan awan ----------
     var cloudMat = mk(0xffffff, { transparent: true, opacity: 0.8, depthWrite: false });
@@ -254,11 +277,13 @@ export function createCampusLife(THREE, A, scene, trees, link) {
         // mobil + bus
         for (i = 0; i < cars.length; i++) {
             c = cars[i];
-            s = (c.s0 + t * (c.axis === 'x' ? c.speed * SPD_X : c.speed)) % 1;
-            var road = c.axis === 'z' ? ROAD_Z : ROAD_X;
+            if (c.minLv && !c.g.visible) continue;      // mobil permukiman belum muncul
+            s = (c.s0 + t * (c.axis === 'x' ? c.speed * SPD_X : (c.axis === 'h' ? c.speed * SPD_H : c.speed))) % 1;
+            var road = c.axis === 'z' ? ROAD_Z : (c.axis === 'h' ? ROAD_H : ROAD_X);
             var a = c.inbound ? road.from : road.to, b = c.inbound ? road.to : road.from;
             var pos = lerp(a, b, s), dirv = b > a ? 1 : -1;
             if (c.axis === 'z') { c.g.position.set(c.lane, 0.06, pos); tmpDir.x = 0; tmpDir.z = dirv; }
+            else if (c.axis === 'h') { c.g.position.set(pos, 0.06, c.lane); tmpDir.x = dirv; tmpDir.z = 0; }
             else { c.g.position.set(pos, link ? link.heightAt(pos) : 0.06, c.lane); tmpDir.x = dirv; tmpDir.z = 0; }
             c.g.rotation.y = Math.atan2(-tmpDir.z, tmpDir.x);
             f = Math.min(1, s / 0.1, (1 - s) / 0.1);
@@ -268,13 +293,14 @@ export function createCampusLife(THREE, A, scene, trees, link) {
         // pejalan (bolak-balik di trotoar): posisi + langkah kaki/lengan + arah badan
         for (i = 0; i < walkers.length; i++) {
             var w = walkers[i];
+            if (w.minLv && !w.g.visible) continue;      // penghuni belum muncul
             var raw = (w.s0 + t * w.speed) % 2;
             var fwd = raw <= 1;
             var q = fwd ? raw : 2 - raw;
-            var wp = lerp(-13.8, -3.9, q);
+            var wp = w.axis === 'h' ? lerp(-13.4, -2.4, q) : lerp(-13.8, -3.9, q);
             var dist = t * w.speed * WALK_LEN[w.axis];
             var bob = CURB_Y + Math.abs(Math.sin(dist * 28)) * 0.012;
-            if (w.axis === 'x') w.g.position.set(wp, bob, w.side);
+            if (w.axis !== 'z') w.g.position.set(wp, bob, w.side);
             else w.g.position.set(w.side, bob, lerp(14, 3.9, q));
             people.pose(w, dist, fwd, t);
         }
@@ -428,6 +454,13 @@ export function createCampusLife(THREE, A, scene, trees, link) {
         },
         setWind: function (rotors) {
             windRotors = (rotors && rotors.length) ? rotors : null;
+        },
+        // Perumahan Karyawan: mobil dan penghuni di Jalan Permukiman tampil sesuai level (0 = semua sembunyi)
+        setHousing: function (level) {
+            housingLv = level || 0;
+            var k;
+            for (k = 0; k < cars.length; k++) if (cars[k].minLv) cars[k].g.visible = housingLv >= cars[k].minLv;
+            for (k = 0; k < walkers.length; k++) if (walkers[k].minLv) walkers[k].g.visible = housingLv >= walkers[k].minLv;
         },
         setFactoryBusy: function (on) {
             factoryBusy = !!on;

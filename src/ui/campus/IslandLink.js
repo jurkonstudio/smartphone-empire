@@ -334,7 +334,7 @@ export function buildMfFar(THREE, parent, ox) {
 // Warna Pulau Kampus [terang, gelap] diambil dari PALETTES.
 var CAMPUS_FAR_KEYS = ['grass', 'soil', 'sand', 'sandWet', 'shallow', 'foam', 'plaza', 'road', 'wall', 'window', 'leaf', 'trunk', 'curb'];
 // Tinggi siluet gedung per slot (satuan dunia).
-var SLOT_H = { lab: 2.2, factory: 1.8, store: 1.6, os: 2.4, billboard: 2.6, monument: 1.8, academy: 2.0, arena: 1.5, port: 0.9, pcplant: 1.8, chipdesign: 2.0 };
+var SLOT_H = { lab: 2.2, factory: 1.8, store: 1.6, os: 2.4, billboard: 2.6, monument: 1.8, academy: 2.0, arena: 1.5, port: 0.9, pcplant: 1.8, chipdesign: 2.0, bank: 1.8, housing: 0.9 };
 
 // Siluet Pulau Kampus untuk peta Manufaktur. Berpusat di (ox, 0, 0); gedung di posisi slot asli.
 export function buildCampusFar(THREE, parent, ox) {

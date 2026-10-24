@@ -37,9 +37,9 @@ export function wrapAngle(a) {
 }
 
 // Arah badan (yaw) dari sumbu jalan dan arah maju. Model menghadap +x:
-//   sumbu x: maju = +x (0), mundur = -x (PI); sumbu z: maju = -z (PI/2), mundur = +z (-PI/2).
+//   sumbu x (dan 'h'): maju = +x (0), mundur = -x (PI); sumbu z: maju = -z (PI/2), mundur = +z (-PI/2).
 export function yawFor(axis, forward) {
-    if (axis === 'x') return forward ? 0 : Math.PI;
+    if (axis !== 'z') return forward ? 0 : Math.PI;     // 'x' dan 'h' (jalan permukiman) sama-sama sejajar sumbu x
     return forward ? Math.PI / 2 : -Math.PI / 2;
 }
 
