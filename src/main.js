@@ -14,6 +14,7 @@ import { LanguageService } from './core/LanguageService.js';
 import { ChipResearchSystem } from './core/ChipResearchSystem.js';
 import { EconomySystem } from './systems/EconomySystem.js';
 import { QuestSystem } from './systems/QuestSystem.js';
+import { EraEventSystem } from './systems/EraEventSystem.js';
 import { TutorialSystem } from './systems/TutorialSystem.js';
 import { ResearchSystem } from './systems/ResearchSystem.js';
 import { OSSystem } from './systems/OSSystem.js';
@@ -73,6 +74,7 @@ import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
 import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
 import { openNewsArticleModal } from './ui/panels/NewsArticleModal.js';
+import { openEraEventModal } from './ui/panels/EraEventModal.js';
 import { openSiliconModal } from './ui/panels/SiliconPanel.js';
 import { openSiliconStoreModal } from './ui/panels/SiliconStorePanel.js';
 import { PaymentService } from './systems/PaymentService.js';
@@ -102,6 +104,7 @@ import advisorNLP from './systems/Advisor/AdvisorNLP.js'; // <-- IMPORT ADVISOR 
 var timeSystem        = new TimeSystem(state);
 var economy           = new EconomySystem(state);
 var quests            = new QuestSystem(state);
+var eraEvents         = new EraEventSystem(state);
 var tutorial          = new TutorialSystem(state);
 var research          = new ResearchSystem(state);
 var chipResearch      = new ChipResearchSystem(state);
@@ -1282,6 +1285,31 @@ function bindStateEvents() {
         }
     });
 
+    // [era-event] Event pilihan 2000–2002: jeda game, tampilkan keputusan, kembalikan kecepatan setelah selesai.
+    var _eraPausedByEvent = false;
+    bus.on('eraevent:pending', function (data) {
+        try {
+            var def = data && data.event;
+            if (!def) return;
+            if (Modal.hasOpen()) { eraEvents.retryLater(); return; }   // jangan menimpa modal lain; dicoba lagi tiap hari game
+            var wasRunning = !state.data.isPaused;
+            var shown = openEraEventModal(def, {
+                eraEvents: eraEvents,
+                resumeIfRunning: function () {
+                    if (Modal.isOpen('era-event')) return;      // ada event antrean berikutnya: tetap jeda
+                    if (_eraPausedByEvent) { _eraPausedByEvent = false; if (state.data.isPaused) timeSystem.togglePause(); }
+                }
+            });
+            if (shown && wasRunning) { _eraPausedByEvent = true; timeSystem.togglePause(); }
+        } catch (err) {
+            console.error('[main] eraevent:pending handler error:', err);
+        }
+    });
+    // Coba lagi saat modal sebelumnya tertutup (event yang tertahan karena modal lain terbuka).
+    bus.on('ui:modal-close', function () {
+        try { if (eraEvents.getPending() && !Modal.hasOpen()) setTimeout(function () { if (!Modal.hasOpen()) eraEvents.reannounce(); }, 300); } catch (e) {}
+    });
+
     bus.on('news:published', function (data) {
         try {
             var article = data && data.article;
@@ -1396,6 +1424,7 @@ async function boot() {
         assemblySystem.start();
         companyHistory.start();
         NewsSystem.start();
+        eraEvents.start();
         advisor.start();
         stockSystem.start();
         promotion.start();
@@ -1444,7 +1473,7 @@ async function boot() {
             cloud: CloudService,
             cloudSync: CloudSync,
             forcePull: function() { return CloudSync.forcePull(); },
-            state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
+            state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, eraEvents: eraEvents, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, marketNav: marketNav, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, plants: componentPlants, assembly: assemblySystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
             silicon: SiliconService, promotion: promotion, bank: bank, econ: econBrakes, payment: PaymentService,
