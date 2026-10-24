@@ -33,6 +33,7 @@ import { createCampusOverlay } from './CampusOverlay.js';
 import { getBuildingInfo, getBuildingName, getUiStrings, hasCelebration } from './CampusInfo.js';
 import { computeAlerts, alertMap } from './CampusAlerts.js';
 import { LINK, buildLinkBridge, makeCampusKit, campusBridgeCfg, buildMfFar } from './IslandLink.js';
+import { createWeather } from './CampusWeather.js';
 
 var BASE_VIEW = 22;
 // DPR maksimum sekarang adaptif per tier kualitas (lihat detectQuality di CampusLook.js).
@@ -91,6 +92,12 @@ export function createCampusScene(THREE, container, gameState) {
     var scene = new THREE.Scene();
     var camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
     var rig = createLookRig(THREE, renderer, scene, quality);   // cahaya + tone mapping + shadow + env
+    var weather = createWeather(THREE, scene, {                  // cuaca otomatis + senja (jam lokal)
+        lights: rig.lights, tier: quality.tier,
+        getCenter: function () { return controls ? controls.view : { x: 0, z: 0 }; },
+        getHalf: function () { return (camera.right - camera.left) * 0.7 + 3; },
+        onChange: function () { requestRender(); }
+    });
     var fx = createCampusFx(THREE);
     scene.add(fx.group);
     var selected = null;          // { id, key, cx, cz, r, top, ring }
@@ -142,6 +149,7 @@ export function createCampusScene(THREE, container, gameState) {
     // Semua render lewat sini: shadow map diperbarui hanya bila ditandai kotor.
     function draw() {
         if (shadowDirty) { rig.requestShadowUpdate(); shadowDirty = false; }
+        weather.update(performance.now() / 1000, ambient);
         renderer.render(scene, camera);
     }
 
@@ -490,6 +498,7 @@ export function createCampusScene(THREE, container, gameState) {
     function applyTheme() {
         var dark = document.documentElement.getAttribute('data-theme') === 'dark';
         var look = rig.applyTheme(dark);                  // cahaya, exposure, env (CampusLook.js)
+        weather.applyLook(look);                          // cuaca/senja menimpa warna & intensitas cahaya
         var base = dark ? PALETTES.dark : PALETTES.light;
         var p = Object.assign({}, base, look.colors, { aoOpacity: look.aoOpacity });
         var w = ERA_WINDOWS[Math.max(0, eraIdx)];
@@ -585,6 +594,7 @@ export function createCampusScene(THREE, container, gameState) {
             disposeObject(shrubs);
             farMf.dispose();
             scene.remove(bridge.group);
+            weather.dispose();
             rig.dispose();
             A.dispose();
             renderer.dispose();

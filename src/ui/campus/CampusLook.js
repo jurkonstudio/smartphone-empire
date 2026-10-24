@@ -164,6 +164,7 @@ export function createLookRig(THREE, renderer, scene, quality) {
     return {
         shadowsOn: shadowsOn,
         envOn: envOn,
+        lights: { hemi: hemi, sun: sun, fill: fill, rim: rim },   // dipakai CampusWeather (cuaca & senja)
         applyTheme: applyTheme,
         // Tandai shadow map perlu dihitung ulang pada render berikutnya.
         requestShadowUpdate: function () { if (shadowsOn) renderer.shadowMap.needsUpdate = true; },
