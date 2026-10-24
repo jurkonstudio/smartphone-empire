@@ -55,6 +55,7 @@ export class ProductSystem {
 
     // Pabrik komponen internal: stok baterai & layar diambil dari sini saat rilis dan restok.
     setComponentPlantSystem(cps) { this._componentPlants = cps; }
+    setAssemblySystem(asm) { this._assembly = asm; }
     setEconBrakes(eb) { this._econ = eb; }
 
     // [v2029.1] Pengali biaya volume & tagihan produksi massal.
@@ -69,6 +70,7 @@ export class ProductSystem {
     }
     quoteProduction(config, qty) {
         var parts = this.computeUnitCost(config, true) * qty + this._quoteComponents(config, qty);
+        if (this._assembly) { try { parts = parts * this._assembly.getCostFactor(); } catch (e) {} }
         var vm = this._volMult(qty);
         return { volMult: vm, parts: Math.round(parts), total: Math.round(parts * vm + BALANCE.products.productionSetupCost) };
     }
@@ -835,6 +837,14 @@ export class ProductSystem {
     // ============================================================
     // Jeda hari produksi manual (makin banyak unit, makin lama).
     getManualRestockDays(qty) {
+        if (this._assembly) {
+            try {
+                if (this._assembly.isOperating()) {
+                    var ad = this._assembly.getLeadDays(qty, this._assembly.getPendingUnits());
+                    if (ad) return ad;
+                }
+            } catch (e) {}
+        }
         var c = (BALANCE.products.manualRestock) || { baseDays: 2, unitsPerExtraDay: 2500, maxDays: 10 };
         var days = c.baseDays + Math.floor((qty || 0) / c.unitsPerExtraDay);
         return Math.max(1, Math.min(c.maxDays, days));
@@ -851,6 +861,7 @@ export class ProductSystem {
 
         WalletService.pay(totalCost, 'restock');
         this._recordProd(qty);
+        if (this._assembly) { try { this._assembly.recordOrder(qty); } catch (e) {} }
         this._settleComponents(p.config, qty);
 
         var days = this.getManualRestockDays(qty);
