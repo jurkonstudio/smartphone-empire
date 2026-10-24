@@ -18,6 +18,11 @@ import { WalletService } from '../../systems/WalletService.js';
 import { resolveComponentCost, getMarketPrice, getBuiltPlantEffect } from '../../data/material-plants.data.js';
 import { BALANCE } from '../../data/balance.data.js';
 import { isFaiActive, getFaiDesignAdvice } from '../../systems/FutureEffects.js';
+import {
+    FEATURES, FEATURE_GROUPS, EXPECTATIONS, REGULATIONS, getFeatureById, getFeatureName, getFeatureDescription,
+    isFeatureSelectable
+} from '../../data/features.data.js';
+import { nodeNameById } from '../../data/i18n/research-localize.js';
 
 let _wizardState = null;
 let _wizardView = 'front';
@@ -244,6 +249,16 @@ function _getFaiAdvice(s) {
 }
 
 const WZ_CSS = `
+.wz-feat-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.wz-feat { flex: 1 1 140px; min-width: 130px; text-align: left; padding: 8px 10px; border-radius: 10px; background: var(--bg-3); border: 1px solid var(--border); color: var(--text-primary); cursor: pointer; position: relative; }
+.wz-feat.selected { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--bg-3)); }
+.wz-feat.selected::after { content: "✓"; position: absolute; top: 6px; right: 8px; font-size: 11px; font-weight: 800; color: var(--accent); }
+.wz-feat.locked { opacity: 0.5; cursor: not-allowed; }
+.wz-feat b { display: block; font-size: 12px; padding-right: 14px; }
+.wz-feat small { display: block; font-size: 10px; color: var(--text-tertiary); line-height: 1.35; margin-top: 2px; }
+.wz-feat-hint { font-size: 11px; color: var(--text-tertiary); margin: -4px 0 8px; line-height: 1.4; }
+.wz-feat-fx { margin-top: 8px; font-size: 11px; line-height: 1.5; }
+.wz-feat-fx .pos { color: var(--success); } .wz-feat-fx .neg { color: var(--warn); }
 [data-modal-id="design-wizard"] .modal-card { padding-top: 0; padding-bottom: 0; scroll-behavior: auto; }
 .wz-stage { position: sticky; top: 0; z-index: 6; margin: 0 -18px 12px; padding: 12px 18px 12px; background: var(--bg-2); border-bottom: 1px solid var(--border); box-shadow: 0 10px 18px -14px rgba(0,0,0,0.7); }
 .wz-steps { display: flex; gap: 6px; margin: 0 0 12px; padding: 0; list-style: none; }
@@ -329,7 +344,8 @@ function defaultState() {
     return {
         step: 1, name: '', nameAuto: '', formFactorManual: false, formFactorId: null, displayId: null, cameraId: 'none', ramId: 'none', storageId: 'none',
         batteryId: null, chipId: null, networkId: null, osOptionId: null,
-        bodyId: null, bodyColorId: null, price: 100, priceManuallyEdited: false, productionQty: 5000
+        bodyId: null, bodyColorId: null, price: 100, priceManuallyEdited: false, productionQty: 5000,
+        featureIds: []
     };
 }
 
@@ -404,7 +420,7 @@ function _autoFillBest(s) {
         if (bestFf) s.formFactorId = bestFf.id;
     }
 
-    const catMap = { display: 'displayId', camera: 'cameraId', battery: 'batteryId', chip: 'chipId', ram: 'ramId', network: 'networkId' };
+    const catMap = { display: 'displayId', camera: 'cameraId', battery: 'batteryId', chip: 'chipId', ram: 'ramId', storage: 'storageId', network: 'networkId' };  // storage ikut: memori kecil menurunkan permintaan (fitur)
     for (const catId in catMap) {
         const list = filterComponentsByEra(catId);
         const best = _pickMostExpensive(list);
@@ -434,6 +450,7 @@ function _autoFillBest(s) {
     const colors = filterBodyColorsByEra();
     if (colors.length) s.bodyColorId = colors[0].id;
 
+    s.featureIds = _autoFeatureIds();   // standar pasar + regulasi, fitur termurah
     s.priceManuallyEdited = false;
 }
 
@@ -641,6 +658,10 @@ function _bindStep() {
         });
     });
 
+    root.querySelectorAll('[data-wiz-feature]').forEach(function (btn) {
+        btn.addEventListener('click', function () { _toggleFeature(btn.dataset.wizFeature); });
+    });
+
     root.querySelectorAll('[data-wiz-view]').forEach(function (btn) {
         btn.addEventListener('click', function () {
             _wizardView = (btn.dataset.wizView === 'back' || btn.dataset.wizView === 'box' || btn.dataset.wizView === 'open') ? btn.dataset.wizView : 'front';
@@ -815,6 +836,7 @@ function _confirm() {
         bodyId: s.bodyId,
         bodyColorId: s.bodyColorId,
         osOptionId: s.osOptionId,
+        featureIds: (s.featureIds || []).slice(),
         price: s.price,
         productionQty: s.productionQty
     });
@@ -975,12 +997,156 @@ function _step2(s) {
     `;
 }
 
+// ============================================================
+// FITUR PONSEL (features.data.js) — modul tambahan di atas komponen.
+// Penyimpanan tetap lewat komponen 'storage' (langkah 2); tier ft_stor_* disembunyikan agar tidak dihitung ganda.
+// ============================================================
+function _featName(f) { return getFeatureName(f, _isEn() ? 'en' : 'id'); }
+function _featDesc(f) { return getFeatureDescription(f, _isEn() ? 'en' : 'id'); }
+function _pickedCompleted() {
+    let done = [];
+    try { done = state.get().research.completed || []; } catch (e) {}
+    return done;
+}
+
+// Daftar fitur yang tampil: bisa dipilih, atau terkunci hanya karena belum riset.
+function _visibleFeatures() {
+    const year = DesignEraService.getCurrentYear();
+    const done = _pickedCompleted();
+    return FEATURES.filter(function (f) {
+        if (f.storageGB) return false;
+        if (year < f.minYear) return false;
+        if (f.maxYear && year > f.maxYear) return false;
+        return true;
+    }).map(function (f) {
+        return { f: f, ok: isFeatureSelectable(f, year, done) };
+    });
+}
+
+// Buang pilihan yang sudah tidak valid (kedaluwarsa/belum riset/bentrok) supaya wizard tidak crash.
+function _pruneFeatures(s) {
+    const year = DesignEraService.getCurrentYear();
+    const done = _pickedCompleted();
+    const seenExcl = {};
+    s.featureIds = (Array.isArray(s.featureIds) ? s.featureIds : []).filter(function (id) {
+        const f = getFeatureById(id);
+        if (!f || f.storageGB || !isFeatureSelectable(f, year, done)) return false;
+        if (f.exclusiveGroup) {
+            if (seenExcl[f.exclusiveGroup]) return false;
+            seenExcl[f.exclusiveGroup] = true;
+        }
+        return true;
+    });
+}
+
+function _toggleFeature(id) {
+    const s = _wizardState;
+    const f = getFeatureById(id);
+    if (!s || !f) return;
+    const year = DesignEraService.getCurrentYear();
+    if (!isFeatureSelectable(f, year, _pickedCompleted())) return;
+    const cur = (s.featureIds || []).slice();
+    const at = cur.indexOf(id);
+    if (at >= 0) {
+        cur.splice(at, 1);
+        s.featureIds = cur;
+    } else {
+        const next = f.exclusiveGroup ? cur.filter(function (x) {
+            const o = getFeatureById(x);
+            return !(o && o.exclusiveGroup === f.exclusiveGroup);
+        }) : cur;
+        next.push(id);
+        s.featureIds = next;
+    }
+    _render();
+}
+
+// Isi otomatis: fitur termurah untuk tiap standar pasar yang berlaku + syarat regulasi.
+function _autoFeatureIds() {
+    const year = DesignEraService.getCurrentYear();
+    const done = _pickedCompleted();
+    const chosen = [];
+    const usedExcl = {};
+    function pickFrom(ids) {
+        if (ids.some(function (id) { return chosen.indexOf(id) >= 0; })) return;
+        const opts = ids.map(getFeatureById).filter(function (f) {
+            return f && !f.storageGB && isFeatureSelectable(f, year, done) && !(f.exclusiveGroup && usedExcl[f.exclusiveGroup]);
+        }).sort(function (a, b) { return a.costPerUnit - b.costPerUnit; });
+        if (!opts.length) return;
+        chosen.push(opts[0].id);
+        if (opts[0].exclusiveGroup) usedExcl[opts[0].exclusiveGroup] = true;
+    }
+    EXPECTATIONS.forEach(function (e) { if (year >= e.year) pickFrom(e.anyOf); });
+    REGULATIONS.forEach(function (r) { if (year >= r.fromYear) pickFrom(r.requiresAnyOf); });
+    return chosen;
+}
+
+function _featureSectionHtml(s) {
+    const rows = _visibleFeatures();
+    if (!rows.length) return '';
+    const sel = s.featureIds || [];
+    const groups = FEATURE_GROUPS.map(function (g) {
+        const items = rows.filter(function (r) { return r.f.group === g.id; });
+        if (!items.length) return '';
+        const gname = _isEn() ? (g.nameEn || g.name) : g.name;
+        return '<div class="wiz-cat">' +
+            '<div class="wiz-cat-title" style="text-transform:none;">' + escapeHtml(gname) + '</div>' +
+            '<div class="wz-feat-grid">' + items.map(function (r) {
+                const f = r.f;
+                const on = sel.indexOf(f.id) >= 0;
+                let sub;
+                if (r.ok) {
+                    sub = _perUnit(f.costPerUnit);
+                } else {
+                    const need = nodeNameById(f.requiresResearch, f.requiresResearch);
+                    sub = _tf('wiz.feat.locked', _pick('Butuh riset: {n}', 'Research needed: {n}'), { n: need });
+                }
+                return '<button type="button" class="wz-feat ' + (on ? 'selected ' : '') + (r.ok ? '' : 'locked') + '"' +
+                    (r.ok ? ' data-wiz-feature="' + f.id + '"' : ' disabled aria-disabled="true"') +
+                    ' title="' + escapeHtml(_featDesc(f)) + '">' +
+                    '<b>' + escapeHtml(_featName(f)) + '</b>' +
+                    '<small>' + escapeHtml(sub) + '</small></button>';
+            }).join('') + '</div></div>';
+    }).join('');
+    const title = _tf('wiz.feat.title', _pick('Fitur Tambahan', 'Extra Features'));
+    const hint = _tf('wiz.feat.hint', _pick(
+        'Fitur standar yang tidak ada bikin permintaan turun. Buka fitur baru lewat tab Riset > Fitur.',
+        'Missing standard features reduce demand. Unlock more in Research > Features.'));
+    return '<div class="wiz-cat">' +
+        '<div class="wiz-cat-title" style="text-transform:none;">' + renderIcon('layers', 14, 'style="vertical-align:middle;margin-right:5px;"') + escapeHtml(title) + '</div>' +
+        '<div class="wz-feat-hint">' + escapeHtml(hint) + '</div>' + groups + '</div>';
+}
+
+// Ringkasan efek fitur untuk pratinjau (sumber sama dengan permintaan nyata: ProductSystem.getFeatureAnalysisFor).
+function _featureFxHtml(s) {
+    const ps = window.__game && window.__game.products;
+    if (!ps || !ps.getFeatureAnalysisFor) return '';
+    const a = ps.getFeatureAnalysisFor(s);
+    const en = _isEn();
+    const pct = Math.round((a.factor - 1) * 1000) / 10;
+    const lines = [];
+    a.penalties.slice().sort(function (x, y) { return y.value - x.value; }).slice(0, 4).forEach(function (p) {
+        lines.push('<div class="neg">− ' + escapeHtml(en ? (p.labelEn || p.label) : p.label) + '</div>');
+    });
+    a.regulations.forEach(function (r) {
+        lines.push('<div class="neg">− ' + escapeHtml(en ? (r.labelEn || r.label) : r.label) + '</div>');
+    });
+    a.bonuses.slice().sort(function (x, y) { return y.value - x.value; }).slice(0, 3).forEach(function (b) {
+        lines.push('<div class="pos">+ ' + escapeHtml(en ? (b.nameEn || b.name) : b.name) + '</div>');
+    });
+    const row = '<div class="preview-row"><span>' + escapeHtml(_tf('wiz.feat.demand', _pick('Efek fitur ke permintaan', 'Feature effect on demand'))) + '</span>' +
+        '<b style="color:' + (pct >= 0 ? 'var(--success)' : 'var(--warn)') + ';">' + (pct >= 0 ? '+' : '') + pct + '%</b></div>';
+    return row + (lines.length ? '<div class="wz-feat-fx">' + lines.join('') + '</div>' : '');
+}
+
+
 function _step3(s) {
     const osOptions = (window.__game && window.__game.os && window.__game.os.getOsOptionsForPhone)
         ? window.__game.os.getOsOptionsForPhone()
         : [];
     const bodies = filterBodiesByEra();
     const colors = filterBodyColorsByEra();
+    _pruneFeatures(s);
 
     if (colors.length && !colors.some(function (c) { return c.id === s.bodyColorId; })) {
         s.bodyColorId = colors[0].id;
@@ -1023,6 +1189,7 @@ function _step3(s) {
                         ' aria-label="' + escapeHtml(_colorName(c)) + '"></button>';
                 }).join('') + '</div>' : '<div class="wiz-empty">' + t('wiz.step3.color_empty') + '</div>'}
             </div>
+            ${_featureSectionHtml(s)}
         </div>
         <div class="wiz-nav">
             <button class="btn-secondary" data-wiz-back style="flex:1;">${t('wiz.step3.back')}</button>
@@ -1261,6 +1428,7 @@ function _previewHtml(s) {
             ${plantFxHtml}
             <div class="preview-row"><span>${t('wiz.preview.total_cost')}</span><b>$${totalCost.toLocaleString('en-US')}</b></div>
             <div class="preview-row"><span>${t('wiz.preview.margin')}</span><b style="color:${margin >= 0 ? 'var(--success)' : 'var(--danger)'};">$${margin} (${marginPct}%)</b></div>
+            ${_featureFxHtml(s)}
             <div class="preview-row"><span>${t('wiz.preview.demand')}</span><b>${t('wiz.preview.demand_unit', { n: demand.toLocaleString('en-US') })}</b></div>
             ${noCamera ? '<div style="margin-top:8px;font-size:11px;color:var(--text-mute);">' + t('wiz.preview.no_camera') + '</div>' : ''}
             ${warnings.length ? '<div style="margin-top:8px;font-size:11px;color:var(--warn);line-height:1.5;">⚠ ' + warnings.join('<br>⚠ ') + '</div>' : ''}
