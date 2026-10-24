@@ -66,5 +66,8 @@ export const Modal = {
         while (_openStack.length) this.close(_openStack[_openStack.length - 1].id, true);
     },
 
-    isOpen(id) { return _openStack.some(m => m.id === id); }
+    isOpen(id) { return _openStack.some(m => m.id === id); },
+
+    // [era-event] Ada modal apa pun yang sedang terbuka? (event tak boleh menimpanya)
+    hasOpen() { return _openStack.length > 0; }
 };
