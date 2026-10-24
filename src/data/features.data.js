@@ -347,7 +347,7 @@ const STORAGE_ANCHORS = [
 // Kapasitas komponen penyimpanan yang sudah ada di components.data.js (kategori 'storage').
 // Dipakai agar analisis memori memakai komponen pilihan pemain, bukan menghitung ganda dengan tier ft_stor_*.
 export const STORAGE_COMPONENT_GB = {
-    stor_mmc_16: 0.016, stor_sd_128: 0.128, stor_minisd_512: 0.512, stor_microsd_1g: 1,
+    stor_int_16: 0.016, stor_int_32: 0.032, stor_mmc_16: 0.016, stor_sd_128: 0.128, stor_minisd_512: 0.512, stor_microsd_1g: 1,
     stor_microsdhc_4g: 4, stor_flash_16g: 16, stor_emmc_64g: 64, stor_ufs_128g: 128,
     stor_ufs_256g: 256, stor_ufs_512g: 512, stor_ufs_1t: 1024
 };
