@@ -44,7 +44,7 @@ ok(W.weatherLook(DARK, 'rain', 0).fogCol !== W.weatherLook(LIGHT, 'rain', 0).fog
 const T0 = new Date(2026, 9, 24, 12, 0, 0).getTime();    // 12:00 lokal -> tanpa senja
 const mk = (extra) => { const scene = mkScene(), lights = mkLights(); const w = W.createWeather(THREE, scene, Object.assign({ lights, tier: 'medium', now: () => T0, search: '', getCenter: () => ({ x: 0, z: 0 }), getHalf: () => 16 }, extra)); return { scene, lights, w }; };
 const A = mk({});
-ok(A.scene.kids.length === 2, 'menambah tepat 2 objek (hujan & salju)');
+ok(A.scene.kids.length === 3, 'menambah tepat 3 objek (hujan, percikan, salju)');
 ok(A.w.getKind() === W.weatherForBlock(W.blockOf(T0)) && A.w.getSunset() === 0, 'jenis awal = weatherForBlock(blok sekarang); senja 0 pukul 12:00');
 
 const R = mk({ search: '?weather=rain' });
@@ -84,8 +84,8 @@ S.w.update(50, true); const sx0 = Array.from(sp).filter((_, i) => i % 3 === 0), 
 for (let s = 1; s <= 10; s++) S.w.update(50 + s * 0.1, true);
 const sx1 = Array.from(sp).filter((_, i) => i % 3 === 0), sy1 = Array.from(sp).filter((_, i) => i % 3 === 1);
 let sdown = 0, sway = 0;
-for (let i = 0; i < nS; i++) { if (sy1[i] < sy0[i]) sdown++; if (sx1[i] !== sx0[i]) sway++; }
-ok(sdown > nS * 0.9 && sway > nS * 0.9, `salju turun dan bergoyang: ${sdown}/${sway} dari ${nS}`);
+for (let i = 0; i < nS; i++) { if (sy1[i] !== sy0[i]) sdown++; if (sx1[i] !== sx0[i]) sway++; }   // bergerak (butiran yang membungkus ke atas tetap dihitung)
+ok(sdown > nS * 0.95 && sway > nS * 0.9, `salju bergerak dan bergoyang: ${sdown}/${sway} dari ${nS}`);
 ok(S.w.snow.geometry.attrs.position.needsUpdate === true, 'atribut salju ditandai needsUpdate');
 
 // ambien mati -> diam
@@ -125,6 +125,56 @@ X.w.dispose();
 ok(X.scene.kids.length === 0 && X.scene.fog === null && ro.geometry.disposed && so.geometry.disposed && ro.material.disposed && so.material.disposed, 'dispose: objek dilepas, kabut dilepas, geometri & material dibuang');
 X.w.update(1, true); X.w.applyLook(LIGHT); X.w.dispose();
 ok(true, 'dispose ganda & panggilan setelah dispose aman');
+
+// hujan organik: warna memudar di tepi kotak, goresan miring, panjang bervariasi
+const F = mk({ search: '?weather=rain', getCenter: () => ({ x: 0, z: 0 }) });
+F.w.applyLook(DARK);
+const col = F.w.rain.geometry.attrs.color.array, pos = F.w.rain.geometry.attrs.position.array;
+let edgeSum = 0, edgeN = 0, midSum = 0, midN = 0, lenMin = 1e9, lenMax = -1e9, slantOk = true;
+for (let i = 0; i < F.w.rainPos.length / 3; i++) {
+  const x = F.w.rainPos[i * 3], z = F.w.rainPos[i * 3 + 2], br = col[i * 6];
+  const ex = Math.min(1 - Math.abs(x) / 16, 1 - Math.abs(z) / 16);
+  if (ex < 0.05) { edgeSum += br; edgeN++; } else if (ex > 0.5) { midSum += br; midN++; }
+  const L = pos[i * 6 + 4] - pos[i * 6 + 1];
+  lenMin = Math.min(lenMin, L); lenMax = Math.max(lenMax, L);
+  if (!(pos[i * 6 + 3] < pos[i * 6])) slantOk = false;
+}
+ok(edgeN > 0 && midN > 0 && edgeSum / edgeN < midSum / midN * 0.5, 'tepi kotak lebih redup dari tengah');
+ok(lenMax - lenMin > 0.5, 'panjang goresan bervariasi: ' + lenMin.toFixed(2) + '..' + lenMax.toFixed(2));
+ok(slantOk, 'semua goresan miring ke arah angin');
+ok(Array.from(col).every(Number.isFinite) && Array.from(col).every(v => v >= 0 && v <= 1), 'warna hujan finite & 0..1');
+F.w.applyLook(LIGHT);
+ok(F.w.rain.material.needsUpdate === true, 'pergantian tema menandai ulang material hujan');
+
+// hujan realistis (rev. 2): angin berubah, goresan miring searah angin, percikan di tanah
+ok(W.windAt(0) > 0 && W.windAt(0) < 0.4, 'angin positif & wajar');
+let wmin = 9, wmax = -9; for (let t = 0; t < 300; t += 0.5) { const v = W.windAt(t); wmin = Math.min(wmin, v); wmax = Math.max(wmax, v); }
+ok(wmax - wmin > 0.05 && wmin > 0, 'angin berubah pelan: ' + wmin.toFixed(3) + '..' + wmax.toFixed(3));
+const RW = mk({ search: '?weather=rain', getCenter: () => ({ x: 0, z: 0 }) });
+RW.w.applyLook(DARK);
+RW.w.update(200, true);
+let spawned = 0;
+for (let s = 1; s <= 60; s++) RW.w.update(200 + s * 0.05, true);       // 3 detik ambien
+for (const a of RW.w.spAge) if (a < 0.22) spawned++;
+ok(spawned > 0, 'percikan muncul saat tetes menyentuh tanah: ' + spawned + ' aktif');
+ok(RW.w.spAge.some(a => a >= 0.22), 'percikan lama mati (tidak menumpuk)');
+
+
+RW.w.update(203.05, true);
+const pos2 = RW.w.rain.geometry.attrs.position.array;
+let ratioOk = 0, ratioN = 0;
+for (let i = 0; i < RW.w.rainLen.length; i++) {
+  const L = pos2[i * 6 + 4] - pos2[i * 6 + 1];
+  if (L > 0.1) { ratioN++; const r = (pos2[i * 6 + 3] - pos2[i * 6]) / L; if (Math.abs(r + W.windAt(203.05) * 1.0) < W.windAt(203.05) * 0.4) ratioOk++; }
+}
+ok(ratioN > 0 && ratioOk / ratioN > 0.8, 'goresan miring sesuai angin: ' + ratioOk + '/' + ratioN);
+ok(RW.w.splash.visible === true && RW.w.snow.visible === false, 'percikan tampil saat hujan');
+const dsp = mk({ search: '?weather=snow' });
+ok(dsp.w.splash.visible === false, 'percikan tersembunyi saat salju');
+RW.w.setKind('clear');
+ok(RW.w.splash.visible === false, 'percikan hilang saat cerah');
+RW.w.dispose();
+ok(RW.scene.kids.length === 0, 'dispose membuang percikan juga');
 
 console.log(fail ? 'ADA GAGAL' : 'SEMUA LULUS');
 process.exit(fail ? 1 : 0);
