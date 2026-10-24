@@ -88,6 +88,24 @@ ok(shown2 === 0, 'life.setSky(sunny): payung tertutup');
 let threw = false;
 try { for (let t = 0; t < 120; t += 0.033) life.update(t); } catch (e) { threw = e; }
 ok(!threw, 'update 120 detik tanpa error' + (threw ? ': ' + threw.stack : ''));
+// perumahan: mobil & penghuni Jalan Permukiman tampil sesuai level
+ok(typeof life.setHousing === 'function', 'life.setHousing tersedia');
+const meshCount = () => { let n = 0; walk(scene, o => { if (o instanceof Mesh) n++; }); return n; };
+const vis = () => { let n = 0; walk(scene, o => { if (o instanceof Group && o.visible === false && o.children.length > 0 && o.children.every(c => c instanceof Mesh || c instanceof Group)) n++; }); return n; };
+life.setHousing(0); const hidden0 = vis();
+life.setHousing(3); const hidden3 = vis();
+ok(hidden3 < hidden0, 'setHousing(3) menampilkan mobil & penghuni yang tadinya tersembunyi: ' + hidden0 + ' -> ' + hidden3);
+life.setHousing(1); const hidden1 = vis();
+ok(hidden1 < hidden0 && hidden1 > hidden3, 'setHousing(1) hanya sebagian: ' + hidden0 + ' > ' + hidden1 + ' > ' + hidden3);
+life.setHousing(0);
+let thr2 = false;
+try { life.setHousing(2); for (let t = 0; t < 200; t += 0.05) life.update(t); life.setHousing(0); life.update(300); } catch (e) { thr2 = e; }
+ok(!thr2, 'update dengan perumahan tampil & disembunyikan tanpa error' + (thr2 ? ': ' + thr2.stack : ''));
+// penghuni berjalan di trotoar Jalan Permukiman (z 6.5 / 8.5) dalam x -13.4..-2.4
+life.setHousing(3);
+const res = []; walk(scene, o => { if (o instanceof Group && o.position && Math.abs(o.position.z - 6.5) < 1e-6 || o instanceof Group && o.position && Math.abs(o.position.z - 8.5) < 1e-6) res.push(o); });
+life.update(77);
+ok(res.length >= 1 && res.every(o => o.position.x >= -13.5 && o.position.x <= -2.3), 'penghuni di trotoar jalan permukiman: ' + res.length + ' orang, x -13.4..-2.4');
 life.dispose();
 ok(scene.children.length === 0, 'dispose CampusLife melepas root dari scene');
 const lifeMats = allMats.filter(m => m.roughness !== undefined);
