@@ -114,6 +114,13 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             totalProduced: 0
         },
 
+        assembly: {
+            built: false, level: 0, upgrade: null,
+            workers: { operator: 0, qc: 0, technician: 0, supervisor: 0 },
+            training: [], overtime: false, morale: 75, unpaid: 0,
+            recent: [], totalAssembled: 0, defectUnits: 0, wagesPaid: 0, orders: 0
+        },
+
         marketing: { activeCampaigns: [] },
         reviews: { feed: [] },
 
@@ -471,6 +478,12 @@ class GameState {
                 plants: { ...((incoming.componentPlants && incoming.componentPlants.plants) || {}) },
                 inventory: { ...((incoming.componentPlants && incoming.componentPlants.inventory) || {}) },
                 history: Array.isArray(incoming.componentPlants && incoming.componentPlants.history) ? incoming.componentPlants.history : []
+            },
+            assembly: {
+                ...base.assembly, ...(incoming.assembly || {}),
+                workers: { ...base.assembly.workers, ...((incoming.assembly && incoming.assembly.workers) || {}) },
+                training: Array.isArray(incoming.assembly && incoming.assembly.training) ? incoming.assembly.training : [],
+                recent: Array.isArray(incoming.assembly && incoming.assembly.recent) ? incoming.assembly.recent : []
             },
             marketing: {
                 ...base.marketing, ...(incoming.marketing || {}),
