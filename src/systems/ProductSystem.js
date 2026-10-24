@@ -15,6 +15,7 @@ import { getCampaignById, MARKETING_CAMPAIGNS } from '../data/marketing.data.js'
 import { resolveComponentCost, getMarketPrice, getBuiltPlantEffect, getPlantTypeForCategory } from '../data/material-plants.data.js';
 import { getLicenseById, getLicenseStatsAtYear } from '../data/os.data.js';
 import { computeTechEdge, getMasteryStatBonus, RND_TRACKS } from '../data/research.data.js';
+import { getFeatureStats, getFeatureUnitCost, getFeatureAnalysis, validateFeatureSelection, getStorageGBForComponent } from '../data/features.data.js';
 import { getMacro, reviewBaseScore } from '../core/MacroModel.js';
 import { WalletService } from './WalletService.js';
 import { getEraEventDemandFactor } from './EraEventSystem.js';
@@ -170,6 +171,11 @@ export class ProductSystem {
         var chipComp = getComponentById(config.chipId);
         var chipPerf = (chipComp && chipComp.stats && chipComp.stats.performance) || 0;
         stats.performance += getGameEnginePerfBonus(chipPerf, config.osOptionId, this.state.data);
+        // [Fitur Ponsel] Tambahan stat dari modul fitur (sudah dibatasi FEATURE_STAT_CAP). Tanpa featureIds = netral.
+        var featStats = getFeatureStats(config.featureIds);
+        for (var fk in featStats) {
+            if (stats[fk] !== undefined) stats[fk] += featStats[fk];
+        }
 
         ['display','camera','battery','performance','connectivity','quality','design','usability'].forEach(function (k) {
             stats[k] = Math.max(0, Math.min(100, Math.round(stats[k])));
@@ -201,7 +207,22 @@ export class ProductSystem {
             // Harga internal jika pabrik komponen (baterai/layar) sudah dibangun.
             if (c) cost += resolveComponentCost(self.state.data, c);
         });
+        // [Fitur Ponsel] Biaya modul fitur per unit (bukan komponen pabrik, jadi selalu ikut).
+        cost += getFeatureUnitCost(config.featureIds);
         return Math.round(cost);
+    }
+
+    // [Fitur Ponsel] Pengali permintaan dari fitur. Dipakai estimasi wizard DAN permintaan nyata
+    // (fungsi yang sama, supaya angka pratinjau = angka setelah rilis).
+    // Produk/save lama tanpa featureIds -> 1 (netral).
+    getFeatureAnalysisFor(configOrProduct) {
+        var cfg = configOrProduct && (configOrProduct.config || configOrProduct);
+        return getFeatureAnalysis(cfg ? cfg.featureIds : null, this.state.data.time.currentYear,
+            { storageGB: cfg ? getStorageGBForComponent(cfg.storageId) : 0 });
+    }
+    _getFeatureFactor(configOrProduct) {
+        var f = this.getFeatureAnalysisFor(configOrProduct).factor;
+        return (typeof f === 'number' && isFinite(f) && f > 0) ? f : 1;
     }
 
     estimateDemand(config) {
@@ -225,8 +246,9 @@ export class ProductSystem {
         var lifecycleF = 1.0;
         var techF = this._getTechFactor(null);
         var navF = this._nav ? this._nav.estimateFactor(stats, config.price, config) : 1.0;
+        var featureF = this._getFeatureFactor(config);
 
-        var demand = baseDemand * baseMult * qualityF * priceF * repF * marketingF * osFactor * trendF * competitorF * lifecycleF * techF * navF;
+        var demand = baseDemand * baseMult * qualityF * priceF * repF * marketingF * osFactor * trendF * competitorF * lifecycleF * techF * navF * featureF;
         return Math.max(0, Math.round(demand));
     }
 
@@ -335,6 +357,13 @@ export class ProductSystem {
 
         if (config.productionQty < 100) return { ok: false, reason: 'Jumlah produksi minimal 100 unit.' };
 
+        // [Fitur Ponsel] Validasi pilihan fitur (riset, tahun, grup eksklusif). Kosong/undefined = tanpa fitur.
+        if (config.featureIds !== undefined && !Array.isArray(config.featureIds)) config.featureIds = [];
+        if (Array.isArray(config.featureIds)) {
+            var fv = validateFeatureSelection(config.featureIds, data.time.currentYear, (data.research && data.research.completed) || []);
+            if (!fv.ok) return { ok: false, reason: fv.reason };
+        }
+
         var unitCost = this.computeUnitCost(config);
         
         // ============================================================
@@ -371,7 +400,7 @@ export class ProductSystem {
         var project = {
             id: productId,
             name: name,
-            config: Object.assign({}, config),
+            config: Object.assign({}, config, Array.isArray(config.featureIds) ? { featureIds: config.featureIds.slice() } : {}),
             stats: stats,
             unitCost: unitCost,
             volMult: volMult,
@@ -508,7 +537,7 @@ export class ProductSystem {
         var product = {
             id: d.id,
             name: d.name,
-            config: Object.assign({}, cfg),
+            config: Object.assign({}, cfg, Array.isArray(cfg.featureIds) ? { featureIds: cfg.featureIds.slice() } : {}),
             stats: Object.assign({}, d.stats),
             techSnapshot: d.techSnapshot ? { levels: Object.assign({}, d.techSnapshot.levels), year: d.techSnapshot.year } : null,
             price: cfg.price,
@@ -670,6 +699,7 @@ export class ProductSystem {
         var navF = this._nav ? this._nav.getDemandFactor(p) : 1.0;
         // [era-event] pengali sementara dari keputusan event 2000–2002 (1.0 bila tidak ada).
         var eventF = getEraEventDemandFactor(data, p);
+        var featureF = this._getFeatureFactor(p);   // [Fitur Ponsel] 1.0 untuk produk lama
 
         // Noise harian dihaluskan (AR1) supaya penjualan tidak naik-turun liar.
         var sm = BALANCE.macro.demandNoiseSmoothing;
@@ -679,7 +709,7 @@ export class ProductSystem {
 
         var demand = baseDemand * baseMult * qualityF * priceF * repF
                      * marketingF * osFactor * trendF * competitorF
-                     * lifecycleF * techF * navF * eventF * noise;
+                     * lifecycleF * techF * navF * eventF * featureF * noise;
 
         return Math.max(0, Math.round(demand));
     }

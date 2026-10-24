@@ -999,6 +999,18 @@ export class AdvisorBrain {
                 if (age > 180) tags.push(L('mulai menua', 'aging'));
                 if (p.price > 0 && typeof p.unitCost === 'number' && (p.price - p.unitCost) / p.price < 0.12) tags.push(L('margin tipis', 'thin margin'));
                 if (typeof sat[p.id] === 'number' && sat[p.id] < 45) tags.push(L('pengguna kurang puas', 'users unhappy'));
+                // [Fitur Ponsel] sebut fitur standar yang kurang / regulasi (produk lama tanpa featureIds dilewati).
+                try {
+                    var psx = window.__game && window.__game.products;
+                    if (psx && psx.getFeatureAnalysisFor && p.config && Array.isArray(p.config.featureIds)) {
+                        var fa = psx.getFeatureAnalysisFor(p);
+                        if (fa.regulations && fa.regulations.length) tags.push(L(fa.regulations[0].label, fa.regulations[0].labelEn || fa.regulations[0].label));
+                        else {
+                            var tp = (fa.penalties || []).slice().sort(function (x, y) { return y.value - x.value; })[0];
+                            if (tp && tp.value >= 0.03) tags.push(L(tp.label, tp.labelEn || tp.label));
+                        }
+                    }
+                } catch (e) {}
             }
             lines.push('**' + p.name + '** — ' + L('terjual ', 'sold ') + money(p.totalSold || 0) + L(', stok ', ', stock ') + money(p.stock || 0) +
                        (p.status === 'selling' ? L(', umur ' + age + ' hari', ', age ' + age + ' days') : '') +

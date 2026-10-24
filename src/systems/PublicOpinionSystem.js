@@ -317,6 +317,49 @@ export class PublicOpinionSystem {
         });
     }
 
+    // Analisis fitur produk (null bila produk lama tanpa featureIds / ProductSystem belum siap).
+    _getFeatureAnalysis(product) {
+        try {
+            const cfg = product && product.config;
+            if (!cfg || !Array.isArray(cfg.featureIds)) return null;
+            const ps = window.__game && window.__game.products;
+            if (!ps || !ps.getFeatureAnalysisFor) return null;
+            const a = ps.getFeatureAnalysisFor(product);
+            return (a && isFinite(a.factor)) ? a : null;
+        } catch (e) { return null; }
+    }
+
+    // Satu kalimat ulasan dari hasil analisis fitur. '' bila tidak ada yang layak disebut.
+    _featureReviewNote(fa, score) {
+        if (!fa) return '';
+        const id = _lang() === 'id';
+        const pick = function (arr) { return arr[Math.floor(Math.random() * arr.length)]; };
+        const regs = fa.regulations || [];
+        const pens = (fa.penalties || []).filter(function (x) { return x.value >= 0.02; })
+            .sort(function (a, b) { return b.value - a.value; });
+        const bons = (fa.bonuses || []).filter(function (x) { return x.value >= 0.015; })
+            .sort(function (a, b) { return b.value - a.value; });
+        if (score <= 6.5 && (regs.length || pens.length)) {
+            if (regs.length && Math.random() < 0.5) {
+                const r = regs[0];
+                return (id ? 'Di Eropa: ' + r.label : 'In Europe: ' + (r.labelEn || r.label)) + '.';
+            }
+            if (pens.length) {
+                const p = pens[Math.floor(Math.random() * Math.min(2, pens.length))];
+                const lbl = id ? p.label : (p.labelEn || p.label);
+                return id ? pick(['Kekurangannya: ', 'Sayangnya ', 'Yang mengganjal: ']) + lbl + '.'
+                          : pick(['Downside: ', 'Unfortunately, ', 'The letdown: ']) + lbl + '.';
+            }
+        }
+        if (score >= 6 && bons.length) {
+            const b = bons[Math.floor(Math.random() * Math.min(2, bons.length))];
+            const nm = id ? b.name : (b.nameEn || b.name);
+            return id ? pick(['Nilai plus: ', 'Yang saya suka: ']) + nm + '.'
+                      : pick(['Plus: ', 'What I like: ']) + nm + '.';
+        }
+        return '';
+    }
+
     _generateReviewForProduct(product, isInitial) {
         const data = this.state.data;
         const year = data.time.currentYear || 2000;
@@ -356,6 +399,10 @@ export class PublicOpinionSystem {
 
         base += pricePenalty;
         base -= bugHit;
+
+        // [Fitur Ponsel] Fitur yang kurang/unggul memengaruhi skor ulasan. Produk lama tanpa featureIds = netral.
+        const fa = this._getFeatureAnalysis(product);
+        if (fa) base += Math.max(-2, Math.min(1, (fa.factor - 1) * 5));
         
         const variance = (Math.random() * 2 - 1) * 1.2;
         let score = Math.max(1, Math.min(10, Math.round((base + variance) * 10) / 10));
@@ -393,6 +440,10 @@ export class PublicOpinionSystem {
                 }
             }
         }
+
+        // Sebut fitur yang kurang (keluhan) atau unggul (pujian) bila ada.
+        const featNote = this._featureReviewNote(fa, score);
+        if (featNote && Math.random() < 0.7) finalText = finalText.replace(/\s+$/, '') + ' ' + featNote;
 
         return {
             id: 'rv_' + Date.now() + '_' + Math.floor(Math.random() * 1000),

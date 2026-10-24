@@ -88,6 +88,8 @@ const DICT = {
         'share_drop.d': 'Pangsa pasarmu turun dari {from}% menjadi {to}%. Pesaing sedang menekan; cek tren dan harga.',
         'product_unhappy.t': 'Pengguna kurang puas: {name}',
         'product_unhappy.d': 'Kepuasan {n}/100. Perbaiki bug OS dan rancang penerus yang lebih baik.',
+        'feature_gap.t': 'Fitur kurang: {name}',
+        'feature_gap.d': 'Masalah utama: {gap}. Permintaan turun sekitar {pct}% karena fitur. Riset fitur di tab Riset, lalu masukkan ke desain penerus.',
         'catalog_full.t': 'Katalog aktif penuh',
         'catalog_full.d': '{n} produk dijual sekaligus (batas {max}). Hentikan yang sudah tua sebelum merilis yang baru.',
         'viral_opportunity.t': 'Momentum viral positif',
@@ -199,6 +201,8 @@ const DICT = {
         'share_drop.d': 'Your share fell from {from}% to {to}%. Rivals are pushing; check trends and pricing.',
         'product_unhappy.t': 'Users are unhappy: {name}',
         'product_unhappy.d': 'Satisfaction {n}/100. Fix OS bugs and design a better successor.',
+        'feature_gap.t': 'Missing features: {name}',
+        'feature_gap.d': 'Main issue: {gap}. Demand is down about {pct}% because of features. Research features in the Research tab, then add them to a successor.',
         'catalog_full.t': 'Active catalog is full',
         'catalog_full.d': '{n} products on sale (limit {max}). Retire old ones before releasing new ones.',
         'viral_opportunity.t': 'Positive viral momentum',
@@ -411,6 +415,26 @@ const RULES = [
                 push('product_unhappy:' + p.id, 'tip', 'mood-low', { name: p.name, n: Math.round(v) },
                     { nav: 'research', subtab: 'os' }, 36);
             }
+        });
+    },
+    // [Fitur Ponsel] Produk yang kehilangan fitur standar / melanggar regulasi wilayah.
+    function featureGap(c, push) {
+        var ps = window.__game && window.__game.products;
+        if (!ps || !ps.getFeatureAnalysisFor) return;
+        var id = curLang() === 'id';
+        c.selling.forEach(function (p) {
+            if (!p.config || !Array.isArray(p.config.featureIds)) return;
+            var a = ps.getFeatureAnalysisFor(p);
+            if (!a || !(a.factor < 0.97)) return;
+            var gap = '';
+            if (a.regulations && a.regulations.length) gap = id ? a.regulations[0].label : (a.regulations[0].labelEn || a.regulations[0].label);
+            else {
+                var top = (a.penalties || []).slice().sort(function (x, y) { return y.value - x.value; })[0];
+                if (top) gap = id ? top.label : (top.labelEn || top.label);
+            }
+            if (!gap) return;
+            push('feature_gap:' + p.id, a.factor < 0.88 ? 'warn' : 'tip', 'phone',
+                { name: p.name, gap: gap, pct: Math.round((1 - a.factor) * 100) }, { nav: 'research', subtab: 'tech' }, 30);
         });
     },
     function hiring(c, push) {
