@@ -1,4 +1,4 @@
-// Uji cuaca & senja (CampusWeather.js): fungsi murni, look, gerak hujan/salju, visibilitas, ambien mati, dispose.
+// Uji cuaca (5 kondisi: clear, sunny, overcast, rain, snow) & senja (CampusWeather.js): fungsi murni, look, gerak hujan/salju, visibilitas, ambien mati, dispose.
 // Tidak butuh probe: memakai THREE tiruan kecil. Jalankan: node tools/weather-test.mjs
 import { stubBrowser, load } from './boot.mjs';
 stubBrowser();
@@ -19,24 +19,55 @@ const DARK = { hemiSky: 0x7f93bd, hemiGround: 0x1d2430, hemiI: 0.9, sunCol: 0xa9
 
 // --- fungsi murni ---
 ok(W.weatherForBlock(12345) === W.weatherForBlock(12345), 'weatherForBlock deterministik');
-const cnt = { clear: 0, rain: 0, snow: 0 }; const N = 20000;
+const cnt = { clear: 0, sunny: 0, overcast: 0, rain: 0, snow: 0 }; const N = 40000;
 for (let b = 0; b < N; b++) cnt[W.weatherForBlock(b)]++;
-ok(Math.abs(cnt.clear / N - 0.6) < 0.03 && Math.abs(cnt.rain / N - 0.3) < 0.03 && Math.abs(cnt.snow / N - 0.1) < 0.02,
-  `distribusi ~60/30/10: ${(cnt.clear / N).toFixed(3)}/${(cnt.rain / N).toFixed(3)}/${(cnt.snow / N).toFixed(3)}`);
+const exp5 = { clear: 0.40, sunny: 0.20, overcast: 0.15, rain: 0.15, snow: 0.10 };
+ok(Object.keys(exp5).every(k => Math.abs(cnt[k] / N - exp5[k]) < 0.02) && Object.keys(cnt).length === 5,
+  'distribusi ~40/20/15/15/10: ' + Object.keys(exp5).map(k => (cnt[k] / N).toFixed(3)).join('/'));
+ok(W.KINDS.length === 5 && W.KINDS.every(k => W.isKind(k)) && !W.isKind('hujan'), 'daftar 5 kondisi');
 ok(W.blockOf(0) === 0 && W.blockOf(1800000 - 1) === 0 && W.blockOf(1800000) === 1, 'blok 30 menit');
 ok(W.sunsetAmount(12) === 0 && W.sunsetAmount(16.5) === 0 && W.sunsetAmount(18) === 1 && W.sunsetAmount(19.5) === 0 && W.sunsetAmount(23) === 0, 'senja 0 siang, 1 pada 18.0, 0 pada 19.5');
 ok(Math.abs(W.sunsetAmount(17.25) - 0.5) < 1e-9 && Math.abs(W.sunsetAmount(18.75) - 0.5) < 1e-9, 'senja naik/turun linear');
 const o1 = W.readOverride('?weather=rain&sunset=0.5'), o2 = W.readOverride('?sunset=7&x=1'), o3 = W.readOverride('?weather=hujan');
 ok(o1.weather === 'rain' && o1.sunset === 0.5 && o2.sunset === 1 && o2.weather === null && o3.weather === null && W.readOverride('').sunset === null, 'readOverride');
+ok(['clear', 'sunny', 'overcast', 'rain', 'snow'].every(k => W.readOverride('?weather=' + k).weather === k) && W.readOverride('?weather=sunnyy').weather === null, 'override URL untuk kelima kondisi');
+
+// --- senja bergantung cuaca ---
+ok(W.sunsetFor('sunny', 18) === 1 && W.sunsetFor('clear', 18) === 0 && W.sunsetFor('rain', 18) === 0 && W.sunsetFor('snow', 18) === 0, 'senja: penuh di sunny; nol di clear/rain/snow pada 18.0');
+ok(W.sunsetFor('overcast', 18) > 0 && W.sunsetFor('overcast', 18) <= 0.1 + 1e-9, 'senja mendung sangat kecil (<=0.1)');
+ok(W.sunsetFor('sunny', 12) === 0 && W.sunsetFor('sunny', 17.25) === 0.5 && W.sunsetFor('bogus', 18) === 0, 'senja sunny mengikuti jam; kondisi asing = 0');
 ok(W.mixHex(0x000000, 0xffffff, 0.5) === 0x808080 && W.mixHex(0x102030, 0x405060, 0) === 0x102030 && W.mixHex(0x102030, 0x405060, 1) === 0x405060, 'mixHex');
 
 // --- weatherLook ---
 const clear = W.weatherLook(LIGHT, 'clear', 0), rain = W.weatherLook(LIGHT, 'rain', 0), snow = W.weatherLook(LIGHT, 'snow', 0);
+const sunny = W.weatherLook(LIGHT, 'sunny', 0), over = W.weatherLook(LIGHT, 'overcast', 0);
 ok(!clear.fogOn && clear.sunI === LIGHT.sunI && clear.sunCol === LIGHT.sunCol, 'cerah tanpa senja = look asli, tanpa kabut');
+ok(sunny.sunI > clear.sunI && !sunny.fogOn && sunny.rimI > clear.rimI, 'sangat cerah: matahari lebih kuat dari cerah, tanpa kabut');
+ok(over.sunI < clear.sunI * 0.4 && over.hemiI > clear.hemiI && over.hemiI / over.sunI > clear.hemiI / clear.sunI * 2, 'mendung: matahari <40% cerah, hemisphere dominan');
+ok(over.fogOn && over.fogFar > rain.fogFar && over.fogNear > rain.fogNear, 'mendung: kabut tipis (lebih jauh dari hujan)');
+ok(((over.hemiSky >> 16) & 255) - (over.hemiSky & 255) < ((LIGHT.hemiSky >> 16) & 255) - (LIGHT.hemiSky & 255) + 1 && over.hemiSky !== LIGHT.hemiSky, 'mendung: langit abu dingin (bukan hangat)');
 ok(rain.sunI < clear.sunI && snow.sunI < clear.sunI && rain.fogOn && snow.fogOn, 'hujan & salju lebih redup dari cerah, berkabut');
 ok(snow.hemiI > clear.hemiI, 'salju membuat hemi lebih terang');
-const dusk = W.weatherLook(LIGHT, 'clear', 1);
-ok(dusk.sunCol !== LIGHT.sunCol && dusk.sunI < LIGHT.sunI && ((dusk.sunCol >> 16) & 255) > (dusk.sunCol & 255), 'senja: matahari jingga & sedikit lebih redup');
+ok(over.sunI > rain.sunI * 0.5 && rain.fogFar < snow.fogFar + 20, 'hujan tetap lebih gelap/berkabut dari mendung');
+const dusk = W.weatherLook(LIGHT, 'sunny', 1);
+ok(dusk.sunCol !== sunny.sunCol && dusk.sunI < sunny.sunI && ((dusk.sunCol >> 16) & 255) - (dusk.sunCol & 255) > 120, 'senja (sunny): matahari jingga & sedikit lebih redup');
+ok(['clear', 'rain', 'snow'].every(k => JSON.stringify(W.weatherLook(LIGHT, k, 1)) === JSON.stringify(W.weatherLook(LIGHT, k, 0))), 'clear/rain/snow tidak menerima senja (weatherLook)');
+const od = W.weatherLook(LIGHT, 'overcast', 1);
+ok(od.sunCol !== over.sunCol && ((od.sunCol >> 16) & 255) - (od.sunCol & 255) < 60 && od.sunCol !== dusk.sunCol, 'mendung: rona senja hanya samar');
+// semua kondisi x tema x senja: tidak NaN, warna valid
+let lookOk = true;
+for (const L of [LIGHT, DARK]) for (const k of W.KINDS) for (const sv of [0, 0.5, 1]) {
+  const w = W.weatherLook(L, k, sv);
+  for (const key of ['hemiI', 'sunI', 'fillI', 'rimI']) if (!Number.isFinite(w[key]) || w[key] < 0) lookOk = false;
+  for (const key of ['hemiSky', 'hemiGround', 'sunCol', 'fillCol', 'rimCol', 'fogCol']) if (!Number.isInteger(w[key]) || w[key] < 0 || w[key] > 0xffffff) lookOk = false;
+}
+ok(lookOk, 'weatherLook: 5 kondisi x 2 tema x 3 senja tanpa NaN, warna 0..0xffffff');
+// awan
+const cc = W.cloudLook('clear', 0, false), co = W.cloudLook('overcast', 0, false), cr = W.cloudLook('rain', 0, false), cs = W.cloudLook('sunny', 1, false), cd = W.cloudLook('clear', 1, false);
+ok(cc.color === 0xffffff && cc.opacity === 0.8 && cc.y === 9, 'awan cerah = tampilan asli');
+ok(co.color !== 0xffffff && co.y < cc.y && co.opacity > cc.opacity && cr.y <= co.y, 'awan mendung/hujan: lebih gelap, rendah, pekat');
+ok(cs.color !== 0xffffff && ((cs.color >> 16) & 255) > (cs.color & 255) && cd.color === 0xffffff, 'awan senja jingga hanya saat sunny');
+ok(W.cloudLook('clear', 0, true).opacity === 0.45 && W.cloudLook('clear', 0, true).shadow === 0.16, 'awan tema gelap = tampilan asli');
 ok(LIGHT.sunI === 3.0 && LIGHT.sunCol === 0xffe6c2, 'weatherLook tidak mengubah input');
 ok(W.weatherLook(DARK, 'rain', 0).fogCol !== W.weatherLook(LIGHT, 'rain', 0).fogCol, 'warna kabut mengikuti tema');
 
@@ -57,6 +88,33 @@ R.w.setKind('snow');
 ok(R.w.snow.visible && !R.w.rain.visible && R.lights.hemi.intensity > LIGHT.hemiI, 'setKind(snow)');
 R.w.setKind('bogus');
 ok(R.w.getKind() === 'clear', 'jenis tidak dikenal -> cerah');
+
+// lima kondisi di createWeather
+const kinds5 = {};
+for (const k of W.KINDS) {
+  const M5 = mk({ search: '?weather=' + k + '&sunset=1' }); M5.w.applyLook(LIGHT);
+  kinds5[k] = { w: M5.w, lights: M5.lights, scene: M5.scene };
+}
+ok(W.KINDS.every(k => kinds5[k].w.getKind() === k), 'override memilih tiap kondisi');
+ok(kinds5.rain.w.rain.visible && !kinds5.rain.w.snow.visible && kinds5.snow.w.snow.visible && !kinds5.snow.w.rain.visible, 'partikel hanya untuk hujan/salju');
+ok(['clear', 'sunny', 'overcast'].every(k => !kinds5[k].w.rain.visible && !kinds5[k].w.snow.visible && !kinds5[k].w.splash.visible), 'cerah/sangat cerah/mendung tanpa partikel');
+ok(kinds5.sunny.w.getSunset() === 1 && kinds5.clear.w.getSunset() === 0 && kinds5.rain.w.getSunset() === 0 && kinds5.snow.w.getSunset() === 0 && Math.abs(kinds5.overcast.w.getSunset() - 0.1) < 1e-9, 'senja efektif per kondisi saat ?sunset=1');
+ok(kinds5.sunny.scene.fog === null && kinds5.clear.scene.fog === null && kinds5.overcast.scene.fog && kinds5.overcast.scene.fog.far === 160 && kinds5.rain.scene.fog && kinds5.snow.scene.fog, 'kabut hanya untuk mendung, hujan, salju');
+const sl = kinds5.sunny.lights, ol = kinds5.overcast.lights, cl5 = kinds5.clear.lights;
+const warm = h => ((h >> 16) & 255) - (h & 255);
+ok(warm(sl.sun.color.hex) > warm(LIGHT.sunCol) + 50 && cl5.sun.color.hex === LIGHT.sunCol, 'sunny senja jingga di lampu; clear tetap asli walau ?sunset=1');
+ok(ol.sun.intensity < LIGHT.sunI * 0.4, 'mendung: intensitas matahari <40% dari cerah');
+// sunny siang hari tanpa senja tetap lebih kuat dari cerah
+const SD = mk({ search: '?weather=sunny' }); SD.w.applyLook(LIGHT);
+ok(SD.w.getSunset() === 0 && SD.lights.sun.intensity > LIGHT.sunI, 'sunny siang: tanpa senja tapi lebih terang dari cerah');
+// ganti kondisi di tempat mengikuti faktor senja
+const SW = mk({ search: '?sunset=1' }); SW.w.applyLook(LIGHT);
+SW.w.setKind('sunny'); const sunnySun = SW.w.getSunset();
+SW.w.setKind('rain'); const rainSun = SW.w.getSunset();
+SW.w.setKind('overcast');
+ok(sunnySun === 1 && rainSun === 0 && Math.abs(SW.w.getSunset() - 0.1) < 1e-9, 'setKind menghitung ulang senja efektif');
+for (const k of W.KINDS) kinds5[k].w.dispose();
+ok(W.KINDS.every(k => kinds5[k].scene.kids.length === 0 && kinds5[k].scene.fog === null), 'dispose membersihkan semua kondisi');
 
 // gerak hujan
 const Q = mk({ search: '?weather=rain', getCenter: () => ({ x: 5, z: -3 }) });
@@ -102,21 +160,28 @@ ok(cl('low', 'snow').w.snowPos.length / 3 === 200 && cl('medium', 'snow').w.snow
 
 // senja dari jam lokal + onChange
 let t = new Date(2026, 9, 24, 12, 0, 0).getTime(), changes = 0;
-const Z = mk({ now: () => t, onChange: () => changes++, search: '?weather=clear' });
+const Z = mk({ now: () => t, onChange: () => changes++, search: '?weather=sunny' });
 Z.w.applyLook(LIGHT);
-ok(Z.w.getSunset() === 0 && Z.lights.sun.intensity === LIGHT.sunI, 'siang: tanpa senja');
+const noonSun = Z.lights.sun.intensity;
+ok(Z.w.getSunset() === 0 && noonSun > LIGHT.sunI, 'siang (sunny): tanpa senja');
 t = new Date(2026, 9, 24, 18, 0, 0).getTime();
 Z.w.update(1000, true);
-ok(Math.abs(Z.w.getSunset() - 1) < 1e-9 && Z.lights.sun.intensity < LIGHT.sunI && changes === 1, 'pukul 18:00: senja penuh, cahaya bergeser, onChange dipanggil');
+ok(Math.abs(Z.w.getSunset() - 1) < 1e-9 && Z.lights.sun.intensity < noonSun && changes === 1, 'pukul 18:00 (sunny): senja penuh, cahaya bergeser, onChange dipanggil');
+const ZC = mk({ now: () => t, search: '?weather=clear' }); ZC.w.applyLook(LIGHT);
+ok(ZC.w.getSunset() === 0 && ZC.lights.sun.intensity === LIGHT.sunI && ZC.lights.sun.color.hex === LIGHT.sunCol, 'pukul 18:00 (clear): tanpa senja sama sekali');
+const ZR = mk({ now: () => t, search: '?weather=rain' }); ZR.w.applyLook(LIGHT);
+const ZR0 = mk({ now: () => T0, search: '?weather=rain' }); ZR0.w.applyLook(LIGHT);
+ok(ZR.lights.sun.color.hex === ZR0.lights.sun.color.hex && ZR.lights.sun.intensity === ZR0.lights.sun.intensity, 'pukul 18:00 (hujan): sama persis dengan siang (tanpa oranye)');
 Z.w.update(1005, true);
 ok(changes === 1, 'dicek hanya tiap ~20 detik (tidak ada onChange ganda)');
-const SO = mk({ search: '?sunset=0.5' });
-ok(SO.w.getSunset() === 0.5, 'override ?sunset=0.5');
+const SO = mk({ search: '?weather=sunny&sunset=0.5' });
+ok(SO.w.getSunset() === 0.5, 'override ?sunset=0.5 (sunny)');
+ok(mk({ search: '?weather=snow&sunset=0.5' }).w.getSunset() === 0, 'override ?sunset tetap dikalikan faktor cuaca (salju = 0)');
 
 // ganti blok
 let tb = T0; const B = mk({ now: () => tb, onChange: () => changes++ });
 const kinds = new Set(); for (let i = 0; i < 40; i++) { tb = T0 + i * 1800000; B.w.update(i * 100, true); kinds.add(B.w.getKind()); }
-ok(kinds.size >= 2, 'jenis cuaca berganti antar blok: ' + Array.from(kinds).join(','));
+ok(kinds.size >= 3, 'jenis cuaca berganti antar blok: ' + Array.from(kinds).join(','));
 
 // dispose
 const X = mk({ search: '?weather=rain' }); X.w.applyLook(LIGHT);
