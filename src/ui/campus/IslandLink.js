@@ -231,12 +231,27 @@ function createFar(THREE, parent, ox, defs) {
     geos.push(boxG, ballG, cylG);
 
     function mm(key) { return typeof key === 'string' ? mats[key] : key; }
+    // Haze jarak (CinematicFx): warna material dicampur ke warna kabut agar pulau tetangga tampak lebih jauh.
+    var darkNow = false, hazeCol = new THREE.Color(0xffffff), hazeAmt = 0;
+    function paint() {
+        var ix = darkNow ? 1 : 0;
+        keys.forEach(function (k) {
+            mats[k].color.setHex(defs[k][ix]);
+            if (hazeAmt > 0) mats[k].color.lerp(hazeCol, hazeAmt);
+        });
+        extra.forEach(function (m) {
+            m.color.setHex(m.userData.baseHex);
+            if (hazeAmt > 0) m.color.lerp(hazeCol, hazeAmt);
+        });
+    }
     return {
         group: group, mats: mats, boxG: boxG, ballG: ballG, cylG: cylG,
         // Warna tetap (mis. aksen pabrik); ikut di-dispose.
         solid: function (hex) {
             var m = new THREE.MeshStandardMaterial({ color: hex, roughness: 0.6, metalness: 0.1 });
             m.envMapIntensity = 0.45;
+            m.userData.baseHex = hex;
+            if (hazeAmt > 0) m.color.lerp(hazeCol, hazeAmt);
             extra.push(m);
             return m;
         },
@@ -267,8 +282,14 @@ function createFar(THREE, parent, ox, defs) {
             return m;
         },
         setDark: function (dark) {
-            var ix = dark ? 1 : 0;
-            keys.forEach(function (k) { mats[k].color.setHex(defs[k][ix]); });
+            darkNow = !!dark;
+            paint();
+        },
+        // hex warna kabut + jumlah campuran 0..1 (0 = warna asli).
+        setHaze: function (hex, amount) {
+            hazeCol.setHex(hex);
+            hazeAmt = Math.max(0, Math.min(0.6, amount || 0));
+            paint();
         },
         dispose: function () {
             geos.forEach(function (g) { g.dispose(); });

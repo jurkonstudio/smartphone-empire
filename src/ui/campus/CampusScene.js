@@ -21,7 +21,7 @@ import { frameGapMs } from '../../core/RenderFps.js';
 import {
     createAssets, buildGround, buildForest, buildShrubs, buildHQ, buildSlot, buildSprawl,
     computePlan, rememberPeak, buildWind, buildRail, applyShadowFlags, disposeObject,
-    PALETTES, TREE_SPOTS, ERA_WINDOWS, SLOT_ORDER, SPRAWL_SPOTS, BUILDER_IDS, islandRadius
+    PALETTES, TREE_SPOTS, ERA_WINDOWS, SLOT_ORDER, SPRAWL_SPOTS, BUILDER_IDS, islandRadius, LAMP_SPOTS
 } from './CampusBuildings.js';
 import { CAMPUS_BY_ID, validateCampusRegistry } from '../../data/campus-buildings.data.js';
 import { detectQuality, createLookRig } from './CampusLook.js';
@@ -34,6 +34,7 @@ import { getBuildingInfo, getBuildingName, getUiStrings, hasCelebration } from '
 import { computeAlerts, alertMap } from './CampusAlerts.js';
 import { LINK, buildLinkBridge, makeCampusKit, campusBridgeCfg, buildMfFar, mfCoastR } from './IslandLink.js';
 import { createSea } from './SeaWater.js';
+import { createCinematic } from './CinematicFx.js';
 import { createWeather } from './CampusWeather.js';
 
 var BASE_VIEW = 22;
@@ -124,6 +125,14 @@ export function createCampusScene(THREE, container, gameState) {
         ]
     });
     scene.add(sea.mesh);
+    // Sentuhan sinematik: vignette CSS, bloom lampu malam (Points aditif), haze siluet tetangga. Tanpa post-processing.
+    var cineLights = LAMP_SPOTS.map(function (l) { return { x: l[0], y: 1.58, z: l[1], size: 1.8, color: 0xffc872 }; });
+    cineLights.push({ x: 0, y: 2.36, z: 14.39, size: 2.2, color: 0x35d6ff, k: 0.7 });        // papan nama gerbang selatan (addGate)
+    cineLights.push({ x: -14.01, y: 2.36, z: 0, size: 2.2, color: 0x35d6ff, k: 0.7 });       // papan nama gerbang barat
+    var cine = createCinematic(THREE, scene, {
+        renderer: renderer, canvas: canvas, container: container, tier: quality.tier, lights: cineLights,
+        onHaze: function (hex, amt) { farMf.setHaze(hex, amt); }
+    });
     var bridge = buildLinkBridge(THREE, makeCampusKit(THREE, A), campusBridgeCfg());
     scene.add(bridge.group);
     var shadowDirty = true;       // shadow map statis: hitung ulang hanya saat geometri berubah
@@ -163,6 +172,7 @@ export function createCampusScene(THREE, container, gameState) {
         if (shadowDirty) { rig.requestShadowUpdate(); shadowDirty = false; }
         weather.update(performance.now() / 1000, ambient);
         if (ambient) sea.update(performance.now() / 1000, weather.getKind(), weather.getSunset());
+        cine.update(canvas.height / Math.max(0.001, camera.top - camera.bottom), weather.getKind(), weather.getSunset());
         renderer.render(scene, camera);
     }
 
@@ -522,6 +532,7 @@ export function createCampusScene(THREE, container, gameState) {
         farMf.setDark(dark);
         sea.setTheme(dark);
         sea.setWeather(weather.getKind(), weather.getSunset());
+        cine.setTheme(dark);
         fx.setAccent(readAccent(), dark);
         if (life) life.setTheme(dark, p.window);
     }
@@ -610,6 +621,7 @@ export function createCampusScene(THREE, container, gameState) {
             disposeObject(shrubs);
             farMf.dispose();
             scene.remove(sea.mesh); sea.dispose();
+            cine.dispose();
             scene.remove(bridge.group);
             weather.dispose();
             rig.dispose();
