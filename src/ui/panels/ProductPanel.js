@@ -14,6 +14,7 @@ import { ToastService } from '../../core/ToastService.js';
 import { openChipDesigner } from './ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './FabPanel.js';
 import { renderChipMockup } from '../phone/ChipMockup.js';
+import { renderPhoneMockup } from '../phone/PhoneMockup.js';
 import { t } from '../../core/LanguageService.js';
 import { bus } from '../../core/EventBus.js';
 import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
@@ -201,6 +202,52 @@ function _stockPct(p) {
     return Math.max(0, Math.min(100, Math.round((p.stock / cap) * 100)));
 }
 
+// ---- Katalog v2: tampilan "dashboard manajemen" (gaya game simulasi profesional) ----
+var _thumbCache = {};
+function _phoneThumb(p) {
+    try {
+        var key = p.id + '|' + (p.releaseDate ? p.releaseDate.year : '') + '|' + JSON.stringify(p.config || {});
+        if (_thumbCache[key]) return _thumbCache[key];
+        var svg = renderPhoneMockup(p.config, { size: 78, year: p.releaseDate && p.releaseDate.year, showBrand: false, isStatic: true });
+        _thumbCache[key] = svg;
+        return svg;
+    } catch (e) { return ''; }
+}
+
+function _fmt(n) { return Math.round(n || 0).toLocaleString('en-US'); }
+function _fmtShort(n) {
+    n = n || 0;
+    var a = Math.abs(n);
+    if (a >= 1e9) return '$' + (n / 1e9).toFixed(2).replace(/\.?0+$/, '') + 'B';
+    if (a >= 1e6) return '$' + (n / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'M';
+    if (a >= 1e4) return '$' + (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+    return '$' + _fmt(n);
+}
+
+// Sparkline penjualan (14 hari terakhir) + arah tren vs 7 hari sebelumnya.
+function _salesTrend(p) {
+    var ds = (p.dailySales || []).slice(-14).map(function (d) { return d.sold || 0; });
+    if (ds.length < 2) return { svg: '<div class="cat2-spark-empty">—</div>', delta: null };
+    var max = Math.max.apply(null, ds) || 1;
+    var W = 100, H = 26, step = W / (ds.length - 1);
+    var pts = ds.map(function (v, i) { return (i * step).toFixed(1) + ',' + (H - 2 - (v / max) * (H - 5)).toFixed(1); });
+    var line = pts.join(' ');
+    var area = '0,' + H + ' ' + line + ' ' + W + ',' + H;
+    var half = Math.floor(ds.length / 2);
+    var prev = ds.slice(0, half).reduce(function (s, v) { return s + v; }, 0);
+    var cur = ds.slice(half).reduce(function (s, v) { return s + v; }, 0);
+    var delta = prev > 0 ? Math.round(((cur - prev) / prev) * 100) : (cur > 0 ? 100 : 0);
+    var svg = '<svg class="cat2-spark" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">' +
+        '<polygon points="' + area + '" class="cat2-spark-area"/><polyline points="' + line + '" class="cat2-spark-line"/></svg>';
+    return { svg: svg, delta: delta };
+}
+
+function _segMeter(pct, cls) {
+    var N = 20, filled = pct > 0 ? Math.max(1, Math.round(pct / 100 * N)) : 0, h = '';
+    for (var i = 0; i < N; i++) h += '<i class="' + (i < filled ? 'on' : '') + '"></i>';
+    return '<div class="cat2-meter ' + cls + '" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '">' + h + '</div>';
+}
+
 function _renderCatalog() {
     var data = state.get();
     var catalog = (data.products && data.products.catalog) ? data.products.catalog : [];
@@ -211,19 +258,21 @@ function _renderCatalog() {
     var selling = catalog.filter(function (p) { return p.status === 'selling'; });
     var lowStock = selling.filter(function (p) { return p.stock <= 0 || _stockPct(p) < 20; }).length;
     var totalRev = catalog.reduce(function (s, p) { return s + (p.totalRevenue || 0); }, 0);
-    var summary = '<div class="kpi-grid cat-summary">' +
-        '<div class="kpi"><div class="kpi-label">' + tx('prod.catalog.sum_active', 'Dijual') + '</div><div class="kpi-value">' + selling.length + '/' + catalog.length + '</div></div>' +
-        '<div class="kpi ' + (lowStock ? 'warn' : 'blue') + '"><div class="kpi-label">' + tx('prod.catalog.sum_low', 'Stok menipis') + '</div><div class="kpi-value">' + lowStock + '</div></div>' +
-        '<div class="kpi"><div class="kpi-label">' + tx('prod.catalog.sum_rev', 'Pendapatan') + '</div><div class="kpi-value" style="font-size:14px;">$' + totalRev.toLocaleString('en-US') + '</div></div>' +
+    var totalSold = catalog.reduce(function (s, p) { return s + (p.totalSold || 0); }, 0);
+    var summary = '<div class="cat2-hud">' +
+        '<div class="cat2-hud-tile"><span class="cat2-hud-l">' + tx('prod.catalog.sum_active', 'Dijual') + '</span><span class="cat2-hud-v">' + selling.length + '<small>/' + catalog.length + '</small></span></div>' +
+        '<div class="cat2-hud-tile ' + (lowStock ? 'warn' : 'ok') + '"><span class="cat2-hud-l">' + tx('prod.catalog.sum_low', 'Stok menipis') + '</span><span class="cat2-hud-v">' + lowStock + '</span></div>' +
+        '<div class="cat2-hud-tile"><span class="cat2-hud-l">' + tx('prod.catalog.sum_units', 'Unit terjual') + '</span><span class="cat2-hud-v">' + _fmtShort(totalSold).replace('$', '') + '</span></div>' +
+        '<div class="cat2-hud-tile accent"><span class="cat2-hud-l">' + tx('prod.catalog.sum_rev', 'Pendapatan') + '</span><span class="cat2-hud-v">' + _fmtShort(totalRev) + '</span></div>' +
         '</div>';
 
     var filters = [['all', tx('prod.catalog.f_all', 'Semua')], ['selling', t('prod.catalog.status_selling')], ['disc', t('prod.catalog.status_discontinued')]];
     var sorts = [['newest', tx('prod.catalog.s_new', 'Terbaru')], ['sold', tx('prod.catalog.s_sold', 'Terlaris')], ['rating', tx('prod.catalog.s_rating', 'Rating')], ['stock', tx('prod.catalog.s_stock', 'Stok')]];
-    var bar = '<div class="cat-chips">';
-    filters.forEach(function (f) { bar += '<button class="chip-small ' + (_catalogFilter === f[0] ? 'active' : '') + '" data-catalog-filter="' + f[0] + '">' + f[1] + '</button>'; });
-    bar += '</div><div class="cat-chips">';
-    sorts.forEach(function (f) { bar += '<button class="chip-small ' + (_catalogSort === f[0] ? 'active' : '') + '" data-catalog-sort="' + f[0] + '">' + f[1] + '</button>'; });
-    bar += '</div>';
+    var bar = '<div class="cat2-toolbar"><div class="cat2-seg" role="group" aria-label="Filter">';
+    filters.forEach(function (f) { bar += '<button class="cat2-seg-btn ' + (_catalogFilter === f[0] ? 'active' : '') + '" data-catalog-filter="' + f[0] + '">' + f[1] + '</button>'; });
+    bar += '</div><div class="cat2-seg cat2-seg-sort" role="group" aria-label="Sort"><span class="cat2-seg-cap">' + tx('prod.catalog.sort_by', 'Urut') + '</span>';
+    sorts.forEach(function (f) { bar += '<button class="cat2-seg-btn ' + (_catalogSort === f[0] ? 'active' : '') + '" data-catalog-sort="' + f[0] + '">' + f[1] + '</button>'; });
+    bar += '</div></div>';
 
     var list = catalog.slice().filter(function (p) {
         if (_catalogFilter === 'selling') return p.status === 'selling';
@@ -244,39 +293,55 @@ function _renderCatalog() {
     for (var i = 0; i < list.length; i++) {
         var p = list[i];
         var avg = _avgReview(p);
-        var avgTxt = avg === null ? '-' : avg.toFixed(1);
+        var avgTxt = avg === null ? '–' : avg.toFixed(1);
         var avgCls = avg === null ? '' : (avg >= 7 ? 'good' : (avg >= 5 ? 'mid' : 'bad'));
         var isSelling = p.status === 'selling';
         var statusLabel = isSelling ? t('prod.catalog.status_selling') : t('prod.catalog.status_discontinued');
         var autoActive = !!(p.autoRestock && p.autoRestock.enabled);
         var pct = _stockPct(p);
         var stockCls = p.stock <= 0 ? 'out' : (pct < 20 ? 'low' : '');
+        var health = !isSelling ? 'disc' : (p.stock <= 0 ? 'out' : (pct < 20 ? 'low' : 'ok'));
         var stockNote = !isSelling ? '' : (p.stock <= 0
-            ? '<span class="cat-warn">' + tx('prod.catalog.out', 'Stok habis') + '</span>'
-            : (pct < 20 ? '<span class="cat-warn">' + tx('prod.catalog.low', 'Stok menipis') + '</span>' : ''));
+            ? '<span class="cat2-flag danger">' + tx('prod.catalog.out', 'Stok habis') + '</span>'
+            : (pct < 20 ? '<span class="cat2-flag warn">' + tx('prod.catalog.low', 'Stok menipis') + '</span>' : ''));
         var pendQty = (p.pendingProduction || []).reduce(function (n, o) { return n + (o.qty || 0); }, 0);
-        if (isSelling && pendQty > 0) stockNote += '<span style="color:var(--accent);font-size:11px;">+' + pendQty.toLocaleString('en-US') + ' ' + tx('prod.catalog.in_production', 'dalam produksi') + '</span>';
+        var pendNote = (isSelling && pendQty > 0)
+            ? '<span class="cat2-flag info">+' + _fmt(pendQty) + ' ' + tx('prod.catalog.in_production', 'dalam produksi') + '</span>' : '';
+        var tr = _salesTrend(p);
+        var deltaHtml = tr.delta === null ? '' :
+            '<span class="cat2-delta ' + (tr.delta > 0 ? 'up' : (tr.delta < 0 ? 'down' : '')) + '">' + (tr.delta > 0 ? '▲' : (tr.delta < 0 ? '▼' : '■')) + ' ' + Math.abs(tr.delta) + '%</span>';
         var toggle = isSelling
-            ? '<div class="cat-auto"><span>' + tx('prod.catalog.auto_short', 'Auto-restock') + '</span>' +
+            ? '<div class="cat2-foot"><div class="cat2-auto-l"><b>' + tx('prod.catalog.auto_short', 'Auto-restock') + '</b><span>' + (autoActive ? tx('prod.catalog.auto_on', 'Aktif — produksi ulang otomatis') : tx('prod.catalog.auto_off', 'Nonaktif')) + '</span></div>' +
               '<button class="toggle-switch ' + (autoActive ? 'on' : '') + '" data-auto-toggle data-prod-id="' + p.id + '" aria-pressed="' + autoActive + '" aria-label="' + tx('prod.catalog.auto_short', 'Auto-restock') + '"><span class="toggle-thumb"></span></button></div>'
             : '';
+        var q = (p.stats && p.stats.qualityScore != null) ? p.stats.qualityScore : '–';
 
-        cards += '<div class="card prod-card ' + (isSelling ? '' : 'is-disc') + '" data-prod-detail="' + p.id + '">' +
-            '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
-            '<div style="flex:1;min-width:0;">' +
-            '<div style="font-size:14px;font-weight:700;">' + escapeHtml(p.name) + (autoActive ? ' <span style="color:var(--accent);font-size:12px;">' + t('prod.catalog.auto_tag') + '</span>' : '') + '</div>' +
-            '<div style="font-size:11px;color:var(--text-mute);">' + p.releaseDate.day + '/' + p.releaseDate.month + '/' + p.releaseDate.year + '</div>' +
+        cards += '<article class="cat2-card is-' + health + '" data-prod-detail="' + p.id + '">' +
+            '<header class="cat2-head">' +
+              '<div class="cat2-thumb">' + _phoneThumb(p) + '</div>' +
+              '<div class="cat2-id">' +
+                '<div class="cat2-name">' + escapeHtml(p.name) + (autoActive ? ' <em>' + t('prod.catalog.auto_tag') + '</em>' : '') + '</div>' +
+                '<div class="cat2-date">' + tx('prod.catalog.released', 'Rilis') + ' ' + p.releaseDate.day + '/' + p.releaseDate.month + '/' + p.releaseDate.year + '</div>' +
+                '<div class="cat2-tags"><span class="cat2-led ' + health + '"></span><span class="cat2-status ' + (isSelling ? 'selling' : 'disc') + '">' + statusLabel + '</span>' +
+                '<span class="cat2-rate ' + avgCls + '">★ ' + avgTxt + '<small>/10</small></span></div>' +
+              '</div>' +
+            '</header>' +
+            '<div class="cat2-stats">' +
+              '<div><span class="cat2-sl">' + tx('prod.catalog.l_price', 'Harga') + '</span><span class="cat2-sv">$' + _fmt(p.price) + '</span></div>' +
+              '<div><span class="cat2-sl">' + tx('prod.catalog.l_quality', 'Kualitas') + '</span><span class="cat2-sv">' + q + '</span></div>' +
+              '<div><span class="cat2-sl">' + tx('prod.catalog.l_sold', 'Terjual') + '</span><span class="cat2-sv">' + _fmt(p.totalSold) + '</span></div>' +
+              '<div><span class="cat2-sl">' + tx('prod.catalog.l_revenue', 'Pendapatan') + '</span><span class="cat2-sv money">' + _fmtShort(p.totalRevenue) + '</span></div>' +
             '</div>' +
-            '<div class="prod-badge ' + (isSelling ? 'selling' : 'disc') + '">' + statusLabel + '</div>' +
+            '<div class="cat2-trend"><div class="cat2-trend-l"><span class="cat2-sl">' + tx('prod.catalog.l_trend', 'Tren penjualan 14 hari') + '</span>' + deltaHtml + '</div>' + tr.svg + '</div>' +
+            '<div class="cat2-stock">' +
+              '<div class="cat2-stock-head"><span class="cat2-sl">' + tx('prod.catalog.l_stock', 'Persediaan') + '</span><span class="cat2-stock-n">' + _fmt(p.stock) + ' <small>' + tx('prod.catalog.units', 'unit') + (isSelling ? ' · ' + pct + '%' : '') + '</small></span></div>' +
+              _segMeter(isSelling ? pct : 0, stockCls) +
+              ((stockNote || pendNote) ? '<div class="cat2-flags">' + stockNote + pendNote + '</div>' : '') +
             '</div>' +
-            '<div class="prod-stats-mini"><span class="cat-rate ' + avgCls + '">' + t('prod.catalog.review', { n: avgTxt }) + '</span><span>' + t('prod.catalog.price', { n: p.price }) + '</span><span>' + t('prod.catalog.quality', { n: p.stats.qualityScore }) + '</span></div>' +
-            '<div class="prod-stats-mini"><span>' + t('prod.catalog.sold', { n: p.totalSold.toLocaleString('en-US') }) + '</span><span>' + t('prod.catalog.revenue', { n: p.totalRevenue.toLocaleString('en-US') }) + '</span></div>' +
-            '<div class="cat-stock"><div class="cat-stock-head"><span>' + t('prod.catalog.stock', { n: p.stock.toLocaleString('en-US') }) + '</span>' + stockNote + '</div>' +
-            '<div class="cat-bar"><div class="cat-bar-fill ' + stockCls + '" style="width:' + pct + '%;"></div></div></div>' +
             toggle +
-            '</div>';
+            '</article>';
     }
-    return summary + bar + '<div class="prod-list">' + cards + '</div>';
+    return summary + bar + '<div class="cat2-list">' + cards + '</div>';
 }
 
 // ============================================================
