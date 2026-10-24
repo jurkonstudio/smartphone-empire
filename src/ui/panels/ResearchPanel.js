@@ -50,6 +50,7 @@ export function renderResearchPanel(params) {
     var osSystem = params.osSystem;
     var chipResearchSystem = params.chipResearchSystem;
     var componentPlantSystem = params.componentPlantSystem;
+    var assemblySystem = params.assemblySystem;
 
     const chipTabVisible = _isChipTabVisible();
 
@@ -69,7 +70,7 @@ export function renderResearchPanel(params) {
     } else if (subtab === 'future') {
         body = renderFuturePanel();
     } else if (subtab === 'manufaktur' && chipResearchSystem) {
-        body = renderManufacturePanel({ chipResearchSystem, componentPlantSystem });
+        body = renderManufacturePanel({ chipResearchSystem, componentPlantSystem, assemblySystem });
     } else if (subtab === 'chip' && chipTabVisible && chipResearchSystem) {
         body = renderChipResearchPanel({ chipResearchSystem });
     } else {

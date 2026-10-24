@@ -12,6 +12,7 @@ import { renderIcon } from '../icons/FeatureIcons.js';
 import { t } from '../../core/LanguageService.js';
 import { plantName, plantDesc, plantLevelName } from '../../data/i18n/research-localize.js';
 import { PLANT_MIN_ORDER, getPlantYield } from '../../data/material-plants.data.js';
+import { renderAssemblySection } from './AssemblyPanel.js';
 
 // Ukuran batch default untuk tombol "Produksi" (dibatasi kapasitas pabrik).
 var DEFAULT_BATCH = 50000;
@@ -27,7 +28,8 @@ function _num(n) { return Math.round(n || 0).toLocaleString('en-US'); }
 
 export function renderManufacturePanel(params) {
     var plantHtml = params.componentPlantSystem ? _renderPlantSection(params.componentPlantSystem) : '';
-    return plantHtml + _renderChipManufacture(params);
+    var asmHtml = params.assemblySystem ? renderAssemblySection(params.assemblySystem) : '';
+    return asmHtml + plantHtml + _renderChipManufacture(params);
 }
 
 // ============================================================
