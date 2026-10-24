@@ -651,11 +651,16 @@ function _bindStep() {
             const key = parts[0];
             const value = parts.slice(1).join(':');
             _wizardState[key] = value;
+            if (key === 'osOptionId') _osMenuOpen = false;
             if (key === 'formFactorId') _wizardState.formFactorManual = true;
             if (key === 'cameraId') _wizardView = 'back';
             else if (key === 'displayId' || key === 'formFactorId') _wizardView = 'front';
             _render();
         });
+    });
+
+    root.querySelectorAll('[data-wiz-os-toggle]').forEach(function (btn) {
+        btn.addEventListener('click', function () { _osMenuOpen = !_osMenuOpen; _render(); });
     });
 
     root.querySelectorAll('[data-wiz-feature]').forEach(function (btn) {
@@ -1140,6 +1145,8 @@ function _featureFxHtml(s) {
 }
 
 
+let _osMenuOpen = false;
+
 function _step3(s) {
     const osOptions = (window.__game && window.__game.os && window.__game.os.getOsOptionsForPhone)
         ? window.__game.os.getOsOptionsForPhone()
@@ -1156,15 +1163,23 @@ function _step3(s) {
         <div class="wz-scroll">
             <div class="wiz-cat">
                 <div class="wiz-cat-title" style="text-transform:none;">${renderIcon('disc', 14, 'style="vertical-align:middle;margin-right:5px;"')}${t('wiz.step3.os_label')}</div>
-                <div class="wiz-options wiz-options-col">
-                    ${osOptions.length ? osOptions.map(function (o) {
+                ${(function () {
+                    if (!osOptions.length) return '<div class="wiz-empty">' + t('wiz.step3.os_empty') + '</div>';
+                    var cur = osOptions.filter(function (o) { return o.id === s.osOptionId; })[0] || osOptions[0];
+                    var curMeta = cur.source === 'license' ? _perUnit(cur.costPerUnit) : t('wiz.step3.os_free');
+                    var head = '<button class="wiz-os-toggle ' + (_osMenuOpen ? 'open' : '') + '" data-wiz-os-toggle aria-expanded="' + _osMenuOpen + '">' +
+                        '<span class="wiz-os-cur"><span class="wiz-opt-name">' + escapeHtml(cur.label) + '</span>' +
+                        '<span class="wiz-opt-meta">' + curMeta + '</span></span>' +
+                        '<span class="wiz-os-caret">▾</span></button>';
+                    if (!_osMenuOpen) return head;
+                    return head + '<div class="wiz-options wiz-options-col wiz-os-menu">' + osOptions.map(function (o) {
                         var meta = o.source === 'license' ? _perUnit(o.costPerUnit) : t('wiz.step3.os_free');
                         return '<button class="wiz-option ' + (s.osOptionId === o.id ? 'selected' : '') + '" data-wiz-pick="osOptionId:' + o.id + '">' +
                             '<div class="wiz-opt-name">' + escapeHtml(o.label) + '</div>' +
                             '<div class="wiz-opt-meta">' + meta + '</div>' +
                             '</button>';
-                    }).join('') : '<div class="wiz-empty">' + t('wiz.step3.os_empty') + '</div>'}
-                </div>
+                    }).join('') + '</div>';
+                })()}
             </div>
 
             <div class="wiz-cat">
