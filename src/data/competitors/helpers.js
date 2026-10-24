@@ -13,6 +13,7 @@ export const FICTIONAL_NAMES = {
     honor: 'Honour', oneplus: 'OnePlusX', nothing: 'Somewhat',
     asus: 'Asos', sony_mobile: 'Soni Mobile', realme: 'Realmi',
     meizu: 'MeizuX', lenovo: 'Lenovu', tecno: 'Tekno', zte: 'ZetE',
+    sagem: 'Sagen', alcatel: 'Alkatel', sharp: 'Sharpa', nec: 'NECO', panasonic: 'Panasonix',
     novamind: 'Novamind'
 };
 

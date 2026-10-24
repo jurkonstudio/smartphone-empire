@@ -35,6 +35,12 @@ import { lenovo } from './lenovo.js';
 import { tecno } from './tecno.js';
 import { zte } from './zte.js';
 import { xiaomi } from './xiaomi.js';
+// [celah 2000-2007] Pemain kecil era ponsel fitur.
+import { sagem } from './sagem.js';
+import { alcatel } from './alcatel.js';
+import { sharp } from './sharp.js';
+import { nec } from './nec.js';
+import { panasonic } from './panasonic.js';
 // [paket kompetitor] Pendatang fiktif spekulatif.
 import { novamind } from './novamind.js';
 
@@ -43,6 +49,7 @@ export const COMPETITORS = [
     blackberry, samsung, lg, htc, apple, google_android, huawei,
     oppo, vivo, microsoft_nokia, honor, oneplus, nothing,
     asus, sony_mobile, realme, meizu, lenovo, tecno, zte, xiaomi,
+    sagem, alcatel, sharp, nec, panasonic,
     novamind
 ];
 
