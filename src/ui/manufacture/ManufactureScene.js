@@ -504,6 +504,102 @@ export function createManufactureScene(THREE, container, gameState) {
         }
     }
 
+    // ============================================================
+    // KAPAL KARGO: siklus away -> approach -> berth -> depart -> away (hanya ambien)
+    // Kapal hidup di grup shell (koordinat dunia), bukan di petak hub, agar bisa berlayar tanpa ikut rebuild petak.
+    // Model dibuat malas per ukuran (kecil/sedang/besar): hanya yang dipakai yang dibuat, hanya satu yang tampil.
+    // Jalur laut dua segmen: P0 -> P1 -> berth. Kapal berputar di tempat sebelum berangkat (20% awal depart).
+    // Ambien mati: satu kapal bersandar statis bila hub berdiri (seperti sebelumnya).
+    // ============================================================
+    var SHIP = { P0: [24, 30], P1: [18.2, 22], berth: [DOCK.shipX, DOCK.shipZ], Y: 0.06, app: 14, away: 6, dwellMin: 20, dwellMax: 30 };
+    var SHIP_TIER = [{ sc: 0.78, n: 2 }, { sc: 1, n: 4 }, { sc: 1.25, n: 6 }];
+    var SHIP_L1 = Math.hypot(SHIP.P1[0] - SHIP.P0[0], SHIP.P1[1] - SHIP.P0[1]);
+    var SHIP_L2 = Math.hypot(SHIP.berth[0] - SHIP.P1[0], SHIP.berth[1] - SHIP.P1[1]);
+    var SHIP_LEN = SHIP_L1 + SHIP_L2;
+    var SHIP_ANG1 = Math.atan2(SHIP.P1[0] - SHIP.P0[0], SHIP.P1[1] - SHIP.P0[1]);     // haluan = +z lokal
+    var SHIP_ANG2 = Math.atan2(SHIP.berth[0] - SHIP.P1[0], SHIP.berth[1] - SHIP.P1[1]);
+    var shipModels = [], shipS = { ph: 'away', t: 0, dwell: 24, last: null, cur: null };
+    function hubBuilt() { var h = states.hub; return !!(h && h.status === 'built'); }
+    // ukuran menurut level hub dan stok: kecil <= 2, sedang 3-4, besar >= 5
+    function shipWant() {
+        var h = states.hub || {}, sc = (h.level || 0) + ((h.stock || 0) >= 500 ? 1 : 0);
+        return sc <= 2 ? 0 : (sc <= 4 ? 1 : 2);
+    }
+    function buildShipModel(tier) {
+        var T = SHIP_TIER[tier], s = T.sc, g = new THREE.Group(), i, L = 3.8 * s, Wd = 1.2 * s;
+        shell.add(g);
+        box(g, 'hull', Wd, 0.55, L, 0, 0.1, 0);
+        box(g, 'red', Wd + 0.02, 0.14, L + 0.02, 0, 0.0, 0);
+        box(g, 'white', 0.9 * s, 0.7, 0.6 * s, 0, 0.75, -1.3 * s);
+        box(g, 'glass', 0.92 * s, 0.18, 0.62 * s, 0, 0.9, -1.3 * s);
+        for (i = 0; i < T.n; i++) box(g, [ACC.hub, 'red', 'amber', 'green', 'steel', 'crate'][i % 6], 0.5 * s, 0.4, 0.62 * s, (i % 2 ? 0.28 : -0.28) * s, 0.6 + Math.floor(i / 2) * 0.42, 0);
+        var foam = noShadow(box(g, 'foam', 0.7 * s, 0.03, 0.6, 0, 0.02, -(L / 2 + 0.45)));    // buih di buritan
+        foam.visible = false;
+        g.visible = false;
+        return { g: g, foam: foam, foamBz: 0.6 };                       // skala dasar buih (sama dengan dimensi box di atas)
+    }
+    function shipModel(tier) { return shipModels[tier] || (shipModels[tier] = buildShipModel(tier)); }
+    function shipEase(u) { return ctSmooth(u); }
+    // pose di sepanjang jalur dari P0 (f = 0) ke berth (f = 1); arah dilicinkan di sekitar simpul P1
+    function shipPose(f) {
+        var s = clamp(f, 0, 1) * SHIP_LEN, x, z;
+        if (s <= SHIP_L1) {
+            var u = s / SHIP_L1;
+            x = SHIP.P0[0] + (SHIP.P1[0] - SHIP.P0[0]) * u; z = SHIP.P0[1] + (SHIP.P1[1] - SHIP.P0[1]) * u;
+        } else {
+            var v = (s - SHIP_L1) / SHIP_L2;
+            x = SHIP.P1[0] + (SHIP.berth[0] - SHIP.P1[0]) * v; z = SHIP.P1[1] + (SHIP.berth[1] - SHIP.P1[1]) * v;
+        }
+        return { x: x, z: z, ang: lerpAng(SHIP_ANG1, SHIP_ANG2, clamp((s - (SHIP_L1 - 1.5)) / 3, 0, 1)) };
+    }
+    function shipPlace(m, p, sec, moving) {
+        m.g.position.set(p.x, SHIP.Y + (ambient ? Math.sin(sec * 0.9) * 0.04 : 0), p.z);
+        m.g.rotation.y = p.ang;
+        m.g.rotation.z = ambient ? Math.sin(sec * 0.7) * 0.02 : 0;
+        m.g.visible = true;
+        m.foam.visible = !!moving && ambient;
+        if (m.foam.visible) m.foam.scale.z = m.foamBz * (0.8 + 0.4 * Math.abs(Math.sin(sec * 4)));
+    }
+    function shipHideAll() { for (var i = 0; i < shipModels.length; i++) if (shipModels[i]) shipModels[i].g.visible = false; }
+    function animateShip(sec) {
+        var dt = shipS.last === null ? 0 : clamp(sec - shipS.last, 0, 0.5);
+        shipS.last = sec;
+        if (!hubBuilt()) { shipHideAll(); shipS.ph = 'away'; shipS.t = 0; return; }
+        if (!ambient) {                                                  // ambien mati: satu kapal bersandar statis
+            var mS = shipModel(shipWant());
+            if (mS !== shipS.cur) { shipHideAll(); shipS.cur = mS; }
+            shipS.ph = 'berth'; shipS.t = 0; shipS.dwell = SHIP.dwellMin;
+            shipPlace(mS, shipPose(1), sec, false);
+            return;
+        }
+        shipS.t += dt;
+        if (shipS.ph === 'away') {
+            shipHideAll();
+            if (!(shipS.t >= SHIP.away && srcActive('hub'))) return;    // tunggu sampai ada stok yang dikirim
+            shipS.cur = shipModel(shipWant()); shipS.ph = 'approach'; shipS.t = 0;
+        }
+        var m = shipS.cur;
+        if (shipS.ph === 'approach') {
+            var u = Math.min(1, shipS.t / SHIP.app);
+            shipPlace(m, shipPose(shipEase(u)), sec, u < 1);
+            if (u >= 1) { shipS.ph = 'berth'; shipS.t = 0; shipS.dwell = SHIP.dwellMin + Math.random() * (SHIP.dwellMax - SHIP.dwellMin); }
+        } else if (shipS.ph === 'berth') {
+            shipPlace(m, shipPose(1), sec, false);
+            if (shipS.t >= shipS.dwell) { shipS.ph = 'depart'; shipS.t = 0; }
+        } else if (shipS.ph === 'depart') {
+            var v = Math.min(1, shipS.t / SHIP.app), TURN = 0.2;
+            if (v < TURN) {                                              // putar di tempat dulu
+                var bp = shipPose(1);
+                shipPlace(m, { x: bp.x, z: bp.z, ang: lerpAng(SHIP_ANG2, SHIP_ANG2 + Math.PI, shipEase(v / TURN)) }, sec, false);
+            } else {
+                var pq = shipPose(1 - shipEase((v - TURN) / (1 - TURN)));
+                pq.ang += Math.PI;
+                shipPlace(m, pq, sec, true);
+            }
+            if (v >= 1) { shipS.ph = 'away'; shipS.t = 0; m.g.visible = false; }
+        }
+    }
+
     // jembatan jalan raya ke Pulau Kampus (timur) + siluet Pulau Kampus. Adaptor memakai geometri/material scene ini
     // (ikut tema lewat COLORS & di-dispose bersama G/M). Peta Kampus memakai jembatan yang sama dari sisi seberang.
     var LINK_ROLE = { road: 'road', curb: 'curb', line: 'roadLine', post: 'steel', pole: 'metal', lamp: 'lamp' };
@@ -771,7 +867,6 @@ export function createManufactureScene(THREE, container, gameState) {
     };
     TYPE.hub = function (f, def, L, st, tk, on) {
         var dm = dimsFor(def, L), i;
-        var big = clamp(L, 0, 6);                                    // L = jumlah pabrik berdiri
         hall(f, 'hub', { bw: dm.bw, bd: dm.bd, bh: dm.bh }, ZC - 0.1, true);
         for (i = 0; i < 3; i++) {                                    // pintu rolling
             box(f, 'steel', 1.0, 0.95, 0.05, -1.45 + i * 1.45, 0.48, ZC - 0.1 + dm.bd / 2 + 0.03);
@@ -800,12 +895,7 @@ export function createManufactureScene(THREE, container, gameState) {
         var dZ0 = DOCK.z0 - 5.2, dZ1 = DOCK.z1 - 5.2, nP = 6, plk = (dZ1 - dZ0) / nP;    // koordinat lokal (origin hub = 12, 5.2)
         for (i = 0; i < nP; i++) box(f, 'wood', DOCK.w, 0.12, plk - 0.04, cx0, 0.02, dZ0 + (i + 0.5) * plk);
         for (i = 0; i <= nP; i += 2) [-0.6, 0.6].forEach(function (ox) { box(f, 'metal', 0.14, 0.9, 0.14, cx0 + ox, -0.25, dZ0 + i * plk); });
-        var ship = new THREE.Group(); ship.position.set(cx0 + (DOCK.shipX - DOCK.x), -0.1, DOCK.shipZ - 5.2); f.add(ship);
-        box(ship, 'hull', 1.2, 0.55, 3.8, 0, 0.1, 0); box(ship, 'red', 1.22, 0.14, 3.82, 0, 0.0, 0);
-        box(ship, 'white', 0.9, 0.7, 0.6, 0, 0.75, -1.3); box(ship, 'glass', 0.92, 0.18, 0.62, 0, 0.9, -1.3);
-        var nShipBoxes = clamp(big, 1, 6);
-        for (i = 0; i < nShipBoxes; i++) box(ship, [ACC.hub, 'red', 'amber', 'green', 'steel', 'crate'][i % 6], 0.5, 0.4, 0.62, (i % 2 ? 0.28 : -0.28), 0.6, 1.0 - Math.floor(i / 2) * 0.7);
-        tk.push(function (sec) { ship.position.y = ambient ? -0.1 + Math.sin(sec * 0.9) * 0.04 : -0.1; ship.rotation.z = ambient ? Math.sin(sec * 0.7) * 0.02 : 0; });
+        // kapal kargo tidak lagi di petak ini: dikelola animateShip (koordinat dunia, bisa berlayar)
         beacon(f, -dm.bw / 2 + 0.3, dm.bh + 0.3, ZC - 0.1, tk, st.producing || on, 'hub');
     };
 
@@ -1196,6 +1286,7 @@ export function createManufactureScene(THREE, container, gameState) {
     function animateShell(sec) {
         var i, k, tr, u;
         animateContainers(sec);
+        animateShip(sec);
         for (i = 0; i < truckObjs.length; i++) {
             tr = truckObjs[i];
             tr.g.visible = i < activeTrucks;
