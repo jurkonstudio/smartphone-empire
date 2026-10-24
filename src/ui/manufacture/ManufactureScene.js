@@ -34,6 +34,7 @@ import { PLOTS, PLOT_BY_ID, CHIP_ORDER, PIPES, plotState, allStates, plotSig, de
 import { LINK, buildLinkBridge, mfBridgeCfg, buildCampusFar } from '../campus/IslandLink.js';
 import { createSea } from '../campus/SeaWater.js';
 import { createCinematic } from '../campus/CinematicFx.js';
+import { createBeach } from '../campus/Beach.js';
 import { islandRadius as campusIslandRadius } from '../campus/CampusBuildings.js';
 import { ASSEMBLY_ROLES } from '../../data/assembly.data.js';
 
@@ -298,7 +299,8 @@ export function createManufactureScene(THREE, container, gameState) {
     });
     scene.add(sea.mesh);
     islandSlab(1.08, GY - 0.26, 0.5, M.sandWet);
-    islandSlab(1.05, GY - 0.03, 0.7, M.sand);
+    var beach = createBeach(THREE, { radius: function (th, s) { return coastR(th) * s; }, y: GY });   // pantai landai (Beach.js) menggantikan lempengan pasir 1.05
+    scene.add(beach.mesh);
     islandSlab(1.0, GY, 0.7, [M.ground, M.soil]);
     var di, hp, hr;
     for (di = 0; di < 5; di++) {                                   // bukit rendah di pinggiran
@@ -1484,6 +1486,7 @@ export function createManufactureScene(THREE, container, gameState) {
         sea.setTheme(dark);
         sea.setWeather(weather.getKind(), weather.getSunset());
         cine.setTheme(dark);
+        beach.setTheme(dark, COLORS.sand[ix], COLORS.sandWet[ix]);
         M.selRing.color.setHex(accentHex);
         M.lamp.color.setHex(dark ? 0xffe39a : 0xfff1c4);
         lampPosts.forEach(function (l) { var s = dark ? 0.16 : 0.12; l.scale.set(s, s, s); });
@@ -2033,6 +2036,7 @@ export function createManufactureScene(THREE, container, gameState) {
             controls.dispose();
             scene.remove(sea.mesh); sea.dispose();
             cine.dispose();
+            beach.dispose();
             farCampus.dispose();
             plotList.forEach(function (r) {
                 if (r.label && r.label.material) r.label.material.dispose();
