@@ -35,6 +35,7 @@ import { computeAlerts, alertMap } from './CampusAlerts.js';
 import { LINK, buildLinkBridge, makeCampusKit, campusBridgeCfg, buildMfFar, mfCoastR } from './IslandLink.js';
 import { createSea } from './SeaWater.js';
 import { createCinematic } from './CinematicFx.js';
+import { createBeach } from './Beach.js';
 import { createWeather } from './CampusWeather.js';
 
 var BASE_VIEW = 22;
@@ -125,6 +126,8 @@ export function createCampusScene(THREE, container, gameState) {
         ]
     });
     scene.add(sea.mesh);
+    var beach = createBeach(THREE, { radius: islandRadius });     // pantai landai: pasir kering -> basah + garis sampah
+    scene.add(beach.mesh);
     // Sentuhan sinematik: vignette CSS, bloom lampu malam (Points aditif), haze siluet tetangga. Tanpa post-processing.
     var cineLights = LAMP_SPOTS.map(function (l) { return { x: l[0], y: 1.58, z: l[1], size: 1.8, color: 0xffc872 }; });
     cineLights.push({ x: 0, y: 2.36, z: 14.39, size: 2.2, color: 0x35d6ff, k: 0.7 });        // papan nama gerbang selatan (addGate)
@@ -536,6 +539,7 @@ export function createCampusScene(THREE, container, gameState) {
         sea.setTheme(dark);
         sea.setWeather(weather.getKind(), weather.getSunset());
         cine.setTheme(dark);
+        beach.setTheme(dark, p.sand, p.sandWet);
         fx.setAccent(readAccent(), dark);
         if (life) life.setTheme(dark, p.window);
     }
@@ -625,6 +629,7 @@ export function createCampusScene(THREE, container, gameState) {
             farMf.dispose();
             scene.remove(sea.mesh); sea.dispose();
             cine.dispose();
+            beach.dispose();
             scene.remove(bridge.group);
             weather.dispose();
             rig.dispose();

@@ -26,6 +26,7 @@ import { DESIGN_ERAS, getDesignEraForYear } from '../../data/era-design.data.js'
 import { BALANCE } from '../../data/balance.data.js';
 import { t } from '../../core/LanguageService.js';
 import { SHADE_DIR } from './CampusLook.js';
+import { beachY } from './Beach.js';
 import {
     CAMPUS_RULES, CAMPUS_SLOTS, CAMPUS_SLOT_ORDER, CAMPUS_BY_ID, CAMPUS_RESERVED, CAMPUS_ROADS, campusLevelFor
 } from '../../data/campus-buildings.data.js';
@@ -707,7 +708,8 @@ function islandSlab(A, THREE, scale, top, depth, mat) {
 // dibuat dari lempengan statis di sini: digambar shader SeaWater.js (dibuat oleh CampusScene).
 function addIsland(g, A, THREE) {
     g.add(islandSlab(A, THREE, 1.08, -0.26, 0.5, A.mat('sandWet')));
-    g.add(islandSlab(A, THREE, 1.05, -0.03, 0.7, A.mat('sand')));
+    // Pasir kering/basah digambar Beach.js sebagai satu lereng landai (vertex color) dari tepi rumput ke garis air,
+    // jadi lempengan pasir 1.05 tidak lagi dibuat (tidak ada "anak tangga").
     g.add(islandSlab(A, THREE, 1.0, 0, 0.7, [A.mat('grass'), A.mat('soil')]));
 }
 
@@ -730,7 +732,7 @@ function addScenery(g, A, THREE) {
         var th = rnd() * Math.PI * 2, f = 1.02 + rnd() * 0.17;
         var rr = islandRadius(th, f);
         var s0 = 0.14 + rnd() * rnd() * 0.5;
-        var surf = f < 1.05 ? -0.03 : (f < 1.08 ? -0.26 : (f < 1.115 ? -0.455 : -0.47));   // tinggi permukaan di lapisan itu
+        var surf = f < 1.08 ? beachY(f) : (f < 1.115 ? -0.455 : -0.47);   // tinggi permukaan di lapisan itu
         rocks.push([Math.cos(th) * rr, surf + s0 * 0.25, Math.sin(th) * rr, s0 * (1 + rnd() * 0.6), s0 * (0.7 + rnd() * 0.5), s0 * (1 + rnd() * 0.6), rnd() * 6]);
     }
     g.add(instanced(A, THREE, rg, 'rock', rocks.filter(function (r) { return !_inLinkCorridor(r[0], r[2]); }), function (n, c) { var v = 0.85 + rnd() * 0.25; c.setRGB(v, v, v); }));
