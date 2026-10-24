@@ -489,7 +489,7 @@ export function createManufactureScene(THREE, container, gameState) {
         var LO = CT_LOAD, T1 = tr.T1, UN = CT_UNLOAD;
         if (t < LO) return { p: mixPose(samplePath(tr.back, tr.back.total), samplePath(tr.fwd, 0), ctSmooth(t / LO)), cargo: true };
         if (t < LO + T1) return { p: samplePath(tr.fwd, (t - LO) * CT_SPEED), cargo: true };
-        if (t < LO + T1 + UN) return { p: mixPose(samplePath(tr.fwd, tr.fwd.total), samplePath(tr.back, 0), ctSmooth((t - LO - T1) / UN)), cargo: false };
+        if (t < LO + T1 + UN) return { p: mixPose(samplePath(tr.fwd, tr.fwd.total), samplePath(tr.back, 0), ctSmooth((t - LO - T1) / UN)), cargo: false, unload: true };
         return { p: samplePath(tr.back, (t - LO - T1 - UN) * CT_SPEED), cargo: false };
     }
     function animateContainers(sec) {
@@ -500,7 +500,9 @@ export function createManufactureScene(THREE, container, gameState) {
             var pose = ctPose(tr, ambient ? (sec + tr.phase) % tr.cycle : CT_LOAD);     // ambien mati: parkir di asal, kargo terlihat
             tr.g.position.set(pose.p.x, 0.12, pose.p.z);
             tr.g.rotation.y = -pose.p.ang;
-            tr.cargo.visible = pose.cargo;
+            if (pose.unload) { if (!tr.ordered) { tr.ordered = true; tr.okOrder = craneOrder(tr, pose.p); } }   // sekali per bongkar
+            else tr.ordered = false;
+            tr.cargo.visible = pose.cargo || (!!pose.unload && !tr.okOrder);   // kargo hilang hanya bila kontainer sudah dipesan crane
         }
     }
 
@@ -536,7 +538,7 @@ export function createManufactureScene(THREE, container, gameState) {
         var foam = noShadow(box(g, 'foam', 0.7 * s, 0.03, 0.6, 0, 0.02, -(L / 2 + 0.45)));    // buih di buritan
         foam.visible = false;
         g.visible = false;
-        return { g: g, foam: foam, foamBz: 0.6 };                       // skala dasar buih (sama dengan dimensi box di atas)
+        return { g: g, foam: foam, foamBz: 0.6, sc: s, loaded: [] };    // foamBz: skala dasar buih (sama dengan dimensi box di atas)
     }
     function shipModel(tier) { return shipModels[tier] || (shipModels[tier] = buildShipModel(tier)); }
     function shipEase(u) { return ctSmooth(u); }
@@ -564,10 +566,10 @@ export function createManufactureScene(THREE, container, gameState) {
     function animateShip(sec) {
         var dt = shipS.last === null ? 0 : clamp(sec - shipS.last, 0, 0.5);
         shipS.last = sec;
-        if (!hubBuilt()) { shipHideAll(); shipS.ph = 'away'; shipS.t = 0; return; }
+        if (!hubBuilt()) { shipModels.forEach(function (m) { if (m) shipShipOut(m); }); shipHideAll(); shipS.ph = 'away'; shipS.t = 0; return; }
         if (!ambient) {                                                  // ambien mati: satu kapal bersandar statis
             var mS = shipModel(shipWant());
-            if (mS !== shipS.cur) { shipHideAll(); shipS.cur = mS; }
+            if (mS !== shipS.cur) { if (shipS.cur) shipShipOut(shipS.cur); shipHideAll(); shipS.cur = mS; }
             shipS.ph = 'berth'; shipS.t = 0; shipS.dwell = SHIP.dwellMin;
             shipPlace(mS, shipPose(1), sec, false);
             return;
@@ -596,8 +598,196 @@ export function createManufactureScene(THREE, container, gameState) {
                 pq.ang += Math.PI;
                 shipPlace(m, pq, sec, true);
             }
-            if (v >= 1) { shipS.ph = 'away'; shipS.t = 0; m.g.visible = false; }
+            if (v >= 1) { shipS.ph = 'away'; shipS.t = 0; m.g.visible = false; shipShipOut(m); }
         }
+    }
+
+    // ============================================================
+    // CRANE & KONTAINER (tahap 2): satu crane ship-to-shore di apron, koordinat dunia. Hanya ambien.
+    // Truk yang mulai membongkar mengirim satu kontainer ke antrean crane. Crane mengangkat kontainer dari titik
+    // bongkar lalu menaruhnya di kapal yang sedang sandar (selama ada tempat) atau di tumpukan apron. Saat kapal
+    // sandar dan tumpukan berisi, crane memuat tumpukan ke kapal. Kontainer memakai pool tetap, tanpa objek baru
+    // per frame. Tanpa hub berdiri: crane dan kontainer disembunyikan, truk tidak membongkar (kargo tetap terlihat).
+    // Jika tidak ada tempat, crane menahan kontainer di udara; jika pool habis, kargo truk tetap terlihat.
+    // ============================================================
+    var CR = { T: [13.5, 12.6], TOP: 4.0, TRAVEL: 3.6, SHIP_H: 1.035, RMIN: 1.6, RMAX: 7.6, REST: [0.3, 3.5], MOVE: 2.6, VERT: 1.2, REL: 0.4, OFF: 0.35 };
+    var CNT = { L: 1.05, H: 0.5, W: 0.56, POOL: 24, BASE: 6, LV: 2, DECK_Y: 0.625, TRUCK_Y: 0.58 };
+    var cntPool = [], cntFree = [], stackPos = [], stackOcc = [];
+    var craneQ = [];
+    var craneS = { last: null, vis: null, job: null, st: 'idle', t: 0, dur: 0, A: null, B: null, th: CR.REST[0], r: CR.REST[1], h: CR.TRAVEL, held: null };
+    for (var ci = 0; ci < CNT.POOL; ci++) {
+        var cm = box(shell, 'white', CNT.L, CNT.H, CNT.W, 0, -5, 0);
+        cm.visible = false;
+        var cp = { mesh: cm, at: 'free' };
+        cntPool.push(cp); cntFree.push(cp);
+    }
+    for (var si = 0; si < CNT.BASE * CNT.LV; si++) {                 // tumpukan: 6 alas, 2 lapis; isi lapis bawah dulu
+        var bs = si % CNT.BASE, lv = Math.floor(si / CNT.BASE);
+        stackPos.push([15.95 + (bs % 2) * 1.0, 0.39 + lv * 0.5, 9.87 + Math.floor(bs / 2) * 0.56]);
+        stackOcc.push(null);
+    }
+    var craneObj = { legs: [], boom: new THREE.Group(), trolley: null, hook: null, cable: null };
+    [[-0.45, -0.45], [0.45, -0.45], [-0.45, 0.45], [0.45, 0.45]].forEach(function (o) {
+        craneObj.legs.push(box(shell, 'safety', 0.14, CR.TOP, 0.14, CR.T[0] + o[0], CR.TOP / 2, CR.T[1] + o[1]));
+    });
+    craneObj.boom.position.set(CR.T[0], CR.TOP, CR.T[1]); shell.add(craneObj.boom);
+    box(craneObj.boom, 'safety', CR.RMAX + 0.4, 0.16, 0.16, (CR.RMAX + 0.4) / 2, 0, 0);
+    craneObj.trolley = box(shell, 'dark', 0.32, 0.16, 0.32, CR.T[0], CR.TOP, CR.T[1]);
+    craneObj.hook = box(shell, 'dark', 0.25, 0.25, 0.25, CR.T[0], CR.TRAVEL, CR.T[1]);
+    craneObj.cable = box(shell, 'metal', 0.04, 1, 0.04, CR.T[0], CR.TOP, CR.T[1]);
+    // pose crane: sudut lengan th (dari tiang), jangkauan troli r, tinggi kait h. Kontainer yang dibawa ikut kait.
+    function craneSetPose(th, r, h) {
+        var s = craneS, x = CR.T[0] + r * Math.cos(th), z = CR.T[1] + r * Math.sin(th);
+        s.th = th; s.r = r; s.h = h;
+        craneObj.boom.rotation.y = -th;                              // lengan lokal +x menunjuk ke arah th
+        craneObj.trolley.position.set(x, CR.TOP, z);
+        craneObj.hook.position.set(x, h, z);
+        craneObj.cable.position.set(x, (CR.TOP + h) / 2, z);
+        craneObj.cable.scale.set(0.04, Math.max(0.01, CR.TOP - h), 0.04);
+        if (s.held) s.held.mesh.position.set(x, h - CR.OFF, z);
+    }
+    function craneAim(x, z) {
+        return { th: Math.atan2(z - CR.T[1], x - CR.T[0]), r: clamp(Math.hypot(x - CR.T[0], z - CR.T[1]), CR.RMIN, CR.RMAX) };
+    }
+    // mulai tahap gerak: dari pose sekarang ke pose B dalam dur detik
+    // panjang lintasan kait (lengkung di udara) dari pose A ke B; dipakai agar ayunan tidak terlalu cepat
+    function craneLen(A, B) {
+        var len = 0, px = 0, pz = 0, ph = 0, i;
+        for (i = 0; i <= 8; i++) {
+            var e = i / 8, th = lerpAng(A.th, B.th, e), r = A.r + (B.r - A.r) * e, h = A.h + (B.h - A.h) * e;
+            var x = CR.T[0] + r * Math.cos(th), z = CR.T[1] + r * Math.sin(th);
+            if (i > 0) len += Math.hypot(x - px, z - pz, h - ph);
+            px = x; pz = z; ph = h;
+        }
+        return len;
+    }
+    // durasi tahap = minimum 'dur' atau 0,7 x panjang lintasan (kecepatan rata-rata ~1,4 satuan/detik)
+    function craneStage(name, dur, B) {
+        var s = craneS;
+        s.st = name; s.t = 0; s.A = { th: s.th, r: s.r, h: s.h }; s.B = B;
+        s.dur = Math.max(dur, craneLen(s.A, B) * 0.7);
+    }
+    // slot dek kapal k: lokal (lx, lz) dan koordinat dunia saat sandar (haluan = SHIP_ANG2)
+    function shipSlotWorld(m, k) {
+        var lx = (k % 2 ? 0.3 : -0.3) * m.sc, lz = [0, -1.1, 1.1][Math.floor(k / 2)], a = SHIP_ANG2;
+        return { lx: lx, lz: lz, x: SHIP.berth[0] + lx * Math.cos(a) + lz * Math.sin(a), z: SHIP.berth[1] - lx * Math.sin(a) + lz * Math.cos(a) };
+    }
+    // kapal sedang sandar dan masih cukup waktu untuk satu bongkar muat (sekitar 4 detik) serta ada tempat
+    function shipCap() { var h = states.hub || {}; return clamp(h.level || 1, 1, 6); }
+    function shipAt(need) {
+        var m = shipS.cur;
+        if (!ambient || !hubBuilt() || shipS.ph !== 'berth' || !m) return null;
+        if (shipS.dwell - shipS.t < (need || 6) || m.loaded.length >= shipCap()) return null;
+        return m;
+    }
+    // kapal yang berangkat membawa kontainer di dek: kontainer kembali ke pool
+    function shipShipOut(m) {
+        for (var i = 0; i < m.loaded.length; i++) { var c = m.loaded[i]; shell.add(c.mesh); c.mesh.visible = false; c.at = 'free'; cntFree.push(c); }
+        m.loaded = [];
+    }
+
+    // truk mulai membongkar: ambil kontainer dari pool dan taruh di titik bongkar (menunggu crane). false jika tidak bisa.
+    function craneOrder(tr, p) {
+        if (!hubBuilt() || !cntFree.length || craneQ.length >= 2) return false;   // antrean penuh: truk pulang dengan kargo
+        var c = cntFree.pop();
+        c.at = 'job'; c.mesh.material = ACC[tr.slot.id] || ACC.hub; c.mesh.rotation.y = 0;
+        c.mesh.position.set(p.x, CNT.TRUCK_Y, p.z); c.mesh.visible = true;
+        craneQ.push({ kind: 'truck', cont: c, pick: { x: p.x, z: p.z, y: CNT.TRUCK_Y } });
+        return true;
+    }
+    // pekerjaan berikutnya: antrean truk dulu; bila kosong dan kapal sandar, muat tumpukan dari atas
+    // Tumpukan >= 6 atau antrean kosong: kapal yang sandar dimuat dari tumpukan dulu.
+    function craneNextJob() {
+        var m = shipAt(12), k, n = 0;
+        for (k = 0; k < stackOcc.length; k++) if (stackOcc[k]) n++;
+        if (m && (n >= 6 || !craneQ.length)) {
+            for (k = stackOcc.length - 1; k >= 0; k--) if (stackOcc[k]) {
+                var c = stackOcc[k]; stackOcc[k] = null; c.at = 'job';     // sudah diambil crane, belum di tumpukan
+                return { kind: 'stack', cont: c, pick: { x: stackPos[k][0], z: stackPos[k][2], y: stackPos[k][1] } };
+            }
+        }
+        if (craneQ.length) return craneQ.shift();
+        return null;
+    }
+    function craneBegin(j) {
+        var P = craneAim(j.pick.x, j.pick.z);
+        j.P = P; j.pickH = j.pick.y + CR.OFF;
+        craneS.job = j;
+        craneStage('toPick', CR.MOVE, { th: P.th, r: P.r, h: CR.TRAVEL });
+    }
+    // tujuan: kapal bila sandar dan ada tempat, selain itu slot tumpukan kosong pertama; null = tahan dulu
+    function craneDest() {
+        var m = shipAt(), k, d;
+        if (m) {
+            d = { kind: 'ship', m: m, k: m.loaded.length };
+            if (shipS.dwell - shipS.t >= craneNeed(craneDestPose(d)) + 0.5) return d;   // cukup waktu sampai lepas
+        }
+        for (k = 0; k < stackOcc.length; k++) if (!stackOcc[k]) return { kind: 'stack', k: k };
+        return null;
+    }
+    // waktu sisa yang dibutuhkan dari posisi crane sekarang: ayun ke tujuan + turun + lepas
+    function craneNeed(dp) {
+        var A = { th: craneS.th, r: craneS.r, h: CR.TRAVEL }, M = { th: dp.P.th, r: dp.P.r, h: CR.TRAVEL }, D = { th: dp.P.th, r: dp.P.r, h: dp.h };
+        return Math.max(CR.MOVE, craneLen(A, M) * 0.7) + Math.max(CR.VERT, craneLen(M, D) * 0.7) + CR.REL;
+    }
+    function craneDestPose(d) {
+        if (d.kind === 'ship') {
+            var w = shipSlotWorld(d.m, d.k);
+            d.lx = w.lx; d.lz = w.lz;
+            return { P: craneAim(w.x, w.z), h: CR.SHIP_H };
+        }
+        var sp = stackPos[d.k];
+        return { P: craneAim(sp[0], sp[2]), h: sp[1] + CR.OFF };
+    }
+    function craneRelease(j) {
+        var c = j.cont, d = j.dest;
+        craneS.held = null;
+        if (d.kind === 'ship') {
+            d.m.g.add(c.mesh);                                        // kontainer pindah induk ke grup kapal
+            c.mesh.position.set(d.lx, CNT.DECK_Y, d.lz); c.mesh.rotation.y = Math.PI / 2;
+            d.m.loaded.push(c); c.at = 'ship';
+        } else {
+            stackOcc[d.k] = c; c.at = 'stack';
+            c.mesh.position.set(stackPos[d.k][0], stackPos[d.k][1], stackPos[d.k][2]); c.mesh.rotation.y = 0;
+        }
+    }
+    // tahap selesai -> tahap berikut. Tahap 'up' berakhir di 'dest' (menunggu tujuan).
+    function craneAdvance(j) {
+        var s = craneS, P = j.P, D = j.D;
+        switch (s.st) {
+            case 'toPick': craneStage('down', CR.VERT, { th: P.th, r: P.r, h: j.pickH }); break;
+            case 'down': j.cont.at = 'hook'; s.held = j.cont; craneStage('up', CR.VERT, { th: P.th, r: P.r, h: CR.TRAVEL }); break;
+            case 'up': s.st = 'dest'; break;
+            case 'swing': craneStage('downD', CR.VERT, { th: D.th, r: D.r, h: j.dropH }); break;
+            case 'downD': craneStage('rel', CR.REL, { th: D.th, r: D.r, h: j.dropH }); break;
+            case 'rel': craneRelease(j); craneStage('upD', CR.VERT, { th: D.th, r: D.r, h: CR.TRAVEL }); break;
+            case 'upD': s.job = null; s.st = 'idle'; break;
+        }
+    }
+    function animateCrane(sec) {
+        var s = craneS, on = hubBuilt(), dt = s.last === null ? 0 : clamp(sec - s.last, 0, 0.5);
+        s.last = sec;
+        if (s.vis !== on) {                                           // crane dan kontainer ikut petak hub
+            s.vis = on;
+            craneObj.legs.forEach(function (o) { o.visible = on; });
+            craneObj.boom.visible = on;
+            [craneObj.trolley, craneObj.hook, craneObj.cable].forEach(function (o) { o.visible = on; });
+            cntPool.forEach(function (c) { c.mesh.visible = on && c.at !== 'free'; });
+        }
+        if (!on || !ambient) return;                                  // ambien mati: crane diam di posenya
+        if (!s.job) { var nj = craneNextJob(); if (!nj) return; craneBegin(nj); }
+        var j = s.job;
+        if (s.st === 'dest') {
+            var d = craneDest();
+            if (!d) return;                                           // tidak ada tempat: tahan kontainer di udara
+            var dp = craneDestPose(d);
+            j.dest = d; j.D = dp.P; j.dropH = dp.h;
+            craneStage('swing', CR.MOVE, { th: dp.P.th, r: dp.P.r, h: CR.TRAVEL });
+        }
+        s.t += dt;
+        var u = s.dur > 0 ? Math.min(1, s.t / s.dur) : 1, e = ctSmooth(u), A = s.A, B = s.B;
+        craneSetPose(lerpAng(A.th, B.th, e), A.r + (B.r - A.r) * e, A.h + (B.h - A.h) * e);
+        if (u >= 1) craneAdvance(j);
     }
 
     // jembatan jalan raya ke Pulau Kampus (timur) + siluet Pulau Kampus. Adaptor memakai geometri/material scene ini
@@ -890,7 +1080,7 @@ export function createManufactureScene(THREE, container, gameState) {
         box(jib, 'safety', 0.12, 0.12, 4.2, 0, 0, 1.3);
         var hook = box(f, 'dark', 0.25, 0.25, 0.25, cx0, 2.0, 3.0);
         var cab = box(f, 'steel', 0.4, 0.3, 0.3, cx0, 2.6, 2.15); void cab;
-        tk.push(function (sec) { hook.position.z = ambient ? 3.4 + Math.sin(sec * 0.5) * 1.0 : 3.4; hook.position.y = ambient && on ? 1.9 + Math.sin(sec * 1.0) * 0.4 : 2.0; });
+        // kait crane hub kini diam (crane bergerak ada di animateCrane, di apron)
         // dermaga kayu + kapal kargo
         var dZ0 = DOCK.z0 - 5.2, dZ1 = DOCK.z1 - 5.2, nP = 6, plk = (dZ1 - dZ0) / nP;    // koordinat lokal (origin hub = 12, 5.2)
         for (i = 0; i < nP; i++) box(f, 'wood', DOCK.w, 0.12, plk - 0.04, cx0, 0.02, dZ0 + (i + 0.5) * plk);
@@ -1287,6 +1477,7 @@ export function createManufactureScene(THREE, container, gameState) {
         var i, k, tr, u;
         animateContainers(sec);
         animateShip(sec);
+        animateCrane(sec);
         for (i = 0; i < truckObjs.length; i++) {
             tr = truckObjs[i];
             tr.g.visible = i < activeTrucks;
