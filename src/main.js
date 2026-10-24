@@ -8,6 +8,7 @@ import { TimeSystem } from './core/TimeSystem.js';
 import { SaveService } from './core/SaveService.js';
 import { DEV_BUILD } from './config/dev.config.js';
 import { ToastService } from './core/ToastService.js';
+import { setUserControlPolicy } from './systems/FutureEffects.js';
 import { NotificationPrefs } from './core/NotificationPrefs.js';
 import { ThemeService } from './core/ThemeService.js';
 import { LanguageService } from './core/LanguageService.js';
@@ -641,6 +642,15 @@ function bindGlobalClicks() {
         }
         var autoThresh = e.target.closest('[data-auto-threshold]');
         if (autoThresh) { e.preventDefault(); vibrate(6); products.setAutoRestockThreshold(autoThresh.dataset.prodId, parseInt(autoThresh.dataset.autoThreshold, 10) || 20); _refreshProductUi(autoThresh.dataset.prodId); return; }
+        var ucPol = e.target.closest('[data-uc-policy]');
+        if (ucPol) {
+            e.preventDefault(); vibrate(8);
+            if (setUserControlPolicy(ucPol.dataset.ucPolicy, state.get())) {
+                try { AudioService.play('select'); } catch (err) {}
+                renderAll();
+            }
+            return;
+        }
         var catFilter = e.target.closest('[data-catalog-filter]');
         if (catFilter) { e.preventDefault(); setCatalogView('filter', catFilter.dataset.catalogFilter); renderAll(); return; }
         var catSort = e.target.closest('[data-catalog-sort]');
