@@ -31,6 +31,7 @@ import { BASE_VIEW, MAX_DPR, FRAME_MS, MIN_RESIZE_DELTA, NARROW_PX, clamp, tint,
 import { PLOTS, PLOT_BY_ID, CHIP_ORDER, PIPES, plotState, allStates, plotSig, describePlot, plotTitle, runAction, ms,
     ROAD_NODES, ROAD_EDGES, APRON, DOCK, CT_SLOTS, shortestRoute } from './ManufactureLogic.js';
 import { LINK, buildLinkBridge, mfBridgeCfg, buildCampusFar } from '../campus/IslandLink.js';
+import { ASSEMBLY_ROLES } from '../../data/assembly.data.js';
 
 // [terang, gelap]
 var COLORS = {
@@ -1093,6 +1094,8 @@ export function createManufactureScene(THREE, container, gameState) {
     var ASM_ZC = -1.2;
     TYPE.assembly = function (f, def, L, st, tk, on) {
         var dm = dimsFor(def, L), bw = dm.bw, bd = dm.bd, bh = dm.bh, zc = ASM_ZC, i, k, t;
+        var roofSink = f.userData.roofSink || null;                                  // daftar atap (disembunyikan saat "masuk")
+        function roofPart(m) { if (roofSink) roofSink.push(m); return m; }
         var asm = st.asm || {}, act = !!asm.operating, total = asm.total || 0, autoLv = Math.max(0, L - 1);
         var xL = -bw / 2, xR = bw / 2, zF = zc + bd / 2, zB = zc - bd / 2;
         var bayX0 = xL + bw * 0.38, bayW = bw * 0.34, bayX1 = bayX0 + bayW, bayCx = bayX0 + bayW / 2;
@@ -1118,8 +1121,8 @@ export function createManufactureScene(THREE, container, gameState) {
             var n = Math.max(1, Math.floor(sw / 1.5)), tw = sw / n;                                      // atap gergaji
             for (var q = 0; q < n; q++) {
                 var tx = S.x0 + (q + 0.5) * tw;
-                var pnl = box(f, 'roof', tw * 1.04, 0.06, bd + 0.12, tx, bh + 0.2, zc); pnl.rotation.z = -0.26;
-                box(f, 'win', 0.05, 0.3, bd * 0.94, tx - tw / 2 + 0.03, bh + 0.15, zc);
+                var pnl = roofPart(box(f, 'roof', tw * 1.04, 0.06, bd + 0.12, tx, bh + 0.2, zc)); pnl.rotation.z = -0.26;
+                roofPart(box(f, 'win', 0.05, 0.3, bd * 0.94, tx - tw / 2 + 0.03, bh + 0.15, zc));
             }
         });
         // pintu rolling di dinding depan seksi A
@@ -1172,9 +1175,9 @@ export function createManufactureScene(THREE, container, gameState) {
             }
         }
         // peralatan atap: AC, cerobong, panel surya
-        box(f, 'steel', 0.7, 0.28, 0.5, xL + 1.0, bh + 0.5, zc - 0.7); box(f, 'steel', 0.6, 0.24, 0.45, xL + 2.2, bh + 0.48, zc + 0.6);
+        roofPart(box(f, 'steel', 0.7, 0.28, 0.5, xL + 1.0, bh + 0.5, zc - 0.7)); roofPart(box(f, 'steel', 0.6, 0.24, 0.45, xL + 2.2, bh + 0.48, zc + 0.6));
         cyl(f, 'metal', 0.1, 0.8, xL + 0.5, bh + 0.65, zB + 0.5); smoke(f, xL + 0.5, bh + 1.1, zB + 0.5, tk, on);
-        if (L >= 3) for (i = 0; i < 6; i++) { var sp = box(f, 'panel', 0.5, 0.03, 0.34, bayX1 + 0.5 + (i % 3) * 0.6, bh + 0.52 + Math.floor(i / 3) * 0.04, zc - 0.5 + Math.floor(i / 3) * 0.7); sp.rotation.x = -0.35; }
+        if (L >= 3) for (i = 0; i < 6; i++) { var sp = roofPart(box(f, 'panel', 0.5, 0.03, 0.34, bayX1 + 0.5 + (i % 3) * 0.6, bh + 0.52 + Math.floor(i / 3) * 0.04, zc - 0.5 + Math.floor(i / 3) * 0.7)); sp.rotation.x = -0.35; }
         beacon(f, xR - 0.3, bh + 0.5, zB + 0.4, tk, act, 'assembly');
         // dermaga muat (sisi timur) + truk + forklift
         for (i = 0; i < 3; i++) {
@@ -1322,6 +1325,7 @@ export function createManufactureScene(THREE, container, gameState) {
         r.tick = null;
         var tk = [], top = 2.2, f = r.furn, def = r.def;
         var on = !!st.producing;
+        r.roofMeshes = []; f.userData.roofSink = r.roofMeshes;      // atap dicatat ulang setiap bangun (furn dibangun ulang)
         try {
             if (st.building) {
                 if (st.status === 'built') {                           // upgrade: bangunan lama tetap ada + perancah
@@ -1339,6 +1343,7 @@ export function createManufactureScene(THREE, container, gameState) {
                 top = ghostBuilding(f, def, st.status === 'locked').top;
             }
         } catch (e) { console.warn('[ManufactureScene] gagal bangun ' + def.id, e); }
+        applyInside(r);
         if (tk.length) {
             r.tick = function (sec) { for (var i = 0; i < tk.length; i++) tk[i](sec); };
             r.tick(0);
@@ -1348,6 +1353,63 @@ export function createManufactureScene(THREE, container, gameState) {
         rebuildLabel(r);
         rebuildAlert(r);
         rig.requestShadowUpdate();
+    }
+
+    // ---------- mode masuk Assembly: atap gergaji disembunyikan, label stasiun dari data ----------
+    // Tidak ada mesh baru: atap yang sudah dibuat hanya diubah visibilitasnya; label stasiun berupa sprite.
+    function applyInside(r) {
+        var on = !!r.inside;
+        (r.roofMeshes || []).forEach(function (m) { m.visible = !on; });
+        (r.stations || []).forEach(function (s) { s.visible = on; });
+    }
+    function setInside(r, on) {
+        on = !!on;
+        if (!r || !!r.inside === on) return;
+        r.inside = on;
+        applyInside(r);
+        requestRender();
+        rig.requestShadowUpdate();
+    }
+    function clearStations(r) {
+        (r.stations || []).forEach(function (sp) {
+            r.group.remove(sp);
+            if (sp.material) sp.material.dispose();
+            var tx = sp.userData.tex;
+            if (tx) { tx.dispose(); var ix = labelTex.indexOf(tx); if (ix >= 0) labelTex.splice(ix, 1); }
+        });
+        r.stations = [];
+    }
+    var STN_KEY = { operator: 'stn.operator', qc: 'stn.qc', technician: 'stn.technician', supervisor: 'stn.supervisor' };
+    function stationLines(st) {
+        var a = st && st.asm;
+        if (!a || !a.workers) return null;
+        var crew = (a.levelInfo && a.levelInfo.crew) || {};
+        return ASSEMBLY_ROLES.map(function (role) {
+            var s = ms(STN_KEY[role.id] || role.id) + ' ' + (a.workers[role.id] || 0) + '/' + (crew[role.id] || 0);
+            if (role.id === 'operator') s += ' · ' + ms('stn.util', { v: Math.round(clamp(a.utilization || 0, 0, 1) * 100) });
+            return s;
+        });
+    }
+    // Satu label per peran (maks 4), di depan bay. Dibangun ulang hanya bila teks/level/tema berubah.
+    function refreshStations(r) {
+        if (!r) return;
+        var st = r.st, lines = (r.def.id === 'assembly' && st && st.status === 'built') ? stationLines(st) : null;
+        var key = lines ? 'L' + st.level + '|' + lines.join('|') + (dark ? '|d' : '|l') : '';
+        if (key !== (r.stationKey || '')) {
+            clearStations(r);
+            r.stationKey = key;
+            if (lines) {
+                var dm = dimsFor(r.def, st.level), bw = dm.bw, bd = dm.bd, bh = dm.bh;
+                var x = -bw / 2 + bw * 0.55;                                 // pusat bay terbuka (lihat TYPE.assembly)
+                lines.forEach(function (text, i) {
+                    var sp = makeLabel(text, dark, false, r.def.accent);
+                    sp.position.set(x, PAD_TOP + bh - 0.6 + i * 0.5, ASM_ZC + bd / 2 + 0.9);
+                    r.group.add(sp);
+                    r.stations.push(sp);
+                });
+            }
+        }
+        applyInside(r);
     }
 
     // ---------- tema ----------
@@ -1366,6 +1428,7 @@ export function createManufactureScene(THREE, container, gameState) {
         lampPosts.forEach(function (l) { var s = dark ? 0.16 : 0.12; l.scale.set(s, s, s); });
         rig.applyTheme(dark);
         plotList.forEach(function (r) { if (r.st) rebuildLabel(r); if (r.st) rebuildAlert(r); });
+        if (plots.assembly) { plots.assembly.stationKey = null; refreshStations(plots.assembly); }
         rig.requestShadowUpdate();
     }
 
@@ -1407,9 +1470,14 @@ export function createManufactureScene(THREE, container, gameState) {
         tweenView(v.x, v.z, v.zoom);
     }
     function resetView() { tweenView(0, 0, fitZoom()); }
+    var ASM_IN_ZOOM = 1.6;
+    function insideTarget(r) {                                               // pusat hall Assembly (koordinat dunia)
+        return { x: r.def.x, z: r.def.z + ASM_ZC, zoom: Math.max(controls.view.zoom, ASM_IN_ZOOM) };
+    }
     function focusPlot(id) {
         var r = plots[id];
         if (!r) return;
+        if (id === 'assembly' && r.inside) { var t = insideTarget(r); tweenView(t.x, t.z, t.zoom); return; }
         tweenView(r.def.x, r.def.z, Math.max(controls.view.zoom, id === 'fab' ? 0.8 : 1.15));
     }
 
@@ -1777,6 +1845,9 @@ export function createManufactureScene(THREE, container, gameState) {
         selected = id;
         if (id) hintGone = true;
         plotList.forEach(function (r) { r.ov.visible = (id === r.def.id); });
+        var asm = plots.assembly, entering = id === 'assembly' && !!asm && !asm.inside;
+        setInside(asm, id === 'assembly');                                   // masuk saat Assembly dipilih, keluar saat yang lain
+        if (entering) { var t = insideTarget(asm); tweenView(t.x, t.z, t.zoom); }
         cardSig = '';
         refreshCard();
         rebuildChips();
@@ -1840,6 +1911,7 @@ export function createManufactureScene(THREE, container, gameState) {
             r.sig = sig;
             rebuildPlot(r, st);
         });
+        refreshStations(plots.assembly);
         syncShell();
         rebuildChips();
         refreshCard();
@@ -1896,6 +1968,7 @@ export function createManufactureScene(THREE, container, gameState) {
             plotList.forEach(function (r) {
                 if (r.label && r.label.material) r.label.material.dispose();
                 if (r.alertSp && r.alertSp.material) r.alertSp.material.dispose();
+                clearStations(r);
                 r.ovMat.dispose();
             });
             while (fxList.length) endFx(0);
