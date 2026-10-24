@@ -344,6 +344,17 @@ const STORAGE_ANCHORS = [
     [2015, 32], [2016, 64], [2018, 128], [2020, 128], [2022, 256], [2026, 256]
 ];
 
+// Kapasitas komponen penyimpanan yang sudah ada di components.data.js (kategori 'storage').
+// Dipakai agar analisis memori memakai komponen pilihan pemain, bukan menghitung ganda dengan tier ft_stor_*.
+export const STORAGE_COMPONENT_GB = {
+    stor_mmc_16: 0.016, stor_sd_128: 0.128, stor_minisd_512: 0.512, stor_microsd_1g: 1,
+    stor_microsdhc_4g: 4, stor_flash_16g: 16, stor_emmc_64g: 64, stor_ufs_128g: 128,
+    stor_ufs_256g: 256, stor_ufs_512g: 512, stor_ufs_1t: 1024
+};
+export function getStorageGBForComponent(componentId) {
+    return STORAGE_COMPONENT_GB[componentId] || 0;
+}
+
 export function getExpectedStorageGB(year) {
     var A = STORAGE_ANCHORS, y = Number(year) || 2000;
     if (y <= A[0][0]) return A[0][1];
@@ -433,8 +444,9 @@ function _clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 //   penalties     [{ id, label, labelEn, value }]     -> bahan ulasan keluhan
 //   regulations   [{ id, region, label, labelEn }]    -> regulasi yang dilanggar
 //   storage       { gb, expectedGb } atau null
+// ctx (opsional) = { storageGB } kapasitas dari komponen penyimpanan desain.
 // ------------------------------------------------------------
-export function getFeatureAnalysis(featureIds, year) {
+export function getFeatureAnalysis(featureIds, year, ctx) {
     var neutral = {
         factor: 1, base: 1, regionFactors: { asia: 1, europe: 1, rest: 1 },
         bonuses: [], penalties: [], regulations: [], storage: null
@@ -473,7 +485,9 @@ export function getFeatureAnalysis(featureIds, year) {
     // 3) Penyimpanan vs standar tahun itu.
     var storage = null, storageDelta = 0;
     var tierId = featureIds.filter(function (id) { return FEATURE_MAP[id] && FEATURE_MAP[id].storageGB; })[0];
-    var gb = tierId ? FEATURE_MAP[tierId].storageGB : 0.004;
+    // Prioritas: tier fitur (ft_stor_*) -> komponen penyimpanan dari ctx.storageGB -> memori dasar 4 MB.
+    var ctxGb = ctx && Number(ctx.storageGB) > 0 ? Number(ctx.storageGB) : 0;
+    var gb = tierId ? FEATURE_MAP[tierId].storageGB : (ctxGb || 0.004);
     var expectedGb = getExpectedStorageGB(y);
     storage = { gb: gb, expectedGb: expectedGb };
     var ratio = gb / expectedGb;

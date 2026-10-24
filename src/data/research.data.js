@@ -1,10 +1,18 @@
 // FILE: src/data/research.data.js
 // ============================================================
-// DATA RISET — 8 kategori (Layar, Kamera, Baterai, Chip, Jaringan, Bodi, Sensor, Audio).
+// DATA RISET — 9 kategori (Layar, Kamera, Baterai, Chip, Jaringan, Bodi, Sensor, Audio, Fitur).
 // Semua angka balancing di sini (bukan di logic/UI).
 // ============================================================
 
 import { BALANCE } from './balance.data.js';
+// Sistem Fitur Ponsel: kategori + node riset 'feature' digabung ke tech tree utama.
+// features.data.js hanya mengimpor region.data.js, jadi tidak ada impor melingkar.
+import {
+    FEATURE_RESEARCH_CATEGORY,
+    FEATURE_RESEARCH_NODES,
+    FEATURE_RND_TRACK,
+    validateFeatureData
+} from './features.data.js';
 
 export const RESEARCH_CATEGORIES = [
     { id: 'display',   name: 'Layar',        icon: 'monitor' },
@@ -16,6 +24,11 @@ export const RESEARCH_CATEGORIES = [
     { id: 'sensor',    name: 'Sensor',       icon: 'shield' },      // BARU
     { id: 'audio',     name: 'Audio & Fitur',icon: 'headphones' }   // BARU
 ];
+RESEARCH_CATEGORIES.push(FEATURE_RESEARCH_CATEGORY);   // kategori ke-9: 'feature'
+
+// Kategori inti (8 pertama) = dasar perhitungan "Tech Edge". Kategori Fitur tidak ikut
+// dirata-rata agar save lama tidak terkena nerf tersembunyi (mastery fitur mulai 0).
+export const TECH_EDGE_EXCLUDED_CATEGORIES = ['feature'];
 
 export const RESEARCH_NODES = [
     // ==================== LAYAR (Asli) ====================
@@ -460,6 +473,7 @@ export const RESEARCH_NODES = [
       cost: 200000, durationDays: 80, prerequisites: ['audio_stereo'],
       effects: { unlocksComponents: ['audio_spatial'], statBonuses: { quality: 30 }, unlocksOsFeatures: [] } }
 ];
+RESEARCH_NODES.push(...FEATURE_RESEARCH_NODES);   // 44 node riset kategori 'feature'
 
 // ============================================================
 // VALIDASI — dijalankan sekali saat boot.
@@ -499,6 +513,10 @@ export function validateResearchData() {
     RESEARCH_NODES.forEach(n => {
         if (!validCats.has(n.category)) issues.push('Node ' + n.id + ' kategori tidak valid: ' + n.category);
     });
+    // Validasi data fitur (ID id node utama = semua node selain kategori 'feature').
+    const featNodeIds = new Set(FEATURE_RESEARCH_NODES.map(n => n.id));
+    validateFeatureData(RESEARCH_NODES.filter(n => !featNodeIds.has(n.id)).map(n => n.id))
+        .forEach(i => issues.push('[fitur] ' + i));
     if (issues.length) {
         console.warn('[research.data] Ditemukan ' + issues.length + ' masalah:');
         issues.forEach(i => console.warn('  - ' + i));
@@ -528,7 +546,8 @@ export const RND_TRACKS = {
     // TAMBAHAN RND TRACKS:
     body:    { name: 'Penyempurnaan Bodi',    hint: 'Material, bobot, dan durabilitas',              productStat: 'quality' },
     sensor:  { name: 'Penyempurnaan Sensor',  hint: 'Akurasi biometrik dan fitur keamanan',          productStat: 'security' },
-    audio:   { name: 'Penyempurnaan Audio',   hint: 'Kualitas suara, konektivitas, dan fitur',       productStat: 'usability' }
+    audio:   { name: 'Penyempurnaan Audio',   hint: 'Kualitas suara, konektivitas, dan fitur',       productStat: 'usability' },
+    feature: FEATURE_RND_TRACK
 };
 
 // Standar level teknologi yang dianggap "normal" oleh pasar pada tahun tertentu.
@@ -548,8 +567,9 @@ export function getMasteryStatBonus(level) {
 export function computeTechEdge(levels, year) {
     var cfg = BALANCE.rnd;
     var sum = 0;
-    RESEARCH_CATEGORIES.forEach(function (c) { sum += (levels && levels[c.id]) || 0; });
-    var avg = sum / RESEARCH_CATEGORIES.length;
+    var cats = RESEARCH_CATEGORIES.filter(function (c) { return TECH_EDGE_EXCLUDED_CATEGORIES.indexOf(c.id) === -1; });
+    cats.forEach(function (c) { sum += (levels && levels[c.id]) || 0; });
+    var avg = sum / cats.length;
     var bench = getTechBenchmark(year);
     var delta = avg - bench;
     var factor = Math.max(cfg.edge.min, Math.min(cfg.edge.max, 1 + cfg.edge.perLevel * delta));
