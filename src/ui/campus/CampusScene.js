@@ -168,10 +168,13 @@ export function createCampusScene(THREE, container, gameState) {
     }
 
     // Semua render lewat sini: shadow map diperbarui hanya bila ditandai kotor.
+    var lastWinSun = -1;
     function draw() {
         if (shadowDirty) { rig.requestShadowUpdate(); shadowDirty = false; }
         weather.update(performance.now() / 1000, ambient);
         if (ambient) sea.update(performance.now() / 1000, weather.getKind(), weather.getSunset());
+        var sunNow = weather.getSunset();
+        if (Math.abs(sunNow - lastWinSun) > 0.01) { lastWinSun = sunNow; A.setSunset(sunNow); }     // jendela/lampu menyala bertahap saat senja
         cine.update(canvas.height / Math.max(0.001, camera.top - camera.bottom), weather.getKind(), weather.getSunset());
         renderer.render(scene, camera);
     }

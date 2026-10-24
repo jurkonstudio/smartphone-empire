@@ -453,6 +453,7 @@ export function createAssets(THREE, opts) {
     var geos = new Map();
     var mats = new Map();
     var extraMats = [];          // material milik modul lain (CampusLife) yang ikut skala env
+    var nightOn = false, sunsetAmt = 0;   // keadaan malam/senja untuk jendela & lampu
     var facade = makeFacade(THREE);
     var noiseTex = makeNoiseTex(THREE);
     var patchTex = noiseTex.clone();
@@ -554,6 +555,20 @@ export function createAssets(THREE, opts) {
             extraMats.push(m);
             return m;
         },
+        // Senja (tema terang): jendela menyala BERTAHAP per varian fasad (A lebih dulu, lalu B, lalu C) dengan cahaya hangat;
+        // lampu jalan ikut menguat. s = 0..1 (CampusWeather.getSunset). Tema gelap sudah menyala penuh -> tidak berbuat apa-apa.
+        setSunset: function (s) {
+            sunsetAmt = Math.max(0, Math.min(1, s || 0));
+            if (nightOn) return;
+            var self = this;
+            FACADE_KEYS.forEach(function (k, i) {
+                var fm = self.mat(k);
+                var t = smooth01((sunsetAmt - (0.12 + 0.2 * i)) / 0.28);
+                fm.emissive.setHex(0xffe0a8);
+                fm.emissiveIntensity = 0.85 * t;
+            });
+            self.mat('lamp').emissiveIntensity = 0.15 + 0.85 * smooth01(sunsetAmt / 0.5);
+        },
         // k = envI tema / 0.55 (tema terang = 1).
         setEnvIntensity: function (envI) {
             var k = envI / 0.55;
@@ -571,8 +586,9 @@ export function createAssets(THREE, opts) {
             if (g.emissive && p.glow !== undefined) { g.emissive.setHex(p.glow); g.emissiveIntensity = 0.55; }
 
             var night = p.night ? 1 : 0;
+            nightOn = !!night;
             facade.draw(p.wall, p.window !== undefined ? p.window : 0x8fb4e8);
-            FACADE_KEYS.forEach(function (k) { self.mat(k).emissiveIntensity = night ? 0.9 : 0; });
+            FACADE_KEYS.forEach(function (k) { var fm = self.mat(k); fm.emissive.setHex(0xffffff); fm.emissiveIntensity = night ? 0.9 : 0; });
             var lamp = self.mat('lamp');
             lamp.emissive.setHex(0xffd98a);
             lamp.emissiveIntensity = night ? 1.1 : 0.15;
@@ -585,6 +601,7 @@ export function createAssets(THREE, opts) {
             var wt = self.mat('water');
             wt.emissive.setHex(0x2a6f95);
             wt.emissiveIntensity = night ? 0.25 : 0.12;
+            if (!night) self.setSunset(sunsetAmt);       // tema terang: pertahankan nyala senja setelah palet diganti
             if (p.aoOpacity !== undefined) self.mat('ao').opacity = self.realShadows ? p.aoOpacity * 0.8 : p.aoOpacity;
         },
         dispose: function () {
@@ -596,6 +613,8 @@ export function createAssets(THREE, opts) {
         }
     };
 }
+
+function smooth01(v) { v = Math.max(0, Math.min(1, v)); return v * v * (3 - 2 * v); }
 
 function mesh(A, THREE, geo, role, x, y, z) {
     var m = new THREE.Mesh(geo, A.mat(role));
