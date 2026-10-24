@@ -824,7 +824,17 @@ export function createManufactureScene(THREE, container, gameState) {
         lights: lampPosts.map(function (l) { var wp = l.getWorldPosition(new THREE.Vector3()); return { x: wp.x, y: wp.y, z: wp.z, size: 1.7, color: 0xffc872 }; }),
         onHaze: function (hex, amt) { farCampus.setHaze(hex, amt); }
     });
-    function cineTick() { cine.update(canvas.height / Math.max(0.001, camera.top - camera.bottom), weather.getKind(), weather.getSunset()); }
+    var lastWinSun = -1;
+    // Jendela pabrik menyala hangat bertahap saat senja (tema terang). Tema gelap: tetap seperti applyTheme.
+    function winSunset() {
+        var sn = weather.getSunset();
+        if (Math.abs(sn - lastWinSun) <= 0.01) return;
+        lastWinSun = sn;
+        if (dark) return;
+        var t = Math.max(0, Math.min(1, (sn - 0.12) / 0.5)); t = t * t * (3 - 2 * t);
+        M.win.emissive.setRGB(0.72 * t, 0.58 * t, 0.34 * t);
+    }
+    function cineTick() { winSunset(); cine.update(canvas.height / Math.max(0.001, camera.top - camera.bottom), weather.getKind(), weather.getSunset()); }
     var TRUCK_X0 = -16, TRUCK_X1 = LINK.OFFSET - LINK.CAMPUS_ROAD_END + 3;   // dari ujung barat plaza sampai jalan Kampus di seberang
     var TRUCK_RATE = 0.055 * 32 / (TRUCK_X1 - TRUCK_X0);                       // kecepatan dunia sama dengan sebelumnya
 
@@ -1468,6 +1478,7 @@ export function createManufactureScene(THREE, container, gameState) {
         var ix = dark ? 1 : 0;
         Object.keys(COLORS).forEach(function (k) { M[k].color.setHex(COLORS[k][ix]); });
         M.win.emissive.setHex(dark ? tint(COLORS.win[1], -0.35) : 0x000000);
+        lastWinSun = -1;                                        // paksa hitung ulang nyala senja pada frame berikutnya
         M.shade.opacity = dark ? 0.22 : 0.14;
         farCampus.setDark(dark);
         sea.setTheme(dark);
