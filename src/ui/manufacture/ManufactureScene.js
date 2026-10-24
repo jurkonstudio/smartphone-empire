@@ -35,6 +35,7 @@ import { LINK, buildLinkBridge, mfBridgeCfg, buildCampusFar } from '../campus/Is
 import { createSea } from '../campus/SeaWater.js';
 import { createCinematic } from '../campus/CinematicFx.js';
 import { createBeach } from '../campus/Beach.js';
+import { createDayClock, lerpHex } from '../campus/DayCycle.js';
 import { islandRadius as campusIslandRadius } from '../campus/CampusBuildings.js';
 import { ASSEMBLY_ROLES } from '../../data/assembly.data.js';
 
@@ -107,8 +108,9 @@ export function createManufactureScene(THREE, container, gameState) {
         if (o.isDirectionalLight && o.castShadow) { var sc = o.shadow.camera; sc.left = -32; sc.right = 32; sc.top = 32; sc.bottom = -32; sc.far = 90; sc.updateProjectionMatrix(); }
     });
     renderer.shadowMap.autoUpdate = !!rig.shadowsOn;
+    var clock = createDayClock();                                    // jam nyata perangkat (siklus siang-malam), ?hour= untuk uji
     var weather = createWeather(THREE, scene, {                      // cuaca otomatis + senja (jam lokal)
-        lights: rig.lights, tier: look.tier,
+        lights: rig.lights, tier: look.tier, now: clock.now,
         getCenter: function () { return controls ? controls.view : { x: 0, z: 0 }; },
         getHalf: function () { return (camera.right - camera.left) * 0.7 + 3; },
         onChange: function () { requestRender(); }
@@ -826,16 +828,16 @@ export function createManufactureScene(THREE, container, gameState) {
         lights: lampPosts.map(function (l) { var wp = l.getWorldPosition(new THREE.Vector3()); return { x: wp.x, y: wp.y, z: wp.z, size: 1.7, color: 0xffc872 }; }),
         onHaze: function (hex, amt) { farCampus.setHaze(hex, amt); }
     });
-    var lastWinSun = -1;
-    // Jendela pabrik menyala hangat bertahap saat senja (tema terang). Tema gelap: tetap seperti applyTheme.
-    function winSunset() {
+    var lastWinSun = -1, curNight = 0, winTmp = new THREE.Color();
+    // Jendela pabrik: nyala malam (dicampur dengan tingkat malam) atau nyala hangat bertahap saat senja; ambil yang lebih terang.
+    function applyWinGlow() {
         var sn = weather.getSunset();
-        if (Math.abs(sn - lastWinSun) <= 0.01) return;
         lastWinSun = sn;
-        if (dark) return;
         var t = Math.max(0, Math.min(1, (sn - 0.12) / 0.5)); t = t * t * (3 - 2 * t);
-        M.win.emissive.setRGB(0.72 * t, 0.58 * t, 0.34 * t);
+        var nc = winTmp.setHex(tint(COLORS.win[1], -0.35)).multiplyScalar(curNight);
+        M.win.emissive.setRGB(Math.max(nc.r, 0.72 * t), Math.max(nc.g, 0.58 * t), Math.max(nc.b, 0.34 * t));
     }
+    function winSunset() { if (Math.abs(weather.getSunset() - lastWinSun) > 0.01) applyWinGlow(); }
     function cineTick() { winSunset(); cine.update(canvas.height / Math.max(0.001, camera.top - camera.bottom), weather.getKind(), weather.getSunset()); }
     var TRUCK_X0 = -16, TRUCK_X1 = LINK.OFFSET - LINK.CAMPUS_ROAD_END + 3;   // dari ujung barat plaza sampai jalan Kampus di seberang
     var TRUCK_RATE = 0.055 * 32 / (TRUCK_X1 - TRUCK_X0);                       // kecepatan dunia sama dengan sebelumnya
@@ -1473,28 +1475,34 @@ export function createManufactureScene(THREE, container, gameState) {
 
     // ---------- tema ----------
     function applyTheme() {
-        dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        var night = clock.night(document.documentElement.getAttribute('data-theme') === 'dark');   // 0 siang .. 1 malam (jam nyata)
+        lastNight = night;
+        curNight = night;
+        var wasDark = dark, firstTheme = !themeInit;
+        themeInit = true;
+        dark = night >= 0.5;                                    // keputusan diskret (label, dll)
         var ac = new THREE.Color();
         try { ac.set(readAccent()); } catch (e) { ac.setHex(0x2563eb); }
         accentHex = ac.getHex();
-        var ix = dark ? 1 : 0;
-        Object.keys(COLORS).forEach(function (k) { M[k].color.setHex(COLORS[k][ix]); });
-        M.win.emissive.setHex(dark ? tint(COLORS.win[1], -0.35) : 0x000000);
-        lastWinSun = -1;                                        // paksa hitung ulang nyala senja pada frame berikutnya
-        M.shade.opacity = dark ? 0.22 : 0.14;
-        farCampus.setDark(dark);
-        sea.setTheme(dark);
+        Object.keys(COLORS).forEach(function (k) { M[k].color.setHex(lerpHex(COLORS[k][0], COLORS[k][1], night)); });
+        applyWinGlow();
+        M.shade.opacity = 0.14 + 0.08 * night;
+        farCampus.setDark(night);
+        sea.setTheme(night);
         sea.setWeather(weather.getKind(), weather.getSunset());
-        cine.setTheme(dark);
-        beach.setTheme(dark, COLORS.sand[ix], COLORS.sandWet[ix]);
+        cine.setTheme(night);
+        beach.setTheme(dark, lerpHex(COLORS.sand[0], COLORS.sand[1], night), lerpHex(COLORS.sandWet[0], COLORS.sandWet[1], night));
         M.selRing.color.setHex(accentHex);
-        M.lamp.color.setHex(dark ? 0xffe39a : 0xfff1c4);
-        lampPosts.forEach(function (l) { var s = dark ? 0.16 : 0.12; l.scale.set(s, s, s); });
-        weather.applyLook(rig.applyTheme(dark));
-        plotList.forEach(function (r) { if (r.st) rebuildLabel(r); if (r.st) rebuildAlert(r); });
-        if (plots.assembly) { plots.assembly.stationKey = null; refreshStations(plots.assembly); }
+        M.lamp.color.setHex(lerpHex(0xfff1c4, 0xffe39a, night));
+        lampPosts.forEach(function (l) { var s = 0.12 + 0.04 * night; l.scale.set(s, s, s); });
+        weather.applyLook(rig.applyNight(night));
+        if (firstTheme || dark !== wasDark) {                   // label & stasiun hanya digambar ulang saat siang<->malam berganti
+            plotList.forEach(function (r) { if (r.st) rebuildLabel(r); if (r.st) rebuildAlert(r); });
+            if (plots.assembly) { plots.assembly.stationKey = null; refreshStations(plots.assembly); }
+        }
         rig.requestShadowUpdate();
     }
+    var lastNight = -1, themeInit = false;
 
     // ============================================================
     // KAMERA
@@ -1995,7 +2003,14 @@ export function createManufactureScene(THREE, container, gameState) {
         chipSig = ''; cardSig = '';
         rebuildChips(); refreshCard(); requestRender();
     }
-    function onVis() { if (!document.hidden) requestRender(); }
+    // Cek pergantian siang-malam (jam nyata): terapkan ulang tema bila tingkat malam bergeser >= 0.02.
+    function checkDay() {
+        if (disposed || document.hidden) return;
+        var n = clock.night(document.documentElement.getAttribute('data-theme') === 'dark');
+        if (Math.abs(n - lastNight) >= 0.02 || (n !== lastNight && (n === 0 || n === 1))) { applyTheme(); requestRender(); }
+    }
+    var dayTimer = setInterval(checkDay, 15000);
+    function onVis() { if (!document.hidden) { checkDay(); requestRender(); } }
     var io = null;
     if (typeof IntersectionObserver !== 'undefined') {
         io = new IntersectionObserver(function (en) { inView = en[en.length - 1].isIntersecting; if (inView) requestRender(); });
@@ -2031,6 +2046,7 @@ export function createManufactureScene(THREE, container, gameState) {
             if (io) io.disconnect();
             if (ro) ro.disconnect(); else window.removeEventListener('resize', resize);
             document.removeEventListener('visibilitychange', onVis);
+            clearInterval(dayTimer);
             canvas.removeEventListener('webglcontextlost', onCtxLost);
             canvas.removeEventListener('webglcontextrestored', onCtxRestored);
             controls.dispose();
