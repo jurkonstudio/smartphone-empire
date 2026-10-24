@@ -1096,6 +1096,9 @@ export function createManufactureScene(THREE, container, gameState) {
         var dm = dimsFor(def, L), bw = dm.bw, bd = dm.bd, bh = dm.bh, zc = ASM_ZC, i, k, t;
         var roofSink = f.userData.roofSink || null;                                  // daftar atap (disembunyikan saat "masuk")
         function roofPart(m) { if (roofSink) roofSink.push(m); return m; }
+        // rig kerja: tangan pekerja & ponsel di ban berjalan; hanya tampil saat mode masuk
+        var asmR = { on: false, hands: [], phones: [] };
+        f.userData.asmRig = asmR;
         var asm = st.asm || {}, act = !!asm.operating, total = asm.total || 0, autoLv = Math.max(0, L - 1);
         var xL = -bw / 2, xR = bw / 2, zF = zc + bd / 2, zB = zc - bd / 2;
         var bayX0 = xL + bw * 0.38, bayW = bw * 0.34, bayX1 = bayX0 + bayW, bayCx = bayX0 + bayW / 2;
@@ -1153,9 +1156,12 @@ export function createManufactureScene(THREE, container, gameState) {
                 var mat = palette[(placed + k) % palette.length];
                 var body = cyl(f, mat, 0.07, 0.22, px, 0.26, zl + side * 0.42);
                 sph(f, 'skin', 0.055, px, 0.43, zl + side * 0.42);
+                var hnd = box(f, 'skin', 0.12, 0.05, 0.05, px + 0.06, 0.19, zl + side * 0.34);
+                asmR.hands.push({ m: hnd, x: px + 0.06, z: zl + side * 0.34, side: side, ph: placed * 1.3 + k });
                 if (act) (function (b, ph) { tk.push(function (sec) { b.position.y = 0.26 + (ambient ? Math.abs(Math.sin(sec * 2.2 + ph)) * 0.012 : 0); }); })(body, placed);
                 placed++;
             }
+            for (var pj = 0; pj < 3; pj++) asmR.phones.push({ m: box(f, 'dark', 0.11, 0.03, 0.17, bayX0 + 0.25, 0.25, zl), j: pj, k: k });   // ponsel di ban berjalan
             if (autoLv >= 2) {                                                                          // lengan robot
                 for (t = 0; t < 2; t++) {
                     var rx = bayX0 + bayW * (0.3 + t * 0.4), arm = new THREE.Group();
@@ -1174,6 +1180,25 @@ export function createManufactureScene(THREE, container, gameState) {
                 (function (g, ph) { tk.push(function (sec) { g.position.z = zc + (act && ambient ? Math.sin(sec * 0.6 + ph) * (bd / 2 - 0.4) : 0); }); })(agv, i * 3.14);
             }
         }
+        // gerak kerja (hanya saat mode masuk, operasi aktif, dan ambien hidup); diam di posisi istirahat selain itu
+        tk.push(function (sec) {
+            var mv = asmR.on && ambient && act;
+            for (var h = 0; h < asmR.hands.length; h++) {
+                var hd = asmR.hands[h], sn = Math.sin(sec * 2.6 + hd.ph);
+                hd.m.position.z = hd.z + (mv ? hd.side * 0.07 * (sn + 1) * 0.5 : 0);
+                hd.m.position.y = 0.19 + (mv ? 0.03 * Math.max(0, sn) : 0);
+            }
+            var xa = bayX0 + 0.25, xb = bayX1 - 0.25;
+            for (var q = 0; q < asmR.phones.length; q++) {
+                var pp = asmR.phones[q], u = mv ? ((sec * 0.07 + pp.j / 3 + pp.k * 0.17) % 1) : ((pp.j / 3 + pp.k * 0.17) % 1);
+                pp.m.position.x = xa + u * (xb - xa);
+            }
+        });
+        asmR.setInside = function (on) {
+            asmR.on = !!on;
+            asmR.hands.forEach(function (h) { h.m.visible = asmR.on; });
+            asmR.phones.forEach(function (p) { p.m.visible = asmR.on && act; });
+        };
         // peralatan atap: AC, cerobong, panel surya
         roofPart(box(f, 'steel', 0.7, 0.28, 0.5, xL + 1.0, bh + 0.5, zc - 0.7)); roofPart(box(f, 'steel', 0.6, 0.24, 0.45, xL + 2.2, bh + 0.48, zc + 0.6));
         cyl(f, 'metal', 0.1, 0.8, xL + 0.5, bh + 0.65, zB + 0.5); smoke(f, xL + 0.5, bh + 1.1, zB + 0.5, tk, on);
@@ -1326,6 +1351,7 @@ export function createManufactureScene(THREE, container, gameState) {
         var tk = [], top = 2.2, f = r.furn, def = r.def;
         var on = !!st.producing;
         r.roofMeshes = []; f.userData.roofSink = r.roofMeshes;      // atap dicatat ulang setiap bangun (furn dibangun ulang)
+        f.userData.asmRig = null;
         try {
             if (st.building) {
                 if (st.status === 'built') {                           // upgrade: bangunan lama tetap ada + perancah
@@ -1361,6 +1387,7 @@ export function createManufactureScene(THREE, container, gameState) {
         var on = !!r.inside;
         (r.roofMeshes || []).forEach(function (m) { m.visible = !on; });
         (r.stations || []).forEach(function (s) { s.visible = on; });
+        if (r.furn.userData.asmRig) r.furn.userData.asmRig.setInside(on);
     }
     function setInside(r, on) {
         on = !!on;
