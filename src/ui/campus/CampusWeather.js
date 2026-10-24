@@ -1,11 +1,14 @@
 // FILE: src/ui/campus/CampusWeather.js
-// Cuaca (cerah / hujan / salju) dan senja untuk peta 3D Kampus dan Manufaktur.
+// Lima kondisi langit (cerah, sangat cerah, mendung, hujan, salju) dan senja untuk peta 3D Kampus dan Manufaktur.
 // Dipakai bersama oleh CampusScene.js dan ManufactureScene.js.
 //
 // Aturan desain:
 //  - Cuaca OTOMATIS: deterministik per blok 30 menit (jam dinding perangkat); tanpa kontrol UI.
-//  - Senja mengikuti JAM LOKAL perangkat: 0 sebelum 16.5, naik ke 1 pada 18.0, turun ke 0 pada 19.5.
-//  - Uji lewat URL: ?weather=clear|rain|snow dan ?sunset=0..1
+//  - Senja mengikuti JAM LOKAL perangkat: 0 sebelum 16.5, naik ke 1 pada 18.0, turun ke 0 pada 19.5,
+//    lalu DIKALIKAN faktor cuaca (SUNSET_FACTOR): hanya 'sunny' yang senja penuh; 'overcast' hanya rona
+//    tipis; 'clear', 'rain', 'snow' tanpa senja.
+//  - Uji lewat URL: ?weather=clear|sunny|overcast|rain|snow dan ?sunset=0..1 (pengganti jam, tetap
+//    dikalikan faktor cuaca, jadi untuk melihat senja pakai ?weather=sunny&sunset=1)
 //  - Posisi matahari TIDAK diubah (shadow map dibekukan); hanya warna dan intensitas cahaya.
 //  - Hujan (rev. 2): angin berhembus pelan (berubah tiap detik), tetes ukuran berbeda (kecepatan dan
 //    panjang goresan mengikuti ukuran), setiap tetes menyentuh tanah memicu percikan kecil yang
@@ -19,6 +22,12 @@ var SNOW_COUNT = { low: 200, medium: 360, high: 600 };
 var SPLASH_COUNT = { low: 40, medium: 80, high: 140 };
 var SPLASH_CHANCE = { low: 0.3, medium: 0.45, high: 0.6 };  // peluang tetes menimbulkan percikan
 var BOX_H = 18;
+export var KINDS = ['clear', 'sunny', 'overcast', 'rain', 'snow'];
+// Faktor senja per kondisi. 'clear' = 0: senja hanya muncul di 'sunny' (ubah di sini bila ingin
+// cerah biasa ikut bersenja tipis).
+export var SUNSET_FACTOR = { clear: 0, sunny: 1, overcast: 0.1, rain: 0, snow: 0 };
+// Ambang kumulatif sebaran kondisi per blok 30 menit: cerah 40%, sangat cerah 20%, mendung 15%, hujan 15%, salju 10%.
+var KIND_CUTS = [['clear', 0.40], ['sunny', 0.60], ['overcast', 0.75], ['rain', 0.90], ['snow', 1.01]];
 var SPLASH_LIFE = 0.22;     // detik
 var SPLASH_RISE = 0.06;     // tinggi tambahan percikan selama hidupnya
 
@@ -34,18 +43,20 @@ function hash01(n) {
 
 export function blockOf(nowMs) { return Math.floor(nowMs / BLOCK_MS); }
 
-// Deterministik: sekitar 60% cerah, 30% hujan, 10% salju.
+// Deterministik: sekitar 40% cerah, 20% sangat cerah, 15% mendung, 15% hujan, 10% salju.
 export function weatherForBlock(block) {
     var r = hash01(block);
-    if (r < 0.6) return 'clear';
-    if (r < 0.9) return 'rain';
-    return 'snow';
+    for (var i = 0; i < KIND_CUTS.length; i++) if (r < KIND_CUTS[i][1]) return KIND_CUTS[i][0];
+    return 'clear';
 }
+
+export function isKind(k) { return KINDS.indexOf(k) >= 0; }
+export function sunsetFactor(kind) { return isKind(kind) ? SUNSET_FACTOR[kind] : 0; }
 
 export function readOverride(search) {
     var out = { weather: null, sunset: null };
     var s = String(search || '');
-    var w = /[?&]weather=(clear|rain|snow)(?:&|$)/.exec(s);
+    var w = /[?&]weather=(clear|sunny|overcast|rain|snow)(?:&|$)/.exec(s);
     if (w) out.weather = w[1];
     var m = /[?&]sunset=([0-9]*\.?[0-9]+)(?:&|$)/.exec(s);
     if (m) {
@@ -70,6 +81,11 @@ export function sunsetAmount(hour) {
     return (19.5 - hour) / 1.5;
 }
 
+// Senja efektif = senja menurut jam (atau override) x faktor cuaca.
+export function sunsetFor(kind, hour) {
+    return sunsetAmount(hour) * sunsetFactor(kind);
+}
+
 export function mixHex(a, b, t) {
     t = Math.max(0, Math.min(1, t));
     var ar = (a >> 16) & 255, ag = (a >> 8) & 255, ab = a & 255;
@@ -86,7 +102,8 @@ function smooth01(v) { v = Math.max(0, Math.min(1, v)); return v * v * (3 - 2 * 
 
 // look: objek dari CAMPUS_LOOK.light/dark. Mengembalikan nilai cahaya + kabut akhir (objek baru).
 export function weatherLook(look, kind, sunset) {
-    var s = Math.max(0, Math.min(1, sunset || 0));
+    // Pengaman: apa pun yang dikirim, senja tidak pernah melewati faktor cuacanya (hujan/salju/cerah biasa = 0).
+    var s = Math.max(0, Math.min(sunsetFactor(kind), Math.min(1, sunset || 0)));
     var o = {
         hemiSky: look.hemiSky, hemiGround: look.hemiGround, hemiI: look.hemiI,
         sunCol: look.sunCol, sunI: look.sunI,
@@ -95,10 +112,26 @@ export function weatherLook(look, kind, sunset) {
         fogOn: false, fogCol: 0, fogNear: 0, fogFar: 0
     };
     var dark = lum(look.hemiSky) < 0.6;
-    if (kind === 'rain') {
-        o.sunI *= 0.45; o.hemiI *= 0.85; o.fillI *= 0.7; o.rimI *= 0.6;
+    if (kind === 'sunny') {
+        // sangat cerah: matahari lebih kuat dan bersih, langit lebih biru, pantulan lebih tegas
+        o.sunI *= dark ? 1.08 : 1.15; o.rimI *= 1.15; o.hemiI *= 0.97;
+        o.sunCol = mixHex(o.sunCol, 0xfff3da, 0.3);
+        o.hemiSky = mixHex(o.hemiSky, 0xcfe4ff, 0.3);
+        o.fillCol = mixHex(o.fillCol, 0xbcd6ff, 0.3);
+    } else if (kind === 'overcast') {
+        // mendung: matahari <40% (cahaya datar didominasi hemisphere), warna abu dingin, kabut tipis
+        o.sunI *= 0.33; o.hemiI *= 1.18; o.fillI *= 0.7; o.rimI *= 0.45;
+        o.hemiSky = mixHex(o.hemiSky, 0xaeb8c6, 0.55);
+        o.hemiGround = mixHex(o.hemiGround, 0x8c939c, 0.25);
+        o.sunCol = mixHex(o.sunCol, 0xdde3ea, 0.6);
+        o.fillCol = mixHex(o.fillCol, 0xb7c3d4, 0.4);
+        o.fogOn = true; o.fogNear = 60; o.fogFar = 160;
+        o.fogCol = mixHex(look.hemiGround, o.hemiSky, dark ? 0.3 : 0.75);
+    } else if (kind === 'rain') {
+        o.sunI *= 0.45; o.hemiI *= 0.85; o.fillI *= 0.8; o.rimI *= 0.6;
         o.hemiSky = mixHex(o.hemiSky, 0x9aa6b8, 0.5);
         o.sunCol = mixHex(o.sunCol, 0xc9d3e0, 0.5);
+        o.fillCol = mixHex(o.fillCol, 0x8fb0e0, 0.5);       // sedikit cahaya dingin dari sisi
         o.fogOn = true; o.fogNear = 34; o.fogFar = 100;
         o.fogCol = mixHex(look.hemiGround, o.hemiSky, dark ? 0.3 : 0.7);
     } else if (kind === 'snow') {
@@ -118,6 +151,18 @@ export function weatherLook(look, kind, sunset) {
         if (o.fogOn) o.fogCol = mixHex(o.fogCol, 0xc79a80, 0.25 * s);
     }
     return o;
+}
+
+// Tampilan awan (CampusLife): mendung/hujan = abu gelap, rendah, hampir penuh; salju = putih kebiruan;
+// senja mewarnai awan jingga muda. dark: tema gelap.
+export function cloudLook(kind, sunset, dark) {
+    var s = Math.max(0, Math.min(sunsetFactor(kind), Math.min(1, sunset || 0)));
+    var col = dark ? 0x8fa0c4 : 0xffffff, op = dark ? 0.45 : 0.8, y = 9, sh = dark ? 0.16 : 0.1;
+    if (kind === 'overcast') { col = dark ? 0x6c7890 : 0xaab2bf; op = dark ? 0.6 : 0.92; y = 7.5; sh = dark ? 0.2 : 0.16; }
+    else if (kind === 'rain') { col = dark ? 0x58637a : 0x8791a1; op = dark ? 0.68 : 0.95; y = 7; sh = dark ? 0.22 : 0.2; }
+    else if (kind === 'snow') { col = dark ? 0x9aa9c8 : 0xe9eef6; op = dark ? 0.55 : 0.88; y = 8; }
+    if (s > 0) col = mixHex(col, 0xffb48a, 0.55 * s);
+    return { color: col, opacity: op, y: y, shadow: sh };
 }
 
 function wrapAround(v, c, h) {
@@ -155,7 +200,7 @@ export function createWeather(THREE, scene, opts) {
     if (search === undefined) { try { search = location.search; } catch (e) { search = ''; } }
     var over = readOverride(search);
 
-    var kind = 'clear', sunset = 0, lastLook = null, lastCheck = -1e9, lastSec = null, disposed = false;
+    var kind = 'clear', sunset = 0, sunBase = 0, lastLook = null, lastCheck = -1e9, lastSec = null, disposed = false;
     var fogObj = null, rainTheme = null, wind = windAt(0);
 
     function setDyn(attr) { if (THREE.DynamicDrawUsage !== undefined && attr.setUsage) attr.setUsage(THREE.DynamicDrawUsage); }
@@ -312,13 +357,14 @@ export function createWeather(THREE, scene, opts) {
     }
 
     function setKind(k) {
-        if (k !== 'clear' && k !== 'rain' && k !== 'snow') k = 'clear';
+        if (!isKind(k)) k = 'clear';
         var was = kind;
         kind = k;
         rain.visible = k === 'rain';
         splash.visible = k === 'rain';
         snow.visible = k === 'snow';
-        if (k !== 'clear' && was !== k) {
+        sunset = sunBase * sunsetFactor(k);
+        if ((k === 'rain' || k === 'snow') && was !== k) {
             for (var q = 0; q < nP; q++) spAge[q] = SPLASH_LIFE;
             seedBox(getCenter(), halfBox());
         }
@@ -329,11 +375,11 @@ export function createWeather(THREE, scene, opts) {
     function refresh() {
         var t = nowFn();
         var nk = over.weather || weatherForBlock(blockOf(t));
-        var ns;
-        if (over.sunset !== null) ns = over.sunset;
-        else { var d = new Date(t); ns = sunsetAmount(d.getHours() + d.getMinutes() / 60); }
+        if (over.sunset !== null) sunBase = over.sunset;
+        else { var d = new Date(t); sunBase = sunsetAmount(d.getHours() + d.getMinutes() / 60); }
+        var ns = sunBase * sunsetFactor(nk);     // senja efektif = jam x faktor cuaca
         var changed = false;
-        if (nk !== kind) { sunset = ns; setKind(nk); changed = true; }
+        if (nk !== kind) { setKind(nk); changed = true; }
         else if (Math.abs(ns - sunset) > 0.01) { sunset = ns; applyLook(); changed = true; }
         return changed;
     }
@@ -346,7 +392,7 @@ export function createWeather(THREE, scene, opts) {
         }
         var dt = lastSec === null ? 0 : Math.min(0.1, Math.max(0, sec - lastSec));
         lastSec = sec;
-        if (!ambientOn || dt === 0 || kind === 'clear') return;
+        if (!ambientOn || dt === 0 || (kind !== 'rain' && kind !== 'snow')) return;
         wind = windAt(sec);
         var c = getCenter(), h = halfBox(), i;
         if (kind === 'rain') {

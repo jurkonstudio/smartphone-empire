@@ -1,4 +1,5 @@
 // FILE: src/ui/campus/CampusLife.js  (REPLACE — v2027.65: mobil jalan barat menyeberangi jembatan ke Manufaktur)
+// Cuaca rev. 3: awan ikut kondisi langit (setSky): mendung/hujan = abu gelap & rendah, senja = awan jingga muda.
 // v2027.65 — jalan barat diperpanjang melewati jembatan sampai jalan raya Pulau Manufaktur. Mobil naik-turun
 // mengikuti dek (link.heightAt), kecepatan dunia tetap sama (diskalakan terhadap panjang jalan), + 4 mobil.
 // v2027.62 — konstanta bersama (kolam, monorail, slot pabrik) diambil dari CampusBuildings (satu sumber);
@@ -13,6 +14,7 @@
 // tanpa shadow map & tanpa alokasi per-frame.
 
 import { POND, RAIL, SLOTS } from './CampusBuildings.js';
+import { cloudLook } from './CampusWeather.js';
 
 var CAR_COLORS = [0xef4444, 0xf59e0b, 0x10b981, 0x6366f1, 0xf8fafc, 0x1f2937, 0xec4899];
 var WALK_COLORS = [0xf97316, 0x3b82f6, 0xa855f7, 0x14b8a6, 0xeab308, 0xef4444];
@@ -31,6 +33,7 @@ export function createCampusLife(THREE, A, scene, trees, link) {
     scene.add(root);
     var mats = [];
     var dark = false;
+    var skyKind = 'clear', skySunset = 0;   // kondisi langit dari CampusWeather (awan)
     var windowHex = 0x8fb4e8;
     var chimneys = [];
     var factoryBusy = false;     // Fab sedang produksi -> asap penuh; idle -> asap tipis
@@ -128,6 +131,14 @@ export function createCampusLife(THREE, A, scene, trees, link) {
         root.add(g, sh);
         clouds.push({ g: g, sh: sh, x0: c[0], z: c[1], speed: c[2], y: 9 });
     });
+
+    function applySky() {
+        var cl = cloudLook(skyKind, skySunset, dark);
+        cloudMat.color.setHex(cl.color);
+        cloudMat.opacity = cl.opacity;
+        shadowMat.opacity = cl.shadow;
+        for (var ci = 0; ci < clouds.length; ci++) clouds[ci].y = cl.y;
+    }
 
     // ---------- asap pabrik ----------
     var puffs = [];
@@ -383,11 +394,14 @@ export function createCampusLife(THREE, A, scene, trees, link) {
             windowHex = winHex;
             var wm = A.mat('window');
             wm.emissive.setHex(dark ? windowHex : 0x000000);
-            cloudMat.color.setHex(dark ? 0x8fa0c4 : 0xffffff);
-            cloudMat.opacity = dark ? 0.45 : 0.8;
-            shadowMat.opacity = dark ? 0.16 : 0.1;
+            applySky();
             birdMat.color.setHex(dark ? 0x94a3b8 : 0x475569);
             for (var k = 0; k < rings.length; k++) rings[k].mat.color.setHex(dark ? 0xa5d8f5 : 0xffffff);
+        },
+        setSky: function (kind, sunset) {
+            skyKind = kind || 'clear';
+            skySunset = sunset || 0;
+            applySky();
         },
         setEra: function (idx) {
             droneOn = idx >= 3;

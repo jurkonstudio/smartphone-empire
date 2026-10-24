@@ -96,7 +96,7 @@ export function createCampusScene(THREE, container, gameState) {
         lights: rig.lights, tier: quality.tier,
         getCenter: function () { return controls ? controls.view : { x: 0, z: 0 }; },
         getHalf: function () { return (camera.right - camera.left) * 0.7 + 3; },
-        onChange: function () { requestRender(); }
+        onChange: function () { if (life) life.setSky(weather.getKind(), weather.getSunset()); requestRender(); }
     });
     var fx = createCampusFx(THREE);
     scene.add(fx.group);
@@ -118,6 +118,7 @@ export function createCampusScene(THREE, container, gameState) {
     var shadowDirty = true;       // shadow map statis: hitung ulang hanya saat geometri berubah
     // Animasi ambient (mobil, awan, asap, drone, dll). Dimatikan bila pengguna memilih reduced-motion.
     var life = prefersReducedMotion() ? null : createCampusLife(THREE, A, scene, forest.nodes, bridge);
+    if (life) life.setSky(weather.getKind(), weather.getSunset());     // awan ikut kondisi langit awal
     var ambient = !!life;
     fx.setImmediate(!ambient);
     var loopRaf = 0, loopTimer = 0, lastFrame = 0, inView = true;
