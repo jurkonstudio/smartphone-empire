@@ -843,6 +843,16 @@ body {
 }
 .wiz-options-row::-webkit-scrollbar { display: none; }
 .wiz-options-col .wiz-option { width: 100%; min-width: 0; flex-shrink: 1; }
+.wiz-os-toggle {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
+    background: var(--bg-3); border: 1px solid var(--accent); border-radius: var(--r);
+    padding: 10px 12px; color: var(--text-primary); font-family: inherit; font-size: var(--fs-sm);
+    text-align: left; cursor: pointer; min-height: 46px;
+}
+.wiz-os-cur { display: flex; flex-direction: column; }
+.wiz-os-caret { color: var(--accent); transition: transform 0.15s; }
+.wiz-os-toggle.open .wiz-os-caret { transform: rotate(180deg); }
+.wiz-os-menu { margin-top: 6px; max-height: 240px; overflow-y: auto; }
 
 .wiz-option {
     background: var(--bg-3); border: 1px solid var(--border);
