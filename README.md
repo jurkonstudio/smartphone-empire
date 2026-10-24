@@ -4,296 +4,310 @@
 
 ### Smartphone Empire
 
-**Bangun perusahaan ponsel dari nol. Mulai 1 Januari 2000, lawan Nokia, Apple, Samsung, dan 24 kompetitor lain, sampai era AI dan foldable, lalu masuk skenario spekulatif 2027–2030.**
+**Build a phone company from scratch. Start on January 1, 2000, take on Nokia, Apple, Samsung, and 28 other rivals, ride the industry through the touchscreen, AI, and foldable eras, and carry on into a speculative 2027–2030 scenario.**
 
-Dibuat oleh **Kalfin Agus Setiawan** di bawah bendera **Jurkon Studio**.
+Created by **Kalfin Agus Setiawan** under the **Jurkon Studio** banner.
 
-[🎮 Coba Game](https://www.smartphone-empire.my.id/) · [🐛 Laporkan Bug](https://github.com/jurkonstudio/smartphone-empire/issues) · [🔒 Kebijakan Keamanan](SECURITY.md)
+[🎮 Play the game](https://www.smartphone-empire.my.id/) · [🐛 Report a bug](https://github.com/jurkonstudio/smartphone-empire/issues) · [🔒 Security policy](SECURITY.md)
 
 </div>
 
 ---
 
-## Kenapa game ini dibuat
+## Why this game exists
 
-Saya suka game simulasi. Tapi yang bikin penasaran: kenapa belum ada game yang benar-benar menceritakan **evolusi ponsel dari awal sampai sekarang**? Rasanya seru bisa merasakan jadi perusahaan kecil tahun 2000 yang harus bersaing dengan Nokia yang sedang jaya-jayanya, lalu pelan-pelan naik kelas sambil melihat industrinya berubah, dari candybar monokrom sampai ponsel lipat.
+I love simulation games, but I couldn't find one that really tells the story of **how the mobile phone evolved from the beginning until today**. It felt like it would be great to start as a tiny company in 2000, compete with Nokia at the height of its power, and slowly climb while watching the whole industry change, from monochrome candybars to foldables.
 
-Ini proyek fan project, bukan produk komersial. Tidak ada afiliasi dengan Nokia, Apple, Samsung, atau perusahaan mana pun.
+This is a fan project, not a commercial product. It has no affiliation with Nokia, Apple, Samsung, or any other company.
 
 ---
 
 ## Gameplay
 
-Kamu adalah CEO perusahaan ponsel yang baru berdiri pada 1 Januari 2000. Modal awal terbatas: **$200K / $100K / $50K** untuk tingkat kesulitan Santai / Normal / Sulit.
+You are the CEO of a phone company founded on January 1, 2000. Starting cash is limited: **$200K / $100K / $50K** on Easy (Santai) / Normal / Hard (Sulit).
 
-Tugasmu:
+Your job:
 
-- Merekrut engineer, designer, dan marketer
-- Riset teknologi supaya tidak tertinggal
-- Membangun OS sendiri, atau melisensi OS pihak ketiga (lebih mahal)
-- Mendesain ponsel, memproduksinya (dengan pabrik komponen sendiri kalau mau), merilisnya ke pasar, lalu membaca ulasan dan reaksi publik
-- Mengelola uang: gaji, sewa, pajak, pinjaman, deposito, saham, dan investasi pabrik
-- Jangan sampai bangkrut. Kas negatif **2 bulan berturut-turut** = game over
+- Hire engineers, designers, and marketers
+- Research technology so you don't fall behind
+- Build your own OS, or license a third-party one (more expensive)
+- Design phones, manufacture them (with your own component plants and assembly factory if you want), release them, then read the reviews and public reaction
+- Manage money: salaries, rent, tax, loans, deposits, stocks, and plant investment
+- Don't go bankrupt. Negative cash for **2 months in a row** means game over
 
-Waktu berjalan real-time: **1 hari game = 60 detik**. Bisa dipause atau dipercepat 2x, 5x, atau 10x. Selama kamu bekerja, kompetitor juga bergerak: merilis produk, naik tier riset, dan merebut pangsa pasar. Ada juga **life events historis** yang mengubah permainan. Tahun 2007, iPhone muncul dan Nokia mulai goyah. Kalau kamu di posisi Nokia, apa yang akan kamu lakukan?
+Time runs in real time: **1 game day = 60 seconds**. You can pause or speed up to 2x, 5x, or 10x. While you work, competitors move too: they release products, climb research tiers, and take market share. **Historical life events** also shape the run. In 2007 the iPhone arrives and Nokia starts to wobble. If you were in Nokia's seat, what would you do?
 
-Dunia nyata di game berhenti di 2026. Sesudahnya (2027–2030) permainan memakai **skenario spekulatif**: krisis memori dan kenaikan harga, ponsel Agentic AI, aturan baterai UE, dan pendatang fiktif. Semua konten skenario ditandai `speculative` di data dan bukan fakta atau prediksi resmi.
+The real-world timeline in the game stops at 2026. After that (2027–2030) the game uses a **speculative scenario**: a memory crisis and price hikes, Agentic AI phones, EU battery rules, and a fictional newcomer. All scenario content is tagged `speculative` in the data and is not fact or an official forecast.
 
-Satu musim berakhir saat tanggal game memasuki **2051** (batas `endYear` 2050 di `src/config/endgame.config.js`). Skor akhir dihitung dari milestone, produk di katalog, riset selesai, staf aktif, dan kekayaan bersih.
+A season ends when the game date enters **2051** (the `endYear` limit of 2050 in `src/config/endgame.config.js`). The final score is calculated from milestones, products in your catalog, completed research, active staff, and net worth.
 
 ---
 
-## Isi game
+## What's in the game
 
-Angka di bawah dihitung langsung dari file data di repo ini (v0.2.2, sudah tercatat di `patches.json`).
+The numbers below were counted directly from the data files in this repo (v0.2.2).
 
-### 🧭 Navigasi
+### 🧭 Navigation
 
-Bar bawah: **Home · HQ · Riset · Produk · Pasar · Setelan**.
+Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 
-- **Home** punya sakelar **Kampus | Kantor** (peta 3D kampus atau peta 3D kantor).
-- **HQ** punya 6 sub-tab: **Ringkasan, Tim, Bursa, Bank, Investasi, Riwayat**.
-- Tampilan desktop punya tata letak sendiri (`desktop.css`), jadi game nyaman dipakai di layar lebar, bukan hanya di HP.
+- **Home** has a **Campus | Office** switch (3D campus map or 3D office map).
+- **HQ** has 6 sub-tabs: **Overview, Team, Exchange, Bank, Invest, History**.
+- **Research** has 4 sub-tabs: **Tech, OS, Manufacturing, Chip**. **Products** has 4: **Design, Catalog, Sales, Chip**. **Market** has 5: **Share, Competitors, Trends, Promo, Public**.
+- The desktop layout has its own styling (`desktop.css`), so the game is comfortable on wide screens, not only on phones.
 
-### 🏢 Kampus, Kantor, dan Tim
+### 🏢 Campus, Office, and Team
 
-- **Peta Kampus 3D** di Home: gedung tumbuh dan naik level seiring progres (HQ, Lab R&D, Pabrik Chip, Toko Flagship, Pusat OS, Billboard, Monumen). Gaya bangunan mengikuti era, ada siang dan malam sesuai tema, dan kota ikut beranimasi.
-  - **Pulau Manufaktur** terhubung ke kampus lewat jembatan. Truk menyeberang di antara dua pulau, dan kamera bisa digeser ke sana.
-- **Office 3D Map** (Home → Kantor): interior kantor isometrik dengan **9 ruangan** yang terhubung ke data game.
-  - Staf duduk di meja. Warna menunjukkan peran, dan bola kecil menunjukkan moral.
-  - Lab menampilkan riset aktif, rak server menampilkan versi OS dan bug, showroom menampilkan produk yang dijual.
-  - Ruangan yang belum memenuhi syarat tampil terkunci.
-  - Ketuk ruangan untuk kartu info dan tombol ke panel terkait. Dari kartu itu kamu bisa langsung membangun atau mengupgrade Fab (konstruksinya tumbuh di 3D sesuai progres) dan melatih staf tanpa pindah panel.
-  - Ketuk staf untuk kartu detail. Dari kartu itu tersedia tombol "Kelola Tim" dan pelatihan staf.
-  - Ruang Work punya tombol **Rekrut** yang langsung membuka mode rekrutmen di panel Tim.
-- **Tim**: 3 peran (Engineer, Designer, Marketer), 5 tingkat skill (Junior sampai Principal), 8 trait, dan kandidat dari **9 wilayah** (AS, Eropa, Jepang, Korea, Tiongkok, India, Indonesia, Rusia, Amerika Latin). Maksimal 20 orang per peran. Skill naik seiring waktu, dan moral serta gaji ikut berubah.
-  - Dari detail staf ada tombol **Lihat di kantor** yang memindahkan kamu ke peta kantor dan menyorot staf tersebut.
-  - Headhunter bisa mengganti seluruh kandidat dengan bayaran dan cooldown. Tawar gaji punya peluang sukses yang bergantung pada trait kandidat.
-- **HQ → Ringkasan** (dirancang mobile-first): kartu keuangan utama, metrik 2x2 (reputasi, sentimen, tim, era), aktivitas live, grafik 24 bulan, aksi cepat, lalu sorotan publik dan timeline yang bisa dilipat.
+- **3D Campus map** on Home: buildings grow and level up as you progress (HQ, R&D Lab, Chip Plant, Flagship Store, OS Center, Billboard, Monument, and more). Building style follows the era, there is a day and night cycle that follows the theme, and the city is animated.
+  - The **Manufacturing Island** is linked to the campus by a bridge. Trucks cross between the two islands, and the camera can pan over to it.
+- **3D Office map** (Home → Office): an isometric office interior with **9 rooms** connected to game data.
+  - Staff sit at desks. Color shows their role and a small orb shows morale.
+  - The lab shows active research, the server rack shows OS version and bugs, and the showroom shows the products on sale.
+  - Rooms whose requirements aren't met appear locked.
+  - Tap a room for an info card and shortcuts to the related panel. From that card you can build or upgrade a Fab (the construction grows in 3D as it progresses) and train staff without switching panels.
+  - Tap a staff member for a detail card with "Manage Team" and training buttons.
+  - The Work room has a **Recruit** button that opens recruit mode in the Team panel.
+- **Team**: 3 roles (Engineer, Designer, Marketer), 5 skill tiers (Junior to Principal), 8 traits, and candidates from **9 regions** (US, Europe, Japan, Korea, China, India, Indonesia, Russia, Latin America). Up to 20 people per role. Skills grow over time, and morale and salary change with them.
+  - New hires need **24 game hours** to onboard before they join.
+  - The staff detail card has a **View in office** button that jumps to the office map and highlights that person.
+  - A headhunter can replace the whole candidate pool for a fee and a cooldown. Salary negotiation (up to 15% off) has a success chance that depends on the candidate's traits.
+- **HQ → Overview** (mobile-first): main finance card, 2x2 metrics (reputation, sentiment, team, era), live activity, 24-month chart, quick actions, then collapsible public highlights and timeline.
 
-### 🔬 Riset dan OS
+### 🔬 Research and OS
 
-- **Tech tree**: **71 node** dalam **8 kategori** (display, kamera, baterai, chip, jaringan, bodi, sensor, audio), dari 2000 sampai 2027 (node terakhir, Runtime Agen AI, adalah skenario spekulatif). Antrian riset berjalan paralel, dan makin banyak engineer makin banyak slot. Termasuk riset kabel USB Tipe-C.
-- **OS sendiri**: **38 fitur OS** dalam **5 era** (Firmware Dasar, Era Layar Sentuh, Smartphone Modern, AI & Ekosistem, AI On-Device). Tiga fitur terbaru (OS Agentik, Pagar Agen, Toko Agen) terbuka dari 2027 lewat riset Runtime Agen AI. Ada versi OS, bug acak (**46 template** bug, lengkap dengan patch), **7 aplikasi bawaan**, dan ekosistem aplikasi pihak ketiga.
-- **Lisensi OS**: **5 paket** kalau kamu tidak mau membangun OS sendiri.
-- **Fitur ponsel**: **59 fitur** dalam 10 grup (konektivitas, keamanan, audio, kamera tambahan, daya tahan, daya, sensor, UX, penyimpanan, AI).
+- **Tech tree**: **90 nodes** in **8 categories** (display, camera, battery, chip, network, sensor, body, audio), from 2000 to 2027. The last node, AI Agent Runtime, is part of the speculative scenario. The research queue runs in parallel, and more engineers means more slots. Early-2000s content includes infrared, MMS, Wi-Fi, e-mail, FM radio, MP3, memory cards, video recording, basic GPS, and USB Type-C.
+- **Your own OS**: **50 OS features** across **5 eras** (Basic Firmware, Touchscreen Era, Modern Smartphone, AI & Ecosystem, On-Device AI). Three Agentic features (Agentic OS, Agent Guard, Agent Store) unlock from 2027 through the AI Agent Runtime research. There are OS versions, random bugs (**51 bug templates**, each with a patch), **7 built-in apps**, a third-party app ecosystem, and OS update cards organized into 9 tracks.
+- **OS licensing**: **5 packages** if you'd rather not build your own OS.
+- **Phone features**: **59 features** in 10 groups (connectivity, security, audio, extra camera, endurance, power, sensors, UX, storage, AI).
+- **Future panels**: tech-preview panels (F-AI, Dev Tools, Game Engine) that unlock from research or year conditions and affect OS feature discounts and design suggestions. User Control is still locked.
 
-### 📱 Produk dan Penjualan
+### 📱 Products and Sales
 
-- **Wizard desain ponsel** dengan preview real-time. Ada **128 komponen** dalam **10 kategori** (display, kamera, baterai, chip, RAM, jaringan, bodi, sensor, audio, bentuk) dan **8 warna bodi**. Pilihan mengikuti tahun, jadi tidak ada layar OLED di tahun 2001. RAM bersifat opsional (default "RAM Standar", tanpa biaya). Mulai 2027 tersedia RAM LPDDR6 24GB, dan harga pasar RAM mengikuti indeks krisis memori (×1,35 di 2027, ×1,5 di 2028, ×1,2 di 2029, ×1,05 di 2030) yang memengaruhi biaya desain, tagihan produksi, dan harga jual pabrik RAM sendiri.
-- **Mockup ponsel 3 tampilan**: depan, belakang, dan **kemasan retail** (kotak yang mengikuti era, lengkap dengan isi kotak seperti kabel, charger, dan earphone). Tampak belakang menampilkan lencana **Internal** untuk komponen dari pabrikmu sendiri.
-- **Pengembangan 4 fase**: Desain → Prototipe → Produksi → Rilis.
-- **Rumus permintaan yang transparan**: kualitas × harga × reputasi × pemasaran × OS × tren × kompetitor × lifecycle × kondisi makro.
-- **Lifecycle produk**: naik → puncak → turun → mati. Ada stok gudang, restock otomatis, dan maksimal **5 produk aktif**.
-- **Pemasaran**: **5 jenis kampanye** (Iklan Online, Sponsor Event, Peluncuran Produk, Billboard Kota, Kampanye Influencer).
-- **Promosi**: **18 paket**: 12 paket regional (Global, Asia, Eropa, Amerika & Lainnya, masing-masing 3 paket) dan 6 paket per segmen konsumen. Ada **12 event musiman** seperti Imlek, 618, Singles Day 11.11, Golden Week/Diwali, Karnaval, Back to School, Summer Sales, Black Friday, dan Natal. Maksimal 3 kampanye promosi aktif per produk.
-- **Navigasi Pasar**: pasar dibaca per **8 segmen konsumen** (value, mainstream, premium, gamer, creator, pro, youth, senior) dan **8 sub-wilayah**. Ada **19 gelombang tren** (16 historis ditambah 3 gelombang skenario 2027–2029: Krisis Memori, Ponsel Agen AI, Aturan Baterai UE) ditambah 4 tren tambahan, dan faktor ini ikut masuk ke rumus permintaan. Tab **Pasar** menampilkan kartu Peluang Terbaik, Segmen, Sub-Wilayah, Gelombang Tren, Reaksi per segmen, dan Riwayat Viral. Datanya juga bisa dibaca lewat `window.__game.marketNav`.
+- **Phone design wizard** with a real-time preview. There are **139 components** in **11 categories** (display, camera, battery, chip, RAM, storage, network, body, sensor, audio, form factor) and **18 body colors** that unlock progressively by era. Choices follow the year, so there's no OLED screen in 2001. RAM and storage are optional (default "Standard RAM", no cost). From 2027, LPDDR6 24GB is available, and the RAM market price follows the memory-crisis index (×1.35 in 2027, ×1.5 in 2028, ×1.2 in 2029, ×1.05 in 2030), which affects design cost, production bills, and the sale price from your own RAM plant.
+- **Three-view phone mockup**: front, back, and **retail packaging** (an era-appropriate box with contents such as cable, charger, and earphones). The back view shows an **In-house** badge for components from your own plants.
+- **4-phase development**: Design → Prototype → Production → Release.
+- **Transparent demand formula**: quality × price × reputation × marketing × OS × trend × competitors × lifecycle × macro conditions.
+- **Product lifecycle**: rising → peak → declining → dead. There is warehouse stock, automatic restock, and a maximum of **5 active products**.
+- **Marketing**: **5 campaign types** (Online Ads, Event Sponsorship, Product Launch, City Billboard, Influencer Campaign).
+- **Promotions**: **18 packages**: 12 regional (Global, Asia, Europe, Americas & Rest, 3 each) and 6 per consumer segment. There are **12 seasonal events** such as Lunar New Year, 618, Singles' Day 11.11, Golden Week/Diwali, Carnival, Back to School, Summer Sales, Black Friday, and Christmas. At most 3 active promotion campaigns per product.
+- **Market Navigation**: the market is read by **8 consumer segments** (value, mainstream, premium, gamer, creator, pro, youth, senior) and **8 sub-regions**. There are **19 trend waves** (16 historical plus 3 scenario waves for 2027–2029: Memory Crisis, AI Agent Phones, EU Battery Rules) and 4 extra trends, all feeding into the demand formula. The **Market** tab shows cards for Best Opportunities, Segments, Sub-Regions, Trend Waves, Reactions per segment, and Viral History. The data can also be read through `window.__game.marketNav`.
 
-### 🧠 Chip, Fab, dan Manufaktur
+### 🧠 Chips, Fabs, and Manufacturing
 
-- **Riset chip**: **52 node** dalam **6 kategori** (desain, arsitektur, proses, grafis, daya, bisnis).
-- **Desain chip sendiri**: **8 arsitektur**, **14 process node**, dan **24 fitur chip** dalam 7 kategori.
-- **Fab** dengan 4 tingkat, dari Small Fab (5.000 chip/bulan, biaya $5 juta) sampai Mega Fab (5 juta chip/bulan, biaya $600 juta). Ada waktu bangun, upgrade, antrian produksi, dan yield.
-- **Pabrik komponen** (panel Manufaktur): **5 jenis pabrik** (Baterai, Layar, SoC, Kamera, RAM) dengan 4 level. Tiap level memberi diskon harga, kapasitas, yield, dan bonus spesifikasi (misalnya SoC menambah performa, Kamera menambah kualitas foto). SoC dan RAM butuh Fab.
-  - Stok pabrik dipakai saat rilis dan restok. Kekurangan dibeli dengan harga pasar.
-  - Ada **biaya perawatan** bulanan dan **pajak infrastruktur** 0,2% per bulan dari modal terpasang.
-  - Stok surplus bisa **dijual grosir** (harga pasar × 0,92, kuota bulanan 40% kapasitas). Pabrik level rendah bisa rugi di grosir, level tinggi untung.
+- **Chip research**: **52 nodes** in **6 categories** (design, architecture, process, graphics, power, business).
+- **Custom chip design**: **8 architectures**, **14 process nodes**, and **24 chip features** in 7 categories.
+- **Fab** with 4 tiers, from Small Fab (5,000 chips/month, $5M) to Mega Fab (5 million chips/month, $600M). Build times, upgrades, a production queue, and yield all apply.
+- **Component plants** (Manufacturing panel): **5 plant types** (Battery, Display, SoC, Camera, RAM) with 4 levels each. Every level adds a price discount, capacity, yield, and a spec bonus (for example SoC adds performance, Camera adds photo quality). Display, SoC, and RAM plants require a Fab. Plants unlock over time (Battery 2002, Display 2003, SoC and RAM 2004, Camera 2005), and the Manufacturing tab opens from 2003.
+  - Plant stock is used at release and restock. Any shortfall is bought at market price.
+  - There is a monthly **maintenance cost** and a 0.2% monthly **infrastructure tax** on installed capital.
+  - Surplus stock can be **sold wholesale** (market price × 0.92, monthly quota of 40% of capacity). Low-level plants can lose money on wholesale, high-level plants profit.
+- **Assembly factory** (Manufacturing tab and 3D island): a final-assembly plant with 4 levels (Manual Line, Semi-Automatic Line, Automated Factory, Robotic Smart Factory). You can start building from 2001, and it starts producing from 2002. Before it operates, production runs through contract manufacturing with no penalty.
+  - Workers are modeled as headcount groups per role (operator, QC, technician, supervisor), roughly 120 people at level 1 up to about 1,500 at level 4, with a 14-day training period.
+  - Once operating, it cuts restock cost by 5 / 9 / 13 / 17% (scaled by staffing), and production lag depends on queue versus capacity, operator and technician staffing, morale, and overtime. QC keeps the defect rate down (2–6%).
+  - Wages and maintenance are charged daily, and unpaid wages hurt morale. Wage and maintenance costs follow a year-based index.
 
-### 🌍 Kompetitor dan Pasar
+### 🌍 Competitors and the Market
 
-- **27 perusahaan** dengan kepribadian (dominant, aggressive, premium, follower, innovator, declining). Contoh: Nokia, Motorola, Sony Ericsson, Siemens, Palm, BlackBerry, Samsung, LG, HTC, Apple, Android, Huawei, Oppo, Vivo, Microsoft Lumia, Honor, OnePlus, Nothing, Asus, Sony Mobile, Realme, Meizu, Lenovo, Tecno, ZTE, dan Xiaomi, ditambah **Novamind**, pendatang fiktif AI-native yang masuk pasar pada 2028 (skenario).
-  - Pangsa pasar tiap merek diteruskan sampai 2030 sebagai arah skenario: Samsung dan Apple naik tipis, merek Tiongkok turun lalu pulih sebagian, merek kecil turun sekitar separuh pada 2028.
-  - Setiap perusahaan punya tahun aktif, pangsa pasar historis per tahun, produk ikonik, milestone, dan life events.
-  - Ada penanda tingkat faktualitas dan catatan sumber, supaya jelas mana yang fakta dan mana yang disederhanakan.
-- **Mode nama**: pakai nama asli atau nama parodi fiktif (misalnya "Nokio", "Apel", "Samsul").
-- **Aksi dinamis kompetitor**: mereka bisa agresif, menekan harga, atau melemah, tergantung kepribadian dan tingkat kesulitan. Saat krisis memori aktif, merek lebih jarang banting harga dan merek kecil lebih sering diam.
-- **Penarikan merek emergent** (mulai 2027): merek non-ekosistem keluar dari simulasi bila pangsanya di bawah 0,3% selama 2 tahun berturut-turut. Ini hasil ambang di data, bukan skrip. Pada simulasi uji, yang keluar adalah Meizu (2028), Lenovo (2029), dan Asus (2030). Ambangnya bisa disetel di `src/data/competitor-actions.data.js`.
-- **Pangsa pasar** dihitung bulanan dengan riwayat 24 bulan. Model makro (GDP, inflasi, suku bunga, 2000–2026) memengaruhi permintaan. Anchor ukuran pasar dan harga rata-rata diteruskan sampai 2030 (turun di puncak krisis memori 2028, lalu pulih).
-- **Opini publik**: sentimen per **11 aspek** (desain, kamera, baterai, performa, harga, keandalan, OS, support, layar, konektivitas, kemudahan pakai), feed ulasan yang makin beragam dari era ke era, dan **26 viral event** yang bisa kamu tanggapi (minta maaf, recall, klarifikasi, atau diabaikan; "Abaikan" hanya bisa sekali per event). Efek viral memengaruhi penjualan harian.
-- **Berita**: headline otomatis dari **20 media**, dengan jurnalis dan dateline per negara. Ada **72 headline bulanan** (2000–2005), **33 headline** 2018–2026, dan **9 berita skenario** 2027–2029 (berlabel spekulatif, sumber generik), serta template berita yang menyoroti rilis produk, milestone, dan kejadian industri.
+- **32 companies** with personalities (dominant, aggressive, premium, follower, innovator, declining). They include Nokia, Motorola, Sony Ericsson, Siemens, Sagem, Alcatel, Palm, BlackBerry, Samsung, LG, HTC, Apple, Android, Huawei, Oppo, Vivo, Microsoft Lumia, Honor, OnePlus, Nothing, Asus, Sony Mobile, Realme, Meizu, Lenovo, Tecno, ZTE, Xiaomi, Sharp, NEC, and Panasonic, plus **Novamind**, a fictional AI-native newcomer that enters the market in 2028 (scenario).
+  - Each brand's market share is carried forward to 2030 as a scenario direction: Samsung and Apple edge up, Chinese brands dip then partly recover, and small brands roughly halve by 2028.
+  - Every company has active years, historical market share per year, signature products, milestones, and life events.
+  - Factuality labels and source notes show what is fact and what was simplified.
+- **Name mode**: use real names or fictional parody names (for example "Nokio", "Apel", "Samsul").
+- **Dynamic competitor actions**: they can be aggressive, cut prices, or fade, depending on personality and difficulty. While the memory crisis is active, brands cut prices less often and small brands are quieter.
+- **Emergent brand withdrawal** (from 2027): non-ecosystem brands exit the simulation if their share stays below 0.3% for 2 years in a row. This is the result of a data threshold, not a script. In test simulations the brands that left were Meizu (2028), Lenovo (2029), and Asus (2030). The thresholds can be tuned in `src/data/competitor-actions.data.js`.
+- **Market share** is computed monthly with a 24-month history. A macro model (GDP, inflation, interest rates, 2000–2026) affects demand. Market-size and average-price anchors continue to 2030 (dipping at the 2028 memory-crisis peak, then recovering).
+- **Public opinion**: sentiment across **11 aspects** (design, camera, battery, performance, price, reliability, OS, support, display, connectivity, usability), a review feed that gets more varied from era to era, and **26 viral events** you can respond to (apologize, recall, clarify, or ignore; "Ignore" can be used only once per event). Viral effects change daily sales.
+- **News**: automatic headlines from **20 outlets**, with journalists and datelines per country. There are **96 monthly headlines** (2000–2007), 6 pre-history headlines, **33 headlines** for 2018–2026, **9 scenario stories** for 2027–2029 (labeled speculative, generic sources), **263 competitor release stories**, and templates that highlight product releases, milestones, and industry events.
 
-### 💰 Keuangan
+### 💰 Finance
 
-- **Ekonomi**: gaji, sewa, pajak (12% / 15% / 20% sesuai kesulitan), peringatan burn-rate, dan riwayat kas.
-- **Penahan ekonomi** (supaya kas tidak menumpuk tanpa batas):
-  - Biaya komponen naik seiring volume produksi (maksimal ×2,2).
-  - Permintaan dibatasi plafon pasar yang bergantung pada kesulitan.
-  - Tekanan kompetitor naik saat utilisasi tinggi.
-  - Tempat membelanjakan kas di **HQ → Investasi**: Investasi Pabrik (L1–L5, melandaikan kurva biaya) dan **akuisisi merek rival** (mulai 2003, maksimal 5, jeda 6 bulan).
-- **Bank**: **3 bank** (Global, Asia, Euro), pinjaman dengan bunga dan tenor, deposito fleksibel dan berjangka, dan **credit rating 8 tingkat (AAA sampai D)**. Telat bayar kena denda dan bisa memblokir akses pinjaman.
-- **Bursa saham** (HQ → Bursa): **84 saham** dalam **12 kategori** (Ponsel, Chip, Software, Media Sosial, Streaming, E-commerce, Keuangan, Energi & Tambang, Konsumen, Telekomunikasi, Lainnya, dan Perusahaanmu), **9 indeks** (NASDAQ, Dow, S&P 500, IHSG, Nikkei, FTSE, DAX, Hang Seng, KOSPI), dan **5 mata uang** (USD, KRW, TWD, HKD, IDR) dengan kurs historis.
-  - Daftar emiten mengikuti tahun game: tahun 2000 ada 42 emiten aktif, tahun 2026 ada 77. Kategori seperti Media Sosial dan Streaming baru terisi setelah perusahaannya ada di dunia nyata.
-  - **Aksi beli dan jual kamu menggerakkan harga.** Satu transaksi maksimal menggeser harga 3%, dampaknya meluruh tiap bulan, dan emiten besar (tier mega) lebih sulit digeser.
-  - Harga di antara dua tahun data diinterpolasi, dan setelah tahun data terakhir harga diproyeksikan.
-  - Tiap emiten punya penanda kepercayaan data (`verified`, `trend`, `fictional`).
+- **Economy**: salaries, rent, tax (12% / 15% / 20% by difficulty), burn-rate warnings, and a cash history.
+- **Economy brakes** (so cash can't pile up forever):
+  - Component cost rises with production volume (max ×2.2).
+  - Demand is capped by a market ceiling that depends on difficulty.
+  - Competitor pressure rises when utilization is high.
+  - Places to spend cash in **HQ → Invest**: Plant Investment (L1–L5, which flattens the cost curve) and **rival brand acquisition** (from 2003, max 5, 6-month gap).
+- **Bank**: **3 banks** (Global, Asia, Euro), loans with interest and term, flexible and fixed-term deposits, and an **8-tier credit rating (AAA to D)**. Late payments incur penalties and can block loan access.
+- **Stock exchange** (HQ → Exchange): **84 stocks** in **12 categories** (Phone, Chip, Software, Social Media, Streaming, E-commerce, Finance, Energy & Mining, Consumer, Telecom, Other, and Your Company), **9 indices** (NASDAQ, Dow, S&P 500, IHSG, Nikkei, FTSE, DAX, Hang Seng, KOSPI), and **5 currencies** (USD, KRW, TWD, HKD, IDR) with historical rates.
+  - The list of listed companies follows the game year: 43 are active in 2000 and 78 in 2026. Categories like Social Media and Streaming fill up only after those companies exist in the real world.
+  - **Your buys and sells move prices.** A single trade shifts a price by at most 3%, the impact decays each month, and mega-tier stocks are harder to move.
+  - Prices between two data years are interpolated, and after the last data year they are projected.
+  - Each stock carries a data-confidence tag (`verified`, `trend`, `fictional`).
 
-### 🎯 Bantuan dan Progres
+### 🎯 Help and Progression
 
-- **Asisten Bisnis** berbasis aturan: saran berurutan dari kritis sampai info, bisa ditunda, dan tanya-jawab lokal. Asisten juga memberi tahu kalau ada patch baru. Titik sambung ke AI sudah disiapkan.
-- **Tutorial** 8 langkah, **quest** pemula, tips kontekstual, dan log serta milestone.
-- **Panduan** dan panel **Timeline** sejarah (17 ponsel ikonik, 12 tonggak OS).
-- **Level pemain** (1–50), **level perusahaan**, dan **kredibilitas** (reputasi, skor kredit, sentimen, integritas bayar). Level dan skor leaderboard dihitung di server. Naik level dan mencapai tingkat kredibilitas tertentu memberi hadiah yang diklaim lewat Pesan.
+- **Business Advisor**: rule-based advice ordered from critical to info, snoozable, with local Q&A. It also tells you when a new patch is out. A hook for AI is prepared.
+- **Tutorial** (8 steps), starter **quests**, contextual tips, and a log with milestones.
+- **Guide** and a history **Timeline** panel (23 iconic phones, 14 OS milestones, 5 eras).
+- **Player level** (1–50), **company level**, and **credibility** (reputation, credit score, sentiment, payment integrity). Levels and leaderboard scores are computed on the server. Reaching levels and credibility tiers grants rewards that you claim through Messages.
 
-### 🎨 Tampilan dan Bahasa
+### 🎨 Look and Language
 
-- **Era-aware visual**: **7 era desain** (LCD Monokrom → TFT Warna → Revolusi Touchscreen → Smartphone Matang → Premium & Bezel-less → AI & Notch → Foldable & Ultra). Mockup ponsel, layar, dan notifikasi berubah per era.
-- **Tema** gelap dan terang, dengan **6 warna aksen** (blue, emerald, violet, amber, rose, cyan).
-- **12 bahasa**: English, Bahasa Indonesia, Mandarin (Sederhana), Korea, Jepang, Prancis, Jerman, Spanyol, Italia, Rusia, Polandia, dan Hindi. Bisa diganti kapan saja di Setelan.
-  - **Indonesia dan English penuh**, masing-masing sekitar **2.700 kunci** (gabungan kamus utama dan kamus per fitur).
-  - **10 bahasa lain** memakai kamus inti (sekitar 235 kunci) dan **kembali ke English** untuk teks yang belum diterjemahkan.
-  - Nama dan deskripsi komponen ponsel masih dalam bahasa Indonesia (rencana terjemahan ada di roadmap).
-- **Audio** tap sound sintetis (Web Audio API), plus getar di perangkat yang mendukung.
-- **Mode hemat** otomatis di HP kelas bawah (RAM, CPU, Data Saver, dan baterai dideteksi saat start). Bisa dipaksa lewat `?perf=lite`, `?perf=full`, atau `?perf=auto`. Loop waktu game berhenti total saat tab tersembunyi, dan loop 3D tidak lagi bangun di setiap vsync.
-- **Loading screen** mengikuti bahasa: sampul versi Indonesia (`assets/img/loading-id.webp`) atau English (`assets/img/loading-en.webp`), dipilih sebelum halaman digambar. Persen di bawah gambar adalah progres nyata (modul JS yang terunduh + tahap boot). Kalau gambar gagal dimuat, dipakai `assets/img/loading-screen.jpg`. Bahasa lain memakai sampul English.
-- Layout mobile-first, dengan swipe antar sub-tab. Game juga bisa dipasang sebagai **PWA** (`manifest.webmanifest`), dan APK Android hanya pembungkus (WebAPK) dari versi web.
+- **Era-aware visuals**: **7 design eras** (Monochrome LCD → Color TFT → Touchscreen Revolution → Mature Smartphone → Premium & Bezel-less → AI & Notch → Foldable & Ultra). Phone mockups, screens, and notifications change by era.
+- **Dark and light themes** with **6 accent colors** (blue, emerald, violet, amber, rose, cyan).
+- **12 languages**: English, Bahasa Indonesia, Chinese (Simplified), Korean, Japanese, French, German, Spanish, Italian, Russian, Polish, and Hindi. Switch any time in Settings.
+  - **Indonesian and English are full**, with roughly **2,900 and 3,000 keys** respectively (main dictionary plus per-feature dictionaries).
+  - The **10 other languages** use a core dictionary (about 235 keys) and **fall back to English** for untranslated text.
+  - Phone component names and descriptions are still in Indonesian (translation is on the roadmap).
+- **Audio**: synthesized tap sounds (Web Audio API), plus vibration on supported devices.
+- **Lite mode** turns on automatically on low-end phones (RAM, CPU, Data Saver, and battery are detected at startup). You can force it with `?perf=lite`, `?perf=full`, or `?perf=auto`. The game time loop stops entirely when the tab is hidden, and the 3D loops no longer wake on every vsync.
+- **Language-aware loading screen**: Indonesian cover (`assets/img/loading-id.webp`) or English cover (`assets/img/loading-en.webp`), chosen before the page renders. The percentage under the image is real progress (JS modules downloaded plus boot stages). If the image fails to load, `assets/img/loading-screen.jpg` is used. Other languages use the English cover.
+- Mobile-first layout with swipe between sub-tabs. The game can also be installed as a **PWA** (`manifest.webmanifest`), and the Android APK is just a wrapper (WebAPK) around the web version.
 
-### ☁️ Cloud, Akun, dan Save
+### ☁️ Cloud, Account, and Saves
 
-- **Save lokal** otomatis (dijalankan saat browser idle), plus export dan import file save.
-- **Cloud save** lewat Supabase: login, **1 slot** (menyimpan save terbaru), profil pemain (nama tampil dan avatar), pengecekan nama perusahaan yang unik, dan leaderboard.
-- **Profil Pemain**: **ID Pemain** (8 digit) tampil di panel Profil Pemain dan **bisa dilihat pemain lain**. Jangan anggap ID ini rahasia. Setelan kini hanya berisi pengaturan, terpisah dari profil.
-- **Pesan**: inbox untuk notifikasi sistem dan hadiah, pesan antar pemain (dengan blokir), dan kirim SIL antar pemain (maksimal 5.000 SIL per 24 jam).
-- **Dompet Universal**: uang ($) dan Silicon (SIL) bisa dipakai untuk hampir semua hal. Biaya dalam uang boleh ditutup dengan SIL, dan sebaliknya. Kurs mengikuti inflasi (tahun 2000: 1 SIL = $2.500). SIL tidak pernah dicetak dari uang. Mode bayar (Otomatis, Uang dulu, SIL dulu, Terpisah) dan Dana Darurat SIL ada di Setelan → Keuangan.
-- **Silicon (SIL)**: mata uang premium untuk mempercepat waktu dan riset, dengan bonus login harian dan reward quest.
-  - **Top-up sedang ditutup sementara.** Tab Beli dan panel pembayaran di game dikunci lewat flag `TOPUP_LOCKED` di `src/ui/panels/SiliconStorePanel.js`, dan halaman landing (`web.html`) mengikutinya. Saldo, bonus harian, reward, dan penggunaan SIL tetap berjalan.
-  - Saat dibuka, top-up masih manual (GoPay/QRIS) dan disetujui admin lewat panel `/fsociety`. Provider pembayaran otomatis belum terhubung.
-  - Penguncian saat ini hanya di sisi klien. Detailnya ada di Known issues dan [`SECURITY.md`](SECURITY.md).
-- **Keamanan**: save diberi tanda tangan integritas (penghalang edit manual, bukan enkripsi). Saldo SIL dan ledger dijaga di server lewat Row Level Security dan fungsi yang hanya bisa dipanggil server. Kebijakan keamanan lengkap dan cara melapor ada di [`SECURITY.md`](SECURITY.md).
+- **Local save** runs automatically (when the browser is idle), plus save-file export and import.
+- **Cloud save** through Supabase: login, **1 slot** (stores the latest save), player profile (display name and avatar), unique company-name check, and a leaderboard.
+- **Player Profile**: an **8-digit Player ID** is shown in the Player Profile panel and **can be seen by other players**. Don't treat it as a secret. Settings now contain only settings, separate from the profile.
+- **Messages**: an inbox for system notifications and rewards, player-to-player messages (with blocking), and SIL transfers between players (max 5,000 SIL per 24 hours).
+- **Universal Wallet**: money ($) and Silicon (SIL) can be used for almost everything. Cash costs can be covered with SIL and vice versa. The rate follows inflation (year 2000: 1 SIL = $2,500, rising 15% per year). SIL is never minted from money. Pay modes (Auto, Cash first, SIL first, Strict) and the SIL Emergency Fund are in Settings → Finance.
+- **Silicon (SIL)**: a premium currency for speeding up time and research, with a daily login bonus and quest rewards. It can also be exchanged into in-game cash (requires `supabase/10-tukar-sil.sql`).
+  - **Top-up is temporarily closed.** The Buy tab and payment panel in the game are locked by the `TOPUP_LOCKED` flag in `src/ui/panels/SiliconStorePanel.js`, and the landing page (`web.html`) follows it. Balance, daily bonus, rewards, and SIL spending keep working.
+  - When open, top-up is still manual (GoPay/QRIS) and approved by an admin through the `/fsociety` panel. No automatic payment provider is connected yet.
+  - The lock is currently client-side only. Details are in Known issues and [`SECURITY.md`](SECURITY.md).
+- **Security**: saves carry an integrity signature (a barrier against manual editing, not encryption). SIL balances and the ledger are protected on the server through Row Level Security and server-only functions. The full security policy and how to report issues are in [`SECURITY.md`](SECURITY.md).
 
 ### ⚠️ Known issues
 
-- **Leaderboard sebagian divalidasi server.** Statistik masih dikirim dari perangkat pemain. Server membatasi frekuensi sinkron, memeriksa invarian, dan menyembunyikan profil yang mencurigakan (`supabase/11`), serta menghitung level dan skor sendiri (`supabase/12` dan `15`). Nilai yang masih di dalam batas wajar tetap bisa dipalsukan, jadi belum bisa dianggap peringkat resmi.
-- **Penguncian top-up hanya di klien.** Fungsi server `create_payment_order` tetap bisa dipanggil akun yang login lewat API langsung. Pesanan tetap `pending` sampai admin menyetujui, tetapi kalau top-up memang harus tertutup total, tambahkan flag di server.
-- **Teks mentah di beberapa tempat.** Empat kunci terjemahan dipakai tanpa teks cadangan dan belum ada di kamus: `main.toast.fab_unlocked`, `wiz.warn.volume_cost`, `wiz.preview.unit_design`, `wiz.preview.unit_parts`. Selain itu ada 38 kunci baru (misalnya `team.recruit.*`, `team.nego.*`, `silstore.locked.*`) yang masih memakai teks cadangan dan belum digabung ke `src/data/i18n/en.js` dan `id.js`.
-- **`supabase/BACA-DULU.md` belum lengkap.** Tabelnya sudah memuat 01–09, 14, dan 15, tetapi file 10 (dua file), 11, 12, dan 13 belum tercantum. Selain itu, ia menyebut `functions/advisor-chat/` padahal foldernya `supabase/function/advisor-chat/` (sudah diperbaiki di 0.2.2).
-- **Tukar SIL → uang** memerlukan `supabase/10-tukar-sil.sql`. Tanpa file ini, pemanggilan gagal dan SIL tidak terpotong.
-- **Edge Function Asisten Bisnis (AI)** belum punya rate limit per pengguna dan CORS-nya terbuka (`*`). Jangan diaktifkan untuk publik luas sebelum itu ditambahkan. Detail di `SECURITY.md`.
-- **Catatan rilis belum lengkap.** `patches.json` sekarang memuat 0.2.2 (dan 0.2.1). Beberapa entri di bagian Versi di bawah belum dipindahkan ke `patches.json`.
-- **Screenshot di landing page** (`assets/img/landing/`) perlu diambil ulang. Gambar HQ masih menampilkan tab Kantor dan tata letak Ringkasan yang lama.
-- **Gate admin di sisi klien hanya kosmetik.** Admin yang sebenarnya diverifikasi di server lewat `is_admin()`.
-- **Konten 2027–2030 bersifat spekulatif.** Angka harga, indeks RAM, pangsa merek, dan ambang penarikan merek adalah skenario permainan yang masih perlu dikalibrasi lewat bermain. Rincian aturan baterai UE tidak dimodelkan (hanya efek tren dan berita). Nama merek nyata bisa "menarik diri" di simulasi lewat ambang pangsa, dan itu bukan klaim tentang perusahaan nyata.
-- **Nama dan deskripsi komponen** baru (LPDDR6) masih dalam bahasa Indonesia, sama seperti komponen lain.
-- **Office 3D Map** belum menampilkan dampak rekrut dan bonus trait dari `TeamSystem`. Ringkasan di peta masih dihitung sendiri.
+- **The leaderboard is only partly validated by the server.** Stats are still sent from the player's device. The server limits sync frequency, checks invariants, and hides suspicious profiles (`supabase/11`), and it computes level and score itself (`supabase/12` and `15`). Values that stay within plausible bounds can still be faked, so this isn't an official ranking.
+- **The top-up lock is client-side only.** The server function `create_payment_order` can still be called by a logged-in account through the API directly. Orders stay `pending` until an admin approves them, but if top-up must be fully closed, add a server-side flag.
+- **Two different `patches.json` files.** The game reads `./patches.json` from the site root, which is still at 0.2.1, while `src/patches.json` has 0.2.2. Copy the 0.2.2 entry to the root file so the Advisor's patch notice is up to date.
+- **Raw text in some places.** Four translation keys are used without fallback text and aren't in the dictionaries yet: `main.toast.fab_unlocked`, `wiz.warn.volume_cost`, `wiz.preview.unit_design`, `wiz.preview.unit_parts`. Many other keys (for example `team.recruit.*`, `team.nego.*`, `silstore.locked.*`) still rely on fallback text and haven't been merged into `src/data/i18n/en.js` and `id.js`.
+- **`supabase/BACA-DULU.md` is incomplete.** Its table covers 01–09, 14, and 15, but is missing both file-10 variants, 11, 12, 13, 15b, 16, and 17.
+- **SIL → money exchange** needs `supabase/10-tukar-sil.sql`. Without it the call fails and no SIL is deducted.
+- **Business Advisor Edge Function (AI)** has no per-user rate limit and its CORS is open (`*`). Don't enable it for a wide public before that is added. Details in `SECURITY.md`.
+- **Release notes are incomplete.** `src/patches.json` has 0.2.2 (and 0.2.1), but several entries in the Versions section below haven't been moved into it yet.
+- **Landing-page screenshots** (`assets/img/landing/`) need to be retaken. The HQ image still shows the old Office tab and the old Overview layout.
+- **The client-side admin gate is cosmetic only.** Real admin status is verified on the server through `is_admin()`.
+- **2027–2030 content is speculative.** Prices, the RAM index, brand shares, and withdrawal thresholds are game scenarios that still need calibration through play. The details of EU battery rules are not modeled (only the trend effect and news). Real brand names can "withdraw" in the simulation through the share threshold, and that is not a claim about real companies.
+- **Component names and descriptions** (including the newer LPDDR6 entries) are still in Indonesian, like the other components.
+- **The Office 3D Map** doesn't yet show recruit impact and trait bonuses from `TeamSystem`. The map's summary is still computed separately.
+- **The Assembly 3D scene hasn't been tested in a real browser/WebGL** (only syntax checks and builder simulation with a mock THREE, per `CHANGES-assembly.md`).
 
 ---
 
-## Cara main
+## How to play
 
-Buka https://www.smartphone-empire.my.id/ (atau https://jurkonstudio.github.io/smartphone-empire/) di HP atau desktop. Butuh koneksi internet untuk load pertama, karena library 3D dan cloud dimuat dari CDN. Halaman perkenalan game ada di `web.html`.
+Open https://www.smartphone-empire.my.id/ (or https://jurkonstudio.github.io/smartphone-empire/) on a phone or desktop. You need an internet connection for the first load, because the 3D and cloud libraries come from a CDN. The game's intro page is `web.html`.
 
-### Jalankan di lokal
+### Run locally
 
-Karena memakai ES Modules, kamu butuh server lokal (browser memblokir `file://`):
+Because the project uses ES Modules, you need a local server (browsers block `file://`):
 
 ```bash
 python3 -m http.server 8000
-# atau
+# or
 npx serve .
 ```
 
-Lalu buka `http://localhost:8000`. Tidak ada langkah build dan tidak ada `npm install`.
+Then open `http://localhost:8000`. There is no build step and no `npm install`.
 
 ---
 
-## Teknologi
+## Tech
 
-- **JavaScript murni (ES Modules)**, HTML, dan CSS. Tanpa framework dan tanpa bundler.
-- **Three.js 0.160.0** (versi dipin, dimuat lazy dari CDN) untuk Peta Kampus, Office 3D Map, dan peta Manufaktur. Kalau WebGL atau CDN gagal, game tetap jalan dengan tampilan cadangan.
-- **Supabase** (`supabase-js` 2.49.4 dari CDN) untuk auth, cloud save, profil, pesan, dan storage avatar.
-- Komunikasi antar sistem lewat **event bus** (`src/core/EventBus.js`). Daftar event ada di `src/config/event.md`.
-- Ukuran kode: **296 file JS** dengan sekitar **82 ribu baris** di `src/`.
-- Belum ada test otomatis resmi, linter, atau `package.json`. Folder `tools/` berisi 13 skrip uji manual (Node, ES Modules) untuk kalibrasi, simulasi permintaan, penahan ekonomi, promosi, render panel, dan paket 2027–2030 (`paket2027.mjs`: indeks biaya RAM, riset dan fitur OS baru, berita, serta simulasi kompetitor 2027–2031); skrip ini tidak dimuat game. Contoh: `node --experimental-default-type=module tools/sim.mjs src` dan `node tools/paket2027.mjs src`.
+- **Plain JavaScript (ES Modules)**, HTML, and CSS. No framework and no bundler.
+- **Three.js 0.160.0** (pinned, lazy-loaded from a CDN) for the Campus Map, Office 3D Map, and Manufacturing map. If WebGL or the CDN fails, the game still runs with a fallback view.
+- **Supabase** (`supabase-js` 2.49.4 from a CDN) for auth, cloud save, profiles, messages, and avatar storage.
+- Systems communicate through an **event bus** (`src/core/EventBus.js`). The event list is in `src/config/event.md`.
+- Code size: **312 JS files** with about **88 thousand lines** in `src/`.
+- There are no official automated tests, linter, or `package.json` yet. The `tools/` folder holds **26 manual test scripts** (Node, ES Modules) for calibration, demand simulation, economy brakes, promotions, panel rendering, the 2027–2030 package, and the Manufacturing and Assembly scenes (ships, cranes, trucks, road graph, weather, workers). These scripts are not loaded by the game. See `tools/README.md` for the ones that need a probe or a reference copy. Examples: `node --experimental-default-type=module tools/sim.mjs src` and `node tools/paket2027.mjs src`.
 
-### Struktur folder
+### Folder structure
 
 ```
 smartphone-empire/
-├─ index.html           game utama (+ style.css · density.css · profile-ui.css · desktop.css)
-├─ web.html             landing page (ID/EN, login, status akun, dan halaman Silicon)
-├─ Welcome.html · campus-verify.html   halaman pendukung
-├─ 031411/              panel admin (dashboard data pemain, persetujuan SIL), noindex
-├─ supabase/            skema SQL 01–15, Edge Function Asisten (function/), panduan (BACA-DULU.md)
-├─ tools/               skrip uji manual (bukan bagian game)
-├─ _diff/               diff perubahan lama untuk referensi
-├─ assets/              ikon, audio, gambar (loading screen per bahasa, img/landing = screenshot landing)
-├─ patches.json         catatan rilis yang dibaca Asisten Bisnis
-├─ manifest.webmanifest · CNAME · .nojekyll   PWA dan hosting GitHub Pages
-├─ CHANGES*.md · PERF-CHANGES.md · econ-brakes.patch   catatan perubahan per paket update
+├─ index.html           main game (+ style.css · density.css · profile-ui.css · desktop.css)
+├─ web.html             landing page (ID/EN, login, account status, and Silicon page)
+├─ Welcome.html · campus-verify.html   supporting pages
+├─ 031411/              admin panel (player data dashboard, SIL approvals), noindex
+├─ supabase/            SQL schema 01–17, Advisor Edge Function (function/), guide (BACA-DULU.md)
+├─ tools/               manual test scripts (not part of the game)
+├─ _diff/               old change diffs for reference
+├─ assets/              icons, audio, images (per-language loading screens, img/landing = landing screenshots)
+├─ patches.json         release notes read by the Business Advisor (see Known issues)
+├─ manifest.webmanifest · CNAME · .nojekyll   PWA and GitHub Pages hosting
+├─ CHANGES*.md · PERF-CHANGES.md · econ-brakes.patch   change notes per update package
 └─ src/
-   ├─ main.js           boot, routing tab, binding event
-   ├─ config/           konstanta, waktu, endgame, dev flag, dokumentasi event
-   ├─ core/             state, waktu, save, event bus, tema, bahasa, audio, integritas, model makro
-   ├─ data/             data murni: riset, OS, komponen, kompetitor, saham, bank, berita, i18n/
-   ├─ systems/          logika game: riset, OS, produk, pasar, tim, bank, saham, fab, chip, berita, advisor, penahan ekonomi
-   ├─ services/         cloud (Supabase), i18n cloud
-   ├─ diagnostics/      laporan diagnostik untuk debug
-   └─ ui/               panel, layout, modal, chart, ikon, avatar, sosial, peta kampus (campus/), kantor (office/), manufaktur (manufacture/)
+   ├─ main.js           boot, tab routing, event binding
+   ├─ config/           constants, time, endgame, dev flag, event documentation
+   ├─ core/             state, time, save, event bus, theme, language, audio, integrity, macro model
+   ├─ data/             pure data: research, OS, components, competitors, stocks, bank, news, assembly, i18n/
+   ├─ systems/          game logic: research, OS, products, market, team, bank, stocks, fab, chip, plants, assembly, news, advisor, economy brakes
+   ├─ services/         cloud (Supabase), cloud i18n, patch checker
+   ├─ diagnostics/      diagnostic report for debugging
+   └─ ui/               panels, layout, modals, charts, icons, avatars, social, campus map (campus/), office (office/), manufacturing (manufacture/), phone mockups (phone/)
 ```
 
-Data dipisah dari logika. Untuk menambah komponen, saham, kompetitor, atau headline, cukup ubah file di `src/data/`.
+Data is separate from logic. To add a component, stock, competitor, or headline, just edit the files in `src/data/`.
 
 ---
 
-## Setup Supabase (cloud save, SIL, dan panel admin)
+## Supabase setup (cloud save, SIL, and admin panel)
 
-Game bisa jalan tanpa Supabase, tapi cloud save, SIL, dan panel admin membutuhkannya. Jalankan file di `supabase/` **berurutan** lewat SQL Editor (lihat `supabase/BACA-DULU.md`):
+The game runs without Supabase, but cloud save, SIL, and the admin panel need it. Run the files in `supabase/` **in order** in the SQL Editor (see `supabase/BACA-DULU.md`):
 
-- **Wajib:** `01` → `05`, lalu `08` (ganti email di `08-jadikan-admin.sql` dulu), `14` setelah `03` (nama perusahaan unik di jalur save), dan `15` setelah `12` (level perusahaan di server).
-- **Opsional:** `06`–`07` (panel admin lengkap), `09` (pesan pemain), `10-pesan-antar-pemain` dan `10-tukar-sil` (pesan antar pemain dan tukar SIL), `11` (validasi leaderboard), `12` (level kredibilitas dan reward), `13` (diagnosa leaderboard, hanya untuk pengecekan), `15b` (uji paritas rumus level, hanya baca).
-- **Catatan urutan:** `12` butuh `09`, `10`, dan `11`, sedangkan `15` butuh `12`. Kalau mau memakai level dan reward, jalankan rantai itu lengkap.
-- **Opsional, AI:** `function/advisor-chat/` (Edge Function Asisten Bisnis). Butuh secret `ANTHROPIC_API_KEY` di Supabase, bukan di kode klien.
-- URL dan *publishable key* Supabase di `src/services/cloud/supabase.config.js` memang boleh publik. Kalau kamu menjalankan proyek sendiri, ganti keduanya dengan milik proyekmu. Jangan pernah menaruh `service_role` key di repo.
+- **Required:** `01` → `05`, then `08` (change the e-mail in `08-jadikan-admin.sql` first), `14` after `03` (unique company name on the save path), and `15` after `12` (company level on the server).
+- **Optional:** `06`–`07` (full admin panel), `09` (player messages), `10-pesan-antar-pemain` and `10-tukar-sil` (player-to-player messages and SIL exchange), `11` (leaderboard validation), `12` (credibility levels and rewards), `13` (leaderboard diagnostics, check-only), `15b` (company-level formula parity test, read-only), `16` (schema diagnostics, read-only), and `17` (rebuilds the `public_profiles` view; run it after 11, 12, and 15 if `16` reports missing view columns).
+- **Order notes:** `12` needs `09`, `10`, and `11`, and `15` needs `12`. If you want levels and rewards, run that chain in full. Don't re-run `03` or `11` after `17` without running `17` again.
+- **Optional, AI:** `function/advisor-chat/` (Business Advisor Edge Function). It needs the `ANTHROPIC_API_KEY` secret in Supabase, never in client code.
+- The Supabase URL and *publishable key* in `src/services/cloud/supabase.config.js` are meant to be public. If you run your own project, replace both with yours. Never put a `service_role` key in the repo.
 
-Semua file aman dijalankan ulang. Proyek lama cukup menjalankan file yang belum pernah dijalankan dengan urutan yang sama.
+All files are safe to re-run. For an existing project, just run the files you haven't run yet, in the same order.
 
-> Catatan: `BACA-DULU.md` belum memuat file 10–13. Jalankan secara manual sesuai fiturnya, setelah 01–09.
-
----
-
-## Yang belum kelar
-
-Proyek ini masih berjalan. Catatan roadmap:
-
-- ✅ **Office 3D Map tahap 3**: bangun atau upgrade Fab dan latih staf langsung dari peta, konstruksi Fab 3D, aktivitas staf yang lebih hidup, dan tampilan yang lebih rapi di HP
-- ✅ **Integrasi Office ↔ Tim**: dari kartu staf di peta bisa membuka detail staf, dari detail staf bisa melihat staf di kantor, dan ruang Work punya jalan pintas ke rekrutmen
-- ✅ **Navigasi Pasar** (data, permintaan, opini, promosi Amerika & Lainnya, promosi per segmen, dan panel UI di tab Pasar)
-- ✅ **Manufaktur**: pabrik komponen (Baterai, Layar, SoC, Kamera, RAM), jual grosir, pajak infrastruktur, dan jembatan Kampus ↔ Pulau Manufaktur
-- ✅ **Penahan ekonomi dan tab Investasi**
-- ✅ **Bursa saham v2**: dampak transaksi pemain, lebih banyak emiten dan indeks dunia/IDX, tier emiten
-- ✅ **Paket 2027–2030 (skenario spekulatif)**: anchor pasar, indeks biaya RAM, tren, berita, fitur OS Agentic AI, pendatang fiktif Novamind, dan penarikan merek emergent
-- ✅ **Kemasan retail di mockup** dan riset USB Tipe-C
-- ✅ **12 bahasa** (Indonesia dan English penuh, 10 lainnya kamus inti)
-- ✅ **Level pemain dan perusahaan di server**, Pesan, dan hadiah
-- ⏳ **Perbaikan terjemahan (i18n)**: ganti sisa teks hardcoded dengan kunci, gabungkan kunci baru ke `en.js` dan `id.js`, lalu terjemahkan nama dan deskripsi 127 komponen
-- ⏳ **Peta kantor membaca TeamSystem**: dampak rekrut, bonus trait, dan ringkasan tim dihitung dari satu sumber
-- ⏳ **Event acak dengan pilihan**, transisi layar per era, dan polish UI
-- ⏳ **Patch UI Evolution**: tampilan notifikasi berubah per era (monokrom → glossy → flat → Dynamic Island)
-- ⏳ **Berita bilingual**: headline versi English sudah ada, sebagian template ulasan masih Indonesia
-- ⏳ **Pembayaran Silicon**: membuka kembali top-up dengan provider pembayaran produksi dan verifikasi server (termasuk penguncian di server)
-- ⏳ **Perbaikan known issues** di atas
+> Note: `BACA-DULU.md` doesn't list files 10–13, 16, and 17 yet. Run those manually according to the features you need, after 01–09.
 
 ---
 
-## Versi
+## What's not done yet
 
-Versi terbaru yang tercatat: **0.2.2** (23 Oktober 2026). Daftar perubahan resmi ada di `patches.json` dan `PERF-CHANGES.md`.
+The project is still in progress. Roadmap notes:
 
-Perubahan yang sudah ada di kode tetapi belum masuk `patches.json`:
-- Navigasi Pasar (segmen, sub-wilayah, gelombang tren, 11 aspek opini, 26 viral event, promosi Amerika & Lainnya dan per segmen, panel UI di tab Pasar).
-- Integrasi peta kantor dengan panel Tim (deep-link staf, tombol Lihat di kantor, jalan pintas Rekrut dari ruang Work).
-- Manufaktur, penahan ekonomi, tab Investasi, dan jembatan Kampus ↔ Pulau Manufaktur.
-- Bursa saham v2 (dampak transaksi, emiten dan indeks baru).
-- Mockup kemasan retail dan riset USB Tipe-C.
-- 12 bahasa dan perbaikan teks mentah.
-- Perombakan HQ → Ringkasan, tab Kantor dipindah ke sakelar di Home, dan ID Pemain dipindah ke Profil Pemain.
-- Top-up Silicon ditutup sementara.
-- Paket 2027–2030: pasar, indeks biaya RAM, tren skenario, berita, fitur OS Agentic AI (OS Agentik, Pagar Agen, Toko Agen), pendatang fiktif Novamind, dan penarikan merek emergent (lihat `CHANGES-2027-kompetitor.md`).
-- Loading screen per bahasa (Indonesia dan English).
+- ✅ **Office 3D Map stage 3**: build or upgrade Fabs and train staff straight from the map, 3D Fab construction, livelier staff activity, and a tidier mobile layout
+- ✅ **Office ↔ Team integration**: staff cards open staff details, staff details can jump to the office, and the Work room has a recruit shortcut
+- ✅ **Market Navigation** (data, demand, opinion, Americas & Rest promotions, per-segment promotions, and UI panels in the Market tab)
+- ✅ **Manufacturing**: component plants (Battery, Display, SoC, Camera, RAM), wholesale, infrastructure tax, and the Campus ↔ Manufacturing Island bridge
+- ✅ **Assembly factory**: 4 levels, headcount-based workforce, restock discounts, and a 3D plant on the Manufacturing Island
+- ✅ **Economy brakes and the Invest tab**
+- ✅ **Stock market v2**: player trade impact, more listed companies, world/IDX indices, and company tiers
+- ✅ **2027–2030 package (speculative scenario)**: market anchors, RAM cost index, trends, news, Agentic AI OS features, the fictional newcomer Novamind, and emergent brand withdrawal
+- ✅ **Early-2000s content**: infrared, MMS, Wi-Fi, e-mail, FM radio, MP3, memory cards (new storage component category), video, and basic GPS
+- ✅ **Retail packaging in the mockup** and USB Type-C research
+- ✅ **12 languages** (Indonesian and English in full, 10 others with a core dictionary)
+- ✅ **Player and company levels on the server**, Messages, and rewards
+- ✅ **Lite mode** for low-end phones and lower battery use
+- ⏳ **Translation fixes (i18n)**: replace the remaining hardcoded text with keys, merge new keys into `en.js` and `id.js`, then translate the names and descriptions of the 139 components
+- ⏳ **Office map reads TeamSystem**: recruit impact, trait bonuses, and the team summary computed from one source
+- ⏳ **Random events with choices**, per-era screen transitions, and UI polish
+- ⏳ **UI Evolution patch**: notification styling that changes per era (monochrome → glossy → flat → Dynamic Island)
+- ⏳ **Bilingual news**: English headlines exist, but some review templates are still Indonesian-only
+- ⏳ **Silicon payments**: reopening top-up with a production payment provider and server-side verification (including a server-side lock)
+- ⏳ **Fixing the known issues** above
 
 ---
 
-## Kontribusi dan laporan bug
+## Versions
 
-Bug atau saran? Buka [issue](https://github.com/jurkonstudio/smartphone-empire/issues). Kalau menemukan celah keamanan, **jangan** buka issue publik. Ikuti cara pelaporan privat di [`SECURITY.md`](SECURITY.md).
+Latest recorded version: **0.2.2** (October 23, 2026). Official change lists are in `src/patches.json` and `PERF-CHANGES.md`. The root `patches.json` is still at 0.2.1 (see Known issues).
 
-Nama dan merek perusahaan dalam game dipakai untuk tujuan edukasi dan hiburan. Hak ciptanya milik masing-masing pemiliknya. Data historis disederhanakan untuk kebutuhan gameplay.
+Changes that are already in the code but not yet in `patches.json`:
+- Market Navigation (segments, sub-regions, trend waves, 11 opinion aspects, 26 viral events, Americas & Rest and per-segment promotions, UI panels in the Market tab).
+- Office map integration with the Team panel (staff deep-link, View in office button, Recruit shortcut from the Work room).
+- Manufacturing, economy brakes, the Invest tab, and the Campus ↔ Manufacturing Island bridge.
+- Assembly factory (see `CHANGES-assembly.md`).
+- Stock market v2 (trade impact, new listed companies and indices).
+- Retail packaging mockup and USB Type-C research.
+- Early-2000s content: new OS features, research, bugs, and the storage component category (see `CHANGES-2001-2004-konten.md`).
+- 12 languages and raw-text fixes.
+- HQ → Overview overhaul, the Office tab moved to a switch on Home, and Player ID moved to Player Profile.
+- Silicon top-up temporarily closed.
+- 2027–2030 package: market, RAM cost index, scenario trends, news, Agentic AI OS features (Agentic OS, Agent Guard, Agent Store), the fictional newcomer Novamind, and emergent brand withdrawal (see `CHANGES-2027-kompetitor.md`).
+- Per-language loading screen (Indonesian and English).
+
+---
+
+## Contributing and bug reports
+
+Found a bug or have a suggestion? Open an [issue](https://github.com/jurkonstudio/smartphone-empire/issues). If you find a security hole, **do not** open a public issue. Follow the private reporting process in [`SECURITY.md`](SECURITY.md).
+
+Company and brand names in the game are used for educational and entertainment purposes. Their copyrights belong to their respective owners. Historical data is simplified for gameplay.

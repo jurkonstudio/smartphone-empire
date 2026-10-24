@@ -1,99 +1,105 @@
-# Kebijakan Keamanan
+# Security Policy
 
-Smartphone Empire adalah game web statis (HTML, CSS, JavaScript murni) yang memakai **Supabase** untuk login, cloud save, profil dan pesan pemain, dompet Silicon (SIL), dan panel admin. Dokumen ini menjelaskan apa yang dilindungi, apa yang tidak, dan cara melapor.
+Smartphone Empire is a static web game (plain HTML, CSS, and JavaScript) that uses **Supabase** for login, cloud save, player profiles and messages, the Silicon (SIL) wallet, and the admin panel. This document explains what is protected, what is not, and how to report a problem.
 
-## Versi yang didukung
+## Supported versions
 
-Proyek ini di-deploy sebagai satu versi live, jadi perbaikan keamanan hanya diterapkan pada versi terbaru.
+The project is deployed as a single live version, so security fixes are applied only to the latest version.
 
-| Versi | Didukung |
-| ----- | -------- |
-| 0.2.x (terbaru, saat ini 0.2.2) | ✅ |
+| Version | Supported |
+| ------- | --------- |
+| 0.2.x (latest, currently 0.2.2) | ✅ |
 | < 0.2 | ❌ |
 
-## Cara melapor celah keamanan
+## How to report a vulnerability
 
-**Jangan membuka issue publik** untuk celah keamanan.
+**Do not open a public issue** for a security problem.
 
-1. Gunakan **GitHub Private Vulnerability Reporting**: tab *Security* → *Report a vulnerability* di repo [jurkonstudio/smartphone-empire](https://github.com/jurkonstudio/smartphone-empire).
-2. Jika fitur itu tidak tersedia, hubungi pemilik repo lewat profil GitHub **jurkonstudio** dan minta jalur kontak privat. Jangan menaruh detail teknis di tempat publik.
+1. Use **GitHub Private Vulnerability Reporting**: the *Security* tab → *Report a vulnerability* on the [jurkonstudio/smartphone-empire](https://github.com/jurkonstudio/smartphone-empire) repo.
+2. If that feature isn't available, contact the repo owner through the **jurkonstudio** GitHub profile and ask for a private channel. Don't put technical details anywhere public.
 
-Sertakan: langkah mengulang, dampak yang kamu lihat, akun uji yang dipakai, dan jika ada, saran perbaikan.
+Please include: steps to reproduce, the impact you observed, the test account you used, and, if you have one, a suggested fix.
 
-**Yang bisa kamu harapkan** (proyek ini dikelola perorangan, jadi ini target upaya terbaik, bukan jaminan kontrak):
-- Konfirmasi laporan dalam **7 hari**.
-- Kabar perkembangan minimal tiap **14 hari** sampai selesai.
-- Celah yang valid diperbaiki secepat mungkin, dan pelapor dicantumkan sebagai penemu bila bersedia.
-- Laporan yang ditolak akan dijelaskan alasannya.
+**What you can expect** (this is a one-person project, so these are best-effort targets, not a contractual guarantee):
+- Acknowledgement of your report within **7 days**.
+- A progress update at least every **14 days** until it is resolved.
+- Valid issues are fixed as quickly as possible, and the reporter is credited as the finder if they wish.
+- If a report is declined, the reason will be explained.
 
-## Aturan pengujian
+## Testing rules
 
-Boleh: menguji dengan **akunmu sendiri** dan data milikmu sendiri.
-Tidak boleh: mengakses, mengubah, atau menghapus data pemain lain; mengganggu layanan (DoS, spam massal); mengirim top-up palsu atau menguras SIL orang lain; mengirim pesan massal atau spam ke pemain lain; menebak atau mengumpulkan ID Pemain secara massal; rekayasa sosial terhadap admin atau pemain. Temuan yang kamu dapat dengan cara di atas tidak akan dianggap itikad baik.
+Allowed: testing with **your own account** and your own data.
+Not allowed: accessing, changing, or deleting other players' data; disrupting the service (DoS, mass spam); submitting fake top-ups or draining other people's SIL; sending mass messages or spam to other players; guessing or mass-collecting Player IDs; and social engineering of admins or players. Findings obtained this way will not be treated as good faith.
 
-## Di dalam cakupan
+## In scope
 
-- Kode di repo ini (`src/`, `index.html`, `web.html` (landing page), `031411/` panel admin). Folder `tools/` berisi skrip uji lokal dan tidak dimuat game, jadi bukan permukaan serangan produksi.
-- Skema dan fungsi SQL di `supabase/` (termasuk `12` dan `15` untuk level dan reward) serta Edge Function `supabase/function/advisor-chat`.
-- Layanan Supabase milik proyek ini yang dipakai game.
+- The code in this repo (`src/`, `index.html`, `web.html` (landing page), and the `031411/` admin panel). The `tools/` folder holds local test scripts that the game does not load, so it is not a production attack surface.
+- The SQL schema and functions in `supabase/` (including `12` and `15` for levels and rewards, `11` for leaderboard validation, and `17` for the leaderboard view) and the Edge Function `supabase/function/advisor-chat`.
+- The Supabase services belonging to this project that the game uses.
 
-Di luar cakupan: celah di Supabase, GitHub, CDN pihak ketiga (jsDelivr, esm.sh, Three.js), atau browser itu sendiri (laporkan ke penyedianya); serangan yang butuh perangkat korban sudah dibobol; dan temuan hanya berupa saran *best practice* tanpa dampak nyata.
+Out of scope: flaws in Supabase, GitHub, third-party CDNs (jsDelivr, esm.sh, Three.js), or the browser itself (report those to their vendors); attacks that require the victim's device to be already compromised; and findings that are only *best practice* suggestions with no real impact.
 
-## Model keamanan (apa yang dijaga dan di mana)
+Also not a security issue: the game's offline, client-side logic. The simulation (demand, economy, competitors, the 2027–2030 scenario, and the Assembly and component plants) runs in the browser by design, so values in a local save can be changed by the player. See "What is deliberately NOT guaranteed" below.
 
-Prinsip utamanya: **kode klien bisa dibaca dan diubah siapa pun, jadi hal yang bernilai harus dijaga server.**
+## Security model (what is protected and where)
 
-| Aset | Perlindungan |
-| ---- | ------------ |
-| Saldo SIL dan ledger | Dijaga di server. Pemain tidak punya hak `INSERT/UPDATE/DELETE` pada `silicon_wallets` dan `silicon_ledger`. Fungsi kredit `add_silicon` hanya bisa dipanggil `service_role`. Belanja SIL memakai fungsi server anti-ganda, dan tiap kredit tercatat di ledger. |
-| Top-up SIL | Harga dan isi paket divalidasi di server (`_sil_packages`). Pesanan berstatus `pending` sampai admin menyetujui, satu pesanan tidak bisa dikredit dua kali, dan satu akun maksimal punya 5 pesanan `pending`. Pembayaran saat ini manual (GoPay/QRIS), belum ada provider otomatis. Fungsi pembuatan pesanan lewat ID pemain (`create_topup_order_by_public_id`) dan `lookup_player_by_public_id` hanya bisa dipanggil `service_role`. |
-| Kirim SIL antar pemain | Dilakukan atomik di server dengan penguncian dua dompet berurutan (anti deadlock), batas kirim 5.000 SIL per 24 jam, dan tercatat di ledger. |
-| Aksi admin | Diverifikasi di server lewat `is_admin()`, bukan di klien. Gate admin di sisi klien hanya kosmetik. Panel admin (`031411/`) bertanda `noindex`, tetapi **kerahasiaannya tidak bergantung pada URL-nya**. |
-| Data pemain | *Row Level Security* aktif pada tabel inti. Fungsi `SECURITY DEFINER` memakai `set search_path` dan hak eksekusinya dicabut dari `public/anon` lalu diberikan hanya ke peran yang perlu. |
-| Level, XP, dan kredibilitas | Klien **tidak** mengirim level atau XP. Server menghitungnya dari komponen mentah (`12-level-kredibilitas-reward.sql` dan `15-level-perusahaan.sql`). Kolom turunan di `profiles` tidak bisa ditulis langsung dari klien (`revoke update` pada kolom itu). |
-| Hadiah level dan kredibilitas | Dibuat hanya oleh server dan masuk ke Pesan. Klaimnya memakai pembaruan atomik sehingga hanya bisa **sekali**, dan tahan terhadap pengulangan permintaan karena jaringan. |
-| Statistik leaderboard | Sebagian divalidasi (lihat bagian *Yang sengaja BUKAN jaminan*): frekuensi sinkron dibatasi, invarian diperiksa, dan profil yang melanggar disembunyikan dari leaderboard sampai ditinjau admin (`11-validasi-leaderboard.sql`). |
-| Nama perusahaan unik | Ditegakkan di server, termasuk lewat trigger di jalur save (`14-nama-save-unik.sql`). |
-| Input pemain di UI | Teks dari pemain atau server (nama, bio, pesan, judul inbox) wajib lewat `escapeHtml` (`src/utils/html.js`) atau `textContent` sebelum masuk `innerHTML`. Pemeriksaan acak pada panel Pesan, profil, dan daftar pemain menunjukkan aturan ini dijalankan, tetapi belum ada pemindaian otomatis (lihat risiko 8). |
-| Rahasia | Tidak ada `service_role` key atau API key AI di kode klien. Key Anthropic untuk Asisten hanya dibaca dari secret Edge Function (`ANTHROPIC_API_KEY`). |
+The core principle: **client code can be read and modified by anyone, so anything of value must be guarded by the server.**
 
-### Yang sengaja BUKAN jaminan
+| Asset | Protection |
+| ----- | ---------- |
+| SIL balance and ledger | Guarded on the server. Players have no `INSERT/UPDATE/DELETE` rights on `silicon_wallets` and `silicon_ledger`. The credit function `add_silicon` can only be called by `service_role`. SIL spending uses anti-duplicate server functions, and every credit is recorded in the ledger. |
+| SIL → cash exchange | Handled on the server (`10-tukar-sil.sql`). The client sends only a package ID, the year, and a `request_id`. The server deducts the SIL and computes the cash amount. Retrying with the same `request_id` returns the earlier result, so SIL is not deducted twice and cash is not granted twice. |
+| SIL top-up | Prices and package contents are validated on the server (`_sil_packages`). Orders stay `pending` until an admin approves them, one order cannot be credited twice, and one account can have at most 5 `pending` orders. Payment is currently manual (GoPay/QRIS) with no automatic provider. The order-by-player-ID function (`create_topup_order_by_public_id`) and `lookup_player_by_public_id` can only be called by `service_role`. |
+| SIL transfers between players | Done atomically on the server with ordered two-wallet locking (deadlock-safe), a limit of 5,000 SIL per 24 hours, and a ledger entry. |
+| Admin actions | Verified on the server through `is_admin()`, not on the client. The client-side admin gate is cosmetic. The admin table `admin_users` has RLS enabled with no policies and all API rights revoked. The admin panel (`031411/`) is marked `noindex`, but **its secrecy does not depend on its URL**. It signs out after 15 minutes of inactivity and does not keep the session after the tab or browser closes. |
+| Player data | *Row Level Security* is enabled on core tables. `SECURITY DEFINER` functions set `search_path`, and their execute rights are revoked from `public/anon` and granted only to the roles that need them. |
+| Level, XP, and credibility | The client does **not** send level or XP. The server computes them from raw components (`12-level-kredibilitas-reward.sql` and `15-level-perusahaan.sql`). Derived columns in `profiles` cannot be written directly from the client (`revoke update` on those columns). |
+| Level and credibility rewards | Created only by the server and delivered to Messages. Claiming uses an atomic update so a reward can be claimed only **once**, and it is safe against repeated requests caused by network retries. |
+| Leaderboard stats | Partly validated (see *What is deliberately NOT guaranteed*): sync frequency is limited, invariants are checked, and profiles that violate them are hidden from the leaderboard until an admin reviews them (`11-validasi-leaderboard.sql`). The `public_profiles` view hides flagged profiles (`15` and `17`). |
+| Unique company name | Enforced on the server, including through a trigger on the save path (`14-nama-save-unik.sql`). |
+| Player messages | Player-to-player messages support blocking and reporting (reports are visible to admins). The server enforces the rules, not the client. |
+| Player input in the UI | Text from players or the server (names, bios, messages, inbox titles) must go through `escapeHtml` (`src/utils/html.js`) or `textContent` before entering `innerHTML`. Spot checks of the Messages panel, profile, and player list show the rule is followed, but there is no automated scan yet (see risk 8). |
+| Secrets | There is no `service_role` key or AI API key in client code. The Anthropic key for the Advisor is read only from an Edge Function secret (`ANTHROPIC_API_KEY`). |
 
-- **Tanda tangan save (`src/core/Integrity.js`) bukan enkripsi.** Ia hanya membuat edit manual `localStorage` atau file export mudah terdeteksi, dan sanksinya mengembalikan SIL ke 0 serta menandai save (`tamperFlag`). Kuncinya ada di kode klien, jadi pemain yang berniat dan mampu tetap bisa memalsukannya. Perlindungan nyata ada di server.
-- **Statistik leaderboard tetap dilaporkan klien** (pendapatan, kas, dan sebagainya). Server menangkap pemalsuan kasar (angka mustahil, sinkron terlalu sering), tetapi nilai yang masih di dalam batas wajar tetap bisa dipalsukan. Validasi penuh butuh simulasi atau audit di server, jadi peringkat belum resmi. Level dan skor yang diturunkan darinya ikut mewarisi batas ini.
-- **Penguncian Top Up hanya di sisi klien.** Game (`TOPUP_LOCKED` di `src/ui/panels/SiliconStorePanel.js`) dan landing page (`web.html`) menyembunyikan atau menonaktifkan pembayaran, tetapi fungsi server `create_payment_order` tidak mengecek flag apa pun. Pemain yang login tetap bisa membuat pesanan `pending` lewat API langsung. Pesanan itu tidak otomatis mengkredit SIL (tetap butuh persetujuan admin), tetapi kalau top-up harus tertutup total, kuncinya perlu ditambahkan di server.
-- **ID Pemain bersifat publik.** Ia tampil di profil dan bisa dilihat pemain lain, jadi jangan dianggap rahasia dan jangan dipakai sebagai bukti identitas.
-- **Supabase URL dan *publishable key*** di `src/services/cloud/supabase.config.js` memang publik. Keamanan data bergantung pada RLS dan hak fungsi, bukan pada kerahasiaan key itu.
-- **Save lokal tidak dienkripsi.** Siapa pun yang memakai perangkat yang sama bisa membacanya.
+### What is deliberately NOT guaranteed
 
-## Risiko yang sudah diketahui
+- **The save signature (`src/core/Integrity.js`) is not encryption.** It only makes manual edits to `localStorage` or an exported file easy to detect. The penalty resets SIL to 0 and flags the save (`tamperFlag`). The key lives in client code, so a determined and capable player can still forge it. Real protection is on the server.
+- **Leaderboard stats are still reported by the client** (revenue, cash, and so on). The server catches crude forgery (impossible numbers, syncing too often), but values that stay within plausible bounds can still be faked. Full validation would need server-side simulation or auditing, so the ranking is not official. Levels and scores derived from those stats inherit this limit.
+- **The Top Up lock is client-side only.** The game (`TOPUP_LOCKED` in `src/ui/panels/SiliconStorePanel.js`, mirrored by `STUDIO_TOPUP_LOCKED` in `src/ui/panels/SettingsPanel.js`) and the landing page (`web.html`) hide or disable payment, but the server function `create_payment_order` doesn't check any flag. A logged-in player can still create a `pending` order through the API directly. That order does not automatically credit SIL (it still needs admin approval), but if top-up must be fully closed, the lock needs to be added on the server.
+- **Player ID is public.** It is shown on the profile and visible to other players, so don't treat it as a secret and don't use it as proof of identity.
+- **The Supabase URL and *publishable key*** in `src/services/cloud/supabase.config.js` are public by design. Data security depends on RLS and function rights, not on keeping that key secret.
+- **Local saves are not encrypted.** Anyone using the same device can read them.
+- **Game simulation runs on the client.** The economy, demand model, competitor actions, and scenario content are computed in the browser and stored in the local save, so they can be modified by the player. Nothing that holds money-like value (SIL balance, account data) depends on them.
 
-Kami mencantumkannya terbuka agar peneliti tidak membuang waktu pada hal yang sudah diketahui, tetapi laporan dengan dampak baru tetap diterima.
+## Known risks
 
-1. **Edge Function Asisten Bisnis (`advisor-chat`)**: belum ada rate limit per pengguna dan header CORS-nya `Access-Control-Allow-Origin: *`. Karena memanggil API berbayar, **jangan diaktifkan untuk publik luas** sebelum rate limit (mis. per user di tabel Supabase) dan pembatasan origin ditambahkan. Input sudah dipotong (pertanyaan 300 karakter, riwayat 6 pesan, konteks 6.000 karakter).
-2. **Leaderboard** berbasis angka klien yang divalidasi sebagian (lihat di atas).
-3. **Top Up hanya dikunci di klien** (lihat di atas). Landing page juga memuat QRIS pembayaran (`qris-gopay.png`) sebagai berkas statis publik.
-4. **Global error overlay** di `index.html` menampilkan pesan dan *stack trace* di layar saat terjadi error JavaScript, dan tidak dibatasi oleh `DEV_BUILD`. Ini berguna untuk debug, tetapi membocorkan path file ke pemain. Pertimbangkan menyembunyikannya di produksi.
-5. **Dependensi CDN**: Three.js (`cdn.jsdelivr.net`, v0.160.0) dan `supabase-js` (`cdn.jsdelivr.net` dengan cadangan `esm.sh`, v2.49.4) dimuat dengan versi dipin, tetapi **tanpa Content-Security-Policy**. Subresource Integrity (SRI) juga belum ada, dan tidak bisa dipasang langsung pada `import()` dinamis. Opsi perbaikannya: simpan salinan library di repo (self-host) atau pakai import map dengan atribut `integrity`. Kompromi CDN akan berdampak ke semua pemain.
-6. **`DEV_BUILD`** harus tetap `false` di produksi (`src/config/dev.config.js`).
-7. **Enumerasi ID Pemain**: fungsi `get_player_by_id` mengembalikan nama perusahaan dan nama pemain untuk ID mana pun kepada pengguna yang login, tanpa rate limit. Karena ID Pemain publik, ini by design, tetapi pengumpulan massal tetap dilarang (lihat aturan pengujian).
-8. **Belum ada pemindaian otomatis untuk XSS.** Kode memiliki puluhan titik `innerHTML` dan aturan `escapeHtml`, tetapi belum ada linter atau test yang memeriksanya. Komponen baru yang menampilkan teks pemain perlu diperiksa manual.
-9. **Panel admin (`031411/`) punya konsol RPC bebas.** Admin bisa memanggil fungsi apa pun dengan argumen JSON. Pengamannya hanya `is_admin()` di server, jadi akun admin wajib memakai password kuat dan 2FA.
-10. `supabase/BACA-DULU.md` belum memuat file SQL 10–13. Proyek yang melewatkan file tertentu bisa kehilangan perlindungannya (misalnya validasi nama unik di `14`, validasi leaderboard di `11`, atau perhitungan level di server pada `12` dan `15`).
-11. **Data dan logika game ada di klien.** Paket skenario 2027–2030 (indeks biaya komponen, pangsa merek, penarikan merek, berita) seluruhnya dihitung di browser dan tersimpan di save lokal (`competitorState.withdrawn`, `lowShareYears`). Seperti save lain, ia dilindungi tanda tangan integritas yang bukan enkripsi, jadi nilainya bisa diubah pemain. Tidak ada saldo SIL atau data akun yang bergantung padanya, dan skor leaderboard tetap mewarisi batas yang dijelaskan di atas.
-12. Komentar di `src/core/Integrity.js` masih merujuk `supabase/hardening.sql`, yang sudah digabung ke file bernomor.
+We list these openly so researchers don't waste time on what is already known, but reports with new impact are still welcome.
 
-## Panduan untuk yang menjalankan proyek sendiri
+1. **Business Advisor Edge Function (`advisor-chat`)**: no per-user rate limit yet, and its CORS header is `Access-Control-Allow-Origin: *`. Because it calls a paid API, **don't enable it for a wide public** until a rate limit (for example per user in a Supabase table) and origin restrictions are added. Input is already truncated (question 300 characters, history 6 messages of 280 characters each, context 6,000 characters).
+2. **The leaderboard** is based on client numbers that are only partly validated (see above).
+3. **Top Up is locked only on the client** (see above). The landing page also includes the payment QRIS (`qris-gopay.png`) as a public static file.
+4. **The global error overlay** in `index.html` shows the message and *stack trace* on screen when a JavaScript error happens, and is not gated by `DEV_BUILD`. It is useful for debugging but leaks file paths to players. Consider hiding it in production.
+5. **CDN dependencies**: Three.js (`cdn.jsdelivr.net`, v0.160.0) and `supabase-js` (`cdn.jsdelivr.net` with an `esm.sh` fallback, v2.49.4) are loaded with pinned versions, but there is **no Content-Security-Policy**. Subresource Integrity (SRI) is also missing and can't be applied directly to dynamic `import()`. Fix options: keep a copy of the libraries in the repo (self-host) or use an import map with `integrity` attributes. A CDN compromise would affect every player.
+6. **`DEV_BUILD`** must stay `false` in production (`src/config/dev.config.js`).
+7. **Player ID enumeration**: the `get_player_by_id` function returns the company name and player name for any ID to a logged-in user, with no rate limit. Because Player IDs are public this is by design, but mass collection is still prohibited (see the testing rules).
+8. **No automated XSS scanning yet.** The code has roughly a hundred `innerHTML` call sites and an `escapeHtml` rule, but no linter or test checks them. New components that display player text need a manual check. This applies in particular to the social, Messages, and profile screens.
+9. **The admin panel (`031411/`) has a free-form RPC console.** An admin can call any function with JSON arguments. The only safeguard is `is_admin()` on the server, so admin accounts must use a strong password and 2FA.
+10. **`supabase/BACA-DULU.md` is incomplete**: it doesn't list SQL files 10–13, 16, or 17. A project that skips a file can lose its protection (for example unique-name validation in `14`, leaderboard validation in `11`, server-side level calculation in `12` and `15`, or the corrected leaderboard view in `17`).
+11. **The leaderboard view can be overwritten by older files.** Re-running `03` or `11` after `12`/`15` recreates `public_profiles` without the newer columns (and without hiding flagged profiles). Run `16` to check and `17` to repair.
+12. **Two `patches.json` files** (root and `src/`) are out of sync. The game reads the root one. This is not a security problem, but it means release notes (including fix notices) may not reach players.
+13. A comment in `src/core/Integrity.js` still refers to `supabase/hardening.sql`, which has been merged into the numbered files.
 
-- Ganti `SUPABASE_URL` dan `SUPABASE_KEY` dengan milik proyekmu, dan jalankan SQL di `supabase/` **berurutan** sesuai README (rantai level: `09` → `10` → `11` → `12` → `15`).
-- Ganti email di `08-jadikan-admin.sql` dengan akun adminmu. Lindungi akun itu dengan password kuat dan 2FA di sisi penyedia email.
-- Ganti `qris-gopay.png` dengan kode pembayaranmu sendiri, atau hapus kalau kamu tidak membuka top-up.
-- Kalau ingin menutup top-up, jangan hanya mengandalkan flag di klien. Tambahkan pengecekan di fungsi `create_payment_order` (mis. tabel pengaturan atau flag yang hanya bisa diubah admin).
-- Jangan pernah commit `service_role` key, token, atau `.env`. Jika terlanjur, **rotasi key sekarang** (menghapus commit saja tidak cukup).
-- Simpan `ANTHROPIC_API_KEY` hanya sebagai secret Edge Function (`supabase secrets set`).
-- Pertimbangkan menambah header keamanan di hosting-mu (CSP, `X-Content-Type-Options`, `Referrer-Policy`). GitHub Pages tidak mengizinkan header kustom, jadi untuk itu perlu CDN/proxy di depannya.
-- Pastikan `DEV_BUILD = false` sebelum rilis.
+## Guidance for people running their own copy
 
-## Lain-lain
+- Replace `SUPABASE_URL` and `SUPABASE_KEY` with your own project's, and run the SQL in `supabase/` **in order** following the README (level chain: `09` → `10` → `11` → `12` → `15`; then optionally `16` to check the schema, and `17` if it reports missing view columns).
+- Replace the e-mail in `08-jadikan-admin.sql` with your admin account. Protect that account with a strong password and 2FA at your e-mail provider.
+- Replace `qris-gopay.png` with your own payment code, or delete it if you don't open top-up.
+- If you want to close top-up, don't rely only on the client flag. Add a check in the `create_payment_order` function (for example a settings table or a flag that only an admin can change).
+- Never commit a `service_role` key, tokens, or `.env`. If you already did, **rotate the key now** (deleting the commit is not enough).
+- Keep `ANTHROPIC_API_KEY` only as an Edge Function secret (`supabase secrets set`), and add rate limiting and origin restrictions before enabling the Advisor Edge Function publicly.
+- Consider adding security headers at your host (CSP, `X-Content-Type-Options`, `Referrer-Policy`). GitHub Pages doesn't allow custom headers, so that needs a CDN or proxy in front.
+- Make sure `DEV_BUILD = false` before release.
 
-Gambar QRIS/GoPay di repo (`qris-gopay.png`) berisi tujuan pembayaran top-up. Pastikan hanya berisi rekening yang memang untuk publik dan selalu cocokkan pesanan di panel admin sebelum menyetujui.
+## Other notes
+
+The QRIS/GoPay image in the repo (`qris-gopay.png`) contains the top-up payment destination. Make sure it contains only an account that is meant to be public, and always match orders in the admin panel before approving them.
