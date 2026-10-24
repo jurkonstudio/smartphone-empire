@@ -4982,3 +4982,18 @@ html[data-theme="dark"] .mobile-nav.dragging .nav-slider::before {
     html[data-theme="dark"] .mobile-nav { background: rgba(38,38,42,0.97) !important; }
     html .app-header { background: var(--bg-1) !important; }
 }
+
+/* ---- Assembly (panel Manufaktur) ---- */
+.asm-badge { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: rgba(255,122,61,.16); color: #ff7a3d; vertical-align: middle; }
+.asm-kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin: 8px 0; }
+.asm-kpi { padding: 8px 10px; border-radius: 10px; background: var(--surface, rgba(255,255,255,.04)); }
+.asm-kv { font-weight: 700; font-size: 15px; }
+.asm-kv small { font-weight: 500; font-size: 10.5px; color: var(--text-mute); }
+.asm-kl { font-size: 10.5px; color: var(--text-mute); margin-top: 2px; }
+.asm-warn .asm-kv { color: var(--danger, #e5484d); }
+.asm-sec { margin: 12px 0 6px; }
+.asm-note { margin: 4px 2px 8px; }
+.asm-count { font-weight: 500; font-size: 12px; color: var(--text-mute); margin-left: 4px; }
+.asm-bar { height: 5px; border-radius: 3px; background: rgba(127,127,127,.2); margin: 5px 0 3px; overflow: hidden; }
+.asm-bar i { display: block; height: 100%; background: #ff7a3d; border-radius: 3px; }
+.asm-btns { display: flex; gap: 4px; }
