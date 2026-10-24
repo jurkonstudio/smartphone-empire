@@ -958,7 +958,7 @@ function _step2(s) {
 
         if (isOptional) {
             const noneLabel = catId === 'camera' ? t('wiz.step2.no_camera') : catId === 'ram' ? _tf('wiz.step2.no_ram', 'RAM Standar') : catId === 'storage' ? _tf('wiz.step2.no_storage', 'Tanpa kartu memori') : t('wiz.step2.no_item', { name: _catName(cat) });
-            const noneMeta = catId === 'camera' ? t('wiz.step2.no_camera_hint') : catId === 'ram' ? _tf('wiz.step2.no_ram_hint', 'Memori bawaan chip, tanpa biaya tambahan') : catId === 'storage' ? _tf('wiz.step2.no_storage_hint', 'Hanya memori internal ponsel') : t('wiz.step2.optional');
+            const noneMeta = catId === 'camera' ? t('wiz.step2.no_camera_hint') : catId === 'ram' ? _tf('wiz.step2.no_ram_hint', 'Memori bawaan chip, tanpa biaya tambahan') : catId === 'storage' ? _tf('wiz.step2.no_storage_hint', 'Memori internal dasar 4 MB') : t('wiz.step2.optional');
             const isNoneSelected = (!selected || selected === 'none');
             options = '<button class="wiz-option ' + (isNoneSelected ? 'selected' : '') + '" data-wiz-pick="' + stateKey + ':none">' +
                 '<div class="wiz-opt-name">' + noneLabel + '</div>' +
@@ -1156,7 +1156,7 @@ function _step3(s) {
         <div class="wz-scroll">
             <div class="wiz-cat">
                 <div class="wiz-cat-title" style="text-transform:none;">${renderIcon('disc', 14, 'style="vertical-align:middle;margin-right:5px;"')}${t('wiz.step3.os_label')}</div>
-                <div class="wiz-options-row">
+                <div class="wiz-options wiz-options-col">
                     ${osOptions.length ? osOptions.map(function (o) {
                         var meta = o.source === 'license' ? _perUnit(o.costPerUnit) : t('wiz.step3.os_free');
                         return '<button class="wiz-option ' + (s.osOptionId === o.id ? 'selected' : '') + '" data-wiz-pick="osOptionId:' + o.id + '">' +
