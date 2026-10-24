@@ -111,7 +111,7 @@ export function renderAssemblySection(sys) {
         html += '<div class="mf-row asm-role"><div class="mf-main">' +
             '<div class="mf-name">' + esc(at('r_' + r.id)) + ' <span class="asm-count">' + num(have) + '/' + num(need) + (tr ? ' (+' + num(tr) + ')' : '') + '</span></div>' +
             '<div class="asm-bar"><i style="width:' + fill + '%"></i></div>' +
-            '<div class="mf-reason">' + esc(at('d_' + r.id)) + ' · ' + esc(at('wage')) + ' ' + money(r.wage) + '</div></div>' +
+            '<div class="mf-reason">' + esc(at('d_' + r.id)) + ' · ' + esc(at('wage')) + ' ' + money(sys.getRoleWage(r)) + '</div></div>' +
             '<div class="mf-buy asm-btns">' +
             '<button class="btn-primary mf-buy-btn" data-asm-action="hire" data-asm-role="' + r.id + '" data-asm-n="10"' + (h10 > 0 ? '' : ' disabled') + '>+10</button>' +
             '<button class="btn-primary mf-buy-btn" data-asm-action="hire" data-asm-role="' + r.id + '" data-asm-n="50"' + (h50 > 0 ? '' : ' disabled') + '>+50</button>' +
