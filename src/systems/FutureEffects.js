@@ -2,6 +2,7 @@
 // Efek panel Future ke sistem game. Satu-satunya tempat angka bonus F-AI, Alat Pengembang, dan Mesin Game.
 // Semua hitungan biaya OS (sistem + UI) harus lewat helper ini supaya angkanya cocok.
 import { getFutureUnlockState, getFuturePanelById } from '../data/future-panels.data.js';
+import { getSegmentWeights } from '../data/market-nav.data.js';
 
 export const DEV_TOOLS_CONFIG = {
     // Diskon biaya pengembangan fitur ekosistem aplikasi (0.15 = 15%). Ubah di sini untuk menyeimbangkan.
@@ -42,6 +43,126 @@ export function isDevToolsActive(data) {
     catch (e) { return false; }
 }
 
+// ---- Kontrol Pengguna: kebijakan data (Terbuka / Seimbang / Privasi Ketat) ----
+// Semua angka keseimbangan ada di sini.
+//  scareMult     pengali peluang event viral "kekhawatiran privasi data" (<1 = lebih jarang).
+//  audience      perubahan permintaan = audience * porsi pasar segmen pro+premium (0.20 dan porsi 30% = +6%).
+//  general       perubahan permintaan semua produk (personalisasi data vs gesekan privasi).
+//  aiFactor      pengali besar diskon F-AI dan Alat Pengembang (privasi ketat membatasi personalisasi).
+//  wellbeing     seberapa kuat bonus Kesejahteraan Digital berlaku (segmen youth & senior).
+// Efek PERLINDUNGAN (scareMult < 1, audience > 0, wellbeing) hanya berlaku bila OS produk/pemain punya
+// fitur Pusat Privasi; BIAYA kebijakan (scareMult > 1, audience < 0, general, aiFactor) selalu berlaku.
+export const USER_CONTROL_CONFIG = {
+    defaultPolicy: 'balanced',
+    requiredOsFeature: 'fw_privacy',
+    wellbeingFeature: 'fw_digital_wellbeing',
+    wellbeingBonus: 0.12,
+    privacyAudienceSegments: ['pro', 'premium'],
+    wellbeingSegments: ['youth', 'senior'],
+    policies: {
+        open:     { id: 'open',     name: 'Terbuka',       nameEn: 'Open',
+                    desc: 'Kumpulkan data untuk personalisasi. Fitur AI lebih murah, tapi pembeli peduli privasi menjauh.',
+                    descEn: 'Collect data for personalisation. AI features cost less, but privacy-minded buyers drift away.',
+                    scareMult: 1.8, audience: -0.20, general: 0.02, aiFactor: 1.10, wellbeing: 0 },
+        balanced: { id: 'balanced', name: 'Seimbang',      nameEn: 'Balanced',
+                    desc: 'Pengaturan standar. Perlindungan ringan bila OS punya Pusat Privasi.',
+                    descEn: 'Standard settings. Light protection if the OS has the Privacy Center.',
+                    scareMult: 0.85, audience: 0.05, general: 0, aiFactor: 1.0, wellbeing: 0.5 },
+        strict:   { id: 'strict',   name: 'Privasi Ketat', nameEn: 'Strict Privacy',
+                    desc: 'Data tetap di perangkat. Kepercayaan dan permintaan segmen pro naik, tapi personalisasi dan diskon AI berkurang.',
+                    descEn: 'Data stays on the device. Trust and pro-segment demand rise, but personalisation and AI discounts shrink.',
+                    scareMult: 0.4, audience: 0.20, general: -0.01, aiFactor: 0.7, wellbeing: 1 }
+    }
+};
+
+export const USER_CONTROL_POLICY_ORDER = ['open', 'balanced', 'strict'];
+
+// True bila Kontrol Pengguna terbuka (tahun >= 2019 dan riset sensor_face3d selesai).
+export function isUserControlActive(data) {
+    try { return getFutureUnlockState(getFuturePanelById('user_control'), data).unlocked === true; }
+    catch (e) { return false; }
+}
+
+export function getUserControlPolicyId(data) {
+    var id = data && data.userControl && data.userControl.policy;
+    return USER_CONTROL_CONFIG.policies[id] ? id : USER_CONTROL_CONFIG.defaultPolicy;
+}
+
+export function getUserControlPolicy(data) {
+    return USER_CONTROL_CONFIG.policies[getUserControlPolicyId(data)];
+}
+
+// Mengganti kebijakan. Mengembalikan true bila berhasil (panel harus terbuka).
+export function setUserControlPolicy(policyId, data) {
+    data = data || currentGameData();
+    if (!USER_CONTROL_CONFIG.policies[policyId] || !isUserControlActive(data)) return false;
+    if (!data.userControl || typeof data.userControl !== 'object') data.userControl = {};
+    data.userControl.policy = policyId;
+    return true;
+}
+
+// True bila ada versi OS milik pemain yang punya fitur itu (untuk efek tingkat perusahaan, mis. opini publik).
+export function playerOsHasFeature(featureId, data) {
+    var versions = (data && data.os && data.os.versions) || [];
+    return versions.some(function (v) { return Array.isArray(v.features) && v.features.indexOf(featureId) !== -1; });
+}
+
+// Pengali peluang event viral "kekhawatiran privasi data". 1 bila panel belum terbuka.
+export function getPrivacyScareMult(data) {
+    if (!isUserControlActive(data)) return 1;
+    var pol = getUserControlPolicy(data);
+    if (pol.scareMult < 1 && !playerOsHasFeature(USER_CONTROL_CONFIG.requiredOsFeature, data)) return 1;
+    return pol.scareMult;
+}
+
+// Pengali permintaan produk (osOptionId 'own:...' dicek per produk; OS lisensi tidak punya daftar fitur).
+// Dipanggil dari ProductSystem._getOsFactor, jadi preview desain dan penjualan nyata selalu sama.
+export function getUserControlDemandMult(osOptionId, data) {
+    if (!isUserControlActive(data)) return 1;
+    var cfg = USER_CONTROL_CONFIG, pol = getUserControlPolicy(data);
+    var year = (data && data.time && data.time.currentYear) || 2019;
+    var w = getSegmentWeights(year);
+    var share = 0;
+    cfg.privacyAudienceSegments.forEach(function (id) { share += w[id] || 0; });
+    var hasPriv = osOptionHasFeature(osOptionId, cfg.requiredOsFeature, data);
+    var audience = pol.audience;
+    if (audience > 0 && !hasPriv) audience = 0;
+    var bonus = pol.general + audience * share;
+    if (pol.wellbeing > 0 && osOptionHasFeature(osOptionId, cfg.wellbeingFeature, data)) {
+        var wshare = 0;
+        cfg.wellbeingSegments.forEach(function (id) { wshare += w[id] || 0; });
+        bonus += cfg.wellbeingBonus * pol.wellbeing * wshare;
+    }
+    return Math.max(0.8, 1 + bonus);
+}
+
+// Ringkasan efek kebijakan saat ini untuk ditampilkan di kartu panel. Tidak mengubah state.
+export function describeUserControl(data) {
+    var cfg = USER_CONTROL_CONFIG, pol = getUserControlPolicy(data);
+    var year = (data && data.time && data.time.currentYear) || 2019;
+    var w = getSegmentWeights(year);
+    var share = 0;
+    cfg.privacyAudienceSegments.forEach(function (id) { share += w[id] || 0; });
+    var hasPriv = playerOsHasFeature(cfg.requiredOsFeature, data);
+    var hasWell = playerOsHasFeature(cfg.wellbeingFeature, data);
+    var audience = pol.audience;
+    if (audience > 0 && !hasPriv) audience = 0;
+    return {
+        policy: pol,
+        hasPrivacyOs: hasPriv,
+        hasWellbeingOs: hasWell,
+        scareMult: getPrivacyScareMult(data),
+        demandPct: (pol.general + audience * share) * 100,
+        wellbeingPct: (pol.wellbeing > 0 && hasWell) ? cfg.wellbeingBonus * pol.wellbeing * (function () { var x = 0; cfg.wellbeingSegments.forEach(function (id) { x += w[id] || 0; }); return x; })() * 100 : 0,
+        aiFactor: pol.aiFactor
+    };
+}
+
+// Pengali besar diskon F-AI / Alat Pengembang menurut kebijakan data (1 bila Kontrol Pengguna belum terbuka).
+export function getUserControlDiscountFactor(data) {
+    return isUserControlActive(data) ? getUserControlPolicy(data).aiFactor : 1;
+}
+
 // Biaya fitur OS setelah efek F-AI dan Alat Pengembang. f = objek fitur dari os.data.js.
 export function getOsFeatureCost(f, data) {
     if (!f) return 0;
@@ -49,11 +170,11 @@ export function getOsFeatureCost(f, data) {
     var cost = base;
     var discounted = false;
     if (FAI_CONFIG.osAiFeatures.indexOf(f.id) !== -1 && isFaiActive(data)) {
-        cost *= (1 - FAI_CONFIG.osAiDiscount);
+        cost *= (1 - FAI_CONFIG.osAiDiscount * getUserControlDiscountFactor(data));
         discounted = true;
     }
     if (DEV_TOOLS_CONFIG.osDevFeatures.indexOf(f.id) !== -1 && isDevToolsActive(data)) {
-        cost *= (1 - DEV_TOOLS_CONFIG.osDevDiscount);
+        cost *= (1 - DEV_TOOLS_CONFIG.osDevDiscount * getUserControlDiscountFactor(data));
         discounted = true;
     }
     return discounted ? Math.round(cost) : base;

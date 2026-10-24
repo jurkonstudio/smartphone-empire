@@ -25,6 +25,7 @@ import { WalletService } from './WalletService.js';
 import { LanguageService } from '../core/LanguageService.js';
 import { VIRAL_EXT, VIRAL_LEGACY_EN } from '../data/market-nav.data.js';
 import { attachBugReactions } from './PublicOpinionBugReactions.js';
+import { getPrivacyScareMult } from './FutureEffects.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 
@@ -436,7 +437,13 @@ export class PublicOpinionSystem {
                 && (v.kind !== 'product' || selling.length > 0)).map(v => ({ ev: v, ext: true })))
             .filter(x => activeIds.indexOf(x.ev.id) < 0);
         if (!pool.length) return;
-        const chosen = pool[Math.floor(Math.random() * pool.length)];
+        // Kontrol Pengguna: kebijakan data mengubah bobot event "kekhawatiran privasi data" (1 = normal).
+        const scareMult = getPrivacyScareMult(data);
+        let totalW = 0;
+        const weights = pool.map(x => { const wt = x.ev.id === 'viral_privacy_scare' ? scareMult : 1; totalW += wt; return wt; });
+        let roll = Math.random() * totalW, idx = 0;
+        while (idx < pool.length - 1 && roll >= weights[idx]) { roll -= weights[idx]; idx++; }
+        const chosen = pool[idx];
         const extra = {};
         if (chosen.ext) {
             if (chosen.ev.segs) extra.segs = chosen.ev.segs.slice();
