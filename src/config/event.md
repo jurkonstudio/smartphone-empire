@@ -63,8 +63,12 @@
 ## Cloud (stub)
 - `cloud:status-changed` / `cloud:sync-start` / `cloud:sync-success` / `cloud:sync-error`
 
+## Event Pilihan Era (2000–2002)
+- `eraevent:pending` — `{ event }` — event menunggu keputusan pemain (UI membuka modal dan menjeda game)
+- `eraevent:resolved` — `{ eventId, choiceId, event, choice }` — pemain memilih; efek sudah diterapkan
+
 ## Quest & Tutorial
-- `quest:activated` / `quest:completed`
+- `quest:activated` / `quest:completed` / `quest:expired` — `{ id, title }` — quest era bertenggat lewat batas waktu tanpa selesai
 - `tutorial:step-changed` / `tutorial:completed` / `tutorial:action` / `tutorial:skip` / `tutorial:next` / `tutorial:restart`
 
 ## UI
