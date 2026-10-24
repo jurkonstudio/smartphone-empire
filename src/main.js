@@ -28,6 +28,7 @@ import { TeamSystem } from './systems/TeamSystem.js';
 import { ChipSystem } from './systems/ChipSystem.js';
 import { FabSystem } from './systems/FabSystem.js';
 import { ComponentPlantSystem } from './systems/ComponentPlantSystem.js';
+import { AssemblySystem } from './systems/AssemblySystem.js';
 import { CompanyHistorySystem } from './systems/CompanyHistorySystem.js';
 import { NewsSystem } from './systems/NewsSystem.js';
 import { AdvisorSystem } from './systems/AdvisorSystem.js';
@@ -119,6 +120,7 @@ var teamSystem        = new TeamSystem(state);
 var chipSystem        = new ChipSystem(state);
 var fabSystem         = new FabSystem(state);
 var componentPlants   = new ComponentPlantSystem(state);
+var assemblySystem    = new AssemblySystem(state);
 var companyHistory    = new CompanyHistorySystem(state);
 var advisor           = new AdvisorSystem(state, { research: research });
 var stockSystem       = new StockSystem(state);
@@ -129,6 +131,7 @@ var econBrakes        = new EconBrakeSystem(state);
 market.setCompetitorSystem(competitors);
 products.setPromotionSystem(promotion);
 products.setComponentPlantSystem(componentPlants);
+products.setAssemblySystem(assemblySystem);
 bank.setPromotionSystem(promotion);
 economy.setBank(bank);
 // [v2029.1] penahan ekonomi: biaya volume, plafon pasar, respons rival, sink dana.
@@ -313,7 +316,7 @@ function renderView(opts) {
         if (activeView === 'dashboard') html = renderHomePanel();
         else if (activeView === 'profile') html = renderCompanyProfilePanel({ teamSystem: teamSystem, marketSystem: market, competitors: competitors, opinionSystem: opinion });
         else if (activeView === 'team') html = renderHqPanel({ subtab: activeHqSubtab, state: state.get(), timeSnapshot: getTime(), researchSystem: research, teamSystem: teamSystem, stockSystem: stockSystem });
-        else if (activeView === 'research') html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os, chipResearchSystem: chipResearch, componentPlantSystem: componentPlants });
+        else if (activeView === 'research') html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os, chipResearchSystem: chipResearch, componentPlantSystem: componentPlants, assemblySystem: assemblySystem });
         else if (activeView === 'products') html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os });
         else if (activeView === 'market') html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion });
         else if (activeView === 'settings') html = renderSettingsPanel();
@@ -905,6 +908,21 @@ function bindGlobalClicks() {
             return;
         }
 
+        var asmAction = e.target.closest('[data-asm-action]');
+        if (asmAction) {
+            e.preventDefault(); vibrate(8);
+            var aA = asmAction.dataset.asmAction, aN = parseInt(asmAction.dataset.asmN, 10) || 0, aR = null;
+            if (aA === 'build') aR = assemblySystem.build();
+            else if (aA === 'upgrade') aR = assemblySystem.upgrade();
+            else if (aA === 'cancel') aR = assemblySystem.cancelUpgrade();
+            else if (aA === 'hire') aR = assemblySystem.hire(asmAction.dataset.asmRole, aN);
+            else if (aA === 'fire') aR = assemblySystem.fire(asmAction.dataset.asmRole, aN);
+            else if (aA === 'overtime') aR = assemblySystem.setOvertime(aN === 1);
+            if (aR && !aR.ok) ToastService.error(aR.reason);
+            else if (aR) renderAll();
+            return;
+        }
+
         var fabBuy = e.target.closest('[data-chip-fab-buy]');
         if (fabBuy) {
             e.preventDefault();
@@ -1375,6 +1393,7 @@ async function boot() {
         chipSystem.start();
         fabSystem.start();
         componentPlants.start();
+        assemblySystem.start();
         companyHistory.start();
         NewsSystem.start();
         advisor.start();
@@ -1427,7 +1446,7 @@ async function boot() {
             forcePull: function() { return CloudSync.forcePull(); },
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, marketNav: marketNav, eraSystem: eraSystem, teamSystem: teamSystem,
-            chips: chipSystem, fab: fabSystem, plants: componentPlants, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
+            chips: chipSystem, fab: fabSystem, plants: componentPlants, assembly: assemblySystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
             silicon: SiliconService, promotion: promotion, bank: bank, econ: econBrakes, payment: PaymentService,
             openSiliconStore: openSiliconStoreModal, LanguageService: LanguageService,
             SaveService: SaveService, ToastService: ToastService, Modal: Modal, navigate: navigate, render: renderAll, renderSoft: renderSoft,
