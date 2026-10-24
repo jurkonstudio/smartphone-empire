@@ -169,10 +169,14 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
         events: {
             cooldownUntilMinute: 0,
             pending: null,
-            history: []
+            history: [],
+            // [era-event] event pilihan 2000–2002 (EraEventSystem)
+            queue: [],
+            seen: [],
+            mods: []
         },
 
-        quests: { active: [], completed: [] },
+        quests: { active: [], completed: [], expired: [] },
 
         log: [],
         milestones: [],
