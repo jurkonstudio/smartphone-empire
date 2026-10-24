@@ -684,18 +684,15 @@ function islandSlab(A, THREE, scale, top, depth, mat) {
     return m;
 }
 
-// Pulau + laut berlapis: rumput -> pasir -> pasir basah -> busa -> perairan dangkal -> laut dalam.
+// Pulau berlapis: rumput -> pasir -> pasir basah. Laut (perairan dangkal, busa, ombak) TIDAK lagi
+// dibuat dari lempengan statis di sini: digambar shader SeaWater.js (dibuat oleh CampusScene).
 function addIsland(g, A, THREE) {
-    var sea = mesh(A, THREE, A.box(500, 1, 500), 'ocean', 0, -1.0, 0);          // permukaan laut y = -0.5
-    g.add(sea);
-    g.add(islandSlab(A, THREE, 1.30, -0.47, 0.2, A.mat('shallow')));
-    g.add(islandSlab(A, THREE, 1.115, -0.455, 0.2, A.mat('foam')));
     g.add(islandSlab(A, THREE, 1.08, -0.26, 0.5, A.mat('sandWet')));
     g.add(islandSlab(A, THREE, 1.05, -0.03, 0.7, A.mat('sand')));
     g.add(islandSlab(A, THREE, 1.0, 0, 0.7, [A.mat('grass'), A.mat('soil')]));
 }
 
-// Pemandangan alami: bukit, batu pantai, riak ombak, bercak rumput. TANPA gedung dekoratif.
+// Pemandangan alami: bukit, batu pantai, bercak rumput. TANPA gedung dekoratif.
 function addScenery(g, A, THREE) {
     var i, rnd = _rng(1357);
 
@@ -719,14 +716,7 @@ function addScenery(g, A, THREE) {
     }
     g.add(instanced(A, THREE, rg, 'rock', rocks.filter(function (r) { return !_inLinkCorridor(r[0], r[2]); }), function (n, c) { var v = 0.85 + rnd() * 0.25; c.setRGB(v, v, v); }));
 
-    // riak ombak: garis busa tipis di laut sekeliling pulau
-    var waves = [];
-    for (i = 0; i < 90; i++) {
-        var a = rnd() * Math.PI * 2, f2 = 1.4 + rnd() * 1.1;
-        var wr = islandRadius(a, f2);
-        waves.push([Math.cos(a) * wr, -0.488, Math.sin(a) * wr, 0.9 + rnd() * 2.2, 1, 0.07 + rnd() * 0.05, -a + Math.PI / 2 + (rnd() - 0.5) * 0.4]);
-    }
-    g.add(instanced(A, THREE, A.box(1, 0.012, 1), 'foam', waves));
+    // riak ombak: kini ditangani shader laut (SeaWater.js)
 
     // bercak rumput tambahan di pinggiran (variasi warna, tetap di dalam pantai)
     var patches = [];

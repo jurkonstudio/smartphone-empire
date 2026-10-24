@@ -21,7 +21,7 @@ import { frameGapMs } from '../../core/RenderFps.js';
 import {
     createAssets, buildGround, buildForest, buildShrubs, buildHQ, buildSlot, buildSprawl,
     computePlan, rememberPeak, buildWind, buildRail, applyShadowFlags, disposeObject,
-    PALETTES, TREE_SPOTS, ERA_WINDOWS, SLOT_ORDER, SPRAWL_SPOTS, BUILDER_IDS
+    PALETTES, TREE_SPOTS, ERA_WINDOWS, SLOT_ORDER, SPRAWL_SPOTS, BUILDER_IDS, islandRadius
 } from './CampusBuildings.js';
 import { CAMPUS_BY_ID, validateCampusRegistry } from '../../data/campus-buildings.data.js';
 import { detectQuality, createLookRig } from './CampusLook.js';
@@ -32,7 +32,8 @@ import { createCampusFx } from './CampusFx.js';
 import { createCampusOverlay } from './CampusOverlay.js';
 import { getBuildingInfo, getBuildingName, getUiStrings, hasCelebration } from './CampusInfo.js';
 import { computeAlerts, alertMap } from './CampusAlerts.js';
-import { LINK, buildLinkBridge, makeCampusKit, campusBridgeCfg, buildMfFar } from './IslandLink.js';
+import { LINK, buildLinkBridge, makeCampusKit, campusBridgeCfg, buildMfFar, mfCoastR } from './IslandLink.js';
+import { createSea } from './SeaWater.js';
 import { createWeather } from './CampusWeather.js';
 
 var BASE_VIEW = 22;
@@ -113,6 +114,16 @@ export function createCampusScene(THREE, container, gameState) {
     // Pulau Manufaktur di seberang selat (barat) + jembatan jalan raya dari gerbang barat kampus.
     // Kantor TIDAK ditampilkan sebagai tetangga kampus; kantor hanya dibuka lewat gedung HQ.
     var farMf = buildMfFar(THREE, scene, -LINK.OFFSET);
+    // Laut hidup (shader): garis air = tepi pasir basah (skala 1.08) pulau Kampus dan siluet pulau Manufaktur.
+    var sea = createSea(THREE, {
+        quality: quality.tier,
+        palette: { shallow: [PALETTES.light.shallow, PALETTES.dark.shallow], ocean: [PALETTES.light.ocean, PALETTES.dark.ocean], foam: [PALETTES.light.foam, PALETTES.dark.foam] },
+        islands: [
+            { cx: 0, cz: 0, radius: function (th) { return islandRadius(th, 1.08); } },
+            { cx: -LINK.OFFSET, cz: 0, radius: function (th) { return mfCoastR(th) * 1.08; } }
+        ]
+    });
+    scene.add(sea.mesh);
     var bridge = buildLinkBridge(THREE, makeCampusKit(THREE, A), campusBridgeCfg());
     scene.add(bridge.group);
     var shadowDirty = true;       // shadow map statis: hitung ulang hanya saat geometri berubah
@@ -151,6 +162,7 @@ export function createCampusScene(THREE, container, gameState) {
     function draw() {
         if (shadowDirty) { rig.requestShadowUpdate(); shadowDirty = false; }
         weather.update(performance.now() / 1000, ambient);
+        if (ambient) sea.update(performance.now() / 1000, weather.getKind(), weather.getSunset());
         renderer.render(scene, camera);
     }
 
@@ -508,6 +520,8 @@ export function createCampusScene(THREE, container, gameState) {
         A.applyPalette(p, readAccent());
         A.setEnvIntensity(look.envI);
         farMf.setDark(dark);
+        sea.setTheme(dark);
+        sea.setWeather(weather.getKind(), weather.getSunset());
         fx.setAccent(readAccent(), dark);
         if (life) life.setTheme(dark, p.window);
     }
@@ -595,6 +609,7 @@ export function createCampusScene(THREE, container, gameState) {
             forest.dispose();
             disposeObject(shrubs);
             farMf.dispose();
+            scene.remove(sea.mesh); sea.dispose();
             scene.remove(bridge.group);
             weather.dispose();
             rig.dispose();

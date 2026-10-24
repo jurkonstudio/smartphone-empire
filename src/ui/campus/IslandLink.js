@@ -291,8 +291,7 @@ var MF_FAR = {
 export function buildMfFar(THREE, parent, ox) {
     var F = createFar(THREE, parent, ox, MF_FAR);
     var R = mfCoastR;
-    F.slab(R, 1.22, -0.47, 0.2, 'shallow');
-    F.slab(R, 1.115, -0.455, 0.2, 'foam');
+    // perairan dangkal & busa digambar shader laut (SeaWater.js)
     F.slab(R, 1.08, -0.26, 0.5, 'sandWet');
     F.slab(R, 1.05, -0.03, 0.7, 'sand');
     F.slab(R, 1.0, 0, 0.7, ['ground', 'soil']);
@@ -342,8 +341,7 @@ export function buildCampusFar(THREE, parent, ox) {
     CAMPUS_FAR_KEYS.forEach(function (k) { defs[k] = [PALETTES.light[k], PALETTES.dark[k]]; });
     var F = createFar(THREE, parent, ox, defs);
     var R = function (th) { return islandRadius(th, 1); };
-    F.slab(R, 1.30, -0.47, 0.2, 'shallow');
-    F.slab(R, 1.115, -0.455, 0.2, 'foam');
+    // perairan dangkal & busa digambar shader laut (SeaWater.js)
     F.slab(R, 1.08, -0.26, 0.5, 'sandWet');
     F.slab(R, 1.05, -0.03, 0.7, 'sand');
     F.slab(R, 1.0, 0, 0.7, ['grass', 'soil']);
