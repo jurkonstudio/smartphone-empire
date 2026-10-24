@@ -44,19 +44,30 @@ var COLORS = {
     white:   [0xffffff, 0xc2cada], pipe: [0xb7c0cd, 0x7b8798], gold: [0xe0b445, 0xc9a13a],
     red:     [0xef5350, 0xd0443f], amber: [0xf5b83d, 0xd9a02a], green: [0x43c07a, 0x38a468],
     glass:   [0x9cc7ee, 0x4f77b8], win: [0x8fb4e8, 0x4f77b8], wood: [0x9a6e46, 0x6f4f33],
-    crate:   [0xc99a62, 0x8a6a42], safety: [0xffc247, 0xd9a02a], hull: [0x2e3b52, 0x1b2434]
+    crate:   [0xc99a62, 0x8a6a42], safety: [0xffc247, 0xd9a02a], hull: [0x2e3b52, 0x1b2434],
+    asphalt: [0x5d6675, 0x1b2028], stripe: [0xf1f3f7, 0x9aa3b2], fence: [0x9aa4b2, 0x6a7586],
+    carA: [0xd9534f, 0xb84540], carB: [0x4a7fd1, 0x3b66a8], carC: [0xe8e8ea, 0xa7adb8], carD: [0x3d4350, 0x262b34],
+    vest: [0xff8a3d, 0xe0762f], coat: [0xf6f7fa, 0xc9cfda], techc: [0x3fae72, 0x2f8a58], skin: [0xe6b997, 0xc29a7c], panel: [0x2b4a8f, 0x1d3568]
 };
 var PBR = { ground: [0.95, 0], base: [0.9, 0], pad: [0.85, 0], road: [0.95, 0], metal: [0.35, 0.35], steel: [0.4, 0.4], glass: [0.12, 0.1],
     gold: [0.3, 0.6], pipe: [0.4, 0.45], ocean: [0.42, 0], shallow: [0.4, 0], win: [0.3, 0.1] };
 
 var ISLAND = { rx: 21, rz: 14.5, n: 3.2 };
+function smooth01(t) { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); }
 function coastR(th) {
     var c = Math.abs(Math.cos(th)) / ISLAND.rx, s = Math.abs(Math.sin(th)) / ISLAND.rz;
     var r = Math.pow(Math.pow(c, ISLAND.n) + Math.pow(s, ISLAND.n), -1 / ISLAND.n);
-    return r * (1 + 0.045 * Math.sin(3 * th + 0.8) + 0.03 * Math.sin(5 * th + 2.1));
+    r = r * (1 + 0.045 * Math.sin(3 * th + 0.8) + 0.03 * Math.sin(5 * th + 2.1));
+    var sn = Math.sin(th);                                  // daratan tambahan di selatan untuk pabrik Assembly
+    if (sn > 0) r *= 1 + 0.6 * sn * sn * (1 - smooth01((r * Math.cos(th) - 8) / 4.5));
+    return r;
 }
 function onIsland(x, z, m) { return Math.hypot(x, z) < coastR(Math.atan2(z, x)) - (m || 0); }
-function nearPlots(x, z, m) { return Math.abs(x) < 16.4 + (m || 0) && Math.abs(z) < 8.9 + (m || 0); }
+function nearPlots(x, z, m) {
+    m = m || 0;
+    if (Math.abs(x) < 16.4 + m && Math.abs(z) < 8.9 + m) return true;
+    return x > -17.8 - m && x < 7.8 + m && z > 8.2 - m && z < 18.9 + m;      // petak Assembly + jalan akses
+}
 
 var ZC = -0.6;                       // pusat bangunan utama di dalam petak (lokal z); halaman di sisi +z
 var PAD_TOP = 0.16;                  // permukaan alas petak
@@ -81,6 +92,9 @@ export function createManufactureScene(THREE, container, gameState) {
     var scene = new THREE.Scene();
     var camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 140);
     var rig = createLookRig(THREE, renderer, scene, look);
+    scene.traverse(function (o) {                                   // peta lebih luas (pabrik Assembly): perlebar jangkauan bayangan
+        if (o.isDirectionalLight && o.castShadow) { var sc = o.shadow.camera; sc.left = -32; sc.right = 32; sc.top = 32; sc.bottom = -32; sc.far = 90; sc.updateProjectionMatrix(); }
+    });
     renderer.shadowMap.autoUpdate = !!rig.shadowsOn;
 
     // ---------- geometri & material bersama ----------
@@ -293,6 +307,9 @@ export function createManufactureScene(THREE, container, gameState) {
     // plaza + jalan raya (z = 0) + marka + trotoar
     box(shell, 'base', 33.4, 0.1, 17.9, 0, 0.05, 0);
     box(shell, 'road', 33.4, 0.03, 2.7, 0, 0.115, 0);
+    box(shell, 'road', 1.5, 0.03, 9.6, -16.6, 0.115, 4.5);          // jalan akses barat menuju Assembly
+    box(shell, 'road', 25.6, 0.03, 1.4, -4.8, 0.115, 8.95);         // jalan depan Assembly
+    for (var rl = 0; rl < 12; rl++) box(shell, 'roadLine', 0.7, 0.012, 0.07, -16.2 + rl * 2.0, 0.135, 8.95);
     box(shell, 'curb', 33.4, 0.05, 0.1, 0, 0.125, -1.4);
     box(shell, 'curb', 33.4, 0.05, 0.1, 0, 0.125, 1.4);
     var li;
@@ -402,6 +419,7 @@ export function createManufactureScene(THREE, container, gameState) {
     function dimsFor(def, L) {
         if (def.kind === 'fab') return { bw: 6.6 + 1.3 * L, bd: 3.0, bh: 1.45 + 0.3 * L };
         if (def.kind === 'hub') return { bw: 4.6, bd: 2.4, bh: 1.5 };
+        if (def.kind === 'assembly') return { bw: 7 + 1.9 * L, bd: 3.6 + 0.4 * L, bh: 1.3 + 0.2 * L };
         return { bw: 3.4 + 0.38 * L, bd: 2.3 + 0.2 * L, bh: 1.0 + 0.34 * L };
     }
     function hall(f, id, dm, zc, noWin) {
@@ -660,11 +678,151 @@ export function createManufactureScene(THREE, container, gameState) {
         beacon(f, -dm.bw / 2 + 0.3, dm.bh + 0.3, ZC - 0.1, tk, st.producing || on, 'hub');
     };
 
+    // ---------- Pabrik perakitan (Assembly): hall bergerigi + bay terbuka (potongan) + kantor + dermaga + parkir ----------
+    var ASM_ZC = -1.2;
+    TYPE.assembly = function (f, def, L, st, tk, on) {
+        var dm = dimsFor(def, L), bw = dm.bw, bd = dm.bd, bh = dm.bh, zc = ASM_ZC, i, k, t;
+        var asm = st.asm || {}, act = !!asm.operating, total = asm.total || 0, autoLv = Math.max(0, L - 1);
+        var xL = -bw / 2, xR = bw / 2, zF = zc + bd / 2, zB = zc - bd / 2;
+        var bayX0 = xL + bw * 0.38, bayW = bw * 0.34, bayX1 = bayX0 + bayW, bayCx = bayX0 + bayW / 2;
+        // aspal halaman depan
+        var apZ0 = zF + 0.05, apZ1 = 4.3;
+        box(f, 'asphalt', def.w - 0.8, 0.03, apZ1 - apZ0, 0, 0.015, (apZ0 + apZ1) / 2);
+        // lantai bay (potongan atap) + jalur pejalan
+        box(f, 'dark', bayW, 0.04, bd - 0.12, bayCx, 0.03, zc);
+        box(f, 'safety', bayW - 0.1, 0.012, 0.05, bayCx, 0.055, zF - 0.16);
+        // dinding belakang & samping
+        box(f, 'wall', bw, bh, 0.12, 0, bh / 2, zB + 0.06);
+        box(f, 'wall', 0.12, bh, bd, xL + 0.06, bh / 2, zc);
+        box(f, 'wall', 0.12, bh, bd, xR - 0.06, bh / 2, zc);
+        // seksi beratap A (kiri) dan B (kanan) + dinding sekat di tepi bay
+        var secs = [{ x0: xL, x1: bayX0 }, { x0: bayX1, x1: xR }];
+        secs.forEach(function (S, si) {
+            var sw = S.x1 - S.x0, cx = (S.x0 + S.x1) / 2;
+            box(f, 'wall', sw, bh, 0.12, cx, bh / 2, zF - 0.06);                                        // dinding depan
+            for (var r = 0; r < Math.floor(sw / 0.8); r++) box(f, 'wallDk', 0.05, bh * 0.98, 0.04, S.x0 + 0.4 + r * 0.8, bh / 2, zF + 0.015);   // rusuk panel
+            box(f, ACC.assembly, sw + 0.03, 0.14, 0.06, cx, bh - 0.12, zF + 0.02);                      // pita aksen
+            box(f, 'win', sw * 0.8, 0.2, 0.05, cx, bh * 0.52, zF + 0.03);                              // pita jendela
+            box(f, 'wallDk', 0.12, bh, bd, si === 0 ? S.x1 - 0.06 : S.x0 + 0.06, bh / 2, zc);           // sekat bay
+            var n = Math.max(1, Math.floor(sw / 1.5)), tw = sw / n;                                      // atap gergaji
+            for (var q = 0; q < n; q++) {
+                var tx = S.x0 + (q + 0.5) * tw;
+                var pnl = box(f, 'roof', tw * 1.04, 0.06, bd + 0.12, tx, bh + 0.2, zc); pnl.rotation.z = -0.26;
+                box(f, 'win', 0.05, 0.3, bd * 0.94, tx - tw / 2 + 0.03, bh + 0.15, zc);
+            }
+        });
+        // pintu rolling di dinding depan seksi A
+        for (i = 0; i < 2; i++) {
+            var dx = xL + 1.2 + i * 1.6;
+            box(f, 'steel', 1.0, 0.8, 0.05, dx, 0.4, zF + 0.04);
+            for (var sl = 0; sl < 4; sl++) box(f, 'metal', 0.98, 0.02, 0.06, dx, 0.18 + sl * 0.19, zF + 0.06);
+        }
+        // rangka atap terbuka di atas bay
+        for (i = 0; i < 4; i++) box(f, 'steel', 0.07, 0.07, bd + 0.1, bayX0 + 0.3 + i * ((bayW - 0.6) / 3), bh + 0.03, zc);
+        box(f, 'steel', bayW, 0.06, 0.06, bayCx, bh + 0.03, zF - 0.05);
+        box(f, 'steel', bayW, 0.06, 0.06, bayCx, bh + 0.03, zB + 0.05);
+        // lampu gantung di bay
+        for (i = 0; i < 4; i++) box(f, act ? 'lamp' : 'metal', 0.3, 0.04, 0.12, bayX0 + 0.5 + i * ((bayW - 1.0) / 3), bh - 0.12, zc);
+        // lini perakitan: konveyor + stasiun + pekerja + robot
+        var nl = clamp(L, 1, 4), laneGap = nl > 1 ? (bd - 1.5) / (nl - 1) : 0;
+        var figTotal = clamp(Math.round(Math.sqrt(total) * 1.3), 0, 28), placed = 0;
+        var palette = ['vest', 'vest', 'coat', 'techc'];
+        for (k = 0; k < nl; k++) {
+            var zl = nl === 1 ? zc : zB + 0.75 + k * laneGap;
+            conveyor(f, bayCx, zl, bayW - 0.3, tk, act, 'assembly');
+            box(f, 'red', 0.2, 0.18, 0.2, bayX1 - 0.25, 0.09, zl + 0.34);                               // bin cacat
+            box(f, 'win', 0.26, 0.2, 0.05, bayX0 + 0.25, 0.4, zl - 0.34);                               // layar QC
+            var slots = Math.max(3, Math.floor((bayW - 0.8) / 0.62));
+            for (i = 0; i < slots && placed < figTotal; i++) {
+                var side = i % 2 ? 1 : -1, px = bayX0 + 0.45 + i * ((bayW - 0.9) / Math.max(1, slots - 1));
+                box(f, 'metal', 0.3, 0.16, 0.22, px, 0.08, zl + side * 0.36);                           // meja kerja
+                var mat = palette[(placed + k) % palette.length];
+                var body = cyl(f, mat, 0.07, 0.22, px, 0.26, zl + side * 0.42);
+                sph(f, 'skin', 0.055, px, 0.43, zl + side * 0.42);
+                if (act) (function (b, ph) { tk.push(function (sec) { b.position.y = 0.26 + (ambient ? Math.abs(Math.sin(sec * 2.2 + ph)) * 0.012 : 0); }); })(body, placed);
+                placed++;
+            }
+            if (autoLv >= 2) {                                                                          // lengan robot
+                for (t = 0; t < 2; t++) {
+                    var rx = bayX0 + bayW * (0.3 + t * 0.4), arm = new THREE.Group();
+                    arm.position.set(rx, 0.28, zl - 0.36); f.add(arm);
+                    cyl(f, 'steel', 0.09, 0.28, rx, 0.14, zl - 0.36);
+                    box(arm, 'amber', 0.07, 0.3, 0.07, 0, 0.15, 0); box(arm, 'amber', 0.07, 0.07, 0.3, 0, 0.3, 0.14);
+                    sph(f, 'ledG', 0.03, rx, 0.3, zl - 0.36);
+                    (function (a, ph) { tk.push(function (sec) { a.rotation.y = act && ambient ? Math.sin(sec * 1.3 + ph) * 0.9 : 0.3; }); })(arm, k * 1.7 + t);
+                }
+            }
+        }
+        if (autoLv >= 3) {                                                                              // AGV pengantar komponen
+            for (i = 0; i < 2; i++) {
+                var agv = new THREE.Group(); agv.position.set(bayX0 + 0.2 + i * (bayW - 0.4), 0.09, zc); f.add(agv);
+                box(agv, 'safety', 0.24, 0.1, 0.3, 0, 0, 0); box(agv, ACC.assembly, 0.16, 0.08, 0.2, 0, 0.09, 0); sph(agv, 'ledA', 0.025, 0.1, 0.07, 0.13);
+                (function (g, ph) { tk.push(function (sec) { g.position.z = zc + (act && ambient ? Math.sin(sec * 0.6 + ph) * (bd / 2 - 0.4) : 0); }); })(agv, i * 3.14);
+            }
+        }
+        // peralatan atap: AC, cerobong, panel surya
+        box(f, 'steel', 0.7, 0.28, 0.5, xL + 1.0, bh + 0.5, zc - 0.7); box(f, 'steel', 0.6, 0.24, 0.45, xL + 2.2, bh + 0.48, zc + 0.6);
+        cyl(f, 'metal', 0.1, 0.8, xL + 0.5, bh + 0.65, zB + 0.5); smoke(f, xL + 0.5, bh + 1.1, zB + 0.5, tk, on);
+        if (L >= 3) for (i = 0; i < 6; i++) { var sp = box(f, 'panel', 0.5, 0.03, 0.34, bayX1 + 0.5 + (i % 3) * 0.6, bh + 0.52 + Math.floor(i / 3) * 0.04, zc - 0.5 + Math.floor(i / 3) * 0.7); sp.rotation.x = -0.35; }
+        beacon(f, xR - 0.3, bh + 0.5, zB + 0.4, tk, act, 'assembly');
+        // dermaga muat (sisi timur) + truk + forklift
+        for (i = 0; i < 3; i++) {
+            var dz = zc + (i - 1) * 1.1;
+            box(f, 'dark', 0.05, 0.62, 0.72, xR + 0.03, 0.31, dz); box(f, 'steel', 0.07, 0.04, 0.78, xR + 0.04, 0.66, dz);
+            box(f, 'safety', 0.12, 0.1, 0.5, xR + 0.1, 0.06, dz);
+        }
+        box(f, 'roof', 1.2, 0.06, 3.6, xR + 0.62, 0.95, zc); [-1.7, 1.7].forEach(function (zz) { box(f, 'steel', 0.06, 0.95, 0.06, xR + 1.2, 0.48, zc + zz); });
+        var nTruck = act && total > 0 ? (L >= 3 ? 2 : 1) : 0;
+        for (i = 0; i < nTruck; i++) {
+            var tz = zc + (i === 0 ? -1.1 : 1.1), tg = new THREE.Group(); tg.position.set(xR + 0.1, 0, tz); f.add(tg);
+            box(tg, 'white', 1.7, 0.6, 0.66, 1.0, 0.45, 0); box(tg, ACC.assembly, 1.7, 0.12, 0.68, 1.0, 0.3, 0);
+            box(tg, 'white', 0.42, 0.45, 0.6, 2.05, 0.36, 0); box(tg, 'glass', 0.04, 0.2, 0.5, 2.27, 0.42, 0);
+            [0.3, 1.5, 1.95].forEach(function (wx) { [-0.34, 0.34].forEach(function (wz) { cyl(tg, 'dark', 0.1, 0.1, wx, 0.1, wz).rotation.x = Math.PI / 2; }); });
+        }
+        var nCrate = clamp(Math.floor(Math.log10(Math.max(1, st.stock || 0)) * 1.3), 0, 6);
+        for (i = 0; i < nCrate; i++) box(f, i % 2 ? 'crate' : ACC.assembly, 0.34, 0.3, 0.34, xR + 0.5 + (i % 3) * 0.4, 0.17 + Math.floor(i / 3) * 0.3, zc + 2.15);
+        var fk = new THREE.Group(); fk.position.set(xR + 0.6, 0.12, zc); f.add(fk);
+        box(fk, 'safety', 0.3, 0.16, 0.2, 0, 0.1, 0); box(fk, 'metal', 0.14, 0.2, 0.14, -0.06, 0.28, 0); box(fk, 'dark', 0.24, 0.03, 0.12, 0.26, 0.06, 0);
+        if (act) tk.push(function (sec) { fk.position.z = zc + (ambient ? Math.sin(sec * 0.7) * 1.4 : 0); });
+        // kantor administrasi di barat hall
+        var ow = 3.2, ox = xL - 0.12 - ow / 2, fl = L >= 3 ? 3 : (L >= 2 ? 2 : 1), oh = 0.7 * fl + 0.15, od = bd + 0.5, oz = zc + 0.1;
+        box(f, 'white', ow, oh, od, ox, oh / 2, oz); box(f, 'roof', ow + 0.12, 0.08, od + 0.12, ox, oh + 0.04, oz);
+        box(f, 'glass', ow * 0.92, oh * 0.8, 0.05, ox, oh * 0.5, oz + od / 2 + 0.03);
+        box(f, 'glass', 0.05, oh * 0.8, od * 0.8, ox + ow / 2 + 0.03, oh * 0.5, oz);
+        for (i = 1; i < fl; i++) box(f, 'wallDk', ow * 0.94, 0.04, 0.07, ox, 0.7 * i + 0.08, oz + od / 2 + 0.05);
+        box(f, ACC.assembly, ow + 0.04, 0.14, od + 0.04, ox, oh - 0.06, oz);
+        box(f, 'roof', 0.9, 0.05, 0.5, ox - 0.5, 0.52, oz + od / 2 + 0.28); [-0.9, -0.1].forEach(function (cx) { box(f, 'steel', 0.04, 0.5, 0.04, ox + cx - 0.05, 0.26, oz + od / 2 + 0.5); });
+        box(f, 'dark', 0.5, 0.42, 0.05, ox - 0.5, 0.21, oz + od / 2 + 0.04);
+        box(f, 'metal', 0.04, oh + 1.1, 0.04, ox + ow / 2 - 0.25, (oh + 1.1) / 2, oz + od / 2 - 0.25);       // tiang bendera
+        box(f, ACC.assembly, 0.34, 0.2, 0.03, ox + ow / 2 - 0.08, oh + 0.95, oz + od / 2 - 0.25);
+        // pos jaga + palang
+        var gx = -def.w / 2 + 1.2;
+        box(f, 'wall', 0.8, 0.62, 0.7, gx, 0.31, 3.7); box(f, 'roof', 0.92, 0.06, 0.82, gx, 0.65, 3.7); box(f, 'win', 0.5, 0.18, 0.04, gx, 0.4, 3.7 + 0.37);
+        box(f, 'metal', 0.06, 0.5, 0.06, gx + 0.7, 0.25, 3.7);
+        for (i = 0; i < 4; i++) box(f, i % 2 ? 'white' : 'red', 0.3, 0.07, 0.06, gx + 0.85 + i * 0.3, 0.52, 3.7);
+        // pagar depan (celah di gerbang)
+        var fx0 = gx + 2.4, fx1 = def.w / 2 - 0.5;
+        box(f, 'fence', fx1 - fx0, 0.03, 0.03, (fx0 + fx1) / 2, 0.4, 4.4); box(f, 'fence', fx1 - fx0, 0.03, 0.03, (fx0 + fx1) / 2, 0.2, 4.4);
+        for (var fp = fx0; fp <= fx1; fp += 1.3) box(f, 'fence', 0.04, 0.44, 0.04, fp, 0.22, 4.4);
+        // parkir karyawan (jumlah mobil mengikuti headcount) + bus antar-jemput
+        for (i = 0; i < 9; i++) box(f, 'stripe', 0.03, 0.01, 0.62, -8.0 + i * 0.78, 0.035, 3.2);
+        var nCars = clamp(Math.round(total / 14), 2, 14), carMats = ['carA', 'carB', 'carC', 'carD'];
+        for (i = 0; i < nCars; i++) {
+            var cxp = -7.6 + (i % 8) * 0.78, czp = i < 8 ? 3.25 : 2.55, cm = carMats[i % 4];
+            box(f, cm, 0.55, 0.14, 0.3, cxp, 0.1, czp); box(f, 'win', 0.28, 0.1, 0.26, cxp - 0.02, 0.22, czp);
+        }
+        if (L >= 2) { box(f, 'amber', 1.5, 0.34, 0.5, 0.9, 0.2, 3.3); box(f, 'glass', 1.3, 0.12, 0.52, 0.9, 0.27, 3.3); [-0.45, 0.45].forEach(function (bx) { cyl(f, 'dark', 0.08, 0.08, 0.9 + bx, 0.07, 3.55).rotation.x = Math.PI / 2; }); }
+        // gardu listrik & tangki air di belakang
+        box(f, 'steel', 0.7, 0.4, 0.5, xR - 1.0, 0.2, zB - 0.5); box(f, 'safety', 0.9, 0.04, 0.7, xR - 1.0, 0.05, zB - 0.5);
+        cyl(f, 'metal', 0.38, 0.9, xR - 2.2, 0.45, zB - 0.5);
+    };
+
     // ---------- konstruksi (perancah + crane + bangunan tumbuh + bar progres) ----------
     function construction(f, def, st, tk) {
         var b = st.building, L = Math.max(1, b.target), dm = dimsFor(def, L);
         var bw = dm.bw, bd = dm.bd, bh = dm.bh, zc = ZC;
         if (def.kind === 'fab') zc = ZC - 0.1;
+        if (def.kind === 'assembly') zc = ASM_ZC;
         var h = Math.max(0.12, b.pct * bh);
         if (b.isBuild) box(f, 'wall', bw * 0.94, h, bd * 0.94, 0, h / 2, zc);                    // bangunan tumbuh
         else {                                                         // upgrade: lantai tambahan tumbuh di sebelah bangunan lama
@@ -697,7 +855,7 @@ export function createManufactureScene(THREE, container, gameState) {
     }
 
     function ghostBuilding(f, def, locked) {
-        var dm = dimsFor(def, 2), zc = def.kind === 'fab' ? ZC - 0.1 : ZC;
+        var dm = dimsFor(def, 2), zc = def.kind === 'fab' ? ZC - 0.1 : (def.kind === 'assembly' ? ASM_ZC : ZC);
         var gm = locked ? M.lockGhost : GHOST[def.id], em = locked ? M.lockEdge : EDGE[def.id];
         var bw = def.kind === 'fab' ? 9.0 : dm.bw, bh = dm.bh;
         box(f, gm, bw, bh, dm.bd, 0, bh / 2, zc);
@@ -763,9 +921,9 @@ export function createManufactureScene(THREE, container, gameState) {
                 var key = def.kind === 'plant' ? def.id : def.kind;
                 TYPE[key](f, def, st.level, st, tk, on);
                 var dm = dimsFor(def, st.level);
-                top = dm.bh + (key === 'display' ? 1.9 : key === 'fab' ? 2.8 : key === 'soc' ? 1.9 : key === 'ram' ? 1.6 : key === 'hub' ? 1.4 : 1.2);
+                top = dm.bh + (key === 'display' ? 1.9 : key === 'fab' ? 2.8 : key === 'soc' ? 1.9 : key === 'ram' ? 1.6 : key === 'hub' ? 1.4 : key === 'assembly' ? 1.7 : 1.2);
                 if (def.kind === 'plant') levelPips(f, def.id, st.level, 4);
-                if (def.kind !== 'hub') crateStacks(f, st.stock, -2.6, 2.1, def.id);
+                if (def.kind !== 'hub' && def.kind !== 'assembly') crateStacks(f, st.stock, -2.6, 2.1, def.id);
             } else {
                 top = ghostBuilding(f, def, st.status === 'locked').top;
             }
@@ -1230,7 +1388,7 @@ export function createManufactureScene(THREE, container, gameState) {
     controls = createCampusControls(canvas, {
         unitsPerPixel: function (zoom) { return (BASE_VIEW / zoom) / Math.max(1, container.clientHeight); },
         minZoom: 0.2, maxZoom: 3,
-        bounds: { minX: -20, maxX: LINK.OFFSET - 12, minZ: -20, maxZ: 20 },   // geser ke timur sampai jembatan/Pulau Kampus
+        bounds: { minX: -20, maxX: LINK.OFFSET - 12, minZ: -20, maxZ: 27 },   // geser ke timur sampai jembatan/Pulau Kampus
         onChange: function () { applyCamera(); requestRender(); },
         onTap: handleTap
     });

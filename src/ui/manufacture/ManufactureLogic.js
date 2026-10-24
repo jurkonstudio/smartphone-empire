@@ -16,6 +16,8 @@ import { PLANT_TYPES, PLANT_MIN_ORDER, INFRA_TAX_RATE_MONTHLY, getPlantTypeById,
 import { plantName, plantDesc, plantLevelName } from '../../data/i18n/research-localize.js';
 import { fmtMoney, clamp } from '../office/OfficeConfig.js';
 import { COMPONENTS } from '../../data/components.data.js';
+import { ASSEMBLY_UNLOCK_YEAR, ASSEMBLY_OPERATE_YEAR, ASSEMBLY_ROLES, getAssemblyLevel, getAssemblyCrewTotal } from '../../data/assembly.data.js';
+import { at as asmText, assemblyLevelName } from '../panels/AssemblyPanel.js';
 
 // ============================================================
 // DENAH — pusat petak (x, z), ukuran (w x d). Kamera isometrik melihat dari +x,+z.
@@ -31,12 +33,14 @@ export var PLOTS = [
     { id: 'display', kind: 'plant', x: -4,  z: 5.2,  w: 7,  d: 6,   accent: 0x00b8d9 },
     { id: 'camera',  kind: 'plant', x: 4,   z: 5.2,  w: 7,  d: 6,   accent: 0xef5a8b },
     { id: 'battery', kind: 'plant', x: -12, z: 5.2,  w: 7,  d: 6,   accent: 0x43c07a },
-    { id: 'hub',     kind: 'hub',   x: 12,  z: 5.2,  w: 7,  d: 6,   accent: 0x3b82f6 }
+    { id: 'hub',     kind: 'hub',   x: 12,  z: 5.2,  w: 7,  d: 6,   accent: 0x3b82f6 },
+    // Pabrik perakitan: petak terbesar, di daratan tambahan sisi selatan.
+    { id: 'assembly', kind: 'assembly', x: -4.5, z: 14.0, w: 22, d: 9.0, accent: 0xff7a3d }
 ];
 export var PLOT_BY_ID = {};
 PLOTS.forEach(function (p) { PLOT_BY_ID[p.id] = p; });
 // Urutan chip di bilah atas.
-export var CHIP_ORDER = ['fab', 'soc', 'ram', 'display', 'camera', 'battery', 'hub'];
+export var CHIP_ORDER = ['fab', 'soc', 'ram', 'display', 'camera', 'battery', 'assembly', 'hub'];
 // Pipa wafer: [dari, ke]. Aktif (mengalir) bila kedua pabrik berdiri.
 export var PIPES = [['fab', 'soc'], ['fab', 'ram'], ['fab', 'display']];
 
@@ -54,7 +58,7 @@ var TX = {
         fbBody: 'WebGL atau Three.js gagal dimuat. Periksa koneksi internet lalu buka ulang tab Manufaktur.',
         hint: 'Geser untuk menjelajah · cubit untuk zoom · ketuk pabrik',
         all: 'Semua', close: 'Tutup', expand: 'Buka kartu', collapse: 'Ciutkan kartu',
-        'room.fab': 'Fab Chip', 'room.hub': 'Pusat Logistik',
+        'room.fab': 'Fab Chip', 'room.hub': 'Pusat Logistik', 'room.assembly': 'Assembly',
         locked: 'Terkunci', empty: 'Siap dibangun', lvl: 'Level {n}', building: 'Dibangun {n}%', upgrading: 'Upgrade {n}%',
         'lock.year': 'Tersedia mulai tahun {y}.',
         'lock.fab': 'Butuh Fab Chip yang sudah berdiri.',
@@ -88,7 +92,11 @@ var TX = {
         'fxl.batteryLife': 'Daya tahan baterai', 'fxl.displayQuality': 'Kualitas layar', 'fxl.performance': 'Performa',
         'fxl.cameraQuality': 'Kualitas kamera', 'fxl.usability': 'Kelancaran',
         fabName: 'Fab Chip',
-        fabDesc: 'Fondasi manufaktur: wafer chip sendiri. Pabrik SoC, RAM, dan Layar butuh Fab yang sudah berdiri.'
+        fabDesc: 'Fondasi manufaktur: wafer chip sendiri. Pabrik SoC, RAM, dan Layar butuh Fab yang sudah berdiri.',
+        asmDesc: 'Lini perakitan akhir ponsel. Pekerja dikelola per kelompok peran. Izin operasi mulai {y}.',
+        'go.assembly': 'Buka Panel Assembly', 'alert.permit': 'Menunggu izin operasi', 'alert.staff': 'Kekurangan pekerja',
+        asmCrew: 'Pekerja {n} · staf {p}%', asmRun: 'Kapasitas {c}/bulan · utilisasi {u}%', asmCost: 'Gaji + perawatan {v}/bulan',
+        asmWait: 'Sudah berdiri. Izin operasi keluar tahun {y}.', 'lock.asm': 'Tersedia mulai tahun {y}.', 'fx.asm': 'Assembly siap!'
     },
     en: {
         aria: 'Manufacturing 3D map. Drag to explore, pinch to zoom, tap a factory for details.',
@@ -97,7 +105,7 @@ var TX = {
         fbBody: 'WebGL or Three.js failed to load. Check your connection and reopen the Manufacture tab.',
         hint: 'Drag to explore · pinch to zoom · tap a factory',
         all: 'All', close: 'Close', expand: 'Expand card', collapse: 'Collapse card',
-        'room.fab': 'Chip Fab', 'room.hub': 'Logistics Hub',
+        'room.fab': 'Chip Fab', 'room.hub': 'Logistics Hub', 'room.assembly': 'Assembly',
         locked: 'Locked', empty: 'Ready to build', lvl: 'Level {n}', building: 'Building {n}%', upgrading: 'Upgrade {n}%',
         'lock.year': 'Available from {y}.',
         'lock.fab': 'Requires a built Chip Fab.',
@@ -131,7 +139,11 @@ var TX = {
         'fxl.batteryLife': 'Battery life', 'fxl.displayQuality': 'Display quality', 'fxl.performance': 'Performance',
         'fxl.cameraQuality': 'Camera quality', 'fxl.usability': 'Smoothness',
         fabName: 'Chip Fab',
-        fabDesc: 'The manufacturing foundation: your own chip wafers. SoC, RAM, and Display plants need a built Fab.'
+        fabDesc: 'The manufacturing foundation: your own chip wafers. SoC, RAM, and Display plants need a built Fab.',
+        asmDesc: 'Final phone assembly line. Workers are managed as role groups. Operating permit from {y}.',
+        'go.assembly': 'Open Assembly panel', 'alert.permit': 'Awaiting operating permit', 'alert.staff': 'Understaffed',
+        asmCrew: 'Workers {n} · staffing {p}%', asmRun: 'Capacity {c}/month · utilization {u}%', asmCost: 'Wages + upkeep {v}/month',
+        asmWait: 'Built. Operating permit arrives in {y}.', 'lock.asm': 'Available from {y}.', 'fx.asm': 'Assembly ready!'
     }
 };
 function dict() {
@@ -151,6 +163,7 @@ function num(n) { return Math.round(n || 0).toLocaleString('en-US'); }
 export function plotTitle(id) {
     if (id === 'fab') return ms('room.fab');
     if (id === 'hub') return ms('room.hub');
+    if (id === 'assembly') return ms('room.assembly');
     var pt = getPlantTypeById(id);
     return pt ? plantName(pt) : String(id);
 }
@@ -201,6 +214,7 @@ function prodOf(p, nameKey) {
 // Syarat membuka pabrik. -> { ok } atau { ok:false, key, vars }
 export function unlockOf(id, d) {
     if (id === 'fab') return fabResearched(d) ? { ok: true } : { ok: false, key: 'lock.research' };
+    if (id === 'assembly') return ((d && d.time && d.time.currentYear) || 0) >= ASSEMBLY_UNLOCK_YEAR ? { ok: true } : { ok: false, key: 'lock.asm', vars: { y: ASSEMBLY_UNLOCK_YEAR } };
     var pt = getPlantTypeById(id);
     if (!pt) return { ok: false, key: 'lock.year', vars: { y: '?' } };
     var year = (d && d.time && d.time.currentYear) || 0;
@@ -226,6 +240,7 @@ export function plotState(id, d) {
         st.alert = unpaid > 0 ? { lvl: 'bad', key: 'alert.unpaid', vars: { v: fmtMoney(unpaid) } } : null;
         return st;
     }
+    if (def.kind === 'assembly') return assemblyState(st, d);
     var raw = id === 'fab' ? fabRaw(d) : plantRaw(d, id);
     st.unlock = unlockOf(id, d);
     st.building = progressOf(raw.upgrade);
@@ -251,6 +266,29 @@ export function plotState(id, d) {
     return st;
 }
 
+function sysAsm() { var g = window.__game; return (g && g.assembly) || null; }
+function assemblyState(st, d) {
+    var raw = d.assembly || {}, sys = sysAsm();
+    st.unlock = unlockOf('assembly', d);
+    st.building = progressOf(raw.upgrade);
+    var snap = null;
+    if (sys) { try { snap = sys.getSnapshot(); } catch (e) {} }
+    st.asm = snap;
+    if (raw.built && raw.level) { st.status = 'built'; st.level = raw.level; }
+    else if (st.building) st.status = 'empty';
+    else st.status = st.unlock.ok ? 'empty' : 'locked';
+    st.stock = snap ? snap.pending : 0;
+    var total = snap ? snap.total : 0, operating = !!(snap && snap.operating);
+    st.producing = (operating && snap.pending > 0) ? { pct: clamp(snap.utilization, 0, 1), units: snap.pending, name: '' } : null;
+    st.sigExtra = (operating ? 'o' : 'w') + Math.floor(Math.log10(Math.max(1, total)) * 3) + (snap && snap.overtime ? 'x' : '');
+    if (st.status === 'built' && snap) {
+        if (snap.unpaid > 0) st.alert = { lvl: 'bad', key: 'alert.unpaid', vars: { v: fmtMoney(snap.unpaid) } };
+        else if (!operating) st.alert = { lvl: 'warn', key: 'alert.permit', vars: {} };
+        else if (snap.staffing.operator < 0.5) st.alert = { lvl: 'warn', key: 'alert.staff', vars: {} };
+    }
+    return st;
+}
+
 export function allStates(d) {
     var out = {};
     PLOTS.forEach(function (p) { out[p.id] = plotState(p.id, d); });
@@ -262,7 +300,7 @@ export function plotSig(st, d) {
     var b = st.building ? (st.building.isBuild ? 'B' : 'U') + st.building.target + ':' + Math.floor(st.building.pct * 25) : '';
     var pr = st.producing ? 'P' + Math.floor(st.producing.pct * 10) : '';
     var stockBucket = Math.floor(Math.log10(Math.max(1, st.stock)) * 2);
-    return [st.status, st.level, b, pr, stockBucket, st.alert ? st.alert.lvl : '', st.unlock && st.unlock.ok ? 1 : 0].join('|');
+    return [st.status, st.level, b, pr, stockBucket, st.alert ? st.alert.lvl : '', st.unlock && st.unlock.ok ? 1 : 0, st.sigExtra || ''].join('|');
 }
 
 // ============================================================
@@ -282,6 +320,7 @@ export function describePlot(id, d) {
     var info = { title: plotTitle(id), badge: '', lines: [], actions: [], go: null, go2: null, alert: st.alert };
     if (def.kind === 'hub') return describeHub(info, st, d);
     if (def.kind === 'fab') return describeFab(info, st, d);
+    if (def.kind === 'assembly') return describeAssembly(info, st, d);
     return describePlant(info, st, d, id);
 }
 
@@ -408,6 +447,48 @@ function describePlant(info, st, d, id) {
     return info;
 }
 
+function describeAssembly(info, st, d) {
+    var raw = d.assembly || {}, sys = sysAsm(), s = st.asm;
+    info.badge = statusBadge(st);
+    info.lines.push(ms('asmDesc', { y: ASSEMBLY_OPERATE_YEAR }));
+    if (st.status === 'built' && s) {
+        info.lines.push(ms('level', { n: s.level, name: assemblyLevelName(s.level) }));
+        if (s.operating) {
+            info.lines.push(ms('asmRun', { c: num(s.capacity), u: Math.round(s.utilization * 100) }));
+            info.lines.push(ms('asmCrew', { n: num(s.total), p: Math.round(s.staffing.operator * 100) }));
+        } else {
+            info.lines.push(ms('asmWait', { y: ASSEMBLY_OPERATE_YEAR }));
+        }
+        info.lines.push(ms('asmCost', { v: fmtMoney(s.wages + s.upkeep) }));
+        if (s.unpaid > 0) info.lines.push(ms('unpaid', { v: fmtMoney(s.unpaid) }));
+    } else if (st.status === 'locked') {
+        info.lines.push(ms(st.unlock.key, st.unlock.vars));
+    } else if (!st.building) {
+        var l1 = getAssemblyLevel(1);
+        if (l1) info.lines.push(ms('cost', { v: fmtMoney(l1.cost), n: l1.durationDays }));
+    }
+    if (st.building) {
+        info.lines.push(ms(st.building.isBuild ? 'constructing' : 'upgrading2', { p: Math.round(st.building.pct * 100), d: st.building.daysLeft }));
+        if (sys) info.actions.push({ id: 'asm-cancel', label: ms('act.cancel'), note: ms('note.refund', { v: fmtMoney(Math.floor((raw.upgrade.cost || 0) * 0.4)) }) });
+    } else if (sys) {
+        if (!raw.built && st.unlock.ok) {
+            var tb = getAssemblyLevel(1), poor = !canPay(tb.cost);
+            info.actions.push({ id: 'asm-build', label: ms('act.build', { v: fmtMoney(tb.cost) }), disabled: poor,
+                note: poor ? ms('note.poor', { v: fmtMoney(tb.cost - cashOf(d)) }) : ms('note.days', { n: tb.durationDays }) });
+        } else if (raw.built) {
+            var nx = getAssemblyLevel((raw.level || 1) + 1);
+            if (nx) {
+                var poorU = !canPay(nx.cost);
+                info.lines.push(ms('next', { name: assemblyLevelName(nx.level), v: fmtMoney(nx.cost), n: nx.durationDays }));
+                info.actions.push({ id: 'asm-upgrade', label: ms('act.upgrade', { name: assemblyLevelName(nx.level), v: fmtMoney(nx.cost) }), disabled: poorU,
+                    note: poorU ? ms('note.poor', { v: fmtMoney(nx.cost - cashOf(d)) }) : ms('note.days', { n: nx.durationDays }) });
+            } else info.lines.push(ms('maxed'));
+        }
+    }
+    info.go = { nav: 'research', subtab: 'manufaktur', label: ms('go.assembly') };
+    return info;
+}
+
 function describeHub(info, st, d) {
     var cp = d.componentPlants || {}, sys = sysPlants();
     var upkeep = 0, unpaid = 0, built = 0;
@@ -447,6 +528,9 @@ export function runAction(a) {
         case 'plant-cancel-up': return pl ? pl.cancelUpgrade(a.typeId) : { ok: false };
         case 'plant-order': return pl ? pl.orderProduction(a.typeId, a.compId, a.qty) : { ok: false };
         case 'plant-cancel-prod': return pl ? pl.cancelProduction(a.typeId) : { ok: false };
+        case 'asm-build': return g.assembly ? g.assembly.build() : { ok: false };
+        case 'asm-upgrade': return g.assembly ? g.assembly.upgrade() : { ok: false };
+        case 'asm-cancel': return g.assembly ? g.assembly.cancelUpgrade() : { ok: false };
     }
     return { ok: false, reason: '' };
 }
@@ -456,6 +540,8 @@ export var FX_EVENTS = {
     'fab:built':                 function () { return { plot: 'fab', kind: 'gold', key: 'fx.built' }; },
     'fab:upgraded':              function () { return { plot: 'fab', kind: 'gold', key: 'fx.upgraded' }; },
     'fab:production-completed':  function () { return { plot: 'fab', kind: 'green', key: 'fx.produced' }; },
+    'assembly:built':            function () { return { plot: 'assembly', kind: 'gold', key: 'fx.built' }; },
+    'assembly:upgraded':         function () { return { plot: 'assembly', kind: 'gold', key: 'fx.upgraded' }; },
     'plant:built':               function (p) { return p && p.typeId ? { plot: p.typeId, kind: 'gold', key: 'fx.built' } : null; },
     'plant:upgraded':            function (p) { return p && p.typeId ? { plot: p.typeId, kind: 'gold', key: 'fx.upgraded' } : null; },
     'plant:production-completed': function (p) { return p && p.typeId ? { plot: p.typeId, kind: 'green', key: 'fx.produced' } : null; }
