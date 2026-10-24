@@ -893,6 +893,48 @@ export const COMPONENTS = [
       costPerUnit: 4, stats: { usability: 7 },
       realReference: 'Standar industri (2005)', milestone: false, requiresResearch: 'stor_microsd' },
 
+    { id: 'stor_microsdhc_4g', category: 'storage', tier: 2, minYear: 2007,
+      name: 'microSDHC 4GB', icon: 'disc',
+      description: 'Kartu microSDHC untuk musik, foto, dan video dalam jumlah besar.',
+      costPerUnit: 5, stats: { usability: 8 },
+      realReference: 'Standar industri (2007)', milestone: false, requiresResearch: 'stor_microsdhc' },
+
+    { id: 'stor_flash_16g', category: 'storage', tier: 3, minYear: 2010,
+      name: 'Flash Internal 16GB', icon: 'disc',
+      description: 'Penyimpanan flash tertanam sehingga ruang tersedia tanpa kartu.',
+      costPerUnit: 7, stats: { usability: 9 },
+      realReference: 'Standar industri (2010)', milestone: false, requiresResearch: 'stor_flash16' },
+
+    { id: 'stor_emmc_64g', category: 'storage', tier: 3, minYear: 2013,
+      name: 'eMMC 64GB', icon: 'disc',
+      description: 'Penyimpanan eMMC cepat untuk aplikasi dan video HD.',
+      costPerUnit: 10, stats: { usability: 10 },
+      realReference: 'Standar industri (2013)', milestone: false, requiresResearch: 'stor_emmc64' },
+
+    { id: 'stor_ufs_128g', category: 'storage', tier: 4, minYear: 2016,
+      name: 'UFS 2.1 128GB', icon: 'disc',
+      description: 'Penyimpanan UFS dengan baca-tulis jauh lebih cepat dari eMMC.',
+      costPerUnit: 14, stats: { usability: 11, performance: 1 },
+      realReference: 'Standar industri (2016)', milestone: false, requiresResearch: 'stor_ufs21' },
+
+    { id: 'stor_ufs_256g', category: 'storage', tier: 4, minYear: 2019,
+      name: 'UFS 3.0 256GB', icon: 'disc',
+      description: 'Kecepatan baca berlipat untuk foto 4K dan game berat.',
+      costPerUnit: 20, stats: { usability: 12, performance: 1 },
+      realReference: 'Standar industri (2019)', milestone: false, requiresResearch: 'stor_ufs30' },
+
+    { id: 'stor_ufs_512g', category: 'storage', tier: 5, minYear: 2022,
+      name: 'UFS 3.1 512GB', icon: 'disc',
+      description: 'Kapasitas setengah terabyte untuk video 8K dan pustaka besar.',
+      costPerUnit: 28, stats: { usability: 13, performance: 2 },
+      realReference: 'Standar industri (2022)', milestone: false, requiresResearch: 'stor_ufs31' },
+
+    { id: 'stor_ufs_1t', category: 'storage', tier: 5, minYear: 2024,
+      name: 'UFS 4.0 1TB', icon: 'disc',
+      description: 'Satu terabyte dengan kecepatan tertinggi untuk beban kerja AI lokal.',
+      costPerUnit: 38, stats: { usability: 14, performance: 2 },
+      realReference: 'Standar industri (2024)', milestone: false, requiresResearch: 'stor_ufs40' },
+
     { id: 'ram_sdram_16', category: 'ram', tier: 1, minYear: 2003,
       name: 'SDRAM 16MB', icon: 'layers',
       description: 'Cukup untuk menu berwarna dan Java ME.',
