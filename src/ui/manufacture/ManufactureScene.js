@@ -32,6 +32,8 @@ import { BASE_VIEW, MAX_DPR, FRAME_MS, MIN_RESIZE_DELTA, NARROW_PX, clamp, tint,
 import { PLOTS, PLOT_BY_ID, CHIP_ORDER, PIPES, plotState, allStates, plotSig, describePlot, plotTitle, runAction, ms,
     ROAD_NODES, ROAD_EDGES, APRON, DOCK, CT_SLOTS, shortestRoute } from './ManufactureLogic.js';
 import { LINK, buildLinkBridge, mfBridgeCfg, buildCampusFar } from '../campus/IslandLink.js';
+import { createSea } from '../campus/SeaWater.js';
+import { islandRadius as campusIslandRadius } from '../campus/CampusBuildings.js';
 import { ASSEMBLY_ROLES } from '../../data/assembly.data.js';
 
 // [terang, gelap]
@@ -283,9 +285,17 @@ export function createManufactureScene(THREE, container, gameState) {
         mesh(shell, G.sph, isleRnd() < 0.5 ? 'leaf' : 'leaf2', 0.5 * s, 0.5 * s, 0.5 * s, x, GY + 0.9 * s, z);
         mesh(shell, G.sph, 'leaf2', 0.32 * s, 0.32 * s, 0.32 * s, x + 0.1 * s, GY + 1.32 * s, z - 0.08 * s);
     }
-    terrain(G.box, 'ocean', 340, 1, 340, 0, GY - 1.0, 0);
-    islandSlab(1.22, GY - 0.47, 0.2, M.shallow);
-    islandSlab(1.115, GY - 0.455, 0.2, M.foam);
+    // Laut hidup (shader): garis air = tepi pasir basah (skala 1.08) pulau Manufaktur + siluet pulau Kampus.
+    // Perairan dangkal, busa, dan ombak digambar shader (SeaWater.js), bukan lempengan statis.
+    var sea = createSea(THREE, {
+        quality: look.tier,
+        palette: { shallow: COLORS.shallow, ocean: COLORS.ocean, foam: COLORS.foam },
+        islands: [
+            { cx: 0, cz: 0, radius: function (th) { return coastR(th) * 1.08; } },
+            { cx: LINK.OFFSET, cz: 0, radius: function (th) { return campusIslandRadius(th, 1.08); } }
+        ]
+    });
+    scene.add(sea.mesh);
     islandSlab(1.08, GY - 0.26, 0.5, M.sandWet);
     islandSlab(1.05, GY - 0.03, 0.7, M.sand);
     islandSlab(1.0, GY, 0.7, [M.ground, M.soil]);
@@ -310,11 +320,6 @@ export function createManufactureScene(THREE, container, gameState) {
     for (di = 0; di < 14; di++) {                                  // batu pantai
         var rth = isleRnd() * Math.PI * 2, rr = coastR(rth) * (0.97 + isleRnd() * 0.07), rs = 0.12 + isleRnd() * isleRnd() * 0.35;
         terrain(G.ico, 'rock', rs * (1 + isleRnd() * 0.5), rs * 0.7, rs * (1 + isleRnd() * 0.5), Math.cos(rth) * rr, GY - 0.25 + rs * 0.2, Math.sin(rth) * rr);
-    }
-    for (di = 0; di < 34; di++) {                                  // riak ombak
-        var wa = isleRnd() * Math.PI * 2, wr = coastR(wa) * (1.25 + isleRnd() * 0.45);
-        var wm = terrain(G.box, 'foam', 0.9 + isleRnd() * 2.2, 0.012, 0.07 + isleRnd() * 0.05, Math.cos(wa) * wr, GY - 0.488, Math.sin(wa) * wr);
-        wm.rotation.y = wa + Math.PI / 2;
     }
 
     // plaza + jalan raya (z = 0) + marka + trotoar
@@ -1457,6 +1462,8 @@ export function createManufactureScene(THREE, container, gameState) {
         M.win.emissive.setHex(dark ? tint(COLORS.win[1], -0.35) : 0x000000);
         M.shade.opacity = dark ? 0.22 : 0.14;
         farCampus.setDark(dark);
+        sea.setTheme(dark);
+        sea.setWeather(weather.getKind(), weather.getSunset());
         M.selRing.color.setHex(accentHex);
         M.lamp.color.setHex(dark ? 0xffe39a : 0xfff1c4);
         lampPosts.forEach(function (l) { var s = dark ? 0.16 : 0.12; l.scale.set(s, s, s); });
@@ -1653,6 +1660,7 @@ export function createManufactureScene(THREE, container, gameState) {
         for (var i = 0; i < animPlots.length; i++) animPlots[i].tick(sec);
         animateShell(sec);
         weather.update(sec, ambient);
+        sea.update(sec, weather.getKind(), weather.getSunset());
         if (fxList.length) updateFx(sec);
         renderer.render(scene, camera);
         watchQuality(now);
@@ -1670,6 +1678,7 @@ export function createManufactureScene(THREE, container, gameState) {
             if (disposed || document.hidden || ctxLost) return;
             animateShell(performance.now() / 1000);
             weather.update(performance.now() / 1000, ambient);
+            sea.setWeather(weather.getKind(), weather.getSunset());
             renderer.render(scene, camera);
         });
     }
@@ -2000,6 +2009,7 @@ export function createManufactureScene(THREE, container, gameState) {
             canvas.removeEventListener('webglcontextlost', onCtxLost);
             canvas.removeEventListener('webglcontextrestored', onCtxRestored);
             controls.dispose();
+            scene.remove(sea.mesh); sea.dispose();
             farCampus.dispose();
             plotList.forEach(function (r) {
                 if (r.label && r.label.material) r.label.material.dispose();
