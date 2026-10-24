@@ -3,7 +3,8 @@
 // Menampilkan kotak-kotak panel masa depan yang masih terkunci.
 // Datanya ada di src/data/future-panels.data.js.
 import { renderIcon } from '../icons/FeatureIcons.js';
-import { t } from '../../core/LanguageService.js';
+import { t, LanguageService } from '../../core/LanguageService.js';
+import { describeUserControl, USER_CONTROL_CONFIG, USER_CONTROL_POLICY_ORDER } from '../../systems/FutureEffects.js';
 import { futureName, futureDesc, futureSystemLabel, nodeNameById } from '../../data/i18n/research-localize.js';
 import {
     FUTURE_PANELS, FUTURE_SYSTEM_LABELS,
@@ -53,6 +54,7 @@ export function renderFuturePanel() {
             '<div class="fp-desc">' + esc(futureDesc(p)) + '</div>' +
             '<div class="fp-links">' + links + '</div>' +
             '<div class="fp-status">' + esc(_statusText(p, st)) + '</div>' +
+            ((p.id === 'user_control' && st.unlocked) ? _renderUserControl(data) : '') +
             '</div>';
     }).join('');
 
@@ -69,6 +71,43 @@ function _statusText(p, st) {
     var vars = st.reasonVars;
     if (vars && vars.nodeId) vars = { id: nodeNameById(vars.nodeId, vars.id) };   // nama riset sesuai bahasa
     return t(st.reasonKey, vars);
+}
+
+
+// ---- Kontrol Pengguna: pilihan kebijakan + ringkasan efek ----
+function _en() { try { return LanguageService.getLang() === 'en'; } catch (e) { return false; } }
+function _tf(key, id, en) { var v = t(key); return (v && v !== key) ? v : (_en() ? en : id); }
+function _pct(n) { var r = Math.round(n * 10) / 10; return (r > 0 ? '+' : '') + r + '%'; }
+
+function _renderUserControl(data) {
+    var d = describeUserControl(data);
+    var en = _en();
+    var btns = USER_CONTROL_POLICY_ORDER.map(function (id) {
+        var pol = USER_CONTROL_CONFIG.policies[id];
+        return '<button class="uc-btn ' + (d.policy.id === id ? 'active' : '') + '" data-uc-policy="' + id + '" aria-pressed="' + (d.policy.id === id) + '">' + esc(en ? pol.nameEn : pol.name) + '</button>';
+    }).join('');
+
+    var scarePct = (d.scareMult - 1) * 100;
+    function row(label, val, cls) { return '<div class="uc-row"><span>' + esc(label) + '</span><b class="' + (cls || '') + '">' + esc(val) + '</b></div>'; }
+    var scareCls = scarePct < -0.5 ? 'good' : (scarePct > 0.5 ? 'bad' : '');
+    var demCls = d.demandPct > 0.05 ? 'good' : (d.demandPct < -0.05 ? 'bad' : '');
+    var aiPct = (d.aiFactor - 1) * 100;
+    var aiCls = aiPct > 0.5 ? 'good' : (aiPct < -0.5 ? 'bad' : '');
+    var rows = row(_tf('uc.row.scare', 'Peluang event isu privasi', 'Privacy-scare event chance'), d.scareMult === 1 ? _tf('uc.normal', 'Normal', 'Normal') : _pct(scarePct), scareCls) +
+        row(_tf('uc.row.demand', 'Permintaan (pro & premium)', 'Demand (pro & premium)'), _pct(d.demandPct), demCls) +
+        row(_tf('uc.row.ai', 'Besar diskon F-AI & Alat Pengembang', 'F-AI & Dev Tools discount size'), d.aiFactor === 1 ? _tf('uc.normal', 'Normal', 'Normal') : _pct(aiPct), aiCls) +
+        (d.wellbeingPct > 0 ? row(_tf('uc.row.wellbeing', 'Bonus Kesejahteraan Digital (anak muda & senior)', 'Digital Wellbeing bonus (youth & seniors)'), _pct(d.wellbeingPct), 'good') : '');
+
+    var req = d.hasPrivacyOs
+        ? '<div class="uc-note ok">' + esc(_tf('uc.req.ok', 'Pusat Privasi aktif di OS-mu: efek perlindungan berlaku.', 'Privacy Center is active in your OS: protection effects apply.')) + '</div>'
+        : '<div class="uc-note warn">' + esc(_tf('uc.req.missing', 'Efek perlindungan butuh fitur OS "Pusat Privasi" (OS milik sendiri, mulai 2020). Biaya kebijakan tetap berlaku.', 'Protection effects need the OS feature "Privacy Center" (own OS, from 2020). Policy costs still apply.')) + '</div>';
+
+    return '<div class="uc-box">' +
+        '<div class="uc-title">' + esc(_tf('uc.title', 'Kebijakan data', 'Data policy')) + '</div>' +
+        '<div class="uc-seg" role="group">' + btns + '</div>' +
+        '<div class="uc-desc">' + esc(en ? d.policy.descEn : d.policy.desc) + '</div>' +
+        '<div class="uc-rows">' + rows + '</div>' + req +
+        '</div>';
 }
 
 function _ensureStyles() {
@@ -90,7 +129,20 @@ function _ensureStyles() {
         '.fp-desc { font-size: 12px; color: var(--text-dim); line-height: 1.45; }',
         '.fp-links { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }',
         '.fp-tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.06); color: var(--text-mute); }',
-        '.fp-status { font-size: 12px; color: var(--text-mute); margin-top: 2px; }'
+        '.fp-status { font-size: 12px; color: var(--text-mute); margin-top: 2px; }',
+        '.uc-box { margin-top: 8px; padding: 10px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--border, rgba(255,255,255,.08)); }',
+        '.uc-title { font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--text-tertiary, var(--text-mute)); margin-bottom: 6px; }',
+        '.uc-seg { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(0,0,0,.25); }',
+        '.uc-btn { flex: 1; min-height: 34px; border: 0; border-radius: 8px; background: transparent; color: var(--text-secondary, inherit); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }',
+        '.uc-btn.active { background: var(--accent-soft, rgba(79,140,255,.18)); color: var(--accent, #4f8cff); box-shadow: inset 0 0 0 1px var(--accent, #4f8cff); }',
+        '.uc-desc { font-size: 12px; color: var(--text-dim); line-height: 1.45; margin: 8px 0; }',
+        '.uc-rows { display: flex; flex-direction: column; }',
+        '.uc-row { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-top: 1px solid var(--border, rgba(255,255,255,.07)); font-size: 12px; color: var(--text-secondary, inherit); }',
+        '.uc-row b { font-variant-numeric: tabular-nums; white-space: nowrap; }',
+        '.uc-row b.good { color: var(--success, #10b981); } .uc-row b.bad { color: var(--danger, #ef4444); }',
+        '.uc-note { margin-top: 8px; font-size: 11.5px; line-height: 1.4; padding: 6px 8px; border-radius: 8px; }',
+        '.uc-note.ok { background: var(--success-soft, rgba(16,185,129,.14)); color: var(--success, #10b981); }',
+        '.uc-note.warn { background: var(--warn-soft, rgba(245,158,11,.14)); color: var(--warn, #f59e0b); }'
     ].join('\n');
     var style = document.createElement('style');
     style.setAttribute('data-future-panel', '');
