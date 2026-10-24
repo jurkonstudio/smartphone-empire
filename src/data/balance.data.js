@@ -60,6 +60,7 @@ export const BALANCE = {
         // [era-quest] Target era 2000–2002. silicon sengaja kecil (1–3 SIL ~ $2.500/SIL di 2000).
         era_two_products:     { cash: 3000,  reputation: 1, silicon: 0 },
         era_decide_2:         { cash: 2000,  reputation: 1, silicon: 0 },
+        era_carrier_deal:     { cash: 4000,  reputation: 1, silicon: 0 },
         era_sales_5k:         { cash: 6000,  reputation: 2, silicon: 1 },
         era_color_phone:      { cash: 8000,  reputation: 2, silicon: 1 },
         era_own_os:           { cash: 8000,  reputation: 2, silicon: 1 },
