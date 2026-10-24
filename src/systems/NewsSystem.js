@@ -23,6 +23,8 @@ import { getCompetitorReleasesForMonth, getReleaseDay } from '../data/news-compe
 import '../data/news-competitor-releases.s1.data.js';
 // [Sesi 2] Berita rilis kompetitor 2009-2017.
 import '../data/news-competitor-releases.s2.data.js';
+// [Sesi 3] Berita rilis kompetitor kecil era 2000-2008 (Sharp, Panasonic, NEC, Sagem, Alcatel).
+import '../data/news-competitor-releases.s3.data.js';
 
 // [TAMBAHAN BARU] Import data 2018-2026
 import { MONTHLY_HEADLINES_2018_2026 } from '../data/news-headlines-2018-2026.data.js';
