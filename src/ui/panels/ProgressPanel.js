@@ -2,6 +2,7 @@ import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/ProgressPanel.js
 // v2027.13a — i18n.
 import { t } from '../../core/LanguageService.js';
+import { localizeQuest } from '../../systems/QuestSystem.js';
 
 
 export function renderProgressPanel(state, researchSystem) {
@@ -51,7 +52,8 @@ export function renderProgressPanel(state, researchSystem) {
 
     if (activeQuests.length) {
         body += '<div class="focus-section-label">' + t('dashboard.focus_quest') + '</div>';
-        body += activeQuests.slice(0, 3).map(function (q) {
+        body += activeQuests.slice(0, 3).map(function (q0) {
+            var q = Object.assign({}, q0, localizeQuest(q0));
             return '<div class="focus-quest">' +
                 '<div class="quest-dot"></div>' +
                 '<div>' +

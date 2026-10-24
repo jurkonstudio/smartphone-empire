@@ -1,13 +1,15 @@
 // FILE: src/ui/panels/QuestsPanel.js
 // v2027.13c — i18n.
 import { t } from '../../core/LanguageService.js';
+import { localizeQuest } from '../../systems/QuestSystem.js';
 
 export function renderQuestsPanel(state) {
     const active = (state.quests && state.quests.active) ? state.quests.active : [];
     const completed = (state.quests && state.quests.completed) ? state.quests.completed : [];
 
     const list = active.length
-        ? active.map(function (q) {
+        ? active.map(function (q0) {
+            const q = Object.assign({}, q0, localizeQuest(q0));
             return `
                 <div class="quest-item">
                     <div class="quest-dot"></div>
