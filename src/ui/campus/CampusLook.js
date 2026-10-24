@@ -11,6 +11,8 @@
 //  - Paksa tier untuk QA lewat URL: ?campusq=low | medium | high
 //  - Nilai cahaya mengikuti Three r160 (lampu fisik, tanpa pengali PI).
 
+import { blendObj } from './DayCycle.js';
+
 // Warna & intensitas khusus peta kampus. Sengaja TERPISAH dari PALETTES (yang juga dipakai
 // OfficeScene), supaya tampilan Office tidak ikut berubah.
 export var CAMPUS_LOOK = {
@@ -161,11 +163,25 @@ export function createLookRig(THREE, renderer, scene, quality) {
         return p;
     }
 
+    // Siklus siang-malam: n = 0 (siang) .. 1 (malam); campuran halus antara CAMPUS_LOOK.light dan .dark.
+    function applyNight(n) {
+        var p = blendObj(CAMPUS_LOOK.light, CAMPUS_LOOK.dark, n);
+        hemi.color.setHex(p.hemiSky);
+        hemi.groundColor.setHex(p.hemiGround);
+        hemi.intensity = p.hemiI;
+        sun.color.setHex(p.sunCol); sun.intensity = p.sunI;
+        fill.color.setHex(p.fillCol); fill.intensity = p.fillI;
+        rim.color.setHex(p.rimCol); rim.intensity = p.rimI;
+        renderer.toneMappingExposure = p.exposure;
+        return p;
+    }
+
     return {
         shadowsOn: shadowsOn,
         envOn: envOn,
         lights: { hemi: hemi, sun: sun, fill: fill, rim: rim },   // dipakai CampusWeather (cuaca & senja)
         applyTheme: applyTheme,
+        applyNight: applyNight,
         // Tandai shadow map perlu dihitung ulang pada render berikutnya.
         requestShadowUpdate: function () { if (shadowsOn) renderer.shadowMap.needsUpdate = true; },
         dispose: function () {

@@ -22,6 +22,7 @@ var SNOW_COUNT = { low: 200, medium: 360, high: 600 };
 var SPLASH_COUNT = { low: 40, medium: 80, high: 140 };
 var SPLASH_CHANCE = { low: 0.3, medium: 0.45, high: 0.6 };  // peluang tetes menimbulkan percikan
 var BOX_H = 18;
+import { dawnAmount } from './DayCycle.js';
 export var KINDS = ['clear', 'sunny', 'overcast', 'rain', 'snow'];
 // Faktor senja per kondisi. 'clear' = 0: senja hanya muncul di 'sunny' (ubah di sini bila ingin
 // cerah biasa ikut bersenja tipis).
@@ -376,7 +377,7 @@ export function createWeather(THREE, scene, opts) {
         var t = nowFn();
         var nk = over.weather || weatherForBlock(blockOf(t));
         if (over.sunset !== null) sunBase = over.sunset;
-        else { var d = new Date(t); sunBase = sunsetAmount(d.getHours() + d.getMinutes() / 60); }
+        else { var d = new Date(t), hr = d.getHours() + d.getMinutes() / 60; sunBase = Math.max(sunsetAmount(hr), dawnAmount(hr)); }   // senja sore + fajar
         var ns = sunBase * sunsetFactor(nk);     // senja efektif = jam x faktor cuaca
         var changed = false;
         if (nk !== kind) { setKind(nk); changed = true; }

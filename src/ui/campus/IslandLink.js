@@ -232,11 +232,12 @@ function createFar(THREE, parent, ox, defs) {
 
     function mm(key) { return typeof key === 'string' ? mats[key] : key; }
     // Haze jarak (CinematicFx): warna material dicampur ke warna kabut agar pulau tetangga tampak lebih jauh.
-    var darkNow = false, hazeCol = new THREE.Color(0xffffff), hazeAmt = 0;
+    var nightN = 0, hazeCol = new THREE.Color(0xffffff), hazeAmt = 0;
+    var cMix = new THREE.Color();
     function paint() {
-        var ix = darkNow ? 1 : 0;
         keys.forEach(function (k) {
-            mats[k].color.setHex(defs[k][ix]);
+            mats[k].color.setHex(defs[k][0]);
+            if (nightN > 0) mats[k].color.lerp(cMix.setHex(defs[k][1]), nightN);
             if (hazeAmt > 0) mats[k].color.lerp(hazeCol, hazeAmt);
         });
         extra.forEach(function (m) {
@@ -281,8 +282,9 @@ function createFar(THREE, parent, ox, defs) {
             group.add(m);
             return m;
         },
+        // dark: boolean (lama) atau 0..1 (tingkat malam, siklus siang-malam)
         setDark: function (dark) {
-            darkNow = !!dark;
+            nightN = Math.max(0, Math.min(1, +dark || 0));
             paint();
         },
         // hex warna kabut + jumlah campuran 0..1 (0 = warna asli).

@@ -294,25 +294,27 @@ export function createSea(THREE, opts) {
     mesh.renderOrder = -1;                       // laut digambar lebih dulu; objek lain menimpanya
     mesh.frustumCulled = false;
 
-    var dark = false, kind = 'clear', sunset = 0, disposed = false;
-    var deepMul = new THREE.Color();
+    var night = 0, kind = 'clear', sunset = 0, disposed = false;   // night: 0 siang .. 1 malam (siklus siang-malam)
+    var deepMul = new THREE.Color(), cB = new THREE.Color();
+
+    // pair = [terang, gelap] (hex) -> campuran pada tingkat malam saat ini
+    function mixPair(target, pair) { return target.setHex(pair[0]).lerp(cB.setHex(pair[1]), night); }
 
     function apply() {
-        var ix = dark ? 1 : 0;
         var u = uniforms;
-        u.uShallow.value.setHex(pal.shallow[ix]);
-        u.uMid.value.setHex(pal.ocean[ix]);
+        mixPair(u.uShallow.value, pal.shallow);
+        mixPair(u.uMid.value, pal.ocean);
         deepMul.setRGB(0.55, 0.68, 0.86);        // laut dalam: lebih gelap & biru dari warna dasar
-        u.uDeep.value.setHex(pal.ocean[ix]).multiply(deepMul);
-        u.uFoam.value.setHex(pal.foam[ix]);
-        u.uSky.value.setHex(pal.sky[ix]);
-        u.uSun.value.setHex(pal.sun[ix]);
-        u.uDark.value = dark ? 1 : 0;
+        mixPair(u.uDeep.value, pal.ocean).multiply(deepMul);
+        mixPair(u.uFoam.value, pal.foam);
+        mixPair(u.uSky.value, pal.sky);
+        mixPair(u.uSun.value, pal.sun);
+        u.uDark.value = night;
         var wx = WEATHER[kind] || WEATHER.clear;
         u.uGray.value = wx[0];
         u.uChop.value = wx[1];
-        u.uGlint.value = wx[2] * (dark ? 0.55 : 1) * (1 - sunset * 0.2);
-        u.uLit.value = (dark ? LIT.dark : LIT.light) * wx[3] * (1 - sunset * 0.06);
+        u.uGlint.value = wx[2] * (1 - 0.45 * night) * (1 - sunset * 0.2);
+        u.uLit.value = (LIT.light + (LIT.dark - LIT.light) * night) * wx[3] * (1 - sunset * 0.06);
         u.uSunset.value = sunset;
     }
     apply();
@@ -320,9 +322,11 @@ export function createSea(THREE, opts) {
     return {
         mesh: mesh,
         material: mat,
-        setTheme: function (isDark) {
-            if (disposed || dark === !!isDark) return;
-            dark = !!isDark;
+        // n: boolean (tema lama) atau 0..1 (tingkat malam).
+        setTheme: function (n) {
+            n = +n || 0;
+            if (disposed || Math.abs(night - n) < 0.004) return;
+            night = Math.max(0, Math.min(1, n));
             apply();
         },
         // kondisi langit; murah, keluar cepat bila tidak berubah. Waktu animasi TIDAK disentuh.

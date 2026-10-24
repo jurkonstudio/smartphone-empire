@@ -36,6 +36,7 @@ import { LINK, buildLinkBridge, makeCampusKit, campusBridgeCfg, buildMfFar, mfCo
 import { createSea } from './SeaWater.js';
 import { createCinematic } from './CinematicFx.js';
 import { createBeach } from './Beach.js';
+import { createDayClock, blendObj, lerpHex } from './DayCycle.js';
 import { createWeather } from './CampusWeather.js';
 
 var BASE_VIEW = 22;
@@ -95,8 +96,9 @@ export function createCampusScene(THREE, container, gameState) {
     var scene = new THREE.Scene();
     var camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
     var rig = createLookRig(THREE, renderer, scene, quality);   // cahaya + tone mapping + shadow + env
+    var clock = createDayClock();                                // jam nyata perangkat (siklus siang-malam), ?hour= untuk uji
     var weather = createWeather(THREE, scene, {                  // cuaca otomatis + senja (jam lokal)
-        lights: rig.lights, tier: quality.tier,
+        lights: rig.lights, tier: quality.tier, now: clock.now,
         getCenter: function () { return controls ? controls.view : { x: 0, z: 0 }; },
         getHalf: function () { return (camera.right - camera.left) * 0.7 + 3; },
         onChange: function () { if (life) life.setSky(weather.getKind(), weather.getSunset()); requestRender(); }
@@ -525,20 +527,25 @@ export function createCampusScene(THREE, container, gameState) {
         });
     }
 
+    // Tingkat malam 0..1: jam nyata perangkat (DayCycle.js); bila siklus dimatikan, mengikuti tema UI seperti dulu.
+    var lastNight = -1;
+    function themeIsDark() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
     function applyTheme() {
-        var dark = document.documentElement.getAttribute('data-theme') === 'dark';
-        var look = rig.applyTheme(dark);                  // cahaya, exposure, env (CampusLook.js)
+        var night = clock.night(themeIsDark());
+        lastNight = night;
+        var dark = night >= 0.5;                          // keputusan diskret (awan, burung, dll)
+        var look = rig.applyNight(night);                 // cahaya, exposure, env, dicampur terang<->gelap (CampusLook.js)
         weather.applyLook(look);                          // cuaca/senja menimpa warna & intensitas cahaya
-        var base = dark ? PALETTES.dark : PALETTES.light;
+        var base = blendObj(PALETTES.light, PALETTES.dark, night);
         var p = Object.assign({}, base, look.colors, { aoOpacity: look.aoOpacity });
         var w = ERA_WINDOWS[Math.max(0, eraIdx)];
-        if (w) p.window = dark ? w.dark : w.light;     // warna jendela ikut era
+        if (w) p.window = lerpHex(w.light, w.dark, night);     // warna jendela ikut era
         A.applyPalette(p, readAccent());
         A.setEnvIntensity(look.envI);
-        farMf.setDark(dark);
-        sea.setTheme(dark);
+        farMf.setDark(night);
+        sea.setTheme(night);
         sea.setWeather(weather.getKind(), weather.getSunset());
-        cine.setTheme(dark);
+        cine.setTheme(night);
         beach.setTheme(dark, p.sand, p.sandWet);
         fx.setAccent(readAccent(), dark);
         if (life) life.setTheme(dark, p.window);
@@ -575,7 +582,14 @@ export function createCampusScene(THREE, container, gameState) {
         requestRender();
     }
 
-    function onVis() { if (!document.hidden) requestRender(); }
+    // Cek pergantian siang-malam: murah (hanya hitung jam). Terapkan ulang tema bila tingkat malam bergeser >= 0.02.
+    function checkDay() {
+        if (disposed || document.hidden) return;
+        var n = clock.night(themeIsDark());
+        if (Math.abs(n - lastNight) >= 0.02 || (n !== lastNight && (n === 0 || n === 1))) { applyTheme(); requestRender(); }
+    }
+    var dayTimer = setInterval(checkDay, 15000);
+    function onVis() { if (!document.hidden) { checkDay(); requestRender(); } }
     var io = null;
     if (ambient && typeof IntersectionObserver !== 'undefined') {
         io = new IntersectionObserver(function (en) {
@@ -622,6 +636,7 @@ export function createCampusScene(THREE, container, gameState) {
             fx.dispose();
             if (ro) ro.disconnect(); else window.removeEventListener('resize', resize);
             document.removeEventListener('visibilitychange', onVis);
+            clearInterval(dayTimer);
             controls.dispose();
             for (var dk in dyn) disposeObject(dyn[dk].group);   // buffer InstancedMesh bangunan
             forest.dispose();

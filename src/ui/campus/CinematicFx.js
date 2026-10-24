@@ -71,7 +71,7 @@ export function createCinematic(THREE, scene, opts) {
     var tier = opts.tier || 'medium';
     var saver = tier === 'low';
     var container = opts.container, canvas = opts.canvas;
-    var dark = false, kind = 'clear', sunset = 0, px = 0;
+    var night = 0, kind = 'clear', sunset = 0, px = 0;    // night: 0 siang .. 1 malam
     var disposed = false;
 
     // ---------- vignette ----------
@@ -136,23 +136,22 @@ export function createCinematic(THREE, scene, opts) {
         var wk = VIG_WEATHER[kind] || 0;
 
         if (vig) {
-            var base = dark ? VIG.dark : VIG.light;
-            var rgb = mixRgb(base.rgb, VIG_WARM, 0.5 * s);
-            var a = clamp01(base.a + wk + 0.06 * s);
+            var rgb = mixRgb(mixRgb(VIG.light.rgb, VIG.dark.rgb, night), VIG_WARM, 0.5 * s);
+            var a = clamp01(lerp(VIG.light.a, VIG.dark.a, night) + wk + 0.06 * s);
             var c = Math.round(rgb[0]) + ',' + Math.round(rgb[1]) + ',' + Math.round(rgb[2]);
             vig.style.background = 'radial-gradient(ellipse at 50% 50%, rgba(' + c + ',0) 52%, rgba(' + c + ',' + a.toFixed(3) + ') 100%)';
         }
 
         if (bloom) {
-            var night = dark ? 1 : s * 0.55;
-            var I = night * (BLOOM_WEATHER[kind] || 1) * 0.85;
+            var lit = Math.max(night, s * 0.55);
+            var I = lit * (BLOOM_WEATHER[kind] || 1) * 0.85;
             bloomMat.uniforms.uI.value = I;
             bloom.visible = I > 0.02;
         }
 
         if (opts.onHaze) {
-            var hc = mixRgb(dark ? HAZE.dark : HAZE.light, HAZE_WARM, (dark ? 0.12 : 0.35) * s);
-            var amt = clamp01((HAZE_AMT[kind] === undefined ? 0.2 : HAZE_AMT[kind]) + (dark ? 0.06 : 0) + 0.06 * s);
+            var hc = mixRgb(mixRgb(HAZE.light, HAZE.dark, night), HAZE_WARM, lerp(0.35, 0.12, night) * s);
+            var amt = clamp01((HAZE_AMT[kind] === undefined ? 0.2 : HAZE_AMT[kind]) + 0.06 * night + 0.06 * s);
             opts.onHaze(rgbHex(hc), amt);
         }
     }
@@ -161,11 +160,12 @@ export function createCinematic(THREE, scene, opts) {
 
     return {
         points: bloom,
-        setTheme: function (d) {
+        // n: boolean (tema lama) atau 0..1 (tingkat malam)
+        setTheme: function (n) {
             if (disposed) return;
-            d = !!d;
-            if (d === dark) return;
-            dark = d;
+            n = clamp01(+n || 0);
+            if (Math.abs(n - night) < 0.004) return;
+            night = n;
             applyLook();
         },
         // Dipanggil tiap render: murah (hanya bandingkan nilai). pxPerUnit = tinggi buffer render / tinggi kamera ortografik.
