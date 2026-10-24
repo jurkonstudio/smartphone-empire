@@ -35,6 +35,14 @@ const ERA_QUEST_DEFS = [
         rewards: Object.assign({}, BALANCE.questRewards.era_decide_2)
     },
     {
+        id: 'era_carrier_deal', from: { year: 2000 }, until: { year: 2001, month: 12 }, requires: ['first_product'],
+        title: 'Kontrak operator pertama', description: 'Teken kontrak dengan operator lewat event industri (OEM 3G atau paket GPRS).',
+        i18n: { title: { id: 'Kontrak operator pertama', en: 'First carrier deal' }, description: { id: 'Teken kontrak dengan operator lewat event industri (OEM 3G atau paket GPRS).', en: 'Sign a deal with a carrier through an industry event (3G OEM or GPRS bundle).' } },
+        check: (state) => ((state.data.events && state.data.events.history) || []).some(h =>
+            (h.eventId === 'ev2000_3g_auction' && h.choiceId === 'oem') || (h.eventId === 'ev2001_gprs_data' && h.choiceId === 'partner')),
+        rewards: Object.assign({}, BALANCE.questRewards.era_carrier_deal)
+    },
+    {
         id: 'era_sales_5k', from: { year: 2000 }, until: { year: 2001, month: 6 }, requires: ['first_product'],
         title: 'Jual 5.000 unit', description: 'Jual total 5.000 unit ponsel.',
         i18n: { title: { id: 'Jual 5.000 unit', en: 'Sell 5,000 units' }, description: { id: 'Jual total 5.000 unit ponsel.', en: 'Sell 5,000 phones in total.' } },
