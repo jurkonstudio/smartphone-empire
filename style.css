@@ -842,6 +842,7 @@ body {
     padding-bottom: 6px; scrollbar-width: none;
 }
 .wiz-options-row::-webkit-scrollbar { display: none; }
+.wiz-options-col .wiz-option { width: 100%; min-width: 0; flex-shrink: 1; }
 
 .wiz-option {
     background: var(--bg-3); border: 1px solid var(--border);
