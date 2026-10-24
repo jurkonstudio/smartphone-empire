@@ -15,9 +15,10 @@
 
 import { POND, RAIL, SLOTS } from './CampusBuildings.js';
 import { cloudLook } from './CampusWeather.js';
+import { createPeople } from './CampusPeople.js';
 
 var CAR_COLORS = [0xef4444, 0xf59e0b, 0x10b981, 0x6366f1, 0xf8fafc, 0x1f2937, 0xec4899];
-var WALK_COLORS = [0xf97316, 0x3b82f6, 0xa855f7, 0x14b8a6, 0xeab308, 0xef4444];
+var WALK_LEN = { x: 9.9, z: 10.1 };       // panjang trotoar (satuan dunia): jarak tempuh = fraksi x panjang
 var ROAD_Z = { from: 14.6, to: 3.6 };     // jalan selatan: x = lane, z dari tepi ke plaza
 var ROAD_X = { from: -41.0, to: -3.6 };   // jalan barat:   z = lane, x dari Pulau Manufaktur (lewat jembatan) ke plaza
 var ROAD_X_BASE = 11;                     // panjang jalan barat lama -> kecepatan dunia mobil tetap sama
@@ -98,14 +99,10 @@ export function createCampusLife(THREE, A, scene, trees, link) {
     addCar('x', -0.5, false, 0.15, 0.52, 2);
 
     // ---------- pejalan kaki (di trotoar) ----------
+    var people = createPeople(THREE, A, root, mk, put);
     var walkers = [];
-    function addWalker(axis, side, speed, s0, ci) {
-        var g = new THREE.Group();
-        var m = mk(WALK_COLORS[ci % WALK_COLORS.length]);
-        g.add(put(A.cyl(0.05, 0.07, 0.22, 6), m, 0, 0.11, 0));
-        g.add(put(A.sph(0.065, 6, 5), mk(0xf1c9a5), 0, 0.28, 0));
-        root.add(g);
-        walkers.push({ axis: axis, side: side, speed: speed, s0: s0, g: g });
+    function addWalker(axis, side, speed, s0, idx) {
+        walkers.push(people.add({ axis: axis, side: side, speed: speed, s0: s0, index: idx }));
     }
     addWalker('x',  1.22, 0.045, 0.1, 0);
     addWalker('x', -1.22, 0.05, 0.7, 1);
@@ -113,6 +110,10 @@ export function createCampusLife(THREE, A, scene, trees, link) {
     addWalker('z', -1.22, 0.045, 0.4, 2);
     addWalker('z',  1.22, 0.05, 1.2, 3);
     addWalker('z', -1.22, 0.04, 1.7, 5);
+    addWalker('x', -1.22, 0.042, 1.1, 6);
+    addWalker('x',  1.22, 0.048, 0.5, 7);
+    addWalker('z',  1.22, 0.043, 0.8, 8);
+    addWalker('z', -1.22, 0.047, 1.5, 9);
 
     // ---------- awan + bayangan awan ----------
     var cloudMat = mk(0xffffff, { transparent: true, opacity: 0.8, depthWrite: false });
@@ -264,16 +265,20 @@ export function createCampusLife(THREE, A, scene, trees, link) {
             c.g.scale.setScalar(Math.max(0.001, f));
         }
 
-        // pejalan (bolak-balik di trotoar)
+        // pejalan (bolak-balik di trotoar): posisi + langkah kaki/lengan + arah badan
         for (i = 0; i < walkers.length; i++) {
             var w = walkers[i];
-            var q = (w.s0 + t * w.speed) % 2;
-            if (q > 1) q = 2 - q;
+            var raw = (w.s0 + t * w.speed) % 2;
+            var fwd = raw <= 1;
+            var q = fwd ? raw : 2 - raw;
             var wp = lerp(-13.8, -3.9, q);
-            var bob = CURB_Y + Math.abs(Math.sin(t * 8 + i)) * 0.035;
+            var dist = t * w.speed * WALK_LEN[w.axis];
+            var bob = CURB_Y + Math.abs(Math.sin(dist * 28)) * 0.012;
             if (w.axis === 'x') w.g.position.set(wp, bob, w.side);
             else w.g.position.set(w.side, bob, lerp(14, 3.9, q));
+            people.pose(w, dist, fwd, t);
         }
+        people.endFrame(t);
 
         // awan + bayangan
         for (i = 0; i < clouds.length; i++) {
@@ -402,6 +407,7 @@ export function createCampusLife(THREE, A, scene, trees, link) {
             skyKind = kind || 'clear';
             skySunset = sunset || 0;
             applySky();
+            people.setRain(skyKind === 'rain');   // payung saat hujan
         },
         setEra: function (idx) {
             droneOn = idx >= 3;
