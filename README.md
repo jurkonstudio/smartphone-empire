@@ -75,10 +75,10 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 
 ### 🔬 Research and OS
 
-- **Tech tree**: **90 nodes** in **8 categories** (display, camera, battery, chip, network, sensor, body, audio), from 2000 to 2027. The last node, AI Agent Runtime, is part of the speculative scenario. The research queue runs in parallel, and more engineers means more slots. Early-2000s content includes infrared, MMS, Wi-Fi, e-mail, FM radio, MP3, memory cards, video recording, basic GPS, and USB Type-C.
+- **Tech tree**: **134 nodes** in **9 categories** (display, camera, battery, chip, network, sensor, body, audio, features), from 2000 to 2027. The last node, AI Agent Runtime, is part of the speculative scenario. The research queue runs in parallel, and more engineers means more slots. Early-2000s content includes infrared, MMS, Wi-Fi, e-mail, FM radio, MP3, memory cards, video recording, basic GPS, and USB Type-C.
 - **Your own OS**: **50 OS features** across **5 eras** (Basic Firmware, Touchscreen Era, Modern Smartphone, AI & Ecosystem, On-Device AI). Three Agentic features (Agentic OS, Agent Guard, Agent Store) unlock from 2027 through the AI Agent Runtime research. There are OS versions, random bugs (**51 bug templates**, each with a patch), **7 built-in apps**, a third-party app ecosystem, and OS update cards organized into 9 tracks.
 - **OS licensing**: **5 packages** if you'd rather not build your own OS.
-- **Phone features**: **59 features** in 10 groups (connectivity, security, audio, extra camera, endurance, power, sensors, UX, storage, AI).
+- **Phone features**: **59 features** in 10 groups (connectivity, security, audio, extra camera, endurance, power, sensors, UX, storage, AI). Features are researched in the **Features** category, picked in the design wizard (step 3), and change stats, unit cost, demand (missing standard features, regional rules such as EU USB-C 2025), reviews, and advisor alerts. Phones without a feature list (old saves) stay neutral.
 - **Future panels**: tech-preview panels (F-AI, Dev Tools, Game Engine) that unlock from research or year conditions and affect OS feature discounts and design suggestions. User Control is still locked.
 
 ### 📱 Products and Sales
