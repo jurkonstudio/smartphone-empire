@@ -64,7 +64,9 @@ export const FUTURE_PANELS = [
         icon: 'sliders',
         description: 'Pengaturan privasi, batas penggunaan, dan kendali yang dipegang pengguna. Memengaruhi opini publik dan pasar.',
         linksTo: ['opinion', 'market'],
-        unlock: { enabled: false, year: null, research: null }
+        connected: ['opinion', 'market', 'os'],   // opinion: peluang event privasi; market: permintaan pro/premium & keluarga; os: diskon F-AI/Alat Pengembang berubah sesuai kebijakan (FutureEffects.js).
+        // Terbuka: tahun 2019 ke atas DAN riset Face ID 3D (sensor_face3d) selesai. Efek perlindungan baru aktif bila OS milik pemain punya fitur Pusat Privasi.
+        unlock: { enabled: true, year: 2019, research: 'sensor_face3d' }
     }
 ];
 
