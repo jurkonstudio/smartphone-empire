@@ -26,6 +26,7 @@ import { frameGapMs, getRenderFps } from '../../core/RenderFps.js';
 import { ToastService } from '../../core/ToastService.js';
 import { bus } from '../../core/EventBus.js';
 import { createLookRig, detectQuality } from '../campus/CampusLook.js';
+import { createWeather } from '../campus/CampusWeather.js';
 import { createCampusControls } from '../campus/CampusControls.js';
 import { BASE_VIEW, MAX_DPR, FRAME_MS, MIN_RESIZE_DELTA, NARROW_PX, clamp, tint, hexCss, readAccent, prefersReducedMotion } from '../office/OfficeConfig.js';
 import { PLOTS, PLOT_BY_ID, CHIP_ORDER, PIPES, plotState, allStates, plotSig, describePlot, plotTitle, runAction, ms,
@@ -102,6 +103,12 @@ export function createManufactureScene(THREE, container, gameState) {
         if (o.isDirectionalLight && o.castShadow) { var sc = o.shadow.camera; sc.left = -32; sc.right = 32; sc.top = 32; sc.bottom = -32; sc.far = 90; sc.updateProjectionMatrix(); }
     });
     renderer.shadowMap.autoUpdate = !!rig.shadowsOn;
+    var weather = createWeather(THREE, scene, {                      // cuaca otomatis + senja (jam lokal)
+        lights: rig.lights, tier: look.tier,
+        getCenter: function () { return controls ? controls.view : { x: 0, z: 0 }; },
+        getHalf: function () { return (camera.right - camera.left) * 0.7 + 3; },
+        onChange: function () { requestRender(); }
+    });
 
     // ---------- geometri & material bersama ----------
     var G = {
@@ -1453,7 +1460,7 @@ export function createManufactureScene(THREE, container, gameState) {
         M.selRing.color.setHex(accentHex);
         M.lamp.color.setHex(dark ? 0xffe39a : 0xfff1c4);
         lampPosts.forEach(function (l) { var s = dark ? 0.16 : 0.12; l.scale.set(s, s, s); });
-        rig.applyTheme(dark);
+        weather.applyLook(rig.applyTheme(dark));
         plotList.forEach(function (r) { if (r.st) rebuildLabel(r); if (r.st) rebuildAlert(r); });
         if (plots.assembly) { plots.assembly.stationKey = null; refreshStations(plots.assembly); }
         rig.requestShadowUpdate();
@@ -1645,6 +1652,7 @@ export function createManufactureScene(THREE, container, gameState) {
         var sec = now / 1000;
         for (var i = 0; i < animPlots.length; i++) animPlots[i].tick(sec);
         animateShell(sec);
+        weather.update(sec, ambient);
         if (fxList.length) updateFx(sec);
         renderer.render(scene, camera);
         watchQuality(now);
@@ -1661,6 +1669,7 @@ export function createManufactureScene(THREE, container, gameState) {
             raf = 0;
             if (disposed || document.hidden || ctxLost) return;
             animateShell(performance.now() / 1000);
+            weather.update(performance.now() / 1000, ambient);
             renderer.render(scene, camera);
         });
     }
@@ -2005,6 +2014,7 @@ export function createManufactureScene(THREE, container, gameState) {
             Object.keys(G).forEach(function (k) { G[k].dispose(); });
             Object.keys(M).forEach(function (k) { M[k].dispose(); });
             [ACC, GLOW, GHOST, EDGE].forEach(function (grp) { Object.keys(grp).forEach(function (k) { grp[k].dispose(); }); });
+            weather.dispose();
             rig.dispose();
             renderer.dispose();
             try { renderer.forceContextLoss(); } catch (e) {}
