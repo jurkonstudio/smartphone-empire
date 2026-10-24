@@ -7,7 +7,7 @@
 // jadi tidak merusak save lama. Jitter per produk deterministik (hash id).
 // ============================================================
 import { COUNTRIES, WEALTH_REF_PRICE, getUnlockedCountries, getNextUnlocks } from '../data/countries.data.js';
-import { ADOPTION_CONFIG, getAgeFactor, getVersionTier } from './OsAdoptionModel.js';
+import { getProductActiveUsers } from './OsAdoptionModel.js';
 
 function _hash(str) {
     var h = 2166136261;
@@ -80,8 +80,6 @@ export function computeSupplyTable(price, qty, year, seed) {
 export function computeOsCountryUsage(data) {
     var os = (data && data.os) || {};
     var nowYear = (data && data.time && data.time.currentYear) || 2000;
-    var versions = Array.isArray(os.versions) ? os.versions : [];
-    var currentId = os.currentVersionId || (versions.length ? versions[versions.length - 1].id : null);
     var products = (data && data.products && Array.isArray(data.products.catalog)) ? data.products.catalog : [];
 
     var acc = {};
@@ -91,11 +89,9 @@ export function computeOsCountryUsage(data) {
         if (opt.indexOf('own:') !== 0) return;
         var sold = p.totalSold || 0;
         if (sold <= 0) return;
-        var vid = opt.slice(4);
-        var v = versions.find(function (x) { return x.id === vid; });
-        var tier = v ? getVersionTier(versions, currentId, vid) : 'older';
-        var relYear = v ? ((v.releasedAt && v.releasedAt.year) || nowYear) : nowYear;
-        var active = Math.round(sold * ADOPTION_CONFIG.retention[tier] * getAgeFactor(relYear, nowYear));
+        // v3: perangkat aktif tidak lagi bergantung tier versi (pengguna bisa update antar versi),
+        // pakai helper yang sama dengan tab Pengguna agar total negara = total pengguna OS.
+        var active = getProductActiveUsers(p, data);
         if (active <= 0) return;
 
         var pYear = (p.releaseDate && p.releaseDate.year) || nowYear;
