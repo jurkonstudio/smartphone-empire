@@ -149,9 +149,16 @@ ok(act().includes('era_sales_50k') && act().includes('era_color_phone') && act()
 state.data.products.catalog.push({ id: 2, totalSold: 0, config: { displayId: 'scr_stn_color', cameraId: 'none' } });
 qs.evaluateAll();
 ok(state.data.quests.completed.includes('era_color_phone') && state.data.quests.completed.includes('era_two_products'), 'warna & dua produk selesai');
+// kontrak operator: selesai hanya lewat pilihan OEM 3G / paket GPRS
+ok(act().includes('era_carrier_deal'), 'quest kontrak operator aktif');
+state.data.events.history.push({ eventId: 'ev2000_3g_auction', choiceId: 'budget' }); qs.evaluateAll();
+ok(!state.data.quests.completed.includes('era_carrier_deal'), 'pilihan non-operator tidak menyelesaikan');
+state.data.events.history.push({ eventId: 'ev2001_gprs_data', choiceId: 'partner' }); qs.evaluateAll();
+ok(state.data.quests.completed.includes('era_carrier_deal'), 'paket operator GPRS menyelesaikan kontrak operator');
 // kedaluwarsa
 state.data.time.currentYear = 2002; state.data.time.currentMonth = 1; bus.emit('time:month-changed', {});
-ok(!act().includes('era_decide_2') && state.data.quests.expired.includes('era_decide_2'), 'era_decide_2 hangus setelah 2001');
+ok(!act().includes('era_decide_2') && (state.data.quests.completed.includes('era_decide_2') || state.data.quests.expired.includes('era_decide_2')), 'era_decide_2 tidak aktif lagi (selesai atau hangus)');
+ok(state.data.quests.expired.includes('era_two_products') || state.data.quests.completed.includes('era_two_products'), 'era_two_products tidak tertinggal aktif');
 ok(act().includes('era_camera_13mp'), 'quest kamera 2002 terbuka');
 state.data.time.currentYear = 2003; state.data.time.currentMonth = 1; bus.emit('time:month-changed', {});
 ok(act().filter(i => i.startsWith('era_')).length === 0, 'semua quest era hangus/selesai di 2003: ' + act());
