@@ -33,6 +33,7 @@ import { PLOTS, PLOT_BY_ID, CHIP_ORDER, PIPES, plotState, allStates, plotSig, de
     ROAD_NODES, ROAD_EDGES, APRON, DOCK, CT_SLOTS, shortestRoute } from './ManufactureLogic.js';
 import { LINK, buildLinkBridge, mfBridgeCfg, buildCampusFar } from '../campus/IslandLink.js';
 import { createSea } from '../campus/SeaWater.js';
+import { createCinematic } from '../campus/CinematicFx.js';
 import { islandRadius as campusIslandRadius } from '../campus/CampusBuildings.js';
 import { ASSEMBLY_ROLES } from '../../data/assembly.data.js';
 
@@ -817,6 +818,13 @@ export function createManufactureScene(THREE, container, gameState) {
     var linkBridge = buildLinkBridge(THREE, linkKit, mfBridgeCfg());
     shell.add(linkBridge.group);
     var farCampus = buildCampusFar(THREE, scene, LINK.OFFSET);
+    // Sentuhan sinematik: vignette CSS, bloom lampu malam (Points aditif), haze siluet Kampus. Tanpa post-processing.
+    var cine = createCinematic(THREE, scene, {
+        renderer: renderer, canvas: canvas, container: container, tier: look.tier,
+        lights: lampPosts.map(function (l) { var wp = l.getWorldPosition(new THREE.Vector3()); return { x: wp.x, y: wp.y, z: wp.z, size: 1.7, color: 0xffc872 }; }),
+        onHaze: function (hex, amt) { farCampus.setHaze(hex, amt); }
+    });
+    function cineTick() { cine.update(canvas.height / Math.max(0.001, camera.top - camera.bottom), weather.getKind(), weather.getSunset()); }
     var TRUCK_X0 = -16, TRUCK_X1 = LINK.OFFSET - LINK.CAMPUS_ROAD_END + 3;   // dari ujung barat plaza sampai jalan Kampus di seberang
     var TRUCK_RATE = 0.055 * 32 / (TRUCK_X1 - TRUCK_X0);                       // kecepatan dunia sama dengan sebelumnya
 
@@ -1464,6 +1472,7 @@ export function createManufactureScene(THREE, container, gameState) {
         farCampus.setDark(dark);
         sea.setTheme(dark);
         sea.setWeather(weather.getKind(), weather.getSunset());
+        cine.setTheme(dark);
         M.selRing.color.setHex(accentHex);
         M.lamp.color.setHex(dark ? 0xffe39a : 0xfff1c4);
         lampPosts.forEach(function (l) { var s = dark ? 0.16 : 0.12; l.scale.set(s, s, s); });
@@ -1662,6 +1671,7 @@ export function createManufactureScene(THREE, container, gameState) {
         weather.update(sec, ambient);
         sea.update(sec, weather.getKind(), weather.getSunset());
         if (fxList.length) updateFx(sec);
+        cineTick();
         renderer.render(scene, camera);
         watchQuality(now);
     }
@@ -1679,6 +1689,7 @@ export function createManufactureScene(THREE, container, gameState) {
             animateShell(performance.now() / 1000);
             weather.update(performance.now() / 1000, ambient);
             sea.setWeather(weather.getKind(), weather.getSunset());
+            cineTick();
             renderer.render(scene, camera);
         });
     }
@@ -2010,6 +2021,7 @@ export function createManufactureScene(THREE, container, gameState) {
             canvas.removeEventListener('webglcontextrestored', onCtxRestored);
             controls.dispose();
             scene.remove(sea.mesh); sea.dispose();
+            cine.dispose();
             farCampus.dispose();
             plotList.forEach(function (r) {
                 if (r.label && r.label.material) r.label.material.dispose();
