@@ -120,7 +120,6 @@ function _sortList(list, mode) {
 function _filterList(list, f) {
     if (f === 'live') return list.filter(function (p) { return p.status === 'new' || p.status === 'selling' || p.status === 'declining'; });
     if (f === 'ended') return list.filter(function (p) { return p.status === 'ended'; });
-    if (f === 'upcoming') return list.filter(function (p) { return p.status === 'upcoming'; });
     return list;
 }
 
@@ -146,7 +145,7 @@ export function openAcquisitionProductsModal(params) {
         var sel = function (id, label) { return '<option value="' + id + '"' + (st.sort === id ? ' selected' : '') + '>' + esc(label) + '</option>'; };
         return '<div class="ap-bar"><div class="rg-chips">' +
                 chip('live', L('Dijual', 'On sale')) + chip('all', L('Semua', 'All')) +
-                chip('ended', L('Berakhir', 'Ended')) + chip('upcoming', L('Mendatang', 'Upcoming')) +
+                chip('ended', L('Berakhir', 'Ended')) +
             '</div><select class="ap-sort" data-ap-sort>' +
                 sel('status', L('Urut: Status', 'Sort: Status')) + sel('margin', L('Urut: Margin', 'Sort: Margin')) +
                 sel('profit', L('Urut: Laba/bln', 'Sort: Profit/mo')) + sel('price', L('Urut: Harga', 'Sort: Price')) +
