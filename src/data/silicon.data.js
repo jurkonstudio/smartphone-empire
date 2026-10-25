@@ -63,7 +63,8 @@ export const PAYMENT_METHODS = [
     { id: 'ovo',      group: 'ewallet', icon: 'wallet-cards', name: 'OVO',              provider: 'ovo' },
     { id: 'dana',     group: 'ewallet', icon: 'phone-pay', name: 'DANA',             provider: 'dana' },
     { id: 'shopeepay',group: 'ewallet', icon: 'bag', name: 'ShopeePay',        provider: 'shopeepay' },
-    { id: 'qris',     group: 'qris',    icon: 'qr', name: 'QRIS',             provider: 'qris' },
+    // [LOCK] QRIS dikunci: Top Up hanya bisa lewat GoPay. Hapus `locked: true` untuk membuka lagi.
+    { id: 'qris',     group: 'qris',    icon: 'qr', name: 'QRIS',             provider: 'qris', locked: true },
     { id: 'va',       group: 'bank',    icon: 'bank', name: 'Virtual Account',  provider: 'va' },
     { id: 'card',     group: 'card',    icon: 'card', name: 'Kartu Kredit/Debit', provider: 'card' },
     { id: 'gplay',    group: 'store',   icon: 'play-store', name: 'Google Play',      provider: 'gplay' },
