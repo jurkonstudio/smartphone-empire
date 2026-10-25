@@ -53,7 +53,7 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 
 - **Home** has a **Campus | Office** switch (3D campus map or 3D office map).
 - **HQ** has 6 sub-tabs: **Overview, Team, Exchange, Bank, Invest, History**.
-- **Research** has 4 sub-tabs: **Tech, OS, Manufacturing, Chip**. **Products** has 4: **Design, Catalog, Sales, Chip**. **Market** has 5: **Share, Competitors, Trends, Promo, Public**.
+- **Research** has 4 sub-tabs: **Tech, OS, Manufacturing, Chip**. **Products** has 4: **Design, Catalog, Sales, Chip**. **Market** has 6: **Share, Competitors, Trends, Promo, Channels, Public**.
 - The desktop layout has its own styling (`desktop.css`), so the game is comfortable on wide screens, not only on phones.
 
 ### 🏢 Campus, Office, and Team
@@ -88,6 +88,7 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 - **4-phase development**: Design → Prototype → Production → Release.
 - **Transparent demand formula**: quality × price × reputation × marketing × OS × trend × competitors × lifecycle × macro conditions.
 - **Product lifecycle**: rising → peak → declining → dead. There is warehouse stock, automatic restock, and a maximum of **5 active products**.
+- **Sales channels** (Market → Channels): Mobile Carriers (2000), Online Store (2003), and Own Stores (2004) expand demand with era-based reach, but units sold through them are margin-cut and carry fixed costs. Production cost per unit does not change, so thin-margin phones lose money through carriers. See `CHANGES-channels.md`.
 - **Marketing**: **5 campaign types** (Online Ads, Event Sponsorship, Product Launch, City Billboard, Influencer Campaign).
 - **Promotions**: **18 packages**: 12 regional (Global, Asia, Europe, Americas & Rest, 3 each) and 6 per consumer segment. There are **12 seasonal events** such as Lunar New Year, 618, Singles' Day 11.11, Golden Week/Diwali, Carnival, Back to School, Summer Sales, Black Friday, and Christmas. At most 3 active promotion campaigns per product.
 - **Market Navigation**: the market is read by **8 consumer segments** (value, mainstream, premium, gamer, creator, pro, youth, senior) and **8 sub-regions**. There are **19 trend waves** (16 historical plus 3 scenario waves for 2027–2029: Memory Crisis, AI Agent Phones, EU Battery Rules) and 4 extra trends, all feeding into the demand formula. The **Market** tab shows cards for Best Opportunities, Segments, Sub-Regions, Trend Waves, Reactions per segment, and Viral History. The data can also be read through `window.__game.marketNav`.
@@ -279,6 +280,7 @@ The project is still in progress. Roadmap notes:
 - ⏳ **Translation fixes (i18n)**: replace the remaining hardcoded text with keys, merge new keys into `en.js` and `id.js`, then translate the names and descriptions of the 139 components
 - ⏳ **Office map reads TeamSystem**: recruit impact, trait bonuses, and the team summary computed from one source
 - ✅ **Random events with choices** (5 dynamic incidents, 2000–2050, risky choices, cost scaled to company size; see `CHANGES-dynamic-events.md`)
+- ✅ **Sales channels**: carriers, online store, and own stores (`CHANGES-channels.md`)
 - ⏳ More incidents, per-era screen transitions, and UI polish
 - ⏳ **UI Evolution patch**: notification styling that changes per era (monochrome → glossy → flat → Dynamic Island)
 - ⏳ **Bilingual news**: English headlines exist, but some review templates are still Indonesian-only
