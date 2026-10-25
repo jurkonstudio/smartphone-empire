@@ -19,7 +19,8 @@ import { WalletService } from './WalletService.js';
 import { computeOsAdoption, getProductActiveUsers } from './OsAdoptionModel.js';
 import { ensureAfterSalesState } from './AfterSalesSystem.js';
 import {
-    ECO_CONST, ECO_LINES, ECO_TIERS, ECO_TIER_META, getEcoLine, tierBasePrice
+    ECO_CONST, ECO_LINES, ECO_TIERS, ECO_TIER_META, getEcoLine, tierBasePrice,
+    ECO_SERVICES, SERVICE_TIERS, SERVICE_TIER_META, getEcoService, serviceTierBasePrice
 } from '../data/ecosystem.data.js';
 
 var AS_SCALE_BASE = 30000;   // sama dengan AfterSalesSystem: pendapatan 3 bulan rata-rata = skala 1
@@ -97,6 +98,15 @@ function _storeAppeal(commission) {
         ECO_CONST.storeAppealMin, ECO_CONST.storeAppealMax);
 }
 
+// Basis pelanggan layanan: ponsel aktif (Cloud) atau pengguna OS aktif (Asisten AI).
+function _serviceBase(data, svc) {
+    return svc.baseBy === 'os' ? (computeOsAdoption(data).activeUsers || 0) : _phoneBase(data);
+}
+
+function _serviceAvailable(data, svc) {
+    return _hasOsFeature(data, svc.requiredFeatureId);
+}
+
 // State ekosistem. Aman untuk save lama: dibuat dengan default bila belum ada.
 export function ensureEcosystemState(data) {
     if (!data.ecosystem || typeof data.ecosystem !== 'object') data.ecosystem = {};
@@ -111,13 +121,25 @@ export function ensureEcosystemState(data) {
         if (typeof s.openedAbs !== 'number' || !isFinite(s.openedAbs)) s.openedAbs = 0;
         if (typeof s.lockUntilAbs !== 'number' || !isFinite(s.lockUntilAbs)) s.lockUntilAbs = 0;
     });
+    if (!e.services || typeof e.services !== 'object') e.services = {};
+    ECO_SERVICES.forEach(function (svc) {
+        var s = e.services[svc.id];
+        if (!s || typeof s !== 'object') s = e.services[svc.id] = {};
+        if (typeof s.open !== 'boolean') s.open = false;
+        if (SERVICE_TIERS.indexOf(s.tier) < 0) s.tier = 'standard';
+        var base = serviceTierBasePrice(svc, s.tier);
+        if (s.tier !== 'free' && (typeof s.price !== 'number' || !isFinite(s.price) || s.price <= 0)) s.price = base;
+        if (s.tier === 'free') s.price = 0;
+        if (typeof s.openedAbs !== 'number' || !isFinite(s.openedAbs)) s.openedAbs = 0;
+        if (typeof s.lockUntilAbs !== 'number' || !isFinite(s.lockUntilAbs)) s.lockUntilAbs = 0;
+    });
     if (!e.store || typeof e.store !== 'object') e.store = {};
     var st = e.store;
     st.commission = _clamp(_num(st.commission, ECO_CONST.commissionDefault), ECO_CONST.commissionMin, ECO_CONST.commissionMax);
     if (typeof st.lockUntilAbs !== 'number' || !isFinite(st.lockUntilAbs)) st.lockUntilAbs = 0;
     if (typeof e.score !== 'number' || !isFinite(e.score)) e.score = 0;
     if (!e.stats || typeof e.stats !== 'object') e.stats = {};
-    ['revenue', 'cost', 'units', 'storeRevenue', 'lineOpenings'].forEach(function (k) {
+    ['revenue', 'cost', 'units', 'storeRevenue', 'lineOpenings', 'serviceRevenue', 'subscribers'].forEach(function (k) {
         if (typeof e.stats[k] !== 'number' || !isFinite(e.stats[k])) e.stats[k] = 0;
     });
     if (!e.pending || typeof e.pending !== 'object') e.pending = {};
@@ -135,7 +157,7 @@ function _linePlan(line, s, base, sat, scale) {
     var price = Math.max(1, _num(s.price, basePrice));
     var priceF = _clamp(Math.pow(basePrice / price, line.elasticity), ECO_CONST.priceFactorMin, ECO_CONST.priceFactorMax);
     var unitCost = basePrice * tier.costRatio;
-    var raw = base * line.attach * tier.attachMult * priceF * sat;
+    var raw = base * line.attach * ECO_CONST.lineAttachScale * tier.attachMult * priceF * sat;
     var units = Math.round(_clamp(raw, 0, base * ECO_CONST.maxAttachShare));
     return {
         units: units,
@@ -167,14 +189,17 @@ export class EcosystemSystem {
 
     _lockLeft(untilAbs) { return Math.max(0, untilAbs - this._now()); }
 
-    // Skor lock-in 0..1: separuh dari lini aksesori yang terbuka, separuh dari pengguna App Store.
+    // Skor lock-in 0..1: lini aksesori, App Store, dan layanan berlangganan (bobot di ECO_CONST).
     _refreshScore() {
         var d = this.state.data, e = this._e();
         var open = ECO_LINES.filter(function (l) { return e.lines[l.id].open; }).length;
         var lineScore = open / ECO_LINES.length;
         var users = _storeAvailable(d) ? (computeOsAdoption(d).activeUsers || 0) : 0;
         var storeScore = _clamp(users / ECO_CONST.storeUsersForFullScore, 0, 1);
-        e.score = _clamp(0.5 * lineScore + 0.5 * storeScore, 0, 1);
+        var svcOpen = ECO_SERVICES.filter(function (v) { return e.services[v.id].open; }).length;
+        var svcScore = svcOpen / ECO_SERVICES.length;
+        e.score = _clamp(ECO_CONST.scoreWeightLines * lineScore + ECO_CONST.scoreWeightStore * storeScore
+            + ECO_CONST.scoreWeightServices * svcScore, 0, 1);
         return e.score;
     }
 
@@ -261,6 +286,119 @@ export class EcosystemSystem {
         return { ok: true };
     }
 
+    // ---------------------------------------------------------------- layanan berlangganan
+    isServiceOpen(id) { var s = this._e().services[id]; return !!(s && s.open); }
+
+    getServiceAvailability(id) {
+        var svc = getEcoService(id);
+        if (!svc) return { ok: false, reason: 'unknown' };
+        var year = Number((this.state.data.time || {}).currentYear) || 2000;
+        if (year < svc.minYear) return { ok: false, reason: 'locked', year: svc.minYear };
+        if (!_serviceAvailable(this.state.data, svc)) return { ok: false, reason: 'unavailable' };
+        return { ok: true };
+    }
+
+    openService(id) {
+        var svc = getEcoService(id);
+        if (!svc) return { ok: false, reason: 'unknown' };
+        var d = this.state.data, e = this._e(), s = e.services[id];
+        if (s.open) return { ok: false, reason: 'already' };
+        var av = this.getServiceAvailability(id);
+        if (!av.ok) return av;
+        var cost = _nice(svc.setup * Math.sqrt(this._scale()));
+        if (!WalletService.canAfford(cost)) return { ok: false, reason: 'funds', cost: cost };
+        WalletService.pay(cost, 'Membuka layanan berlangganan: ' + svc.id);
+        s.open = true;
+        s.openedAbs = this._now();
+        this._refreshScore();
+        bus.emit('ecosystem:service-opened', { id: id });
+        return { ok: true, cost: cost };
+    }
+
+    closeService(id) {
+        var svc = getEcoService(id);
+        if (!svc) return { ok: false, reason: 'unknown' };
+        var s = this._e().services[id];
+        if (!s.open) return { ok: false, reason: 'already' };
+        var untilAbs = s.openedAbs + ECO_CONST.commitMonths;
+        if (this._now() < untilAbs) return { ok: false, reason: 'commit', monthsLeft: untilAbs - this._now() };
+        s.open = false;
+        this._refreshScore();
+        return { ok: true };
+    }
+
+    setServiceTier(id, tier) {
+        var svc = getEcoService(id);
+        if (!svc || SERVICE_TIERS.indexOf(tier) < 0) return { ok: false, reason: 'unknown' };
+        var s = this._e().services[id];
+        if (s.tier === tier) return { ok: false, reason: 'same' };
+        if (this._now() < s.lockUntilAbs) return { ok: false, reason: 'lock', monthsLeft: this._lockLeft(s.lockUntilAbs) };
+        s.tier = tier;
+        s.price = serviceTierBasePrice(svc, tier);
+        s.lockUntilAbs = this._now() + ECO_CONST.lockMonths;
+        return { ok: true };
+    }
+
+    // Harga hanya bisa diubah di tier berbayar; tier gratis tidak punya harga.
+    setServicePriceStep(id, dir) {
+        var svc = getEcoService(id);
+        if (!svc || !dir) return { ok: false, reason: 'unknown' };
+        var s = this._e().services[id];
+        if (s.tier === 'free') return { ok: false, reason: 'free' };
+        if (this._now() < s.lockUntilAbs) return { ok: false, reason: 'lock', monthsLeft: this._lockLeft(s.lockUntilAbs) };
+        var base = serviceTierBasePrice(svc, s.tier);
+        var lo = base * ECO_CONST.priceMinMult, hi = base * ECO_CONST.priceMaxMult;
+        var next = dir > 0 ? s.price * (1 + ECO_CONST.priceStep) : s.price / (1 + ECO_CONST.priceStep);
+        next = Math.round(_clamp(next, lo, hi) * 100) / 100;
+        if (next === s.price) return { ok: false, reason: 'same' };
+        s.price = next;
+        s.lockUntilAbs = this._now() + ECO_CONST.lockMonths;
+        return { ok: true };
+    }
+
+    // Hitung rencana satu layanan untuk bulan ini (tanpa mengubah state).
+    _servicePlan(svc, s, base, sat, scale) {
+        var tier = SERVICE_TIER_META[s.tier] || SERVICE_TIER_META.standard;
+        var basePrice = serviceTierBasePrice(svc, s.tier);
+        var price = tier.priceMult > 0 ? Math.max(0.01, _num(s.price, basePrice)) : 0;
+        var priceF = 1;
+        if (basePrice > 0) {
+            priceF = _clamp(Math.pow(basePrice / price, svc.elasticity), ECO_CONST.priceFactorMin, ECO_CONST.priceFactorMax);
+        }
+        var unitCost = svc.refPrice * svc.unitCostRatio * tier.costMult;
+        var raw = base * svc.attach * tier.attachMult * priceF * sat;
+        var subs = Math.round(_clamp(raw, 0, base * ECO_CONST.maxAttachShare));
+        return {
+            subscribers: subs, price: price, unitCost: unitCost,
+            revenue: subs * price, cogs: subs * unitCost,
+            fixed: _nice(svc.monthlyFixed * Math.sqrt(scale))
+        };
+    }
+
+    getServicePreview(id) {
+        var svc = getEcoService(id);
+        if (!svc) return null;
+        var d = this.state.data, e = this._e(), s = e.services[id];
+        var base = _serviceBase(d, svc), sat = _satFactor(d), scale = this._scale();
+        var plan = this._servicePlan(svc, s, base, sat, scale);
+        var basePrice = serviceTierBasePrice(svc, s.tier);
+        var av = this.getServiceAvailability(id);
+        var setupCost = _nice(svc.setup * Math.sqrt(scale));
+        var commitLeft = s.open ? Math.max(0, s.openedAbs + ECO_CONST.commitMonths - this._now()) : 0;
+        return {
+            id: id, nameKey: svc.nameKey, descKey: svc.descKey, minYear: svc.minYear,
+            available: av.ok, availabilityReason: av.ok ? null : av.reason, availabilityYear: av.year || null,
+            open: s.open, tier: s.tier, price: plan.price, basePrice: basePrice,
+            priceMin: basePrice * ECO_CONST.priceMinMult, priceMax: basePrice * ECO_CONST.priceMaxMult,
+            setupCost: setupCost, canOpen: !s.open && av.ok && WalletService.canAfford(setupCost),
+            locked: this._now() < s.lockUntilAbs, lockLeft: this._lockLeft(s.lockUntilAbs),
+            closeLocked: s.open && commitLeft > 0, commitLeft: commitLeft,
+            base: base, subscribers: plan.subscribers, revenue: plan.revenue,
+            cost: plan.cogs + plan.fixed, unitCost: plan.unitCost,
+            margin: plan.revenue > 0 ? (plan.revenue - plan.cogs) / plan.revenue : 0
+        };
+    }
+
     // ---------------------------------------------------------------- uang (dipanggil EconomySystem)
     // Dipanggil sekali per bulan. Mengembalikan total biaya bulan itu; pendapatan disimpan di pending.
     processMonth() {
@@ -281,6 +419,19 @@ export class EcosystemSystem {
             units += plan.units;
         });
 
+        // Layanan berlangganan: pendapatan langganan dan biaya per pelanggan + tetap.
+        var svcRevenue = 0, subscribers = 0;
+        ECO_SERVICES.forEach(function (svc) {
+            var s = e.services[svc.id];
+            if (!s || !s.open) return;
+            var sb = _serviceBase(d, svc);
+            var sp = self._servicePlan(svc, s, sb, sat, scale);
+            svcRevenue += sp.revenue;
+            subscribers += sp.subscribers;
+            revenue += sp.revenue;
+            cost += sp.cogs + sp.fixed;
+        });
+
         // App Store: komisi dari belanja kotor pengguna OS aktif.
         var storeUsers = 0, storeRev = 0;
         if (_storeAvailable(d)) {
@@ -298,9 +449,12 @@ export class EcosystemSystem {
         e.pending.revenue = revenue;
         e.last = {
             units: units, storeUsers: storeUsers, revenue: revenue, cost: cost,
-            lineRevenue: Math.round(lineRevenue), storeRevenue: Math.round(storeRev)
+            lineRevenue: Math.round(lineRevenue), storeRevenue: Math.round(storeRev),
+            serviceRevenue: Math.round(svcRevenue), subscribers: subscribers
         };
         e.stats.units += units;
+        e.stats.serviceRevenue += Math.round(svcRevenue);
+        e.stats.subscribers = subscribers;
         e.stats.storeRevenue += Math.round(storeRev);
         e.stats.cost += cost;
 
@@ -363,9 +517,11 @@ export class EcosystemSystem {
     getSummary() {
         var d = this.state.data, e = this._e();
         var linesOpen = ECO_LINES.filter(function (l) { return e.lines[l.id].open; }).length;
+        var servicesOpen = ECO_SERVICES.filter(function (v) { return e.services[v.id].open; }).length;
         return {
             score: e.score, demandBonus: this.getDemandFactor() - 1, competitorRelief: 1 - this.getCompetitorRelief(),
             linesOpen: linesOpen, lineCount: ECO_LINES.length, storeAvailable: _storeAvailable(d),
+            servicesOpen: servicesOpen, serviceCount: ECO_SERVICES.length,
             phoneBase: _phoneBase(d), last: e.last, stats: e.stats, history: e.history.slice()
         };
     }
