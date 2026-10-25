@@ -117,5 +117,6 @@ export function renderEcosystemPanel(params) {
     var sum = sys.getSummary();
     var sp = sys.getStorePreview();
     var lines = ECO_LINES.map(function (l) { return _lineCard(sys, l); }).join('');
-    return _summaryCard(sum) + _storeCard(sp) + lines;
+    var link = '<div class="rg-btn-row"><button class="btn-secondary" data-nav="products" data-nav-sub="accessories">' + esc(t('eco.prod.view')) + '</button></div>';
+    return _summaryCard(sum) + link + _storeCard(sp) + lines;
 }

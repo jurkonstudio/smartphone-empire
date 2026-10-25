@@ -19,6 +19,7 @@ import { t } from '../../core/LanguageService.js';
 import { bus } from '../../core/EventBus.js';
 import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
 import { renderSupplyCard } from './CountryPanels.js';
+import { renderAccessoriesTab } from './AccessoriesTab.js';
 
 
 function safe(fn, fallback) {
@@ -101,6 +102,7 @@ export function renderProductPanel(params) {
     var productSystem = params.productSystem;
     var researchSystem = params.researchSystem;
     var osSystem = params.osSystem;
+    var ecosystemSystem = params.ecosystemSystem;
 
     var chipUnlocked = isChipLabUnlocked();
     if (subtab === 'chip' && !chipUnlocked) subtab = 'design';
@@ -108,6 +110,7 @@ export function renderProductPanel(params) {
     var subtabs = [
         { id: 'design',  label: t('prod.subtab.design') },
         { id: 'catalog', label: t('prod.subtab.catalog') },
+        { id: 'accessories', label: t('prod.subtab.accessories') },
         { id: 'sales',   label: t('prod.subtab.sales') }
     ];
     if (chipUnlocked) subtabs.push({ id: 'chip', label: t('prod.subtab.chip') });
@@ -122,6 +125,8 @@ export function renderProductPanel(params) {
     var body = '';
     if (subtab === 'catalog') {
         body = safe(function () { return _renderCatalog(); }, '<div class="empty"><div class="empty-title">' + tx('prod.error', 'Error') + '</div></div>');
+    } else if (subtab === 'accessories') {
+        body = safe(function () { return renderAccessoriesTab({ ecosystemSystem: ecosystemSystem }); }, '<div class="empty"><div class="empty-title">' + tx('prod.error', 'Error') + '</div></div>');
     } else if (subtab === 'sales') {
         body = safe(function () { return _renderSales(); }, '<div class="empty"><div class="empty-title">' + tx('prod.error', 'Error') + '</div></div>');
     } else if (subtab === 'chip') {
