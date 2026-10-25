@@ -62,7 +62,19 @@ export const ANNUAL_CONFIG = {
         D: { cash: 0,     reputation: -3, demand: [{ scope: 'all', mult: 0.95, days: 90 }] }
     },
     // Selama masa percobaan, hanya bagian positif dari efek nilai yang berlaku.
-    graceKeepsOnlyPositive: true
+    graceKeepsOnlyPositive: true,
+
+    // ---------------- Rival Tahunan (target ke-4)
+    // Tiap tahun dewan menunjuk satu pesaing: pangsa pasar rata-ratamu harus melewati pangsa rata-rata rival
+    // di tahun yang sama. Rival = pesaing terdekat di atasmu (sulit: satu tingkat lebih jauh di atas);
+    // bila kamu sudah #1, rivalnya pesaing terkuat.
+    rival: {
+        enabled: true,
+        minShare: 0.0005,                                  // abaikan merek yang pangsanya di bawah 0,05% (bila masih ada pilihan lain)
+        skipAbove: { santai: 0, normal: 0, sulit: 1 },     // berapa tingkat dilewati di atas pemain
+        // Bonus tambahan bila rival dikalahkan (dijumlahkan dengan hadiah nilai; kas x skala bisnis)
+        winEffects: { cash: 4000, reputation: 2 }
+    }
 };
 
 export const GRADE_TEXT = {
@@ -120,6 +132,8 @@ export function getFocusById(id) {
 export const TARGET_META = {
     revenue:  { kind: 'money',   label: { id: 'Omzet setahun',             en: 'Annual revenue' } },
     share:    { kind: 'percent', label: { id: 'Rata-rata pangsa pasar',    en: 'Average market share' } },
-    netWorth: { kind: 'money',   label: { id: 'Kekayaan bersih akhir tahun', en: 'Year-end net worth' } }
+    netWorth: { kind: 'money',   label: { id: 'Kekayaan bersih akhir tahun', en: 'Year-end net worth' } },
+    // Target rival: nama rival ditambahkan UI ("Kalahkan Nokia"); nilainya pangsa pasar rata-rata.
+    rival:    { kind: 'percent', label: { id: 'Kalahkan ', en: 'Beat ' } }
 };
 export const TARGET_KEYS = ['revenue', 'share', 'netWorth'];
