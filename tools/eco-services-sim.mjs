@@ -49,7 +49,16 @@ d.os.versions[0].features.push('fw_cloud_sync');
 // --- 3. Buka layanan dengan dana cukup
 state.addCash(1e9);
 check(eco.openService('cloud').ok, 'buka cloud ketika fitur & tahun terpenuhi');
-check(eco.openService('ai').ok, 'buka asisten AI');
+{ const prevY = d.time.currentYear, prevM = d.time.currentMonth;
+  d.time.currentYear = 2022;
+  const early = eco.openService('ai');
+  check(!early.ok && early.reason === 'locked', 'asisten AI terkunci sebelum 2023 (' + JSON.stringify(early) + ')');
+  d.time.currentYear = 2023;
+  const noFeat = eco.openService('ai');
+  check(!noFeat.ok && noFeat.reason === 'unavailable', 'asisten AI butuh fitur fw_ai_on_device (' + JSON.stringify(noFeat) + ')');
+  d.os.versions[0].features.push('fw_ai_on_device');
+  check(eco.openService('ai').ok, 'buka asisten AI');
+  d.time.currentYear = prevY; d.time.currentMonth = prevM; }
 check(!eco.openService('ai').ok, 'tidak bisa membuka dua kali');
 
 // --- 4. Batas harga dan kunci tier
@@ -85,7 +94,7 @@ let nanCount = 0, capBreach = 0, freeRev = 0, guardOk = true, negative = 0;
 for (let y = 2013; y <= 2026; y++) {
   for (let m = 1; m <= 12; m++) {
     d.time.currentYear = y; d.time.currentMonth = m;
-    if (y === 2020 && m === 6) { d.os.versions[0].features.includes('fw_siri') || d.os.versions[0].features.push('fw_siri'); }
+    
     const cost = eco.processMonth();
     const again = eco.processMonth();           // penjaga bulan ganda
     if (again !== 0) guardOk = false;
