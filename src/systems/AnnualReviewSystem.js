@@ -9,10 +9,11 @@
 //
 // State baru: data.annual (dilengkapi otomatis oleh ensureAnnualState, aman untuk save lama):
 //   baseline { year, month, netWorth, productSold:{id:n}, reputation }  awal periode berjalan
-//   targets  { year, revenue, share, netWorth, focusId } | null         target periode berjalan
+//   targets  { year, revenue, share, netWorth, focusId, rival } | null  target periode berjalan
+//            rival = { id, name, baseShare } | undefined (Rival Tahunan, target ke-4; save lama tanpa rival tetap 3 target)
 //   focus    { id, year } | null
 //   pending  laporan yang menunggu keputusan fokus | null
-//   history  [{ year, grade, avgRatio, revenueAnnual, avgShare, rank, netWorth, passed, focusId }]
+//   history  [{ year, grade, avgRatio, revenueAnnual, avgShare, rank, netWorth, passed, focusId, rivalId, rivalBeaten }]
 //
 // UI TIDAK ada di sini: sistem hanya memancarkan 'annual:pending' dan 'annual:resolved'.
 // Semua angka balance ada di src/data/annual-review.data.js.
@@ -95,7 +96,9 @@ export function computePeriodMetrics(data, n) {
         return { id: id, name: names[id] || id, share: months ? compSum[id] / months : 0 };
     }).filter(function (r) { return r.share > 0; }).sort(function (x, y) { return y.share - x.share; });
     var rank = 1 + rivals.filter(function (r) { return r.share > avgShare; }).length;
-    return { months: months, revenue: revenue, avgShare: avgShare, rank: rank, brands: rivals.length + 1, topRival: rivals[0] || null };
+    var rivalShares = {};
+    rivals.forEach(function (r) { rivalShares[r.id] = r.share; });
+    return { months: months, revenue: revenue, avgShare: avgShare, rank: rank, brands: rivals.length + 1, topRival: rivals[0] || null, rivals: rivals, rivalShares: rivalShares };
 }
 
 function _productSoldMap(data) {
@@ -115,6 +118,42 @@ export function computeUnits(data, baseline) {
         if (delta > 0 && (!best || delta > best.units)) best = { name: p.name || p.id, units: delta };
     });
     return { units: total, best: best };
+}
+
+// Rival Tahunan: pesaing terdekat di atas pemain (sulit melewati beberapa tingkat); bila tak ada yang di atas,
+// pesaing terkuat. `rivals` urut pangsa menurun. `activeIds` (opsional) membatasi ke merek yang masih aktif.
+export function pickRival(rivals, avgShare, difficulty, activeIds) {
+    var R = ANNUAL_CONFIG.rival;
+    if (!R || !R.enabled) return null;
+    var pool = (rivals || []).filter(function (r) {
+        return r && r.share > 0 && (!activeIds || activeIds.indexOf(r.id) >= 0);
+    });
+    var big = pool.filter(function (r) { return r.share >= R.minShare; });
+    if (big.length) pool = big;
+    if (!pool.length) return null;
+    var above = pool.filter(function (r) { return r.share > avgShare; }).sort(function (a, b) { return a.share - b.share; });
+    var pick;
+    if (above.length) {
+        var skip = (R.skipAbove && R.skipAbove[difficulty]) || 0;
+        pick = above[Math.min(skip, above.length - 1)];
+    } else {
+        pick = pool.slice().sort(function (a, b) { return b.share - a.share; })[0];
+    }
+    return { id: pick.id, name: pick.name, baseShare: pick.share };
+}
+
+// Item penilaian rival untuk periode berjalan atau yang ditutup. Rival yang sudah tak ada (share 0) = otomatis lulus.
+function _rivalItem(rival, metrics) {
+    var rs = _num(metrics.rivalShares && metrics.rivalShares[rival.id]);
+    var actual = metrics.avgShare;
+    var withdrawn = rs <= 0;
+    var ratio = withdrawn ? 1 : _clamp(actual / rs, 0, 2);
+    return { key: 'rival', target: rs, actual: actual, ratio: ratio, passed: withdrawn || actual >= rs,
+             rivalId: rival.id, rivalName: rival.name, withdrawn: withdrawn };
+}
+
+function _activeIds(data) {
+    return ((data.market && data.market.competitors) || []).map(function (c) { return c.id; });
 }
 
 function _diffKey(data, table) {
@@ -170,6 +209,7 @@ export function evaluateTargets(targets, metrics, netWorth, months) {
         else ratio = actual >= target ? 1 : 0;
         return { key: key, target: target, actual: actual, ratio: ratio, passed: actual >= target };
     });
+    if (targets.rival) items.push(_rivalItem(targets.rival, metrics));
     var avg = items.reduce(function (s, it) { return s + it.ratio; }, 0) / items.length;
     return { items: items, avgRatio: avg };
 }
@@ -194,6 +234,13 @@ export function getBoardCardData(data) {
         var ratio = target > 0 ? _clamp(actual / target, 0, 1.5) : (actual >= target ? 1 : 0);
         return { key: key, target: target, actual: actual, hasData: hasData, ratio: ratio, passed: hasData && actual >= target };
     });
+    if (a.targets.rival) {
+        var ri = _rivalItem(a.targets.rival, m);
+        ri.hasData = m.months > 0;
+        ri.ratio = ri.target > 0 ? _clamp(ri.actual / ri.target, 0, 1.5) : 1;
+        ri.passed = ri.hasData && ri.passed;
+        items.push(ri);
+    }
     return { year: a.targets.year, months: k, items: items, focusId: a.targets.focusId || null };
 }
 
@@ -256,6 +303,11 @@ export class AnnualReviewSystem {
         }
         var t = buildTargets(d, last, index, nw, a.focus && a.focus.id);
         a.targets = { year: d.time.currentYear, revenue: t.revenue, share: t.share, netWorth: t.netWorth, focusId: a.focus ? a.focus.id : null };
+        if (last && hist.length >= 3) {
+            var mm = computePeriodMetrics(d, 12);
+            var rv = pickRival(mm.rivals, mm.avgShare, d.difficulty, _activeIds(d));
+            if (rv) a.targets.rival = rv;
+        }
         bus.emit('state:changed', d);
     }
 
@@ -294,7 +346,9 @@ export class AnnualReviewSystem {
             units: u.units, bestPhone: u.best,
             reputation: _num(d.market && d.market.reputation), reputationStart: a.baseline ? a.baseline.reputation : null,
             graded: false, items: [], avgRatio: 0, grade: null, effects: null,
-            nextYear: d.time.currentYear
+            nextYear: d.time.currentYear,
+            rival: null,
+            rivalsTop: m.rivals.slice(0, 8).map(function (r) { return { id: r.id, name: r.name, share: r.share }; })
         };
 
         if (a.targets) {
@@ -303,7 +357,12 @@ export class AnnualReviewSystem {
             report.items = ev.items;
             report.avgRatio = ev.avgRatio;
             report.grade = gradeFor(ev.avgRatio);
+            var ri = ev.items.filter(function (it) { return it.key === 'rival'; })[0];
+            if (ri) report.rival = { id: ri.rivalId, name: ri.rivalName, beaten: ri.passed, withdrawn: ri.withdrawn, playerShare: ri.actual, rivalShare: ri.target };
             report.effects = this._applyGradeEffects(d, report);
+            if (report.rival && report.rival.beaten && !report.rival.withdrawn) {
+                this.state.addLog((_lang() === 'id' ? 'Kamu mengalahkan rival tahunan: ' : 'You beat your annual rival: ') + report.rival.name + '.', LOG_TYPES.info);
+            }
             this.state.addLog((_lang() === 'id' ? 'Rapor ' : 'Annual report ') + closedYear + ': ' +
                 (_lang() === 'id' ? 'nilai ' : 'grade ') + report.grade + '.', LOG_TYPES.info);
         }
@@ -312,7 +371,9 @@ export class AnnualReviewSystem {
             year: closedYear, grade: report.grade, avgRatio: report.avgRatio,
             revenueAnnual: report.revenueAnnual, avgShare: report.avgShare, rank: report.rank,
             netWorth: nw, passed: report.items.filter(function (i) { return i.passed; }).length,
-            focusId: a.targets ? a.targets.focusId : null
+            focusId: a.targets ? a.targets.focusId : null,
+            rivalId: report.rival ? report.rival.id : null,
+            rivalBeaten: report.rival ? !!report.rival.beaten : null
         });
         if (a.history.length > C.historyMax) a.history.splice(0, a.history.length - C.historyMax);
 
@@ -331,10 +392,18 @@ export class AnnualReviewSystem {
         var cash = Math.round(_num(fx.cash) * report.scale);
         var rep = _num(fx.reputation);
         var demand = (fx.demand || []).slice();
+        // Bonus mengalahkan rival (selalu positif, berlaku juga di masa percobaan).
+        var win = (C.rival && C.rival.winEffects) || {};
+        var winRep = 0, winCash = 0;
+        if (report.rival && report.rival.beaten && !report.rival.withdrawn) {
+            winCash = Math.round(_num(win.cash) * report.scale);
+            winRep = _num(win.reputation);
+        }
         if (report.grace && C.graceKeepsOnlyPositive) {
             if (rep < 0) rep = 0;
             demand = [];
         }
+        cash += winCash; rep += winRep;
         if (cash) this.state.addCash(cash);
         if (rep) this.state.addReputation(rep);
         this._pushMods(d, 'annual_grade:' + report.year, demand);
@@ -393,6 +462,13 @@ export class AnnualReviewSystem {
         return buildTargets(d, last, a.history.length, base, null);
     }
 
+    // Rival yang akan ditunjuk dewan untuk tahun berikutnya (untuk ditampilkan sebelum memilih fokus).
+    previewRival() {
+        var d = this.state.data, a = ensureAnnualState(d);
+        if (!a.pending) return null;
+        return pickRival(a.pending.rivalsTop, a.pending.avgShare, d.difficulty, _activeIds(d));
+    }
+
     canChooseFocus(focusId) {
         var a = ensureAnnualState(this.state.data);
         if (!a.pending) return { ok: false, reason: 'not-pending' };
@@ -422,12 +498,15 @@ export class AnnualReviewSystem {
         var baseNW = a.baseline ? a.baseline.netWorth : computeNetWorth(d);
         var t = buildTargets(d, last, a.history.length, baseNW, focusId);
         a.targets = { year: report.nextYear, revenue: t.revenue, share: t.share, netWorth: t.netWorth, focusId: focusId };
+        var rv = pickRival(report.rivalsTop, report.avgShare, d.difficulty, _activeIds(d));
+        if (rv) a.targets.rival = rv;
         a.focus = { id: focusId, year: report.nextYear };
         a.pending = null;
         this._announced = false;
 
         var label = _L(p.def.label);
         this.state.addLog((_lang() === 'id' ? 'Fokus strategis ' : 'Strategic focus ') + report.nextYear + ': ' + label + '.', LOG_TYPES.info);
+        if (rv) this.state.addLog((_lang() === 'id' ? 'Rival tahun ' : 'Rival for ') + report.nextYear + ': ' + rv.name + '.', LOG_TYPES.info);
         ToastService.success((_lang() === 'id' ? 'Fokus dipilih: ' : 'Focus chosen: ') + label);
         bus.emit('annual:resolved', { report: report, focusId: focusId, targets: a.targets });
         bus.emit('state:changed', d);
