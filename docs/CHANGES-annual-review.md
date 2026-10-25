@@ -1,4 +1,4 @@
-# Rapor Tahunan + Target Dewan
+# Rapor Tahunan + Target Dewan + Rival Tahunan
 
 Tiap 1 Januari game berhenti sejenak dan menampilkan rapor tahun yang baru berakhir, lalu pemain memilih
 satu Fokus Strategis. Dewan menetapkan 3 target per tahun, jadi tiap tahun punya taruhan sendiri.
@@ -20,10 +20,16 @@ Salin file ke lokasi yang sama (path relatif dari akar repo). Tidak ada langkah 
 - `src/config/event.md` — dokumentasi event `annual:pending` / `annual:resolved`.
 
 ## Cara kerja
-- **Tiga target dewan**: omzet setahun, rata-rata pangsa pasar, kekayaan bersih akhir tahun
+- **Tiga target dewan** (ditambah Rival Tahunan sebagai target ke-4, lihat bawah): omzet setahun, rata-rata pangsa pasar, kekayaan bersih akhir tahun
   (kas + simpanan bank − pinjaman; saham tidak dihitung, sama seperti skor akhir musim).
 - **Tahun pertama**: angka dasar per kesulitan. **Tahun berikutnya**: capaian tahun lalu × pengali pertumbuhan,
   dengan lantai supaya target tak jatuh ke nol. Save lama di tengah game memakai capaian 12 bulan terakhir.
+- **Rival Tahunan** (target ke-4, mulai tahun kedua saat data pesaing sudah ada): dewan menunjuk pesaing terdekat di atas
+  pangsa pasarmu (sulit: satu tingkat lebih jauh; bila kamu sudah #1, pesaing terkuat). Targetnya: pangsa rata-ratamu
+  melewati pangsa rata-rata rival di tahun yang sama. Dinilai langsung head-to-head, jadi rival yang ikut tumbuh tetap
+  menantang. Menang = bonus kas dan reputasi di atas hadiah nilai, berlaku juga di masa percobaan. Rival yang mundur dari
+  pasar = lulus otomatis tanpa bonus. Rival naik tingkat mengikuti kemajuanmu. Save lama yang tidak punya rival tetap 3 target.
+  Angka ada di `ANNUAL_CONFIG.rival`.
 - **Nilai**: rata-rata (aktual / target, tiap target dijepit 0..2). S ≥ 1,25, A ≥ 1,0, B ≥ 0,8, C ≥ 0,5, selebihnya D.
 - **Hadiah/hukuman**: S dan A memberi kas (× skala bisnis) dan reputasi. C mengurangi reputasi. D mengurangi reputasi
   dan menurunkan permintaan 5% selama 90 hari. Rapor pertama adalah masa percobaan: tidak ada hukuman.
@@ -49,5 +55,6 @@ Field baru `data.annual` dilengkapi otomatis oleh `ensureAnnualState`. `GameStat
 - Tampilan modal belum diuji di browser/perangkat asli (hanya tes headless dan render HTML sebagai teks).
 
 ## Ide lanjutan yang sudah disiapkan datanya
-- Rival Tahunan (#3): `report.topRival` dan peringkat sudah dihitung; tinggal dijadikan target ke-4.
+- Headline berita saat rival dikalahkan: sekarang hanya masuk log dan toast, karena artikel NewsSystem butuh media dan jurnalis.
+- Milestone "Rival Tahunan" ke skor akhir musim: sengaja belum, karena tiap milestone bernilai 100 poin dan mengubah balance skor.
 - Riwayat nilai per tahun sudah tersimpan di `data.annual.history`, siap ditampilkan di HQ → History.
