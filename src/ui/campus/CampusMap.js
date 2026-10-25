@@ -9,7 +9,8 @@ import { createCampusScene } from './CampusScene.js';
 import { renderCampusFallback } from './CampusFallback.js';
 import { bus } from '../../core/EventBus.js';
 import { unmountManufactureMap } from '../manufacture/ManufactureMap.js';
-import { isOfficeMode, isManufactureMode, resumeOffice, resumeManufacture, registerCampusHooks } from './CampusOfficeBridge.js';
+import { unmountServerMap } from '../server/ServerMap.js';
+import { isOfficeMode, isManufactureMode, isServerMode, resumeOffice, resumeManufacture, resumeServer, registerCampusHooks } from './CampusOfficeBridge.js';
 
 var THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 var _threePromise = null;
@@ -27,6 +28,7 @@ export async function mountCampusMap(containerEl, gameState) {
     unmountCampusMap();
     // Sedang di dalam kantor (mis. Home dirender ulang): lanjutkan Office 3D, jangan buat peta kampus.
     if (isManufactureMode()) { resumeManufacture(containerEl); return; }
+    if (isServerMode()) { resumeServer(containerEl); return; }
     if (isOfficeMode()) { resumeOffice(containerEl, gameState); return; }
     var token = ++_token;
     try {
@@ -56,6 +58,7 @@ export async function mountCampusMap(containerEl, gameState) {
 export function unmountCampusMap() {
     _token++; // batalkan mount yang masih menunggu
     unmountManufactureMap();
+    unmountServerMap();
     if (!_active) return;
     _active.unsubs.forEach(function (u) { if (typeof u === 'function') u(); });
     _active.scene.dispose();

@@ -1,4 +1,6 @@
 // FILE: src/ui/campus/CampusOfficeBridge.js  (REPLACE — v2027.67: tab Manufaktur memuat Peta Manufaktur 3D)
+// v2027.73 — Peta Server 3D (dasar laut, src/ui/server/*) dibuka lewat tombol "Server" di samping sakelar.
+//   Sakelar Home tetap DUA tab (Kampus | Manufaktur); Server bukan tab baru. Aturan satu WebGL tetap.
 // v2027.67 — tab Manufaktur di Home kini menampilkan Peta Manufaktur 3D (src/ui/manufacture/*), menggantikan placeholder
 //   "Segera hadir". Aturan tetap: hanya satu scene WebGL aktif; pindah Kampus/Kantor/Manufaktur membuang scene sebelumnya.
 // v2027.66 — sakelar Home kini "Kampus | Manufaktur" (Manufaktur = placeholder, belum ada isinya). Tab "Kantor" dihapus:
@@ -17,6 +19,7 @@
 //  - Tab HQ > Kantor tetap berfungsi seperti biasa.
 import { mountOfficeMap, unmountOfficeMap, isOfficeMounted, renderOfficeLoading } from '../office/OfficeMap.js';
 import { mountManufactureMap, unmountManufactureMap, renderManufactureLoading } from '../manufacture/ManufactureMap.js';
+import { mountServerMap, unmountServerMap, renderServerLoading } from '../server/ServerMap.js';
 import { renderCampusLoading } from './CampusFallback.js';
 import { bus } from '../../core/EventBus.js';
 
@@ -37,11 +40,22 @@ var CSS = [
     '.home-switch-btn svg{flex:0 0 auto;width:17px;height:17px;display:block;}',
     '.home-switch-btn.active{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent-soft);}',
     '.home-switch-btn:active{transform:scale(.96);}',
-    '.home-switch-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}'
+    '.home-switch-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}',
+    /* baris sakelar + tombol Server (v2027.73) */
+    '.home-topbar{display:flex;gap:8px;align-items:stretch;}',
+    '.home-topbar .home-switch{flex:1 1 auto;min-width:0;}',
+    '.home-server-chip{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;',
+    'border:1px solid var(--border);border-radius:14px;background:var(--bg-2);color:var(--text-tertiary);font:inherit;font-size:12.5px;font-weight:700;',
+    'cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .18s ease,color .18s ease,transform .12s ease;}',
+    '.home-server-chip svg{flex:0 0 auto;width:17px;height:17px;display:block;}',
+    '.home-server-chip.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent-soft);}',
+    '.home-server-chip:active{transform:scale(.96);}',
+    '.home-server-chip:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}'
 ].join('');
 
 var _inOffice = false;      // true = Home menampilkan Office (dibuka dari gedung HQ), bukan peta kampus
 var _inManu = false;        // true = Home menampilkan placeholder Manufaktur
+var _inServer = false;      // true = Home menampilkan Peta Server 3D (dasar laut)
 var _tok = 0;               // membatalkan transisi yang tertunda
 var _hooks = null;          // { mount, unmount } milik CampusMap.js
 var _timers = [];
@@ -91,13 +105,26 @@ function fadeIn(el) {
 
 // Sinkronkan status aktif sakelar Kampus | Manufaktur di Home dengan mode saat ini.
 // Office adalah bagian dari Kampus, jadi tab Kampus tetap aktif selama di dalam kantor.
+// Saat Peta Server tampil, tidak ada tab yang aktif (Server dibuka lewat tombol tersendiri).
 function syncSwitch() {
     var btns = document.querySelectorAll('.home-switch-btn');
     for (var i = 0; i < btns.length; i++) {
-        var on = (btns[i].getAttribute('data-home-switch') === 'manufacture') === _inManu;
+        var isManuBtn = btns[i].getAttribute('data-home-switch') === 'manufacture';
+        var on = isManuBtn ? _inManu : (!_inManu && !_inServer);
         btns[i].classList.toggle('active', on);
         btns[i].setAttribute('aria-selected', on ? 'true' : 'false');
     }
+    var chip = document.querySelector('.home-server-chip');
+    if (chip) {
+        chip.classList.toggle('active', _inServer);
+        chip.setAttribute('aria-pressed', _inServer ? 'true' : 'false');
+    }
+}
+
+async function mountServerInto(el, data) {
+    el.classList.add('office-map', 'srv-map');  // menonaktifkan vinyet kampus (seperti Manufaktur)
+    el.innerHTML = renderServerLoading();
+    await mountServerMap(el, data);
 }
 
 async function mountManufactureInto(el, data) {
@@ -119,6 +146,7 @@ export function registerCampusHooks(h) { _hooks = h; }
 
 export function isOfficeMode() { return _inOffice; }
 export function isManufactureMode() { return _inManu; }
+export function isServerMode() { return _inServer; }
 
 // CSS sakelar dipasang sekali; HomePanel memanggilnya sebelum menggambar markup sakelar.
 export function ensureBridgeStyle() { ensureStyle(); }
@@ -133,7 +161,8 @@ export function enterOffice(containerEl) {
     if (!containerEl || _inOffice || !_hooks) return;
     ensureStyle();
     _inManu = false;                          // keluar dari Manufaktur bila sedang di sana
-    containerEl.classList.remove('manu-map');
+    _inServer = false;                        // keluar dari Server bila sedang di sana
+    containerEl.classList.remove('manu-map', 'srv-map');
     _inOffice = true;
     syncSwitch();
     var tok = ++_tok;
@@ -142,6 +171,7 @@ export function enterOffice(containerEl) {
         if (tok !== _tok || !containerEl.isConnected) return;
         _hooks.unmount();                         // buang scene kampus (WebGL context dilepas)
         unmountManufactureMap();                  // dan scene manufaktur bila sebelumnya di sana
+        unmountServerMap();                       // dan scene server bila sebelumnya di sana
         fadeIn(containerEl);
         mountOfficeInto(containerEl, gameData());
     });
@@ -175,6 +205,7 @@ export function enterManufacture(containerEl) {
     ensureStyle();
     var fromOffice = _inOffice;
     _inOffice = false;
+    _inServer = false;                        // dari Server: tutup Server lalu buka Manufaktur
     _inManu = true;
     syncSwitch();
     var tok = ++_tok;
@@ -183,8 +214,54 @@ export function enterManufacture(containerEl) {
         if (tok !== _tok || !containerEl.isConnected) return;
         _hooks.unmount();                         // buang scene kampus
         if (fromOffice) unmountOfficeMap();       // buang scene office bila dibuka dari dalam kantor
+        unmountServerMap();                       // buang scene server bila sebelumnya di sana
+        containerEl.classList.remove('srv-map');
         fadeIn(containerEl);
         mountManufactureInto(containerEl, gameData());
+    });
+}
+
+// Dipakai CampusMap saat Home dirender ulang sementara pemain masih di Peta Server.
+export function resumeServer(containerEl) {
+    ensureStyle();
+    mountServerInto(containerEl, gameData());
+}
+
+// Tombol "Server" di samping sakelar: buka peta dasar laut (bukan tab; sakelar tetap dua).
+export function enterServer(containerEl) {
+    if (!containerEl || _inServer || !_hooks) return;
+    ensureStyle();
+    var fromOffice = _inOffice;
+    _inOffice = false;
+    _inManu = false;
+    _inServer = true;
+    syncSwitch();
+    var tok = ++_tok;
+    clearTimers();
+    fadeOut(containerEl, function () {
+        if (tok !== _tok || !containerEl.isConnected) return;
+        _hooks.unmount();                         // buang scene kampus
+        if (fromOffice) unmountOfficeMap();
+        unmountManufactureMap();
+        fadeIn(containerEl);
+        mountServerInto(containerEl, gameData());
+    });
+}
+
+export function exitServer(containerEl) {
+    if (!_inServer) return;
+    ensureStyle();
+    _inServer = false;
+    syncSwitch();
+    var tok = ++_tok;
+    clearTimers();
+    fadeOut(containerEl, function () {
+        if (tok !== _tok || !containerEl.isConnected) return;
+        unmountServerMap();                       // buang scene server (WebGL context dilepas)
+        containerEl.classList.remove('office-map', 'manu-map', 'srv-map');
+        containerEl.innerHTML = renderCampusLoading();
+        fadeIn(containerEl);
+        if (_hooks) _hooks.mount(containerEl, gameData());
     });
 }
 
@@ -217,7 +294,7 @@ if (typeof document !== 'undefined') {
         enterOffice(box);
     });
     // Sakelar Kampus | Manufaktur di atas peta Home.
-    // Tab Kampus: dari Manufaktur kembali ke kampus; dari dalam kantor keluar ke peta kampus.
+    // Tab Kampus: dari Manufaktur kembali ke kampus; dari dalam kantor keluar ke peta kampus; dari Server kembali ke kampus.
     document.addEventListener('click', function (e) {
         var sw = e.target && e.target.closest && e.target.closest('.home-switch-btn');
         if (!sw) return;
@@ -226,11 +303,21 @@ if (typeof document !== 'undefined') {
         e.preventDefault();
         if (sw.getAttribute('data-home-switch') === 'manufacture') { enterManufacture(box); return; }
         if (_inManu) exitManufacture(box);
+        else if (_inServer) exitServer(box);
         else if (_inOffice) exitOffice(box);
+    });
+    // Tombol "Server" di samping sakelar: buka / tutup Peta Server 3D.
+    document.addEventListener('click', function (e) {
+        var chip = e.target && e.target.closest && e.target.closest('.home-server-chip');
+        if (!chip) return;
+        var box = document.getElementById('campus-map');
+        if (!box) return;
+        e.preventDefault();
+        if (_inServer) exitServer(box); else enterServer(box);
     });
     // Pindah ke tab lain => kembali ke mode kampus (kantor ditutup oleh renderView di main.js).
     bus.on('view:changed', function (p) {
-        if (p && p.id !== 'dashboard' && (_inOffice || _inManu)) { _inOffice = false; _inManu = false; _tok++; clearTimers(); syncSwitch(); }
+        if (p && p.id !== 'dashboard' && (_inOffice || _inManu || _inServer)) { _inOffice = false; _inManu = false; _inServer = false; _tok++; clearTimers(); syncSwitch(); }
     });
 }
 
