@@ -396,10 +396,10 @@ function makeFacade(THREE) {
                 a.fillStyle = hexCss(tint(win, -0.38)); a.fillRect(x + 31, y + 14, 2, 34);
                 a.fillStyle = hexCss(tint(win, -0.32)); a.fillRect(x + 12, y + 31, 40, 2);
                 if (lit[r * 4 + c]) {
-                    b.fillStyle = hexCss(tint(win, 0.38));
+                    b.fillStyle = hexCss(lerpHex(tint(win, 0.38), 0xffd890, 0.5));   // v2027.71 — jendela menyala hangat
                     b.fillRect(x + 13, y + 15, 17, 15);
                     b.fillRect(x + 34, y + 15, 17, 15);
-                    b.fillStyle = hexCss(tint(win, 0.15));
+                    b.fillStyle = hexCss(lerpHex(tint(win, 0.15), 0xffc870, 0.5));
                     b.fillRect(x + 13, y + 33, 17, 14);
                     b.fillRect(x + 34, y + 33, 17, 14);
                 }
@@ -566,8 +566,8 @@ export function createAssets(THREE, opts) {
                 var fm = self.mat(k);
                 var t = smooth01((sunsetAmt - (0.12 + 0.2 * i)) / 0.28);
                 var lit = Math.max(t * 0.85 / 0.9, n);
-                fm.emissive.setHex(lerpHex(0xffe0a8, 0xffffff, n));
-                fm.emissiveIntensity = 0.9 * lit;
+                fm.emissive.setHex(lerpHex(0xffe0a8, 0xfff2d8, n));      // v2027.71 — malam: putih hangat (peta emissive sudah hangat)
+                fm.emissiveIntensity = (0.9 + 0.5 * n) * lit;           // malam lebih terang (maks 1.4)
             });
             self.mat('lamp').emissiveIntensity = 0.15 + 0.95 * Math.max(smooth01(sunsetAmt / 0.5) * 0.85 / 0.95, n);
         },
@@ -597,7 +597,7 @@ export function createAssets(THREE, opts) {
             bc.emissive.setHex(0xff2d2d);
             bc.emissiveIntensity = 0.8;
             var hl = self.mat('halo');
-            hl.opacity = 0.22 * night;
+            hl.opacity = 0.3 * night;                      // v2027.71 — halo lampu sedikit lebih kuat
             hl.visible = night > 0.02;
             var wt = self.mat('water');
             wt.emissive.setHex(0x2a6f95);
@@ -852,6 +852,7 @@ function addScenery(g, A, THREE) {
 
 // v2027.70 — render DETAIL (semua instanced -> hanya beberapa draw call).
 function addDetail(g, A, THREE) {
+    var lite = !A.realShadows;   // v2027.71 — tier 'low' (tanpa shadow map): lewati bunga & bangku (hemat draw call)
     var rnd = _rng(5150);
     function tint(lo, hi) { return function (i, c) { var v = lo + rnd() * (hi - lo); c.setRGB(v, v, v * 0.98); }; }
     if (DETAIL.patches.length) {
@@ -868,9 +869,9 @@ function addDetail(g, A, THREE) {
         sh.castShadow = true; sh.receiveShadow = true;
         g.add(sh);
     }
-    if (DETAIL.flowersA.length) g.add(instanced(A, THREE, A.sph(0.08, 5, 4), 'flowerA', DETAIL.flowersA.map(function (f) { return [f[0], f[1], f[2], 1.3, 1.3, 1.3, 0]; })));
-    if (DETAIL.flowersB.length) g.add(instanced(A, THREE, A.sph(0.08, 5, 4), 'flowerB', DETAIL.flowersB.map(function (f) { return [f[0], f[1], f[2], 1.3, 1.3, 1.3, 0]; })));
-    if (DETAIL.benches.length) {
+    if (!lite && DETAIL.flowersA.length) g.add(instanced(A, THREE, A.sph(0.08, 5, 4), 'flowerA', DETAIL.flowersA.map(function (f) { return [f[0], f[1], f[2], 1.3, 1.3, 1.3, 0]; })));
+    if (!lite && DETAIL.flowersB.length) g.add(instanced(A, THREE, A.sph(0.08, 5, 4), 'flowerB', DETAIL.flowersB.map(function (f) { return [f[0], f[1], f[2], 1.3, 1.3, 1.3, 0]; })));
+    if (!lite && DETAIL.benches.length) {
         var seats = [], backs = [], legs = [];
         DETAIL.benches.forEach(function (b) {
             var th = b[3], s = Math.sin(th), c = Math.cos(th);

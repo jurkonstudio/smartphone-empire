@@ -1,4 +1,5 @@
 // FILE: src/ui/campus/CampusLook.js
+// v2027.71 — tampilan malam lebih terbaca + override tuning via URL (lihat CAMPUS_LOOK & ?lk= / ?lkn=).
 // v2027.60 — "Premium look" untuk Peta Kampus 3D.
 // Berisi: tingkat kualitas adaptif, environment map prosedural (PMREM, sekali buat),
 // rig cahaya (matahari + fill + rim + hemisphere), tone mapping, dan shadow map statis.
@@ -25,18 +26,50 @@ export var CAMPUS_LOOK = {
         rimCol: 0xe3ecff, rimI: 0.7,
         envI: 0.42, exposure: 1.0,
         aoOpacity: 0.46,
-        colors: { roofAlt: 0xa3adbb }
+        // v2027.71 — cermin PALETTES.light (nilai sama = tidak mengubah siang); wajib ada agar blendObj mencampur kunci malam.
+        colors: {
+            roofAlt: 0xa3adbb,
+            wall: 0xf4f7fc, grass: 0xc4e3bd, grass2: 0xaed99f, grass3: 0x93c987,
+            plaza: 0xf3f5fa, road: 0xbfc9d8, curb: 0xd2d9e5,
+            leaf: 0x72bd78, leaf2: 0x91cf87, sand: 0xf1dfae, sandWet: 0xd9c795
+        }
     },
     dark: {
-        hemiSky: 0x7f93bd, hemiGround: 0x1d2430, hemiI: 0.9,
-        sunCol: 0xa9bde8, sunI: 1.7,
-        fillCol: 0x6f8fd0, fillI: 0.35,
-        rimCol: 0x8fb0ff, rimI: 0.55,
-        envI: 0.22, exposure: 0.95,
-        aoOpacity: 0.5,
-        colors: { roofAlt: 0x5a6578 }
+        // v2027.71 — malam lebih terbaca: hemi & fill (menerangi dinding +z/+x yang terlihat kamera) dinaikkan,
+        // rim jadi tepi cahaya bangunan, exposure sedikit naik, AO dikurangi. Warna tanah/jalan/dinding malam
+        // diangkat lewat colors (hanya peta Kampus; PALETTES.dark milik Office tidak disentuh).
+        hemiSky: 0x8ea4d6, hemiGround: 0x2a3446, hemiI: 1.15,
+        sunCol: 0xb7caf5, sunI: 2.1,
+        fillCol: 0x7f9fe0, fillI: 0.7,
+        rimCol: 0x9fbfff, rimI: 1.0,
+        envI: 0.32, exposure: 1.08,
+        aoOpacity: 0.4,
+        colors: {
+            roofAlt: 0x74829a,
+            wall: 0xd5dfee, grass: 0x2a4d40, grass2: 0x376350, grass3: 0x2a4e3b,
+            plaza: 0x46536a, road: 0x323c4d, curb: 0x66748c,
+            leaf: 0x3f9163, leaf2: 0x5cb07a, sand: 0x8f8266, sandWet: 0x6f654f
+        }
     }
 };
+
+// v2027.71 — tuning cepat tanpa edit file (untuk QA di HP): ?lk=sunI:3,hemiI:0.8,exposure:1  (siang)
+//                                                       ?lkn=hemiI:1.3,rimI:1.2,exposure:1.1  (malam)
+// Hanya kunci numerik yang sudah ada & hasilnya angka terbatas; salah ketik diabaikan.
+(function () {
+    function apply(param, target) {
+        try {
+            var m = new RegExp('[?&]' + param + '=([^&]+)').exec(location.search);
+            if (!m) return;
+            decodeURIComponent(m[1]).split(',').forEach(function (kv) {
+                var a = kv.split(':'), k = a[0], v = parseFloat(a[1]);
+                if (typeof target[k] === 'number' && isFinite(v) && v >= 0 && v <= 10) target[k] = v;
+            });
+        } catch (e) {}
+    }
+    apply('lk', CAMPUS_LOOK.light);
+    apply('lkn', CAMPUS_LOOK.dark);
+})();
 
 // Arah matahari: dari kiri-depan (-x,+z) relatif kamera isometrik, sehingga dua sisi dinding
 // yang terlihat (+z dan +x) mendapat nilai terang berbeda dan bayangan jatuh ke kanan layar.
