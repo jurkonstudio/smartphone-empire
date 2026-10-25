@@ -1,6 +1,8 @@
 // FILE: src/systems/AdvisorBrain.js
 // v2028.40 — "Otak" lokal Asisten Bisnis. Tanpa server / API key.
 
+import { buildReport, formatReport, evaluateLoan, formatLoanVerdict, evaluateHire, formatHireVerdict, parseAction, actionAdvice } from './AdvisorReasoning.js';
+
 var DAY = 1440;
 
 // ------------------------------------------------------------
@@ -87,6 +89,7 @@ var INTENTS = {
     glossary:  { w: 1.2, kw: ['itu', 'artinya', 'maksud', 'definisi', 'arti', 'what', 'means', 'meaning', 'define', 'istilah'] },
     why:       { w: 1.0, kw: ['kenapa', 'mengapa', 'why', 'alasan', 'sebab', 'reason', 'bagaimana'] },
     bug:       { w: 1.2, kw: ['error', 'eror', 'rusak', 'macet', 'hang', 'crash', 'glitch', 'freeze', 'broken', 'diagnosa', 'diagnostic', 'lag'] },
+    quant:     { w: 1.8, kw: ['audit', 'analisis', 'analysis', 'stress', 'skenario', 'scenario', 'dscr', 'breakeven', 'impas', 'risiko', 'risk', 'evaluasi', 'evaluate'] },
     more:      { w: 0.5, kw: ['lanjut', 'detail', 'lagi', 'terus', 'jelasin', 'jelaskan', 'lengkap', 'more', 'continue', 'elaborate', 'next', 'oke', 'ok', 'ya', 'yes', 'iya', 'boleh'] }
 };
 
@@ -105,6 +108,7 @@ var INTENT_LABEL = {
 INTENT_LABEL.briefing = ['perubahan terbaru', 'recent changes'];
 INTENT_LABEL.bug = ['masalah aplikasi', 'app problem'];
 INTENT_LABEL.patch = ['patch & pembaruan', 'patches & updates'];
+INTENT_LABEL.quant = ['audit bisnis', 'business audit'];
 
 // Penjelasan awam untuk kode anomali dari DiagnosticReport.
 var ALERT_TEXT = {
@@ -313,6 +317,9 @@ export class AdvisorBrain {
             return this._run('bug', { detail: false, text: text, product: null, toks: tokens(text) }, 0.9);
         }
 
+        var act = parseAction(text);
+        if (act) { m.last = 'action'; return this._doAction(act, text); }
+
         var nav = this._detectNav(text);
         if (nav) {
             m.last = 'navigate';
@@ -428,6 +435,37 @@ export class AdvisorBrain {
         return { text: L('Saran #' + (r.idx + 1) + ': **' + a.title + '**\n' + a.detail, 'Suggestion #' + (r.idx + 1) + ': **' + a.title + '**\n' + a.detail),
                  actions: acts, chips: [L('Tunda saran ini', 'Snooze this'), L('Apa prioritas sekarang?', 'What should I do now?')],
                  intent: 'ref', confidence: 1 };
+    }
+
+    // Menanggapi tindakan pemain (sudah / akan merekrut, pinjam, ubah harga, dst.).
+    _doAction(act, text) {
+        var L = this.L.bind(this), isId = this.lang() === 'id', self = this;
+        var c = this.sys._ctx();
+        var product = (act.type === 'price' || act.type === 'restock' || act.type === 'campaign')
+            ? this._findProduct(text) : null;
+        var r = actionAdvice(c, act, {
+            isId: isId, product: product,
+            salaryOf: function (role) { return self.sys.salaryOf(role); }
+        });
+        if (r.need === 'product') {
+            var names = c.catalog.slice(0, 4).map(function (p) { return p.name; });
+            return { text: L('Produk yang mana? Sebutkan namanya.', 'Which product? Name it, please.'),
+                     chips: names.length ? names : [L('Rancang ponsel dulu', 'Design a phone first')], actions: [] };
+        }
+        if (r.need === 'value') {
+            var q = act.type === 'restock'
+                ? L('Berapa unit yang mau diproduksi? Contoh: "produksi 100 unit".', 'How many units? For example: "produce 100 units".')
+                : L('Harga barunya berapa? Contoh: "naikkan harga ke 800" atau "turunkan 10%".', 'What is the new price? For example: "raise price to 800" or "lower 10%".');
+            return { text: q, chips: [L('Cek harga & margin', 'Check price & margin'), L('Kondisi bisnis', 'Business status')], actions: [] };
+        }
+        this.mem.lastAction = act.type;
+        return { text: r.text, chips: [L('Kondisi bisnis', 'Business status'), L('Prediksi uang', 'Cash forecast'), L('Audit bisnis', 'Business audit')], actions: [] };
+    }
+
+    _h_quant() {
+        var isId = this.lang() === 'id';
+        var rep = buildReport(this.sys._ctx(), isId);
+        return { text: formatReport(rep, isId), intent: 'quant', confidence: 1 };
     }
 
     _h_patch() {
