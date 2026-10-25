@@ -45,9 +45,9 @@ export const ECO_TIERS = ['basic', 'mid', 'premium'];
 // priceMult = pengali terhadap refPrice lini; costRatio = HPP per unit / harga dasar tier;
 // attachMult = pengali tingkat pasang (tier mahal dibeli lebih sedikit orang, tetapi kualitasnya lebih baik).
 export const ECO_TIER_META = {
-    basic:   { name: { id: 'Dasar', en: 'Basic' },       priceMult: 0.5, costRatio: 0.55, attachMult: 0.8 },
-    mid:     { name: { id: 'Menengah', en: 'Mid' },       priceMult: 1.0, costRatio: 0.60, attachMult: 1.0 },
-    premium: { name: { id: 'Premium', en: 'Premium' },   priceMult: 2.0, costRatio: 0.65, attachMult: 1.15 }
+    basic:   { nameKey: 'eco.tier.basic',   priceMult: 0.5, costRatio: 0.55, attachMult: 0.8 },
+    mid:     { nameKey: 'eco.tier.mid',     priceMult: 1.0, costRatio: 0.60, attachMult: 1.0 },
+    premium: { nameKey: 'eco.tier.premium', priceMult: 2.0, costRatio: 0.65, attachMult: 1.15 }
 };
 
 // attach      : porsi basis ponsel aktif yang membeli per bulan (sebelum faktor harga & kepuasan)
@@ -55,11 +55,11 @@ export const ECO_TIER_META = {
 // monthlyFixed: biaya tetap lini per bulan (dikali akar skala perusahaan)
 // elasticity  : seberapa sensitif permintaan terhadap harga
 export const ECO_LINES = [
-    { id: 'earbuds', name: { id: 'Earbuds nirkabel', en: 'Wireless earbuds' }, minYear: 2004,
+    { id: 'earbuds', nameKey: 'eco.line.name.earbuds', minYear: 2004,
       refPrice: 60,  setup: 18000, monthlyFixed: 1200, attach: 0.004,  elasticity: 0.9 },
-    { id: 'watch',   name: { id: 'Jam pintar', en: 'Smartwatch' },            minYear: 2014,
+    { id: 'watch',   nameKey: 'eco.line.name.watch',   minYear: 2014,
       refPrice: 180, setup: 60000, monthlyFixed: 2500, attach: 0.0012, elasticity: 0.8 },
-    { id: 'charger', name: { id: 'Charger & daya', en: 'Chargers & power' },   minYear: 2000,
+    { id: 'charger', nameKey: 'eco.line.name.charger', minYear: 2000,
       refPrice: 35,  setup: 8000,  monthlyFixed: 400,  attach: 0.012,  elasticity: 1.0 }
 ];
 
