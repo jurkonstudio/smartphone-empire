@@ -22,11 +22,18 @@ import { ToastService } from '../core/ToastService.js';
 import { LanguageService } from '../core/LanguageService.js';
 import { WalletService } from './WalletService.js';
 import { ERA_EVENTS, getEraEventById } from '../data/era-events.data.js';
+import { DYNAMIC_EVENTS, getDynamicEventById, resolveDynamicEvent } from '../data/dynamic-events.data.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
 const FACTOR_MIN = 0.6;
 const FACTOR_MAX = 1.5;
 const HISTORY_MAX = 60;
+// Insiden dinamis (dynamic-events.data.js)
+const DYN_CHANCE = 0.22;         // peluang muncul per bulan bila ada kandidat
+const DYN_MIN_GAP = 5;           // jarak minimum antar insiden (bulan)
+const DYN_MIN_ELAPSED_DAYS = 120; // jangan muncul di 4 bulan pertama
+const DYN_SCALE_BASE = 30000;    // omzet bulanan yang dianggap skala 1x
+const DYN_SCALE_MAX = 300;
 
 function _abs(y, m) { return (Number(y) || 0) * 12 + (Number(m) || 1); }
 function _lang() { try { return LanguageService.getLang() === 'id' ? 'id' : 'en'; } catch (e) { return 'en'; } }
@@ -42,6 +49,9 @@ export function ensureEraEventState(data) {
     if (!Array.isArray(e.seen)) e.seen = [];
     if (!Array.isArray(e.history)) e.history = [];
     if (!Array.isArray(e.mods)) e.mods = [];
+    if (!e.dynLast || typeof e.dynLast !== 'object') e.dynLast = {};   // { [id]: bulan-absolut terakhir muncul }
+    if (!e.dynScale || typeof e.dynScale !== 'object') e.dynScale = {}; // skala biaya saat event dijadwalkan
+    if (typeof e.dynLastAny !== 'number') e.dynLastAny = 0;
     return e;
 }
 
@@ -124,6 +134,7 @@ export class EraEventSystem {
             if (now > to) continue;
             ev.queue.push(def.id);
         }
+        this._maybeDynamic(ev, now);
         this._tryOpen();
     }
 
@@ -142,7 +153,7 @@ export class EraEventSystem {
         var ev = ensureEraEventState(this.state.data);
         if (!ev.pending && ev.queue.length) ev.pending = ev.queue.shift();
         if (!ev.pending) return;
-        var def = getEraEventById(ev.pending);
+        var def = this._def(ev.pending);
         if (!def) { ev.pending = null; return; }
         if (this._announced === ev.pending) return;
         this._announced = ev.pending;
@@ -160,13 +171,13 @@ export class EraEventSystem {
 
     getPending() {
         var ev = ensureEraEventState(this.state.data);
-        return ev.pending ? getEraEventById(ev.pending) : null;
+        return ev.pending ? this._def(ev.pending) : null;
     }
 
     // ---------------------------------------------------------------- keputusan
 
     canChoose(eventId, choiceId) {
-        var def = getEraEventById(eventId);
+        var def = this._def(eventId);
         var ch = def && def.choices.find(c => c.id === choiceId);
         if (!ch) return { ok: false, reason: 'invalid' };
         if (ch.cost > 0 && !WalletService.canAfford(ch.cost)) return { ok: false, reason: 'funds' };
@@ -177,7 +188,7 @@ export class EraEventSystem {
         var d = this.state.data;
         var ev = ensureEraEventState(d);
         if (ev.pending !== eventId) return { ok: false, reason: 'not-pending' };
-        var def = getEraEventById(eventId);
+        var def = this._def(eventId);
         var ch = def && def.choices.find(c => c.id === choiceId);
         if (!ch) return { ok: false, reason: 'invalid' };
 
@@ -186,7 +197,36 @@ export class EraEventSystem {
             WalletService.pay(ch.cost, 'era-event:' + eventId);
         }
 
-        var fx = ch.effects || {};
+        // Pilihan berisiko: undi sukses/gagal, lalu pakai efek cabang yang terpilih.
+        var roll = null, fx = ch.effects || {}, outcomeObj = ch.outcome;
+        var extra = null;
+        if (ch.risk) {
+            roll = Math.random() < _clamp(Number(ch.risk.p) || 0, 0, 1) ? 'success' : 'fail';
+            var br = ch.risk[roll] || {};
+            extra = br.effects || {};
+            outcomeObj = br.outcome;
+        }
+        this._applyEffects(d, ev, eventId, fx);
+        if (extra) this._applyEffects(d, ev, eventId, extra);
+
+        ev.history.push({ eventId: eventId, choiceId: choiceId, roll: roll, year: d.time.currentYear, month: d.time.currentMonth });
+        if (ev.history.length > HISTORY_MAX) ev.history.splice(0, ev.history.length - HISTORY_MAX);
+        ev.pending = null;
+        this._announced = null;
+
+        var title = _L(def.title), label = _L(ch.label);
+        this.state.addLog((_lang() === 'id' ? 'Keputusan "' : 'Decision "') + title + '": ' + label + '.', LOG_TYPES.info);
+        ToastService.success((_lang() === 'id' ? 'Keputusan diambil: ' : 'Decision made: ') + label);
+        // Untuk layar hasil: pilihan dengan efek cabang yang benar-benar terjadi.
+        var applied = ch;
+        if (ch.risk) { applied = {}; for (var k in ch) applied[k] = ch[k]; applied.effects = this._mergeFx(fx, extra); applied.risk = null; }
+        bus.emit('eraevent:resolved', { eventId: eventId, choiceId: choiceId, event: def, choice: ch, roll: roll });
+        bus.emit('state:changed', d);
+        return { ok: true, outcome: _L(outcomeObj), choice: applied, roll: roll };
+    }
+
+    _applyEffects(d, ev, eventId, fx) {
+        if (!fx) return;
         if (fx.cash) this.state.addCash(fx.cash);
         if (fx.reputation) this.state.addReputation(fx.reputation);
         if (Array.isArray(fx.demand)) {
@@ -198,18 +238,72 @@ export class EraEventSystem {
                 });
             });
         }
+    }
 
-        ev.history.push({ eventId: eventId, choiceId: choiceId, year: d.time.currentYear, month: d.time.currentMonth });
-        if (ev.history.length > HISTORY_MAX) ev.history.splice(0, ev.history.length - HISTORY_MAX);
-        ev.pending = null;
-        this._announced = null;
+    _mergeFx(a, b) {
+        var o = {};
+        a = a || {}; b = b || {};
+        var cash = (a.cash || 0) + (b.cash || 0), rep = (a.reputation || 0) + (b.reputation || 0);
+        if (cash) o.cash = cash;
+        if (rep) o.reputation = rep;
+        var dem = (a.demand || []).concat(b.demand || []);
+        if (dem.length) o.demand = dem;
+        return o;
+    }
 
-        var title = _L(def.title), label = _L(ch.label);
-        this.state.addLog((_lang() === 'id' ? 'Keputusan "' : 'Decision "') + title + '": ' + label + '.', LOG_TYPES.info);
-        ToastService.success((_lang() === 'id' ? 'Keputusan diambil: ' : 'Decision made: ') + label);
-        bus.emit('eraevent:resolved', { eventId: eventId, choiceId: choiceId, event: def, choice: ch });
-        bus.emit('state:changed', d);
-        return { ok: true, outcome: _L(ch.outcome), choice: ch };
+    // ---------------------------------------------------------------- insiden dinamis
+
+    // Definisi event (era atau dinamis). Dinamis diskalakan dengan skala yang disimpan saat dijadwalkan.
+    _def(id) {
+        var st = getEraEventById(id);
+        if (st) return st;
+        var dyn = getDynamicEventById(id);
+        if (!dyn) return null;
+        var ev = ensureEraEventState(this.state.data);
+        return resolveDynamicEvent(dyn, ev.dynScale[id] || this._scale());
+    }
+
+    // Ukuran bisnis: rata-rata omzet pemain 3 bulan terakhir dibanding skala dasar (>= 1).
+    _scale() {
+        var rh = (this.state.data.market && this.state.data.market.revenueHistory) || [];
+        var sum = 0, n = 0;
+        for (var i = 0; i < Math.min(3, rh.length); i++) { sum += Number(rh[i] && rh[i].playerRevenue) || 0; n++; }
+        var avg = n ? sum / n : 0;
+        return _clamp(avg / DYN_SCALE_BASE, 1, DYN_SCALE_MAX);
+    }
+
+    _cond(when) {
+        var d = this.state.data;
+        if (when === 'selling') {
+            var cat = (d.products && d.products.catalog) || [];
+            return cat.some(function (p) { return p && p.status === 'selling'; });
+        }
+        return true;
+    }
+
+    _maybeDynamic(ev, now) {
+        var d = this.state.data;
+        if (ev.pending || ev.queue.length) return;
+        if (d.time.elapsedGameMinutes < DYN_MIN_ELAPSED_DAYS * MINUTES_PER_DAY) return;
+        if (ev.dynLastAny && now - ev.dynLastAny < DYN_MIN_GAP) return;
+        var year = d.time.currentYear;
+        var self = this;
+        var cands = DYNAMIC_EVENTS.filter(function (def) {
+            if (year < def.minYear || year > def.maxYear) return false;
+            var last = ev.dynLast[def.id];
+            if (last && now - last < (def.cooldownMonths || 12)) return false;
+            return self._cond(def.when);
+        });
+        if (!cands.length) return;
+        if (Math.random() >= DYN_CHANCE) return;
+        var total = 0;
+        cands.forEach(function (c) { total += (c.weight || 1); });
+        var r = Math.random() * total, pick = cands[cands.length - 1];
+        for (var i = 0; i < cands.length; i++) { r -= (cands[i].weight || 1); if (r <= 0) { pick = cands[i]; break; } }
+        ev.dynLast[pick.id] = now;
+        ev.dynLastAny = now;
+        ev.dynScale[pick.id] = this._scale();
+        ev.queue.push(pick.id);
     }
 
     // ---------------------------------------------------------------- bantu
@@ -217,4 +311,4 @@ export class EraEventSystem {
     countResolved() { return ensureEraEventState(this.state.data).history.length; }
 }
 
-export { ERA_EVENTS };
+export { ERA_EVENTS, DYNAMIC_EVENTS };
