@@ -5136,3 +5136,73 @@ html[data-theme="dark"] .mobile-nav.dragging .nav-slider::before {
 .cat2-card { display: flex; flex-direction: column; }
 .cat2-foot { margin-top: auto; }
 .cat2-stock { margin-bottom: 10px; }
+
+/* ============================================================================
+   LIGHT-MODE FIX — token alias yang dipakai panel (JS-injected style) tapi
+   sebelumnya TIDAK pernah didefinisikan, sehingga jatuh ke fallback putih
+   (rgba(255,255,255,.x)) dan tak terbaca di tema terang.
+   ============================================================================ */
+:root, [data-theme="dark"] {
+    --text-mute: rgba(235,235,245,0.56);
+    --text-dim: rgba(235,235,245,0.68);
+    --surface: rgba(255,255,255,0.04);
+    --surface-2: rgba(255,255,255,0.07);
+    --surface-secondary: rgba(255,255,255,0.06);
+    --surface-glass: rgba(44,44,46,0.82);
+    --border-subtle: rgba(255,255,255,0.10);
+    --warning: #f5b942;
+}
+[data-theme="light"] {
+    --text-mute: #6b6b72;
+    --text-dim: #48484d;
+    --surface: rgba(60,60,67,0.05);
+    --surface-2: rgba(60,60,67,0.08);
+    --surface-secondary: rgba(60,60,67,0.07);
+    --surface-glass: rgba(255,255,255,0.88);
+    --border-subtle: rgba(60,60,67,0.14);
+    --warning: #b45309;
+}
+
+/* Light mode: teks sekunder/tersier dibuat solid agar kontras ≥ 4.5:1 */
+[data-theme="light"] {
+    --text-secondary: #3c3c43;
+    --text-tertiary: #6e6e73;
+}
+
+/* Light mode: warna semantik (teks hijau/kuning/merah) lebih pekat agar terbaca di latar putih */
+[data-theme="light"] {
+    --success: #138043;
+    --warn: #a85d00;
+    --danger: #d12f26;
+    --info: #1f5fd1;
+    --warning: #a85d00;
+}
+/* Item terkunci: tetap dimmed tapi teks tetap terbaca di light mode */
+[data-theme="light"] .node-row-wrap.node-locked { opacity: 0.82; }
+[data-theme="light"] .tech-node.tech-locked,
+[data-theme="light"] .feature-locked,
+[data-theme="light"] .os-feat-locked,
+[data-theme="light"] .os-lic-row.os-lic-locked { opacity: 0.82; }
+[data-theme="light"] .license-item.locked { opacity: 0.75; }
+[data-theme="light"] .rg-tag.good { color: #138043; }
+
+/* Light mode — perbaikan kontras lanjutan (hasil audit browser) */
+[data-theme="light"] .rnd-bonus { color: var(--success); }
+[data-theme="light"] .fp-card.fp-locked { opacity: .9; }
+[data-theme="light"] .fp-tag { background: rgba(60,60,67,.10); color: var(--text-dim); }
+[data-theme="light"] .fp-status { color: var(--text-dim); }
+[data-theme="light"] .mf-row-mystery { opacity: .85; }
+[data-theme="light"] .mf-year, [data-theme="light"] .mf-desc { color: var(--text-dim); }
+[data-theme="light"] .asm-badge { background: rgba(200,80,20,.14); color: #a8460f; }
+[data-theme="light"] .settings-row-chevron { color: var(--text-secondary); }
+[data-theme="light"] .settings-row-hint { color: var(--text-secondary); }
+[data-theme="light"] .ch-year.active { color: #0057b8; }
+[data-theme="light"] .btn-primary:disabled,
+[data-theme="light"] .btn-secondary:disabled,
+[data-theme="light"] .btn-danger:disabled { opacity: .72; }
+[data-theme="light"] .node-row-cta-locked { color: var(--text-secondary); }
+[data-theme="light"] .fab-tier-card.disabled { opacity: .85; }
+[data-theme="light"] .kpi-value[style*="60a5fa"],
+[data-theme="light"] .kpi-value[style*="96, 165, 250"] { color: var(--accent) !important; }
+/* inisial ticker berwarna pastel (inline color) → gelapkan teks di tema terang */
+[data-theme="light"] .ex-ava { filter: brightness(.68) saturate(1.2); }
