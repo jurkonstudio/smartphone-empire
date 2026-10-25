@@ -1126,13 +1126,14 @@ function bindGlobalClicks() {
             else if (ecoDs.ecoTier) ecoRes = ecosystem.setTier(ecoDs.ecoTier, ecoDs.ecoVal);
             else if (ecoDs.ecoPrice) ecoRes = ecosystem.setPriceStep(ecoDs.ecoPrice, parseInt(ecoDs.ecoVal, 10));
             else ecoRes = ecosystem.setCommissionStep(parseInt(ecoDs.ecoVal, 10));
-            if (ecoRes.ok) ToastService.success(_runwayL('Diperbarui.', 'Updated.'));
-            else ToastService.error(ecoRes.reason === 'funds' ? _runwayL('Dana tidak cukup.', 'Not enough funds.')
-                : ecoRes.reason === 'locked' ? _runwayL('Terbuka tahun ' + ecoRes.year + '.', 'Unlocks in ' + ecoRes.year + '.')
-                : ecoRes.reason === 'lock' ? _runwayL('Bisa diubah lagi dalam ' + Math.ceil(ecoRes.monthsLeft) + ' bulan.', 'Can change again in ' + Math.ceil(ecoRes.monthsLeft) + ' month(s).')
-                : ecoRes.reason === 'commit' ? _runwayL('Masih terikat komitmen ' + Math.ceil(ecoRes.monthsLeft) + ' bulan.', 'Still under commitment for ' + Math.ceil(ecoRes.monthsLeft) + ' month(s).')
-                : ecoRes.reason === 'unavailable' ? _runwayL('Fitur App Store belum dimiliki.', 'App Store feature not owned yet.')
-                : _runwayL('Tidak bisa diubah.', 'Cannot change this.'));
+            var ecoMsg = ecoRes.reason === 'funds' ? tr('eco.toast.funds')
+                : ecoRes.reason === 'locked' ? tr('eco.toast.locked', { year: ecoRes.year })
+                : ecoRes.reason === 'lock' ? tr('eco.toast.lock', { n: Math.ceil(ecoRes.monthsLeft) })
+                : ecoRes.reason === 'commit' ? tr('eco.toast.commit', { n: Math.ceil(ecoRes.monthsLeft) })
+                : ecoRes.reason === 'unavailable' ? tr('eco.toast.unavailable')
+                : tr('eco.toast.fail');
+            if (ecoRes.ok) ToastService.success(tr('eco.toast.ok'));
+            else ToastService.error(ecoMsg);
             renderAll();
             return;
         }
