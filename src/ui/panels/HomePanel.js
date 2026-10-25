@@ -8,7 +8,8 @@ import { t, LanguageService } from '../../core/LanguageService.js';
 import { bus } from '../../core/EventBus.js';
 import { TIME_CONFIG } from '../../config/time.config.js';
 import { renderCampusLoading } from '../campus/CampusFallback.js';
-import { isOfficeMode, isManufactureMode, ensureBridgeStyle } from '../campus/CampusOfficeBridge.js';
+import { isOfficeMode, isManufactureMode, isServerMode, ensureBridgeStyle } from '../campus/CampusOfficeBridge.js';
+import { serverChipLabels } from '../server/ServerMap.js';
 import { getBridgeStrings } from '../campus/CampusInfo.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { renderNewsListPanel } from './NewsListPanel.js';
@@ -344,18 +345,25 @@ export function renderHomePanel() {
     ensureBridgeStyle();
     const office = isOfficeMode();
     const manu = isManufactureMode();
+    const srv = isServerMode();
     const L = getBridgeStrings();
+    const SL = serverChipLabels();
+    // Sakelar tetap DUA tab (Kampus | Manufaktur). Server dibuka lewat tombol kecil di sampingnya, bukan tab baru.
     const switchHtml =
+        '<div class="home-topbar">' +
         '<div class="home-switch" role="tablist">' +
-            '<button type="button" role="tab" class="home-switch-btn' + (manu ? '' : ' active') + '" data-home-switch="campus" aria-selected="' + (manu ? 'false' : 'true') + '">' +
+            '<button type="button" role="tab" class="home-switch-btn' + ((manu || srv) ? '' : ' active') + '" data-home-switch="campus" aria-selected="' + ((manu || srv) ? 'false' : 'true') + '">' +
                 renderIcon('layers', 17) + '<span>' + L.tabCampus + '</span></button>' +
             '<button type="button" role="tab" class="home-switch-btn' + (manu ? ' active' : '') + '" data-home-switch="manufacture" aria-selected="' + (manu ? 'true' : 'false') + '">' +
                 renderIcon('factory', 17) + '<span>' + L.tabManufacture + '</span></button>' +
+        '</div>' +
+        '<button type="button" class="home-server-chip' + (srv ? ' active' : '') + '" data-home-server="' + (srv ? 'close' : 'open') + '" aria-pressed="' + (srv ? 'true' : 'false') + '">' +
+            renderIcon('database', 17) + '<span>' + (srv ? SL.back : SL.open) + '</span></button>' +
         '</div>';
 
     return '<div class="home-wrapper">' +
         switchHtml +
-        '<div id="campus-map" class="card home-map' + ((office || manu) ? ' office-map' : '') + (manu ? ' manu-map' : '') + '" role="img" aria-label="' + t('home.campus.aria') + '">' +
+        '<div id="campus-map" class="card home-map' + ((office || manu || srv) ? ' office-map' : '') + (manu ? ' manu-map' : '') + (srv ? ' srv-map' : '') + '" role="img" aria-label="' + t('home.campus.aria') + '">' +
             renderCampusLoading() +
         '</div>' +
         '<div class="home-dock' + (_dockCollapsed ? ' collapsed' : '') + '" data-home-dock>' +
