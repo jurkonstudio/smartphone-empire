@@ -13,6 +13,7 @@ import { getBridgeStrings } from '../campus/CampusInfo.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { renderNewsListPanel } from './NewsListPanel.js';
 import { renderLogPanel } from './LogPanel.js';
+import { renderBoardTargetsCard } from './AnnualReviewModal.js';
 // [v2027.42] renderProgressPanel tidak dipakai di focus tab.
 
 const TABS = ['focus', 'news', 'activity'];
@@ -154,7 +155,7 @@ function _renderFocusSlide(state) {
         deltaColor = 'var(--accent)';
     }
 
-    return _renderGoalCard(state) +
+    return _renderGoalCard(state) + renderBoardTargetsCard(state) +
         '<div class="card">' +
             '<div class="card-title">' + t('home.focus.sales_title') + '</div>' +
             '<div style="display:flex;align-items:baseline;gap:8px;margin-top:2px;">' +
