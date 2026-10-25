@@ -164,15 +164,15 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 - **Messages**: an inbox for system notifications and rewards, player-to-player messages (with blocking), and SIL transfers between players (max 5,000 SIL per 24 hours).
 - **Universal Wallet**: money ($) and Silicon (SIL) can be used for almost everything. Cash costs can be covered with SIL and vice versa. The rate follows inflation (year 2000: 1 SIL = $2,500, rising 15% per year). SIL is never minted from money. Pay modes (Auto, Cash first, SIL first, Strict) and the SIL Emergency Fund are in Settings → Finance.
 - **Silicon (SIL)**: a premium currency for speeding up time and research, with a daily login bonus and quest rewards. It can also be exchanged into in-game cash (requires `supabase/10-tukar-sil.sql`).
-  - **Top-up is temporarily closed.** The Buy tab and payment panel in the game are locked by the `TOPUP_LOCKED` flag in `src/ui/panels/SiliconStorePanel.js`, and the landing page (`web.html`) follows it. Balance, daily bonus, rewards, and SIL spending keep working.
-  - When open, top-up is still manual (GoPay/QRIS) and approved by an admin through the `/fsociety` panel. No automatic payment provider is connected yet.
-  - The lock is currently client-side only. Details are in Known issues and [`SECURITY.md`](SECURITY.md).
+  - **Top-up is open through GoPay only.** The Buy tab is controlled by the `TOPUP_LOCKED` flag in `src/ui/panels/SiliconStorePanel.js` (now `false`), and the landing page (`web.html`) follows it. **QRIS is locked**: the `qris` method in `src/data/silicon.data.js` has `locked: true`, so it shows as "Locked" and cannot be selected or ordered. Only GoPay opens the payment panel.
+  - Top-up is still manual and approved by an admin through the `/fsociety` panel. No automatic payment provider is connected yet.
+  - The QRIS lock is client-side only. Details are in Known issues and [`SECURITY.md`](SECURITY.md).
 - **Security**: saves carry an integrity signature (a barrier against manual editing, not encryption). SIL balances and the ledger are protected on the server through Row Level Security and server-only functions. The full security policy and how to report issues are in [`SECURITY.md`](SECURITY.md).
 
 ### ⚠️ Known issues
 
 - **The leaderboard is only partly validated by the server.** Stats are still sent from the player's device. The server limits sync frequency, checks invariants, and hides suspicious profiles (`supabase/11`), and it computes level and score itself (`supabase/12` and `15`). Values that stay within plausible bounds can still be faked, so this isn't an official ranking.
-- **The top-up lock is client-side only.** The server function `create_payment_order` can still be called by a logged-in account through the API directly. Orders stay `pending` until an admin approves them, but if top-up must be fully closed, add a server-side flag.
+- **The QRIS lock is client-side only.** Orders do not record a payment method, and the server function `create_payment_order` can still be called by a logged-in account through the API directly. Orders stay `pending` until an admin approves them, but if top-up (or QRIS) must be fully closed, add a server-side flag.
 - **Ecosystem balance is a first-pass estimate.** Accessory and App Store values (`src/data/ecosystem.data.js`) were checked only in a headless simulation and a browser smoke test, not against the real game economy. The target from the design notes is 5–15% of phone revenue and a 35–55% gross margin; calibrate it through play before treating it as final.
 - **Accessory visuals are fixed designs.** The mockups follow the tier and the open/closed state only. The player cannot yet choose color, material, or shape for accessories, and they are not shown in Market → Ecosystem (only linked).
 - **Raw text in some places.** Four translation keys are used without fallback text and aren't in the dictionaries yet: `main.toast.fab_unlocked`, `wiz.warn.volume_cost`, `wiz.preview.unit_design`, `wiz.preview.unit_parts`. Many other keys (for example `team.recruit.*`, `team.nego.*`, `silstore.locked.*`) still rely on fallback text and haven't been merged into `src/data/i18n/en.js` and `id.js`.
@@ -286,7 +286,7 @@ The project is still in progress. Roadmap notes:
 - ⏳ More incidents, per-era screen transitions, and UI polish
 - ⏳ **UI Evolution patch**: notification styling that changes per era (monochrome → glossy → flat → Dynamic Island)
 - ⏳ **Bilingual news**: English headlines exist, but some review templates are still Indonesian-only
-- ⏳ **Silicon payments**: reopening top-up with a production payment provider and server-side verification (including a server-side lock)
+- ⏳ **Silicon payments**: reopening QRIS and adding a production payment provider with server-side verification (including a server-side lock). GoPay top-up is already open (manual).
 - ⏳ **Fixing the known issues** above
 
 ---
@@ -317,7 +317,7 @@ Changes that are already in the code but not yet in `patches.json`:
 - Early-2000s content: new OS features, research, bugs, and the storage component category (see `CHANGES-2001-2004-konten.md`).
 - 12 languages and raw-text fixes.
 - HQ → Overview overhaul, the Office tab moved to a switch on Home, and Player ID moved to Player Profile.
-- Silicon top-up temporarily closed.
+- Silicon top-up reopened through GoPay only; QRIS locked.
 - 2027–2030 package: market, RAM cost index, scenario trends, news, Agentic AI OS features (Agentic OS, Agent Guard, Agent Store), the fictional newcomer Novamind, and emergent brand withdrawal (see `CHANGES-2027-kompetitor.md`).
 - Per-language loading screen (Indonesian and English).
 

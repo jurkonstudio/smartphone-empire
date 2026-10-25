@@ -266,6 +266,8 @@ h2.h{font-size:clamp(2rem,5.4vw,3.2rem);font-weight:700;letter-spacing:-.052em;l
 .methods{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
 .method{flex:1;min-width:130px;min-height:48px;border-radius:14px;font-weight:600;background:var(--inner);box-shadow:inset 0 0 0 1px var(--line);display:flex;align-items:center;justify-content:center;gap:8px}
 .method[aria-checked=true]{background:rgba(0,113,227,.09);box-shadow:inset 0 0 0 2px var(--blue)}
+.method:disabled{opacity:.55;cursor:not-allowed}
+.method small{font-size:.72rem;font-weight:700;color:var(--text3)}
 .checkout{margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 16px;border-radius:16px;background:var(--inner);box-shadow:inset 0 0 0 1px var(--line)}
 .checkout .sm{font-size:.82rem;color:var(--text3);font-weight:600}
 .checkout .tt{font-size:1.2rem;font-weight:700;letter-spacing:-.03em}
@@ -561,7 +563,7 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
   <div class="sil">
     <div class="kicker">Silicon (SIL)</div>
     <h2 class="h" data-en="Account, balance, and Silicon.">Akun, saldo, dan Silicon.</h2>
-    <p class="sub" data-en="SIL is a premium currency for speeding up time and research. Sign in with the same account you use in the game to see your balance and orders. Top-up is temporarily closed.">SIL adalah mata uang premium untuk mempercepat waktu dan riset. Masuk dengan akun yang sama dengan di game untuk melihat saldo dan pesananmu. Top up sedang ditutup sementara.</p>
+    <p class="sub" data-en="SIL is a premium currency for speeding up time and research. Sign in with the same account you use in the game to see your balance and orders. Top-up is open through GoPay.">SIL adalah mata uang premium untuk mempercepat waktu dan riset. Masuk dengan akun yang sama dengan di game untuk melihat saldo dan pesananmu. Top up dibuka lewat GoPay.</p>
     <div class="sil-grid">
       <div>
         <div class="acct" id="acct"></div>
@@ -574,16 +576,17 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
       </div>
       <div id="shop">
         <div class="lock-note" id="lockNote" role="status" data-en="<b>Top-up is temporarily closed.</b> Your balance, daily login bonus, and quest rewards keep working as usual."><b>Top up sedang ditutup sementara.</b> Saldo, bonus login harian, dan reward quest tetap berjalan seperti biasa.</div>
+        <div class="lock-note" id="qrisNote" role="status" hidden data-en="<b>QRIS is locked for now.</b> Top-up is only available through GoPay."><b>QRIS dikunci sementara.</b> Top up saat ini hanya tersedia lewat GoPay.</div>
         <div class="pkgs" role="radiogroup" aria-label="Paket Silicon" data-en-aria="Silicon packages" id="pkgs"></div>
         <div class="methods" role="radiogroup" aria-label="Metode pembayaran" data-en-aria="Payment method" id="methods">
-          <button class="method" type="button" role="radio" aria-checked="true" data-m="qris">QRIS</button>
-          <button class="method" type="button" role="radio" aria-checked="false" data-m="gopay">GoPay</button>
+          <button class="method" type="button" role="radio" aria-checked="true" data-m="gopay">GoPay</button>
+          <button class="method" type="button" role="radio" aria-checked="false" aria-disabled="true" disabled data-m="qris" data-locked="1">QRIS <small data-en="🔒 Locked">🔒 Terkunci</small></button>
         </div>
         <div class="checkout">
           <div><div class="sm" id="coLabel">Pilih paket</div><div class="tt" id="coTotal">—</div></div>
           <button class="btn btn-blue" type="button" id="coBtn" disabled>Top up sekarang</button>
         </div>
-        <p class="fine" data-en="This page will be updated when top-up reopens. Until then, packages are shown for reference only. Once reopened, QRIS and GoPay payments will still be confirmed manually by an admin, with the Order ID in the transfer note and a maximum of 5 orders awaiting approval.">Halaman ini akan diperbarui saat top up dibuka kembali. Sampai saat itu, paket hanya ditampilkan sebagai referensi. Setelah dibuka, pembayaran lewat QRIS dan GoPay tetap dikonfirmasi manual oleh admin, dengan Order ID di berita transfer dan maksimal 5 pesanan menunggu persetujuan.</p>
+        <p class="fine" data-en="Payments are made through GoPay and confirmed manually by an admin, so SIL is not added instantly. Put the Order ID in the payment note. You can have at most 5 orders awaiting approval.">Pembayaran dilakukan lewat GoPay dan dikonfirmasi manual oleh admin, jadi SIL tidak masuk seketika. Sertakan Order ID pada catatan pembayaran. Maksimal 5 pesanan yang menunggu persetujuan.</p>
         <div class="orders" id="orders" hidden><h4 data-en="Recent orders">Pesanan terakhir</h4><div id="ordList"></div></div>
       </div>
     </div>
@@ -624,7 +627,7 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
     <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="12 languages">12 bahasa</b><span data-en="Indonesian and English are complete; 10 more use a core dictionary.">Indonesia dan English penuh; 10 bahasa lain memakai kamus inti.</span></div></div>
     <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Translation polish">Penyempurnaan terjemahan</b><span data-en="Replace the last hardcoded texts and translate component names and descriptions.">Mengganti sisa teks hardcoded dan menerjemahkan nama serta deskripsi komponen.</span></div></div>
     <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Random events with choices">Event acak dengan pilihan</b><span data-en="Plus per-era screen transitions and UI polish.">Plus transisi layar per era dan polish UI.</span></div></div>
-    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Reopen Silicon top-up">Membuka kembali top up Silicon</b><span data-en="Reopening with automatic payments and a server-side switch.">Dibuka kembali dengan pembayaran otomatis dan sakelar di sisi server.</span></div></div>
+    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Reopen QRIS and automatic payments">Membuka kembali QRIS dan pembayaran otomatis</b><span data-en="Top-up is open through GoPay; QRIS is still locked. Next: automatic payments and a server-side switch.">Top up sudah dibuka lewat GoPay; QRIS masih dikunci. Berikutnya: pembayaran otomatis dan sakelar di sisi server.</span></div></div>
     <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Fully bilingual news">Berita bilingual penuh</b><span data-en="English headlines are in; some review templates are still Indonesian.">Headline English sudah ada; sebagian template ulasan masih berbahasa Indonesia.</span></div></div>
   </div>
 </div></section>
@@ -637,7 +640,7 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
     <details><summary data-en="Is the game free?">Apakah game ini gratis?</summary><p data-en="Yes. You can play for free in the browser and through the Android APK. Silicon is an optional premium currency.">Ya. Game bisa dimainkan gratis di browser dan lewat APK Android. Silicon adalah mata uang premium opsional.</p></details>
     <details><summary data-en="Do I need an account to play?">Perlu akun untuk bermain?</summary><p data-en="No. Local saves are automatic. An account is needed for cloud save (1 slot), the player profile and Player ID, the leaderboard, messages, and a server-side SIL balance.">Tidak. Save lokal otomatis. Akun dibutuhkan untuk cloud save (1 slot), profil pemain dan ID Pemain, leaderboard, pesan, dan saldo SIL yang tersimpan di server.</p></details>
     <details><summary data-en="Which languages are supported?">Bahasa apa saja yang didukung?</summary><p data-en="12 languages: English, Bahasa Indonesia, Chinese (Simplified), Korean, Japanese, French, German, Spanish, Italian, Russian, Polish, and Hindi. Indonesian and English are complete; the rest use a core dictionary and fall back to English for untranslated text. Change it anytime in Settings.">12 bahasa: English, Bahasa Indonesia, Mandarin (Sederhana), Korea, Jepang, Prancis, Jerman, Spanyol, Italia, Rusia, Polandia, dan Hindi. Indonesia dan English tersedia penuh; sisanya memakai kamus inti dan kembali ke English untuk teks yang belum diterjemahkan. Bisa diganti kapan saja di Setelan.</p></details>
-    <details><summary data-en="Can I top up Silicon right now?">Bisa top up Silicon sekarang?</summary><p data-en="Not for now. Top-up is temporarily closed in the game and on this page. Your balance, daily login bonus, and quest rewards keep working. When it reopens, orders will still be confirmed manually by an admin until an automatic payment provider is connected, so it won’t be instant.">Untuk sementara belum. Top up ditutup sementara di game dan di halaman ini. Saldo, bonus login harian, dan reward quest tetap berjalan. Setelah dibuka kembali, pesanan tetap dikonfirmasi manual oleh admin sampai provider pembayaran otomatis terhubung, jadi tidak instan.</p></details>
+    <details><summary data-en="Can I top up Silicon right now?">Bisa top up Silicon sekarang?</summary><p data-en="Yes, through GoPay only. QRIS is locked for now. Orders are confirmed manually by an admin until an automatic payment provider is connected, so SIL is not added instantly.">Bisa, hanya lewat GoPay. QRIS dikunci sementara. Pesanan dikonfirmasi manual oleh admin sampai provider pembayaran otomatis terhubung, jadi SIL tidak masuk seketika.</p></details>
     <details><summary data-en="Is the leaderboard official yet?">Apakah leaderboard sudah resmi?</summary><p data-en="Not yet. Leaderboard stats are still reported from the player’s device. The server limits how often they sync, rejects impossible numbers, and calculates levels and scores itself, but believable numbers can still be faked, so they can’t be treated as official rankings.">Belum. Statistik leaderboard masih dikirim dari perangkat pemain. Server membatasi frekuensi sinkron, menolak angka yang mustahil, dan menghitung level serta skor sendiri, tetapi angka yang masuk akal tetap bisa dipalsukan, jadi belum bisa dianggap peringkat resmi.</p></details>
     <details><summary data-en="Can I play on a PC as well as a phone?">Bisa dimainkan di PC dan HP?</summary><p data-en="Yes. The game runs in phone and PC browsers, with its own desktop layout. You can install it as a PWA, and the Android APK is a wrapper around the same web version.">Bisa. Game berjalan di browser HP maupun PC dengan tata letak desktop tersendiri. Kamu bisa memasangnya sebagai PWA, dan APK Android adalah pembungkus dari versi web yang sama.</p></details>
     <details><summary data-en="Is this an official Nokia, Apple, or Samsung product?">Apakah ini produk resmi Nokia, Apple, atau Samsung?</summary><p data-en="No. This is a fan project with no affiliation to any company. Names and brands are used for educational and entertainment purposes, and there’s a parody-name mode.">Bukan. Ini fan project tanpa afiliasi dengan perusahaan mana pun. Nama dan merek dipakai untuk tujuan edukasi dan hiburan, dan ada mode nama parodi.</p></details>
@@ -679,13 +682,13 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
 <!-- MODAL: QR -->
 <div class="ovl" id="qrOvl" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
   <div class="sheet">
-    <div class="sh-head"><h3 id="qrTitle" data-en="Scan QRIS">Pindai QRIS</h3><button class="x" type="button" data-close aria-label="Tutup" data-en-aria="Close">&times;</button></div>
+    <div class="sh-head"><h3 id="qrTitle" data-en="Pay with GoPay">Bayar dengan GoPay</h3><button class="x" type="button" data-close aria-label="Tutup" data-en-aria="Close">&times;</button></div>
     <div class="cnt"><span data-en="Time left">Sisa waktu</span> <span class="tm" id="qrTimer">15:00</span></div>
     <div class="cnt" style="margin-top:10px" data-en="Total payment">Total pembayaran</div>
     <div class="big-amt" id="qrAmt">Rp0</div>
     <div class="cnt" id="qrPkg"></div>
-    <div class="qrbox"><img src="./qris-gopay.png" alt="Kode QRIS pembayaran Jurkon Studio" data-en-alt="Jurkon Studio QRIS payment code"></div>
-    <div class="cnt" data-en="Scan with your banking or e-wallet app.<br><b>IMPORTANT:</b> include the Order ID in the transfer note.">Pindai dengan aplikasi bank atau e-wallet.<br><b>PENTING:</b> sertakan Order ID pada berita transfer.</div>
+    <div class="qrbox"><img src="./qris-gopay.png" alt="Kode pembayaran GoPay Jurkon Studio" data-en-alt="Jurkon Studio GoPay payment code"></div>
+    <div class="cnt" data-en="Open the GoPay app and scan this code.<br><b>IMPORTANT:</b> include the Order ID in the payment note.">Buka aplikasi GoPay lalu pindai kode ini.<br><b>PENTING:</b> sertakan Order ID pada catatan pembayaran.</div>
     <div class="ordid"><code id="qrOrd"></code><button type="button" id="qrCopy" data-en="Copy">Salin</button></div>
     <div class="msg" id="qMsg" role="status"></div>
     <button class="btn btn-blue" type="button" id="qrCheck" style="width:100%;margin-top:14px" data-en="Check status">Cek status</button>
@@ -885,11 +888,13 @@ let PACKAGES = [
   { id: 'pkg_xl', sil: 700, bonus: 140, priceIdr: 169000, tag: null },
   { id: 'pkg_xxl', sil: 1500, bonus: 400, priceIdr: 329000, tag: 'best' }
 ];
-/* Top Up ditutup sementara (sama dengan TOPUP_LOCKED di SiliconStorePanel.js pada game).
+/* Top Up DIBUKA (sama dengan TOPUP_LOCKED di SiliconStorePanel.js pada game; true = ditutup).
    Ini hanya penguncian tampilan; penguncian sungguhan harus ada di fungsi server create_payment_order.
-   Ubah ke false untuk membuka kembali. */
-const TOPUP_LOCKED = true;
-let selPkg = null, selMethod = 'qris', coBusy = false;
+   Ubah ke true untuk menutup lagi. */
+const TOPUP_LOCKED = false;
+/* QRIS dikunci: hanya GoPay yang bisa dipakai (sama dengan flag `locked` pada metode qris di silicon.data.js). */
+const QRIS_LOCKED = true;
+let selPkg = null, selMethod = 'gopay', coBusy = false;
 
 function renderPkgs() {
   $('#pkgs').innerHTML = PACKAGES.map(p => `
@@ -912,13 +917,16 @@ function updateCheckout() {
 $('#pkgs').addEventListener('click', e => { if (TOPUP_LOCKED) return; const b = e.target.closest('.pkg'); if (!b) return; selPkg = b.dataset.id; renderPkgs(); });
 $('#methods').addEventListener('click', e => {
   if (TOPUP_LOCKED) return;
-  const b = e.target.closest('.method'); if (!b) return; selMethod = b.dataset.m;
+  const b = e.target.closest('.method'); if (!b || b.disabled) return;
+  if (QRIS_LOCKED && b.dataset.m === 'qris') return;   // QRIS terkunci: abaikan, tetap GoPay
+  selMethod = b.dataset.m;
   $$('.method').forEach(m => m.setAttribute('aria-checked', m === b));
 });
 selPkg = 'pkg_l';
 $('#shop').classList.toggle('sil-locked', TOPUP_LOCKED);
 $('#lockNote').hidden = !TOPUP_LOCKED;
-$$('.method').forEach(m => { m.disabled = TOPUP_LOCKED; });
+$$('.method').forEach(m => { m.disabled = TOPUP_LOCKED || (QRIS_LOCKED && m.dataset.m === 'qris'); });
+$('#qrisNote').hidden = TOPUP_LOCKED || !QRIS_LOCKED;
 
 /* ---------- Supabase ---------- */
 let cfg = null, client = null, user = null, publicId = null, balance = null, cloudErr = null;
@@ -1167,7 +1175,7 @@ function openQr(order) {
   if (TOPUP_LOCKED) return;
   stopQr(); qr.order = order; qr.until = Date.now() + 15 * 60 * 1000;
   $('#qrAmt').textContent = rp(order.amount);
-  $('#qrPkg').textContent = `${nf(order.sil)} SIL · ${selMethod === 'gopay' ? 'GoPay' : 'QRIS'}`;
+  $('#qrPkg').textContent = `${nf(order.sil)} SIL · GoPay`;
   $('#qrOrd').textContent = order.id; clearMsg($('#qMsg'));
   const tick = () => { const left = Math.round((qr.until - Date.now()) / 1000); $('#qrTimer').textContent = fmtT(left); if (left <= 0) { stopQr(); setMsg($('#qMsg'), t('qrExpired'), 'info'); } };
   tick(); qr.timer = setInterval(tick, 1000);
