@@ -14,7 +14,7 @@ let _authBound = false;
 function _loadSlot() {
     try {
         const n = parseInt(localStorage.getItem(SLOT_KEY), 10);
-        if (n >= 1 && n <= 9) return 1; 
+        if (n >= 1 && n <= 9) return n; // [FIX] dulu selalu 1, sehingga slot 2–9 hilang saat app dibuka ulang
     } catch (e) {}
     return 1;
 }
