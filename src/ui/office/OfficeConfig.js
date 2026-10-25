@@ -110,7 +110,15 @@ export var COLORS = {
     foam:    [0xf4fbff, 0x9cc4d8],
     sand:    [0xf1dfae, 0x7a6f58],
     sandWet: [0xd9c795, 0x5e5543],
-    rock:    [0x98a0aa, 0x555d68]
+    rock:    [0x98a0aa, 0x555d68],
+    // Area kampus (v2027.54a): plaza, jalan, bibir trotoar, semak, gedung tetangga.
+    paving:   [0xdfe3ea, 0x3b4455],
+    path:     [0xc3c9d3, 0x2f3745],
+    curb:     [0xeceff4, 0x566174],
+    hedge:    [0x4c9a61, 0x2a6445],
+    bldg:     [0xe9edf3, 0x4b566b],
+    bldgRoof: [0xa7b2c3, 0x333c4c],
+    bldgBand: [0xc7d0de, 0x3a4457]
 };
 
 // ============================================================
