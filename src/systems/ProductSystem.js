@@ -37,11 +37,15 @@ export class ProductSystem {
         this._promotion = null;
         this._componentPlants = null;
         this._nav = null;
+        this._channels = null;
         this._market = null;
     }
 
     // Navigasi pasar (MarketNavSystem): segmen, wilayah, gelombang tren, dan efek viral ke permintaan.
     setMarketNav(nav) { this._nav = nav; }
+    // [kanal distribusi] ChannelSystem: pengali jangkauan permintaan & retensi pendapatan (netral bila tidak ada kanal aktif).
+    setChannels(ch) { this._channels = ch; }
+    _channelReach(p) { return this._channels ? this._channels.getReachFactor(p) : 1.0; }
 
     // Sistem pasar: dipakai untuk memperkirakan tekanan kompetitor di wizard.
     setMarketSystem(market) { this._market = market; }
@@ -247,8 +251,9 @@ export class ProductSystem {
         var techF = this._getTechFactor(null);
         var navF = this._nav ? this._nav.estimateFactor(stats, config.price, config) : 1.0;
         var featureF = this._getFeatureFactor(config);
+        var channelF = this._channelReach({ price: config.price, config: config });
 
-        var demand = baseDemand * baseMult * qualityF * priceF * repF * marketingF * osFactor * trendF * competitorF * lifecycleF * techF * navF * featureF;
+        var demand = baseDemand * baseMult * qualityF * priceF * repF * marketingF * osFactor * trendF * competitorF * lifecycleF * techF * navF * featureF * channelF;
         return Math.max(0, Math.round(demand));
     }
 
@@ -627,7 +632,10 @@ export class ProductSystem {
             var sold = Math.min(demand, p.stock);
             if (sold <= 0) continue;
 
-            var revenue = sold * p.price;
+            var grossRevenue = sold * p.price;
+            // [Kanal] potongan margin untuk unit yang lewat operator/online (1.0 bila tidak ada kanal aktif).
+            var revenue = this._channels ? Math.round(grossRevenue * this._channels.getRetention(p)) : grossRevenue;
+            if (this._channels) this._channels.recordSale(p, sold, grossRevenue, revenue);
             p.stock -= sold;
             p.totalSold += sold;
             p.totalRevenue += revenue;
@@ -700,6 +708,7 @@ export class ProductSystem {
         // [era-event] pengali sementara dari keputusan event 2000–2002 (1.0 bila tidak ada).
         var eventF = getEraEventDemandFactor(data, p);
         var featureF = this._getFeatureFactor(p);   // [Fitur Ponsel] 1.0 untuk produk lama
+        var channelF = this._channelReach(p);       // [Kanal] 1.0 bila tidak ada kanal aktif
 
         // Noise harian dihaluskan (AR1) supaya penjualan tidak naik-turun liar.
         var sm = BALANCE.macro.demandNoiseSmoothing;
@@ -709,7 +718,7 @@ export class ProductSystem {
 
         var demand = baseDemand * baseMult * qualityF * priceF * repF
                      * marketingF * osFactor * trendF * competitorF
-                     * lifecycleF * techF * navF * eventF * featureF * noise;
+                     * lifecycleF * techF * navF * eventF * featureF * channelF * noise;
 
         return Math.max(0, Math.round(demand));
     }

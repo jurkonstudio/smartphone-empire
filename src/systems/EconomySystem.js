@@ -31,6 +31,7 @@ export class EconomySystem {
     setBank(bank) { this.bank = bank; }
     setEconBrakes(eb) { this.econ = eb; }
     setPlants(cps) { this.plants = cps; }
+    setChannels(ch) { this.channels = ch; }
 
     start() {
         this._unsubMonth = bus.on('time:month-changed', (snapshot) => {
@@ -99,7 +100,9 @@ export class EconomySystem {
             const cpd = data.componentPlants;
             if (cpd) cpd.taxPaid = (cpd.taxPaid || 0) + infraTax;
         }
-        const expenseBase = salary + fixed + loanInterest + upkeep + infraTax;
+        // [Kanal distribusi] biaya tetap bulanan (operator, online, toko sendiri).
+        const channelFixed = this.channels ? this.channels.getMonthlyFixedCost() : 0;
+        const expenseBase = salary + fixed + loanInterest + upkeep + infraTax + channelFixed;
         const expense = Math.round(expenseBase * mul);
 
         // ---- Pemasukan (info saja, sudah masuk cash via harian) ----
