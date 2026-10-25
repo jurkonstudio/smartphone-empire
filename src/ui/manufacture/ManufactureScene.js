@@ -142,6 +142,7 @@ export function createManufactureScene(THREE, container, gameState) {
     M.lock = new THREE.MeshStandardMaterial({ color: 0x8b97ad, roughness: 0.6 });
     M.lockGhost = new THREE.MeshBasicMaterial({ color: 0x8b97ad, transparent: true, opacity: 0.2, depthWrite: false });
     M.lockEdge = new THREE.LineBasicMaterial({ color: 0x8b97ad, transparent: true, opacity: 0.7 });
+    M.lockPlan = new THREE.LineBasicMaterial({ color: 0x7c8fb0, transparent: true, opacity: 0.38 });   // v2027.72 — denah rencana (garis tipis) di atas lahan konstruksi
     M.selRing = new THREE.MeshBasicMaterial({ color: 0x2563eb, transparent: true, opacity: 0.3, depthWrite: false });
     M.barBg = new THREE.MeshBasicMaterial({ color: 0x1b2230 });
     // bahan per-pabrik (warna aksen): padat, menyala, bayangan transparan, garis tepi
@@ -172,6 +173,35 @@ export function createManufactureScene(THREE, container, gameState) {
         l.scale.set(w, h, d); l.position.set(x, y, z);
         p.add(l);
         return l;
+    }
+
+    // v2027.72 — gabungkan banyak kotak statis ber-material sama jadi SATU mesh (1 draw call).
+    // list: [w, h, d, x, y, z, rotY]. Geometri milik sendiri -> ditandai userData.ownGeo agar dibuang di clearFurn.
+    var _mbPos = new THREE.Vector3(), _mbQ = new THREE.Quaternion(), _mbE = new THREE.Euler(), _mbS = new THREE.Vector3(), _mbM = new THREE.Matrix4(), _mbV = new THREE.Vector3();
+    function mergedBoxes(parent, mat, list) {
+        if (!list.length) return null;
+        var mm = typeof mat === 'string' ? M[mat] : mat;
+        var bp = G.box.attributes.position, bn = G.box.attributes.normal, bi = G.box.index;
+        var pos = [], nor = [], idx = [];
+        list.forEach(function (b) {
+            var off = pos.length / 3;
+            _mbM.compose(_mbPos.set(b[3], b[4], b[5]), _mbQ.setFromEuler(_mbE.set(0, b[6] || 0, 0)), _mbS.set(b[0], b[1], b[2]));
+            for (var i = 0; i < bp.count; i++) {
+                _mbV.fromBufferAttribute(bp, i).applyMatrix4(_mbM); pos.push(_mbV.x, _mbV.y, _mbV.z);
+                _mbV.fromBufferAttribute(bn, i).applyQuaternion(_mbQ); nor.push(_mbV.x, _mbV.y, _mbV.z);
+            }
+            for (var j = 0; j < bi.count; j++) idx.push(off + bi.getX(j));
+        });
+        var geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+        geo.setIndex(idx);
+        var m = new THREE.Mesh(geo, mm);
+        m.castShadow = !!look.shadows && !mm.transparent && !mm.isMeshBasicMaterial;
+        m.receiveShadow = !!look.shadows;
+        m.userData.ownGeo = true;
+        parent.add(m);
+        return m;
     }
 
     // ---------- label sprite (sama seperti Office) ----------
@@ -1327,10 +1357,75 @@ export function createManufactureScene(THREE, container, gameState) {
         return { top: bh + 3.1 };
     }
 
+    // v2027.72 — LAHAN KONSTRUKSI untuk pabrik terkunci (menggantikan kotak wireframe pucat):
+    // tanah galian + pondasi beton + tulangan besi, pagar proyek oranye, crane kecil statis, tumpukan material,
+    // papan nama beraksen pabrik + gembok. Semua kotak digabung per material (±10 draw call per petak).
+    function lockedSite(f, def, dm, zc, bw) {
+        var hw = bw / 2, hd = dm.bd / 2, m = 0.4;
+        var fw = hw + m, fd = hd + m, gate = 0.7;                       // setengah lebar pagar, setengah dalam, setengah celah gerbang
+        var soil = [], base = [], steel = [], fence = [], rail = [], amber = [], dark = [], crate = [], pipe = [], wood = [];
+        // tanah galian + pondasi
+        soil.push([fw * 2 - 0.1, 0.05, fd * 2 - 0.1, 0, 0.025, zc]);
+        base.push([bw * 0.96, 0.12, dm.bd * 0.96, 0, 0.11, zc]);
+        base.push([bw * 0.96 - 0.5, 0.05, dm.bd * 0.96 - 0.5, 0, 0.195, zc]);
+        // tulangan: tiang besi di atas pondasi (3 x 2)
+        [-1, 0, 1].forEach(function (ix) { [-1, 1].forEach(function (iz) { steel.push([0.06, 0.5, 0.06, ix * (hw - 0.5), 0.45, zc + iz * (hd - 0.4)]); }); });
+        // pagar proyek (panel oranye + rel atas gelap); depan punya celah gerbang
+        var T = 0.05, PH = 0.34;
+        fence.push([fw * 2, PH, T, 0, PH / 2 + 0.02, zc - fd]);                       // belakang
+        fence.push([T, PH, fd * 2, -fw, PH / 2 + 0.02, zc]);                          // kiri
+        fence.push([T, PH, fd * 2, fw, PH / 2 + 0.02, zc]);                           // kanan
+        var segW = fw - gate;
+        fence.push([segW, PH, T, -(gate + segW / 2), PH / 2 + 0.02, zc + fd]);        // depan kiri
+        fence.push([segW, PH, T, (gate + segW / 2), PH / 2 + 0.02, zc + fd]);         // depan kanan
+        rail.push([fw * 2 + 0.06, 0.04, 0.07, 0, PH + 0.04, zc - fd]);
+        rail.push([0.07, 0.04, fd * 2 + 0.06, -fw, PH + 0.04, zc]);
+        rail.push([0.07, 0.04, fd * 2 + 0.06, fw, PH + 0.04, zc]);
+        rail.push([segW, 0.04, 0.07, -(gate + segW / 2), PH + 0.04, zc + fd]);
+        rail.push([segW, 0.04, 0.07, (gate + segW / 2), PH + 0.04, zc + fd]);
+        [[-fw, zc - fd], [fw, zc - fd], [-fw, zc + fd], [fw, zc + fd], [-gate, zc + fd], [gate, zc + fd]].forEach(function (c) { dark.push([0.09, PH + 0.14, 0.09, c[0], (PH + 0.14) / 2 + 0.02, c[1]]); });
+        // crane menara kecil (statis) di sudut belakang-kiri
+        var cx = -fw + 0.3, cz = zc - fd + 0.3, th = 1.75;
+        dark.push([0.42, 0.14, 0.42, cx, 0.09, cz]);
+        amber.push([0.13, th, 0.13, cx, th / 2 + 0.14, cz]);
+        amber.push([0.2, 0.2, 0.2, cx, th + 0.22, cz]);                               // kabin
+        amber.push([2.5, 0.1, 0.1, cx + 0.95, th + 0.4, cz]);                         // lengan
+        amber.push([0.1, 0.3, 0.1, cx, th + 0.5, cz]);                                // puncak
+        dark.push([0.34, 0.26, 0.26, cx - 0.55, th + 0.34, cz]);                      // beban penyeimbang
+        dark.push([0.02, 0.7, 0.02, cx + 1.7, th + 0.04, cz]);                        // tali
+        crate.push([0.3, 0.26, 0.3, cx + 1.7, th - 0.44, cz]);                        // muatan
+        // material: peti, pipa beton, papan kayu
+        crate.push([0.42, 0.3, 0.42, fw - 0.55, 0.2, zc + fd - 0.5]);
+        crate.push([0.36, 0.26, 0.36, fw - 1.0, 0.18, zc + fd - 0.4]);
+        crate.push([0.34, 0.2, 0.34, fw - 0.78, 0.43, zc + fd - 0.47, 0.5]);
+        pipe.push([0.9, 0.12, 0.12, -fw + 0.8, 0.08, zc + fd - 0.45]);
+        pipe.push([0.9, 0.12, 0.12, -fw + 0.8, 0.08, zc + fd - 0.62]);
+        pipe.push([0.9, 0.12, 0.12, -fw + 0.8, 0.2, zc + fd - 0.535]);
+        wood.push([0.8, 0.05, 0.22, fw - 0.9, 0.075, zc - fd + 0.5, 0.35]);
+        mergedBoxes(f, 'soil', soil); mergedBoxes(f, 'base', base); mergedBoxes(f, 'steel', steel);
+        mergedBoxes(f, 'safety', fence); mergedBoxes(f, 'dark', dark.concat(rail)); mergedBoxes(f, 'amber', amber);
+        mergedBoxes(f, 'crate', crate); mergedBoxes(f, 'pipe', pipe); mergedBoxes(f, 'wood', wood);
+        // tumpukan tanah galian
+        [[-fw + 0.9, zc - fd + 0.55, 0.5, 0.42], [-fw + 1.5, zc - fd + 0.45, 0.36, 0.3]].forEach(function (c) {
+            var k = mesh(f, G.cone, 'soil', c[2], c[3], c[2], c[0], c[3] / 2 + 0.05, c[1]); k.castShadow = false;
+        });
+        // denah rencana (garis tipis) = petunjuk ukuran gedung yang akan dibangun
+        edges(f, M.lockPlan, bw, dm.bh, dm.bd, 0, dm.bh / 2, zc);
+        // papan nama di depan gerbang: aksen pabrik + gembok
+        var zs = zc + fd + 0.5;
+        box(f, 'metal', 0.07, 0.8, 0.07, 0, 0.4, zs);
+        box(f, GLOW[def.id], 1.15, 0.64, 0.06, 0, 1.12, zs);
+        box(f, 'white', 0.36, 0.28, 0.1, 0, 1.06, zs + 0.06);                          // badan gembok
+        var shk = mesh(f, G.tor, 'white', 0.17, 0.2, 0.17, 0, 1.26, zs + 0.06); shk.castShadow = false;
+        box(f, 'dark', 0.06, 0.12, 0.11, 0, 1.06, zs + 0.065);
+        return { top: Math.max(dm.bh + 0.8, th + 0.7) };
+    }
+
     function ghostBuilding(f, def, locked) {
         var dm = dimsFor(def, 2), zc = def.kind === 'fab' ? ZC - 0.1 : (def.kind === 'assembly' ? ASM_ZC : ZC);
-        var gm = locked ? M.lockGhost : GHOST[def.id], em = locked ? M.lockEdge : EDGE[def.id];
         var bw = def.kind === 'fab' ? 9.0 : dm.bw, bh = dm.bh;
+        if (locked) return lockedSite(f, def, dm, zc, bw);          // v2027.72 — lahan konstruksi (bukan wireframe)
+        var gm = GHOST[def.id], em = EDGE[def.id];
         box(f, gm, bw, bh, dm.bd, 0, bh / 2, zc);
         edges(f, em, bw, bh, dm.bd, 0, bh / 2, zc);
         // patok sudut
@@ -1351,7 +1446,11 @@ export function createManufactureScene(THREE, container, gameState) {
     // ---------- bangun ulang satu petak ----------
     function clearFurn(r) {
         var f = r.furn;
-        for (var i = f.children.length - 1; i >= 0; i--) f.remove(f.children[i]);
+        for (var i = f.children.length - 1; i >= 0; i--) {
+            var ch = f.children[i];
+            f.remove(ch);
+            if (ch.userData && ch.userData.ownGeo && ch.geometry) ch.geometry.dispose();   // v2027.72 — geometri gabungan milik sendiri
+        }
     }
     function rebuildLabel(r) {
         if (r.label) {
