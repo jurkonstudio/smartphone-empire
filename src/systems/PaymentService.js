@@ -201,6 +201,7 @@ export var PaymentService = {
 function _orderErrorMessage(res) {
     var m = String((res && (res.reason || res.code)) || '');
     if (/too_many_pending/i.test(m)) return 'Kamu masih punya 5 pesanan yang menunggu persetujuan. Tunggu diproses admin atau batalkan salah satunya.';
+    if (/topup_closed/i.test(m)) return 'Top Up sedang ditutup sementara.';
     if (/invalid_package/i.test(m)) return 'Paket tidak valid. Muat ulang game lalu coba lagi.';
     if (/not_authenticated|not_signed_in/i.test(m)) return 'Sesi login berakhir. Masuk lagi lalu coba lagi.';
     if (/network|failed to fetch|load failed/i.test(m) || (res && res.code === 'network')) return 'Gagal menyimpan pesanan ke server. Cek koneksi.';
