@@ -82,3 +82,7 @@
 
 ## Insiden Dinamis (BARU)
 Memakai event bus yang sama dengan event era: `eraevent:pending` (`{ event }`, `event.kind === 'dynamic'` untuk insiden acak) dan `eraevent:resolved` (`{ eventId, choiceId, event, choice, roll }`, `roll` = 'success' | 'fail' | null untuk pilihan berisiko).
+
+## Kanal Distribusi (BARU)
+- `channel:activated` — `{ id, cost }` — kanal dibuka
+- `channel:deactivated` — `{ id }` — kanal ditutup
