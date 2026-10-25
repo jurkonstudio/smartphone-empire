@@ -333,7 +333,7 @@ export class EcosystemSystem {
         var setupCost = _nice(line.setup * Math.sqrt(scale));
         var commitLeft = s.open ? Math.max(0, s.openedAbs + ECO_CONST.commitMonths - this._now()) : 0;
         return {
-            id: id, name: line.name, minYear: line.minYear, yearOk: year >= line.minYear,
+            id: id, nameKey: line.nameKey, minYear: line.minYear, yearOk: year >= line.minYear,
             open: s.open, tier: s.tier, price: s.price, basePrice: basePrice,
             priceMin: basePrice * ECO_CONST.priceMinMult, priceMax: basePrice * ECO_CONST.priceMaxMult,
             setupCost: setupCost, canOpen: !s.open && year >= line.minYear && WalletService.canAfford(setupCost),
