@@ -45,7 +45,7 @@ A season ends when the game date enters **2051** (the `endYear` limit of 2050 in
 
 ## What's in the game
 
-The numbers below were counted directly from the data files in this repo (v0.2.5; the ecosystem and accessory visuals added no new counted items).
+The numbers below were counted directly from the data files in this repo (v0.2.6; the subscription services added no new counted items).
 
 ### 🧭 Navigation
 
@@ -88,7 +88,7 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 - **4-phase development**: Design → Prototype → Production → Release.
 - **Transparent demand formula**: quality × price × reputation × marketing × OS × trend × competitors × lifecycle × macro conditions.
 - **Product lifecycle**: rising → peak → declining → dead. There is warehouse stock, automatic restock, and a maximum of **5 active products**.
-- **Ecosystem** (Market → Ecosystem): three accessory lines (wireless earbuds from 2004, smartwatches from 2014, chargers from 2000). Each line has a Basic, Mid, or Premium tier and an adjustable price. Sales follow your active phone base, and each line has a fixed monthly cost and a setup cost. Once your OS has the App Store feature, you earn a monthly commission (15–30%, adjustable) on app spending by active OS users. A high commission lowers developer appeal, so the catalog shrinks. Owning accessories and an App Store raises phone demand by up to 6% and eases competitor pressure. Tier and price changes are locked for 3 months, and a line can't be closed for 6 months after it opens. See `src/systems/EcosystemSystem.js`.
+- **Ecosystem** (Market → Ecosystem): three accessory lines (wireless earbuds from 2004, smartwatches from 2014, chargers from 2000). Each line has a Basic, Mid, or Premium tier and an adjustable price. Sales follow your active phone base, and each line has a fixed monthly cost and a setup cost. Once your OS has the App Store feature, you earn a monthly commission (15–30%, adjustable) on app spending by active OS users. A high commission lowers developer appeal, so the catalog shrinks. Owning accessories and an App Store raises phone demand by up to 6% and eases competitor pressure. Tier and price changes are locked for 3 months, and a line can't be closed for 6 months after it opens. Below the App Store card, two subscription services sit side by side: **Cloud** (from 2012, needs the Cloud Sync OS feature, subscribers follow your active phone base) and an **AI assistant** (from 2011, needs the Virtual Assistant OS feature, subscribers follow active OS users). Each has Free, Standard, or Premium tiers, a setup cost, and a monthly fixed cost. See `src/systems/EcosystemSystem.js`.
 - **Sales channels** (Market → Channels): Mobile Carriers (2000), Online Store (2003), and Own Stores (2004) expand demand with era-based reach, but units sold through them are margin-cut and carry fixed costs. Production cost per unit does not change, so thin-margin phones lose money through carriers. See `CHANGES-channels.md`.
 - **Marketing**: **5 campaign types** (Online Ads, Event Sponsorship, Product Launch, City Billboard, Influencer Campaign).
 - **Promotions**: **18 packages**: 12 regional (Global, Asia, Europe, Americas & Rest, 3 each) and 6 per consumer segment. There are **12 seasonal events** such as Lunar New Year, 618, Singles' Day 11.11, Golden Week/Diwali, Carnival, Back to School, Summer Sales, Black Friday, and Christmas. At most 3 active promotion campaigns per product.
@@ -164,16 +164,17 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 - **Messages**: an inbox for system notifications and rewards, player-to-player messages (with blocking), and SIL transfers between players (max 5,000 SIL per 24 hours).
 - **Universal Wallet**: money ($) and Silicon (SIL) can be used for almost everything. Cash costs can be covered with SIL and vice versa. The rate follows inflation (year 2000: 1 SIL = $2,500, rising 15% per year). SIL is never minted from money. Pay modes (Auto, Cash first, SIL first, Strict) and the SIL Emergency Fund are in Settings → Finance.
 - **Silicon (SIL)**: a premium currency for speeding up time and research, with a daily login bonus and quest rewards. It can also be exchanged into in-game cash (requires `supabase/10-tukar-sil.sql`).
-  - **Top-up is open through GoPay only.** The Buy tab is controlled by the `TOPUP_LOCKED` flag in `src/ui/panels/SiliconStorePanel.js` (now `false`), and the landing page (`web.html`) follows it. **QRIS is locked**: the `qris` method in `src/data/silicon.data.js` has `locked: true`, so it shows as "Locked" and cannot be selected or ordered. Only GoPay opens the payment panel.
-  - Top-up is still manual and approved by an admin through the `/fsociety` panel. No automatic payment provider is connected yet.
-  - The QRIS lock is client-side only. Details are in Known issues and [`SECURITY.md`](SECURITY.md).
+  - **Top-up is temporarily closed.** The Buy tab and payment panel in the game are locked by the `TOPUP_LOCKED` flag in `src/ui/panels/SiliconStorePanel.js`, and the landing page (`web.html`) follows it. Balance, daily bonus, rewards, and SIL spending keep working.
+  - When open, top-up is still manual (GoPay/QRIS) and approved by an admin through the `/fsociety` panel. No automatic payment provider is connected yet.
+  - The lock is currently client-side only. Details are in Known issues and [`SECURITY.md`](SECURITY.md).
 - **Security**: saves carry an integrity signature (a barrier against manual editing, not encryption). SIL balances and the ledger are protected on the server through Row Level Security and server-only functions. The full security policy and how to report issues are in [`SECURITY.md`](SECURITY.md).
 
 ### ⚠️ Known issues
 
 - **The leaderboard is only partly validated by the server.** Stats are still sent from the player's device. The server limits sync frequency, checks invariants, and hides suspicious profiles (`supabase/11`), and it computes level and score itself (`supabase/12` and `15`). Values that stay within plausible bounds can still be faked, so this isn't an official ranking.
-- **The QRIS lock is client-side only.** Orders do not record a payment method, and the server function `create_payment_order` can still be called by a logged-in account through the API directly. Orders stay `pending` until an admin approves them, but if top-up (or QRIS) must be fully closed, add a server-side flag.
-- **Ecosystem balance is a first-pass estimate.** Accessory and App Store values (`src/data/ecosystem.data.js`) were checked only in a headless simulation and a browser smoke test, not against the real game economy. The target from the design notes is 5–15% of phone revenue and a 35–55% gross margin; calibrate it through play before treating it as final.
+- **The top-up lock is client-side only.** The server function `create_payment_order` can still be called by a logged-in account through the API directly. Orders stay `pending` until an admin approves them, but if top-up must be fully closed, add a server-side flag.
+- **Ecosystem balance is calibrated against the headless game economy, not against play.** Version 0.2.6 tuned the accessory and App Store values with `tools/eco-calib.mjs`, which runs the real market systems from 2000 to 2026. Ecosystem revenue reaches about 13% of phone revenue in 2026 (target 5–15%), and gross margins are 40–65%. In that harness, phone revenue levels off at about 333,000 a month from 2011, so the real ratio may differ. Check it through play before treating it as final.
+- **Subscription services are not verified on real phones.** Browser tests used a synthetic phone base, so the subscriber numbers are not yet checked. The OS features (`fw_cloud_sync`, `fw_siri`) and opening years (2012, 2011) are first-pass choices to confirm.
 - **Accessory visuals are fixed designs.** The mockups follow the tier and the open/closed state only. The player cannot yet choose color, material, or shape for accessories, and they are not shown in Market → Ecosystem (only linked).
 - **Raw text in some places.** Four translation keys are used without fallback text and aren't in the dictionaries yet: `main.toast.fab_unlocked`, `wiz.warn.volume_cost`, `wiz.preview.unit_design`, `wiz.preview.unit_parts`. Many other keys (for example `team.recruit.*`, `team.nego.*`, `silstore.locked.*`) still rely on fallback text and haven't been merged into `src/data/i18n/en.js` and `id.js`.
 - **`supabase/BACA-DULU.md` is incomplete.** Its table covers 01–09, 14, and 15, but is missing both file-10 variants, 11, 12, 13, 15b, 16, and 17.
@@ -286,12 +287,19 @@ The project is still in progress. Roadmap notes:
 - ⏳ More incidents, per-era screen transitions, and UI polish
 - ⏳ **UI Evolution patch**: notification styling that changes per era (monochrome → glossy → flat → Dynamic Island)
 - ⏳ **Bilingual news**: English headlines exist, but some review templates are still Indonesian-only
-- ⏳ **Silicon payments**: reopening QRIS and adding a production payment provider with server-side verification (including a server-side lock). GoPay top-up is already open (manual).
+- ⏳ **Silicon payments**: reopening top-up with a production payment provider and server-side verification (including a server-side lock)
 - ⏳ **Fixing the known issues** above
 
 ---
 
 ## Versions
+
+### 0.2.6 — Subscription services (Cloud and AI assistant)
+- Cloud and an AI assistant are now subscription services in Market → Ecosystem, below the App Store card. Each has Free, Standard, and Premium tiers; paid tiers have an adjustable price.
+- Cloud opens from 2012 and needs the Cloud Sync OS feature. The AI assistant opens from 2011 and needs the Virtual Assistant OS feature. Both have a setup cost and a monthly fixed cost.
+- Lock-in weights changed to 40% accessory lines, 40% App Store, and 20% subscriptions (was 50/50 lines and App Store). Saves with every accessory line and the App Store open now reach 80% lock-in until a subscription opens.
+- Accessory and App Store balance recalibrated against the game economy with `tools/eco-calib.mjs`: attach rate ×0.18, App Store spend per user 0.3, lower fixed costs. Ecosystem reaches about 13% of phone revenue in 2026.
+- Older saves load with subscriptions closed.
 
 Latest recorded version: **0.2.5** (October 25, 2026). Official change lists are in `src/patches.json` and `PERF-CHANGES.md`. The root `patches.json` is kept identical to `src/patches.json`.
 
@@ -317,7 +325,7 @@ Changes that are already in the code but not yet in `patches.json`:
 - Early-2000s content: new OS features, research, bugs, and the storage component category (see `CHANGES-2001-2004-konten.md`).
 - 12 languages and raw-text fixes.
 - HQ → Overview overhaul, the Office tab moved to a switch on Home, and Player ID moved to Player Profile.
-- Silicon top-up reopened through GoPay only; QRIS locked.
+- Silicon top-up temporarily closed.
 - 2027–2030 package: market, RAM cost index, scenario trends, news, Agentic AI OS features (Agentic OS, Agent Guard, Agent Store), the fictional newcomer Novamind, and emergent brand withdrawal (see `CHANGES-2027-kompetitor.md`).
 - Per-language loading screen (Indonesian and English).
 

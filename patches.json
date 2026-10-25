@@ -1,6 +1,33 @@
 {
-  "latest": "0.2.5",
+  "latest": "0.2.6",
   "releases": [
+    {
+      "version": "0.2.6",
+      "date": "2026-10-25",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Layanan berlangganan di Pasar > Ekosistem: Cloud dan Asisten AI, masing-masing dengan tier Gratis, Standar, dan Premium. Harga tier berbayar bisa diatur.",
+            "en": "Subscription services in Market > Ecosystem: Cloud and an AI assistant, each with Free, Standard, and Premium tiers. Paid tier prices are adjustable."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Skor lock-in kini dihitung dari lini aksesori (40%), App Store (40%), dan layanan berlangganan (20%).",
+            "en": "Lock-in score now uses accessory lines (40%), the App Store (40%), and subscription services (20%)."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Keseimbangan ekosistem dikalibrasi ulang terhadap ekonomi permainan: pendapatan aksesori dan App Store kini sekitar 13% pendapatan ponsel di 2026 (target 5–15%).",
+            "en": "Ecosystem balance recalibrated against the game economy: accessory and App Store revenue is now about 13% of phone revenue in 2026 (target 5–15%)."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.5",
       "date": "2026-10-25",

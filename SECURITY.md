@@ -8,7 +8,7 @@ The project is deployed as a single live version, so security fixes are applied 
 
 | Version | Supported |
 | ------- | --------- |
-| 0.2.x (latest, currently 0.2.5) | ✅ |
+| 0.2.x (latest, currently 0.2.6) | ✅ |
 | < 0.2 | ❌ |
 
 ## How to report a vulnerability
@@ -49,7 +49,7 @@ The core principle: **client code can be read and modified by anyone, so anythin
 | ----- | ---------- |
 | SIL balance and ledger | Guarded on the server. Players have no `INSERT/UPDATE/DELETE` rights on `silicon_wallets` and `silicon_ledger`. The credit function `add_silicon` can only be called by `service_role`. SIL spending uses anti-duplicate server functions, and every credit is recorded in the ledger. |
 | SIL → cash exchange | Handled on the server (`10-tukar-sil.sql`). The client sends only a package ID, the year, and a `request_id`. The server deducts the SIL and computes the cash amount. Retrying with the same `request_id` returns the earlier result, so SIL is not deducted twice and cash is not granted twice. |
-| SIL top-up | Prices and package contents are validated on the server (`_sil_packages`). Orders stay `pending` until an admin approves them, one order cannot be credited twice, and one account can have at most 5 `pending` orders. Payment is currently manual (GoPay only; QRIS is locked) with no automatic provider. The order-by-player-ID function (`create_topup_order_by_public_id`) and `lookup_player_by_public_id` can only be called by `service_role`. |
+| SIL top-up | Prices and package contents are validated on the server (`_sil_packages`). Orders stay `pending` until an admin approves them, one order cannot be credited twice, and one account can have at most 5 `pending` orders. Payment is currently manual (GoPay/QRIS) with no automatic provider. The order-by-player-ID function (`create_topup_order_by_public_id`) and `lookup_player_by_public_id` can only be called by `service_role`. |
 | SIL transfers between players | Done atomically on the server with ordered two-wallet locking (deadlock-safe), a limit of 5,000 SIL per 24 hours, and a ledger entry. |
 | Admin actions | Verified on the server through `is_admin()`, not on the client. The client-side admin gate is cosmetic. The admin table `admin_users` has RLS enabled with no policies and all API rights revoked. The admin panel (`031411/`) is marked `noindex`, but **its secrecy does not depend on its URL**. It signs out after 15 minutes of inactivity and does not keep the session after the tab or browser closes. |
 | Player data | *Row Level Security* is enabled on core tables. `SECURITY DEFINER` functions set `search_path`, and their execute rights are revoked from `public/anon` and granted only to the roles that need them. |
@@ -60,6 +60,7 @@ The core principle: **client code can be read and modified by anyone, so anythin
 | Player messages | Player-to-player messages support blocking and reporting (reports are visible to admins). The server enforces the rules, not the client. |
 | Player input in the UI | Text from players or the server (names, bios, messages, inbox titles) must go through `escapeHtml` (`src/utils/html.js`) or `textContent` before entering `innerHTML`. Spot checks of the Messages panel, profile, and player list show the rule is followed, but there is no automated scan yet (see risk 8). |
 | Accessory mockups (0.2.5) | Drawing only. `src/ui/phone/AccessoryMockup.js` produces inline SVG from fixed values in the code. It makes no network calls, loads no external images, and adds no new data, Supabase tables, functions, or secrets. |
+| Subscription services (Cloud and AI assistant, 0.2.6) | Client-side simulation only, the same as the 0.2.4 ecosystem. `EcosystemSystem.js` adds subscription state under the existing `state.data.ecosystem`. It makes no network calls and adds no Supabase tables, functions, or secrets. It does not touch the SIL wallet or the ledger. Setup costs use the normal cash path. |
 | Ecosystem (accessories and App Store, 0.2.4) | Client-side simulation only. `src/systems/EcosystemSystem.js` makes no network calls and adds no Supabase tables, functions, or secrets. It does not touch the SIL wallet or the ledger. Its revenue and commission values are stored in the local save like the other simulation values, so they can be changed by the player (see "What is deliberately NOT guaranteed"). |
 | Secrets | There is no `service_role` key or AI API key in client code. The Anthropic key for the Advisor is read only from an Edge Function secret (`ANTHROPIC_API_KEY`). |
 
@@ -67,11 +68,11 @@ The core principle: **client code can be read and modified by anyone, so anythin
 
 - **The save signature (`src/core/Integrity.js`) is not encryption.** It only makes manual edits to `localStorage` or an exported file easy to detect. The penalty resets SIL to 0 and flags the save (`tamperFlag`). The key lives in client code, so a determined and capable player can still forge it. Real protection is on the server.
 - **Leaderboard stats are still reported by the client** (revenue, cash, and so on). The server catches crude forgery (impossible numbers, syncing too often), but values that stay within plausible bounds can still be faked. Full validation would need server-side simulation or auditing, so the ranking is not official. Levels and scores derived from those stats inherit this limit.
-- **The Top Up / QRIS lock is client-side only.** The game (`TOPUP_LOCKED` in `src/ui/panels/SiliconStorePanel.js`, mirrored by `STUDIO_TOPUP_LOCKED` in `src/ui/panels/SettingsPanel.js`; QRIS via `locked: true` in `src/data/silicon.data.js`) and the landing page (`web.html`, `TOPUP_LOCKED` / `QRIS_LOCKED`) hide or disable payment, but the server function `create_payment_order` doesn't check any flag or payment method. A logged-in player can still create a `pending` order through the API directly. That order does not automatically credit SIL (it still needs admin approval), but if top-up must be fully closed, the lock needs to be added on the server.
+- **The Top Up lock is client-side only.** The game (`TOPUP_LOCKED` in `src/ui/panels/SiliconStorePanel.js`, mirrored by `STUDIO_TOPUP_LOCKED` in `src/ui/panels/SettingsPanel.js`) and the landing page (`web.html`) hide or disable payment, but the server function `create_payment_order` doesn't check any flag. A logged-in player can still create a `pending` order through the API directly. That order does not automatically credit SIL (it still needs admin approval), but if top-up must be fully closed, the lock needs to be added on the server.
 - **Player ID is public.** It is shown on the profile and visible to other players, so don't treat it as a secret and don't use it as proof of identity.
 - **The Supabase URL and *publishable key*** in `src/services/cloud/supabase.config.js` are public by design. Data security depends on RLS and function rights, not on keeping that key secret.
 - **Local saves are not encrypted.** Anyone using the same device can read them.
-- **Game simulation runs on the client.** The economy, demand model, competitor actions, scenario content, and the 0.2.4 ecosystem (accessory sales, App Store commission, and lock-in) are computed in the browser and stored in the local save, so they can be modified by the player. Nothing that holds money-like value (SIL balance, account data) depends on them.
+- **Game simulation runs on the client.** The economy, demand model, competitor actions, scenario content, and the 0.2.4 ecosystem and the 0.2.6 subscription services (accessory sales, App Store commission, subscriptions, and lock-in) are computed in the browser and stored in the local save, so they can be modified by the player. Nothing that holds money-like value (SIL balance, account data) depends on them.
 
 ## Known risks
 
@@ -79,7 +80,7 @@ We list these openly so researchers don't waste time on what is already known, b
 
 1. **Business Advisor Edge Function (`advisor-chat`)**: no per-user rate limit yet, and its CORS header is `Access-Control-Allow-Origin: *`. Because it calls a paid API, **don't enable it for a wide public** until a rate limit (for example per user in a Supabase table) and origin restrictions are added. Input is already truncated (question 300 characters, history 6 messages of 280 characters each, context 6,000 characters).
 2. **The leaderboard** is based on client numbers that are only partly validated (see above).
-3. **QRIS (and the Top Up switch) is locked only on the client** (see above). The landing page also includes the payment QRIS (`qris-gopay.png`) as a public static file.
+3. **Top Up is locked only on the client** (see above). The landing page also includes the payment QRIS (`qris-gopay.png`) as a public static file.
 4. **The global error overlay** in `index.html` shows the message and *stack trace* on screen when a JavaScript error happens, and is not gated by `DEV_BUILD`. It is useful for debugging but leaks file paths to players. Consider hiding it in production.
 5. **CDN dependencies**: Three.js (`cdn.jsdelivr.net`, v0.160.0) and `supabase-js` (`cdn.jsdelivr.net` with an `esm.sh` fallback, v2.49.4) are loaded with pinned versions, but there is **no Content-Security-Policy**. Subresource Integrity (SRI) is also missing and can't be applied directly to dynamic `import()`. Fix options: keep a copy of the libraries in the repo (self-host) or use an import map with `integrity` attributes. A CDN compromise would affect every player.
 6. **`DEV_BUILD`** must stay `false` in production (`src/config/dev.config.js`).
@@ -88,7 +89,7 @@ We list these openly so researchers don't waste time on what is already known, b
 9. **The admin panel (`031411/`) has a free-form RPC console.** An admin can call any function with JSON arguments. The only safeguard is `is_admin()` on the server, so admin accounts must use a strong password and 2FA.
 10. **`supabase/BACA-DULU.md` is incomplete**: it doesn't list SQL files 10–13, 16, or 17. A project that skips a file can lose its protection (for example unique-name validation in `14`, leaderboard validation in `11`, server-side level calculation in `12` and `15`, or the corrected leaderboard view in `17`).
 11. **The leaderboard view can be overwritten by older files.** Re-running `03` or `11` after `12`/`15` recreates `public_profiles` without the newer columns (and without hiding flagged profiles). Run `16` to check and `17` to repair.
-12. **Two `patches.json` files** (root and `src/`) must stay identical. They were out of sync before 0.2.4 and are now both at 0.2.5. Keep them in sync when editing release notes, because the game reads the root one and fix notices may not reach players otherwise.
+12. **Two `patches.json` files** (root and `src/`) must stay identical. They were out of sync before 0.2.4 and are now both at 0.2.6. Keep them in sync when editing release notes, because the game reads the root one and fix notices may not reach players otherwise.
 13. A comment in `src/core/Integrity.js` still refers to `supabase/hardening.sql`, which has been merged into the numbered files.
 
 ## Guidance for people running their own copy
