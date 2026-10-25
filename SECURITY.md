@@ -8,7 +8,7 @@ The project is deployed as a single live version, so security fixes are applied 
 
 | Version | Supported |
 | ------- | --------- |
-| 0.2.x (latest, currently 0.2.7) | ✅ |
+| 0.2.x (latest, currently 0.2.8) | ✅ |
 | < 0.2 | ❌ |
 
 ## How to report a vulnerability
@@ -89,7 +89,7 @@ We list these openly so researchers don't waste time on what is already known, b
 9. **The admin panel (`031411/`) has a free-form RPC console.** An admin can call any function with JSON arguments. The only safeguard is `is_admin()` on the server, so admin accounts must use a strong password and 2FA.
 10. **`supabase/BACA-DULU.md` is incomplete**: it doesn't list SQL files 10–13, 16, or 17. A project that skips a file can lose its protection (for example unique-name validation in `14`, leaderboard validation in `11`, server-side level calculation in `12` and `15`, or the corrected leaderboard view in `17`).
 11. **The leaderboard view can be overwritten by older files.** Re-running `03` or `11` after `12`/`15` recreates `public_profiles` without the newer columns (and without hiding flagged profiles). Run `16` to check and `17` to repair.
-12. **Two `patches.json` files** (root and `src/`) must stay identical. They were out of sync before 0.2.4 and are now both at 0.2.7. Keep them in sync when editing release notes, because the game reads the root one and fix notices may not reach players otherwise.
+12. **Two `patches.json` files** (root and `src/`) must stay identical. They were out of sync before 0.2.4 and are now both at 0.2.8. Keep them in sync when editing release notes, because the game reads the root one and fix notices may not reach players otherwise.
 13. A comment in `src/core/Integrity.js` still refers to `supabase/hardening.sql`, which has been merged into the numbered files.
 
 ## Guidance for people running their own copy

@@ -45,7 +45,7 @@ A season ends when the game date enters **2051** (the `endYear` limit of 2050 in
 
 ## What's in the game
 
-The numbers below were counted directly from the data files in this repo (v0.2.7; the subscription services added no new counted items).
+The numbers below were counted directly from the data files in this repo (v0.2.8; the subscription services added no new counted items).
 
 ### 🧭 Navigation
 
@@ -294,6 +294,12 @@ The project is still in progress. Roadmap notes:
 
 ## Versions
 
+### 0.2.8 — Ecosystem economy recalibrated
+- Balance: measured in the browser on real phone sales (one $250 phone a year, all lines and services open). Ecosystem revenue went from about 2% to about 10–17% of phone revenue (17.3% in 2026), gross margin about 50%. Levers: `fixedScaleExp` 0.3 (fixed costs only; setup keeps sqrt), `lineAttachScale` 0.18→1.7, `storeSpendBase` 0.3→2.1, `maxAttachShare` 0.05→0.12, Cloud attach 0.02→0.10, AI attach 0.015→0.09.
+- Change: the AI assistant opens from 2023 and requires OS feature `fw_ai_on_device` (`llm_accelerator` is a chip feature, so the OS check cannot use it).
+- Tools: `tools/eco-wiring-check.mjs` restored (it was missing from the repo zip); `tools/eco-services-sim.mjs` updated for the 2023 AI gate.
+- Not done: `tools/eco-calib.mjs` still uses flat 333,333 phone revenue, and other scenarios (several phones, $600+ prices) are unmeasured. Advisor updates are not done.
+
 ### 0.2.7 — Subscription service buttons fixed
 - Fix: the Cloud and AI assistant buttons (open, close, tier, price) did nothing, because `src/main.js` had no click handler for `data-eco-svc-*`. The handler is added and uses the existing `eco.svc.toast.*` and `eco.toast.*` keys.
 - Fix: `src/patches.json` was still at 0.2.5 while the root file was at 0.2.6. Both are now identical at 0.2.7.
@@ -308,7 +314,7 @@ The project is still in progress. Roadmap notes:
 - Accessory and App Store balance recalibrated against the game economy with `tools/eco-calib.mjs`: attach rate ×0.18, App Store spend per user 0.3, lower fixed costs. Ecosystem reaches about 13% of phone revenue in 2026.
 - Older saves load with subscriptions closed.
 
-Latest recorded version: **0.2.7** (October 25, 2026). Official change lists are in `src/patches.json` and `PERF-CHANGES.md`. The root `patches.json` is kept identical to `src/patches.json`.
+Latest recorded version: **0.2.8** (October 25, 2026). Official change lists are in `src/patches.json` and `PERF-CHANGES.md`. The root `patches.json` is kept identical to `src/patches.json`.
 
 ### 0.2.5 — Accessory visuals
 - New sub-tab Products → Accessories: inline SVG mockups for earbuds, smartwatches, and chargers (`src/ui/phone/AccessoryMockup.js`, `src/ui/panels/AccessoriesTab.js`). Shape and color follow the tier. Lines that are not open yet show in gray with a label.
