@@ -16,6 +16,7 @@ import { ChipResearchSystem } from './core/ChipResearchSystem.js';
 import { EconomySystem } from './systems/EconomySystem.js';
 import { QuestSystem } from './systems/QuestSystem.js';
 import { EraEventSystem } from './systems/EraEventSystem.js';
+import { AnnualReviewSystem } from './systems/AnnualReviewSystem.js';
 import { ChannelSystem } from './systems/ChannelSystem.js';
 import { AfterSalesSystem } from './systems/AfterSalesSystem.js';
 import { EcosystemSystem } from './systems/EcosystemSystem.js';
@@ -80,6 +81,7 @@ import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
 import { openNewsArticleModal } from './ui/panels/NewsArticleModal.js';
 import { openEraEventModal } from './ui/panels/EraEventModal.js';
+import { openAnnualReviewModal } from './ui/panels/AnnualReviewModal.js';
 import { openSiliconModal } from './ui/panels/SiliconPanel.js';
 import { openSiliconStoreModal } from './ui/panels/SiliconStorePanel.js';
 import { PaymentService } from './systems/PaymentService.js';
@@ -110,6 +112,7 @@ var timeSystem        = new TimeSystem(state);
 var economy           = new EconomySystem(state);
 var quests            = new QuestSystem(state);
 var eraEvents         = new EraEventSystem(state);
+var annualReview      = new AnnualReviewSystem(state);
 var tutorial          = new TutorialSystem(state);
 var research          = new ResearchSystem(state);
 var chipResearch      = new ChipResearchSystem(state);
@@ -1444,6 +1447,30 @@ function bindStateEvents() {
         try { if (eraEvents.getPending() && !Modal.hasOpen()) setTimeout(function () { if (!Modal.hasOpen()) eraEvents.reannounce(); }, 300); } catch (e) {}
     });
 
+    // [annual-review] Rapor Tahunan + Target Dewan: jeda game, tampilkan rapor & pilihan fokus, kembalikan kecepatan setelah selesai.
+    var _annualPausedByReview = false;
+    bus.on('annual:pending', function (data) {
+        try {
+            var report = data && data.report;
+            if (!report) return;
+            if (Modal.hasOpen()) { annualReview.retryLater(); return; }   // jangan menimpa modal lain; dicoba lagi tiap hari game
+            var wasRunning = !state.data.isPaused;
+            var shown = openAnnualReviewModal(report, {
+                annual: annualReview,
+                resumeIfRunning: function () {
+                    if (Modal.isOpen('annual-report') || Modal.isOpen('annual-focus')) return;
+                    if (_annualPausedByReview) { _annualPausedByReview = false; if (state.data.isPaused) timeSystem.togglePause(); }
+                }
+            });
+            if (shown && wasRunning) { _annualPausedByReview = true; timeSystem.togglePause(); }
+        } catch (err) {
+            console.error('[main] annual:pending handler error:', err);
+        }
+    });
+    bus.on('ui:modal-close', function () {
+        try { if (annualReview.getPending() && !Modal.hasOpen()) setTimeout(function () { if (!Modal.hasOpen()) annualReview.reannounce(); }, 300); } catch (e) {}
+    });
+
     bus.on('news:published', function (data) {
         try {
             var article = data && data.article;
@@ -1559,6 +1586,7 @@ async function boot() {
         companyHistory.start();
         NewsSystem.start();
         eraEvents.start();
+        annualReview.start();
         advisor.start();
         stockSystem.start();
         promotion.start();
@@ -1611,7 +1639,7 @@ ecosystem.start();
             cloud: CloudService,
             cloudSync: CloudSync,
             forcePull: function() { return CloudSync.forcePull(); },
-            state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, eraEvents: eraEvents, tutorial: tutorial,
+            state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, eraEvents: eraEvents, annual: annualReview, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, marketNav: marketNav, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, plants: componentPlants, assembly: assemblySystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
             silicon: SiliconService, promotion: promotion, channels: channels, afterSales: afterSales, bank: bank, econ: econBrakes, payment: PaymentService,
