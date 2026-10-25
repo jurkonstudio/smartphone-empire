@@ -86,3 +86,7 @@ Memakai event bus yang sama dengan event era: `eraevent:pending` (`{ event }`, `
 ## Kanal Distribusi (BARU)
 - `channel:activated` — `{ id, cost }` — kanal dibuka
 - `channel:deactivated` — `{ id }` — kanal ditutup
+
+## Rapor Tahunan (BARU)
+- `annual:pending` — `{ report }` — rapor tahun lalu menunggu keputusan fokus (UI membuka modal dan menjeda game). `report` berisi `year`, `grade`, `items`, `effects`, `rank`, `netWorth`, dll.
+- `annual:resolved` — `{ report, focusId, targets }` — pemain memilih Fokus Strategis; target dewan tahun baru sudah aktif.
