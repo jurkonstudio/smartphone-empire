@@ -1,4 +1,24 @@
 // FILE: src/ui/office/OfficeScene.js  (REPLACE)
+// v2027.81 — "Realistic Office" TERSAMBUNG: builder OfficeProps kini benar-benar dipakai (sebelumnya hanya lantai & bayangan).
+//   * Staf: person() memakai props.figure (anatomi, wajah, rambut 6 gaya, aksesori peran, ID card tier) + pose IK:
+//     tangan di keyboard/mouse, minum kopi (cangkir di tangan), ayunan lengan & kaki + lutut saat berjalan. Logika jalan,
+//     aktivitas, gelembung emoji, indikator moral & rute TIDAK berubah.
+//   * Meja kerja: monitor berlayar bertekstur sesuai peran (kode/desain/grafik/terminal/dokumen) atau CRT era lama, keyboard,
+//     mouse, laptop berengsel / PC tower, cangkir bergagang, buku catatan, ponsel & lampu meja (selang-seling), meja berlaci.
+//   * Ruang CEO: meja membulat, rak buku berpapan, sofa berbantal, lampu meja, kursi eksekutif. Design: layar desain + tablet
+//     bertekstur. Marketing & Finance: laptop/keyboard/mouse. Showroom: layar ponsel berwarna per produk. Halaman: pohon bergumpal & bangku berpapan.
+//   * Perbaikan: status tema (VS.era/dark/accent) kini disinkronkan di applyTheme (sebelumnya tak pernah diisi, jadi layar era
+//     lama tak muncul); props.dispose() dipanggil saat scene dibuang. Plat tier skill digeser agar tak menimpa keyboard.
+// v2027.80 — "Realistic Office": visual 3D jauh lebih nyata (logika game, rute jalan, kartu & antarmuka TIDAK berubah).
+//   * Orang: model beranatomi (pinggul, badan, leher, kepala, lengan 2 ruas, kaki 2 ruas, sepatu), wajah (mata, alis,
+//     hidung, telinga, mulut sesuai moral), 6 gaya rambut, pakaian bervariasi, ID card, duduk dengan paha/betis terlihat,
+//     pose mengetik berbasis IK (tangan benar-benar di atas keyboard/mouse), minum kopi, berkedip, langkah dengan lutut.
+//   * Perangkat: monitor tipis berdudukan / CRT era lama dengan LAYAR BERTEKSTUR (kode, desain, grafik, dokumen, dashboard),
+//     laptop berengsel, keyboard, mouse + alas, PC tower, cangkir bergagang, lampu meja, buku catatan, ponsel di meja.
+//   * Perabot: meja kayu bertekstur + laci, kursi kantor (roda, sandaran tangan), sofa, rak buku, tanaman berdaun banyak.
+//   * Lantai: tekstur prosedural per ruangan (papan kayu, marmer, panel server, beton, karpet, ubin berlian) + bump.
+//   * Pencahayaan: bayangan matahari lebih tajam (frustum dipersempit), bayangan kontak lembut, kilau layar di malam hari.
+//   * Material PBR per jenis (logam, kaca, kayu, kain), pohon halaman lebih bulat. Pustaka visual ada di OfficeProps.js.
 // v2027.54a — kantor kini berdiri di dalam AREA KAMPUS (bukan pulau di tengah laut):
 //   * Laut, pantai, busa ombak, bukit & batu dihapus. Gantinya: halaman kampus (lawn + plaza paving + trotoar),
 //     jalan masuk dari gerbang depan ke pintu utama kantor, taman, bangku, tiang lampu, kolam air mancur,
@@ -81,6 +101,7 @@ import { t } from '../../core/LanguageService.js';
 import { BASE_VIEW, COLORS, COLS, ROWS, CORRIDORS, DEST_BY_ROLE, DEST_DEFAULT, DEST_EMOJI, DEST_ROOM, DOOR_EAST, DOOR_NORTH, FLOOR, FRAME_MS, HAIR, MAX_DESKS, MAX_DPR, MIN_RESIZE_DELTA, MORALE_HEX, NARROW_PX, PHASES, ROOM_DEFS, SHADOW_OPACITY, SKIN, WALKERS_MAX, clamp, deskCapacity, hash, hexCss, len, moraleTier, prefersReducedMotion, readAccent, roleCount, sortedStaff, tint } from './OfficeConfig.js';
 import { describeRoom, describeStaff, fabProgress, roomAlert, totalStock, trophyCount, ROOM_LOGIC } from './OfficeLogic.js';
 import { activeResearchPct, devPhaseFrac } from './OfficeFx.js';
+import { createOfficeProps } from './OfficeProps.js';
 
 // ============================================================
 // SCENE
@@ -120,22 +141,28 @@ export function createOfficeScene(THREE, container, gameState) {
         circle: new THREE.CircleGeometry(1, 28),
         arc: new THREE.TorusGeometry(1, 0.07, 6, 18, Math.PI),
         ring: new THREE.RingGeometry(0.78, 1, 36),
-        ico: new THREE.IcosahedronGeometry(1, 0)
+        ico: new THREE.IcosahedronGeometry(1, 0),
+        ico1: new THREE.IcosahedronGeometry(1, 1)      // blob halus (dedaunan, tanaman)
     };
 
     // ---------- material bersama ----------
     var M = {};
     // Material PBR ringan (MeshStandard) supaya menangkap env map & bayangan seperti bangunan kampus.
     var PBR = {                  // [roughness, metalness]
-        ground: [0.95, 0], base: [0.8, 0], metal: [0.35, 0.35], glass: [0.12, 0.1],
-        gold: [0.3, 0.6], leaf: [0.7, 0], trunk: [0.9, 0],
+        ground: [0.95, 0], base: [0.8, 0], metal: [0.28, 0.75], glass: [0.06, 0.1],
+        gold: [0.25, 0.85], leaf: [0.7, 0], trunk: [0.9, 0],
         grass2: [0.97, 0], leaf2: [0.9, 0], soil: [1, 0], ocean: [0.42, 0], shallow: [0.4, 0],
-        foam: [0.9, 0], sand: [0.95, 0], sandWet: [0.9, 0], rock: [0.9, 0]
+        foam: [0.9, 0], sand: [0.95, 0], sandWet: [0.9, 0], rock: [0.9, 0],
+        // v2027.80 — material per jenis benda
+        desk: [0.55, 0], deskTop: [0.45, 0], wood: [0.5, 0], chair: [0.88, 0], white: [0.45, 0.02], paper: [0.85, 0],
+        dark: [0.42, 0.15], rack: [0.4, 0.55], plant: [0.62, 0], pot: [0.78, 0], part: [0.8, 0], wall: [0.9, 0], wallTop: [0.7, 0],
+        mat: [0.95, 0], amber: [0.4, 0.1], red: [0.5, 0], green: [0.5, 0], win: [0.08, 0.2], paving: [0.85, 0], path: [0.92, 0],
+        curb: [0.8, 0], hedge: [0.85, 0], bldg: [0.85, 0], bldgRoof: [0.7, 0.05], bldgBand: [0.8, 0]
     };
     function pbr(color, key) {
         var p = PBR[key] || [0.7, 0];
         var mt = new THREE.MeshStandardMaterial({ color: color, roughness: p[0], metalness: p[1] });
-        mt.envMapIntensity = 0.6;
+        mt.envMapIntensity = p[1] > 0.3 || p[0] < 0.15 ? 1.1 : 0.6;
         return mt;
     }
     Object.keys(COLORS).forEach(function (k) { M[k] = pbr(COLORS[k][0], k); });
@@ -168,6 +195,11 @@ export function createOfficeScene(THREE, container, gameState) {
         return hueMats[key];
     }
 
+    // ---------- pustaka visual (tekstur prosedural, orang, perangkat, perabot) ----------
+    var VS = { era: 0, dark: false, accent: 0x2563eb };      // status tema yang dibaca OfficeProps saat membangun
+    var props = createOfficeProps(THREE, { look: look, state: VS, M: M, G: G, renderer: renderer, SKIN: SKIN, HAIR: HAIR, tierMat: tierMat });
+    props.applyMaps();
+
     function mesh(parent, geo, mat, sx, sy, sz, x, y, z) {
         var mm = typeof mat === 'string' ? M[mat] : mat;
         var m = new THREE.Mesh(geo, mm);
@@ -183,54 +215,18 @@ export function createOfficeScene(THREE, container, gameState) {
     function cyl(p, mat, r, h, x, y, z) { return mesh(p, G.cyl, mat, r, h, r, x, y, z); }
     function sph(p, mat, r, x, y, z) { return mesh(p, G.sph, mat, r, r, r, x, y, z); }
     function cone(p, mat, r, h, x, y, z) { return mesh(p, G.cone, mat, r, h, r, x, y, z); }
-    // bayangan palsu: bidang gelap tipis di lantai (murah, tanpa shadow map)
+    // bayangan kontak lembut (gradien radial) di lantai: melengkapi bayangan matahari agar benda tidak tampak melayang.
+    // Tier 'low' (tanpa shadow map) memakai versi lebih pekat sebagai bayangan utama.
     function shadowBox(p, w, d, x, z) {
-        var m = mesh(p, G.plane, 'shade', w, d, 1, x, 0.03, z);
-        m.rotation.x = -Math.PI / 2;
-        m.visible = !look.shadows;     // tier low saja: bayangan palsu. Tier lain memakai bayangan nyata.
+        var m = props.aoPlane(p, w, d, x, z, look.shadows ? 0.55 : 1);
         return m;
     }
     function shadowRound(p, r, x, z) {
-        var m = mesh(p, G.circle, 'shade', r, r, 1, x, 0.03, z);
-        m.rotation.x = -Math.PI / 2;
-        m.visible = !look.shadows;
+        var m = props.aoPlane(p, r * 2, r * 2, x, z, look.shadows ? 0.55 : 1);
         return m;
     }
 
-    // ---------- tekstur motif lantai (putih transparan; warna diatur lewat material) ----------
     var ownTex = [];
-    function makePatternTexture(type, w, d) {
-        var c = document.createElement('canvas');
-        c.width = 128; c.height = 128;
-        var ctx = c.getContext('2d');
-        ctx.strokeStyle = '#ffffff'; ctx.fillStyle = '#ffffff'; ctx.lineWidth = 3;
-        var i;
-        ctx.beginPath();
-        if (type === 'wood') {
-            for (i = 0; i <= 128; i += 32) { ctx.moveTo(0, i); ctx.lineTo(128, i); }
-            for (i = 0; i < 4; i++) { var off = (i % 2) * 64 + 20 * (i % 3); ctx.moveTo(off % 128, i * 32); ctx.lineTo(off % 128, i * 32 + 32); }
-        } else if (type === 'tile') {
-            ctx.moveTo(0, 0); ctx.lineTo(128, 0); ctx.moveTo(0, 0); ctx.lineTo(0, 128);
-            ctx.moveTo(64, 0); ctx.lineTo(64, 128); ctx.moveTo(0, 64); ctx.lineTo(128, 64);
-        } else if (type === 'grid') {
-            ctx.lineWidth = 2;
-            for (i = 0; i <= 128; i += 32) { ctx.moveTo(i, 0); ctx.lineTo(i, 128); ctx.moveTo(0, i); ctx.lineTo(128, i); }
-        } else if (type === 'diag') {
-            for (i = -128; i <= 128; i += 64) { ctx.moveTo(i, 0); ctx.lineTo(i + 128, 128); ctx.moveTo(i + 128, 0); ctx.lineTo(i, 128); }
-        } else if (type === 'dots') {
-            for (var gx = 16; gx < 128; gx += 32) for (var gy = 16; gy < 128; gy += 32) { ctx.moveTo(gx + 3, gy); ctx.arc(gx, gy, 3, 0, Math.PI * 2); }
-            ctx.fill();
-        } else {   // carpet: garis diagonal halus
-            ctx.lineWidth = 2;
-            for (i = -128; i <= 128; i += 16) { ctx.moveTo(i, 0); ctx.lineTo(i + 128, 128); }
-        }
-        if (type !== 'dots') ctx.stroke();
-        var tex = new THREE.CanvasTexture(c);
-        tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
-        tex.repeat.set(Math.max(1, w / 2), Math.max(1, d / 2));
-        ownTex.push(tex);
-        return tex;
-    }
 
     // ---------- label sprite ----------
     var labelTex = [];
@@ -315,11 +311,7 @@ export function createOfficeScene(THREE, container, gameState) {
         return m;
     }
     function envBox(mat, w, h, d, x, y, z) { return env(G.box, mat, w, h, d, x, y, z); }
-    function tree(x, z, s) {
-        env(G.cyl, 'trunk', 0.11 * s, 0.6 * s, 0.11 * s, x, GY + 0.3 * s, z);
-        env(G.sph, envRnd() < 0.5 ? 'leaf' : 'leaf2', 0.5 * s, 0.5 * s, 0.5 * s, x, GY + 0.9 * s, z);
-        env(G.sph, 'leaf2', 0.32 * s, 0.32 * s, 0.32 * s, x + 0.1 * s, GY + 1.32 * s, z - 0.08 * s);
-    }
+    function tree(x, z, s) { props.tree(env, envRnd, GY, x, z, s); }     // pohon bergumpal (OfficeProps)
     function lamp(x, z) {
         env(G.cyl, 'metal', 0.04, 1.5, x, GY + 0.75, z);
         env(G.sph, 'ledA', 0.1, x, GY + 1.55, z);
@@ -329,10 +321,14 @@ export function createOfficeScene(THREE, container, gameState) {
         g.position.set(x, GY, z);
         g.rotation.y = rotY || 0;
         shell.add(g);
-        box(g, 'wood', 1.4, 0.07, 0.38, 0, 0.36, 0).castShadow = false;
-        box(g, 'wood', 1.4, 0.3, 0.05, 0, 0.55, -0.18).castShadow = false;
-        box(g, 'dark', 0.06, 0.34, 0.34, -0.6, 0.17, 0).castShadow = false;
-        box(g, 'dark', 0.06, 0.34, 0.34, 0.6, 0.17, 0).castShadow = false;
+        function part(mat, w, h, d, r, bx, by, bz) { props.rb(g, mat, w, h, d, r, bx, by, bz).castShadow = false; }
+        var i;
+        for (i = 0; i < 3; i++) part('wood', 1.4, 0.035, 0.11, 0.012, 0, 0.37, -0.12 + i * 0.12);     // papan dudukan
+        for (i = 0; i < 3; i++) part('wood', 1.4, 0.07, 0.03, 0.01, 0, 0.47 + i * 0.09, -0.19);       // papan sandaran
+        part('dark', 0.05, 0.38, 0.34, 0.012, -0.6, 0.19, 0);
+        part('dark', 0.05, 0.38, 0.34, 0.012, 0.6, 0.19, 0);
+        part('dark', 0.05, 0.05, 0.3, 0.012, -0.6, 0.45, -0.02);                                      // sandaran tangan
+        part('dark', 0.05, 0.05, 0.3, 0.012, 0.6, 0.45, -0.02);
     }
     // gedung kampus tetangga: badan + atap + pita jendela di sisi yang menghadap kamera (+z dan +x)
     function campusBlock(x0, x1, z0, z1, h, bodyMat) {
@@ -508,15 +504,19 @@ export function createOfficeScene(THREE, container, gameState) {
         var g = new THREE.Group();
         g.position.set((def.x0 + def.x1) / 2, 0, (def.z0 + def.z1) / 2);
         g.userData.roomId = def.id;
-        var floorMat = new THREE.MeshStandardMaterial({ color: def.tone, transparent: true, opacity: 1 });
+        var fs = props.floorSurface(def.pat, w, d);       // tekstur lantai prosedural (kayu / marmer / panel / beton / karpet)
+        var floorMat = new THREE.MeshStandardMaterial({ color: def.tone, transparent: true, opacity: 1, map: fs.map, bumpMap: fs.map, bumpScale: fs.bump, roughness: fs.rough, metalness: 0 });
+        floorMat.envMapIntensity = 0.7;
         var slab = box(g, floorMat, w - 0.12, 0.12, d - 0.12, 0, -0.04, 0);
+        slab.castShadow = false;
         var ovMat = new THREE.MeshBasicMaterial({ color: accentHex, transparent: true, opacity: 0.26, depthWrite: false });
         var ov = mesh(g, G.plane, ovMat, w - 0.2, d - 0.2, 1, 0, 0.025, 0);
         ov.rotation.x = -Math.PI / 2;
         ov.visible = false;
-        var patMat = new THREE.MeshBasicMaterial({ map: makePatternTexture(def.pat, w, d), color: 0x000000, transparent: true, opacity: 0.1, depthWrite: false });
+        var patMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false });   // (motif garis lama digantikan tekstur lantai)
         var pat = mesh(g, G.plane, patMat, w - 0.2, d - 0.2, 1, 0, 0.022, 0);
         pat.rotation.x = -Math.PI / 2;
+        pat.visible = false;
         var pool = mesh(g, G.plane, 'pool', Math.max(0.5, w - 0.5), Math.max(0.5, d - 0.5), 1, 0, 0.03, 0);
         pool.rotation.x = -Math.PI / 2;
         pool.visible = false;
@@ -539,44 +539,12 @@ export function createOfficeScene(THREE, container, gameState) {
     });
 
     // ---------- bangunan perabot ----------
-    function monitor(p, x, y, z, on) {
-        var scr = on ? 'screenOn' : 'screenOff';
-        if (eraIdx <= 1) {                                // CRT tebal
-            box(p, 'paper', 0.42, 0.34, 0.38, x, y + 0.17, z);
-            box(p, scr, 0.32, 0.24, 0.02, x, y + 0.18, z + 0.2);
-        } else {                                          // layar datar
-            box(p, 'dark', 0.5, 0.3, 0.03, x, y + 0.26, z);
-            box(p, scr, 0.46, 0.26, 0.012, x, y + 0.26, z + 0.02);
-            box(p, 'metal', 0.07, 0.12, 0.05, x, y + 0.06, z);
-        }
-    }
-    function chair(p, x, z, mat) {
-        cyl(p, 'metal', 0.035, 0.28, x, 0.14, z);
-        box(p, mat || 'chair', 0.42, 0.07, 0.42, x, 0.3, z);
-        box(p, mat || 'chair', 0.42, 0.4, 0.05, x, 0.52, z + 0.2);
-    }
-    function plant(p, x, z, s) {
-        s = s || 1;
-        cyl(p, 'pot', 0.16 * s, 0.24 * s, x, 0.12 * s, z);
-        sph(p, 'plant', 0.24 * s, x, 0.42 * s, z);
-        sph(p, 'plant', 0.16 * s, x + 0.1 * s, 0.6 * s, z - 0.05 * s);
-    }
-    function desk(p, x, z, ghost) {
-        var top = ghost ? 'ghost' : 'deskTop', side = ghost ? 'ghost' : 'desk';
-        box(p, top, 1.3, 0.07, 0.65, x, 0.62, z);
-        box(p, side, 0.06, 0.58, 0.6, x - 0.58, 0.29, z);
-        box(p, side, 0.06, 0.58, 0.6, x + 0.58, 0.29, z);
-        box(p, side, 1.1, 0.3, 0.04, x, 0.4, z - 0.28);
-    }
-    function phoneModel(p, mat, scale) {
-        var g = new THREE.Group();
-        box(g, mat || 'dark', 0.3, 0.6, 0.05, 0, 0, 0);
-        box(g, 'screenOn', 0.26, 0.54, 0.012, 0, 0, 0.03);
-        box(g, 'metal', 0.05, 0.03, 0.06, 0, 0.26, -0.005);
-        g.scale.setScalar(scale || 1);
-        p.add(g);
-        return g;
-    }
+    // ---------- perabot & perangkat: dibangun OfficeProps (kotak membulat, layar bertekstur, detail ikut tier kualitas) ----------
+    function monitor(p, x, y, z, on, kind) { return props.monitor(p, x, y, z, on, kind || 'doc'); }
+    function chair(p, x, z, mat, o) { return props.chair(p, x, z, mat, o); }
+    function plant(p, x, z, s) { props.plant(p, x, z, s); }
+    function desk(p, x, z, ghost) { props.desk(p, x, z, ghost); }
+    function phoneModel(p, mat, scale, hue) { return props.phone(p, mat, scale, hue === undefined ? null : { hue: hue }); }
     // ---------- orang ----------
     // routes: [{ path:[{x,z}…], dest }] — tiap rute dimulai dari kursi. Tiap siklus staf memakai rute berikutnya:
     // duduk bekerja -> berjalan ke tujuan -> berdiri sebentar -> kembali duduk.
@@ -642,6 +610,7 @@ export function createOfficeScene(THREE, container, gameState) {
 
     function person(p, s, x, z, tickers, opts) {
         opts = opts || {};
+        var LIFT = 0.32;                                     // tinggi badan terangkat saat berdiri (pelvis duduk -> berdiri)
         var h = hash(s.id);
         // kursi (diam di meja)
         var seat = new THREE.Group();
@@ -651,48 +620,15 @@ export function createOfficeScene(THREE, container, gameState) {
         shadowRound(seat, 0.34, 0, 0.02);
         p.add(seat);
 
-        // badan (bisa berjalan)
+        // badan (bisa berjalan) — model beranatomi dari OfficeProps (kepala, wajah, rambut, lengan/kaki 2 ruas, aksesori, ID card)
         var g = new THREE.Group();
         g.userData.staffId = s.id;
         g.position.set(x, 0, z);
         var mt = moraleTier(s.morale || 0);
         var rm = roleMat[s.role] || roleMat.engineer;
-        var skin = skinMat[h % skinMat.length];
-        var hairM = hairMat[(h >>> 3) % hairMat.length];   // >>> (tanpa tanda): hash() tak bertanda, >> membuat indeks negatif
-        var style = (h >>> 6) % 3;
-        var torso = cyl(g, rm, 0.15, 0.42, 0, 0.62, -0.02);                 // badan
-        var headG = new THREE.Group();
-        headG.position.set(0, 0.97, -0.02);
-        g.add(headG);
-        sph(headG, skin, 0.115, 0, 0, 0);                                   // kepala
-        sph(headG, hairM, 0.12, 0, 0.03, 0.03).scale.set(0.12, 0.07, 0.12); // rambut (topi)
-        if (style === 1) box(headG, hairM, 0.2, 0.2, 0.06, 0, -0.02, 0.1);  // rambut panjang
-        else if (style === 2) sph(headG, hairM, 0.05, 0, 0.13, 0.04);       // cepol
-        box(headG, 'dark', 0.02, 0.03, 0.01, -0.04, 0.012, -0.112);         // mata
-        box(headG, 'dark', 0.02, 0.03, 0.01, 0.04, 0.012, -0.112);
-        if (s.role === 'engineer') {                                        // headphone
-            mesh(headG, G.arc, 'dark', 0.125, 0.125, 0.125, 0, 0, 0);
-            cyl(headG, 'dark', 0.04, 0.035, -0.125, 0, 0).rotation.z = Math.PI / 2;
-            cyl(headG, 'dark', 0.04, 0.035, 0.125, 0, 0).rotation.z = Math.PI / 2;
-        } else if (s.role === 'designer') {                                 // kacamata
-            box(headG, 'dark', 0.17, 0.012, 0.01, 0, 0.02, -0.114);
-            box(headG, 'glass', 0.06, 0.05, 0.008, -0.045, 0.015, -0.116);
-            box(headG, 'glass', 0.06, 0.05, 0.008, 0.045, 0.015, -0.116);
-        } else if (s.role === 'marketer') {                                 // headset + mic
-            cyl(headG, 'dark', 0.035, 0.03, 0.125, 0, 0).rotation.z = Math.PI / 2;
-            box(headG, 'dark', 0.012, 0.012, 0.1, 0.09, -0.05, -0.07);
-        }
-        var armL = box(g, rm, 0.07, 0.07, 0.32, -0.14, 0.7, -0.2);
-        var armR = box(g, rm, 0.07, 0.07, 0.32, 0.14, 0.7, -0.2);
-        var dot = sph(g, moraleMat[mt], 0.055, 0, 1.2, -0.02);              // indikator moral
-        var legs = new THREE.Group();                                        // kaki (hanya terlihat saat berdiri)
-        var legL = box(legs, 'dark', 0.07, 0.73, 0.08, -0.06, 0.045, -0.02);
-        var legR = box(legs, 'dark', 0.07, 0.73, 0.08, 0.06, 0.045, -0.02);
-        legs.visible = false;
-        g.add(legs);
-        if (mt === 0) { headG.rotation.x = -0.38; }                           // lesu saat moral rendah
+        var rig = props.figure(g, { h: h, role: s.role, color: rm.color.getHex(), skill: s.skill || 1, mt: mt });
+        var dot = sph(g, moraleMat[mt], 0.05, 0, 1.4, -0.02);                // indikator moral
         var ph = (h % 628) / 100;
-        var amp = mt === 0 ? 0.006 : 0.012;
         var walk = (opts.routes && opts.routes.length && ambient) ? makeWalk(opts.routes, h) : null;
 
         // jadwal kecil di meja: minum kopi / ide / menguap — deterministik per staf
@@ -731,10 +667,9 @@ export function createOfficeScene(THREE, container, gameState) {
             var yawning = seated && mt === 0 && ev < 3;
             if (ws) {
                 g.position.x = ws.x; g.position.z = ws.z;
-                g.position.y = lift * 0.32;
+                g.position.y = lift * LIFT;
                 if (ws.moving || ws.idle) { if (ws.dx || ws.dz) g.rotation.y = Math.atan2(-ws.dx, -ws.dz); }
                 else g.rotation.y = 0;
-                legs.visible = lift > 0.02;
             }
             // aktivitas + gelembung
             if (!seated) {
@@ -746,30 +681,14 @@ export function createOfficeScene(THREE, container, gameState) {
             else if (thinking) { setAct('office.act.idea', ''); setBubble('💡'); }
             else if (yawning) { setAct('office.act.tired', ''); setBubble('💤'); }
             else { setAct(mt === 0 ? 'office.act.tired' : 'office.act.working', ''); setBubble(''); }
-            if (bub && bub.visible) bub.position.set(0, 1.5 + Math.sin(sec * 3 + ph) * 0.03, -0.02);
+            if (bub && bub.visible) bub.position.set(0, 1.72 + Math.sin(sec * 3 + ph) * 0.03, -0.02);
+            dot.position.y = 1.4 + b * 0.02;
 
-            var base = mt === 0 ? 0.93 : 0.97;
-            headG.position.y = base + b * amp;
-            headG.rotation.y = seated && mt > 0 && ambient ? Math.sin(sec * 0.6 + ph) * 0.22 : 0;   // menoleh sesekali
-            dot.position.y = 1.2 + b * 0.02;
-            if (ws && ws.moving) {
-                var sw = Math.sin(sec * 8 + ph);
-                armL.position.set(-0.14, 0.7, -0.2); armR.position.set(0.14, 0.7, -0.2);
-                armL.rotation.x = sw * 0.5; armR.rotation.x = -sw * 0.5;
-                legL.rotation.x = -sw * 0.5; legR.rotation.x = sw * 0.5;
-            } else {
-                armL.rotation.x = 0; legL.rotation.x = 0; legR.rotation.x = 0;
-                var typing = lift < 0.5 && !sipping;
-                var k = mt === 0 ? 0.5 : 1;
-                armL.position.y = 0.7 + (typing ? Math.sin(sec * 9 + ph) * 0.012 * k : 0);
-                if (sipping) {                                   // tangan kanan membawa cangkir ke mulut
-                    armR.position.set(0.14, 0.86, -0.17); armR.rotation.x = -1.15;
-                } else {
-                    armR.rotation.x = 0; armR.position.set(0.14, 0.7 + (typing ? Math.cos(sec * 8 + ph) * 0.012 * k : 0), -0.2);
-                }
-            }
+            // pose berbasis IK: tangan benar-benar di keyboard/mouse, cangkir ke mulut, ayunan lengan & kaki saat berjalan
+            var moving = !!(ws && ws.moving);
+            var arm = moving ? 'walk' : (lift > 0.5 ? 'stand' : (sipping ? 'sip' : 'type'));
+            rig.pose({ lift: lift, moving: moving, phi: sec * 8 + ph, sec: sec, ph: ph, arm: arm, slump: mt === 0, look: seated && mt > 0 && ambient });
         });
-        void torso;
         staffObjs[s.id] = g;
         p.add(g);
         return g;
@@ -846,31 +765,33 @@ export function createOfficeScene(THREE, container, gameState) {
         shadowBox(f, 1.8, 0.95, 0.1, -0.85);
         shadowBox(f, 0.9, 1.4, -1.25, 1.2);
         shadowBox(f, 2.6, 0.45, 0, -1.95);
-        box(f, 'wood', 1.7, 0.08, 0.8, 0.1, 0.72, -0.9);
-        box(f, 'desk', 0.08, 0.7, 0.7, -0.7, 0.35, -0.9);
-        box(f, 'desk', 0.08, 0.7, 0.7, 0.9, 0.35, -0.9);
-        monitor(f, 0.1, 0.76, -1.0, true);
-        box(f, 'gold', 0.3, 0.05, 0.08, 0.4, 0.78, -0.62);               // papan nama
-        chair(f, 0.1, -0.15, 'wood');
-        box(f, 'wood', 2.5, 1.3, 0.3, 0.0, 0.65, -1.98);                 // rak buku (menempel dinding belakang)
+        props.rb(f, 'wood', 1.7, 0.07, 0.8, 0.02, 0.1, 0.725, -0.9);      // meja eksekutif (permukaan 0.76)
+        props.rb(f, 'desk', 0.08, 0.69, 0.7, 0.015, -0.7, 0.345, -0.9);
+        props.rb(f, 'desk', 0.08, 0.69, 0.7, 0.015, 0.9, 0.345, -0.9);
+        props.rb(f, 'desk', 1.5, 0.4, 0.04, 0.01, 0.1, 0.5, -1.24);       // panel belakang
+        monitor(f, 0.1, 0.76, -1.05, true, 'dash');
+        props.keyboard(f, 0.1, 0.76, -0.78, eraIdx <= 1);
+        props.mouse(f, 0.42, 0.76, -0.76, eraIdx <= 1);
+        props.rb(f, 'gold', 0.3, 0.05, 0.08, 0.01, 0.4, 0.785, -0.58);    // papan nama
+        props.notebook(f, 0.72, 0.76, -1.0, 0.2);
+        props.mug(f, 0.66, 0.76, -0.7, 'white');
+        chair(f, 0.1, -0.15, 'wood', { exec: true });
         var cols = [accentHex, 0xe0b445, 0x43c07a, 0xef5350, 0x8a7fe0, 0x4fb3e8];
-        for (var i = 0; i < 9; i++) box(f, new THREE.MeshStandardMaterial({ color: cols[i % cols.length] }), 0.16, 0.34, 0.2, -1.0 + i * 0.25, 0.92, -1.91).userData.own = 1;
+        props.bookshelf(f, 2.5, 1.3, 0.3, 0.0, 0, -1.98, cols);           // rak buku berpapan (menempel dinding belakang)
         var tn = trophyCount(d, p);
         for (var k = 0; k < tn; k++) {
             cyl(f, 'gold', 0.1, 0.05, -0.8 + k * 0.45, 1.36, -1.93);
             cyl(f, 'gold', 0.03, 0.2, -0.8 + k * 0.45, 1.46, -1.93);
             sph(f, 'gold', 0.1, -0.8 + k * 0.45, 1.64, -1.93);
         }
-        box(f, 'chair', 0.7, 0.35, 1.3, -1.2, 0.18, 1.2);                // sofa
-        box(f, 'chair', 0.18, 0.55, 1.3, -1.5, 0.4, 1.2);
+        props.sofa(f, -1.2, 1.2, 1.3, 0.7, -Math.PI / 2);                // sofa berbantal (sandaran di sisi dinding kiri)
         plant(f, 1.3, 1.7, 1.1);
         // lukisan di dinding kiri + lampu meja
         box(f, 'wood', 0.05, 0.62, 0.92, -1.6, 1.45, 0.2);
         var art = box(f, new THREE.MeshStandardMaterial({ color: tint(accentHex, 0.3) }), 0.03, 0.5, 0.8, -1.57, 1.45, 0.2);
         art.userData.own = 1;
         box(f, 'gold', 0.03, 0.2, 0.3, -1.55, 1.4, 0.35);
-        cyl(f, 'metal', 0.05, 0.02, -0.4, 0.77, -1.05);
-        box(f, 'amber', 0.04, 0.2, 0.04, -0.4, 0.88, -1.05);
+        props.deskLamp(f, -0.42, 0.76, -1.05);
         if ((p.levels.monument || 0) >= 2) {                              // globe
             cyl(f, 'metal', 0.18, 0.06, 1.25, 0.03, -0.2);
             var gl = sph(f, 'glow', 0.28, 1.25, 0.4, -0.2);
@@ -925,16 +846,20 @@ export function createOfficeScene(THREE, container, gameState) {
             shadowBox(f, 1.5, 0.95, x, z + 0.1);
             desk(f, x, z, !s);
             if (s) {
-                monitor(f, x, 0.655, z - 0.1, true);
-                var hs = hash(s.id);
-                if (eraIdx <= 1) {
-                    box(f, 'paper', 0.2, 0.4, 0.45, x + 0.3, 0.2, z - 0.02);              // PC tower di bawah meja
-                } else {
-                    box(f, 'metal', 0.34, 0.015, 0.24, x - 0.38, 0.665, z + 0.04);        // laptop
-                    box(f, 'dark', 0.34, 0.21, 0.012, x - 0.38, 0.77, z - 0.08).rotation.x = -0.2;
+                var hs = hash(s.id), oldEra = eraIdx <= 1;
+                var scr = s.role === 'designer' ? 'design' : (s.role === 'marketer' ? 'chart' : (s.role === 'engineer' ? (hs % 3 === 0 ? 'term' : 'code') : 'doc'));
+                monitor(f, x, 0.655, z - 0.1, true, scr);                                  // layar bertekstur sesuai peran
+                props.keyboard(f, x, 0.655, z + 0.19, oldEra);
+                props.mouse(f, x + 0.3, 0.655, z + 0.2, oldEra);
+                if (oldEra) props.tower(f, x - 0.38, z - 0.04);                            // PC tower di bawah meja
+                else props.laptop(f, x - 0.42, 0.655, z + 0.03, 0.12, 'dash');             // laptop berengsel
+                props.mug(f, x + 0.5, 0.655, z + 0.06, hueMat('m' + (hs % 7)));            // cangkir bergagang
+                if (props.detail >= 1) {                                                   // pernak-pernik meja (selang-seling per staf)
+                    if (hs % 3 === 0) props.notebook(f, x + 0.28, 0.655, z - 0.17, 0.25);
+                    else if (hs % 4 === 1) props.phoneFlat(f, x + 0.47, 0.655, z + 0.21, -0.3);
+                    if (hs % 5 === 0) props.deskLamp(f, x + 0.54, 0.655, z - 0.2);
                 }
-                cyl(f, hueMat('m' + (hs % 7)), 0.03, 0.06, x + 0.46, 0.7, z + 0.1);       // cangkir
-                box(f, tierMat[clamp(s.skill || 1, 1, 5)], 0.2, 0.015, 0.06, x, 0.66, z + 0.27);   // plat tier skill
+                box(f, tierMat[clamp(s.skill || 1, 1, 5)], 0.2, 0.015, 0.06, x, 0.66, z + 0.295);   // plat tier skill
                 var opts = null;
                 if (walkers[s.id] !== undefined) {
                     var rts = routesFor(s, walkers[s.id], x, z + 0.52);
@@ -1021,8 +946,10 @@ export function createOfficeScene(THREE, container, gameState) {
         for (var k = 0; k < 2; k++) {
             var x = -1.2 + k * 2.4;
             desk(f, x, -1.5, false);
-            monitor(f, x, 0.655, -1.6, true);
-            box(f, 'dark', 0.5, 0.02, 0.32, x, 0.67, -1.3);                // tablet gambar
+            monitor(f, x, 0.655, -1.6, true, 'design');
+            props.keyboard(f, x - 0.12, 0.655, -1.31, eraIdx <= 1);
+            props.rb(f, 'dark', 0.46, 0.014, 0.3, 0.01, x + 0.3, 0.662, -1.34);                 // tablet gambar
+            mesh(f, G.plane, props.screenMat('design'), 0.42, 0.26, 1, x + 0.3, 0.671, -1.34).rotation.x = -Math.PI / 2;
             chair(f, x, -0.8);
         }
         // progres fase berjalan: bar di depan pedestal ponsel
@@ -1180,7 +1107,7 @@ export function createOfficeScene(THREE, container, gameState) {
             var x = (idxInRow - (count - 1) / 2) * 1.0 - 0.3, z = -0.55 + row * 1.2;
             var pd = show[i];
             cyl(f, 'white', 0.3, 0.35, x, 0.175, z);
-            var pg = phoneModel(f, hueMat(pd.id), 1.0);
+            var pg = phoneModel(f, hueMat(pd.id), 1.0, hash(pd.id) % 360);
             pg.position.set(x, 0.68, z);
             spin.push(pg);
             sph(f, pd.stock > 0 ? 'ledG' : 'ledR', 0.045, x, 0.2, z + 0.3);
@@ -1214,10 +1141,12 @@ export function createOfficeScene(THREE, container, gameState) {
         var mk = Math.min(3, roleCount(d, 'marketer'));
         for (var k = 0; k < mk; k++) {
             var dx = -0.7 + k * 0.7;
-            box(f, 'deskTop', 0.6, 0.06, 0.5, dx, 0.6, -0.3);
-            box(f, 'desk', 0.05, 0.57, 0.46, dx - 0.27, 0.285, -0.3);
-            box(f, 'desk', 0.05, 0.57, 0.46, dx + 0.27, 0.285, -0.3);
-            cone(f, 'amber', 0.1, 0.26, dx, 0.76, -0.3).rotation.z = Math.PI / 2;
+            props.rb(f, 'deskTop', 0.6, 0.06, 0.5, 0.016, dx, 0.6, -0.3);
+            props.rb(f, 'desk', 0.05, 0.57, 0.46, 0.01, dx - 0.27, 0.285, -0.3);
+            props.rb(f, 'desk', 0.05, 0.57, 0.46, 0.01, dx + 0.27, 0.285, -0.3);
+            if (eraIdx <= 1) props.keyboard(f, dx - 0.04, 0.63, -0.2, true);
+            else props.laptop(f, dx - 0.06, 0.63, -0.3, 0, 'chart');
+            cone(f, 'amber', 0.08, 0.22, dx + 0.2, 0.74, -0.3).rotation.z = Math.PI / 2;      // megafon
             chair(f, dx, 0.35);
         }
         if (camp > 0) {
@@ -1284,7 +1213,9 @@ export function createOfficeScene(THREE, container, gameState) {
             if (bad) lamp.visible = Math.sin(sec * 6) > 0;
         });
         desk(f, 0.6, 0.5, false);
-        monitor(f, 0.6, 0.655, 0.4, true);
+        monitor(f, 0.6, 0.655, 0.4, true, 'chart');
+        props.keyboard(f, 0.6, 0.655, 0.69, eraIdx <= 1);
+        props.mouse(f, 0.9, 0.655, 0.7, eraIdx <= 1);
         chair(f, 0.6, 1.2);
     };
 
@@ -1327,7 +1258,6 @@ export function createOfficeScene(THREE, container, gameState) {
         if (locked) c = dark ? tint(0x56607a, -0.2) : tint(0x9fb4d6, 0.1);
         r.floorMat.color.setHex(c);
         r.floorMat.opacity = locked ? 0.55 : 1;
-        r.pat.visible = !locked;
         r.pool.visible = dark && !locked;
     }
     function rebuildLabel(r) {
@@ -1416,6 +1346,7 @@ export function createOfficeScene(THREE, container, gameState) {
         var ac = new THREE.Color();
         try { ac.set(readAccent()); } catch (e) { ac.setHex(0x2563eb); }
         accentHex = ac.getHex();
+        VS.era = Math.max(0, eraIdx); VS.dark = dark; VS.accent = accentHex;   // dibaca OfficeProps (layar era, warna buku/aksen)
         var ew = ERA_WINDOWS[Math.max(0, eraIdx)] || ERA_WINDOWS[3];
         winHex = dark ? ew.dark : ew.light;
         var ix = dark ? 1 : 0;
@@ -1434,7 +1365,6 @@ export function createOfficeScene(THREE, container, gameState) {
         roomList.forEach(function (r) {
             r.ovMat.color.setHex(accentHex);
             r.patMat.color.setHex(dark ? 0xffffff : 0x000000);
-            r.patMat.opacity = dark ? 0.085 : 0.12;
             if (r.st) { applyRoomVisual(r); rebuildLabel(r); rebuildAlert(r); }
         });
     }
@@ -2105,6 +2035,7 @@ export function createOfficeScene(THREE, container, gameState) {
             Object.keys(alertTex).forEach(function (k) { alertTex[k].dispose(); });
             Object.keys(bubbleTex).forEach(function (k) { bubbleTex[k].dispose(); });
             hairMat.forEach(function (m) { m.dispose(); });
+            props.dispose();
             Object.keys(tierMat).forEach(function (k) { tierMat[k].dispose(); });
             Object.keys(G).forEach(function (k) { G[k].dispose(); });
             Object.keys(M).forEach(function (k) { M[k].dispose(); });
