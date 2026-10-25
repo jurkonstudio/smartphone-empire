@@ -1,6 +1,130 @@
 {
-  "latest": "0.2.1",
+  "latest": "0.2.3",
   "releases": [
+    {
+      "version": "0.2.3",
+      "date": "2026-10-25",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Layanan pasca-jual: atur garansi (6, 12, 24 bulan) per produk. Garansi panjang menaikkan penjualan, tetapi setiap klaim ada biayanya.",
+            "en": "After-sales service: set warranty (6, 12, 24 months) per product. Longer warranty lifts sales, but every claim costs money."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Pusat servis 3 tingkat (mitra, milik sendiri, jaringan global). Antrean klaim memengaruhi kepuasan, reputasi, dan penjualan.",
+            "en": "Three service network tiers (partner, own, global). Claim queues affect satisfaction, reputation, and sales."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Insiden cacat massal: putuskan recall, kampanye servis gratis, atau abaikan. Tab baru Pasar > Servis.",
+            "en": "Mass-defect incidents: choose a recall, a free service campaign, or ignore it. New tab Market > Service."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Dukungan update OS 1–5 tahun per produk (janji publik, hanya bisa dinaikkan) dengan biaya bulanan.",
+            "en": "OS update support of 1–5 years per product (a public promise that can only go up) with a monthly cost."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Ringkasan bulanan kini menampilkan biaya pasca-jual. Ponsel lipat lebih rawan rusak.",
+            "en": "The monthly summary now shows after-sales costs. Foldable phones are more failure-prone."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.2",
+      "date": "2026-10-23",
+      "items": [
+        {
+          "type": "fix",
+          "text": {
+            "id": "Penjualan viral kini benar-benar memengaruhi permintaan harian; tombol Abaikan di event viral hanya bisa dipakai sekali.",
+            "en": "Viral events now actually affect daily demand; the Ignore button on a viral event can only be used once."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Game lebih ringan dan hemat baterai di HP kelas bawah; mode hemat aktif otomatis.",
+            "en": "The game runs lighter and saves battery on low-end phones; lite mode turns on automatically."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Teks mentah dan terjemahan yang hilang diperbaiki; game kini tersedia dalam 12 bahasa.",
+            "en": "Raw text and missing translations fixed; the game is now available in 12 languages."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Navigasi Pasar: 8 segmen konsumen, 8 sub-wilayah, gelombang tren, 11 aspek opini, dan 26 event viral.",
+            "en": "Market Navigation: 8 consumer segments, 8 sub-regions, trend waves, 11 opinion aspects, and 26 viral events."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Promosi baru untuk Amerika & Lainnya dan promosi per segmen (value, youth, gamer, creator, pro, premium).",
+            "en": "New promotions for Americas & Rest and per-segment promotions (value, youth, gamer, creator, pro, premium)."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Manufaktur: pabrik SoC, Kamera, dan RAM dengan 4 level; tab Manufaktur terbuka sejak 2003.",
+            "en": "Manufacturing: SoC, Camera, and RAM plants with 4 levels; the Manufacturing tab opens from 2003."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Tab Investasi baru: Investasi Pabrik dan Akuisisi merek rival (mulai 2003).",
+            "en": "New Investment tab: Plant Investment and rival brand Acquisition (from 2003)."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Bursa saham v2: transaksi memengaruhi harga, plus emiten dan indeks baru.",
+            "en": "Stock market v2: trades now move prices, plus new listed companies and indices."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Tim: kandidat rekrut lebih banyak dan butuh 24 jam game sebelum bergabung; peta kantor terhubung ke panel Tim.",
+            "en": "Team: more recruit candidates who need 24 game hours to join; the office map now links to the Team panel."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Akhir musim di tahun 2050 dengan layar skor akhir.",
+            "en": "Season ends in 2050 with a final score screen."
+          }
+        },
+        {
+          "type": "balance",
+          "text": {
+            "id": "Penahan ekonomi: biaya naik seiring volume produksi dan penjualan dibatasi plafon pasar.",
+            "en": "Economy brakes: costs rise with production volume and total sales are capped by the market."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.1",
       "date": "2026-10-18",
