@@ -1137,6 +1137,27 @@ function bindGlobalClicks() {
             renderAll();
             return;
         }
+        // [Ekosistem] layanan berlangganan (Cloud, Asisten AI): buka/tutup, tier, harga.
+        var svcBtn = e.target.closest('[data-eco-svc-open],[data-eco-svc-close],[data-eco-svc-tier],[data-eco-svc-price]');
+        if (svcBtn) {
+            e.preventDefault(); vibrate(6);
+            var svcDs = svcBtn.dataset, svcRes;
+            if (svcDs.ecoSvcOpen) svcRes = ecosystem.openService(svcDs.ecoSvcOpen);
+            else if (svcDs.ecoSvcClose) svcRes = ecosystem.closeService(svcDs.ecoSvcClose);
+            else if (svcDs.ecoSvcTier) svcRes = ecosystem.setServiceTier(svcDs.ecoSvcTier, svcDs.ecoVal);
+            else svcRes = ecosystem.setServicePriceStep(svcDs.ecoSvcPrice, parseInt(svcDs.ecoVal, 10));
+            var svcMsg = svcRes.reason === 'funds' ? tr('eco.toast.funds')
+                : svcRes.reason === 'locked' ? tr('eco.toast.locked', { year: svcRes.year })
+                : svcRes.reason === 'lock' ? tr('eco.toast.lock', { n: Math.ceil(svcRes.monthsLeft) })
+                : svcRes.reason === 'commit' ? tr('eco.toast.commit', { n: Math.ceil(svcRes.monthsLeft) })
+                : svcRes.reason === 'free' ? tr('eco.svc.toast.free')
+                : svcRes.reason === 'unavailable' ? tr('eco.svc.toast.unavailable')
+                : tr('eco.toast.fail');
+            if (svcRes.ok) ToastService.success(tr('eco.svc.toast.ok'));
+            else ToastService.error(svcMsg);
+            renderAll();
+            return;
+        }
         var mktSub = e.target.closest('[data-market-subtab]');
         if (mktSub) { e.preventDefault(); activeMarketSubtab = mktSub.dataset.marketSubtab; renderView(); return; }
         var compCard = e.target.closest('[data-competitor-detail]');
