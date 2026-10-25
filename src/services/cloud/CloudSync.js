@@ -21,6 +21,9 @@ let _checking = false;
 let _conflictOpen = false;
 let _lastUploadAt = 0;
 let _lastUploadMinutes = -1;
+let _lastUploadSig = '';       // [FIX] tanda isi save terakhir yang terunggah (bukan hanya menit game)
+let _failTries = 0;            // [FIX] percobaan ulang upload otomatis yang gagal
+let _lastErrToastAt = 0;
 let _unsubRealtime = null;
 let _unsubWallet = null;
 let _walletTimer = null;
@@ -85,6 +88,24 @@ export function decideSync(local, cloud) {
     return { action: 'upload' };
 }
 
+// [FIX] Deteksi perubahan berdasarkan ISI save. Dulu hanya menit game: belanja/riset/produk saat game
+// di-pause (menit sama) tidak pernah terunggah, dan progres tampak "kosong" setelah login ulang.
+function _sigOf(data) {
+    try {
+        const str = JSON.stringify(data);
+        let h = 5381;
+        for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+        return str.length + ':' + h;
+    } catch (e) { return String(Date.now()); }
+}
+
+function _currentSig() {
+    if (!_state) return '';
+    const d = _state.serialize();
+    d.silicon = 0;
+    return _sigOf(d);
+}
+
 function _buildPayload(slot) {
     const data = _state.serialize();
     data.silicon = 0; 
@@ -145,7 +166,7 @@ function _reloadAfterApply(silent, delay) {
 
 function _uploadOnLeave() {
     if (!_ready || _busy || _checking || _conflictOpen || !_isConnected() || !_state) return;
-    if (localInfo(_state).minutes === _lastUploadMinutes) return;
+    if (_currentSig() === _lastUploadSig) return;
     uploadNow({ auto: true });
 }
 
@@ -307,6 +328,8 @@ async function uploadNow(opts) {
         if (res.ok) {
             _lastUploadAt = Date.now();
             _lastUploadMinutes = payload.meta.gameMinutes;
+            _lastUploadSig = _sigOf(payload.data);
+            _failTries = 0;
             if (opts.manual) _ready = true;
             _markSynced(slot);
             try { localStorage.setItem(LAST_SYNC_KEY, String(_lastUploadAt)); } catch (e) {}
@@ -330,13 +353,33 @@ function _onLocalSaved() {
     if (!_ready || !_isConnected() || !_state) return;
     if (_conflictOpen) return;                       // menunggu keputusan pemain: jangan dijadwal ulang terus
     if (_busy || _checking) { _scheduleDeferredUpload(3000); return; }
-    const info = localInfo(_state);
-    if (info.minutes === _lastUploadMinutes) return;
+    if (_currentSig() === _lastUploadSig) return;    // tidak ada perubahan isi
     const wait = CLOUD.autoUploadMinMs - (Date.now() - _lastUploadAt);
     if (wait > 0) { _scheduleDeferredUpload(wait); return; }
     uploadNow({ auto: true }).then(function (r) {
-        if (r && (r.code === 'busy' || r.code === 'conflict')) _scheduleDeferredUpload(3000);
+        if (!r) return;
+        if (r.code === 'busy' || r.code === 'conflict') { _scheduleDeferredUpload(3000); return; }
+        if (!r.ok) _onAutoUploadFailed(r);
     });
+}
+
+// [FIX] Upload otomatis yang gagal tidak lagi diam: coba ulang dengan backoff dan beri tahu pemain.
+function _onAutoUploadFailed(r) {
+    console.warn('[CloudSync] Upload otomatis gagal:', r && r.code, r && r.reason);
+    if (r && (r.code === 'not_signed_in' || r.code === 'not_configured' || r.code === 'too_large')) {
+        // Tidak bisa pulih dengan sendirinya: beri tahu (maks. 1x per 2 menit).
+        if (Date.now() - _lastErrToastAt > 120000) {
+            _lastErrToastAt = Date.now();
+            ToastService.error('Progres belum tersimpan ke cloud: ' + ((r && r.reason) || r.code));
+        }
+        return;
+    }
+    _failTries++;
+    if (_failTries === 3 && Date.now() - _lastErrToastAt > 120000) {
+        _lastErrToastAt = Date.now();
+        ToastService.warning('Menyimpan ke cloud gagal berulang kali (' + ((r && (r.reason || r.code)) || 'error') + '). Mencoba lagi...');
+    }
+    _scheduleDeferredUpload(Math.min(60000, 5000 * Math.pow(2, Math.min(_failTries, 4))));
 }
 
 // [FIX] Coba lagi dengan backoff bila daftar save gagal (mis. jaringan putus), bukan diam selamanya.
@@ -354,10 +397,34 @@ async function checkOnConnect() {
     try {
         _ready = false;
         const list = await CloudService.listSavesStrict();
-        if (!list.ok) { _scheduleRecheck(list.code); return; }
-        _recheckTries = 0;
         const slot = CloudService.getSlot();
-        const cloud = (list.rows || []).find(function (r) { return r.slot === slot; }) || null;
+        let cloud = null;
+        if (list.ok) {
+            cloud = (list.rows || []).find(function (r) { return r.slot === slot; }) || null;
+        }
+        // [FIX] save_heads gagal dibaca / kosong / terlambat -> JANGAN menganggap cloud kosong
+        // (dulu: _ready tak pernah true sehingga tidak ada upload, atau save cloud tertimpa save kosong).
+        // Periksa langsung tabel game_saves.
+        if (!list.ok || !cloud) {
+            const direct = await CloudService.downloadSave(slot);
+            if (direct.ok && direct.payload && direct.payload.data) {
+                const dd = direct.payload.data;
+                const tm = dd.time || {};
+                cloud = {
+                    slot: slot,
+                    company_name: dd.companyName || '',
+                    game_minutes: Number(tm.elapsedGameMinutes) || 0,
+                    game_year: tm.currentYear || null,
+                    game_month: tm.currentMonth || null
+                };
+            } else if (direct.code === 'no_save') {
+                cloud = null;                          // benar-benar belum ada save
+            } else {
+                _scheduleRecheck(direct.code || list.code);
+                return;
+            }
+        }
+        _recheckTries = 0;
         const local = localInfo(_state);
         const dec = decideSync(local, cloud);
 
@@ -370,6 +437,7 @@ async function checkOnConnect() {
         } else if (dec.action === 'same') {
             _ready = true;
             _lastUploadMinutes = local.minutes;
+            _lastUploadSig = '';    // menit sama belum tentu isi sama: biarkan save berikutnya terunggah
             _markSynced(slot);
             syncSiliconOnLogin(); 
         } else {
@@ -410,6 +478,7 @@ async function applyCloud(slot, opts) {
     SaveService.save(_state);
     const info = localInfo(_state);
     _lastUploadMinutes = info.minutes;
+    _lastUploadSig = _currentSig();
     _ready = true;
     _markSynced(slot);
     if (!opts.silent) bus.emit('cloud:applied', { slot: slot });
@@ -506,6 +575,25 @@ export const CloudSync = {
     },
 
     uploadNow: uploadNow,
+    // [FIX] Dipakai saat Keluar: tunggu upload lain selesai, coba ulang beberapa kali, lalu pastikan
+    // save benar-benar ada di server (bukan hanya "tidak error") sebelum progres lokal dihapus.
+    flushForSignOut: async function () {
+        let last = { ok: false, code: 'unknown' };
+        for (let i = 0; i < 4; i++) {
+            for (let w = 0; w < 20 && _busy; w++) await new Promise(function (r) { setTimeout(r, 500); });
+            last = (await uploadNow({ manual: true })) || last;
+            if (last.ok) break;
+            if (last.code === 'not_signed_in' || last.code === 'too_large') break;
+            await new Promise(function (r) { setTimeout(r, 1000 * (i + 1)); });
+        }
+        if (!last.ok) return last;
+        const chk = await CloudService.downloadSave(CloudService.getSlot());
+        const dd = chk.ok && chk.payload && chk.payload.data;
+        if (!dd) return { ok: false, code: (chk && chk.code) || 'verify_failed', reason: (chk && chk.reason) || 'Verifikasi save di server gagal.' };
+        const srvMin = Number((dd.time || {}).elapsedGameMinutes) || 0;
+        if (srvMin < localInfo(_state).minutes) return { ok: false, code: 'verify_failed', reason: 'Save di server tertinggal dari perangkat ini.' };
+        return { ok: true };
+    },
     applyCloud: applyCloud,
     recheck: checkOnConnect,
     beginConflict: function () { _conflictOpen = true; },
@@ -554,6 +642,7 @@ export const CloudSync = {
             try { SaveService.save(_state, { silent: true }); } catch (e) {}
             
             _lastUploadMinutes = localInfo(_state).minutes;
+            _lastUploadSig = _currentSig();
             _markSynced(CloudService.getSlot());
 
             ToastService.success('Data dan Silicon ditarik!');
@@ -568,5 +657,5 @@ export const CloudSync = {
         }
     },
 
-    _reset: function () { _debitChain = Promise.resolve(); _pendingDebits = 0; _pendingSince = 0; _inited = false; _ready = false; _busy = false; _checking = false; _conflictOpen = false; _reloadOnVisible = false; _laterChosen = false; _lastUploadAt = 0; _lastUploadMinutes = -1; _stopRealtime(); }
+    _reset: function () { _debitChain = Promise.resolve(); _pendingDebits = 0; _pendingSince = 0; _inited = false; _ready = false; _busy = false; _checking = false; _conflictOpen = false; _reloadOnVisible = false; _laterChosen = false; _lastUploadAt = 0; _lastUploadMinutes = -1; _lastUploadSig = ''; _failTries = 0; _stopRealtime(); }
 };

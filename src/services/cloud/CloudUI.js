@@ -298,7 +298,7 @@ function openAccount() {
             var soBtn = e.target.closest('[data-ca-signout]');
             soBtn.disabled = true;
             // 1. Simpan progres terakhir ke cloud sebelum keluar.
-            var last = (await CloudSync.uploadNow({ manual: true })) || { ok: false, code: 'unknown' };
+            var last = (await CloudSync.flushForSignOut()) || { ok: false, code: 'unknown' };
             if (!last.ok && !window.confirm(tf('cloud.signout.unsaved',
                 'Progres terakhir belum tersimpan ke cloud. Jika keluar sekarang, progres di perangkat ini akan hilang. Tetap keluar?',
                 'Your latest progress could not be saved to the cloud. If you sign out now, progress on this device will be lost. Sign out anyway?'))) {
