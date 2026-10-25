@@ -1,15 +1,16 @@
 // FILE: src/data/ecosystem.data.js  (BARU — ekosistem: aksesori & App Store)
 // ============================================================
 // Angka dasar ekosistem. Semua nilai uang dalam USD (sama seperti WalletService).
-// Target keseimbangan: pendapatan ekosistem penuh ±5–15% pendapatan ponsel di akhir permainan,
+// Target keseimbangan: pendapatan ekosistem penuh ±15–25% pendapatan ponsel di akhir permainan (0.2.8; probe browser: ±17% di 2026, ponsel $250),
 // margin kotor lini 35–55%. Dikalibrasi di 0.2.6 dengan tools/eco-calib.mjs (sistem permainan asli).
 // Plafon referensi: Apple FY2025 (10-K) Wearables/Home/Accessories = 17% dan Services = 52% dari
 // pendapatan iPhone; itu batas atas industri, bukan target pemain biasa.
 // ============================================================
 
 export const ECO_CONST = {
-    maxAttachShare: 0.05,          // batas unit aksesori per bulan = 5% basis ponsel aktif
-    lineAttachScale: 0.18,         // kalibrasi 0.2.6: pengali tingkat pasang semua lini aksesori (lihat tools/eco-calib.mjs)
+    fixedScaleExp: 0.3,            // 0.2.8: biaya tetap bulanan dikali skala^0.3 (sebelumnya akar kuadrat)
+    maxAttachShare: 0.12,          // batas unit aksesori per bulan = 5% basis ponsel aktif
+    lineAttachScale: 1.7,         // kalibrasi 0.2.6: pengali tingkat pasang semua lini aksesori (lihat tools/eco-calib.mjs)
     priceFactorMin: 0.2,           // batas pengali permintaan akibat harga
     priceFactorMax: 2.0,
     lockMonths: 3,                 // jeda antar perubahan tier / harga / komisi
@@ -32,7 +33,7 @@ export const ECO_CONST = {
     appStoreBugId: 'bug_appstore_fail',
     appStoreFeatureId: 'fw_appstore',
     storeMinYear: 2008,
-    storeSpendBase: 0.3,           // USD belanja per pengguna aktif per bulan (awal); 0.6 sebelum kalibrasi 0.2.6
+    storeSpendBase: 2.1,           // USD belanja per pengguna aktif per bulan (awal); 0.6 sebelum kalibrasi 0.2.6
     storeEraGrowth: 0.08,          // belanja naik 8% per tahun sejak 2008
     storeEraCap: 3,                // maks. pengali belanja 3x
     storeAppealBase: 0.2,          // komisi dasar yang dianggap "netral" bagi pengembang
@@ -92,10 +93,10 @@ export function tierBasePrice(line, tier) {
 export const ECO_SERVICES = [
     { id: 'cloud', nameKey: 'eco.svc.name.cloud', descKey: 'eco.svc.desc.cloud', minYear: 2012,
       requiredFeatureId: 'fw_cloud_sync', baseBy: 'phones',
-      refPrice: 2, setup: 40000, monthlyFixed: 450, attach: 0.02, elasticity: 1.2, unitCostRatio: 0.35 },
-    { id: 'ai',    nameKey: 'eco.svc.name.ai',    descKey: 'eco.svc.desc.ai',    minYear: 2011,
-      requiredFeatureId: 'fw_siri', baseBy: 'os',
-      refPrice: 4, setup: 60000, monthlyFixed: 900, attach: 0.015, elasticity: 0.9, unitCostRatio: 0.5 }
+      refPrice: 2, setup: 40000, monthlyFixed: 450, attach: 0.10, elasticity: 1.2, unitCostRatio: 0.35 },
+    { id: 'ai',    nameKey: 'eco.svc.name.ai',    descKey: 'eco.svc.desc.ai',    minYear: 2023,
+      requiredFeatureId: 'fw_ai_on_device', baseBy: 'os',
+      refPrice: 4, setup: 60000, monthlyFixed: 900, attach: 0.09, elasticity: 0.9, unitCostRatio: 0.5 }
 ];
 
 export const SERVICE_TIERS = ['free', 'standard', 'premium'];
