@@ -4,7 +4,7 @@
 // v2027.43 — Focus tab: live sales chart (30 hari), gaya selaras CashChart.
 // v2027.42 — Focus tab: live sales chart (30 hari) real-time.
 // v2027.41a — Layout Home: peta 3D mengisi layar + dock (tab berlabel & carousel).
-import { t } from '../../core/LanguageService.js';
+import { t, LanguageService } from '../../core/LanguageService.js';
 import { bus } from '../../core/EventBus.js';
 import { TIME_CONFIG } from '../../config/time.config.js';
 import { renderCampusLoading } from '../campus/CampusFallback.js';
@@ -84,6 +84,57 @@ function _aggregateDailySales(state, daysBack) {
 // ============================================================
 // FOCUS SLIDE — LIVE SALES CHART
 // ============================================================
+
+// ============================================================
+// KARTU TARGET PERTAMA: "Jual 1.000 ponsel pertama"
+// ============================================================
+const FIRST_GOAL_UNITS = 1000;
+
+function _gp(id, en) {
+    try { return LanguageService.getLang() === 'en' ? en : id; } catch (e) { return id; }
+}
+
+function _renderGoalCard(state) {
+    if (!state || !state.products) return '';
+    const tut = state.tutorial || {};
+    const catalog = state.products.catalog || [];
+    const sold = catalog.reduce(function (a, p) { return a + (p.totalSold || 0); }, 0);
+    if (tut.goalDone || sold >= FIRST_GOAL_UNITS) return '';
+
+    const dev = state.products.development;
+    let line;
+    if (!catalog.length && !dev) {
+        line = _gp('Rancang ponsel pertamamu di tab Produk.', 'Design your first phone in the Products tab.');
+    } else if (!catalog.length && dev) {
+        const names = { design: _gp('desain', 'design'), prototype: _gp('prototipe', 'prototype'), production: _gp('produksi', 'production') };
+        line = _gp('Ponselmu sedang dikembangkan: tahap ', 'Your phone is in development: stage ') + (names[dev.phase] || dev.phase) + '.';
+    } else {
+        line = sold.toLocaleString('en-US') + ' / ' + FIRST_GOAL_UNITS.toLocaleString('en-US') + ' ' + _gp('unit terjual', 'units sold');
+    }
+    const pct = Math.max(0, Math.min(100, Math.round((sold / FIRST_GOAL_UNITS) * 100)));
+
+    return '<div class="card" data-goal-card>' +
+        '<div class="card-title">' + _gp('Target pertama: jual ', 'First goal: sell ') + FIRST_GOAL_UNITS.toLocaleString('en-US') + _gp(' ponsel', ' phones') + '</div>' +
+        '<div style="font-size:12px;color:var(--text-mute);margin-top:2px;">' + line + '</div>' +
+        '<div style="height:6px;border-radius:3px;background:var(--border);margin-top:8px;overflow:hidden;">' +
+            '<div style="height:100%;width:' + pct + '%;background:var(--accent);transition:width .3s;"></div>' +
+        '</div>' +
+    '</div>';
+}
+
+function _refreshGoalCard() {
+    if (_activeTab !== 'focus') return;
+    const root = document.querySelector('.home-wrapper');
+    if (!root) return;
+    const slide = root.querySelector('[data-home-slide="focus"]');
+    const game = window.__game;
+    if (!slide || !game || !game.state) return;
+    const html = _renderGoalCard(game.state.get());
+    const old = slide.querySelector('[data-goal-card]');
+    if (old) { if (html) old.outerHTML = html; else old.remove(); }
+    else if (html) slide.insertAdjacentHTML('afterbegin', html);
+}
+
 function _renderFocusSlide(state) {
     const series = _aggregateDailySales(state, 30);
     const today = series[series.length - 1] || { revenue: 0, sold: 0 };
@@ -103,7 +154,7 @@ function _renderFocusSlide(state) {
         deltaColor = 'var(--accent)';
     }
 
-    return '' +
+    return _renderGoalCard(state) +
         '<div class="card">' +
             '<div class="card-title">' + t('home.focus.sales_title') + '</div>' +
             '<div style="display:flex;align-items:baseline;gap:8px;margin-top:2px;">' +
@@ -225,10 +276,12 @@ function _drawSalesChartIfFocus() {
 function _bindHomeEvents() {
     if (_eventsBound) return;
     _eventsBound = true;
-    const redraw = function () { _drawSalesChartIfFocus(); };
+    const redraw = function () { _drawSalesChartIfFocus(); _refreshGoalCard(); };
     bus.on('time:day-changed', redraw);
     bus.on('product:daily-sales-processed', redraw);
     bus.on('product:released', redraw);
+    bus.on('product:development-started', redraw);
+    bus.on('product:phase-changed', redraw);
 }
 
 // ============================================================
