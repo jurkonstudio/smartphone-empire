@@ -51,6 +51,12 @@ export const ECOSYSTEM_I18N = {
         'eco.toast.lock': 'Bisa diubah lagi dalam {n} bulan.',
         'eco.toast.commit': 'Masih terikat komitmen {n} bulan.',
         'eco.toast.unavailable': 'Fitur App Store belum dimiliki.',
+        'eco.prod.title': 'Aksesori',
+        'eco.prod.hint': 'Tampilan aksesori mereknya. Bentuk dan warna mengikuti tier yang kamu pilih. Tier, harga, dan buka/tutup lini diatur di Pasar → Ekosistem.',
+        'eco.prod.closed': 'Belum dibuka',
+        'eco.prod.closedHint': 'Lini ini belum dibuka. Biaya pembukaan {price}.',
+        'eco.prod.manage': 'Atur di Pasar → Ekosistem',
+        'eco.prod.view': 'Lihat di Produk → Aksesori',
         'eco.toast.fail': 'Tidak bisa diubah.'
     },
     en: {
@@ -102,6 +108,12 @@ export const ECOSYSTEM_I18N = {
         'eco.toast.lock': 'Can change again in {n} month(s).',
         'eco.toast.commit': 'Still under commitment for {n} month(s).',
         'eco.toast.unavailable': 'App Store feature not owned yet.',
+        'eco.prod.title': 'Accessories',
+        'eco.prod.hint': 'How your brand\'s accessories look. Shape and color follow the tier you pick. Tier, price, and opening or closing a line are set in Market → Ecosystem.',
+        'eco.prod.closed': 'Not open yet',
+        'eco.prod.closedHint': 'This line is not open yet. Setup cost {price}.',
+        'eco.prod.manage': 'Manage in Market → Ecosystem',
+        'eco.prod.view': 'View in Products → Accessories',
         'eco.toast.fail': 'Cannot change this.'
     }
 };

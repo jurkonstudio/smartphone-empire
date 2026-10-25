@@ -512,6 +512,7 @@ export const en = {
     // PRODUCT
     'prod.subtab.design':  'Design',
     'prod.subtab.catalog': 'Catalog',
+    'prod.subtab.accessories': 'Accessories',
     'prod.subtab.sales':   'Sales',
     'prod.subtab.chip':    'Chip',
     'prod.design.title':    'Design New Product',

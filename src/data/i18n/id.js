@@ -513,6 +513,7 @@ export const id = {
     // PRODUCT
     'prod.subtab.design':  'Desain',
     'prod.subtab.catalog': 'Katalog',
+    'prod.subtab.accessories': 'Aksesori',
     'prod.subtab.sales':   'Penjualan',
     'prod.subtab.chip':    'Chip',
     'prod.design.title':    'Desain Produk Baru',
