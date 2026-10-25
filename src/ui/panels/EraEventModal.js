@@ -24,6 +24,30 @@ const SCOPE_LABEL = {
     camera:  { id: 'ponsel berkamera',    en: 'camera phones' }
 };
 
+// Bagian efek sebagai potongan teks pendek (dipakai juga untuk cabang berisiko).
+function _fxParts(fx) {
+    var id = _lang() === 'id';
+    var parts = [];
+    fx = fx || {};
+    if (fx.cash) parts.push((id ? 'Kas ' : 'Cash ') + (fx.cash > 0 ? '+' : '-') + formatCurrency(Math.abs(fx.cash)));
+    if (fx.reputation) parts.push((id ? 'Reputasi ' : 'Reputation ') + (fx.reputation > 0 ? '+' : '') + fx.reputation);
+    (fx.demand || []).forEach(function (m) {
+        var pct = Math.round((m.mult - 1) * 100);
+        var scope = _L(SCOPE_LABEL[m.scope] || SCOPE_LABEL.all);
+        parts.push((id ? 'Permintaan ' : 'Demand for ') + scope + ' ' + (pct >= 0 ? '+' : '') + pct + '% ' + (id ? 'selama ' : 'for ') + m.days + (id ? ' hari' : ' days'));
+    });
+    return parts;
+}
+
+function _fxTone(fx) {
+    var score = 0;
+    fx = fx || {};
+    if (fx.cash) score += fx.cash > 0 ? 1 : -1;
+    if (fx.reputation) score += fx.reputation > 0 ? 1 : -1;
+    (fx.demand || []).forEach(function (m) { score += m.mult >= 1 ? 1 : -1; });
+    return score > 0 ? 'good' : (score < 0 ? 'bad' : 'mute');
+}
+
 // Daftar baris efek (tanpa HTML) untuk satu pilihan.
 export function describeEffects(choice) {
     var id = _lang() === 'id';
@@ -40,6 +64,18 @@ export function describeEffects(choice) {
             text: (id ? 'Permintaan ' : 'Demand for ') + scope + ' ' + (pct >= 0 ? '+' : '') + pct + '% ' + (id ? 'selama ' : 'for ') + m.days + (id ? ' hari' : ' days')
         });
     });
+    // Pilihan berisiko: tampilkan peluang dan dampak tiap cabang.
+    if (choice.risk) {
+        var p = Math.round((Number(choice.risk.p) || 0) * 100);
+        [['success', p, id ? 'Berhasil' : 'Success'], ['fail', 100 - p, id ? 'Gagal' : 'Fails']].forEach(function (br) {
+            var bfx = (choice.risk[br[0]] || {}).effects;
+            var parts = _fxParts(bfx);
+            out.push({
+                tone: _fxTone(bfx),
+                text: br[2] + ' (' + br[1] + '%): ' + (parts.length ? parts.join(', ') : (id ? 'tanpa dampak' : 'no impact'))
+            });
+        });
+    }
     if (!out.length) out.push({ tone: 'mute', text: id ? 'Tidak ada perubahan' : 'No change' });
     return out;
 }
@@ -70,7 +106,11 @@ function _resume(ctx) {
 // ctx = { eraEvents, resumeIfRunning }
 export function openEraEventModal(def, ctx) {
     if (!def || !ctx || !ctx.eraEvents) return false;
-    var html =
+    var tag = def.kind === 'dynamic'
+        ? '<div style="font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--warning, #f59e0b);margin-bottom:4px;">⚠ ' +
+          escapeHtml(_lang() === 'id' ? 'INSIDEN' : 'INCIDENT') + '</div>'
+        : '';
+    var html = tag +
         '<div class="modal-title">' + escapeHtml(_L(def.title)) + '</div>' +
         '<div class="modal-sub">' + escapeHtml(_L(def.body)) + '</div>' +
         def.choices.map(_choiceHtml).join('');
@@ -92,8 +132,12 @@ function _openResult(def, res, ctx) {
     var lines = describeEffects(res.choice).map(function (l) {
         return '<div style="font-size:12px;color:' + _toneColor(l.tone) + ';">' + escapeHtml(l.text) + '</div>';
     }).join('');
+    var badge = res.roll
+        ? '<div style="font-size:12px;font-weight:700;margin-bottom:4px;color:' + (res.roll === 'success' ? 'var(--success)' : 'var(--danger)') + ';">' +
+          escapeHtml(res.roll === 'success' ? (id ? '✔ Berhasil' : '✔ It worked') : (id ? '✖ Gagal' : '✖ It failed')) + '</div>'
+        : '';
     var html =
-        '<div class="modal-title">' + escapeHtml(_L(def.title)) + '</div>' +
+        '<div class="modal-title">' + escapeHtml(_L(def.title)) + '</div>' + badge +
         '<div class="modal-sub"><b>' + escapeHtml(_L(res.choice.label)) + '</b><br>' + escapeHtml(res.outcome) + '</div>' +
         '<div style="margin-bottom:12px;">' + lines + '</div>' +
         '<button class="btn-primary" data-modal-close style="width:100%;">' + escapeHtml(id ? 'Lanjut' : 'Continue') + '</button>';
