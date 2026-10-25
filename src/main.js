@@ -16,6 +16,7 @@ import { ChipResearchSystem } from './core/ChipResearchSystem.js';
 import { EconomySystem } from './systems/EconomySystem.js';
 import { QuestSystem } from './systems/QuestSystem.js';
 import { EraEventSystem } from './systems/EraEventSystem.js';
+import { ChannelSystem } from './systems/ChannelSystem.js';
 import { TutorialSystem } from './systems/TutorialSystem.js';
 import { ResearchSystem } from './systems/ResearchSystem.js';
 import { OSSystem } from './systems/OSSystem.js';
@@ -129,6 +130,7 @@ var companyHistory    = new CompanyHistorySystem(state);
 var advisor           = new AdvisorSystem(state, { research: research });
 var stockSystem       = new StockSystem(state);
 var promotion         = new PromotionSystem(state);
+var channels          = new ChannelSystem(state);
 var bank              = new BankSystem(state);
 var econBrakes        = new EconBrakeSystem(state);
 
@@ -143,6 +145,8 @@ products.setEconBrakes(econBrakes);
 market.setEconBrakes(econBrakes);
 economy.setEconBrakes(econBrakes);
 economy.setPlants(componentPlants);
+products.setChannels(channels);
+economy.setChannels(channels);
 teamSystem.setEconomy(economy); // [v2030] simulasi runway saat rekrut
 
 // ============ STATE UI ============
@@ -154,7 +158,7 @@ var activeHqSubtab = 'overview';
 var NAV_SUBTABS = {
     research: ['tech', 'os', 'manufaktur', 'chip'],
     products: ['design', 'catalog', 'sales', 'chip'],
-    market: ['share', 'competitors', 'trends', 'promo', 'public'],
+    market: ['share', 'competitors', 'trends', 'promo', 'channels', 'public'],
     team: ['overview', 'team', 'exchange', 'bank']
 };
 var _burnWarn = null;
@@ -322,7 +326,7 @@ function renderView(opts) {
         else if (activeView === 'team') html = renderHqPanel({ subtab: activeHqSubtab, state: state.get(), timeSnapshot: getTime(), researchSystem: research, teamSystem: teamSystem, stockSystem: stockSystem });
         else if (activeView === 'research') html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os, chipResearchSystem: chipResearch, componentPlantSystem: componentPlants, assemblySystem: assemblySystem });
         else if (activeView === 'products') html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os });
-        else if (activeView === 'market') html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion });
+        else if (activeView === 'market') html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion, channelSystem: channels });
         else if (activeView === 'settings') html = renderSettingsPanel();
         else if (activeView === 'guide') html = renderGuidePanel();
         else html = renderEmptyState({ icon: '?', title: tr('main.not_found') });
@@ -1034,6 +1038,21 @@ function bindGlobalClicks() {
             return;
         }
 
+        var chToggle = e.target.closest('[data-channel-toggle]');
+        if (chToggle) {
+            e.preventDefault(); vibrate(8);
+            var chId = chToggle.dataset.channelToggle;
+            var chRes = channels.isActive(chId) ? channels.deactivate(chId) : channels.activate(chId);
+            if (!chRes.ok) {
+                var chMsg = chRes.reason === 'funds' ? _runwayL('Dana tidak cukup untuk membuka kanal ini.', 'Not enough funds to open this channel.')
+                    : chRes.reason === 'lock' ? _runwayL('Masih terikat komitmen ' + chRes.monthsLeft + ' bulan lagi.', 'Still under commitment for ' + chRes.monthsLeft + ' more month(s).')
+                    : chRes.reason === 'locked' ? _runwayL('Terbuka tahun ' + chRes.year + '.', 'Unlocks in ' + chRes.year + '.')
+                    : _runwayL('Tidak bisa diubah.', 'Cannot change this channel.');
+                ToastService.error(chMsg);
+            } else ToastService.success(channels.isActive(chId) ? _runwayL('Kanal dibuka.', 'Channel opened.') : _runwayL('Kanal ditutup.', 'Channel closed.'));
+            renderAll();
+            return;
+        }
         var mktSub = e.target.closest('[data-market-subtab]');
         if (mktSub) { e.preventDefault(); activeMarketSubtab = mktSub.dataset.marketSubtab; renderView(); return; }
         var compCard = e.target.closest('[data-competitor-detail]');
@@ -1438,6 +1457,7 @@ async function boot() {
         advisor.start();
         stockSystem.start();
         promotion.start();
+        channels.start();
         bank.start();
         econBrakes.start();
         bindRegionalActions();
@@ -1486,7 +1506,7 @@ async function boot() {
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, eraEvents: eraEvents, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, marketNav: marketNav, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, plants: componentPlants, assembly: assemblySystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
-            silicon: SiliconService, promotion: promotion, bank: bank, econ: econBrakes, payment: PaymentService,
+            silicon: SiliconService, promotion: promotion, channels: channels, bank: bank, econ: econBrakes, payment: PaymentService,
             openSiliconStore: openSiliconStoreModal, LanguageService: LanguageService,
             SaveService: SaveService, ToastService: ToastService, Modal: Modal, navigate: navigate, render: renderAll, renderSoft: renderSoft,
             modules: { marketing: marketingModule, feedbackData: feedbackModule },
