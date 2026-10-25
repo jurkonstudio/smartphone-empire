@@ -45,7 +45,7 @@ A season ends when the game date enters **2051** (the `endYear` limit of 2050 in
 
 ## What's in the game
 
-The numbers below were counted directly from the data files in this repo (v0.2.6; the subscription services added no new counted items).
+The numbers below were counted directly from the data files in this repo (v0.2.7; the subscription services added no new counted items).
 
 ### 🧭 Navigation
 
@@ -173,8 +173,8 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 
 - **The leaderboard is only partly validated by the server.** Stats are still sent from the player's device. The server limits sync frequency, checks invariants, and hides suspicious profiles (`supabase/11`), and it computes level and score itself (`supabase/12` and `15`). Values that stay within plausible bounds can still be faked, so this isn't an official ranking.
 - **The top-up lock is client-side only.** The server function `create_payment_order` can still be called by a logged-in account through the API directly. Orders stay `pending` until an admin approves them, but if top-up must be fully closed, add a server-side flag.
-- **Ecosystem balance is calibrated against the headless game economy, not against play.** Version 0.2.6 tuned the accessory and App Store values with `tools/eco-calib.mjs`, which runs the real market systems from 2000 to 2026. Ecosystem revenue reaches about 13% of phone revenue in 2026 (target 5–15%), and gross margins are 40–65%. In that harness, phone revenue levels off at about 333,000 a month from 2011, so the real ratio may differ. Check it through play before treating it as final.
-- **Subscription services are not verified on real phones.** Browser tests used a synthetic phone base, so the subscriber numbers are not yet checked. The OS features (`fw_cloud_sync`, `fw_siri`) and opening years (2012, 2011) are first-pass choices to confirm.
+- **Ecosystem revenue is low against real play.** The 0.2.6 calibration (`tools/eco-calib.mjs`) used a harness whose phone revenue stays flat at about 333,000 a month, which gave about 13% of phone revenue. In a browser run with real phone sales (a new phone each year, all three accessory lines, the App Store and both services open from 2013), ecosystem revenue was about 2% of phone revenue in 2013–2026 (about 168,000 against 7.3 million a month in 2026). Costs scale with the company-size factor, so in that run costs stayed close to revenue and the App Store card lost money. Whether to raise the numbers is an open design decision.
+- **Subscription services were checked on real phones in 0.2.7, in one scenario.** Subscribers matched `getServicePreview` (for example 583 Cloud and 438 AI subscribers in 2023). The click flow (open, tier, price, close, locks) and the Indonesian labels work in the browser at 390×844. The OS features (`fw_cloud_sync`, `fw_siri`) and opening years (2012, 2011) are still first-pass choices to confirm. Not tested on a real mobile device.
 - **Accessory visuals are fixed designs.** The mockups follow the tier and the open/closed state only. The player cannot yet choose color, material, or shape for accessories, and they are not shown in Market → Ecosystem (only linked).
 - **Raw text in some places.** Four translation keys are used without fallback text and aren't in the dictionaries yet: `main.toast.fab_unlocked`, `wiz.warn.volume_cost`, `wiz.preview.unit_design`, `wiz.preview.unit_parts`. Many other keys (for example `team.recruit.*`, `team.nego.*`, `silstore.locked.*`) still rely on fallback text and haven't been merged into `src/data/i18n/en.js` and `id.js`.
 - **`supabase/BACA-DULU.md` is incomplete.** Its table covers 01–09, 14, and 15, but is missing both file-10 variants, 11, 12, 13, 15b, 16, and 17.
@@ -294,6 +294,13 @@ The project is still in progress. Roadmap notes:
 
 ## Versions
 
+### 0.2.7 — Subscription service buttons fixed
+- Fix: the Cloud and AI assistant buttons (open, close, tier, price) did nothing, because `src/main.js` had no click handler for `data-eco-svc-*`. The handler is added and uses the existing `eco.svc.toast.*` and `eco.toast.*` keys.
+- Fix: `src/patches.json` was still at 0.2.5 while the root file was at 0.2.6. Both are now identical at 0.2.7.
+- The 0.2.6 note about "about 13% of phone revenue" is reworded: that figure came from the headless harness only (see Known issues).
+- New `tools/eco-wiring-check.mjs`: checks that every `data-eco-*` button in the ecosystem panel has a click handler in `main.js`.
+- No change to the economy formulas or the save format.
+
 ### 0.2.6 — Subscription services (Cloud and AI assistant)
 - Cloud and an AI assistant are now subscription services in Market → Ecosystem, below the App Store card. Each has Free, Standard, and Premium tiers; paid tiers have an adjustable price.
 - Cloud opens from 2012 and needs the Cloud Sync OS feature. The AI assistant opens from 2011 and needs the Virtual Assistant OS feature. Both have a setup cost and a monthly fixed cost.
@@ -301,7 +308,7 @@ The project is still in progress. Roadmap notes:
 - Accessory and App Store balance recalibrated against the game economy with `tools/eco-calib.mjs`: attach rate ×0.18, App Store spend per user 0.3, lower fixed costs. Ecosystem reaches about 13% of phone revenue in 2026.
 - Older saves load with subscriptions closed.
 
-Latest recorded version: **0.2.5** (October 25, 2026). Official change lists are in `src/patches.json` and `PERF-CHANGES.md`. The root `patches.json` is kept identical to `src/patches.json`.
+Latest recorded version: **0.2.7** (October 25, 2026). Official change lists are in `src/patches.json` and `PERF-CHANGES.md`. The root `patches.json` is kept identical to `src/patches.json`.
 
 ### 0.2.5 — Accessory visuals
 - New sub-tab Products → Accessories: inline SVG mockups for earbuds, smartwatches, and chargers (`src/ui/phone/AccessoryMockup.js`, `src/ui/panels/AccessoriesTab.js`). Shape and color follow the tier. Lines that are not open yet show in gray with a label.

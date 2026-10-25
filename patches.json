@@ -1,6 +1,26 @@
 {
-  "latest": "0.2.6",
+  "latest": "0.2.7",
   "releases": [
+    {
+      "version": "0.2.7",
+      "date": "2026-10-25",
+      "items": [
+        {
+          "type": "fix",
+          "text": {
+            "id": "Tombol layanan berlangganan (buka, tutup, tier, harga) di Pasar > Ekosistem kini berfungsi. Sebelumnya klik pada kartu Cloud dan Asisten AI tidak melakukan apa-apa.",
+            "en": "Subscription service buttons (open, close, tier, price) in Market > Ecosystem now work. Before, clicking the Cloud and AI assistant cards did nothing."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Catatan rilis di src/patches.json kini sama dengan patches.json di akar (sebelumnya masih berhenti di 0.2.5).",
+            "en": "Release notes in src/patches.json now match the root patches.json (it previously stopped at 0.2.5)."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.6",
       "date": "2026-10-25",
@@ -22,8 +42,8 @@
         {
           "type": "fix",
           "text": {
-            "id": "Keseimbangan ekosistem dikalibrasi ulang terhadap ekonomi permainan: pendapatan aksesori dan App Store kini sekitar 13% pendapatan ponsel di 2026 (target 5–15%).",
-            "en": "Ecosystem balance recalibrated against the game economy: accessory and App Store revenue is now about 13% of phone revenue in 2026 (target 5–15%)."
+            "id": "Keseimbangan ekosistem dikalibrasi ulang terhadap ekonomi permainan di uji headless (belum diverifikasi lewat permainan sungguhan).",
+            "en": "Ecosystem balance recalibrated against the game economy in the headless test (not yet verified in real play)."
           }
         }
       ]
