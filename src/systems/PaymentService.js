@@ -1,4 +1,5 @@
 // FILE: src/systems/PaymentService.js
+// v2029.8 — [LOCK] Metode ber-flag `locked` (QRIS) berstatus 'locked' & ditolak createOrder; hanya GoPay yang aktif.
 // v2028.44 — [FIX] Optimistic update: Tambahkan SIL lokal seketika saat paid, cegah hilang tertimpa server.
 import { bus } from '../core/EventBus.js';
 import { state } from '../core/GameState.js';
@@ -56,7 +57,7 @@ export var PaymentService = {
             .map(function (m) {
                 var p = _providers[m.provider];
                 var ok = !!p && (p.serverVerified === true || (DEV_BUILD && m.devOnly));
-                return Object.assign({}, m, { status: ok ? 'available' : 'soon' });
+                return Object.assign({}, m, { status: m.locked ? 'locked' : (ok ? 'available' : 'soon') });
             });
     },
 
@@ -65,6 +66,7 @@ export var PaymentService = {
         if (!pkg) return { ok: false, reason: 'Paket tidak ditemukan.' };
         var method = this.getMethods().find(function (m) { return m.id === methodId; });
         if (!method) return { ok: false, reason: 'Metode pembayaran tidak ditemukan.' };
+        if (method.status === 'locked') return { ok: false, reason: 'Metode ini sedang dikunci. Gunakan GoPay.' };
         if (method.status !== 'available') return { ok: false, reason: 'Metode ini belum tersedia.' };
 
         var order = {
