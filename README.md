@@ -45,7 +45,7 @@ A season ends when the game date enters **2051** (the `endYear` limit of 2050 in
 
 ## What's in the game
 
-The numbers below were counted directly from the data files in this repo (v0.2.2).
+The numbers below were counted directly from the data files in this repo (v0.2.4; the 0.2.4 ecosystem added no new counted items).
 
 ### 🧭 Navigation
 
@@ -53,7 +53,7 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 
 - **Home** has a **Campus | Office** switch (3D campus map or 3D office map).
 - **HQ** has 6 sub-tabs: **Overview, Team, Exchange, Bank, Invest, History**.
-- **Research** has 4 sub-tabs: **Tech, OS, Manufacturing, Chip**. **Products** has 4: **Design, Catalog, Sales, Chip**. **Market** has 6: **Share, Competitors, Trends, Promo, Channels, Public**.
+- **Research** has 4 sub-tabs: **Tech, OS, Manufacturing, Chip**. **Products** has 4: **Design, Catalog, Sales, Chip**. **Market** has 8: **Share, Competitors, Trends, Promo, Channels, Service, Ecosystem, Public**.
 - The desktop layout has its own styling (`desktop.css`), so the game is comfortable on wide screens, not only on phones.
 
 ### 🏢 Campus, Office, and Team
@@ -88,6 +88,7 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 - **4-phase development**: Design → Prototype → Production → Release.
 - **Transparent demand formula**: quality × price × reputation × marketing × OS × trend × competitors × lifecycle × macro conditions.
 - **Product lifecycle**: rising → peak → declining → dead. There is warehouse stock, automatic restock, and a maximum of **5 active products**.
+- **Ecosystem** (Market → Ecosystem): three accessory lines (wireless earbuds from 2004, smartwatches from 2014, chargers from 2000). Each line has a Basic, Mid, or Premium tier and an adjustable price. Sales follow your active phone base, and each line has a fixed monthly cost and a setup cost. Once your OS has the App Store feature, you earn a monthly commission (15–30%, adjustable) on app spending by active OS users. A high commission lowers developer appeal, so the catalog shrinks. Owning accessories and an App Store raises phone demand by up to 6% and eases competitor pressure. Tier and price changes are locked for 3 months, and a line can't be closed for 6 months after it opens. See `src/systems/EcosystemSystem.js`.
 - **Sales channels** (Market → Channels): Mobile Carriers (2000), Online Store (2003), and Own Stores (2004) expand demand with era-based reach, but units sold through them are margin-cut and carry fixed costs. Production cost per unit does not change, so thin-margin phones lose money through carriers. See `CHANGES-channels.md`.
 - **Marketing**: **5 campaign types** (Online Ads, Event Sponsorship, Product Launch, City Billboard, Influencer Campaign).
 - **Promotions**: **18 packages**: 12 regional (Global, Asia, Europe, Americas & Rest, 3 each) and 6 per consumer segment. There are **12 seasonal events** such as Lunar New Year, 618, Singles' Day 11.11, Golden Week/Diwali, Carnival, Back to School, Summer Sales, Black Friday, and Christmas. At most 3 active promotion campaigns per product.
@@ -172,12 +173,12 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 
 - **The leaderboard is only partly validated by the server.** Stats are still sent from the player's device. The server limits sync frequency, checks invariants, and hides suspicious profiles (`supabase/11`), and it computes level and score itself (`supabase/12` and `15`). Values that stay within plausible bounds can still be faked, so this isn't an official ranking.
 - **The top-up lock is client-side only.** The server function `create_payment_order` can still be called by a logged-in account through the API directly. Orders stay `pending` until an admin approves them, but if top-up must be fully closed, add a server-side flag.
-- **Two different `patches.json` files.** The game reads `./patches.json` from the site root, which is still at 0.2.1, while `src/patches.json` has 0.2.2. Copy the 0.2.2 entry to the root file so the Advisor's patch notice is up to date.
+- **Ecosystem balance is a first-pass estimate.** Accessory and App Store values (`src/data/ecosystem.data.js`) were checked only in a headless simulation and a browser smoke test, not against the real game economy. The target from the design notes is 5–15% of phone revenue and a 35–55% gross margin; calibrate it through play before treating it as final.
 - **Raw text in some places.** Four translation keys are used without fallback text and aren't in the dictionaries yet: `main.toast.fab_unlocked`, `wiz.warn.volume_cost`, `wiz.preview.unit_design`, `wiz.preview.unit_parts`. Many other keys (for example `team.recruit.*`, `team.nego.*`, `silstore.locked.*`) still rely on fallback text and haven't been merged into `src/data/i18n/en.js` and `id.js`.
 - **`supabase/BACA-DULU.md` is incomplete.** Its table covers 01–09, 14, and 15, but is missing both file-10 variants, 11, 12, 13, 15b, 16, and 17.
 - **SIL → money exchange** needs `supabase/10-tukar-sil.sql`. Without it the call fails and no SIL is deducted.
 - **Business Advisor Edge Function (AI)** has no per-user rate limit and its CORS is open (`*`). Don't enable it for a wide public before that is added. Details in `SECURITY.md`.
-- **Release notes are incomplete.** `src/patches.json` has 0.2.2 (and 0.2.1), but several entries in the Versions section below haven't been moved into it yet.
+- **Release notes are incomplete.** `src/patches.json` has 0.2.4 (and earlier versions), but several entries in the Versions section below haven't been moved into it yet.
 - **Landing-page screenshots** (`assets/img/landing/`) need to be retaken. The HQ image still shows the old Office tab and the old Overview layout.
 - **The client-side admin gate is cosmetic only.** Real admin status is verified on the server through `is_admin()`.
 - **2027–2030 content is speculative.** Prices, the RAM index, brand shares, and withdrawal thresholds are game scenarios that still need calibration through play. The details of EU battery rules are not modeled (only the trend effect and news). Real brand names can "withdraw" in the simulation through the share threshold, and that is not a claim about real companies.
@@ -291,7 +292,14 @@ The project is still in progress. Roadmap notes:
 
 ## Versions
 
-Latest recorded version: **0.2.2** (October 23, 2026). Official change lists are in `src/patches.json` and `PERF-CHANGES.md`. The root `patches.json` is still at 0.2.1 (see Known issues).
+Latest recorded version: **0.2.4** (October 25, 2026). Official change lists are in `src/patches.json` and `PERF-CHANGES.md`. The root `patches.json` is kept identical to `src/patches.json`.
+
+### 0.2.4 — Ecosystem (accessories and App Store)
+- Accessory lines: wireless earbuds (2004), smartwatches (2014), and chargers (2000), each with Basic / Mid / Premium tiers and an adjustable price (Market → Ecosystem).
+- App Store commission on app spending by active OS users, available once the OS has the App Store feature, with an adjustable 15–30% rate.
+- Lock-in score: owning accessories and an App Store raises phone demand by up to 6% and eases competitor pressure.
+- Monthly summary shows an Ecosystem cost row. Ecosystem revenue is included in income.
+- Market tab now has 8 sub-tabs (Service and Ecosystem added).
 
 Changes that are already in the code but not yet in `patches.json`:
 - Market Navigation (segments, sub-regions, trend waves, 11 opinion aspects, 26 viral events, Americas & Rest and per-segment promotions, UI panels in the Market tab).
