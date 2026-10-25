@@ -5,6 +5,7 @@
 //     recent[], totalAssembled, defectUnits, wagesPaid, orders }
 // Terhubung ke:
 //   - ProductSystem   : biaya restock (getCostFactor) dan jeda produksi (getLeadDays).
+//                       Bobot tier (Pro/Pro Max) ikut memakan kapasitas perakitan.
 //   - WalletService   : bangun/upgrade, gaji dan perawatan harian.
 //   - Peta 3D & panel : getSnapshot().
 // Sebelum pabrik beroperasi (belum dibangun / belum 2002) produksi tetap berjalan
@@ -140,16 +141,19 @@ export class AssemblySystem {
         const perDay = cap / DAYS_PER_MONTH;
         return _clamp(Math.ceil(((qty || 0) + (pendingUnits || 0)) / perDay), 1, ASSEMBLY_MAX_LEAD_DAYS);
     }
+    // Unit tertunda, dihitung setara Basic (varian Pro/Pro Max bobotnya lebih besar).
     getPendingUnits() {
         const cat = (this.state.data.products && this.state.data.products.catalog) || [];
         let n = 0;
-        cat.forEach(p => (p.pendingProduction || []).forEach(o => { n += o.qty || 0; }));
+        cat.forEach(p => (p.pendingProduction || []).forEach(o => { n += (o.qty || 0) * (o.effort > 0 ? o.effort : 1); }));
         return n;
     }
-    recordOrder(qty) {
+    // effort: bobot perakitan tier (1 = Basic). Memakan kapasitas sebesar qty x effort.
+    recordOrder(qty, effort) {
         if (!this.isOperating() || !(qty > 0)) return;
         const a = this._raw();
-        a.recent.push({ minute: this._now(), qty: qty });
+        const w = effort > 0 ? effort : 1;
+        a.recent.push({ minute: this._now(), qty: qty * w });
         a.totalAssembled += qty;
         a.defectUnits += Math.round(qty * this.getDefectRate());
         a.orders += 1;

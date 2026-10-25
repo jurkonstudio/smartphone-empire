@@ -17,6 +17,7 @@ import { getLicenseById, getLicenseStatsAtYear } from '../data/os.data.js';
 import { computeTechEdge, getMasteryStatBonus, RND_TRACKS } from '../data/research.data.js';
 import { getFeatureStats, getFeatureUnitCost, getFeatureAnalysis, validateFeatureSelection, getStorageGBForComponent } from '../data/features.data.js';
 import { getMacro, reviewBaseScore } from '../core/MacroModel.js';
+import { getProductTier, getTierAssemblyEffort } from '../data/product-tiers.data.js';
 import { WalletService } from './WalletService.js';
 import { getEraEventDemandFactor } from './EraEventSystem.js';
 import { getDevToolsDemandMult, getGameEnginePerfBonus, getUserControlDemandMult } from './FutureEffects.js';
@@ -219,6 +220,7 @@ export class ProductSystem {
         });
         // [Fitur Ponsel] Biaya modul fitur per unit (bukan komponen pabrik, jadi selalu ikut).
         cost += getFeatureUnitCost(config.featureIds);
+
         return Math.round(cost);
     }
 
@@ -345,79 +347,144 @@ export class ProductSystem {
     }
 
     // ============================================================
-    // KONFIRMASI DESAIN
+    // KONFIRMASI DESAIN (SERI)
     // ============================================================
+    // Satu desain = satu seri berisi 1–3 varian (Basic, Pro, Pro Max).
+    // Tiap varian punya nama, harga, dan jumlah produksi sendiri, tapi berbagi
+    // desain dasar. Biaya desain dibayar sekali untuk seluruh seri. Setiap varian
+    // yang dirilis masuk katalog sendiri dan memakai kapasitas Pabrik Perakitan
+    // sesuai bobot tiernya (lihat src/data/product-tiers.data.js).
     confirmDesign(config) {
+        return this.confirmTierFamily(config, [{
+            tier: 'basic',
+            name: config.name,
+            price: config.price,
+            productionQty: config.productionQty
+        }]);
+    }
+
+    // Hitung tagihan dan batas harga tiap varian tanpa mengubah apa pun.
+    // Dipakai pratinjau wizard dan konfirmasi, supaya angkanya selalu sama.
+    quoteTierFamily(baseConfig, plans) {
+        var base = this._normalizeBase(baseConfig);
+        var self = this;
+        var items = [], total = 0;
+        (plans || []).forEach(function (p) {
+            var cfg = self._variantConfig(base, p);
+            var unitCost = self.computeUnitCost(cfg);
+            var designUnit = self.computeUnitCost(cfg, true);
+            var vm = self._volMult(cfg.productionQty);
+            var cost = Math.round(designUnit * cfg.productionQty * vm);
+            total += cost;
+            items.push({
+                tier: cfg.tier,
+                cfg: cfg,
+                unitCost: unitCost,
+                volMult: vm,
+                cost: cost,
+                minPrice: unitCost + 1,
+                maxPrice: Math.ceil(Math.max(unitCost * 2.2 * 1.5, unitCost * 4))
+            });
+        });
+        var setupCost = BALANCE.products.productionSetupCost;
+        return { items: items, total: items.length ? total + setupCost : 0 };
+    }
+
+    confirmTierFamily(baseConfig, plans) {
         var data = this.state.data;
         if (data.products.development) return { ok: false, reason: 'Ada produk yang sedang dikembangkan.' };
 
-        if (config.cameraId === 'none') config.cameraId = null;
-        if (config.ramId === 'none') config.ramId = null;
-        if (config.storageId === 'none') config.storageId = null;
-
+        var base = this._normalizeBase(baseConfig);
         var required = ['displayId', 'batteryId', 'chipId', 'networkId', 'formFactorId', 'bodyId'];
         for (var i = 0; i < required.length; i++) {
             var k = required[i];
-            if (!config[k]) return { ok: false, reason: 'Komponen belum lengkap: ' + k };
+            if (!base[k]) return { ok: false, reason: 'Komponen belum lengkap: ' + k };
         }
-        if (!config.osOptionId) return { ok: false, reason: 'Pilih OS.' };
+        if (!base.osOptionId) return { ok: false, reason: 'Pilih OS.' };
 
-        var name = (config.name || '').trim();
-        if (!name) return { ok: false, reason: 'Nama produk kosong.' };
-        if (this._isNameTaken(name)) return { ok: false, reason: 'Nama "' + name + '" sudah dipakai produk lain.' };
+        if (!Array.isArray(plans) || plans.length === 0) {
+            return { ok: false, reason: 'Pilih minimal satu varian untuk dirilis.' };
+        }
+        var seenTier = {}, seenName = {};
+        for (var j = 0; j < plans.length; j++) {
+            var p = plans[j];
+            if (!getProductTier(p.tier)) return { ok: false, reason: 'Tier tidak dikenal: ' + p.tier };
+            if (seenTier[p.tier]) return { ok: false, reason: 'Tier ' + p.tier + ' dipilih dua kali.' };
+            seenTier[p.tier] = true;
+            var pname = (p.name || '').trim();
+            if (!pname) return { ok: false, reason: 'Nama varian kosong.' };
+            var pkey = pname.toLowerCase();
+            if (seenName[pkey]) return { ok: false, reason: 'Nama "' + pname + '" dipakai dua kali dalam seri.' };
+            if (this._isNameTaken(pname)) return { ok: false, reason: 'Nama "' + pname + '" sudah dipakai produk lain.' };
+            seenName[pkey] = true;
+            if (!(p.productionQty >= 100)) return { ok: false, reason: 'Jumlah produksi minimal 100 unit.' };
+        }
 
-        if (config.productionQty < 100) return { ok: false, reason: 'Jumlah produksi minimal 100 unit.' };
-
-        // [Fitur Ponsel] Validasi pilihan fitur (riset, tahun, grup eksklusif). Kosong/undefined = tanpa fitur.
-        if (config.featureIds !== undefined && !Array.isArray(config.featureIds)) config.featureIds = [];
-        if (Array.isArray(config.featureIds)) {
-            var fv = validateFeatureSelection(config.featureIds, data.time.currentYear, (data.research && data.research.completed) || []);
+        // [Fitur Ponsel] Validasi pilihan fitur (riset, tahun, grup eksklusif). Dipakai bersama semua varian.
+        if (Array.isArray(base.featureIds)) {
+            var fv = validateFeatureSelection(base.featureIds, data.time.currentYear, (data.research && data.research.completed) || []);
             if (!fv.ok) return { ok: false, reason: fv.reason };
         }
 
-        var unitCost = this.computeUnitCost(config);
-        
-        // ============================================================
-        // VALIDASI BATAS HARGA (FLOOR & CEILING)
-        // ============================================================
-        var minPrice = unitCost + 1;
-        var maxPrice = Math.ceil(Math.max(unitCost * 2.2 * 1.5, unitCost * 4));
-        
-        if (config.price < minPrice) {
-            return { ok: false, reason: 'Harga di bawah biaya produksi (Min $' + minPrice + ').' };
-        }
-        if (config.price > maxPrice) {
-            return { ok: false, reason: 'Harga melampaui batas logis pasar (Max $' + maxPrice + ').' };
+        var quote = this.quoteTierFamily(base, plans);
+        var multi = quote.items.length > 1;
+        for (var m = 0; m < quote.items.length; m++) {
+            var it = quote.items[m];
+            var pre = multi ? '"' + it.cfg.name + '": ' : '';
+            var perr = this._checkVariantParts(it.cfg, data);
+            if (perr) return { ok: false, reason: pre + perr };
+            // Pakai !(>=) dan !(<=) agar harga kosong/NaN ikut ditolak.
+            if (!(it.cfg.price >= it.minPrice)) return { ok: false, reason: pre + 'Harga di bawah biaya produksi (Min $' + it.minPrice + ').' };
+            if (!(it.cfg.price <= it.maxPrice)) return { ok: false, reason: pre + 'Harga melampaui batas logis pasar (Max $' + it.maxPrice + ').' };
         }
 
-        var setupCost = BALANCE.products.productionSetupCost;
         // Baterai & layar tidak ditagih di sini: diambil dari stok pabrik atau dibeli harga pasar saat rilis.
-        var volMult = this._volMult(config.productionQty);
-        var totalCost = Math.round(this.computeUnitCost(config, true) * config.productionQty * volMult) + setupCost;
+        if (!WalletService.canAfford(quote.total)) {
+            return { ok: false, reason: 'Uang tidak cukup. Butuh $' + quote.total.toLocaleString('en-US') + '.' };
+        }
 
-        if (!WalletService.canAfford(totalCost)) return { ok: false, reason: 'Uang tidak cukup. Butuh $' + totalCost.toLocaleString('en-US') + '.' };
-
-        var stats = this.computeStats(config);
-        var baseDays = 40 + Math.floor(config.productionQty / 5000);
+        var maxQty = 0;
+        quote.items.forEach(function (it) { if (it.cfg.productionQty > maxQty) maxQty = it.cfg.productionQty; });
+        // Tiap varian tambahan memperpanjang desain sedikit (8 hari).
+        var baseDays = 40 + Math.floor(maxQty / 5000) + 8 * (quote.items.length - 1);
         var speedup = this._getDevSpeedMultiplier();
         var totalDays = Math.max(7, Math.round(baseDays / speedup));
 
-        WalletService.pay(totalCost, 'product-dev');
-        this._recordProd(config.productionQty);
+        WalletService.pay(quote.total, 'product-dev');
+        var self = this;
+        quote.items.forEach(function (it) { self._recordProd(it.cfg.productionQty); });
 
-        var productId = 'p_' + Date.now() + '_' + data.products.nextProductId;
+        var seedId = 'p_' + Date.now() + '_' + data.products.nextProductId;
         data.products.nextProductId += 1;
 
+        var family = quote.items.map(function (it, idx) {
+            return {
+                id: idx === 0 ? seedId : seedId + '_' + it.tier,
+                tier: it.tier,
+                name: it.cfg.name,
+                config: it.cfg,
+                stats: self.computeStats(it.cfg),
+                unitCost: it.unitCost,
+                volMult: it.volMult,
+                totalCost: it.cost,
+                price: it.cfg.price,
+                productionQty: it.cfg.productionQty
+            };
+        });
+        var lead = family[0];
+
+        // Field di tingkat atas mengikuti varian pertama (kompatibel dengan kode & simpanan lama).
         var project = {
-            id: productId,
-            name: name,
-            config: Object.assign({}, config, Array.isArray(config.featureIds) ? { featureIds: config.featureIds.slice() } : {}),
-            stats: stats,
-            unitCost: unitCost,
-            volMult: volMult,
-            totalCost: totalCost,
-            price: config.price,
-            productionQty: config.productionQty,
+            id: seedId,
+            name: lead.name,
+            config: lead.config,
+            stats: lead.stats,
+            unitCost: lead.unitCost,
+            volMult: lead.volMult,
+            totalCost: quote.total,
+            price: lead.price,
+            productionQty: lead.productionQty,
+            family: family,
             phase: 'design',
             phaseProgressDays: 0,
             phaseDurationDays: Math.max(3, Math.round(totalDays * 0.3)),
@@ -430,12 +497,61 @@ export class ProductSystem {
         data.products.development = project;
         data.products.designing = null;
 
-        this.state.addLog('Mulai kembangkan "' + name + '" (biaya $' + totalCost.toLocaleString('en-US') + ').', LOG_TYPES.info);
-        ToastService.success('Pengembangan "' + name + '" dimulai!');
-        bus.emit('product:development-started', { productId: productId, name: name, phases: 4 });
+        var names = family.map(function (f) { return '"' + f.name + '"'; }).join(', ');
+        var what = multi ? 'seri ' + names + ' (' + family.length + ' varian)' : names;
+        this.state.addLog('Mulai kembangkan ' + what + ' (biaya $' + quote.total.toLocaleString('en-US') + ').', LOG_TYPES.info);
+        ToastService.success('Pengembangan ' + names + ' dimulai!');
+        bus.emit('product:development-started', { productId: seedId, name: lead.name, phases: 4 });
         bus.emit('tutorial:action', { id: 'action:product-started' });
         bus.emit('state:changed', data);
-        return { ok: true, productId: productId, totalCost: totalCost, totalDays: totalDays };
+        return { ok: true, productId: seedId, totalCost: quote.total, totalDays: totalDays, variants: family.length };
+    }
+
+    _normalizeBase(config) {
+        var base = Object.assign({}, config || {});
+        ['cameraId', 'ramId', 'storageId'].forEach(function (k) {
+            if (base[k] === 'none') base[k] = null;
+        });
+        if (base.featureIds !== undefined && !Array.isArray(base.featureIds)) base.featureIds = [];
+        return base;
+    }
+
+    _variantConfig(base, p) {
+        var cfg = Object.assign({}, base, {
+            tier: p.tier,
+            name: (p.name || '').trim(),
+            price: p.price,
+            productionQty: p.productionQty
+        });
+        // Komponen per varian (kecanggihan & desain). Yang tidak dikirim ikut konfigurasi dasar.
+        ['displayId', 'cameraId', 'batteryId', 'chipId', 'bodyId', 'bodyColorId'].forEach(function (k) {
+            if (p[k] !== undefined) cfg[k] = (p[k] === 'none' || p[k] === '') ? null : p[k];
+        });
+        if (Array.isArray(base.featureIds)) cfg.featureIds = base.featureIds.slice();
+        return cfg;
+    }
+
+    // Komponen varian harus ada, sesuai kategorinya, dan sudah terbuka (tahun & riset).
+    _checkVariantParts(cfg, data) {
+        var year = data.time.currentYear;
+        var completed = (data.research && data.research.completed) || [];
+        var need = [
+            ['displayId', 'display', 'Layar'], ['batteryId', 'battery', 'Baterai'],
+            ['chipId', 'chip', 'Chip'], ['bodyId', 'body', 'Bodi'], ['cameraId', 'camera', 'Kamera']
+        ];
+        for (var i = 0; i < need.length; i++) {
+            var k = need[i][0], cat = need[i][1], label = need[i][2];
+            if (!cfg[k]) {
+                if (k === 'cameraId') continue; // kamera opsional
+                return label + ' belum dipilih.';
+            }
+            var c = getComponentById(cfg[k]);
+            if (!c || c.category !== cat) return label + ' tidak valid.';
+            if (typeof c.minYear === 'number' && year < c.minYear) return label + ' "' + c.name + '" belum tersedia di tahun ini.';
+            if (c.requiresResearch && completed.indexOf(c.requiresResearch) === -1) return label + ' "' + c.name + '" belum diriset.';
+        }
+        if (!cfg.bodyColorId || !getBodyColorById(cfg.bodyColorId)) return 'Warna bodi belum dipilih.';
+        return null;
     }
 
     cancelDevelopment() {
@@ -541,18 +657,38 @@ export class ProductSystem {
         return Math.round(bill);
     }
 
+    // Rilis seri: setiap varian menjadi produk katalog sendiri.
     _releaseProduct(d) {
         var data = this.state.data;
-        var cfg = d.config;
+        var variants = (Array.isArray(d.family) && d.family.length) ? d.family : [{
+            id: d.id,
+            tier: 'basic',
+            name: d.name,
+            config: d.config,
+            stats: d.stats,
+            unitCost: d.unitCost,
+            volMult: d.volMult,
+            price: d.config.price,
+            productionQty: d.config.productionQty
+        }];
+        var self = this;
+        variants.forEach(function (v) { self._releaseVariant(d, v); });
+        data.products.development = null;
+        bus.emit('state:changed', data);
+    }
+
+    _releaseVariant(d, v) {
+        var data = this.state.data;
+        var cfg = v.config;
 
         var product = {
-            id: d.id,
-            name: d.name,
+            id: v.id,
+            name: v.name,
             config: Object.assign({}, cfg, Array.isArray(cfg.featureIds) ? { featureIds: cfg.featureIds.slice() } : {}),
-            stats: Object.assign({}, d.stats),
+            stats: Object.assign({}, v.stats),
             techSnapshot: d.techSnapshot ? { levels: Object.assign({}, d.techSnapshot.levels), year: d.techSnapshot.year } : null,
             price: cfg.price,
-            unitCost: d.unitCost,
+            unitCost: v.unitCost,
             stock: cfg.productionQty,
             totalProduced: cfg.productionQty,
             baseCapacity: cfg.productionQty,
@@ -589,14 +725,13 @@ export class ProductSystem {
         var repDelta = this._reviewReputationDelta(rv.score, 1);
         if (repDelta !== 0) this.state.addReputation(repDelta);
 
-        var partsBill = Math.round(this._settleComponents(cfg, cfg.productionQty) * (d.volMult || 1));
+        var partsBill = Math.round(this._settleComponents(cfg, cfg.productionQty) * (v.volMult || 1));
         if (partsBill > 0) {
             this.state.addCash(-partsBill);
             this.state.addLog('Komponen "' + product.name + '" dibeli harga pasar: $' + partsBill.toLocaleString('en-US') + '.', LOG_TYPES.info);
         }
 
         data.products.catalog.push(product);
-        data.products.development = null;
 
         if (data.products.catalog.length === 1) {
             this.state.addMilestone('first_product', 'Ponsel pertama dirilis: ' + product.name);
@@ -607,7 +742,6 @@ export class ProductSystem {
         if (data.settings.vibrate) { try { if (navigator.vibrate) navigator.vibrate([30, 40, 30]); } catch (e) {} }
 
         bus.emit('product:released', { productId: product.id, name: product.name, score: rv.score });
-        bus.emit('state:changed', data);
     }
 
     // ============================================================
@@ -888,11 +1022,13 @@ export class ProductSystem {
     // STOK & PRODUKSI
     // ============================================================
     // Jeda hari produksi manual (makin banyak unit, makin lama).
-    getManualRestockDays(qty) {
+    getManualRestockDays(qty, tier) {
         if (this._assembly) {
             try {
                 if (this._assembly.isOperating()) {
-                    var ad = this._assembly.getLeadDays(qty, this._assembly.getPendingUnits());
+                    // Bobot perakitan tier: varian Pro/Pro Max memakan kapasitas lebih besar.
+                    var effort = getTierAssemblyEffort(tier);
+                    var ad = this._assembly.getLeadDays((qty || 0) * effort, this._assembly.getPendingUnits());
                     if (ad) return ad;
                 }
             } catch (e) {}
@@ -913,14 +1049,16 @@ export class ProductSystem {
 
         WalletService.pay(totalCost, 'restock');
         this._recordProd(qty);
-        if (this._assembly) { try { this._assembly.recordOrder(qty); } catch (e) {} }
+        var effort = getTierAssemblyEffort(p.config && p.config.tier);
+        if (this._assembly) { try { this._assembly.recordOrder(qty, effort); } catch (e) {} }
         this._settleComponents(p.config, qty);
 
-        var days = this.getManualRestockDays(qty);
+        var days = this.getManualRestockDays(qty, p.config && p.config.tier);
         if (!Array.isArray(p.pendingProduction)) p.pendingProduction = [];
         p.pendingProduction.push({
             id: 'po_' + Date.now() + '_' + p.pendingProduction.length,
             qty: qty,
+            effort: effort,
             cost: totalCost,
             days: days,
             orderedAtMinute: data.time.elapsedGameMinutes,
