@@ -278,7 +278,8 @@ The project is still in progress. Roadmap notes:
 - ✅ **Lite mode** for low-end phones and lower battery use
 - ⏳ **Translation fixes (i18n)**: replace the remaining hardcoded text with keys, merge new keys into `en.js` and `id.js`, then translate the names and descriptions of the 139 components
 - ⏳ **Office map reads TeamSystem**: recruit impact, trait bonuses, and the team summary computed from one source
-- ⏳ **Random events with choices**, per-era screen transitions, and UI polish
+- ✅ **Random events with choices** (5 dynamic incidents, 2000–2050, risky choices, cost scaled to company size; see `CHANGES-dynamic-events.md`)
+- ⏳ More incidents, per-era screen transitions, and UI polish
 - ⏳ **UI Evolution patch**: notification styling that changes per era (monochrome → glossy → flat → Dynamic Island)
 - ⏳ **Bilingual news**: English headlines exist, but some review templates are still Indonesian-only
 - ⏳ **Silicon payments**: reopening top-up with a production payment provider and server-side verification (including a server-side lock)
