@@ -1,6 +1,53 @@
 {
-  "latest": "0.2.5",
+  "latest": "0.2.7",
   "releases": [
+    {
+      "version": "0.2.7",
+      "date": "2026-10-25",
+      "items": [
+        {
+          "type": "fix",
+          "text": {
+            "id": "Tombol layanan berlangganan (buka, tutup, tier, harga) di Pasar > Ekosistem kini berfungsi. Sebelumnya klik pada kartu Cloud dan Asisten AI tidak melakukan apa-apa.",
+            "en": "Subscription service buttons (open, close, tier, price) in Market > Ecosystem now work. Before, clicking the Cloud and AI assistant cards did nothing."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Catatan rilis di src/patches.json kini sama dengan patches.json di akar (sebelumnya masih berhenti di 0.2.5).",
+            "en": "Release notes in src/patches.json now match the root patches.json (it previously stopped at 0.2.5)."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.6",
+      "date": "2026-10-25",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Layanan berlangganan di Pasar > Ekosistem: Cloud dan Asisten AI, masing-masing dengan tier Gratis, Standar, dan Premium. Harga tier berbayar bisa diatur.",
+            "en": "Subscription services in Market > Ecosystem: Cloud and an AI assistant, each with Free, Standard, and Premium tiers. Paid tier prices are adjustable."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Skor lock-in kini dihitung dari lini aksesori (40%), App Store (40%), dan layanan berlangganan (20%).",
+            "en": "Lock-in score now uses accessory lines (40%), the App Store (40%), and subscription services (20%)."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Keseimbangan ekosistem dikalibrasi ulang terhadap ekonomi permainan di uji headless (belum diverifikasi lewat permainan sungguhan).",
+            "en": "Ecosystem balance recalibrated against the game economy in the headless test (not yet verified in real play)."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.5",
       "date": "2026-10-25",
