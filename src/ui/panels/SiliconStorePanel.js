@@ -1,4 +1,5 @@
 // FILE: src/ui/panels/SiliconStorePanel.js
+// v2029.8 — [OPEN] Top Up dibuka. QRIS dikunci (metode `locked` di silicon.data.js); hanya GoPay yang bisa dipakai & membuka panel pembayaran.
 // v2029.7 — [LOCK] Top Up (tab Beli + panel pembayaran QRIS) dikunci sementara. Ubah TOPUP_LOCKED ke false untuk membuka lagi.
 // v2029.6 — [FIX] Cegah double-render saat proses sinkronisasi. Ganti _e() ke _tf().
 import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
@@ -16,7 +17,7 @@ import { SaveService } from '../../core/SaveService.js';
 
 var MODAL_ID = 'silicon-store';
 // [LOCK] true = Top Up ditutup sementara & belum bisa digunakan.
-var TOPUP_LOCKED = true;
+var TOPUP_LOCKED = false;
 var _sel = { pkg: 'pkg_l', method: null, busy: false };
 var _pollingTimer = null;
 var _countdownTimer = null;
@@ -255,7 +256,9 @@ function _renderMethods(methods) {
         html += '<div class="sil-method-group">' + _tf('silicon.store.group.' + g, g) + '</div>';
         html += items.map(function (m) {
             var avail = m.status === 'available';
-            var badge = avail ? '<span class="sil-badge sil-badge-on">' + _tf('silicon.store.available', 'Aktif') + '</span>' : '<span class="sil-badge">' + _tf('silicon.store.soon', 'Segera') + '</span>';
+            var badge = avail ? '<span class="sil-badge sil-badge-on">' + _tf('silicon.store.available', 'Aktif') + '</span>'
+                : (m.status === 'locked' ? '<span class="sil-badge">\uD83D\uDD12 ' + _tf('silicon.store.locked', 'Terkunci') + '</span>'
+                : '<span class="sil-badge">' + _tf('silicon.store.soon', 'Segera') + '</span>');
             return '<button type="button" class="sil-method' + (_sel.method === m.id ? ' active' : '') + (avail ? '' : ' is-soon') + '" data-sil-method="' + m.id + '"' + (avail ? '' : ' disabled') + '>' +
                 '<span class="sil-method-ico">' + gIcon(m.icon || 'wallet', 18) + '</span>' +
                 '<span class="sil-method-name">' + _esc(m.name) + '</span>' + badge + '<span class="sil-radio"></span>' +
@@ -397,7 +400,7 @@ function _showPaymentModal(order) {
     if (TOPUP_LOCKED) { ToastService.warning(_tf('silstore.locked.toast', 'Top Up sedang ditutup sementara.')); return; }
     var pkg = PaymentService.getPackage(order.packageId);
     var mockBtnHtml = DEV_BUILD ? `<div style="margin-top:24px; padding-top:16px; border-top:1px dashed var(--border); text-align:center;"><button type="button" data-qr-mock style="background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger); padding:8px; border-radius:8px; font-size:11px; width:100%; cursor:pointer;">${_tf('silstore.qr.mock', 'Simulasi Lunas')}</button></div>` : '';
-    var html = `<div class="modal-title" style="text-align:center; font-size:18px;">${_tf('silstore.qr.title', 'Pindai QRIS')}</div><div class="modal-sub" style="text-align:center; margin-bottom:16px;">${_tf('silstore.qr.time_left', 'Sisa waktu')} <b id="qr-timer" style="color:var(--danger); font-family:monospace; font-size:14px;">15:00</b></div><div style="text-align:center; margin-bottom:12px;"><div style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">${_tf('silstore.qr.total', 'Total Pembayaran')}</div><div style="font-size:24px; font-weight:bold; color:var(--accent);">${_price(pkg)}</div></div><div style="text-align:center; padding: 12px; background: #fff; border-radius: 12px; margin-bottom:16px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);"><img src="${STATIC_QRIS_URL}" style="width:100%; max-width:250px; display:block; margin:0 auto; border-radius:8px;" alt="QRIS" /></div><div style="font-size:13px; color:var(--text-secondary); text-align:center; margin-bottom:16px; line-height:1.5;">${_tf('silstore.qr.scan', 'Pindai kode di atas menggunakan aplikasi bank atau e-wallet Anda.')}<br><b>${_tf('silstore.qr.important', 'PENTING')}</b> ${_tf('silstore.qr.note_pre', 'Sertakan Order ID')} <b>${_esc(order.id)}</b> ${_tf('silstore.qr.note_post', 'pada berita transfer.')}</div><div style="display:flex; flex-direction:column; gap:8px;"><button type="button" class="btn-primary" data-qr-check style="width:100%;">${_tf('silstore.qr.check', 'Cek Status')}</button><button type="button" class="btn-secondary" data-qr-cancel style="width:100%;">${_tf('silstore.qr.cancel', 'Batal')}</button></div>${mockBtnHtml}`;
+    var html = `<div class="modal-title" style="text-align:center; font-size:18px;">${_tf('silstore.qr.title', 'Bayar dengan GoPay')}</div><div class="modal-sub" style="text-align:center; margin-bottom:16px;">${_tf('silstore.qr.time_left', 'Sisa waktu')} <b id="qr-timer" style="color:var(--danger); font-family:monospace; font-size:14px;">15:00</b></div><div style="text-align:center; margin-bottom:12px;"><div style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">${_tf('silstore.qr.total', 'Total Pembayaran')}</div><div style="font-size:24px; font-weight:bold; color:var(--accent);">${_price(pkg)}</div></div><div style="text-align:center; padding: 12px; background: #fff; border-radius: 12px; margin-bottom:16px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);"><img src="${STATIC_QRIS_URL}" style="width:100%; max-width:250px; display:block; margin:0 auto; border-radius:8px;" alt="GoPay" /></div><div style="font-size:13px; color:var(--text-secondary); text-align:center; margin-bottom:16px; line-height:1.5;">${_tf('silstore.qr.scan', 'Buka aplikasi GoPay, lalu pindai kode di atas.')}<br><b>${_tf('silstore.qr.important', 'PENTING')}</b> ${_tf('silstore.qr.note_pre', 'Sertakan Order ID')} <b>${_esc(order.id)}</b> ${_tf('silstore.qr.note_post', 'pada berita transfer.')}</div><div style="display:flex; flex-direction:column; gap:8px;"><button type="button" class="btn-primary" data-qr-check style="width:100%;">${_tf('silstore.qr.check', 'Cek Status')}</button><button type="button" class="btn-secondary" data-qr-cancel style="width:100%;">${_tf('silstore.qr.cancel', 'Batal')}</button></div>${mockBtnHtml}`;
     Modal.open('payment-qr', html);
     var root = document.querySelector('[data-modal-id="payment-qr"]'); if (!root) return;
     var timerEl = root.querySelector('#qr-timer'); var btnCheck = root.querySelector('[data-qr-check]');

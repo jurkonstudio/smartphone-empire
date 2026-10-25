@@ -626,7 +626,7 @@ function _handleSet(action) {
 // ============================================================
 var STUDIO_APK_URL = 'https://github.com/jurkonstudio/smartphone-empire/releases/download/tycoon/Smartphone.Empire.apk';
 // Samakan dengan TOPUP_LOCKED di SiliconStorePanel.js (landing page web.html memakai flag yang sama).
-var STUDIO_TOPUP_LOCKED = true;
+var STUDIO_TOPUP_LOCKED = false;
 var STUDIO_BUG_URL = 'https://github.com/jurkonstudio/smartphone-empire/issues';
 var STUDIO_SOCIALS = [
     { id: 'github',     label: 'GitHub',     href: 'https://github.com/jurkonstudio', bg: 'linear-gradient(180deg,#8b5cf6,#5b21b6)',
