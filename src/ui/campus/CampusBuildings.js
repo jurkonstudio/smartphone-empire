@@ -47,7 +47,7 @@ export const PALETTES = {
         grass: 0xc4e3bd, plaza: 0xf3f5fa, road: 0xbfc9d8, wall: 0xf4f7fc,
         window: 0x75aee8, trunk: 0x9b7655, leaf: 0x72bd78,
         solar: 0x315c91, metal: 0x8494a8, glow: 0x00c7ed,
-        grass2: 0xaed99f, soil: 0x806b56, curb: 0xd2d9e5, water: 0x55b9e5,
+        grass2: 0xaed99f, grass3: 0x93c987, soil: 0x806b56, curb: 0xd2d9e5, water: 0x55b9e5,
         leaf2: 0x91cf87, gold: 0xf0bd4e, shade: 0x000000,
         flowerA: 0xf472b6, flowerB: 0xfacc15,
         ocean: 0x3fa9dc, shallow: 0x86d8e8, foam: 0xf4fbff,
@@ -60,7 +60,7 @@ export const PALETTES = {
         grass: 0x203b32, plaza: 0x343e50, road: 0x252d3a, wall: 0xc0ccdc,
         window: 0x5798e8, trunk: 0x5d4939, leaf: 0x347d51,
         solar: 0x254a7a, metal: 0x78869a, glow: 0x00ddff,
-        grass2: 0x2b503b, soil: 0x332a26, curb: 0x515d72, water: 0x176d9f,
+        grass2: 0x2b503b, grass3: 0x1b3629, soil: 0x332a26, curb: 0x515d72, water: 0x176d9f,
         leaf2: 0x4c9b68, gold: 0xe3b348, shade: 0x000000,
         flowerA: 0xd9558f, flowerB: 0xd1a914,
         ocean: 0x0d4a78, shallow: 0x1a7a98, foam: 0x9cc4d8,
@@ -308,7 +308,7 @@ export function describeBuilding(id, plan, data) {
 // ============================================================
 var COLOR_ROLES = [
     'grass', 'plaza', 'road', 'wall', 'window', 'trunk', 'leaf', 'solar', 'metal', 'glow',
-    'grass2', 'soil', 'curb', 'water', 'leaf2', 'gold', 'shade', 'flowerA', 'flowerB',
+    'grass2', 'grass3', 'soil', 'curb', 'water', 'leaf2', 'gold', 'shade', 'flowerA', 'flowerB',
     'lamp', 'beacon', 'halo', 'roofAlt',
     'ocean', 'shallow', 'foam', 'sand', 'sandWet', 'rock'
 ];
@@ -324,7 +324,7 @@ var MAT_OPTS = {
 var BASIC_ROLES = { shade: 1, halo: 1, ao: 1 };
 // PBR per role: r = roughness, m = metalness, e = skala envMapIntensity (di tema terang).
 var MAT_PROPS = {
-    grass: { r: 0.97, m: 0, e: 0.35 }, grass2: { r: 0.97, m: 0, e: 0.35 }, soil: { r: 1, m: 0, e: 0.2 },
+    grass: { r: 0.97, m: 0, e: 0.35 }, grass2: { r: 0.97, m: 0, e: 0.35 }, grass3: { r: 0.97, m: 0, e: 0.35 }, soil: { r: 1, m: 0, e: 0.2 },
     plaza: { r: 0.82, m: 0, e: 0.45 }, road: { r: 0.94, m: 0, e: 0.25 }, curb: { r: 0.86, m: 0, e: 0.4 },
     wall: { r: 0.62, m: 0, e: 0.6 }, roof: { r: 0.46, m: 0.15, e: 0.8 }, roofAlt: { r: 0.72, m: 0.05, e: 0.55 },
     window: { r: 0.14, m: 0.3, e: 1.5 }, solar: { r: 0.28, m: 0.55, e: 1.3 },
@@ -667,6 +667,104 @@ export var LAMP_SPOTS = [
 LAMP_SPOTS = LAMP_SPOTS.filter(function (l) { return !_onReserved(l[0], l[1], 0.25) && !_onRoad(l[0], l[1], 0.1); });
 export var PLANTERS = [[3.1, 3.1], [3.1, -3.1], [-3.1, -3.1]];
 
+// ============================================================
+// v2027.70 — DETAIL TANAH & DEKORASI GEDUNG (data deterministik, dihitung sekali)
+// Bercak rumput bernada beda (tanah tidak datar), batu pijakan dari jalan ke tiap gedung, halaman
+// berpaving, semak sudut, bangku, dan lampu. Semua instanced; tidak menyentuh logika game.
+// ============================================================
+var DETAIL_YARD_IDS = ['lab', 'factory', 'store', 'os', 'academy', 'pcplant', 'chipdesign', 'bank', 'housing'];
+export var DETAIL = (function () {
+    var rnd = _rng(70707);
+    var D = { patches: [], stones: [], yards: [], shrubs: [], flowersA: [], flowersB: [], benches: [], lamps: [] };
+
+    // Fitur besar yang tidak boleh ditimpa dekorasi: plaza, jalan utama, teluk, kolam, monorail, ladang angin, koridor jembatan.
+    function featureFree(x, z, pad) {
+        if (Math.abs(x) < 3.9 + pad && Math.abs(z) < 3.9 + pad) return false;
+        if (Math.abs(x) < 1.7 + pad && z > 3 && z < 15.8) return false;
+        if (Math.abs(z) < 1.7 + pad && x < -3 && x > -15.8) return false;
+        if (Math.abs(x - BAY.x) < BAY.w / 2 + 0.9 + pad && Math.abs(z - BAY.z) < BAY.d / 2 + 0.9 + pad) return false;
+        if (Math.hypot(x - POND.x, z - POND.z) < POND.r + 0.7 + pad) return false;
+        if (Math.abs(z - RAIL.z) < 1.2 + pad && x > RAIL.x0 - 1 && x < RAIL.x1 + 1) return false;
+        for (var w = 0; w < WIND_SPOTS.length; w++) if (Math.hypot(x - WIND_SPOTS[w][0], z - WIND_SPOTS[w][1]) < 1.4 + pad) return false;
+        if (_inLinkCorridor(x, z, pad)) return false;
+        return true;
+    }
+    function ok(x, z, pad) {
+        return featureFree(x, z, pad) && !_onReserved(x, z, pad) && !_onRoad(x, z, pad) && _inland(x, z, 2.4);
+    }
+
+    // 1) Bercak rumput elips bernada lebih dalam (variasi warna tanah)
+    for (var tr = 0; tr < 90 && D.patches.length < 34; tr++) {
+        var pa = rnd() * Math.PI * 2, pr = Math.sqrt(rnd()) * 21;
+        var px = Math.cos(pa) * pr, pz = Math.sin(pa) * pr;
+        var rx = 1.1 + rnd() * 2.1, rz = 0.9 + rnd() * 1.8;
+        if (!_inland(px, pz, Math.max(rx, rz) + 1.6) || _inLinkCorridor(px, pz, Math.max(rx, rz))) continue;
+        D.patches.push([px, 0.016, pz, rx, 1, rz, rnd() * 3.14]);
+    }
+
+    // 2) Per gedung: halaman, batu pijakan ke jalan, semak sudut, bangku, lampu
+    var yardIdx = 0;
+    CAMPUS_RESERVED.forEach(function (r) {
+        if (DETAIL_YARD_IDS.indexOf(r.id) < 0) return;
+        var cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2;
+        D.yards.push([cx, 0.016 + yardIdx * 0.0008, cz, r.x1 - r.x0 + 0.9, r.z1 - r.z0 + 0.9]);
+        yardIdx++;
+
+        // target jalan terdekat: jalan selatan (x=0), jalan barat (z=0), atau tepi plaza
+        var cands = [
+            [0, Math.max(4.2, Math.min(14.5, cz))],
+            [Math.max(-14.5, Math.min(-4.2, cx)), 0],
+            [Math.max(-3.9, Math.min(3.9, cx)), Math.max(-3.9, Math.min(3.9, cz))]
+        ];
+        var best = null, bd = 1e9;
+        cands.forEach(function (c) { var d = Math.hypot(c[0] - cx, c[1] - cz); if (d < bd) { bd = d; best = c; } });
+        var steps = Math.floor(bd / 0.85), stones = [], blocked = false, inside = false;
+        for (var s = 0; s <= steps && !blocked; s++) {
+            var u = s / steps;
+            var sx = best[0] + (cx - best[0]) * u, sz = best[1] + (cz - best[1]) * u;
+            if (sx > r.x0 - 0.15 && sx < r.x1 + 0.15 && sz > r.z0 - 0.15 && sz < r.z1 + 0.15) { inside = true; break; }
+            if (_onReserved(sx, sz, 0.25)) { blocked = true; break; }         // terhalang gedung lain -> batalkan jalur
+            if (ok(sx, sz, 0.1) && s > 0) stones.push([sx + (rnd() - 0.5) * 0.12, 0.02, sz + (rnd() - 0.5) * 0.12, 1, 1, 1, (rnd() - 0.5) * 0.5]);
+        }
+        if (inside && !blocked) stones.forEach(function (st) { D.stones.push(st); });
+
+        // semak sudut (tiga sudut yang terlihat kamera) + bunga
+        [[r.x1 + 0.5, r.z1 + 0.5, 3], [r.x0 - 0.3, r.z1 + 0.55, 2], [r.x1 + 0.55, r.z0 + 0.2, 2]].forEach(function (c) {
+            for (var k = 0; k < c[2]; k++) {
+                var bx = c[0] + (rnd() - 0.5) * 0.9, bz = c[1] + (rnd() - 0.5) * 0.9;
+                if (!ok(bx, bz, 0.12)) continue;
+                var sc = 0.65 + rnd() * 0.5;
+                D.shrubs.push([bx, 0.2 * sc, bz, sc, sc * (0.75 + rnd() * 0.25), sc, rnd() * 3]);
+            }
+            var fx = c[0] + (rnd() - 0.5) * 1.1, fz = c[1] + (rnd() - 0.5) * 1.1;
+            if (ok(fx, fz, 0.1)) (rnd() < 0.5 ? D.flowersA : D.flowersB).push([fx, 0.12, fz]);
+        });
+
+        // bangku di sisi timur (punggung bangku ke gedung)
+        if (rnd() < 0.65) {
+            var bx2 = r.x1 + 0.9, bz2 = cz + (rnd() - 0.5) * 0.8;
+            if (ok(bx2, bz2, 0.4)) D.benches.push([bx2, 0.08, bz2, Math.PI / 2]);
+        }
+
+        // lampu halaman (maks 10 total, jarak min dari lampu lain)
+        if (D.lamps.length < 10) {
+            var lc = [[r.x1 + 0.85, r.z1 + 0.85], [r.x0 - 0.85, r.z1 + 0.85], [r.x1 + 0.85, r.z0 - 0.85]];
+            for (var q = 0; q < lc.length; q++) {
+                var lx = lc[q][0], lz = lc[q][1];
+                if (!ok(lx, lz, 0.3)) continue;
+                var near = false, all = LAMP_SPOTS.concat(D.lamps);
+                for (var m = 0; m < all.length; m++) if (Math.hypot(all[m][0] - lx, all[m][1] - lz) < 3) { near = true; break; }
+                if (near) continue;
+                D.lamps.push([lx, lz]);
+                break;
+            }
+        }
+    });
+    return D;
+})();
+// Lampu halaman ikut dihitung sebagai LAMP_SPOTS (glow malam + cahaya sinematik di CampusScene).
+LAMP_SPOTS = LAMP_SPOTS.concat(DETAIL.lamps);
+
 // Gerbang pintu masuk: dua tiang + balok + papan nama menyala.
 function addGate(g, A, THREE, x, z, rot) {
     var a = new THREE.Group();
@@ -751,6 +849,49 @@ function addScenery(g, A, THREE) {
     if (patches.length) g.add(instanced(A, THREE, A.box(1, 0.02, 1), 'grass2', patches));
 }
 
+
+// v2027.70 — render DETAIL (semua instanced -> hanya beberapa draw call).
+function addDetail(g, A, THREE) {
+    var rnd = _rng(5150);
+    function tint(lo, hi) { return function (i, c) { var v = lo + rnd() * (hi - lo); c.setRGB(v, v, v * 0.98); }; }
+    if (DETAIL.patches.length) {
+        g.add(instanced(A, THREE, A.cyl(1, 1, 0.02, 18), 'grass3', DETAIL.patches, tint(0.84, 1.1)));
+    }
+    if (DETAIL.yards.length) {
+        DETAIL.yards.forEach(function (y) { g.add(mesh(A, THREE, A.box(y[3], 0.03, y[4]), 'plaza', y[0], y[1], y[2])); });
+    }
+    if (DETAIL.stones.length) {
+        g.add(instanced(A, THREE, A.box(0.56, 0.03, 0.56), 'curb', DETAIL.stones, tint(0.88, 1.04)));
+    }
+    if (DETAIL.shrubs.length) {
+        var sh = instanced(A, THREE, A.sph(0.3, 8, 6), 'leaf2', DETAIL.shrubs, tint(0.8, 1.08));
+        sh.castShadow = true; sh.receiveShadow = true;
+        g.add(sh);
+    }
+    if (DETAIL.flowersA.length) g.add(instanced(A, THREE, A.sph(0.08, 5, 4), 'flowerA', DETAIL.flowersA.map(function (f) { return [f[0], f[1], f[2], 1.3, 1.3, 1.3, 0]; })));
+    if (DETAIL.flowersB.length) g.add(instanced(A, THREE, A.sph(0.08, 5, 4), 'flowerB', DETAIL.flowersB.map(function (f) { return [f[0], f[1], f[2], 1.3, 1.3, 1.3, 0]; })));
+    if (DETAIL.benches.length) {
+        var seats = [], backs = [], legs = [];
+        DETAIL.benches.forEach(function (b) {
+            var th = b[3], s = Math.sin(th), c = Math.cos(th);
+            seats.push([b[0], b[1] + 0.3, b[2], 1, 1, 1, th]);
+            backs.push([b[0] - 0.14 * s, b[1] + 0.45, b[2] - 0.14 * c, 1, 1, 1, th]);
+            [-0.36, 0.36].forEach(function (o) { legs.push([b[0] + o * c, b[1] + 0.13, b[2] - o * s, 1, 1, 1, th]); });
+        });
+        var bs = instanced(A, THREE, A.box(0.9, 0.07, 0.3), 'trunk', seats);
+        var bb = instanced(A, THREE, A.box(0.9, 0.22, 0.05), 'trunk', backs);
+        var bl = instanced(A, THREE, A.box(0.06, 0.26, 0.26), 'metal', legs);
+        [bs, bb, bl].forEach(function (m) { m.castShadow = true; m.receiveShadow = true; g.add(m); });
+    }
+    if (DETAIL.lamps.length) {
+        var poles = [], heads = [], halos = [];
+        DETAIL.lamps.forEach(function (l) { poles.push([l[0], 0.09 + 0.7, l[1]]); heads.push([l[0], 1.58, l[1]]); halos.push([l[0], 0.1, l[1]]); });
+        g.add(instanced(A, THREE, A.cyl(0.035, 0.045, 1.4, 6), 'metal', poles));
+        g.add(instanced(A, THREE, A.sph(0.1, 8, 6), 'lamp', heads));
+        g.add(instanced(A, THREE, A.cyl(0.8, 0.8, 0.01, 14), 'halo', halos));
+    }
+}
+
 // Tanah dasar: pulau organik di tengah laut, plaza, jalan + trotoar + marka, kolam, teluk, taman, lampu.
 export function buildGround(A, THREE) {
     var g = new THREE.Group();
@@ -830,6 +971,7 @@ export function buildGround(A, THREE) {
     g.add(instanced(A, THREE, A.cyl(0.8, 0.8, 0.01, 14), 'halo', halos));
 
     addScenery(g, A, THREE);
+    addDetail(g, A, THREE);
     // Seluruh permukaan tanah menerima bayangan dari bangunan & pohon inti kampus.
     g.traverse(function (o) { if (o.isMesh) o.receiveShadow = true; });
     return g;

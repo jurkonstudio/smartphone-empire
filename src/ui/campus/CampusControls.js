@@ -8,8 +8,11 @@
 var S = Math.SQRT1_2;
 var SQRT3 = Math.sqrt(3); // 1 / sin(elevasi kamera isometrik)
 
+// v2027.70 — zoom awal sedikit lebih dekat: gedung mengisi layar, laut kosong di tepi berkurang.
+var HOME_ZOOM = 1.15;
+
 export function createCampusControls(el, cfg) {
-    var view = { x: 0, z: 0, zoom: 1 };
+    var view = { x: 0, z: 0, zoom: HOME_ZOOM };
     var ptrs = new Map();
     var pinchDist = 0, moved = 0, downT = 0;
     var minZoom = cfg.minZoom || 0.55, maxZoom = cfg.maxZoom || 2.4;
@@ -190,7 +193,7 @@ export function createCampusControls(el, cfg) {
             bnd = { minX: -limit, maxX: limit, minZ: -limit, maxZ: limit };
             view.x = clamp(view.x, bnd.minX, bnd.maxX); view.z = clamp(view.z, bnd.minZ, bnd.maxZ); changed();
         },
-        reset: function () { flyTo(0, 0, 1); },
+        reset: function () { flyTo(0, 0, HOME_ZOOM); },
         dispose: function () {
             if (raf) cancelAnimationFrame(raf);
             raf = 0;
