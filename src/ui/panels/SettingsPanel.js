@@ -37,7 +37,7 @@ import { CloudService } from '../../services/CloudService.js';
 import { PlayerProfileService } from '../../systems/PlayerProfileService.js';
 import { WalletService } from '../../systems/WalletService.js';
 import { WALLET_CATALOG, WALLET_CASH_ONLY } from '../../data/silicon.data.js';
-import { NotificationPrefs, NOTIF_TYPES } from '../../core/NotificationPrefs.js';
+import { NotificationPrefs } from '../../core/NotificationPrefs.js';
 import { clearNotifications, clearHistory } from '../notifications/NotificationRenderer.js';
 
 let _activeTab = 'umum';
@@ -272,22 +272,25 @@ function _tabNotif() {
         })
     );
 
-    // Saklar per jenis: dikunci (redup & tidak bisa diklik) selama saklar utama mati.
-    const typeRows = NOTIF_TYPES.map(function (type) {
-        return _row({
-            label: t('settings.notif.type.' + type),
-            hint: t('settings.notif.type.' + type + '_hint'),
-            switchOn: NotificationPrefs.getTypeFlag(type),
-            attrs: 'data-notifpref="' + type + '"',
+    // Hanya 2 pilihan tambahan; dikunci (redup) selama saklar utama mati.
+    const opts = _section('bell', _pick('Yang ditampilkan', 'What to show'),
+        '<div' + (on ? '' : ' style="opacity:.45;pointer-events:none;" aria-disabled="true"') + '>' +
+        _row({
+            label: _pick('Hanya peringatan & gagal', 'Warnings & failures only'),
+            hint: _pick('Sembunyikan info dan keberhasilan biasa', 'Hide routine info and success notices'),
+            switchOn: NotificationPrefs.isImportantOnly(),
+            attrs: 'data-notifpref="important"',
             disabled: !on
-        });
-    }).join('');
-    const lockStyle = on ? '' : ' style="opacity:.45;pointer-events:none;" aria-disabled="true"';
-    const types = '<div class="settings-section">' +
-        '<div class="settings-section-head">' + renderIcon('settings', 12) + escapeHtml(t('settings.notif.section_types')) + '</div>' +
-        '<div class="settings-list"' + lockStyle + '>' + typeRows + '</div>' +
-        '<div class="settings-lang-hint">' + escapeHtml(t('settings.notif.types_hint')) + '</div>' +
-        '</div>';
+        }) +
+        _row({
+            label: _pick('Berita industri', 'Industry news'),
+            hint: _pick('Berita pasar & kompetitor', 'Market & competitor news'),
+            switchOn: NotificationPrefs.isNewsEnabled(),
+            attrs: 'data-notifpref="news"',
+            disabled: !on
+        }) +
+        '</div>'
+    );
 
     const tools = _section('settings', t('settings.notif.section_tools'),
         '<div' + (on ? '' : ' style="opacity:.45;pointer-events:none;" aria-disabled="true"') + '>' +
@@ -296,7 +299,7 @@ function _tabNotif() {
         _row({ label: t('settings.notif.clear'), hint: t('settings.notif.clear_hint'), action: true, attrs: 'data-notif-action="clear"', chevron: true })
     );
 
-    return main + types + tools;
+    return main + opts + tools;
 }
 
 function _handleNotifToggle(key) {
@@ -309,9 +312,10 @@ function _handleNotifToggle(key) {
         } else {
             ToastService.success(t('settings.notif.enabled_msg'));
         }
-    } else if (NOTIF_TYPES.indexOf(key) !== -1) {
+    } else if (key === 'important' || key === 'news') {
         if (!NotificationPrefs.isEnabled()) return; // terkunci saat saklar utama mati
-        NotificationPrefs.setType(key, !NotificationPrefs.getTypeFlag(key));
+        if (key === 'important') NotificationPrefs.setImportantOnly(!NotificationPrefs.isImportantOnly());
+        else NotificationPrefs.setNews(!NotificationPrefs.isNewsEnabled());
     } else {
         return;
     }
