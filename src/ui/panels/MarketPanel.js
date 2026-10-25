@@ -6,6 +6,7 @@ import { renderPublicOpinionPanel } from './PublicOpinionPanel.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
 import { renderPromotionPanel } from './PromotionPanel.js';
 import { renderChannelPanel } from './ChannelPanel.js';
+import { renderAfterSalesPanel } from './AfterSalesPanel.js';
 import { renderNavShare, renderNavTrends, renderNavPublic } from './MarketNavPanels.js';
 import '../charts/ChartZoomModal.js'; // side-effect: pasang listener [data-chart-zoom]
 
@@ -34,15 +35,17 @@ export function renderMarketPanel(params) {
     var competitorSystem = params.competitorSystem;
     var opinionSystem = params.opinionSystem;
     var channelSystem = params.channelSystem;
+    var afterSalesSystem = params.afterSalesSystem;
 
     const subtabBar = `
-        <div class="subtab-bar">
-            <button class="subtab-btn ${subtab === 'share'       ? 'active' : ''}" data-market-subtab="share">${t('market.subtab.share')}</button>
-            <button class="subtab-btn ${subtab === 'competitors' ? 'active' : ''}" data-market-subtab="competitors">${t('market.subtab.competitors')}</button>
-            <button class="subtab-btn ${subtab === 'trends'      ? 'active' : ''}" data-market-subtab="trends">${t('market.subtab.trends')}</button>
-            <button class="subtab-btn ${subtab === 'promo'       ? 'active' : ''}" data-market-subtab="promo">${t('market.subtab.promo')}</button>
-            <button class="subtab-btn ${subtab === 'channels'    ? 'active' : ''}" data-market-subtab="channels">${LanguageService.getLang() === 'en' ? 'Channels' : 'Kanal'}</button>
-            <button class="subtab-btn ${subtab === 'public'      ? 'active' : ''}" data-market-subtab="public">${t('market.subtab.public')}</button>
+        <div class="subtab-bar" style="overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
+            <button style="flex:1 0 auto;white-space:nowrap;padding-left:10px;padding-right:10px;" class="subtab-btn ${subtab === 'share'       ? 'active' : ''}" data-market-subtab="share">${t('market.subtab.share')}</button>
+            <button style="flex:1 0 auto;white-space:nowrap;padding-left:10px;padding-right:10px;" class="subtab-btn ${subtab === 'competitors' ? 'active' : ''}" data-market-subtab="competitors">${t('market.subtab.competitors')}</button>
+            <button style="flex:1 0 auto;white-space:nowrap;padding-left:10px;padding-right:10px;" class="subtab-btn ${subtab === 'trends'      ? 'active' : ''}" data-market-subtab="trends">${t('market.subtab.trends')}</button>
+            <button style="flex:1 0 auto;white-space:nowrap;padding-left:10px;padding-right:10px;" class="subtab-btn ${subtab === 'promo'       ? 'active' : ''}" data-market-subtab="promo">${t('market.subtab.promo')}</button>
+            <button style="flex:1 0 auto;white-space:nowrap;padding-left:10px;padding-right:10px;" class="subtab-btn ${subtab === 'channels'    ? 'active' : ''}" data-market-subtab="channels">${LanguageService.getLang() === 'en' ? 'Channels' : 'Kanal'}</button>
+            <button style="flex:1 0 auto;white-space:nowrap;padding-left:10px;padding-right:10px;" class="subtab-btn ${subtab === 'service'     ? 'active' : ''}" data-market-subtab="service">${LanguageService.getLang() === 'en' ? 'Service' : 'Servis'}</button>
+            <button style="flex:1 0 auto;white-space:nowrap;padding-left:10px;padding-right:10px;" class="subtab-btn ${subtab === 'public'      ? 'active' : ''}" data-market-subtab="public">${t('market.subtab.public')}</button>
         </div>
     `;
     let body = '';
@@ -50,6 +53,7 @@ export function renderMarketPanel(params) {
     else if (subtab === 'trends') body = _renderTrends(marketSystem) + _navCards(renderNavTrends);
     else if (subtab === 'promo') body = renderPromotionPanel();
     else if (subtab === 'channels') body = renderChannelPanel({ channelSystem: channelSystem });
+    else if (subtab === 'service') body = renderAfterSalesPanel({ afterSalesSystem: afterSalesSystem });
     else if (subtab === 'public') body = renderPublicOpinionPanel({ opinionSystem }) + _navCards(renderNavPublic);
     else body = _renderShare(marketSystem) + _navCards(renderNavShare);
     return subtabBar + body;
