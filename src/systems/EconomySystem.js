@@ -33,6 +33,7 @@ export class EconomySystem {
     setPlants(cps) { this.plants = cps; }
     setChannels(ch) { this.channels = ch; }
     setAfterSales(as) { this.afterSales = as; }
+    setEcosystem(eco) { this.ecosystem = eco; }
 
     start() {
         this._unsubMonth = bus.on('time:month-changed', (snapshot) => {
@@ -105,12 +106,16 @@ export class EconomySystem {
         const channelFixed = this.channels ? this.channels.getMonthlyFixedCost() : 0;
         // [Pasca-jual] klaim garansi, dukungan update OS, biaya tetap pusat servis (dihitung sekali per bulan).
         const afterSalesCost = this.afterSales ? this.afterSales.processMonth(snapshot) : 0;
-        const expenseBase = salary + fixed + loanInterest + upkeep + infraTax + channelFixed + afterSalesCost;
+        // [Ekosistem] HPP & biaya tetap aksesori, biaya operasi App Store (dihitung sekali per bulan).
+        const ecoCost = this.ecosystem ? this.ecosystem.processMonth() : 0;
+        const expenseBase = salary + fixed + loanInterest + upkeep + infraTax + channelFixed + afterSalesCost + ecoCost;
         const expense = Math.round(expenseBase * mul);
 
         // ---- Pemasukan (info saja, sudah masuk cash via harian) ----
         const plantRevenue = this.plants ? this.plants.takeMonthlyRevenue() : 0;
-        const income = Math.round(this._monthRevenue + plantRevenue);
+        // [Ekosistem] pendapatan aksesori & komisi App Store bulan ini (kas ditambah di sini).
+        const ecoRevenue = this.ecosystem ? this.ecosystem.takeMonthlyRevenue() : 0;
+        const income = Math.round(this._monthRevenue + plantRevenue + ecoRevenue);
 
         // ---- Laba sebelum pajak ----
         const preTax = income - expense;
@@ -142,7 +147,7 @@ export class EconomySystem {
             net,
             cash: cashAfter,
             breakdown: {
-                salary, fixed, loanInterest, loanPrincipal, depositInterest, upkeep, infraTax, plantRevenue, afterSales: afterSalesCost,
+                salary, fixed, loanInterest, loanPrincipal, depositInterest, upkeep, infraTax, plantRevenue, afterSales: afterSalesCost, ecosystem: ecoCost, ecosystemRevenue: ecoRevenue,
                 tax,
                 expenseRaw: expenseBase
             }

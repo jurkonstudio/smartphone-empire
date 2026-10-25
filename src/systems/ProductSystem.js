@@ -49,6 +49,9 @@ export class ProductSystem {
     // [pasca-jual] AfterSalesSystem: pengali permintaan dari garansi, kepuasan servis, dukungan OS, dan stigma cacat (1.0 bila tidak ada).
     setAfterSales(as) { this._afterSales = as; }
     _afterSalesFactor(p) { return this._afterSales ? this._afterSales.getDemandFactor(p) : 1.0; }
+    // [ekosistem] EcosystemSystem: pengali kecil dari skor lock-in (1.0 bila belum ada aksesori / App Store).
+    setEcosystem(eco) { this._ecosystem = eco; }
+    _ecosystemFactor(p) { return this._ecosystem ? this._ecosystem.getDemandFactor(p) : 1.0; }
 
     // Sistem pasar: dipakai untuk memperkirakan tekanan kompetitor di wizard.
     setMarketSystem(market) { this._market = market; }
@@ -704,7 +707,8 @@ export class ProductSystem {
         var marketingF = this._getMarketingFactor(p.id);
         var osFactor = this._getOsFactor(p);
         var trendF = this._getTrendFactor(p.stats);
-        var competitorF = Math.max(0.4, 1 / (1 + (p.competitorPressure || 0)));
+        var ecoRelief = this._ecosystem ? this._ecosystem.getCompetitorRelief() : 1.0; // [ekosistem] lock-in menekan tekanan kompetitor
+        var competitorF = Math.max(0.4, 1 / (1 + (p.competitorPressure || 0) * ecoRelief));
         var lifecycleF = this._getLifecycleFactor(p);
         var techF = this._getTechFactor(p);
         var navF = this._nav ? this._nav.getDemandFactor(p) : 1.0;
@@ -713,6 +717,7 @@ export class ProductSystem {
         var featureF = this._getFeatureFactor(p);   // [Fitur Ponsel] 1.0 untuk produk lama
         var channelF = this._channelReach(p);       // [Kanal] 1.0 bila tidak ada kanal aktif
         var afterSalesF = this._afterSalesFactor(p); // [Pasca-jual] 1.0 bila belum ada data
+        var ecosystemF = this._ecosystemFactor(p);   // [Ekosistem] 1.0 bila belum ada aksesori / App Store
 
         // Noise harian dihaluskan (AR1) supaya penjualan tidak naik-turun liar.
         var sm = BALANCE.macro.demandNoiseSmoothing;
@@ -722,7 +727,7 @@ export class ProductSystem {
 
         var demand = baseDemand * baseMult * qualityF * priceF * repF
                      * marketingF * osFactor * trendF * competitorF
-                     * lifecycleF * techF * navF * eventF * featureF * channelF * afterSalesF * noise;
+                     * lifecycleF * techF * navF * eventF * featureF * channelF * afterSalesF * ecosystemF * noise;
 
         return Math.max(0, Math.round(demand));
     }
