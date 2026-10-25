@@ -1,0 +1,21 @@
+// Tes saklar notifikasi sederhana. Jalankan: node tools/notif-prefs.test.mjs
+const store = {};
+globalThis.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } };
+globalThis.document = { documentElement: { setAttribute() {}, lang: '' }, body: { classList: { add() {}, remove() {}, toggle() {} } }, getElementById: () => null, createElement: () => ({ style: {}, classList: { add() {}, remove() {} }, appendChild() {}, addEventListener() {} }), querySelector: () => null, addEventListener() {} };
+globalThis.window = { addEventListener() {}, matchMedia: () => ({ matches: false, addEventListener() {} }) };
+const { NotificationPrefs: N } = await import('../src/core/NotificationPrefs.js');
+let fails = 0; const ok = (c, m) => { if (!c) { fails++; console.error('GAGAL:', m); } else console.log('ok   ', m); };
+const T = ['success', 'info', 'warning', 'error', 'news'];
+const on = () => T.filter(x => N.isTypeEnabled(x)).join(',');
+ok(on() === '', 'bawaan: semua mati');
+N.setEnabled(true);
+ok(on() === 'success,info,warning,error,news', 'utama nyala: semua tampil');
+N.setImportantOnly(true);
+ok(on() === 'warning,error,news', 'hanya penting: peringatan, gagal, berita');
+N.setNews(false);
+ok(on() === 'warning,error', 'berita dimatikan');
+N.setImportantOnly(false);
+ok(on() === 'success,info,warning,error', 'penting dimatikan: semua kecuali berita');
+N.setEnabled(false);
+ok(on() === '', 'utama mati menahan semua');
+console.log(fails ? ('\n' + fails + ' GAGAL') : '\nSEMUA LULUS'); process.exit(fails ? 1 : 0);
