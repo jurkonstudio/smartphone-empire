@@ -44,6 +44,12 @@ function _fmtTarget(key, v) {
     return formatCurrency(v);
 }
 
+// Label item target; target rival memakai nama rival ("Kalahkan Nokia").
+function _itemLabel(it) {
+    if (it.key === 'rival') return _L(TARGET_META.rival.label) + (it.rivalName || '');
+    return _L(TARGET_META[it.key].label);
+}
+
 function _row(label, value, color) {
     return '<div class="sum-row"><span>' + escapeHtml(label) + '</span><b' + (color ? ' style="color:' + color + ';"' : '') + '>' + escapeHtml(value) + '</b></div>';
 }
@@ -86,7 +92,7 @@ function _reportHtml(r) {
     if (r.graded) {
         targets = r.items.map(function (it) {
             var ok = it.passed;
-            return '<div class="sum-row"><span>' + (ok ? '✔ ' : '✖ ') + escapeHtml(_L(TARGET_META[it.key].label)) + '</span>' +
+            return '<div class="sum-row"><span>' + (ok ? '✔ ' : '✖ ') + escapeHtml(_itemLabel(it)) + '</span>' +
                 '<b style="color:' + (ok ? 'var(--success)' : 'var(--danger)') + ';">' + escapeHtml(_fmtTarget(it.key, it.actual)) +
                 ' <span style="font-weight:400;color:var(--text-mute);">/ ' + escapeHtml(_fmtTarget(it.key, it.target)) + '</span></b></div>';
         }).join('');
@@ -146,13 +152,20 @@ function _focusBtn(p) {
 }
 
 function _targetsBlock(t) {
-    return TARGET_KEYS.map(function (k) {
+    var rows = TARGET_KEYS.map(function (k) {
         return _row(_L(TARGET_META[k].label), _fmtTarget(k, t[k]));
     }).join('');
+    if (t.rival) {
+        rows += _row(_itemLabel({ key: 'rival', rivalName: t.rival.name }),
+            _t('pangsa lebih tinggi (th. lalu ', 'higher share (last yr ') + _fmtTarget('rival', t.rival.baseShare) + ')');
+    }
+    return rows;
 }
 
 function _focusHtml(r, ctx) {
     var base = ctx.annual.previewBaseTargets();
+    var rv = ctx.annual.previewRival();
+    if (rv) base.rival = rv;
     var opts = ctx.annual.getFocusPreview(r);
     return '<div class="modal-title">' + escapeHtml(_t('Fokus Strategis ', 'Strategic Focus ') + r.nextYear) + '</div>' +
         '<div class="modal-sub">' + escapeHtml(_t('Dewan menetapkan target dasar berikut. Pilih satu fokus; ada yang menaikkan target.', 'The board sets these base targets. Pick one focus; some raise the targets.')) + '</div>' +
@@ -215,7 +228,7 @@ export function renderBoardTargetsCard(state) {
         var actual = it.hasData ? _fmtTarget(it.key, it.actual) : '—';
         return '<div style="margin-top:8px;">' +
             '<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;">' +
-                '<span>' + (it.passed ? '✔ ' : '') + escapeHtml(_L(TARGET_META[it.key].label)) + '</span>' +
+                '<span>' + (it.passed ? '✔ ' : '') + escapeHtml(_itemLabel(it)) + '</span>' +
                 '<span style="color:' + (it.passed ? 'var(--success)' : 'var(--text-mute)') + ';">' + escapeHtml(actual) + ' / ' + escapeHtml(_fmtTarget(it.key, it.target)) + '</span>' +
             '</div>' +
             '<div style="height:5px;border-radius:3px;background:var(--border);margin-top:4px;overflow:hidden;">' +
