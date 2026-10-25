@@ -20,7 +20,7 @@ export const CLOUD = {
     slots: 1,
     defaultSlot: 1,
     maxSaveBytes: 4 * 1024 * 1024,
-    autoUploadMinMs: 120000,
+    autoUploadMinMs: 30000,
     tables:  { saves: 'game_saves', heads: 'save_heads', profiles: 'profiles' },
     buckets: { player: 'player-assets', game: 'game-assets' },
     authStorageKey: 'smartphone-empire:supabase-auth:' + _projectRef(),
