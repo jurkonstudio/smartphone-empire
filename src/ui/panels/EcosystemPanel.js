@@ -4,7 +4,7 @@
 import { t } from '../../core/LanguageService.js';
 import { formatCurrency } from '../../utils/format.js';
 import { ensureRegionalStyle } from './RegionalStyle.js';
-import { ECO_LINES, ECO_TIERS, ECO_TIER_META } from '../../data/ecosystem.data.js';
+import { ECO_LINES, ECO_TIERS, ECO_TIER_META, ECO_SERVICES, SERVICE_TIERS, SERVICE_TIER_META } from '../../data/ecosystem.data.js';
 
 function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -110,6 +110,59 @@ function _lineCard(sys, line) {
         '</div>';
 }
 
+function _serviceCard(sys, svc) {
+    var p = sys.getServicePreview(svc.id);
+    if (!p) return '';
+    var name = esc(t(svc.nameKey));
+    if (!p.available) {
+        var why = p.availabilityReason === 'locked'
+            ? t('eco.svc.locked', { year: svc.minYear })
+            : t('eco.svc.unavailable', { feature: t('eco.svc.feat.' + svc.id) });
+        return '<div class="card" style="opacity:.6"><div class="card-title">' + name + '</div>' +
+            '<div class="rg-desc">' + esc(t(svc.descKey)) + '</div>' +
+            '<div class="rg-row-meta">' + esc(why) + '</div></div>';
+    }
+    var tiers = SERVICE_TIERS.map(function (tier) {
+        return '<button class="' + (p.tier === tier ? 'btn-primary' : 'btn-secondary') + '" data-eco-svc-tier="' + esc(svc.id) + '" data-eco-val="' + tier + '"' +
+            (p.locked && p.tier !== tier ? ' disabled' : '') + '>' + esc(t(SERVICE_TIER_META[tier].nameKey)) + '</button>';
+    }).join(' ');
+    var priceRow;
+    if (p.tier === 'free') {
+        priceRow = '<div class="rg-row-meta">' + esc(t('eco.svc.free')) + '</div>';
+    } else {
+        var priceDis = p.locked ? ' disabled' : '';
+        priceRow = '<div style="display:flex;align-items:center;gap:8px;">' +
+            '<button class="btn-secondary" style="flex:1" data-eco-svc-price="' + esc(svc.id) + '" data-eco-val="-1"' +
+            (p.price <= p.priceMin + 1e-9 ? ' disabled' : priceDis) + '>−</button>' +
+            '<b style="min-width:72px;text-align:center">' + esc(money(p.price)) + '</b>' +
+            '<button class="btn-secondary" style="flex:1" data-eco-svc-price="' + esc(svc.id) + '" data-eco-val="1"' +
+            (p.price >= p.priceMax - 1e-9 ? ' disabled' : priceDis) + '>+</button></div>';
+    }
+    var action;
+    if (p.open) {
+        action = '<button class="btn-secondary" data-eco-svc-close="' + esc(svc.id) + '"' + (p.closeLocked ? ' disabled' : '') + '>' +
+            esc(t('eco.svc.close')) + '</button>' +
+            (p.closeLocked ? ' <span class="rg-row-meta">' + esc(t('eco.line.committed', { n: Math.ceil(p.commitLeft) })) + '</span>' : '');
+    } else {
+        action = '<button class="' + (p.canOpen ? 'btn-primary' : 'btn-secondary') + '" data-eco-svc-open="' + esc(svc.id) + '"' +
+            (p.canOpen ? '' : ' disabled') + '>' + esc(t('eco.svc.open')) + ' · ' + esc(money(p.setupCost)) + '</button>';
+    }
+    return '<div class="card"><div class="card-title">' + name + (p.open ? '' : ' · ' + esc(t('eco.line.notOpen'))) + '</div>' +
+        '<div class="rg-desc">' + esc(t(svc.descKey)) + '</div>' +
+        '<div class="rg-row"><div class="rg-row-main"><div class="rg-row-name">' + esc(t('eco.line.tier')) + '</div>' +
+        '<div class="rg-btn-row">' + tiers + '</div></div></div>' +
+        (p.tier === 'free' ? '' : '<div class="rg-row"><div class="rg-row-main"><div class="rg-row-name">' + esc(t('eco.line.price')) + '</div>' + priceRow + '</div></div>') +
+        '<div class="rg-kpis">' +
+            kpi(t('eco.svc.subs'), int(p.subscribers)) +
+            kpi(t('eco.line.revenue'), money(p.revenue)) +
+            kpi(t('eco.line.cost'), money(p.cost)) +
+            kpi(t('eco.line.margin'), pct(p.margin, 0)) +
+        '</div>' +
+        '<div class="rg-btn-row">' + action + '</div>' +
+        (p.locked && p.open ? '<div class="rg-row-meta">' + esc(t('eco.line.priceLocked', { n: Math.ceil(p.lockLeft) })) + '</div>' : '') +
+        '</div>';
+}
+
 export function renderEcosystemPanel(params) {
     ensureRegionalStyle();
     var sys = params.ecosystemSystem;
@@ -118,5 +171,6 @@ export function renderEcosystemPanel(params) {
     var sp = sys.getStorePreview();
     var lines = ECO_LINES.map(function (l) { return _lineCard(sys, l); }).join('');
     var link = '<div class="rg-btn-row"><button class="btn-secondary" data-nav="products" data-nav-sub="accessories">' + esc(t('eco.prod.view')) + '</button></div>';
-    return _summaryCard(sum) + link + _storeCard(sp) + lines;
+    var services = ECO_SERVICES.map(function (v) { return _serviceCard(sys, v); }).join('');
+    return _summaryCard(sum) + link + _storeCard(sp) + services + lines;
 }
