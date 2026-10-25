@@ -15,6 +15,11 @@ function _infraLabel() {
     return 'Pajak & utilitas infrastruktur';
 }
 
+function _ecoLabel() {
+    try { return document.documentElement.lang === 'en' || (window.__game && window.__game.LanguageService.getLang() === 'en') ? 'Ecosystem (accessories, App Store)' : 'Ekosistem (aksesori, App Store)'; }
+    catch (err) { return 'Ekosistem (aksesori, App Store)'; }
+}
+
 function _afterSalesLabel() {
     try { return document.documentElement.lang === 'en' || (window.__game && window.__game.LanguageService.getLang() === 'en') ? 'After-sales (claims, OS support, service)' : 'Pasca-jual (klaim, dukungan OS, servis)'; }
     catch (err) { return 'Pasca-jual (klaim, dukungan OS, servis)'; }
@@ -30,6 +35,7 @@ function _show(e) {
         <div class="sum-row"><span>${t('monthly.salary')}</span><b>-${fmt(e.breakdown.salary)}</b></div>
         <div class="sum-row"><span>${t('monthly.fixed')}</span><b>-${fmt(e.breakdown.fixed)}</b></div>
         ${(e.breakdown.infraTax || 0) > 0 ? `<div class="sum-row"><span>${_infraLabel()}</span><b>-${fmt(e.breakdown.infraTax)}</b></div>` : ''}
+        ${(e.breakdown.ecosystem || 0) > 0 ? `<div class="sum-row"><span>${_ecoLabel()}</span><b>-${fmt(e.breakdown.ecosystem)}</b></div>` : ''}
         ${(e.breakdown.afterSales || 0) > 0 ? `<div class="sum-row"><span>${_afterSalesLabel()}</span><b>-${fmt(e.breakdown.afterSales)}</b></div>` : ''}
         <div class="sum-row"><span>${t('monthly.loan_interest')}</span><b>-${fmt(e.breakdown.loanInterest)}</b></div>
         <div class="sum-row"><span>${t('monthly.tax')}</span><b>-${fmt(e.tax)}</b></div>
