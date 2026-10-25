@@ -1,6 +1,26 @@
 {
-  "latest": "0.2.4",
+  "latest": "0.2.5",
   "releases": [
+    {
+      "version": "0.2.5",
+      "date": "2026-10-25",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Tab baru Produk > Aksesori: tampilan visual earbuds, jam pintar, dan charger. Bentuk dan warna mengikuti tier (Dasar, Menengah, Premium).",
+            "en": "New Products > Accessories tab: visuals for earbuds, smartwatches, and chargers. Shape and color follow the tier (Basic, Mid, Premium)."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Lini aksesori yang belum dibuka tampil abu-abu dengan label. Tab Pasar > Ekosistem kini punya tombol tautan ke tab ini.",
+            "en": "Accessory lines that are not open yet appear gray with a label. Market > Ecosystem now has a shortcut button to this tab."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.4",
       "date": "2026-10-25",

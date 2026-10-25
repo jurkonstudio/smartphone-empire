@@ -168,7 +168,7 @@ var activeMarketSubtab = 'share';
 var activeHqSubtab = 'overview';
 var NAV_SUBTABS = {
     research: ['tech', 'os', 'manufaktur', 'chip'],
-    products: ['design', 'catalog', 'sales', 'chip'],
+    products: ['design', 'catalog', 'accessories', 'sales', 'chip'],
     market: ['share', 'competitors', 'trends', 'promo', 'channels', 'service', 'ecosystem', 'public'],
     team: ['overview', 'team', 'exchange', 'bank']
 };
@@ -336,7 +336,7 @@ function renderView(opts) {
         else if (activeView === 'profile') html = renderCompanyProfilePanel({ teamSystem: teamSystem, marketSystem: market, competitors: competitors, opinionSystem: opinion });
         else if (activeView === 'team') html = renderHqPanel({ subtab: activeHqSubtab, state: state.get(), timeSnapshot: getTime(), researchSystem: research, teamSystem: teamSystem, stockSystem: stockSystem });
         else if (activeView === 'research') html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os, chipResearchSystem: chipResearch, componentPlantSystem: componentPlants, assemblySystem: assemblySystem });
-        else if (activeView === 'products') html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os });
+        else if (activeView === 'products') html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os, ecosystemSystem: ecosystem });
         else if (activeView === 'market') html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion, channelSystem: channels, afterSalesSystem: afterSales, ecosystemSystem: ecosystem });
         else if (activeView === 'settings') html = renderSettingsPanel();
         else if (activeView === 'guide') html = renderGuidePanel();
