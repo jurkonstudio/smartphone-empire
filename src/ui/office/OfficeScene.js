@@ -1657,8 +1657,9 @@ export function createOfficeScene(THREE, container, gameState) {
     applyCardLayout();
 
     var hint = document.createElement('div');
+    hint.className = 'map-hint';
     hint.style.cssText = 'position:absolute;left:12px;bottom:10px;z-index:2;font-size:11px;pointer-events:none;' +
-        'color:var(--text-tertiary);max-width:80%;transition:opacity .4s;';
+        'max-width:80%;transition:opacity .4s;';
     hint.textContent = t('office.hint');
     container.appendChild(hint);
     var hintGone = false;
