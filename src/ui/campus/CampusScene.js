@@ -488,7 +488,7 @@ export function createCampusScene(THREE, container, gameState) {
             list.push({
                 key: key, id: key, name: getBuildingName(key),
                 level: info.level, max: info.max,
-                x: m.cx, y: m.top + 0.45, z: m.cz,
+                x: m.cx, y: m.top + 1.1, z: m.cz,
                 prio: (CAMPUS_BY_ID[key] && CAMPUS_BY_ID[key].prio !== undefined) ? CAMPUS_BY_ID[key].prio : 2,
                 alert: alerts[key] ? alerts[key].tone : ''
             });

@@ -17,12 +17,14 @@ import { blendObj } from './DayCycle.js';
 // OfficeScene), supaya tampilan Office tidak ikut berubah.
 export var CAMPUS_LOOK = {
     light: {
-        hemiSky: 0xeaf2ff, hemiGround: 0xc2cfb8, hemiI: 1.05,
-        sunCol: 0xffe6c2, sunI: 3.0,
-        fillCol: 0xcfe0ff, fillI: 0.6,
-        rimCol: 0xe3ecff, rimI: 0.6,
-        envI: 0.55, exposure: 1.04,
-        aoOpacity: 0.38,
+        // v2027.70 — kontras siang: hemi diturunkan agar warna tidak pucat/"washed out" (ACES meredam saturasi),
+        // matahari sedikit dinaikkan supaya sisi dinding & bayangan lebih tegas. Atur ulang bila terlalu gelap.
+        hemiSky: 0xe6efff, hemiGround: 0xb4c4a6, hemiI: 0.82,
+        sunCol: 0xffe2b8, sunI: 3.35,
+        fillCol: 0xcfe0ff, fillI: 0.45,
+        rimCol: 0xe3ecff, rimI: 0.7,
+        envI: 0.42, exposure: 1.0,
+        aoOpacity: 0.46,
         colors: { roofAlt: 0xa3adbb }
     },
     dark: {
