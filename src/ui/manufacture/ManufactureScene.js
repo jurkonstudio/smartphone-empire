@@ -1741,7 +1741,8 @@ export function createManufactureScene(THREE, container, gameState) {
     }
     applyCardLayout();
     var hint = document.createElement('div');
-    hint.style.cssText = 'position:absolute;left:12px;bottom:10px;z-index:2;font-size:11px;pointer-events:none;color:var(--text-tertiary);max-width:80%;transition:opacity .4s;';
+    hint.className = 'map-hint';
+    hint.style.cssText = 'position:absolute;left:12px;bottom:10px;z-index:2;font-size:11px;pointer-events:none;max-width:80%;transition:opacity .4s;';
     hint.textContent = ms('hint');
     container.appendChild(hint);
     var legendBtn = document.createElement('button');
