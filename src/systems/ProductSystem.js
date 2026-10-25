@@ -46,6 +46,9 @@ export class ProductSystem {
     // [kanal distribusi] ChannelSystem: pengali jangkauan permintaan & retensi pendapatan (netral bila tidak ada kanal aktif).
     setChannels(ch) { this._channels = ch; }
     _channelReach(p) { return this._channels ? this._channels.getReachFactor(p) : 1.0; }
+    // [pasca-jual] AfterSalesSystem: pengali permintaan dari garansi, kepuasan servis, dukungan OS, dan stigma cacat (1.0 bila tidak ada).
+    setAfterSales(as) { this._afterSales = as; }
+    _afterSalesFactor(p) { return this._afterSales ? this._afterSales.getDemandFactor(p) : 1.0; }
 
     // Sistem pasar: dipakai untuk memperkirakan tekanan kompetitor di wizard.
     setMarketSystem(market) { this._market = market; }
@@ -709,6 +712,7 @@ export class ProductSystem {
         var eventF = getEraEventDemandFactor(data, p);
         var featureF = this._getFeatureFactor(p);   // [Fitur Ponsel] 1.0 untuk produk lama
         var channelF = this._channelReach(p);       // [Kanal] 1.0 bila tidak ada kanal aktif
+        var afterSalesF = this._afterSalesFactor(p); // [Pasca-jual] 1.0 bila belum ada data
 
         // Noise harian dihaluskan (AR1) supaya penjualan tidak naik-turun liar.
         var sm = BALANCE.macro.demandNoiseSmoothing;
@@ -718,7 +722,7 @@ export class ProductSystem {
 
         var demand = baseDemand * baseMult * qualityF * priceF * repF
                      * marketingF * osFactor * trendF * competitorF
-                     * lifecycleF * techF * navF * eventF * featureF * channelF * noise;
+                     * lifecycleF * techF * navF * eventF * featureF * channelF * afterSalesF * noise;
 
         return Math.max(0, Math.round(demand));
     }

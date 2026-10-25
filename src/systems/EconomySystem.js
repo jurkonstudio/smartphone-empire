@@ -32,6 +32,7 @@ export class EconomySystem {
     setEconBrakes(eb) { this.econ = eb; }
     setPlants(cps) { this.plants = cps; }
     setChannels(ch) { this.channels = ch; }
+    setAfterSales(as) { this.afterSales = as; }
 
     start() {
         this._unsubMonth = bus.on('time:month-changed', (snapshot) => {
@@ -102,7 +103,9 @@ export class EconomySystem {
         }
         // [Kanal distribusi] biaya tetap bulanan (operator, online, toko sendiri).
         const channelFixed = this.channels ? this.channels.getMonthlyFixedCost() : 0;
-        const expenseBase = salary + fixed + loanInterest + upkeep + infraTax + channelFixed;
+        // [Pasca-jual] klaim garansi, dukungan update OS, biaya tetap pusat servis (dihitung sekali per bulan).
+        const afterSalesCost = this.afterSales ? this.afterSales.processMonth(snapshot) : 0;
+        const expenseBase = salary + fixed + loanInterest + upkeep + infraTax + channelFixed + afterSalesCost;
         const expense = Math.round(expenseBase * mul);
 
         // ---- Pemasukan (info saja, sudah masuk cash via harian) ----
@@ -139,7 +142,7 @@ export class EconomySystem {
             net,
             cash: cashAfter,
             breakdown: {
-                salary, fixed, loanInterest, loanPrincipal, depositInterest, upkeep, infraTax, plantRevenue,
+                salary, fixed, loanInterest, loanPrincipal, depositInterest, upkeep, infraTax, plantRevenue, afterSales: afterSalesCost,
                 tax,
                 expenseRaw: expenseBase
             }
