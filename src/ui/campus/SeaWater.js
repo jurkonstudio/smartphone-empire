@@ -1,4 +1,5 @@
 // FILE: src/ui/campus/SeaWater.js
+// v2027.72 — goresan putih di laut terbuka dikurangi (sinus frekuensi tinggi, kilau, pantulan langit). Revert: lihat komentar v2027.72.
 // Laut hidup & realistis untuk peta 3D Kampus dan Manufaktur (dipakai bersama).
 //
 // Pengganti kotak biru datar + lempengan "perairan dangkal/busa" statis. Satu bidang datar (y = -0.5)
@@ -158,7 +159,7 @@ var FRAG = [
     '    h += (vn(p * 2.3 - vec2(t * 0.28, t * 0.18)) - 0.5) * 0.14;',
     '    #endif',
     '    #if SEA_Q >= 2',
-    '    h += sin(dot(p, vec2(-0.85, -0.5)) * 4.6 + t * 2.3 + 0.7) * 0.07;',
+    '    h += sin(dot(p, vec2(-0.85, -0.5)) * 4.6 + t * 2.3 + 0.7) * 0.03;',   // v2027.72: 0.07 -> 0.03 (sinus lurus frekuensi tinggi = goresan putih)
     '    h += (vn(p * 8.0 + vec2(-t * 0.5, t * 0.3)) - 0.5) * 0.07;',
     '    #endif',
     '    return h;',
@@ -202,13 +203,13 @@ var FRAG = [
     '    // pantulan langit (fresnel; kamera isometrik rendah sehingga diperkuat)',
     '    float ndv = max(dot(N, V), 0.0);',
     '    float fres = 0.02 + 0.98 * pow(1.0 - ndv, 5.0);',
-    '    col = mix(col, uSky * uLit, clamp(fres * 2.4 + 0.03, 0.0, 0.5));',
+    '    col = mix(col, uSky * uLit, clamp(fres * 2.4 + 0.03, 0.0, 0.42));',
     '',
     '    // kilau matahari/bulan: titik-titik berkelip di puncak riak',
     '    vec3 H = normalize(uGlintDir + V);',
     '    float nh = max(dot(N, H), 0.0);',
     '    float tw = pow(vn(p * 3.2 + vec2(t * 0.9, -t * 0.6)), 2.0) * 1.25;',
-    '    float spec = pow(nh, 320.0) * 0.8 * tw + pow(nh, 60.0) * 0.02;',
+    '    float spec = pow(nh, 320.0) * 0.55 * tw + pow(nh, 60.0) * 0.02;',
     '    col += uSun * spec * uGlint * smoothstep(0.3, 2.2, dd + 1.0);',
     '',
     '    // busa: swash tepi (maju-mundur) + garis ombak merambat ke pantai',

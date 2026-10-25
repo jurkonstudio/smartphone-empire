@@ -389,19 +389,35 @@ export function buildCampusFar(THREE, parent, ox) {
         if (id === 'billboard') { F.piece(F.boxG, 'window', 2.2, h, 0.3, sp[0], h / 2, sp[1]); return; }
         if (id === 'monument') { F.piece(F.cylG, 'plaza', 0.5, h, 0.5, sp[0], h / 2, sp[1]); return; }
         var w = id === 'arena' ? 3.8 : 2.8;
-        F.piece(F.boxG, 'wall', w, h, w, sp[0], h / 2, sp[1]);
-        F.piece(F.boxG, 'window', w + 0.1, 0.22, w + 0.1, sp[0], h + 0.05, sp[1]);
+        // v2027.72 — siluet lebih hidup: halaman paving, podium + tingkat atas (setback), pita jendela & atap beda warna
+        F.piece(F.boxG, 'plaza', w + 1.3, 0.05, w + 1.3, sp[0], 0.03, sp[1]);
+        if (id === 'arena' || id === 'port' || id === 'housing') {
+            F.piece(F.boxG, 'wall', w, h, w, sp[0], h / 2, sp[1]);
+            F.piece(F.boxG, 'window', w + 0.1, 0.22, w + 0.1, sp[0], h + 0.05, sp[1]);
+            return;
+        }
+        var ph = h * 0.58;
+        F.piece(F.boxG, 'wall', w, ph, w, sp[0], ph / 2, sp[1]);
+        F.piece(F.boxG, 'window', w + 0.08, 0.18, w + 0.08, sp[0], ph * 0.55, sp[1]);
+        F.piece(F.boxG, 'curb', w + 0.14, 0.1, w + 0.14, sp[0], ph + 0.05, sp[1]);
+        var uw = w * 0.66, uh = h - ph;
+        F.piece(F.boxG, 'wall', uw, uh, uw, sp[0] + 0.15, ph + uh / 2, sp[1] - 0.15);
+        F.piece(F.boxG, 'window', uw + 0.08, 0.2, uw + 0.08, sp[0] + 0.15, h + 0.05, sp[1] - 0.15);
     });
 
     // pepohonan di pinggir pulau (di luar inti & di luar jalur jembatan)
     var rnd = rngFn(77), i, n = 0;
-    for (i = 0; i < 90 && n < 16; i++) {
-        var th = rnd() * Math.PI * 2, dist = islandRadius(th) * (0.64 + rnd() * 0.24);
+    for (i = 0; i < 160 && n < 28; i++) {      // v2027.72 — 16 -> 28 pohon
+        var th = rnd() * Math.PI * 2, dist = islandRadius(th) * (0.6 + rnd() * 0.3);
         var tx = Math.cos(th) * dist, tz = Math.sin(th) * dist;
         if (Math.abs(tx) < 15 && Math.abs(tz) < 15) continue;
         if (tx < -14 && Math.abs(tz) < 3.8) continue;
-        F.piece(F.cylG, 'trunk', 0.12, 0.7, 0.12, tx, 0.35, tz);
-        F.piece(F.ballG, 'leaf', 0.55, 0.55, 0.55, tx, 0.95, tz);
+        // v2027.72 — 3 bentuk pohon (bulat, cemara ramping, pinus 2 tingkat) + ukuran acak
+        var kind = rnd(), sc = 0.8 + rnd() * 0.55;
+        F.piece(F.cylG, 'trunk', 0.12, 0.7 * sc, 0.12, tx, 0.35 * sc, tz);
+        if (kind < 0.4) F.piece(F.ballG, 'leaf', 0.55 * sc, 0.55 * sc, 0.55 * sc, tx, 0.95 * sc, tz);
+        else if (kind < 0.7) F.piece(F.ballG, 'leaf', 0.36 * sc, 0.95 * sc, 0.36 * sc, tx, 1.2 * sc, tz);
+        else { F.piece(F.ballG, 'leaf', 0.58 * sc, 0.42 * sc, 0.58 * sc, tx, 0.85 * sc, tz); F.piece(F.ballG, 'leaf', 0.38 * sc, 0.38 * sc, 0.38 * sc, tx, 1.3 * sc, tz); }
         n++;
     }
     return F;
