@@ -23,6 +23,7 @@ import {
     isFeatureSelectable
 } from '../../data/features.data.js';
 import { nodeNameById } from '../../data/i18n/research-localize.js';
+import { getTierAssemblyEffort } from '../../data/product-tiers.data.js';
 
 let _wizardState = null;
 let _wizardView = 'front';
@@ -191,20 +192,6 @@ function _generateBrandedName(companyName, year, ffId, avoid) {
     return _fitName(brand, ['X' + Date.now().toString().slice(-4)]);
 }
 
-function _affordInfo(s) {
-    const ps = window.__game && window.__game.products;
-    // Sama dengan ProductSystem.confirmDesign: baterai & layar tidak ditagih saat desain.
-    let designUnitCost = 0;
-    try { designUnitCost = ps && ps.computeUnitCost ? ps.computeUnitCost(s, true) : 0; } catch (e) {}
-    let cost = designUnitCost * (s.productionQty || 0) + BALANCE.products.productionSetupCost;
-    try { if (ps && ps.quoteDesign) cost = ps.quoteDesign(s).total; } catch (e) {}
-    let cash = 0;
-    try { cash = state.get().cash || 0; } catch (e) {}
-    let power = cash;
-    try { power = WalletService.getBuyingPower(); } catch (e) {}
-    return { cost: cost, cash: Math.floor(power), ok: WalletService.canAfford(cost) };
-}
-
 function _fmtUsd(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
 
 function _shortText(str, max) {
@@ -331,11 +318,41 @@ const WZ_CSS = `
 @media (prefers-reduced-motion: reduce) { .wiz-name-dice.spin { animation: none; } }
 `;
 
+const WZ_TIER_CSS = `
+.wz-tier-note { font-size: 11px; color: var(--text-tertiary); margin: 0 0 10px; line-height: 1.45; }
+.wz-tiers { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 2px 8px; margin: 0 -2px 10px; -webkit-overflow-scrolling: touch; }
+.wz-tier { flex: 0 0 80%; scroll-snap-align: start; min-width: 0; background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 6px; transition: opacity .15s; }
+.wz-tier.is-off { opacity: .55; }
+.wz-tier.is-off .wz-tier-presets { pointer-events: none; }
+.wz-tier-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.wz-tier-badge { font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: var(--accent); color: #fff; }
+.wz-tier-pro .wz-tier-badge { background: color-mix(in srgb, var(--accent) 65%, #000); }
+.wz-tier-promax .wz-tier-badge { background: #1d1d1f; }
+.wz-tier-req, .wz-tier-toggle { font-size: 11px; color: var(--text-tertiary); display: inline-flex; align-items: center; gap: 4px; }
+.wz-tier-thumb { display: flex; justify-content: center; min-height: 96px; }
+.wz-tier-thumb svg { max-width: 100%; height: auto; }
+.wz-tier-name-row { display: flex; gap: 6px; align-items: center; }
+.wz-tier-name-row .field-input { flex: 1; min-width: 0; }
+.wz-tier-warn { display: none; font-size: 11px; color: var(--warn); line-height: 1.4; }
+.wz-tier-info .preview-row { font-size: 11px; }
+.wz-tier-presets { display: flex; gap: 4px; }
+.wz-tier-presets .wz-tier-preset { flex: 1; min-width: 0; }
+.wz-tier-parts { font-size: 11px; }
+.wz-tier-parts summary { cursor: pointer; color: var(--text-secondary); padding: 4px 0; font-weight: 600; }
+.wz-tier-parts-grid { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 4px 0 8px; }
+.wz-tier-part { display: flex; flex-direction: column; gap: 3px; color: var(--text-tertiary); font-size: 10.5px; }
+.wz-tier-part select { width: 100%; }
+@media (min-width: 640px) {
+    .wz-tier { flex: 1 1 0; }
+    .wz-tiers { overflow-x: visible; }
+}
+`;
+
 function _injectStyles() {
     if (document.getElementById('wz-style')) return;
     const el = document.createElement('style');
     el.id = 'wz-style';
-    el.textContent = WZ_CSS;
+    el.textContent = WZ_CSS + WZ_TIER_CSS;
     document.head.appendChild(el);
 }
 
@@ -345,7 +362,7 @@ function defaultState() {
         step: 1, name: '', nameAuto: '', formFactorManual: false, formFactorId: null, displayId: null, cameraId: 'none', ramId: 'none', storageId: 'none',
         batteryId: null, chipId: null, networkId: null, osOptionId: null,
         bodyId: null, bodyColorId: null, price: 100, priceManuallyEdited: false, productionQty: 5000,
-        featureIds: []
+        featureIds: [], tierPlans: null
     };
 }
 
@@ -678,44 +695,6 @@ function _bindStep() {
         });
     });
 
-    const priceInput = root.querySelector('[data-wiz-price]');
-    if (priceInput) {
-        priceInput.value = _wizardState.price;
-        priceInput.addEventListener('input', function (e) {
-            _wizardState.price = parseInt(e.target.value, 10) || 0;
-            _wizardState.priceManuallyEdited = true;
-            root.querySelectorAll('[data-wiz-suggest]').forEach(b => b.classList.remove('active'));
-            _refreshPreview();
-            _updateConfirmButtonState();
-        });
-    }
-    
-    root.querySelectorAll('[data-wiz-suggest]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const type = btn.dataset.wizSuggest;
-            const prices = _getSuggestedPrices(_wizardState);
-            _wizardState.price = prices[type];
-            _wizardState.priceManuallyEdited = true;
-            
-            root.querySelectorAll('[data-wiz-suggest]').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            if(priceInput) priceInput.value = _wizardState.price;
-            _refreshPreview();
-            _updateConfirmButtonState();
-        });
-    });
-
-    const qtyInput = root.querySelector('[data-wiz-qty]');
-    if (qtyInput) {
-        qtyInput.value = _wizardState.productionQty;
-        qtyInput.addEventListener('input', function (e) {
-            _wizardState.productionQty = parseInt(e.target.value, 10) || 0;
-            _refreshPreview();
-            _updateConfirmButtonState();
-        });
-    }
-
     const nextBtn = root.querySelector('[data-wiz-next]');
     if (nextBtn) nextBtn.addEventListener('click', function () { _next(); });
     const backBtn = root.querySelector('[data-wiz-back]');
@@ -728,123 +707,37 @@ function _bindStep() {
     const detailBtn = root.querySelector('[data-wiz-detail]');
     if (detailBtn) detailBtn.addEventListener('click', function () { _openDetailModal(); });
 
-    if (_wizardState.step === 4) _updateConfirmButtonState();
+    if (_wizardState.step === 4) _bindTierPanels(root);
 }
 
 function _updateConfirmButtonState() {
     const root = document.querySelector('[data-modal-id="design-wizard"]');
     if (!root) return;
     const btn = root.querySelector('[data-wiz-confirm]');
-    const warnEl = root.querySelector('[data-wz-price-warning]');
-    if (!btn) return;
     const s = _wizardState;
-    if (!s) return;
+    if (!btn || !s || !s.tierPlans) return;
 
-    const ps = window.__game && window.__game.products;
-    if (!ps) return;
+    const plans = _enabledPlans(s);
+    const hasIssues = TIER_ORDER.some(function (id) { return _tierIssues(s, id).length > 0; });
+    const afford = _affordFamily(_quoteFamily(s).total);
+    const canRelease = plans.length > 0 && !hasIssues && afford.ok;
 
-    let unitCost = 0;
-    try { unitCost = ps.computeUnitCost ? ps.computeUnitCost(s) : 0; } catch (e) {}
-    
-    const limits = _getPriceLimits(s);
-    const afford = _affordInfo(s);
-    
-    let priceError = null;
-    if (s.price < limits.min) {
-        priceError = _tf('wiz.price.too_low', 'Harga terlalu murah! Minimal ${min} (Biaya produksi).', { min: limits.min });
-    } else if (s.price > limits.max) {
-        priceError = _tf('wiz.price.too_high', 'Harga terlalu mahal! Pasar tidak akan membeli di atas ${max}.', { max: limits.max });
-    }
-
-    const canRelease = !priceError && afford.ok;
-
-    if (warnEl) {
-        if (priceError) {
-            warnEl.textContent = "⚠ " + priceError;
-            warnEl.style.display = 'block';
-        } else {
-            warnEl.style.display = 'none';
-        }
-    }
-
-    if (canRelease) {
-        btn.disabled = false;
-        btn.style.opacity = '';
-        btn.style.cursor = '';
-        btn.textContent = t('wiz.step4.release');
-    } else {
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
-        btn.style.cursor = 'not-allowed';
-        btn.textContent = priceError ? _tf('wiz.price.invalid', 'Harga Tidak Valid') : (!afford.ok ? _tf('wiz.cash.short_btn', _pick('Dana tidak cukup', 'Not enough cash')) : t('wiz.step4.release'));
-    }
-}
-
-function _next() {
-    const s = _wizardState;
-    if (s.step === 1) {
-        if (!s.name.trim()) { ToastService.warning(t('wiz.err.need_name')); return; }
-        if (!s.formFactorId) { ToastService.warning(t('wiz.err.need_ff')); return; }
-        if (_isNameDuplicate(s.name)) {
-            ToastService.error(_tf('wiz.err.duplicate_name', 'Nama produk sudah dipakai.'));
-            return;
-        }
-    }
-    if (s.step === 2) {
-        if (!s.displayId || !s.batteryId || !s.chipId || !s.networkId) {
-            ToastService.warning(t('wiz.err.need_comp'));
-            return;
-        }
-    }
-    if (s.step === 3) {
-        if (!s.osOptionId || !s.bodyId || !s.bodyColorId) {
-            ToastService.warning(t('wiz.err.need_os_body'));
-            return;
-        }
-        if (!s.priceManuallyEdited) {
-            s.price = _getSuggestedPrices(s).balanced;
-        }
-    }
-    if (s.step >= 4) return;
-    s.step += 1;
-    _render();
-}
-
-function _back() {
-    if (_wizardState && _wizardState.step > 1) {
-        _wizardState.step -= 1;
-        _render();
-    }
+    btn.disabled = !canRelease;
+    btn.style.opacity = canRelease ? '' : '0.5';
+    btn.style.cursor = canRelease ? '' : 'not-allowed';
+    if (canRelease) btn.textContent = t('wiz.step4.release');
+    else if (plans.length === 0) btn.textContent = _pick('Pilih varian', 'Pick a variant');
+    else if (hasIssues) btn.textContent = _pick('Periksa varian', 'Check variants');
+    else btn.textContent = _tf('wiz.cash.short_btn', _pick('Dana tidak cukup', 'Not enough cash'));
 }
 
 function _confirm() {
     const s = _wizardState;
     const game = window.__game;
     if (!game || !game.products) { ToastService.error(t('wiz.err.not_ready')); return; }
+    _ensureTierPlans(s);
 
-    const limits = _getPriceLimits(s);
-    if (s.price < limits.min || s.price > limits.max) {
-        ToastService.error(_tf('wiz.price.out_of_range', 'Harga di luar batas wajar pasar.'));
-        return;
-    }
-
-    const res = game.products.confirmDesign({
-        name: s.name.trim(),
-        formFactorId: s.formFactorId,
-        displayId: s.displayId,
-        cameraId: (s.cameraId && s.cameraId !== 'none') ? s.cameraId : null,
-        ramId: (s.ramId && s.ramId !== 'none') ? s.ramId : null,
-        storageId: (s.storageId && s.storageId !== 'none') ? s.storageId : null,
-        batteryId: s.batteryId,
-        chipId: s.chipId,
-        networkId: s.networkId,
-        bodyId: s.bodyId,
-        bodyColorId: s.bodyColorId,
-        osOptionId: s.osOptionId,
-        featureIds: (s.featureIds || []).slice(),
-        price: s.price,
-        productionQty: s.productionQty
-    });
+    const res = game.products.confirmTierFamily(_baseConfig(s), _enabledPlans(s));
     if (!res.ok) {
         ToastService.error(res.reason || t('wiz.err.confirm_fail'));
         return;
@@ -1213,69 +1106,401 @@ function _step3(s) {
     `;
 }
 
-function _step4(s) {
-    const ps = window.__game && window.__game.products;
-    let unitCost = 0;
-    try { unitCost = ps && ps.computeUnitCost ? ps.computeUnitCost(s) : 0; } catch (e) {}
-    const limits = _getPriceLimits(s);
-    const afford = _affordInfo(s);
-    const prices = _getSuggestedPrices(s);
-    const fai = _getFaiAdvice(s);
-    if (fai) prices.fai = fai.price;
-    let faiBtn = '', faiTip = '';
-    if (fai) {
-        const L = STAT_LABELS[_isEn() ? 'en' : 'id'];
-        faiBtn = `<button class="wz-suggest-btn" data-wiz-suggest="fai"><b>$${fai.price}</b><span>F-AI</span></button>`;
-        if (fai.weakKey) {
-            faiTip = `<div style="font-size:11px; color:var(--text-tertiary); margin:-8px 0 14px; line-height:1.4;">${renderIcon('brain', 12)} ${escapeHtml(_pick(
-                'F-AI: harga ' + _fmtUsd(fai.price) + ' sesuai mutu ponsel ini. Sisi terlemah: ' + _statLabel(fai.weakKey, L) + ' (' + fai.weakVal + ').',
-                'F-AI: ' + _fmtUsd(fai.price) + ' fits this phone\'s quality. Weakest area: ' + _statLabel(fai.weakKey, L) + ' (' + fai.weakVal + ').'))}</div>`;
-        }
+// ============================================================
+// RILIS SERI: Basic / Pro / Pro Max (langkah 4)
+// Satu desain dirilis sebagai seri 1–3 varian. Nama tiap varian bebas.
+// ============================================================
+const TIER_ORDER = ['basic', 'pro', 'promax'];
+const TIER_LABEL = { basic: 'Basic', pro: 'Pro', promax: 'Pro Max' };
+
+// Bagian yang bisa dibedakan per varian: kecanggihan (komponen) dan desain (bodi, warna).
+const TIER_PARTS = [
+    { key: 'chipId', cat: 'chip', label: ['Chip', 'Chip'] },
+    { key: 'displayId', cat: 'display', label: ['Layar', 'Display'] },
+    { key: 'cameraId', cat: 'camera', label: ['Kamera', 'Camera'] },
+    { key: 'batteryId', cat: 'battery', label: ['Baterai', 'Battery'] },
+    { key: 'bodyId', cat: 'body', label: ['Bodi', 'Body'] },
+    { key: 'bodyColorId', cat: 'color', label: ['Warna', 'Color'] }
+];
+
+// Rencana tiap varian. Komponen, nama, dan harga yang belum diedit pemain mengikuti langkah 1–3.
+function _ensureTierPlans(s) {
+    if (!s.tierPlans) {
+        s.tierPlans = {};
+        TIER_ORDER.forEach(function (id) {
+            s.tierPlans[id] = {
+                on: true, name: '', nameEdited: false,
+                price: 0, priceManuallyEdited: false,
+                productionQty: s.productionQty || 5000,
+                partsEdited: false
+            };
+        });
     }
+    const tp = s.tierPlans;
+    tp.basic.on = true; // Basic wajib
+    TIER_ORDER.forEach(function (id) {
+        const p = tp[id];
+        if (!p.partsEdited) TIER_PARTS.forEach(function (part) { p[part.key] = s[part.key]; });
+    });
+    TIER_ORDER.forEach(function (id) {
+        const p = tp[id];
+        if (!p.nameEdited) p.name = _autoTierName(s, id);
+        if (!p.priceManuallyEdited) p.price = _getSuggestedPrices(_tierCfg(s, id)).balanced;
+    });
+    return tp;
+}
 
+function _autoTierName(s, id) {
+    const base = (s.name || '').trim() || 'Model';
+    if (id === 'pro') return base + ' Pro';
+    if (id === 'promax') return base + ' Pro Max';
+    return base;
+}
+
+function _planParts(p) {
+    const o = {};
+    if (!p) return o;
+    TIER_PARTS.forEach(function (part) { o[part.key] = p[part.key]; });
+    return o;
+}
+
+// Konfigurasi satu varian: langkah 1–3 + komponen & desain milik varian itu.
+function _tierCfg(s, id) {
+    const tp = s.tierPlans && s.tierPlans[id];
+    return Object.assign({}, s, { tier: id }, _planParts(tp));
+}
+
+// Konfigurasi dasar yang dipakai bersama semua varian (fitur, OS, bentuk, RAM, penyimpanan, jaringan).
+function _baseConfig(s) {
+    return {
+        formFactorId: s.formFactorId,
+        displayId: s.displayId,
+        cameraId: (s.cameraId && s.cameraId !== 'none') ? s.cameraId : null,
+        ramId: (s.ramId && s.ramId !== 'none') ? s.ramId : null,
+        storageId: (s.storageId && s.storageId !== 'none') ? s.storageId : null,
+        batteryId: s.batteryId,
+        chipId: s.chipId,
+        networkId: s.networkId,
+        bodyId: s.bodyId,
+        bodyColorId: s.bodyColorId,
+        osOptionId: s.osOptionId,
+        featureIds: (s.featureIds || []).slice()
+    };
+}
+
+function _enabledPlans(s) {
+    return TIER_ORDER.filter(function (id) { return s.tierPlans[id].on; }).map(function (id) {
+        const p = s.tierPlans[id];
+        const plan = { tier: id, name: (p.name || '').trim(), price: p.price, productionQty: p.productionQty };
+        TIER_PARTS.forEach(function (part) { plan[part.key] = p[part.key]; });
+        return plan;
+    });
+}
+
+function _quoteFamily(s) {
+    const ps = window.__game && window.__game.products;
+    const plans = _enabledPlans(s);
+    if (!ps || !ps.quoteTierFamily || !plans.length) return { total: 0, items: [] };
+    try { return ps.quoteTierFamily(_baseConfig(s), plans); }
+    catch (e) { return { total: 0, items: [] }; }
+}
+
+function _affordFamily(total) {
+    let cash = 0;
+    try { cash = state.get().cash || 0; } catch (e) {}
+    let power = cash;
+    try { power = WalletService.getBuyingPower(); } catch (e) {}
+    return { cost: total, cash: Math.floor(power), ok: WalletService.canAfford(total) };
+}
+
+// Masalah pada satu varian (kosong = siap rilis). Varian yang tidak dirilis tidak diperiksa.
+function _tierIssues(s, id) {
+    const p = s.tierPlans[id];
+    if (!p.on) return [];
+    const out = [];
+    const name = (p.name || '').trim();
+    if (!name) {
+        out.push(_pick('Nama wajib diisi.', 'Name is required.'));
+    } else {
+        const key = name.toLowerCase();
+        const dupInFamily = TIER_ORDER.some(function (other) {
+            return other !== id && s.tierPlans[other].on &&
+                (s.tierPlans[other].name || '').trim().toLowerCase() === key;
+        });
+        if (dupInFamily) out.push(_pick('Nama ini sama dengan varian lain.', 'Same name as another variant.'));
+        else if (_isNameDuplicate(name)) out.push(_pick('Nama sudah dipakai produk lain.', 'Name already used by another product.'));
+    }
+    const lim = _getPriceLimits(_tierCfg(s, id));
+    if (!(p.price >= lim.min)) {
+        out.push(_tf('wiz.price.too_low', 'Harga terlalu murah! Minimal ${min} (Biaya produksi).', { min: lim.min }));
+    } else if (!(p.price <= lim.max)) {
+        out.push(_tf('wiz.price.too_high', 'Harga terlalu mahal! Pasar tidak akan membeli di atas ${max}.', { max: lim.max }));
+    }
+    if (!(p.productionQty >= 100)) out.push(_pick('Jumlah produksi minimal 100 unit.', 'Minimum 100 units.'));
+    return out;
+}
+
+function _tierInfoHtml(s, id) {
+    const ps = window.__game && window.__game.products;
+    const cfg = _tierCfg(s, id);
+    const stats = _computeStats(cfg) || {};
+    let unit = 0;
+    try { unit = ps && ps.computeUnitCost ? ps.computeUnitCost(cfg) : 0; } catch (e) {}
+    const p = s.tierPlans[id];
+    const margin = (p.price || 0) - unit;
+    const marginPct = p.price > 0 ? Math.round((margin / p.price) * 100) : 0;
     return `
-        <div class="wiz-price-layout">
-            <div>
-                <label class="field-label">${t('wiz.step4.price_label')}</label>
-                <input class="field-input" data-wiz-price type="number" min="${limits.min}" max="${limits.max}" value="${s.price}" />
-                <div style="font-size:10px; color:var(--text-tertiary); margin-top:4px;">${_tf('wiz.price.range_hint', 'Batas pasar: ${min} - ${max}', { min: limits.min, max: limits.max })}</div>
-                <div class="wz-price-warning" data-wz-price-warning></div>
+        <div class="preview-row"><span>${t('wiz.preview.quality')}</span><b>${stats.qualityScore || 0}/100</b></div>
+        <div class="preview-row"><span>${_pick('Biaya per unit', 'Cost per unit')}</span><b>$${unit}</b></div>
+        <div class="preview-row"><span>${t('wiz.preview.margin')}</span><b style="color:${margin >= 0 ? 'var(--success)' : 'var(--danger)'};">$${margin} (${marginPct}%)</b></div>
+        <div class="preview-row"><span>${_pick('Beban perakitan', 'Assembly load')}</span><b>×${getTierAssemblyEffort(id).toFixed(2)}</b></div>`;
+}
+
+function _tierPresets(s, id) {
+    const sugg = _getSuggestedPrices(_tierCfg(s, id));
+    const list = [
+        { key: 'budget', label: _tf('wiz.price.budget', 'Ekonomis'), value: sugg.budget },
+        { key: 'balanced', label: _tf('wiz.price.market', 'Pasar'), value: sugg.balanced },
+        { key: 'premium', label: _tf('wiz.price.premium', 'Premium'), value: sugg.premium }
+    ];
+    if (id === 'basic') {
+        const fai = _getFaiAdvice(s);
+        if (fai) list.push({ key: 'fai', label: 'F-AI', value: fai.price });
+    }
+    return list;
+}
+
+function _tierPresetsHtml(s, id) {
+    const p = s.tierPlans[id];
+    return _tierPresets(s, id).map(function (x) {
+        const active = p.price === x.value ? ' active' : '';
+        return '<button type="button" class="wz-suggest-btn wz-tier-preset' + active + '" data-wz-tier-suggest="' + id + ':' + x.key + '">' +
+            '<b>$' + x.value + '</b><span>' + escapeHtml(x.label) + '</span></button>';
+    }).join('');
+}
+
+function _tierThumbHtml(s, id) {
+    try {
+        return renderPhoneMockup(_tierCfg(s, id), { size: 96, view: 'front', isStatic: true, showBrand: false, packCaption: false });
+    } catch (e) { return ''; }
+}
+
+function _partOptionList(part) {
+    if (part.cat === 'body') return filterBodiesByEra();
+    if (part.cat === 'color') return filterBodyColorsByEra();
+    return filterComponentsByEra(part.cat);
+}
+
+function _partSelectHtml(id, part, selected, dis) {
+    const list = _partOptionList(part);
+    const isColor = part.cat === 'color';
+    const opts = list.map(function (c) {
+        return '<option value="' + escapeHtml(c.id) + '"' + (c.id === selected ? ' selected' : '') + '>' +
+            escapeHtml(isColor ? _colorName(c) : c.name) + '</option>';
+    });
+    // Pilihan lama yang sudah tidak ada di daftar (mis. ganti era) tetap ditampilkan agar tidak salah tampil.
+    if (selected && selected !== 'none' && !list.some(function (c) { return c.id === selected; })) {
+        const cur = isColor ? getBodyColorById(selected) : getComponentById(selected);
+        if (cur) opts.unshift('<option value="' + escapeHtml(cur.id) + '" selected>' + escapeHtml(isColor ? _colorName(cur) : cur.name) + '</option>');
+    }
+    if (part.cat === 'camera') {
+        opts.unshift('<option value="none"' + (!selected || selected === 'none' ? ' selected' : '') + '>' + escapeHtml(t('wiz.step2.no_camera')) + '</option>');
+    }
+    return '<label class="wz-tier-part"><span>' + escapeHtml(_pick(part.label[0], part.label[1])) + '</span>' +
+        '<select class="field-input" data-wz-tier-part="' + id + '" data-part="' + part.key + '"' + dis + '>' + opts.join('') + '</select></label>';
+}
+
+function _tierPanelHtml(s, id) {
+    const p = s.tierPlans[id];
+    const dis = p.on ? '' : ' disabled';
+    const head = id === 'basic'
+        ? '<span class="wz-tier-req">' + _pick('Wajib', 'Required') + '</span>'
+        : '<label class="wz-tier-toggle"><input type="checkbox" data-wz-tier-on="' + id + '"' + (p.on ? ' checked' : '') + ' /> <span>' + _pick('Rilis', 'Release') + '</span></label>';
+    const partsHtml = TIER_PARTS.map(function (part) { return _partSelectHtml(id, part, p[part.key], dis); }).join('');
+    return `
+        <section class="wz-tier wz-tier-${id}${p.on ? '' : ' is-off'}" data-wz-tier="${id}">
+            <header class="wz-tier-head">
+                <span class="wz-tier-badge">${escapeHtml(TIER_LABEL[id])}</span>
+                ${head}
+            </header>
+            <div class="wz-tier-thumb" data-wz-tier-thumb="${id}">${_tierThumbHtml(s, id)}</div>
+            <label class="field-label" style="margin:0;">${_pick('Nama model', 'Model name')}</label>
+            <div class="wz-tier-name-row">
+                <input class="field-input" data-wz-tier-name="${id}" maxlength="24" autocomplete="off" value="${escapeHtml(p.name)}"${dis} />
+                <button type="button" class="wiz-name-dice" data-wz-tier-reroll="${id}" title="${escapeHtml(_pick('Acak nama', 'Random name'))}"${dis}>🎲</button>
             </div>
-            <div>
-                <label class="field-label">${t('wiz.step4.qty_label')}</label>
-                <input class="field-input" data-wiz-qty type="number" min="100" step="100" value="${s.productionQty}" />
-            </div>
-        </div>
+            <div class="wz-tier-warn" data-wz-tier-warn="${id}"></div>
+            <div class="wz-tier-info" data-wz-tier-info="${id}">${_tierInfoHtml(s, id)}</div>
+            <details class="wz-tier-parts">
+                <summary>${_pick('Komponen & desain', 'Components & design')}</summary>
+                <div class="wz-tier-parts-grid">${partsHtml}</div>
+            </details>
+            <label class="field-label" style="margin:0;">${t('wiz.step4.price_label')}</label>
+            <input class="field-input" data-wz-tier-price="${id}" type="number" value="${p.price}"${dis} />
+            <div class="wz-tier-presets" data-wz-tier-presets="${id}">${_tierPresetsHtml(s, id)}</div>
+            <label class="field-label" style="margin:0;">${t('wiz.step4.qty_label')}</label>
+            <input class="field-input" data-wz-tier-qty="${id}" type="number" min="100" step="100" value="${p.productionQty}"${dis} />
+        </section>`;
+}
 
-        <div style="display:flex; gap:8px; margin-top:8px; margin-bottom:16px;">
-            <button class="wz-suggest-btn" data-wiz-suggest="budget">
-                <b>$${prices.budget}</b>
-                <span>${_tf('wiz.price.budget', 'Ekonomis')}</span>
-            </button>
-            <button class="wz-suggest-btn ${!s.priceManuallyEdited || s.price === prices.balanced ? 'active' : ''}" data-wiz-suggest="balanced">
-                <b>$${prices.balanced}</b>
-                <span>${_tf('wiz.price.market', 'Pasar')}</span>
-            </button>
-            <button class="wz-suggest-btn" data-wiz-suggest="premium">
-                <b>$${prices.premium}</b>
-                <span>${_tf('wiz.price.premium', 'Premium')}</span>
-            </button>
-            ${faiBtn}
-        </div>
-        ${faiTip}
+function _familySummaryHtml(s) {
+    const q = _quoteFamily(s);
+    if (!q.items.length) {
+        return '<div style="font-size:12px;color:var(--warn);">' +
+            escapeHtml(_pick('Pilih minimal satu varian untuk dirilis.', 'Pick at least one variant to release.')) + '</div>';
+    }
+    const afford = _affordFamily(q.total);
+    const rows = q.items.map(function (it) {
+        const label = TIER_LABEL[it.tier] || it.tier;
+        return '<div class="preview-row"><span>' + escapeHtml(it.cfg.name || label) + ' · ' + escapeHtml(label) + '</span>' +
+            '<b>' + it.cfg.productionQty.toLocaleString('en-US') + ' unit · ' + _fmtUsd(it.cost) + '</b></div>';
+    }).join('');
+    const total = '<div class="preview-row"><span>' + escapeHtml(_pick('Total desain seri (sekali bayar)', 'Family design total (paid once)')) +
+        '</span><b>' + _fmtUsd(q.total) + '</b></div>';
+    const warn = afford.ok ? '' :
+        '<div style="margin-top:8px;font-size:11px;color:var(--warn);">⚠ ' + escapeHtml(_tf('wiz.cash.short_detail',
+            _pick('Dana tidak cukup: butuh {need}, tersedia {have}. Kurangi jumlah produksi.', 'Not enough cash: need {need}, you have {have}. Lower the production quantity.'),
+            { need: _fmtUsd(afford.cost), have: _fmtUsd(afford.cash) })) + '</div>';
+    return rows + total + warn;
+}
 
-        <div>
-            <div class="card-title">${t('wiz.step4.summary')}</div>
-            <div data-wiz-preview>${_previewHtml(s)}</div>
-        </div>
-
+function _step4(s) {
+    _ensureTierPlans(s);
+    return `
+        <div class="wz-tier-note">${_pick(
+            'Satu desain, sampai tiga model. Tiap varian bisa beda chip, layar, kamera, baterai, bodi, dan warna. Nama bebas. Pro dan Pro Max opsional.',
+            'One design, up to three models. Each variant can differ in chip, display, camera, battery, body, and color. Names are free. Pro and Pro Max are optional.')}</div>
+        <div class="wz-tiers">${TIER_ORDER.map(function (id) { return _tierPanelHtml(s, id); }).join('')}</div>
+        <div class="card-title">${t('wiz.step4.summary')}</div>
+        <div data-wiz-preview>${_familySummaryHtml(s)}</div>
         <div class="wiz-nav">
             <button class="btn-secondary" data-wiz-back style="flex:1;">${t('wiz.step4.back')}</button>
-            <button class="btn-primary" data-wiz-confirm style="flex:2;">
-                ${t('wiz.step4.release')}
-            </button>
+            <button class="btn-primary" data-wiz-confirm style="flex:2;">${t('wiz.step4.release')}</button>
         </div>
     `;
+}
+
+// Perbarui teks panel tanpa merender ulang input (agar fokus pengetikan tidak hilang).
+function _refreshTiers(root) {
+    const s = _wizardState;
+    if (!s || !s.tierPlans || !root) return;
+    TIER_ORDER.forEach(function (id) {
+        const p = s.tierPlans[id];
+        const sec = root.querySelector('[data-wz-tier="' + id + '"]');
+        if (!sec) return;
+        sec.classList.toggle('is-off', !p.on);
+        const warn = root.querySelector('[data-wz-tier-warn="' + id + '"]');
+        if (warn) {
+            const issues = _tierIssues(s, id);
+            warn.innerHTML = issues.map(function (x) { return '⚠ ' + escapeHtml(x); }).join('<br>');
+            warn.style.display = issues.length ? 'block' : 'none';
+        }
+        const info = root.querySelector('[data-wz-tier-info="' + id + '"]');
+        if (info) info.innerHTML = _tierInfoHtml(s, id);
+        const presets = root.querySelector('[data-wz-tier-presets="' + id + '"]');
+        if (presets) presets.innerHTML = _tierPresetsHtml(s, id);
+    });
+    const sum = root.querySelector('[data-wiz-preview]');
+    if (sum) sum.innerHTML = _familySummaryHtml(s);
+    _updateConfirmButtonState();
+}
+
+function _setTierEnabled(root, id, on) {
+    ['data-wz-tier-name', 'data-wz-tier-price', 'data-wz-tier-qty', 'data-wz-tier-reroll', 'data-wz-tier-part'].forEach(function (attr) {
+        root.querySelectorAll('[' + attr + '="' + id + '"]').forEach(function (el) { el.disabled = !on; });
+    });
+}
+
+// Harga ikut saran pasar selama pemain belum mengisi harga sendiri.
+function _recalcTierPrice(root, s, id) {
+    const p = s.tierPlans[id];
+    if (p.priceManuallyEdited) return;
+    p.price = _getSuggestedPrices(_tierCfg(s, id)).balanced;
+    const inp = root.querySelector('[data-wz-tier-price="' + id + '"]');
+    if (inp) inp.value = p.price;
+}
+
+function _bindTierPanels(root) {
+    const s = _wizardState;
+    if (!s || !s.tierPlans) return;
+
+    root.querySelectorAll('[data-wz-tier-on]').forEach(function (cb) {
+        cb.addEventListener('change', function () {
+            const id = cb.dataset.wzTierOn;
+            s.tierPlans[id].on = cb.checked;
+            _setTierEnabled(root, id, cb.checked);
+            _refreshTiers(root);
+        });
+    });
+    root.querySelectorAll('[data-wz-tier-part]').forEach(function (sel) {
+        sel.addEventListener('change', function () {
+            const id = sel.dataset.wzTierPart;
+            const part = TIER_PARTS.find(function (x) { return x.key === sel.dataset.part; });
+            if (!part) return;
+            const p = s.tierPlans[id];
+            p[part.key] = sel.value;
+            p.partsEdited = true;
+            _recalcTierPrice(root, s, id);
+            const thumb = root.querySelector('[data-wz-tier-thumb="' + id + '"]');
+            if (thumb) thumb.innerHTML = _tierThumbHtml(s, id);
+            _refreshTiers(root);
+        });
+    });
+    root.querySelectorAll('[data-wz-tier-name]').forEach(function (inp) {
+        inp.addEventListener('input', function () {
+            const p = s.tierPlans[inp.dataset.wzTierName];
+            p.name = inp.value;
+            p.nameEdited = true;
+            _refreshTiers(root);
+        });
+    });
+    root.querySelectorAll('[data-wz-tier-price]').forEach(function (inp) {
+        inp.addEventListener('input', function () {
+            const p = s.tierPlans[inp.dataset.wzTierPrice];
+            p.price = parseInt(inp.value, 10) || 0;
+            p.priceManuallyEdited = true;
+            _refreshTiers(root);
+        });
+    });
+    root.querySelectorAll('[data-wz-tier-qty]').forEach(function (inp) {
+        inp.addEventListener('input', function () {
+            const p = s.tierPlans[inp.dataset.wzTierQty];
+            p.productionQty = parseInt(inp.value, 10) || 0;
+            _refreshTiers(root);
+        });
+    });
+    root.querySelectorAll('[data-wz-tier-reroll]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const id = btn.dataset.wzTierReroll;
+            const p = s.tierPlans[id];
+            const rawCompany = (state.get().companyName) || 'Star';
+            const taken = TIER_ORDER.map(function (x) { return s.tierPlans[x].name; });
+            p.name = _generateBrandedName(rawCompany, DesignEraService.getCurrentYear(), s.formFactorId, taken);
+            p.nameEdited = true;
+            const inp = root.querySelector('[data-wz-tier-name="' + id + '"]');
+            if (inp) inp.value = p.name;
+            _refreshTiers(root);
+        });
+    });
+    // Tombol harga cepat: delegasi di kotak presets, karena isinya dirender ulang saat refresh.
+    root.querySelectorAll('[data-wz-tier-presets]').forEach(function (box) {
+        box.addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-wz-tier-suggest]');
+            if (!btn || !box.contains(btn)) return;
+            const parts = btn.dataset.wzTierSuggest.split(':');
+            const id = parts[0], key = parts[1];
+            const hit = _tierPresets(s, id).find(function (x) { return x.key === key; });
+            if (!hit) return;
+            const p = s.tierPlans[id];
+            p.price = hit.value;
+            p.priceManuallyEdited = true;
+            const inp = root.querySelector('[data-wz-tier-price="' + id + '"]');
+            if (inp) inp.value = p.price;
+            _refreshTiers(root);
+        });
+    });
+
+    _refreshTiers(root);
 }
 
 function _getAdaptiveSize() {
@@ -1319,8 +1544,7 @@ function _refreshPreview() {
         catch (e) { console.error('[DesignWizard] Spec strip error:', e); specStrip.innerHTML = ''; }
     }
 
-    const previewEl = root.querySelector('[data-wiz-preview]');
-    if (previewEl) previewEl.innerHTML = _previewHtml(_wizardState);
+    if (_wizardState && _wizardState.step === 4) _refreshTiers(root);
 }
 
 function _computeStats(s) {
@@ -1376,7 +1600,7 @@ function _specStripHtml(s) {
     if (stats.performance > 60 && stats.battery < 40) warnings.push(t('wiz.preview.warn_chip_bat'));
     if (stats.camera > 60 && stats.display < 40) warnings.push(t('wiz.preview.warn_cam_disp'));
     if (margin < 0) warnings.push(t('wiz.preview.warn_margin'));
-    if (s.step === 4 && !_affordInfo(s).ok) warnings.push(_tf('wiz.cash.short_batch', _pick('Dana tidak cukup untuk batch ini', 'Not enough cash for this batch')));
+    if (s.step === 4 && s.tierPlans && !_affordFamily(_quoteFamily(s)).ok) warnings.push(_tf('wiz.cash.short_batch', _pick('Dana tidak cukup untuk batch ini', 'Not enough cash for this batch')));
 
     return `
         <div class="wz-head">
@@ -1393,64 +1617,6 @@ function _specStripHtml(s) {
         <div class="wz-kv"><span>${t('wiz.spec.chip')}</span><b title="${chipComp ? escapeHtml(chipComp.name) : ''}">${chipComp ? escapeHtml(_shortText(chipComp.name, 22)) : '—'}</b></div>
         ${warnings.length ? '<div class="wz-warn">⚠ ' + escapeHtml(warnings[0]) + (warnings.length > 1 ? ' (+' + (warnings.length - 1) + ')' : '') + '</div>' : ''}
     `;
-}
-
-function _previewHtml(s) {
-    const ps = window.__game && window.__game.products;
-    if (!ps) return '<div style="font-size:12px;color:var(--text-mute);">' + t('wiz.err.not_ready') + '</div>';
-    try {
-        const stats = _computeStats(s);
-        const unitCost = ps.computeUnitCost ? ps.computeUnitCost(s) : 0;
-        // Tagihan desain: tanpa baterai & layar (sama dengan confirmDesign).
-        const designUnitCost = ps.computeUnitCost ? ps.computeUnitCost(s, true) : 0;
-        let totalCost = designUnitCost * (s.productionQty || 0) + BALANCE.products.productionSetupCost;
-        let volMult = 1;
-        if (ps.quoteDesign) { const q = ps.quoteDesign(s); totalCost = q.total; volMult = q.volMult; }
-        const demand = ps.estimateDemand ? ps.estimateDemand(s) : 0;
-        const margin = (s.price || 0) - unitCost;
-        const marginPct = s.price > 0 ? Math.round((margin / s.price) * 100) : 0;
-        // Pecahan biaya per unit: bagian desain (ditagih sekarang) + baterai & layar (ditagih saat produksi).
-        // designUnitCost * qty + setup = totalCost, sehingga angka di pratinjau bisa dicocokkan.
-        const plantPartCost = Math.max(0, unitCost - designUnitCost);
-        const noCamera = !s.cameraId || s.cameraId === 'none';
-        const _gd = state.get();
-        const _fx = [
-            ['battery', 'batteryLife', _pick('Baterai', 'Battery')], ['display', 'displayQuality', _pick('Layar', 'Display')],
-            ['soc', 'performance', _pick('Performa', 'Performance')], ['camera', 'cameraQuality', _pick('Kamera', 'Camera')],
-            ['ram', 'usability', _pick('Kelancaran', 'Smoothness')]
-        ].map(function (x) { const v = getBuiltPlantEffect(_gd, x[0], x[1]); return v > 0 ? x[2] + ' +' + Math.round(v * 100) + '%' : ''; }).filter(Boolean);
-        const plantFxHtml = _fx.length
-            ? '<div class="preview-row"><span>' + _tf('wiz.preview.plant_fx', _pick('Bonus pabrik', 'Plant bonus')) + '</span><b>' + escapeHtml(_fx.join(', ')) + '</b></div>'
-            : '';
-
-        const warnings = [];
-        if (stats.performance > 60 && stats.battery < 40) warnings.push(t('wiz.preview.warn_chip_bat'));
-        if (stats.camera > 60 && stats.display < 40) warnings.push(t('wiz.preview.warn_cam_disp'));
-        if (margin < 0) warnings.push(t('wiz.preview.warn_margin'));
-        if (volMult > 1.02) warnings.push(_tf('wiz.warn.volume_cost', _pick('Volume besar: biaya komponen +{pct}% (pasokan menipis). Pecah produksi tidak membantu: unit 30 hari terakhir ikut dihitung.', 'Large volume: component cost +{pct}% (supply is tight). Splitting orders does not help: units from the last 30 days count too.'), { pct: Math.round((volMult - 1) * 100) }));
-        const afford = _affordInfo(s);
-        if (!afford.ok) {
-            warnings.push(_tf('wiz.cash.short_detail',
-                _pick('Dana tidak cukup: butuh {need}, tersedia {have}. Kurangi jumlah produksi.',
-                      'Not enough cash: need {need}, you have {have}. Lower the production quantity.'),
-                { need: _fmtUsd(afford.cost), have: _fmtUsd(afford.cash) }));
-        }
-
-        return `
-            <div class="preview-row"><span>${t('wiz.preview.quality')}</span><b>${stats.qualityScore || 0}/100</b></div>
-            <div class="preview-row"><span>${_tf('wiz.preview.unit_design', _pick('Biaya desain per unit', 'Design cost per unit'))}</span><b>$${designUnitCost}</b></div>
-            <div class="preview-row"><span>${_tf('wiz.preview.unit_parts', _pick('Komponen pabrik (saat produksi)', 'Factory parts (at production)'))}</span><b>$${plantPartCost}</b></div>
-            ${plantFxHtml}
-            <div class="preview-row"><span>${t('wiz.preview.total_cost')}</span><b>$${totalCost.toLocaleString('en-US')}</b></div>
-            <div class="preview-row"><span>${t('wiz.preview.margin')}</span><b style="color:${margin >= 0 ? 'var(--success)' : 'var(--danger)'};">$${margin} (${marginPct}%)</b></div>
-            ${_featureFxHtml(s)}
-            <div class="preview-row"><span>${t('wiz.preview.demand')}</span><b>${t('wiz.preview.demand_unit', { n: demand.toLocaleString('en-US') })}</b></div>
-            ${noCamera ? '<div style="margin-top:8px;font-size:11px;color:var(--text-mute);">' + t('wiz.preview.no_camera') + '</div>' : ''}
-            ${warnings.length ? '<div style="margin-top:8px;font-size:11px;color:var(--warn);line-height:1.5;">⚠ ' + warnings.join('<br>⚠ ') + '</div>' : ''}
-        `;
-    } catch (e) {
-        return '<div style="font-size:12px;color:var(--danger);">' + escapeHtml(_tf('wiz.preview.error', 'Pratinjau error: {msg}', { msg: e.message })) + '</div>';
-    }
 }
 
 function _openDetailModal() {
