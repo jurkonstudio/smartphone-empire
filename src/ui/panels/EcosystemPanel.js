@@ -1,18 +1,16 @@
 // FILE: src/ui/panels/EcosystemPanel.js  (BARU — ekosistem: aksesori & App Store)
 // Sub-tab "Ekosistem" di panel Pasar. Logika ada di EcosystemSystem.js; klik ditangani main.js
-// lewat atribut data-eco-*.
-import { LanguageService } from '../../core/LanguageService.js';
+// lewat atribut data-eco-*. Semua teks memakai kamus src/data/i18n/ecosystem.i18n.js (key eco.*).
+import { t } from '../../core/LanguageService.js';
 import { formatCurrency } from '../../utils/format.js';
 import { ensureRegionalStyle } from './RegionalStyle.js';
-import { ECO_LINES, ECO_TIERS, ECO_TIER_META, ECO_CONST } from '../../data/ecosystem.data.js';
+import { ECO_LINES, ECO_TIERS, ECO_TIER_META } from '../../data/ecosystem.data.js';
 
-function _en() { try { return LanguageService.getLang() === 'en'; } catch (e) { return false; } }
-function L(id, en) { return _en() ? en : id; }
 function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
-function T(o) { return o == null ? '' : (typeof o === 'string' ? o : (o[_en() ? 'en' : 'id'] || o.en || o.id || '')); }
+function _n(v) { v = Number(v); return isFinite(v) ? v : 0; }
 function money(n) { return formatCurrency(Math.round(_n(n))); }
 function int(n) { return Math.round(_n(n)).toLocaleString('en-US'); }
 function pct(x, d) { return (_n(x) * 100).toFixed(d == null ? 0 : d) + '%'; }
@@ -21,72 +19,65 @@ function signPct(x, d, sign) {
     if (Math.abs(v) < 0.05) return '0%';
     return (sign && v > 0 ? '+' : (v < 0 ? '-' : '')) + Math.abs(v).toFixed(d == null ? 0 : d) + '%';
 }
-function _n(v) { v = Number(v); return isFinite(v) ? v : 0; }
 function kpi(label, val) {
     return '<div class="rg-kpi"><div class="rg-kpi-label">' + esc(label) + '</div><div class="rg-kpi-value">' + esc(val) + '</div></div>';
 }
 function _lockNote(left) {
-    return left > 0 ? ' · ' + esc(L('bisa diubah lagi ' + Math.ceil(left) + ' bln', 'editable in ' + Math.ceil(left) + ' mo')) : '';
+    return left > 0 ? ' · ' + esc(t('eco.lock.store', { n: Math.ceil(left) })) : '';
 }
 
 function _summaryCard(sum) {
     var pctScore = Math.round(sum.score * 100);
-    return '<div class="card"><div class="card-title">' + esc(L('Ekosistem', 'Ecosystem')) + '</div>' +
-        '<div class="rg-desc">' + esc(L(
-            'Aksesori dan App Store membuat pelanggan betah di merekmu. Makin banyak lini dan pengguna, makin kecil pelanggan pindah ke merek lain.',
-            'Accessories and the App Store keep customers with your brand. The more lines and users, the fewer customers switch to rivals.')) + '</div>' +
-        '<div class="rg-row"><div class="rg-row-main"><div class="rg-row-name">' + esc(L('Skor lock-in', 'Lock-in score')) + '</div>' +
+    return '<div class="card"><div class="card-title">' + esc(t('eco.title')) + '</div>' +
+        '<div class="rg-desc">' + esc(t('eco.desc')) + '</div>' +
+        '<div class="rg-row"><div class="rg-row-main"><div class="rg-row-name">' + esc(t('eco.lockin')) + '</div>' +
         '<div class="rg-meter"><i style="width:' + pctScore + '%;background:#0a84ff"></i></div></div>' +
         '<div class="rg-val">' + pctScore + '%</div></div>' +
         '<div class="rg-kpis">' +
-            kpi(L('Permintaan ponsel', 'Phone demand'), signPct(sum.demandBonus, 1, true)) +
-            kpi(L('Tekanan kompetitor', 'Competitor pressure'), signPct(-sum.competitorRelief, 1)) +
-            kpi(L('Lini terbuka', 'Lines open'), sum.linesOpen + '/' + sum.lineCount) +
-            kpi(L('Basis ponsel aktif', 'Active phone base'), int(sum.phoneBase)) +
+            kpi(t('eco.kpi.demand'), signPct(sum.demandBonus, 1, true)) +
+            kpi(t('eco.kpi.pressure'), signPct(-sum.competitorRelief, 1)) +
+            kpi(t('eco.kpi.lines'), sum.linesOpen + '/' + sum.lineCount) +
+            kpi(t('eco.kpi.base'), int(sum.phoneBase)) +
         '</div>' +
-        '<div class="rg-row-meta">' + esc(L('Pendapatan bulan lalu ', 'Last month revenue ')) + '<b>' + money(sum.last && sum.last.revenue) + '</b>' +
-        ' · ' + esc(L('total unit terjual ', 'total units sold ')) + '<b>' + int(sum.stats && sum.stats.units) + '</b></div>' +
+        '<div class="rg-row-meta">' + esc(t('eco.sum.lastRevenue')) + ' <b>' + money(sum.last && sum.last.revenue) + '</b>' +
+        ' · ' + esc(t('eco.sum.unitsTotal')) + ' <b>' + int(sum.stats && sum.stats.units) + '</b></div>' +
         '</div>';
 }
 
 function _storeCard(sp) {
     if (!sp.available) {
-        return '<div class="card"><div class="card-title">App Store</div>' +
-            '<div class="rg-desc">' + esc(L(
-                'Belum tersedia. Toko aplikasi hanya bisa dijalankan setelah OS milikmu punya fitur App Store.',
-                'Not available yet. The app store only runs once your OS has the App Store feature.')) + '</div></div>';
+        return '<div class="card"><div class="card-title">' + esc(t('eco.store.title')) + '</div>' +
+            '<div class="rg-desc">' + esc(t('eco.store.unavailable')) + '</div></div>';
     }
     var dis = sp.locked ? ' disabled' : '';
-    return '<div class="card"><div class="card-title">App Store</div>' +
-        '<div class="rg-desc">' + esc(L(
-            'Komisi dari setiap belanja aplikasi. Komisi tinggi menambah pendapatan, tetapi pengembang jadi enggan, sehingga aplikasi berkurang.',
-            'You take a cut of every app purchase. A high cut boosts income, but developers get reluctant and the catalog shrinks.')) + '</div>' +
-        '<div class="rg-row"><div class="rg-row-main"><div class="rg-row-name">' + esc(L('Komisi', 'Commission')) + '</div></div>' +
+    return '<div class="card"><div class="card-title">' + esc(t('eco.store.title')) + '</div>' +
+        '<div class="rg-desc">' + esc(t('eco.store.desc')) + '</div>' +
+        '<div class="rg-row"><div class="rg-row-main"><div class="rg-row-name">' + esc(t('eco.store.commission')) + '</div></div>' +
         '<div class="rg-btn-row"><button class="btn-secondary" data-eco-commission="x" data-eco-val="-1"' + (sp.commission <= sp.minCommission + 1e-9 ? ' disabled' : dis) + '>−</button>' +
         ' <b>' + pct(sp.commission, 0) + '</b> ' +
         '<button class="btn-secondary" data-eco-commission="x" data-eco-val="1"' + (sp.commission >= sp.maxCommission - 1e-9 ? ' disabled' : dis) + '>+</button></div></div>' +
         '<div class="rg-kpis">' +
-            kpi(L('Pengguna aktif OS', 'Active OS users'), int(sp.users)) +
-            kpi(L('Belanja kotor/bln', 'Gross spend/mo'), money(sp.gross)) +
-            kpi(L('Pendapatan komisi/bln', 'Commission/mo'), money(sp.revenue)) +
-            kpi(L('Biaya toko/bln', 'Store cost/mo'), money(sp.cost)) +
+            kpi(t('eco.store.users'), int(sp.users)) +
+            kpi(t('eco.store.gross'), money(sp.gross)) +
+            kpi(t('eco.store.commissionRev'), money(sp.revenue)) +
+            kpi(t('eco.store.cost'), money(sp.cost)) +
         '</div>' +
-        '<div class="rg-row-meta">' + esc(L('Daya tarik pengembang ', 'Developer appeal ')) + '<b>' + pct(sp.appeal, 0) + '</b> · ' +
-        esc(L('kualitas toko ', 'store quality ')) + '<b>' + pct(sp.quality, 0) + '</b>' + _lockNote(sp.lockLeft) + '</div>' +
+        '<div class="rg-row-meta">' + esc(t('eco.store.appeal')) + ' <b>' + pct(sp.appeal, 0) + '</b> · ' +
+        esc(t('eco.store.quality')) + ' <b>' + pct(sp.quality, 0) + '</b>' + _lockNote(sp.lockLeft) + '</div>' +
         '</div>';
 }
 
 function _lineCard(sys, line) {
     var p = sys.getLinePreview(line.id);
     if (!p) return '';
+    var name = esc(t(line.nameKey));
     if (!p.yearOk) {
-        return '<div class="card" style="opacity:.6"><div class="card-title">' + esc(T(line.name)) + '</div>' +
-            '<div class="rg-desc">' + esc(L('Belum tersedia. Terbuka tahun ' + line.minYear + '.', 'Not available yet. Unlocks in ' + line.minYear + '.')) + '</div></div>';
+        return '<div class="card" style="opacity:.6"><div class="card-title">' + name + '</div>' +
+            '<div class="rg-desc">' + esc(t('eco.line.locked', { year: line.minYear })) + '</div></div>';
     }
-    var tiers = ECO_TIERS.map(function (t) {
-        var m = ECO_TIER_META[t];
-        return '<button class="' + (p.tier === t ? 'btn-primary' : 'btn-secondary') + '" data-eco-tier="' + esc(line.id) + '" data-eco-val="' + t + '"' +
-            (p.locked && p.tier !== t ? ' disabled' : '') + '>' + esc(T(m.name)) + '</button>';
+    var tiers = ECO_TIERS.map(function (tier) {
+        return '<button class="' + (p.tier === tier ? 'btn-primary' : 'btn-secondary') + '" data-eco-tier="' + esc(line.id) + '" data-eco-val="' + tier + '"' +
+            (p.locked && p.tier !== tier ? ' disabled' : '') + '>' + esc(t(ECO_TIER_META[tier].nameKey)) + '</button>';
     }).join(' ');
     var priceDis = p.locked ? ' disabled' : '';
     var priceRow = '<div style="display:flex;align-items:center;gap:8px;">' +
@@ -98,26 +89,24 @@ function _lineCard(sys, line) {
     var action;
     if (p.open) {
         action = '<button class="btn-secondary" data-eco-close="' + esc(line.id) + '"' + (p.closeLocked ? ' disabled' : '') + '>' +
-            esc(L('Tutup lini', 'Close line')) + '</button>' +
-            (p.closeLocked ? ' <span class="rg-row-meta">' + esc(L('terikat ' + Math.ceil(p.commitLeft) + ' bln lagi', 'committed ' + Math.ceil(p.commitLeft) + ' more mo')) + '</span>' : '');
-    } else if (!p.yearOk) {
-        action = '<span class="rg-row-meta">' + esc(L('Terbuka tahun ' + line.minYear, 'Unlocks in ' + line.minYear)) + '</span>';
+            esc(t('eco.line.close')) + '</button>' +
+            (p.closeLocked ? ' <span class="rg-row-meta">' + esc(t('eco.line.committed', { n: Math.ceil(p.commitLeft) })) + '</span>' : '');
     } else {
         action = '<button class="' + (p.canOpen ? 'btn-primary' : 'btn-secondary') + '" data-eco-open="' + esc(line.id) + '"' +
-            (p.canOpen ? '' : ' disabled') + '>' + esc(L('Buka lini', 'Open line')) + ' · ' + esc(money(p.setupCost)) + '</button>';
+            (p.canOpen ? '' : ' disabled') + '>' + esc(t('eco.line.open')) + ' · ' + esc(money(p.setupCost)) + '</button>';
     }
-    return '<div class="card"><div class="card-title">' + esc(T(line.name)) + (p.open ? '' : ' · ' + esc(L('belum dibuka', 'not open'))) + '</div>' +
-        '<div class="rg-row"><div class="rg-row-main"><div class="rg-row-name">' + esc(L('Tier', 'Tier')) + '</div>' +
+    return '<div class="card"><div class="card-title">' + name + (p.open ? '' : ' · ' + esc(t('eco.line.notOpen'))) + '</div>' +
+        '<div class="rg-row"><div class="rg-row-main"><div class="rg-row-name">' + esc(t('eco.line.tier')) + '</div>' +
         '<div class="rg-btn-row">' + tiers + '</div></div></div>' +
-        '<div class="rg-row"><div class="rg-row-main"><div class="rg-row-name">' + esc(L('Harga', 'Price')) + '</div>' + priceRow + '</div></div>' +
+        '<div class="rg-row"><div class="rg-row-main"><div class="rg-row-name">' + esc(t('eco.line.price')) + '</div>' + priceRow + '</div></div>' +
         '<div class="rg-kpis">' +
-            kpi(L('Unit/bln (perkiraan)', 'Units/mo (est.)'), int(p.units)) +
-            kpi(L('Pendapatan/bln', 'Revenue/mo'), money(p.revenue)) +
-            kpi(L('Biaya/bln', 'Cost/mo'), money(p.cost)) +
-            kpi(L('Margin kotor', 'Gross margin'), pct(p.margin, 0)) +
+            kpi(t('eco.line.units'), int(p.units)) +
+            kpi(t('eco.line.revenue'), money(p.revenue)) +
+            kpi(t('eco.line.cost'), money(p.cost)) +
+            kpi(t('eco.line.margin'), pct(p.margin, 0)) +
         '</div>' +
         '<div class="rg-btn-row">' + action + '</div>' +
-        (p.locked && p.open ? '<div class="rg-row-meta">' + esc(L('Harga/tier bisa diubah lagi ' + Math.ceil(p.lockLeft) + ' bln', 'Price/tier editable in ' + Math.ceil(p.lockLeft) + ' mo')) + '</div>' : '') +
+        (p.locked && p.open ? '<div class="rg-row-meta">' + esc(t('eco.line.priceLocked', { n: Math.ceil(p.lockLeft) })) + '</div>' : '') +
         '</div>';
 }
 
