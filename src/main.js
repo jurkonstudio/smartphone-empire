@@ -18,6 +18,7 @@ import { QuestSystem } from './systems/QuestSystem.js';
 import { EraEventSystem } from './systems/EraEventSystem.js';
 import { ChannelSystem } from './systems/ChannelSystem.js';
 import { AfterSalesSystem } from './systems/AfterSalesSystem.js';
+import { EcosystemSystem } from './systems/EcosystemSystem.js';
 import { TutorialSystem } from './systems/TutorialSystem.js';
 import { ResearchSystem } from './systems/ResearchSystem.js';
 import { OSSystem } from './systems/OSSystem.js';
@@ -134,6 +135,7 @@ var stockSystem       = new StockSystem(state);
 var promotion         = new PromotionSystem(state);
 var channels          = new ChannelSystem(state);
 var afterSales        = new AfterSalesSystem(state);
+var ecosystem = new EcosystemSystem(state);   // [ekosistem] aksesori & App Store
 var bank              = new BankSystem(state);
 var econBrakes        = new EconBrakeSystem(state);
 
@@ -153,7 +155,9 @@ economy.setChannels(channels);
 // [Pasca-jual] garansi, pusat servis, dukungan OS, insiden cacat massal.
 afterSales.setAssembly(assemblySystem);
 products.setAfterSales(afterSales);
+products.setEcosystem(ecosystem);
 economy.setAfterSales(afterSales);
+economy.setEcosystem(ecosystem);
 teamSystem.setEconomy(economy); // [v2030] simulasi runway saat rekrut
 
 // ============ STATE UI ============
@@ -165,7 +169,7 @@ var activeHqSubtab = 'overview';
 var NAV_SUBTABS = {
     research: ['tech', 'os', 'manufaktur', 'chip'],
     products: ['design', 'catalog', 'sales', 'chip'],
-    market: ['share', 'competitors', 'trends', 'promo', 'channels', 'service', 'public'],
+    market: ['share', 'competitors', 'trends', 'promo', 'channels', 'service', 'ecosystem', 'public'],
     team: ['overview', 'team', 'exchange', 'bank']
 };
 var _burnWarn = null;
@@ -333,7 +337,7 @@ function renderView(opts) {
         else if (activeView === 'team') html = renderHqPanel({ subtab: activeHqSubtab, state: state.get(), timeSnapshot: getTime(), researchSystem: research, teamSystem: teamSystem, stockSystem: stockSystem });
         else if (activeView === 'research') html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os, chipResearchSystem: chipResearch, componentPlantSystem: componentPlants, assemblySystem: assemblySystem });
         else if (activeView === 'products') html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os });
-        else if (activeView === 'market') html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion, channelSystem: channels, afterSalesSystem: afterSales });
+        else if (activeView === 'market') html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion, channelSystem: channels, afterSalesSystem: afterSales, ecosystemSystem: ecosystem });
         else if (activeView === 'settings') html = renderSettingsPanel();
         else if (activeView === 'guide') html = renderGuidePanel();
         else html = renderEmptyState({ icon: '?', title: tr('main.not_found') });
@@ -1112,6 +1116,26 @@ function bindGlobalClicks() {
             renderAll();
             return;
         }
+        // [Ekosistem] lini aksesori (buka/tutup, tier, harga) dan komisi App Store.
+        var ecoBtn = e.target.closest('[data-eco-open],[data-eco-close],[data-eco-tier],[data-eco-price],[data-eco-commission]');
+        if (ecoBtn) {
+            e.preventDefault(); vibrate(6);
+            var ecoDs = ecoBtn.dataset, ecoRes;
+            if (ecoDs.ecoOpen) ecoRes = ecosystem.openLine(ecoDs.ecoOpen);
+            else if (ecoDs.ecoClose) ecoRes = ecosystem.closeLine(ecoDs.ecoClose);
+            else if (ecoDs.ecoTier) ecoRes = ecosystem.setTier(ecoDs.ecoTier, ecoDs.ecoVal);
+            else if (ecoDs.ecoPrice) ecoRes = ecosystem.setPriceStep(ecoDs.ecoPrice, parseInt(ecoDs.ecoVal, 10));
+            else ecoRes = ecosystem.setCommissionStep(parseInt(ecoDs.ecoVal, 10));
+            if (ecoRes.ok) ToastService.success(_runwayL('Diperbarui.', 'Updated.'));
+            else ToastService.error(ecoRes.reason === 'funds' ? _runwayL('Dana tidak cukup.', 'Not enough funds.')
+                : ecoRes.reason === 'locked' ? _runwayL('Terbuka tahun ' + ecoRes.year + '.', 'Unlocks in ' + ecoRes.year + '.')
+                : ecoRes.reason === 'lock' ? _runwayL('Bisa diubah lagi dalam ' + Math.ceil(ecoRes.monthsLeft) + ' bulan.', 'Can change again in ' + Math.ceil(ecoRes.monthsLeft) + ' month(s).')
+                : ecoRes.reason === 'commit' ? _runwayL('Masih terikat komitmen ' + Math.ceil(ecoRes.monthsLeft) + ' bulan.', 'Still under commitment for ' + Math.ceil(ecoRes.monthsLeft) + ' month(s).')
+                : ecoRes.reason === 'unavailable' ? _runwayL('Fitur App Store belum dimiliki.', 'App Store feature not owned yet.')
+                : _runwayL('Tidak bisa diubah.', 'Cannot change this.'));
+            renderAll();
+            return;
+        }
         var mktSub = e.target.closest('[data-market-subtab]');
         if (mktSub) { e.preventDefault(); activeMarketSubtab = mktSub.dataset.marketSubtab; renderView(); return; }
         var compCard = e.target.closest('[data-competitor-detail]');
@@ -1518,6 +1542,7 @@ async function boot() {
         promotion.start();
         channels.start();
         afterSales.start();
+ecosystem.start();
         bank.start();
         econBrakes.start();
         bindRegionalActions();
@@ -1557,6 +1582,7 @@ async function boot() {
         }
 
         window.__game = {
+            ecosystem: ecosystem,
             report: function (opts) { return buildReport(state.get(), window.__game, opts || {}); },
             reportText: function (opts) { return formatReportText(buildReport(state.get(), window.__game, opts || {})); },
             reportShow: function () { openDiagnosticModal(); },

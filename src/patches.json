@@ -1,6 +1,33 @@
 {
-  "latest": "0.2.3",
+  "latest": "0.2.4",
   "releases": [
+    {
+      "version": "0.2.4",
+      "date": "2026-10-25",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Aksesori: earbuds, jam pintar, dan charger. Penjualan mengikuti basis ponsel aktif milikmu. Tiap lini bisa diatur tier dan harganya.",
+            "en": "Accessories: earbuds, smartwatches, and chargers. Sales follow your active phone base. Each line has its own tier and price."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "App Store: komisi bulanan dari belanja pengguna OS aktif (butuh fitur App Store). Komisi tinggi menurunkan daya tarik bagi pengembang.",
+            "en": "App Store: monthly commission from active OS users' purchases (needs the App Store feature). A high commission lowers developer appeal."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Ekosistem (aksesori dan App Store) menaikkan permintaan ponsel sedikit dan menekan tekanan kompetitor.",
+            "en": "The ecosystem (accessories and App Store) slightly raises phone demand and eases competitor pressure."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.3",
       "date": "2026-10-25",
