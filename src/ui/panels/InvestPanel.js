@@ -4,6 +4,7 @@
 import { LanguageService } from '../../core/LanguageService.js';
 import { formatCurrency } from '../../utils/format.js';
 import { ensureRegionalStyle } from './RegionalStyle.js';
+import { buildCompetitorProducts } from '../../data/competitor-products.model.js';
 
 function _en() { try { return LanguageService.getLang() === 'en'; } catch (e) { return false; } }
 function L(id, en) { return _en() ? en : id; }
@@ -75,14 +76,37 @@ function _acquisitionCard(econ, cash) {
           ' · ' + esc(L('plafon +', 'ceiling +')) + pct(econ.getAcquisitionCapBonus()) + '</div>'
         : '';
     var lock = block ? '<div class="rg-lock">' + esc(block) + '</div>' : '';
-    var rows = econ.getAcquisitionTargets().slice(0, 6).map(function (tg) {
+    var st = null;
+    try { st = window.__game.state.get(); } catch (e) {}
+    var targets = econ.getAcquisitionTargets();
+    var rowsAll = targets.map(function (tg) {
         var can = !block && cash >= tg.price;
-        return '<div class="rg-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;">' +
+        // Ringkasan produk & margin rival (estimasi) langsung di baris target.
+        var prodLine = '';
+        try {
+            var ent = st.competitorState && st.competitorState.entities && st.competitorState.entities[tg.id];
+            var pd = buildCompetitorProducts(tg.id, {
+                year: st.time.currentYear, month: st.time.currentMonth,
+                share: tg.share, releases: (ent && ent.releases) || []
+            });
+            if (pd) prodLine = '<div class="rg-row-meta">' + pd.summary.liveCount + esc(L(' produk aktif', ' active products')) +
+                ' · ' + esc(L('margin rata-rata ~', 'avg margin ~')) + pct(pd.summary.marginPct) + '</div>';
+        } catch (e) { /* ringkasan opsional */ }
+        return '<div class="rg-row" style="display:block;padding:8px 0;border-bottom:1px solid var(--border);">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
             '<div><b>' + esc(tg.name) + '</b><div class="rg-row-meta">' + esc(L('pangsa ', 'share ')) + pct(tg.share) +
-            ' · ' + esc(L('plafon +', 'ceiling +')) + pct(tg.capBonus) + ' · ' + money(tg.price) + '</div></div>' +
+            ' \u00b7 ' + esc(L('plafon +', 'ceiling +')) + pct(tg.capBonus) + ' \u00b7 ' + money(tg.price) + '</div>' + prodLine + '</div>' +
             '<button class="' + (can ? 'btn-primary' : 'btn-secondary') + '" data-econ-acq="' + esc(tg.id) + '"' + (can ? '' : ' disabled') + '>' +
-            esc(L('Akuisisi', 'Acquire')) + '</button></div>';
-    }).join('');
+            esc(L('Akuisisi', 'Acquire')) + '</button></div>' +
+            '<button class="btn-secondary" data-econ-acq-products="' + esc(tg.id) + '" style="width:100%;margin-top:6px;min-height:34px;font-size:12px;">' +
+            esc(L('Lihat produk & margin', 'View products & margin')) + '</button></div>';
+    });
+    var rows = rowsAll.slice(0, 6).join('');
+    if (rowsAll.length > 6) {
+        rows += '<details><summary class="rg-row-meta" style="cursor:pointer;padding:8px 0;">' +
+            esc(L('Tampilkan ' + (rowsAll.length - 6) + ' merek lainnya', 'Show ' + (rowsAll.length - 6) + ' more brands')) +
+            '</summary>' + rowsAll.slice(6).join('') + '</details>';
+    }
     return '<div class="card">' + head + ownedHtml + lock + rows + '</div>';
 }
 
