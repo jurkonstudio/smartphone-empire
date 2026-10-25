@@ -90,6 +90,13 @@ export function buildCompetitorProducts(competitorId, ctx) {
     });
 
     var nowIdx = year * 12 + (month - 1);
+
+    // Produk yang belum rilis disembunyikan agar roadmap rival tidak bocor.
+    // Produk ikonik (bulan rilis tak diketahui) baru tampil setelah tahun
+    // rilisnya terlewati; rilis AI (bulan diketahui) tampil begitu sudah rilis.
+    list = list.filter(function (p) {
+        return p.month ? (p.year * 12 + p.month - 1 <= nowIdx) : (p.year < year);
+    });
     list.forEach(function (p) {
         // Bulan rilis tak diketahui (produk signature) dianggap awal tahun.
         var relIdx = p.year * 12 + ((p.month || 1) - 1);
