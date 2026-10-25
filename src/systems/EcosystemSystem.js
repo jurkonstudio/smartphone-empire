@@ -67,6 +67,10 @@ function _scale(data) {
     return _clamp((n ? sum / n : 0) / AS_SCALE_BASE, 1, AS_SCALE_MAX);
 }
 
+// Skala biaya tetap bulanan (0.2.8): lebih landai dari akar kuadrat (setup tetap memakai sqrt),
+// karena basis pelanggan tumbuh lebih lambat daripada pendapatan ponsel.
+function _fixedScale(scale) { return Math.pow(scale, ECO_CONST.fixedScaleExp); }
+
 // Basis ponsel aktif milik pemain (semua produk, tanpa memandang OS).
 function _phoneBase(data) {
     var cat = (data.products && Array.isArray(data.products.catalog)) ? data.products.catalog : [];
@@ -165,7 +169,7 @@ function _linePlan(line, s, base, sat, scale) {
         unitCost: unitCost,
         revenue: units * price,
         cogs: units * unitCost,
-        fixed: _nice(line.monthlyFixed * Math.sqrt(scale))
+        fixed: _nice(line.monthlyFixed * _fixedScale(scale))
     };
 }
 
@@ -371,7 +375,7 @@ export class EcosystemSystem {
         return {
             subscribers: subs, price: price, unitCost: unitCost,
             revenue: subs * price, cogs: subs * unitCost,
-            fixed: _nice(svc.monthlyFixed * Math.sqrt(scale))
+            fixed: _nice(svc.monthlyFixed * _fixedScale(scale))
         };
     }
 
@@ -439,7 +443,7 @@ export class EcosystemSystem {
             if (storeUsers > 0) {
                 var gross = storeUsers * _storeSpend(d) * _storeAppeal(e.store.commission) * _storeQuality(d);
                 storeRev = gross * e.store.commission;
-                cost += gross * ECO_CONST.storeIncentiveRate + _nice(ECO_CONST.storeFixedMonthly * Math.sqrt(scale));
+                cost += gross * ECO_CONST.storeIncentiveRate + _nice(ECO_CONST.storeFixedMonthly * _fixedScale(scale));
             }
         }
         revenue += storeRev;
@@ -508,7 +512,7 @@ export class EcosystemSystem {
             available: available, commission: st.commission, users: users,
             spend: spend, appeal: appeal, quality: quality, gross: gross,
             revenue: gross * st.commission,
-            cost: users > 0 ? gross * ECO_CONST.storeIncentiveRate + _nice(ECO_CONST.storeFixedMonthly * Math.sqrt(this._scale())) : 0,
+            cost: users > 0 ? gross * ECO_CONST.storeIncentiveRate + _nice(ECO_CONST.storeFixedMonthly * _fixedScale(this._scale())) : 0,
             locked: this._now() < st.lockUntilAbs, lockLeft: this._lockLeft(st.lockUntilAbs),
             minCommission: ECO_CONST.commissionMin, maxCommission: ECO_CONST.commissionMax
         };
