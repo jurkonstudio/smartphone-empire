@@ -5,6 +5,7 @@ import { escapeHtml } from '../../utils/html.js';
 import { renderPublicOpinionPanel } from './PublicOpinionPanel.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
 import { renderPromotionPanel } from './PromotionPanel.js';
+import { renderChannelPanel } from './ChannelPanel.js';
 import { renderNavShare, renderNavTrends, renderNavPublic } from './MarketNavPanels.js';
 import '../charts/ChartZoomModal.js'; // side-effect: pasang listener [data-chart-zoom]
 
@@ -32,6 +33,7 @@ export function renderMarketPanel(params) {
     var marketSystem = params.marketSystem;
     var competitorSystem = params.competitorSystem;
     var opinionSystem = params.opinionSystem;
+    var channelSystem = params.channelSystem;
 
     const subtabBar = `
         <div class="subtab-bar">
@@ -39,6 +41,7 @@ export function renderMarketPanel(params) {
             <button class="subtab-btn ${subtab === 'competitors' ? 'active' : ''}" data-market-subtab="competitors">${t('market.subtab.competitors')}</button>
             <button class="subtab-btn ${subtab === 'trends'      ? 'active' : ''}" data-market-subtab="trends">${t('market.subtab.trends')}</button>
             <button class="subtab-btn ${subtab === 'promo'       ? 'active' : ''}" data-market-subtab="promo">${t('market.subtab.promo')}</button>
+            <button class="subtab-btn ${subtab === 'channels'    ? 'active' : ''}" data-market-subtab="channels">${LanguageService.getLang() === 'en' ? 'Channels' : 'Kanal'}</button>
             <button class="subtab-btn ${subtab === 'public'      ? 'active' : ''}" data-market-subtab="public">${t('market.subtab.public')}</button>
         </div>
     `;
@@ -46,6 +49,7 @@ export function renderMarketPanel(params) {
     if (subtab === 'competitors') body = _renderCompetitors(competitorSystem);
     else if (subtab === 'trends') body = _renderTrends(marketSystem) + _navCards(renderNavTrends);
     else if (subtab === 'promo') body = renderPromotionPanel();
+    else if (subtab === 'channels') body = renderChannelPanel({ channelSystem: channelSystem });
     else if (subtab === 'public') body = renderPublicOpinionPanel({ opinionSystem }) + _navCards(renderNavPublic);
     else body = _renderShare(marketSystem) + _navCards(renderNavShare);
     return subtabBar + body;
