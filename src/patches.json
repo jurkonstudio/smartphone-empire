@@ -1,6 +1,47 @@
 {
-  "latest": "0.2.2",
+  "latest": "0.2.3",
   "releases": [
+    {
+      "version": "0.2.3",
+      "date": "2026-10-25",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Layanan pasca-jual: atur garansi (6, 12, 24 bulan) per produk. Garansi panjang menaikkan penjualan, tetapi setiap klaim ada biayanya.",
+            "en": "After-sales service: set warranty (6, 12, 24 months) per product. Longer warranty lifts sales, but every claim costs money."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Pusat servis 3 tingkat (mitra, milik sendiri, jaringan global). Antrean klaim memengaruhi kepuasan, reputasi, dan penjualan.",
+            "en": "Three service network tiers (partner, own, global). Claim queues affect satisfaction, reputation, and sales."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Insiden cacat massal: putuskan recall, kampanye servis gratis, atau abaikan. Tab baru Pasar > Servis.",
+            "en": "Mass-defect incidents: choose a recall, a free service campaign, or ignore it. New tab Market > Service."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Dukungan update OS 1–5 tahun per produk (janji publik, hanya bisa dinaikkan) dengan biaya bulanan.",
+            "en": "OS update support of 1–5 years per product (a public promise that can only go up) with a monthly cost."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Ringkasan bulanan kini menampilkan biaya pasca-jual. Ponsel lipat lebih rawan rusak.",
+            "en": "The monthly summary now shows after-sales costs. Foldable phones are more failure-prone."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.2",
       "date": "2026-10-23",

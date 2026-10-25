@@ -17,6 +17,7 @@ import { EconomySystem } from './systems/EconomySystem.js';
 import { QuestSystem } from './systems/QuestSystem.js';
 import { EraEventSystem } from './systems/EraEventSystem.js';
 import { ChannelSystem } from './systems/ChannelSystem.js';
+import { AfterSalesSystem } from './systems/AfterSalesSystem.js';
 import { TutorialSystem } from './systems/TutorialSystem.js';
 import { ResearchSystem } from './systems/ResearchSystem.js';
 import { OSSystem } from './systems/OSSystem.js';
@@ -132,6 +133,7 @@ var advisor           = new AdvisorSystem(state, { research: research });
 var stockSystem       = new StockSystem(state);
 var promotion         = new PromotionSystem(state);
 var channels          = new ChannelSystem(state);
+var afterSales        = new AfterSalesSystem(state);
 var bank              = new BankSystem(state);
 var econBrakes        = new EconBrakeSystem(state);
 
@@ -148,6 +150,10 @@ economy.setEconBrakes(econBrakes);
 economy.setPlants(componentPlants);
 products.setChannels(channels);
 economy.setChannels(channels);
+// [Pasca-jual] garansi, pusat servis, dukungan OS, insiden cacat massal.
+afterSales.setAssembly(assemblySystem);
+products.setAfterSales(afterSales);
+economy.setAfterSales(afterSales);
 teamSystem.setEconomy(economy); // [v2030] simulasi runway saat rekrut
 
 // ============ STATE UI ============
@@ -159,7 +165,7 @@ var activeHqSubtab = 'overview';
 var NAV_SUBTABS = {
     research: ['tech', 'os', 'manufaktur', 'chip'],
     products: ['design', 'catalog', 'sales', 'chip'],
-    market: ['share', 'competitors', 'trends', 'promo', 'channels', 'public'],
+    market: ['share', 'competitors', 'trends', 'promo', 'channels', 'service', 'public'],
     team: ['overview', 'team', 'exchange', 'bank']
 };
 var _burnWarn = null;
@@ -327,7 +333,7 @@ function renderView(opts) {
         else if (activeView === 'team') html = renderHqPanel({ subtab: activeHqSubtab, state: state.get(), timeSnapshot: getTime(), researchSystem: research, teamSystem: teamSystem, stockSystem: stockSystem });
         else if (activeView === 'research') html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os, chipResearchSystem: chipResearch, componentPlantSystem: componentPlants, assemblySystem: assemblySystem });
         else if (activeView === 'products') html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os });
-        else if (activeView === 'market') html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion, channelSystem: channels });
+        else if (activeView === 'market') html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion, channelSystem: channels, afterSalesSystem: afterSales });
         else if (activeView === 'settings') html = renderSettingsPanel();
         else if (activeView === 'guide') html = renderGuidePanel();
         else html = renderEmptyState({ icon: '?', title: tr('main.not_found') });
@@ -1060,6 +1066,52 @@ function bindGlobalClicks() {
             renderAll();
             return;
         }
+        // [Pasca-jual] level pusat servis, garansi, dukungan OS, keputusan insiden.
+        var asLevel = e.target.closest('[data-as-level]');
+        if (asLevel) {
+            e.preventDefault(); vibrate(8);
+            var asLr = afterSales.setLevel(asLevel.dataset.asLevel);
+            if (!asLr.ok) {
+                ToastService.error(asLr.reason === 'funds' ? _runwayL('Dana tidak cukup untuk jaringan servis ini.', 'Not enough funds for this service network.')
+                    : asLr.reason === 'locked' ? _runwayL('Terbuka tahun ' + asLr.year + '.', 'Unlocks in ' + asLr.year + '.')
+                    : _runwayL('Tidak bisa diubah.', 'Cannot change this.'));
+            } else ToastService.success(_runwayL('Jaringan servis diperbarui.', 'Service network updated.'));
+            renderAll();
+            return;
+        }
+        var asWar = e.target.closest('[data-as-warranty]');
+        if (asWar) {
+            e.preventDefault(); vibrate(6);
+            var asWr = afterSales.setWarranty(asWar.dataset.asWarranty, parseInt(asWar.dataset.asVal, 10));
+            if (!asWr.ok && asWr.reason === 'lock') ToastService.error(_runwayL('Garansi bisa diubah lagi dalam ' + asWr.monthsLeft + ' bulan.', 'Warranty can change again in ' + asWr.monthsLeft + ' month(s).'));
+            else if (asWr.ok) ToastService.success(_runwayL('Garansi diperbarui.', 'Warranty updated.'));
+            renderAll();
+            return;
+        }
+        var asOs = e.target.closest('[data-as-os]');
+        if (asOs) {
+            e.preventDefault(); vibrate(6);
+            var asOr = afterSales.setOsYears(asOs.dataset.asOs, parseInt(asOs.dataset.asVal, 10));
+            if (!asOr.ok && asOr.reason === 'promise') ToastService.error(_runwayL('Janji dukungan update OS tidak bisa diturunkan.', 'An OS update promise cannot be lowered.'));
+            else if (asOr.ok) ToastService.success(_runwayL('Dukungan update OS dinaikkan.', 'OS update support extended.'));
+            renderAll();
+            return;
+        }
+        var asInc = e.target.closest('[data-as-incident]');
+        if (asInc) {
+            e.preventDefault(); vibrate(10);
+            var asIr = afterSales.resolveIncident(parseInt(asInc.dataset.asIncident, 10), asInc.dataset.asVal);
+            if (!asIr.ok) {
+                ToastService.error(asIr.reason === 'funds' ? _runwayL('Dana tidak cukup untuk tindakan ini.', 'Not enough funds for this action.')
+                    : _runwayL('Insiden ini sudah tidak aktif.', 'This incident is no longer active.'));
+            } else {
+                ToastService.success(asInc.dataset.asVal === 'recall' ? _runwayL('Recall dijalankan.', 'Recall started.')
+                    : asInc.dataset.asVal === 'campaign' ? _runwayL('Kampanye servis gratis dimulai.', 'Free service campaign started.')
+                    : _runwayL('Insiden diabaikan.', 'Incident ignored.'));
+            }
+            renderAll();
+            return;
+        }
         var mktSub = e.target.closest('[data-market-subtab]');
         if (mktSub) { e.preventDefault(); activeMarketSubtab = mktSub.dataset.marketSubtab; renderView(); return; }
         var compCard = e.target.closest('[data-competitor-detail]');
@@ -1465,6 +1517,7 @@ async function boot() {
         stockSystem.start();
         promotion.start();
         channels.start();
+        afterSales.start();
         bank.start();
         econBrakes.start();
         bindRegionalActions();
@@ -1513,7 +1566,7 @@ async function boot() {
             state: state, bus: bus, timeSystem: timeSystem, economy: economy, quests: quests, eraEvents: eraEvents, tutorial: tutorial,
             research: research, chipResearch: chipResearch, os: os, products: products, market: market, competitors: competitors, opinion: opinion, marketNav: marketNav, eraSystem: eraSystem, teamSystem: teamSystem,
             chips: chipSystem, fab: fabSystem, plants: componentPlants, assembly: assemblySystem, news: NewsSystem, advisor: advisor, stocks: stockSystem, ThemeService: ThemeService,
-            silicon: SiliconService, promotion: promotion, channels: channels, bank: bank, econ: econBrakes, payment: PaymentService,
+            silicon: SiliconService, promotion: promotion, channels: channels, afterSales: afterSales, bank: bank, econ: econBrakes, payment: PaymentService,
             openSiliconStore: openSiliconStoreModal, LanguageService: LanguageService,
             SaveService: SaveService, ToastService: ToastService, Modal: Modal, navigate: navigate, render: renderAll, renderSoft: renderSoft,
             modules: { marketing: marketingModule, feedbackData: feedbackModule },
