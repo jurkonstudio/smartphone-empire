@@ -1,6 +1,26 @@
 {
-  "latest": "0.2.7",
+  "latest": "0.2.8",
   "releases": [
+    {
+      "version": "0.2.8",
+      "date": "2026-10-25",
+      "items": [
+        {
+          "type": "balance",
+          "text": {
+            "id": "Ekonomi ekosistem dikalibrasi ulang pada ponsel terjual sungguhan: pendapatan ekosistem kini ±10–17% pendapatan ponsel (sebelumnya ±2%), dengan margin kotor ±50%. Biaya tetap bulanan memakai skala^0,3 (sebelumnya akar kuadrat); tingkat pasang lini, layanan, dan belanja App Store dinaikkan.",
+            "en": "Ecosystem economy recalibrated on real phone sales: ecosystem revenue is now about 10-17% of phone revenue (before: about 2%), with roughly 50% gross margin. Monthly fixed costs scale by scale^0.3 (before: square root); accessory, service and App Store rates were raised."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Asisten AI baru terbuka mulai 2023 dan butuh fitur OS AI On-Device (sebelumnya 2011, Asisten Virtual).",
+            "en": "The AI assistant now opens from 2023 and needs the AI On-Device OS feature (before: 2011, Virtual Assistant)."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.7",
       "date": "2026-10-25",
