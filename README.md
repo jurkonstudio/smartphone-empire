@@ -45,7 +45,7 @@ A season ends when the game date enters **2051** (the `endYear` limit of 2050 in
 
 ## What's in the game
 
-The numbers below were counted directly from the data files in this repo (v0.2.4; the 0.2.4 ecosystem added no new counted items).
+The numbers below were counted directly from the data files in this repo (v0.2.5; the ecosystem and accessory visuals added no new counted items).
 
 ### 🧭 Navigation
 
@@ -53,7 +53,7 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 
 - **Home** has a **Campus | Office** switch (3D campus map or 3D office map).
 - **HQ** has 6 sub-tabs: **Overview, Team, Exchange, Bank, Invest, History**.
-- **Research** has 4 sub-tabs: **Tech, OS, Manufacturing, Chip**. **Products** has 4: **Design, Catalog, Sales, Chip**. **Market** has 8: **Share, Competitors, Trends, Promo, Channels, Service, Ecosystem, Public**.
+- **Research** has 4 sub-tabs: **Tech, OS, Manufacturing, Chip**. **Products** has 5: **Design, Catalog, Accessories, Sales, Chip** (Chip appears only once the Chip Lab is unlocked). **Market** has 8: **Share, Competitors, Trends, Promo, Channels, Service, Ecosystem, Public**.
 - The desktop layout has its own styling (`desktop.css`), so the game is comfortable on wide screens, not only on phones.
 
 ### 🏢 Campus, Office, and Team
@@ -174,6 +174,7 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 - **The leaderboard is only partly validated by the server.** Stats are still sent from the player's device. The server limits sync frequency, checks invariants, and hides suspicious profiles (`supabase/11`), and it computes level and score itself (`supabase/12` and `15`). Values that stay within plausible bounds can still be faked, so this isn't an official ranking.
 - **The top-up lock is client-side only.** The server function `create_payment_order` can still be called by a logged-in account through the API directly. Orders stay `pending` until an admin approves them, but if top-up must be fully closed, add a server-side flag.
 - **Ecosystem balance is a first-pass estimate.** Accessory and App Store values (`src/data/ecosystem.data.js`) were checked only in a headless simulation and a browser smoke test, not against the real game economy. The target from the design notes is 5–15% of phone revenue and a 35–55% gross margin; calibrate it through play before treating it as final.
+- **Accessory visuals are fixed designs.** The mockups follow the tier and the open/closed state only. The player cannot yet choose color, material, or shape for accessories, and they are not shown in Market → Ecosystem (only linked).
 - **Raw text in some places.** Four translation keys are used without fallback text and aren't in the dictionaries yet: `main.toast.fab_unlocked`, `wiz.warn.volume_cost`, `wiz.preview.unit_design`, `wiz.preview.unit_parts`. Many other keys (for example `team.recruit.*`, `team.nego.*`, `silstore.locked.*`) still rely on fallback text and haven't been merged into `src/data/i18n/en.js` and `id.js`.
 - **`supabase/BACA-DULU.md` is incomplete.** Its table covers 01–09, 14, and 15, but is missing both file-10 variants, 11, 12, 13, 15b, 16, and 17.
 - **SIL → money exchange** needs `supabase/10-tukar-sil.sql`. Without it the call fails and no SIL is deducted.
@@ -292,7 +293,12 @@ The project is still in progress. Roadmap notes:
 
 ## Versions
 
-Latest recorded version: **0.2.4** (October 25, 2026). Official change lists are in `src/patches.json` and `PERF-CHANGES.md`. The root `patches.json` is kept identical to `src/patches.json`.
+Latest recorded version: **0.2.5** (October 25, 2026). Official change lists are in `src/patches.json` and `PERF-CHANGES.md`. The root `patches.json` is kept identical to `src/patches.json`.
+
+### 0.2.5 — Accessory visuals
+- New sub-tab Products → Accessories: inline SVG mockups for earbuds, smartwatches, and chargers (`src/ui/phone/AccessoryMockup.js`, `src/ui/panels/AccessoriesTab.js`). Shape and color follow the tier. Lines that are not open yet show in gray with a label.
+- Market → Ecosystem has a shortcut button to the new tab. Tier, price, and open/close are still set in Market → Ecosystem.
+- Visual only: no change to the economy formulas or the save format.
 
 ### 0.2.4 — Ecosystem (accessories and App Store)
 - Accessory lines: wireless earbuds (2004), smartwatches (2014), and chargers (2000), each with Basic / Mid / Premium tiers and an adjustable price (Market → Ecosystem).
