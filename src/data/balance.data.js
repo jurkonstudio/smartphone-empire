@@ -14,7 +14,8 @@ export const BALANCE = {
         'cam_vga',
         'bat_liion',
         'chip_single',
-        'net_gsm'
+        'net_gsm',
+        'body_plastic'   // wajib: tanpa bodi, wizard desain tidak bisa dilanjutkan oleh pemain baru
     ],
 
     difficultyMultiplier: {
