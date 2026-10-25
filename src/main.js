@@ -64,6 +64,7 @@ import { renderProductPanel, setCatalogView, openProductDetailModal, openCampaig
 import { openDesignWizard } from './ui/panels/DesignWizard.js';
 import { renderMarketPanel, drawShareChart } from './ui/panels/MarketPanel.js';
 import { openCompetitorDetailModal } from './ui/panels/CompetitorDetailModal.js';
+import { openAcquisitionProductsModal } from './ui/panels/AcquisitionProductsModal.js';
 import { openViralResponseModal } from './ui/panels/PublicOpinionPanel.js';
 import { drawSalesChart } from './ui/panels/SalesChart.js';
 import { openCandidateDetailModal, setRecruitFilter, setTeamMode } from './ui/panels/TeamPanel.js';
@@ -1017,6 +1018,12 @@ function bindGlobalClicks() {
             var er = econBrakes.buyEfficiency();
             if (!er.ok) ToastService.error(er.reason); else ToastService.success('Investasi pabrik level ' + er.level + ' selesai.');
             renderAll();
+            return;
+        }
+        var econAcqProd = e.target.closest('[data-econ-acq-products]');
+        if (econAcqProd) {
+            e.preventDefault(); vibrate(6);
+            openAcquisitionProductsModal({ competitorId: econAcqProd.dataset.econAcqProducts });
             return;
         }
         var econAcq = e.target.closest('[data-econ-acq]');
