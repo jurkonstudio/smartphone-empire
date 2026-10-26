@@ -125,10 +125,16 @@ function _renderSectionBar(sec, ov) {
 function _renderOverview(params, ov) {
     var asm = ov.asm, year = (ov.data.time && ov.data.time.currentYear) || 0;
 
-    // --- rantai produksi ---
-    function node(sec, ico, name, val, tone, nav) {
+    // --- rantai produksi (horizontal ringkas, aksen warna per tahap, ikon Tabler) ---
+    function node(sec, ico, name, val, tone, nav, stage, pct) {
         var attrs = nav ? 'data-nav="' + nav[0] + '" data-nav-sub="' + nav[1] + '"' : 'data-mf-ui="sec:' + sec + '"';
-        return '<button class="mfx-node ' + tone + '" ' + attrs + '><span class="mfx-node-i">' + ico + '</span><span class="mfx-node-n">' + esc(name) + '</span><span class="mfx-node-v">' + esc(val) + '</span></button>';
+        var bar = (pct === null || pct === undefined) ? '' :
+            '<span class="mfx-node-bar"><i style="width:' + Math.max(0, Math.min(100, Math.round(pct))) + '%"></i></span>';
+        return '<button class="mfx-node mfx-st-' + stage + ' ' + tone + '" ' + attrs + '>' +
+            '<span class="mfx-node-i"><i class="ti ti-' + ico + '" aria-hidden="true"></i></span>' +
+            '<span class="mfx-node-n">' + esc(name) + '</span>' +
+            '<span class="mfx-node-v">' + esc(val) + '</span>' + bar +
+            '<span class="mfx-node-dot" aria-hidden="true"></span></button>';
     }
     var chipTone = ov.fabBuilt ? 'ok' : (year >= FAB_UNLOCK_YEAR ? 'info' : 'mute');
     var chipVal = ov.fabBuilt ? mt('v_chip_on') : (ov.chipLocked ? mt('v_chip_nodes', { n: ov.chipLocked }) : mt('v_chip_off'));
@@ -142,10 +148,15 @@ function _renderOverview(params, ov) {
     }
     var html = '<div class="mfx-hub"><div class="mfx-hub-t">' + esc(mt('hub')) + '</div><div class="mfx-hub-s">' + esc(mt('hub_sub')) + '</div>' +
         '<div class="mfx-chain">' +
-            node('chip', '🧠', mt('n_chip'), chipVal, chipTone) + '<span class="mfx-arrow">›</span>' +
-            node('plants', '⚙️', mt('n_comp'), mt('v_comp', { b: ov.built, t: ov.plants.length }), compTone) + '<span class="mfx-arrow">›</span>' +
-            node('assembly', '🏭', mt('n_asm'), asmVal, asmTone) + '<span class="mfx-arrow">›</span>' +
-            node('', '📦', mt('n_prod'), mt('v_prod', { n: ov.orders }), ov.orders ? 'info' : 'mute', ['products', 'catalog']) +
+            node('chip', 'cpu', mt('n_chip'), chipVal, chipTone, null, 'chip', ov.fabBuilt ? 100 : 0) +
+            '<i class="ti ti-chevron-right mfx-arrow" aria-hidden="true"></i>' +
+            node('plants', 'settings-2', mt('n_comp'), mt('v_comp', { b: ov.built, t: ov.plants.length }), compTone, null, 'comp',
+                ov.plants.length ? ov.built / ov.plants.length * 100 : 0) +
+            '<i class="ti ti-chevron-right mfx-arrow" aria-hidden="true"></i>' +
+            node('assembly', 'building-factory-2', mt('n_asm'), asmVal, asmTone, null, 'asm',
+                asm && asm.operating ? asm.utilization * 100 : 0) +
+            '<i class="ti ti-chevron-right mfx-arrow" aria-hidden="true"></i>' +
+            node('', 'package', mt('n_prod'), mt('v_prod', { n: ov.orders }), ov.orders ? 'info' : 'mute', ['products', 'catalog'], 'prod', null) +
         '</div></div>';
 
     // --- statistik ---
