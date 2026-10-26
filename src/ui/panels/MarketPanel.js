@@ -434,6 +434,48 @@ export function drawShareChart(container) {
 // ============================================================
 // SUB-TAB KOMPETITOR
 // ============================================================
+// Feed "Rilis Rival Terbaru": gabungan rilis semua kompetitor, terbaru di atas.
+// Dampak ditampilkan dari data nyata game: pangsa merek (modifier aksi rilis) + segmen tier.
+function _renderReleaseFeed(competitorSystem, mode) {
+    try {
+        var data = window.__game.state.get();
+        var cs = data.competitorState || {};
+        var ents = cs.entities || {};
+        var mods = cs.actionMods || {};
+        var now = data.time.currentYear * 12 + (data.time.currentMonth - 1);
+        var rows = [];
+        Object.keys(ents).forEach(function (id) {
+            (ents[id].releases || []).forEach(function (r) { rows.push({ id: id, r: r }); });
+        });
+        if (!rows.length) return '';
+        rows.sort(function (a, b) { return (b.r.year * 12 + b.r.month) - (a.r.year * 12 + a.r.month); });
+        var html = rows.slice(0, 6).map(function (row) {
+            var c = competitorSystem.getCompetitorData(row.id, mode);
+            if (!c) return '';
+            var r = row.r;
+            var age = now - (r.year * 12 + (r.month - 1));
+            var seg = r.tier <= 2 ? 'market.feed.seg.entry' : (r.tier === 3 ? 'market.feed.seg.mid' : 'market.feed.seg.premium');
+            var boost = ((mods[row.id] || {}).modifier || 0) > 0.0005 && age <= 3;
+            var badges = '';
+            if (age <= 1) badges += '<span style="background:var(--accent-soft);color:var(--accent);border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:6px;">' + t('market.feed.new') + '</span>';
+            if (r.signature) badges += '<span title="' + t('market.feed.icon') + '" style="margin-left:6px;">★</span>';
+            return '<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--border);">' +
+                '<div style="flex:0 0 3px;align-self:stretch;border-radius:2px;background:' + (c.color || '#888') + ';"></div>' +
+                '<div style="flex:1;min-width:0;">' +
+                    '<div style="font-size:13px;font-weight:700;overflow-wrap:anywhere;">' + escapeHtml(r.name) + badges + '</div>' +
+                    '<div style="font-size:11px;color:var(--text-mute);margin-top:2px;">' + escapeHtml(c.name) + ' • ' +
+                        t(seg) + ' • ' + String(r.month).padStart(2, '0') + '/' + r.year +
+                        (boost ? ' • <span style="color:var(--info);">' + t('market.feed.boost') + '</span>' : '') + '</div>' +
+                '</div></div>';
+        }).join('');
+        return '<div class="card" style="margin-bottom:10px;">' +
+            '<div style="font-size:13px;font-weight:700;margin-bottom:4px;">📰 ' + t('market.feed.title') + '</div>' + html + '</div>';
+    } catch (e) {
+        console.warn('[MarketPanel] feed rilis gagal', e);
+        return '';
+    }
+}
+
 function _renderCompetitors(competitorSystem) {
     if (!competitorSystem) return '<div class="empty"><div class="empty-ico">🏢</div><div class="empty-title">' + t('market.competitors.not_ready') + '</div></div>';
     const mode = window.__game.state.get().settings.competitorMode || 'real';
@@ -461,7 +503,7 @@ function _renderCompetitors(competitorSystem) {
         `;
     }).join('');
 
-    return '<div class="comp-list">' + cards + '</div>';
+    return _renderReleaseFeed(competitorSystem, mode) + '<div class="comp-list">' + cards + '</div>';
 }
 
 // ============================================================
