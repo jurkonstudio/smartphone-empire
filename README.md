@@ -323,7 +323,18 @@ The project is still in progress. Roadmap notes:
 
 ## Versions
 
-Latest recorded version: **0.2.12** (October 27, 2026). Official change lists are in `src/patches.json` and `docs/PERF-CHANGES.md`. The root `patches.json` is kept identical to `src/patches.json`, and `APP_CONFIG.version` in `src/config/app.config.js` must equal `latest`.
+Latest recorded version: **0.2.13** (October 27, 2026). Official change lists are in `src/patches.json` and `docs/PERF-CHANGES.md`. The root `patches.json` is kept identical to `src/patches.json`, and `APP_CONFIG.version` in `src/config/app.config.js` must equal `latest`.
+
+### 0.2.13 — Flagship cycle, hype, world map, and manufacturing overview
+- Feature: **One flagship per calendar year.** `ProductSystem.confirmTierFamily` refuses a new series when this year's flagship has already shipped (`HypeCycleSystem.checkFlagshipSlot`). Basic, Pro, and Pro Max stay inside one series.
+- Feature: **Hype cycle.** Anticipation rises on launch (25 points, scaled 0.4x to 1.5x by product quality), a teaser appears at month 6 (6 points, weaker without a design in development or with third-party OS or chip), a random leak appears at month 9 (50/50 positive or negative, shifted by your own chip and open OS bugs), and anticipation decays 0.93 per month. It adds up to +25% demand through `_getTechFactor`. Numbers are in `src/data/hype.data.js`.
+- Feature: **Product quality sets the launch spike.** Own OS stability (basis 50, up to ±15%), open OS bugs (-6% each, up to 3), own chip edge from `computeTechEdge` (up to ±20%), and a +10% synergy when both OS and chip are your own. A third-party OS or chip costs -10% each.
+- Feature: **World map** on OS → Users (above the top 5 countries) and in Countries to be supplied. Markers are sized by users or share, with World, Americas, Europe & Africa, and Asia-Pacific zooms. Tap a marker for details. Files: `src/ui/components/WorldMap.js`, `src/data/world-map.data.js`, `assets/geo/`.
+- Change: Manufacturing → Overview chain uses per-stage accents, progress bars, and inline SVG icons (`src/ui/manufacture/MfIcons.js`). The emoji and the external icon font are gone. `mfx-overview.css` is linked from `index.html`.
+- Files: `src/systems/HypeCycleSystem.js` (new), `src/data/hype.data.js` (new), `src/systems/ProductSystem.js`, `src/main.js`, `src/ui/panels/CountryPanels.js`, `src/ui/panels/ManufacturePanel.js`, `src/ui/components/WorldMap.js`, `src/data/world-map.data.js`, `src/ui/manufacture/MfIcons.js` (new), `mfx-overview.css` (new), `index.html`, `tools/hype-cycle-test.mjs` (new), `tools/run-all.mjs`.
+- Change: **This patch changes game logic.** The flagship rule and the hype demand factor affect releases and sales. Version 0.2.13 is set in `APP_CONFIG.version`, `package.json`, `patches.json`, `src/patches.json`, and `web.html`.
+- Tests: `tools/hype-cycle-test.mjs` and `tools/world-map-test.mjs` pass, and `tools/run-all.mjs` runs both.
+- Not yet checked: the hype numbers are a starting point and are not calibrated by simulation. The world map outlines are hand-drawn, so coastlines and borders are approximate. The map and the manufacturing overview have not been checked in a browser or on a real phone. The Mini variant does not exist yet: the product tiers are Basic, Pro, and Pro Max.
 
 ### 0.2.12 — Generation Gallery for phone design
 - Feature: Product → Design → Phone has a Generation Gallery above the "Start design" card. The hero shows your latest phone (or a sample design) on a stage tinted by its era, with spec chips for era, rear lenses, and material. Below it, a timeline shows all 17 milestones from `src/data/phone-specs.data.js`, each rendered with its own spec. Status (Live, Passed, Opens in year, Needs research) follows the game year and completed research.
