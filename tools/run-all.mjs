@@ -34,6 +34,8 @@ const TESTS = [
   { file: 'tools/eco-render-check.mjs', src: true },
   { file: 'tools/accessories-mockup-check.mjs', src: true },
   { file: 'tools/overview-v2-check.mjs', src: true },
+  { file: 'tools/cash-range-check.mjs', src: true },
+  { file: 'tools/wholesale-modal-check.mjs', src: true },
   { file: 'tools/eco-services-sim.mjs', src: true },
   { file: 'tools/econ-brakes.mjs', src: true },
   { file: 'tools/era-events-test.mjs', src: true },
