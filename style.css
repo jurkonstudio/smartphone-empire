@@ -5491,3 +5491,17 @@ body.modal-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
     .gen-hero-phone, .gen-stage-glow, .gen-stage::after { animation: none !important; }
 }
+
+/* ============================================================================
+   HOME + NAV MELAYANG: sisakan ruang di bawah untuk bar navigasi kaca.
+   Bar nav sekarang position:fixed (tidak lagi memakan tinggi layout), sehingga
+   view Home sebelumnya memanjang sampai ke tepi bawah dan dock (tab Fokus/Berita/
+   Aktivitas + tombol ciutkan/bentangkan peta) tertutup bar nav, terutama saat
+   dock diciutkan. Angkanya sama dengan yang dipakai posisi tombol Asisten (FAB).
+   Desktop (tanpa bar nav bawah) tidak terpengaruh.
+   ============================================================================ */
+@media not all and (min-width: 768px) and (any-pointer: fine) {
+    .app-view.view-home {
+        padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 10px);
+    }
+}
