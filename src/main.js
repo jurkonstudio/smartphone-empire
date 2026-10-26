@@ -106,6 +106,7 @@ import { getActiveRendererIdPublic, toggleNotificationPanel, closeNotificationPa
 import { initSwipe, showSwipeAnimation } from './core/SwipeService.js';
 import { initNavSliderDrag } from './core/NavSliderDrag.js';
 import { AudioService } from './core/AudioService.js';
+import { registerServiceWorker } from './services/ServiceWorkerService.js';
 import advisorNLP from './systems/Advisor/AdvisorNLP.js'; // <-- IMPORT ADVISOR NLP
 
 // ============ INSTANCE ============
@@ -1769,6 +1770,7 @@ ecosystem.start();
         });
 
         hideLoading();
+        registerServiceWorker(); // Tahap 3A: setelah boot selesai, tidak menunda render pertama
         console.info('[' + APP_CONFIG.name + '] siap. Era: ' + state.get().era + ', Lang: ' + LanguageService.getLang() + ', SIL: ' + SiliconService.getBalance());
     } catch (err) {
         console.error('[boot] gagal:', err);
