@@ -177,7 +177,7 @@ var activeMarketSubtab = 'share';
 var activeHqSubtab = 'overview';
 var NAV_SUBTABS = {
     research: ['tech', 'os', 'manufaktur', 'chip'],
-    products: ['design', 'catalog', 'accessories', 'sales', 'chip'],
+    products: ['design', 'catalog', 'sales', 'chip'],
     market: ['share', 'competitors', 'trends', 'promo', 'channels', 'service', 'ecosystem', 'public'],
     team: ['overview', 'team', 'exchange', 'bank']
 };
@@ -679,6 +679,8 @@ function bindGlobalClicks() {
         if (catFilter) { e.preventDefault(); setCatalogView('filter', catFilter.dataset.catalogFilter); renderAll(); return; }
         var catSort = e.target.closest('[data-catalog-sort]');
         if (catSort) { e.preventDefault(); setCatalogView('sort', catSort.dataset.catalogSort); renderAll(); return; }
+        var catCat = e.target.closest('[data-catalog-cat]');
+        if (catCat) { e.preventDefault(); setCatalogView('cat', catCat.dataset.catalogCat); renderAll(); return; }
 
         var chipAction = e.target.closest('[data-chip-action]');
         if (chipAction) {
@@ -1038,7 +1040,7 @@ function bindGlobalClicks() {
         var prodSub = e.target.closest('[data-prod-subtab]');
         if (prodSub) { e.preventDefault(); activeProdSubtab = prodSub.dataset.prodSubtab; renderView(); return; }
         var designTrackBtn = e.target.closest('[data-design-track]');
-        if (designTrackBtn) { e.preventDefault(); setDesignTrack(designTrackBtn.dataset.designTrack); renderView(); return; }
+        if (designTrackBtn) { e.preventDefault(); setDesignTrack(designTrackBtn.dataset.designTrack); activeProdSubtab = 'design'; renderView(); return; }
         var prodAction = e.target.closest('[data-prod-action]');
         if (prodAction) {
             e.preventDefault();
