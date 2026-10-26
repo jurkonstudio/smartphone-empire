@@ -137,6 +137,7 @@ var fabSystem         = new FabSystem(state);
 var componentPlants   = new ComponentPlantSystem(state);
 var assemblySystem    = new AssemblySystem(state);
 var wholesaleSystem   = new WholesaleContractSystem(state);
+wholesaleSystem.setCompetitorActions(competitorActions);
 var companyHistory    = new CompanyHistorySystem(state);
 var advisor           = new AdvisorSystem(state, { research: research });
 var stockSystem       = new StockSystem(state);
