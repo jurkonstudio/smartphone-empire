@@ -2,7 +2,7 @@
       "relation": ["delegate_permission/common.handle_all_urls"],
       "target": {
         "namespace": "android_app",
-        "package_name": "id.my.smartphone_empire.www.twa",
-        "sha256_cert_fingerprints": ["2D:14:21:6A:3D:FF:36:A7:F0:94:61:7A:4F:D4:4B:19:0C:69:71:60:80:D5:38:71:DC:16:11:62:84:B7:7E:3B"]
+        "package_name": "com.jurkonstudio.smartphoneempire",
+        "sha256_cert_fingerprints": ["B4:B0:27:49:6A:8D:50:DD:AA:4D:DA:5E:97:A0:5A:F8:67:7B:C9:28:BF:23:70:50:90:24:0E:0D:96:CB:68:BE"]
       }
     }]
