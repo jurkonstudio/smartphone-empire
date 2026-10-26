@@ -402,7 +402,9 @@ export class ProductSystem {
         return { items: items, total: items.length ? total + setupCost : 0 };
     }
 
-    confirmTierFamily(baseConfig, plans) {
+    // Pemeriksaan murni tanpa efek samping. Dipakai bersama oleh tombol rilis di wizard
+    // dan confirmTierFamily, supaya tombol tidak pernah aktif untuk rilis yang pasti ditolak.
+    validateTierFamily(baseConfig, plans) {
         var data = this.state.data;
         if (data.products.development) return { ok: false, reason: 'Ada produk yang sedang dikembangkan.' };
         if (this._hype) {
@@ -462,6 +464,17 @@ export class ProductSystem {
         if (!WalletService.canAfford(quote.total)) {
             return { ok: false, reason: 'Uang tidak cukup. Butuh $' + quote.total.toLocaleString('en-US') + '.' };
         }
+
+        return { ok: true, base: base, quote: quote };
+    }
+
+    confirmTierFamily(baseConfig, plans) {
+        var check = this.validateTierFamily(baseConfig, plans);
+        if (!check.ok) return check;
+        var data = this.state.data;
+        var base = check.base;
+        var quote = check.quote;
+        var multi = quote.items.length > 1;
 
         var maxQty = 0;
         quote.items.forEach(function (it) { if (it.cfg.productionQty > maxQty) maxQty = it.cfg.productionQty; });
