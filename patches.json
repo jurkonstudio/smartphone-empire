@@ -1,6 +1,40 @@
 {
-  "latest": "0.2.11",
+  "latest": "0.2.12",
   "releases": [
+    {
+      "version": "0.2.12",
+      "date": "2026-10-27",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Produk → Desain → Ponsel kini punya Galeri Generasi: hero ponsel terakhir Anda (atau contoh standar) mengambang di panggung bernuansa era, plus timeline 17 generasi dari 2000 sampai terbaru. Tiap generasi dirender dengan spesifikasinya sendiri. Status (Aktif, Sudah lewat, Terbuka tahun, Perlu riset) mengikuti tahun dan riset yang sudah selesai, jadi galeri ikut berubah saat waktu berjalan atau saat ponsel baru dirilis.",
+            "en": "Product → Design → Phone now has a Generation Gallery: your latest phone (or a sample design) floats on a stage tinted by its era, plus a timeline of 17 generations from 2000 to the newest. Each generation is rendered with its own spec. Status (Live, Passed, Opens in year, Needs research) follows the game year and completed research, so the gallery updates as time passes or when a new phone is released."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "renderPhoneMockup menerima opsi spec untuk memaksa tampilan generasi tertentu. Opsi ini opsional; pemanggil lama tidak terpengaruh.",
+            "en": "renderPhoneMockup accepts an optional spec option to force a particular generation. Existing callers are unaffected."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Label merek di hero galeri dimatikan karena hero sudah punya caption sendiri. Mockup di wizard desain dan katalog tidak berubah.",
+            "en": "The brand label is off on the gallery hero because the hero has its own caption. The wizard and catalog mockups are unchanged."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Versi game dinaikkan ke 0.2.12 di src/config/app.config.js, package.json, dan web.html. Patch 0.2.12 tidak mengubah logika permainan.",
+            "en": "The game version is now 0.2.12 in src/config/app.config.js, package.json, and web.html. Patch 0.2.12 does not change game logic."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.11",
       "date": "2026-10-27",
