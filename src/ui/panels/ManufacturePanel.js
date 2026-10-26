@@ -217,7 +217,9 @@ function _renderPlantSection(sys) {
         S(mt('pl_sum_save'), _money(cpd.savings)) + (unpaid > 0 ? S(mt('pl_sum_unpaid'), _money(unpaid), true) : S(mt('pl_sum_rev'), _money(cpd.externalRevenue))) + '</div>';
 
     var dfltOpen = builtList.length > 0 && builtList.length <= 2;
-    return head + summary.map(function (s) { return _renderPlantCard(sys, s, cash, dfltOpen); }).join('');
+    var wholesaleEntry = '<div class="mfx-wh-entry"><button class="btn-secondary mf-buy-btn" data-wholesale-action="open">' +
+        esc(_tf('wh.entry', 'Kontrak grosir')) + '</button></div>';
+    return head + wholesaleEntry + summary.map(function (s) { return _renderPlantCard(sys, s, cash, dfltOpen); }).join('');
 }
 
 function _renderPlantCard(sys, s, cash, dfltOpen) {
