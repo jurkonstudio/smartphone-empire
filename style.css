@@ -5224,3 +5224,153 @@ html[data-theme="dark"] .mobile-nav.dragging .nav-slider::before {
     line-height: 1.2;
 }
 html[data-perf="lite"] .home-map .map-hint { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(15, 23, 42, .78); }
+
+/* ============================================================
+   MANUFAKTUR v2 — navigasi bagian, ringkasan, Assembly, kartu pabrik
+   (mfx-* = hub/komponen, asm2-* = Assembly). Aman untuk tema gelap & terang.
+   ============================================================ */
+.mfx-root { --mfx-ok: var(--success, #10b981); --mfx-warn: #f59e0b; --mfx-bad: var(--danger, #ef4444); --mfx-info: var(--info, #3b82f6); --mfx-mute: var(--text-mute, #8b93a1); --mfx-card: var(--surface, rgba(255,255,255,.04)); }
+.mfx-root button { font-family: inherit; }
+
+/* segmented sticky */
+.mfx-seg { position: sticky; top: 0; z-index: 5; display: flex; gap: 4px; padding: 4px; margin: 0 0 10px; border-radius: 12px; background: var(--bg-3, rgba(127,127,127,.14)); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.mfx-seg-b { flex: 1 1 0; min-width: 0; position: relative; padding: 8px 4px; min-height: 36px; border: 0; border-radius: 9px; background: transparent; color: var(--text-dim); font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.mfx-seg-b small { margin-left: 4px; font-size: 10.5px; color: var(--text-mute); font-weight: 500; }
+.mfx-seg-b.active { background: var(--bg-2, var(--mfx-card)); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.mfx-dot { position: absolute; top: 6px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--mfx-warn); }
+.mfx-dot.bad { background: var(--mfx-bad); }
+
+/* hub + rantai */
+.mfx-hub { padding: 12px; margin: 0 0 8px; border-radius: 14px; background: var(--mfx-card); }
+.mfx-hub-t { font-weight: 700; font-size: 15px; }
+.mfx-hub-s { font-size: 12px; color: var(--text-dim); line-height: 1.4; margin: 3px 0 0; }
+.mfx-chain { display: flex; align-items: stretch; gap: 2px; margin-top: 10px; }
+.mfx-node { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; border: 1px solid var(--border, rgba(127,127,127,.2)); border-radius: 10px; background: transparent; color: var(--text); cursor: pointer; text-align: center; }
+.mfx-node:active { transform: scale(.97); }
+.mfx-node-i { font-size: 18px; line-height: 1; }
+.mfx-node-n { font-size: 11px; font-weight: 700; }
+.mfx-node-v { font-size: 9.5px; color: var(--text-mute); line-height: 1.2; overflow-wrap: anywhere; }
+.mfx-node.ok { border-color: var(--mfx-ok); } .mfx-node.warn { border-color: var(--mfx-warn); }
+.mfx-node.bad { border-color: var(--mfx-bad); } .mfx-node.info { border-color: var(--mfx-info); } .mfx-node.mute { opacity: .7; }
+.mfx-arrow { align-self: center; color: var(--text-mute); font-size: 16px; }
+
+.mfx-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 8px; }
+.mfx-stat { padding: 9px 11px; border-radius: 12px; background: var(--mfx-card); }
+.mfx-sv { font-weight: 700; font-size: 15px; overflow-wrap: anywhere; }
+.mfx-sl { font-size: 10.5px; color: var(--text-mute); margin-top: 2px; }
+.mfx-stat.warn .mfx-sv { color: var(--mfx-bad); }
+.mfx-sec { margin: 14px 2px 6px; font-weight: 700; font-size: 13px; }
+
+/* kartu pabrik komponen */
+.mfx-pl { margin: 0 0 8px; border-radius: 14px; background: var(--mfx-card); overflow: hidden; }
+.mfx-pl-head { display: flex; align-items: center; gap: 8px; padding: 10px; }
+.mfx-pl-tog { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.mfx-pl-tog.static { cursor: default; }
+.mfx-pl-ico { flex: 0 0 auto; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; background: rgba(127,127,127,.14); }
+.mfx-pl-main { flex: 1 1 auto; min-width: 0; }
+.mfx-pl-name { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.mfx-pl-st { font-size: 11px; color: var(--text-mute); line-height: 1.35; margin-top: 2px; }
+.mfx-pl-st.bad { color: var(--mfx-bad); } .mfx-pl-st.warn { color: var(--mfx-warn); }
+.mfx-pl-chev { flex: 0 0 auto; color: var(--text-mute); font-size: 14px; }
+.mfx-pl-act { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; }
+.mfx-pl-body { padding: 0 10px 10px; border-top: 1px solid var(--border, rgba(127,127,127,.15)); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.mfx-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mfx-chips span { padding: 3px 8px; border-radius: 999px; background: rgba(127,127,127,.14); font-size: 11px; color: var(--text-mute); }
+.mfx-chips span b { color: var(--text); }
+.mfx-chips span.bad { color: var(--mfx-bad); }
+.mfx-prod { padding: 8px 10px; border-radius: 10px; background: rgba(245,158,11,.1); }
+.mfx-batch { display: flex; flex-direction: column; gap: 5px; font-size: 11.5px; color: var(--text-mute); }
+.mfx-bch-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.mfx-bch { padding: 6px 10px; min-height: 32px; border-radius: 999px; border: 1px solid var(--border-strong, rgba(127,127,127,.3)); background: transparent; color: var(--text); font-size: 12px; cursor: pointer; }
+.mfx-bch.on { background: var(--accent, #6366f1); border-color: var(--accent, #6366f1); color: #fff; }
+.mfx-comp { padding: 9px 10px; border-radius: 10px; background: rgba(127,127,127,.09); }
+.mfx-comp-h { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-size: 13px; }
+.mfx-comp-s { font-size: 11px; color: var(--text-mute); white-space: nowrap; }
+.mfx-comp-s.zero { color: var(--mfx-warn); }
+.mfx-comp-b { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+
+/* Assembly */
+.asm2-hero { padding: 12px; margin: 0 0 8px; border-radius: 14px; background: var(--mfx-card); }
+.asm2-hero-top { display: flex; align-items: center; gap: 10px; }
+.asm2-hero-ico { width: 38px; height: 38px; display: grid; place-items: center; font-size: 20px; border-radius: 11px; background: rgba(255,122,61,.16); flex: 0 0 auto; }
+.asm2-hero-tt { flex: 1 1 auto; min-width: 0; }
+.asm2-hero-name { font-weight: 700; font-size: 15px; }
+.asm2-hero-sub { font-size: 11.5px; color: var(--text-dim); line-height: 1.35; }
+.asm2-chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 600; white-space: nowrap; background: rgba(127,127,127,.18); color: var(--text-dim); }
+.asm2-chip.ok { background: rgba(16,185,129,.16); color: var(--mfx-ok); } .asm2-chip.warn { background: rgba(245,158,11,.18); color: #d97706; }
+.asm2-chip.bad { background: rgba(239,68,68,.16); color: var(--mfx-bad); } .asm2-chip.info { background: rgba(59,130,246,.16); color: var(--mfx-info); }
+.asm2-gauge { height: 8px; margin: 10px 0 4px; border-radius: 5px; background: rgba(127,127,127,.2); overflow: hidden; }
+.asm2-gauge.sm { height: 5px; margin: 6px 0 4px; }
+.asm2-gauge i { display: block; height: 100%; border-radius: 5px; background: var(--mfx-ok); transition: width .3s; }
+.asm2-gauge.warn i { background: var(--mfx-warn); } .asm2-gauge.bad i { background: var(--mfx-bad); }
+.asm2-gauge-l { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--text-mute); }
+.asm2-gauge-l b { color: var(--text); }
+
+.asm2-alerts { display: flex; flex-direction: column; gap: 6px; margin: 0 0 8px; }
+.asm2-alert { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--mfx-card); border-left: 3px solid var(--mfx-info); }
+.asm2-alert.warn { border-left-color: var(--mfx-warn); } .asm2-alert.danger { border-left-color: var(--mfx-bad); }
+.asm2-alert-dot { display: none; }
+.asm2-alert-t { flex: 1 1 auto; min-width: 0; font-size: 12px; line-height: 1.4; }
+.asm2-alert-b { flex: 0 0 auto; }
+
+.asm2-flow { display: flex; align-items: stretch; gap: 2px; margin: 0 0 8px; }
+.asm2-node { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 8px; border: 1px solid var(--border, rgba(127,127,127,.2)); border-radius: 10px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+.asm2-node.on { border-color: #ff7a3d; cursor: default; }
+.asm2-node-t { font-size: 11px; font-weight: 700; }
+.asm2-node-v { font-size: 10px; color: var(--text-mute); line-height: 1.25; }
+.asm2-arrow { align-self: center; color: var(--text-mute); }
+
+.asm2-groups { display: flex; flex-direction: column; gap: 8px; margin: 0 0 8px; }
+.asm2-group { padding: 10px; border-radius: 12px; background: var(--mfx-card); }
+.asm2-group-t { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-mute); margin-bottom: 6px; }
+.asm2-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.asm2-kv { font-weight: 700; font-size: 15px; overflow-wrap: anywhere; }
+.asm2-kv small { font-weight: 500; font-size: 10.5px; color: var(--text-mute); }
+.asm2-kl { font-size: 10.5px; color: var(--text-mute); margin-top: 1px; }
+.asm2-kl em { font-style: normal; opacity: .7; }
+.asm2-kpi.warn .asm2-kv { color: var(--mfx-bad); }
+
+.asm2-sec { margin: 14px 2px 6px; font-weight: 700; font-size: 13px; }
+.asm2-sec-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.asm2-count { font-weight: 500; font-size: 12px; color: var(--text-mute); margin-left: 4px; }
+.asm2-card { padding: 10px 12px; margin: 0 0 8px; border-radius: 12px; background: var(--mfx-card); }
+.asm2-card-t { font-weight: 700; font-size: 13.5px; }
+.asm2-row { display: flex; align-items: center; gap: 10px; }
+.asm2-grow { flex: 1 1 auto; min-width: 0; }
+.asm2-empty { font-size: 12px; color: var(--text-mute); text-align: center; }
+.asm2-note { font-size: 11px; color: var(--text-mute); line-height: 1.4; margin: 6px 2px 8px; }
+.asm2-bul { margin: 6px 0; padding-left: 18px; font-size: 12px; line-height: 1.5; color: var(--text-dim); }
+.asm2-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 8px 0; }
+.asm2-facts div { display: flex; flex-direction: column; font-size: 11px; color: var(--text-mute); }
+.asm2-facts b { font-size: 13px; color: var(--text); }
+.asm2-wide { width: 100%; padding: 11px 12px; margin-top: 6px; }
+.asm2-queue .asm2-q { padding: 4px 0; }
+.asm2-q-h { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; align-items: baseline; }
+.asm2-q-h span { font-size: 11px; color: var(--text-mute); text-align: right; }
+
+.asm2-roles { display: flex; flex-direction: column; gap: 8px; }
+.asm2-role { padding: 10px 12px; border-radius: 12px; background: var(--mfx-card); }
+.asm2-role-h { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-size: 13px; }
+.asm2-role-c { font-weight: 700; font-size: 12.5px; } .asm2-role-c small { font-weight: 500; color: var(--text-mute); }
+.asm2-role-c.ok { color: var(--mfx-ok); } .asm2-role-c.warn { color: var(--mfx-warn); } .asm2-role-c.bad { color: var(--mfx-bad); }
+.asm2-role-m { font-size: 11px; color: var(--text-mute); margin-bottom: 8px; }
+.asm2-steps { display: flex; gap: 6px; }
+.asm2-steps .mf-buy-btn { flex: 1 1 0; min-width: 0; padding: 8px 4px; }
+
+.asm2-cmp { display: flex; flex-direction: column; gap: 4px; }
+.asm2-cmp-h, .asm2-cmp-r { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 6px; font-size: 11.5px; align-items: baseline; }
+.asm2-cmp-h { color: var(--text-mute); font-size: 10.5px; text-transform: uppercase; letter-spacing: .03em; }
+.asm2-cmp-h span:not(:first-child), .asm2-cmp-r span:not(:first-child), .asm2-cmp-r b { text-align: right; }
+.asm2-cmp-r span:first-child { color: var(--text-mute); }
+.asm2-cmp-r b { color: var(--mfx-ok); }
+.asm2-help-b { display: flex; justify-content: space-between; width: 100%; margin: 6px 0 4px; padding: 8px 4px; border: 0; background: transparent; color: var(--text-mute); font-size: 12px; cursor: pointer; }
+
+@media (min-width: 640px) {
+    .mfx-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .asm2-groups { flex-direction: row; }
+    .asm2-group { flex: 1 1 0; }
+    .asm2-roles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .mfx-node-v { font-size: 11px; }
+}
+[data-theme="light"] .asm2-chip.warn { color: #b45309; }
+[data-theme="light"] .mfx-seg-b.active { box-shadow: 0 1px 3px rgba(0,0,0,.12); }
