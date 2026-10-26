@@ -47,6 +47,44 @@ function matchFilter(a, f) {
 }
 function realOnly(list) { return list.filter(function (a) { return a.id !== 'all_good'; }); }
 
+// [v2028.44] Panggilan aman ke sistem Asisten. Jika fungsi tidak ada (mis. AdvisorSystem.js
+// belum diperbarui di server) atau melempar error, panel memakai nilai cadangan dan tetap berjalan.
+function has(obj, name) { return !!obj && typeof obj[name] === 'function'; }
+function call(obj, name, args, fallback) {
+    if (!has(obj, name)) return fallback;
+    try {
+        var r = obj[name].apply(obj, args || []);
+        return r === undefined ? fallback : r;
+    } catch (e) {
+        console.warn('[AdvisorPanel] ' + name + ' gagal:', e);
+        return fallback;
+    }
+}
+function safeList(advisor) {
+    var list = call(advisor, 'getAdvice', [], []);
+    return Array.isArray(list) ? list : [];
+}
+function healthOf(advisor) {
+    var h = call(advisor && advisor.brain, 'health', [], null);
+    return h && Array.isArray(h.parts) ? h : { score: 0, parts: [], weakest: null };
+}
+// Fitur "Tandai selesai" hanya ditampilkan bila sistem mendukungnya.
+function capsOf(advisor) {
+    return { done: has(advisor, 'markDone') && has(advisor, 'undoDone') && has(advisor, 'getDone') };
+}
+// Bungkus handler klik: error di satu tombol tidak menjatuhkan seluruh game.
+function guard(fn) {
+    return function (e) {
+        try { fn(e); }
+        catch (err) {
+            console.warn('[AdvisorPanel] aksi gagal:', err);
+            var msg = tx('ui.action_failed');
+            if (msg === 'ui.action_failed') msg = 'Aksi gagal, coba lagi.';
+            try { ToastService.warning(msg); } catch (e2) {}
+        }
+    };
+}
+
 function ensureStyles() {
     ensureIconStyles();
     if (document.getElementById(STYLE_ID)) return;
@@ -161,7 +199,7 @@ function ensureStyles() {
 // Ikon/teks ringkas per tingkat keparahan.
 function sevLabel(sev) { return tx('ui.sev_' + sev); }
 
-function renderItem(a) {
+function renderItem(a, canDone) {
     var go = '';
     if (a.action && a.action.patch) {
         go = a.action.patch === 'reload'
@@ -176,7 +214,7 @@ function renderItem(a) {
              ' data-adv-subtab="' + esc(a.action.subtab || '') + '">' + esc(tx('ui.open')) + '</button>';
     }
     // Tandai selesai: untuk saran biasa (patch sudah punya "Tandai dibaca" sendiri).
-    var done = (a.id !== 'all_good' && !(a.action && a.action.patch))
+    var done = (canDone && a.id !== 'all_good' && !(a.action && a.action.patch))
         ? '<button class="btn-secondary advisor-btn" type="button" data-adv-done="' + esc(a.id) + '">' + gIcon('check-circle', 14) + esc(tx('ui.done')) + '</button>'
         : '';
     var snooze = a.id !== 'all_good'
@@ -276,7 +314,7 @@ function handleReport(advisor, mode, id, onDone) {
     if (!text) { ToastService.warning(tx('ui.report_failed')); return; }
     copyText(text).then(function () {
         ToastService.success(tx('ui.report_copied'));
-        if (id) advisor.markDone(id);
+        if (id && has(advisor, 'markDone')) advisor.markDone(id);
         if (onDone) onDone();
     }, function () { ToastService.warning(tx('ui.report_failed')); });
 }
@@ -303,12 +341,12 @@ function keepFocus(node, fn) {
 export function openAdvisor(advisor) {
     ensureStyles();
     var chat = advisor.getChat();
-    var h = advisor.brain.health();
     var briefing = null;
     try { briefing = advisor.getBriefing(); } catch (e) {}
 
     var st = { filter: 'all', expanded: false, doneOpen: false };
-    var tab = realOnly(advisor.getAdvice()).length > 0 ? 'advice' : 'chat';
+    var caps = capsOf(advisor);
+    var tab = realOnly(safeList(advisor)).length > 0 ? 'advice' : 'chat';
     var node = null;
     var unsubs = [];
     var busy = false;
@@ -333,7 +371,7 @@ export function openAdvisor(advisor) {
         '</div>' +
         '<div class="adv-hbox" data-adv-hbox hidden><div data-adv-hbox-body></div></div>' +
         renderBriefingLine(briefing) +
-        renderTabs(realOnly(advisor.getAdvice()).length, tab) +
+        renderTabs(realOnly(safeList(advisor)).length, tab) +
         '<div class="adv-panel adv-advice" data-adv-panel="advice" id="adv-p-advice" role="tabpanel" aria-labelledby="adv-t-advice"' + (tab === 'advice' ? '' : ' hidden') + '>' +
             '<div class="adv-toolbar">' +
                 '<div class="adv-filters" data-adv-filterbar role="group" aria-label="' + esc(tx('ui.advice')) + '"></div>' +
@@ -369,9 +407,9 @@ export function openAdvisor(advisor) {
 
     // ---------- pembaruan langsung ----------
     function paintHead() {
-        var hh = advisor.brain.health();
+        var hh = healthOf(advisor);
         var sum = node.querySelector('[data-adv-summary]');
-        if (sum) sum.textContent = advisor.getSummary();
+        if (sum) sum.textContent = call(advisor, 'getSummary', [], '');
         var hb = node.querySelector('[data-adv-health]');
         if (hb) {
             hb.textContent = hh.score + '/100';
@@ -383,13 +421,13 @@ export function openAdvisor(advisor) {
     }
 
     function paintTabs() {
-        var c = realOnly(advisor.getAdvice()).length;
+        var c = realOnly(safeList(advisor)).length;
         var el = node.querySelector('[data-adv-count]');
         if (el) { el.textContent = String(c); el.hidden = c === 0; }
     }
 
     function renderAdvice() {
-        var all = advisor.getAdvice();
+        var all = safeList(advisor);
         var real = realOnly(all);
         var counts = { all: real.length, urgent: 0, info: 0 };
         real.forEach(function (a) { counts[isUrgent(a) ? 'urgent' : 'info']++; });
@@ -406,7 +444,7 @@ export function openAdvisor(advisor) {
         var listEl = node.querySelector('[data-adv-list]');
         var pos = listEl.scrollTop;
         listEl.innerHTML = visible.length
-            ? visible.map(renderItem).join('')
+            ? visible.map(function (a) { return renderItem(a, caps.done); }).join('')
             : '<div class="adv-empty">' + esc(tx('ui.empty_filter')) + '</div>';
         listEl.scrollTop = pos;
 
@@ -416,7 +454,7 @@ export function openAdvisor(advisor) {
             : '';
 
         var dbox = node.querySelector('[data-adv-donebox]');
-        var done = advisor.getDone();
+        var done = caps.done ? call(advisor, 'getDone', [], []) : [];
         if (!done.length) {
             dbox.innerHTML = '';
         } else {
@@ -432,7 +470,9 @@ export function openAdvisor(advisor) {
     }
 
     function renderAll() {
-        keepFocus(node, function () { paintHead(); paintTabs(); renderAdvice(); });
+        try {
+            keepFocus(node, function () { paintHead(); paintTabs(); renderAdvice(); });
+        } catch (e) { console.warn('[AdvisorPanel] render gagal:', e); }
     }
 
     // Notifikasi kecil "Beres: ..." saat saran hilang karena sudah dikerjakan.
@@ -490,7 +530,9 @@ export function openAdvisor(advisor) {
         log.appendChild(typing);
         scroll();
         var started = Date.now();
-        var res = await advisor.chat(text);
+        var res = null;
+        try { res = await advisor.chat(text); }
+        catch (e) { res = { role: 'bot', text: tx('ui.ask_fail'), actions: [], chips: [] }; }
         var wait = Math.max(0, 380 - (Date.now() - started));
         await new Promise(function (r) { setTimeout(r, wait); });
         typing.remove();
@@ -506,11 +548,9 @@ export function openAdvisor(advisor) {
         if (opts && opts.fromInput && input) input.focus();
     }
 
-    paintHead();
-    paintTabs();
-    renderAdvice();
+    renderAll();
 
-    node.addEventListener('click', function (e) {
+    node.addEventListener('click', guard(function (e) {
         var t;
         if ((t = e.target.closest('[data-adv-tab]'))) { setTab(t.dataset.advTab); return; }
         if ((t = e.target.closest('[data-adv-filter]'))) {
@@ -572,7 +612,7 @@ export function openAdvisor(advisor) {
         }
         if ((t = e.target.closest('[data-adv-chip]'))) { send(t.dataset.advChip); return; }
         if (e.target.closest('[data-adv-send]')) send(input.value, { fromInput: true });
-    });
+    }));
 
     // Navigasi keyboard antar tab (panah kiri/kanan), sesuai pola ARIA tablist.
     node.querySelector('.adv-tabs').addEventListener('keydown', function (e) {
@@ -603,7 +643,7 @@ export function mountAdvisorButton(advisor) {
     document.body.appendChild(btn);
 
     function paint() {
-        var b = advisor.getBadge();
+        var b = call(advisor, 'getBadge', [], { count: 0, critical: 0, total: 0 });
         badge.textContent = String(b.count);
         badge.hidden = b.count === 0;
         btn.classList.toggle('critical', b.critical > 0);
