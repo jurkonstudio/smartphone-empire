@@ -41,7 +41,11 @@ export class ProductSystem {
         this._nav = null;
         this._channels = null;
         this._market = null;
+        this._hype = null;
     }
+
+    // HypeCycleSystem: aturan satu flagship per tahun + pengali permintaan antisipasi.
+    setHypeCycle(h) { this._hype = h; }
 
     // Navigasi pasar (MarketNavSystem): segmen, wilayah, gelombang tren, dan efek viral ke permintaan.
     setMarketNav(nav) { this._nav = nav; }
@@ -326,7 +330,8 @@ export class ProductSystem {
         }
         var bz = BALANCE.rnd.buzz;
         var buzzF = 1 + Math.min(bz.maxDemandBonus, ((data.research && data.research.buzz) || 0) * bz.demandPerPoint);
-        return edgeF * buzzF;
+        var hypeF = this._hype ? this._hype.getDemandFactor() : 1;
+        return edgeF * buzzF * hypeF;
     }
 
     _getTrendFactor(stats) {
@@ -400,6 +405,10 @@ export class ProductSystem {
     confirmTierFamily(baseConfig, plans) {
         var data = this.state.data;
         if (data.products.development) return { ok: false, reason: 'Ada produk yang sedang dikembangkan.' };
+        if (this._hype) {
+            var slot = this._hype.checkFlagshipSlot();
+            if (!slot.ok) return slot;
+        }
 
         var base = this._normalizeBase(baseConfig);
         var required = ['displayId', 'batteryId', 'chipId', 'networkId', 'formFactorId', 'bodyId'];
@@ -671,6 +680,7 @@ export class ProductSystem {
     // Rilis seri: setiap varian menjadi produk katalog sendiri.
     _releaseProduct(d) {
         var data = this.state.data;
+        if (this._hype) this._hype.onFlagshipReleased();
         var variants = (Array.isArray(d.family) && d.family.length) ? d.family : [{
             id: d.id,
             tier: 'basic',
