@@ -140,6 +140,8 @@ export const id = {
     'toast.lang_changed':    'Bahasa: {value}',
     'toast.save_ok':         'Save tersimpan.',
     'toast.save_fail':       'Gagal save.',
+    'sw.update.available':   'Versi baru tersedia.',
+    'sw.update.reload':      'Muat ulang',
     'toast.no_save':         'Tidak ada save.',
     'toast.reset_confirm':   'Semua progres akan hilang.',
 

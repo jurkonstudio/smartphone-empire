@@ -139,6 +139,8 @@ export const en = {
     'toast.lang_changed':    'Language: {value}',
     'toast.save_ok':         'Save stored.',
     'toast.save_fail':       'Save failed.',
+    'sw.update.available':   'A new version is available.',
+    'sw.update.reload':      'Reload',
     'toast.no_save':         'No save found.',
     'toast.reset_confirm':   'All progress will be lost.',
 
