@@ -1,0 +1,91 @@
+/* ============================================================
+   MANUFAKTUR — Ringkasan (rantai produksi horizontal)
+   Dimuat setelah style.css. Aman untuk tema gelap & terang.
+   ============================================================ */
+@import url("https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css");
+
+.mfx-st-chip { --st: #60a5fa; }
+.mfx-st-comp { --st: #2dd4bf; }
+.mfx-st-asm  { --st: #a78bfa; }
+.mfx-st-prod { --st: #fbbf24; }
+
+.mfx-chain {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 4px;
+    margin-top: 12px;
+}
+.mfx-node {
+    position: relative;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 10px 8px 9px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--mfx-card);
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--st) 28%, transparent);
+    transition: transform .12s ease, box-shadow .12s ease;
+}
+.mfx-node:active { transform: scale(.97); }
+.mfx-node:focus-visible { outline: 2px solid var(--st); outline-offset: 2px; }
+.mfx-node.mute { opacity: .6; }
+
+.mfx-node-i {
+    width: 30px; height: 30px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--st) 18%, transparent);
+    color: var(--st);
+}
+.mfx-node-i .ti { font-size: 17px; line-height: 1; }
+.mfx-node-n { font-size: 11.5px; font-weight: 700; line-height: 1.2; margin-top: 2px; }
+.mfx-node-v { font-size: 10px; color: var(--text-mute); line-height: 1.25; overflow-wrap: anywhere; }
+
+.mfx-node-bar {
+    display: block;
+    width: 100%;
+    height: 3px;
+    margin-top: 3px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--st) 14%, transparent);
+    overflow: hidden;
+}
+.mfx-node-bar i {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--st);
+    transition: width .4s ease;
+}
+
+/* titik status di pojok kanan atas: warna mengikuti kondisi, bukan tahap */
+.mfx-node-dot {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--mfx-mute);
+}
+.mfx-node.ok .mfx-node-dot   { background: var(--mfx-ok); }
+.mfx-node.warn .mfx-node-dot { background: var(--mfx-warn); }
+.mfx-node.bad .mfx-node-dot  { background: var(--mfx-bad); }
+.mfx-node.info .mfx-node-dot { background: var(--mfx-info); }
+
+.mfx-arrow {
+    color: var(--text-mute);
+    font-size: 14px;
+    line-height: 1;
+    opacity: .7;
+}
+
+@media (max-width: 380px) {
+    .mfx-node-v { display: none; }
+    .mfx-node-n { font-size: 10.5px; }
+}
