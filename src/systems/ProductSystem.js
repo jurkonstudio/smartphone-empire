@@ -468,6 +468,13 @@ export class ProductSystem {
         return { ok: true, base: base, quote: quote };
     }
 
+    // Status slot flagship tahun ini (satu flagship per tahun kalender). Dipakai wizard untuk
+    // memberi tahu pemain sejak awal desain, bukan baru saat tombol rilis.
+    getFlagshipLock() {
+        if (!this._hype) return { ok: true };
+        try { return this._hype.checkFlagshipSlot(); } catch (e) { return { ok: true }; }
+    }
+
     confirmTierFamily(baseConfig, plans) {
         var check = this.validateTierFamily(baseConfig, plans);
         if (!check.ok) return check;
