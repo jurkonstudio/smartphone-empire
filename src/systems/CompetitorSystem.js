@@ -7,6 +7,10 @@ import { TIME_CONFIG } from '../config/time.config.js';
 import { ToastService } from '../core/ToastService.js';
 import { LOG_TYPES } from '../config/constants.js';
 import { COMPETITOR_ACTIONS } from '../data/competitor-actions.data.js';
+import { getCompetitorReleasesForCompetitor } from '../data/news-competitor-releases.data.js';
+import '../data/news-competitor-releases.s1.data.js';
+import '../data/news-competitor-releases.s2.data.js';
+import '../data/news-competitor-releases.s3.data.js';
 import {
     COMPETITORS,
     getActiveCompetitors,
@@ -21,6 +25,19 @@ const DAYS_PER_MONTH_AVG = 30.4;
 
 function absMonth(year, month) {
     return year * 12 + (month - 1);
+}
+
+function hashStr(str) {
+    let h = 0;
+    const s = String(str);
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 99991;
+    return h;
+}
+
+// Jeda ponsel pengisi menurut watak merek (bulan).
+function releaseInterval(comp) {
+    const map = BALANCE.competitors.aiReleaseIntervalByPersonality || {};
+    return map[comp.personality] || BALANCE.competitors.aiReleaseIntervalMonths || 8;
 }
 
 export class CompetitorSystem {
@@ -67,8 +84,9 @@ export class CompetitorSystem {
                     id: c.id,
                     currentTier: c.researchStartTier || 1,
                     currentShare: c.startShare || 0,
-                    lastReleaseMonth: absMonth(year, 1),
+                    lastReleaseMonth: absMonth(year, 1) - (hashStr(c.id) % releaseInterval(c)),
                     releases: [],
+                    releasedSig: {},
                     activeViralId: null,
                     power: 1.0,
                     introduced: true
@@ -172,50 +190,93 @@ export class CompetitorSystem {
         const year = snap.currentYear;
         const month = snap.currentMonth;
         const absNow = absMonth(year, month);
-        const interval = BALANCE.competitors.aiReleaseIntervalMonths || 8;
 
         Object.keys(cs.entities).forEach(id => {
             const e = cs.entities[id];
-            if (absNow - e.lastReleaseMonth >= interval) {
+            const comp = getCompetitorById(id);
+            if (!comp || comp.isEcosystem) return;
+            if (!e.releasedSig || typeof e.releasedSig !== 'object') e.releasedSig = {};
+
+            // 1) Ponsel ikonik: dirilis di tahun & bulan aslinya (save lama: kejar yang terlewat di tahun ini).
+            let launched = false;
+            (comp.signatureProducts || []).forEach(sp => {
+                if (sp.year !== year || e.releasedSig[sp.name]) return;
+                if (this._signatureMonth(comp, sp) > month) return;
+                e.releasedSig[sp.name] = true;
+                this._pushRelease(comp, e, sp.name, sp.tier || 1, year, month, true);
+                e.lastReleaseMonth = absNow;
+                launched = true;
+            });
+
+            // 2) Ponsel pengisi: hanya bila merek sudah lama tidak merilis apa pun,
+            //    supaya setiap kompetitor tetap aktif walau data ikoniknya jarang.
+            if (!launched && absNow - e.lastReleaseMonth >= releaseInterval(comp)) {
                 this._releaseAiProduct(id, year, month);
                 e.lastReleaseMonth = absNow;
             }
         });
     }
 
+    // Bulan rilis ponsel ikonik: pakai bulan dari data berita bila ada, jika tidak sebar deterministik.
+    _signatureMonth(comp, sp) {
+        if (sp.month >= 1 && sp.month <= 12) return sp.month;
+        const key = String(sp.name || '').toLowerCase();
+        const news = getCompetitorReleasesForCompetitor(comp.id).find(n =>
+            n.year === sp.year && n.product && String(n.product).toLowerCase() === key);
+        if (news && news.month >= 1 && news.month <= 12) return news.month;
+        return 1 + (hashStr(comp.id + '|' + sp.name) % 12);
+    }
+
+    // Catat rilis, tulis log, dan umumkan ke sistem lain (tekanan pasar, berita, toast).
+    _pushRelease(comp, e, productName, tier, year, month, signature) {
+        e.releases.push({ name: productName, year, month, tier, signature: !!signature });
+        if (e.releases.length > 10) e.releases.shift();
+        if (signature) e.currentTier = Math.max(e.currentTier, tier);
+
+        this.state.addLog(comp.name + ' merilis ' + productName + ' (Tier ' + tier + ').', LOG_TYPES.info);
+        if (signature) ToastService.info('📱 ' + comp.name + ' merilis ' + productName);
+        bus.emit('competitor:released-product', {
+            competitorId: comp.id,
+            competitorName: comp.name,
+            productName,
+            tier,
+            year,
+            month,
+            signature: !!signature
+        });
+        bus.emit('state:changed', this.state.data);
+    }
+
+    // Ponsel pengisi (non-ikonik). Dipakai tick bulanan dan tombol cheat forceRelease().
     _releaseAiProduct(competitorId, year, month) {
         const comp = getCompetitorById(competitorId);
         if (!comp) return;
         const cs = this.state.data.competitorState;
         const e = cs.entities[competitorId];
         if (!e) return;
+        if (!e.releasedSig || typeof e.releasedSig !== 'object') e.releasedSig = {};
 
         const tier = Math.max(1, Math.min(5, Math.round(e.currentTier + (Math.random() * 0.6 - 0.3))));
-
-        let productName = null;
-        const candidate = (comp.signatureProducts || []).find(sp =>
-            sp.year <= year && sp.year >= year - 3 && sp.tier === tier
-        );
-        if (candidate) {
-            productName = candidate.name;
-        } else {
-            productName = comp.name + ' ' + ['X', 'Pro', 'Plus', 'Lite', 'Neo'][Math.floor(Math.random() * 5)] + (year % 100);
-        }
+        const used = {};
+        e.releases.forEach(r => { used[r.name] = true; });
+        const productName = this._fillerName(comp, tier, year, used);
 
         // [v2027.2a] Tidak lagi tambah currentShare; share berasal dari kurva.
-        e.releases.push({ name: productName, year, month, tier });
-        if (e.releases.length > 10) e.releases.shift();
+        this._pushRelease(comp, e, productName, tier, year, month, false);
+    }
 
-        this.state.addLog(comp.name + ' merilis ' + productName + ' (Tier ' + tier + ').', LOG_TYPES.info);
-        bus.emit('competitor:released-product', {
-            competitorId,
-            competitorName: comp.name,
-            productName,
-            tier,
-            year,
-            month
-        });
-        bus.emit('state:changed', this.state.data);
+    // Nama ponsel pengisi bergaya era: angka seri (<=2004) atau suffix modern, unik per merek.
+    _fillerName(comp, tier, year, used) {
+        const seriesBase = { 1: 1100, 2: 3300, 3: 6600, 4: 7700, 5: 9900 };
+        const suffixes = ['X', 'Pro', 'Plus', 'Lite', 'Neo', 'Air', 'Max', 'Edge'];
+        let seq = hashStr(comp.id + year) % 90;
+        for (let i = 0; i < 40; i++, seq++) {
+            const name = year <= 2004
+                ? comp.name + ' ' + (seriesBase[tier] + 10 * (seq % 90))
+                : comp.name + ' ' + suffixes[seq % suffixes.length] + ' ' + (year % 100) + (seq >= suffixes.length ? String.fromCharCode(65 + (seq % 26)) : '');
+            if (!used[name]) return name;
+        }
+        return comp.name + ' ' + year + '-' + Math.floor(Math.random() * 900 + 100);
     }
 
     // ============================================================
