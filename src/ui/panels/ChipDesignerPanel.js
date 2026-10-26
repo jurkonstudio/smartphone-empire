@@ -1,5 +1,7 @@
 import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/ChipDesignerPanel.js
+// v2027.4d — layout ringkas untuk HP: mockup & metrik sejajar, stepper judul aktif saja,
+// radar pindah ke langkah 4, footer sticky.
 // v2027.4c — FIX: file sebelumnya terpotong (_render & handler hilang → GLOBAL ERROR
 // "_render is not defined"). Wizard dilengkapi (4 langkah, live mockup + radar, validasi,
 // konfirmasi via ChipSystem.startDesign). Pola sama dengan DesignWizard.
@@ -300,7 +302,8 @@ function _bodyConfirm(s, cs, m) {
     }
     let h = '<div class="cw-sum">' + rows.map(function (r) {
         return '<span>' + escapeHtml(String(r[0])) + '</span><b>' + escapeHtml(String(r[1])) + '</b>';
-    }).join('') + '</div>';
+    }).join('') + '</div>' +
+        '<div class="cw-radar" data-cw-radar></div>';
     if (!m) {
         h += '<div class="fab-warning">' + escapeHtml(_tf('chip.wiz.err_arch', 'Pilih arsitektur.', 'Pick an architecture.')) + '</div>';
     }
@@ -347,29 +350,39 @@ function _injectStyles() {
     if (_stylesInjected || document.getElementById('cw-styles')) { _stylesInjected = true; return; }
     _stylesInjected = true;
     const css = `
-.cw-steps{display:flex;gap:6px;list-style:none;padding:0;margin:0 0 12px}
-.cw-steps li{flex:1;font-size:11px;opacity:.5;text-align:center;padding:6px 4px;border-bottom:2px solid var(--border)}
-.cw-steps li.active{opacity:1;border-color:var(--accent);color:var(--accent);font-weight:700}
+.cw-root .chip-wiz-header{padding:8px 10px;margin-bottom:8px;gap:10px}
+.cw-root .cw-hdr-icon{width:34px;height:34px;border-radius:9px}
+.cw-root .chip-wiz-title{font-size:13px}
+.cw-root .chip-wiz-sub{font-size:10.5px}
+.cw-steps{display:flex;gap:4px;list-style:none;padding:0;margin:0 0 8px}
+.cw-steps li{flex:1;min-width:0;font-size:10.5px;opacity:.5;text-align:center;padding:5px 2px;border-bottom:2px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cw-steps li.active{opacity:1;border-color:var(--accent);color:var(--accent);font-weight:700;flex:2.4}
 .cw-steps li.done{opacity:.85;border-color:var(--success)}
+.cw-steps li:not(.active) .cw-lbl{display:none}
 .cw-steps b{margin-right:3px}
-.cw-live{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%}
-.cw-cell{background:var(--bg-3);border-radius:8px;padding:6px 8px;font-size:11px;color:var(--text-mute)}
-.cw-cell b{display:block;font-size:13px;color:var(--text-primary);font-variant-numeric:tabular-nums}
-.cw-body{margin-top:12px}
-.cw-label{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);margin:12px 0 6px}
+.cw-top{display:grid;grid-template-columns:148px 1fr;gap:8px;align-items:center}
+.cw-mock{display:flex;justify-content:center;align-items:center;background:linear-gradient(135deg,#0a0a15,#0a1525);border-radius:12px;border:1px solid var(--border);padding:4px;min-height:156px}
+.cw-live{display:grid;grid-template-columns:1fr 1fr;gap:6px;min-width:0}
+.cw-cell{background:var(--bg-3);border-radius:8px;padding:5px 7px;font-size:10px;color:var(--text-mute)}
+.cw-cell b{display:block;font-size:14px;color:var(--text-primary);font-variant-numeric:tabular-nums}
+.cw-radar{display:flex;justify-content:center;margin-top:10px}
+.cw-body{margin-top:8px}
+.cw-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-mute);margin:9px 0 5px}
 .cw-label b{color:var(--text-primary);font-size:12px;letter-spacing:0}
 .cw-input{width:100%;padding:10px 12px;background:var(--bg-3);border:1px solid var(--border);border-radius:var(--r);color:inherit;font-size:14px;box-sizing:border-box}
-.cw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
-.cw-opt{text-align:left;background:var(--bg-3);border:1px solid var(--border);border-radius:var(--r);padding:10px;color:inherit;cursor:pointer;display:flex;flex-direction:column;gap:3px}
+.cw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px}
+.cw-opt{text-align:left;background:var(--bg-3);border:1px solid var(--border);border-radius:var(--r);padding:7px 9px;color:inherit;cursor:pointer;display:flex;flex-direction:column;gap:3px}
 .cw-opt.on{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent) inset}
 .cw-opt span{font-size:11px;color:var(--text-mute)}
 .cw-opt small{font-size:10.5px;color:var(--text-dim);line-height:1.35}
 .cw-range{width:100%}
 .cw-chips{display:flex;flex-wrap:wrap;gap:6px}
-.cw-chip{padding:6px 10px;border-radius:var(--r-pill);background:var(--bg-3);border:1px solid var(--border);font-size:12px;color:inherit;cursor:pointer}
+.cw-chip{padding:5px 9px;border-radius:var(--r-pill);background:var(--bg-3);border:1px solid var(--border);font-size:12px;color:inherit;cursor:pointer}
 .cw-chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .cw-cat{font-size:11px;color:var(--text-mute);margin:10px 0 4px;display:flex;align-items:center;gap:6px}
-.cw-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.cw-foot{position:sticky;bottom:0;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px;padding:8px 0 calc(8px + env(safe-area-inset-bottom,0px));background:var(--bg-2,#1c1c1f);z-index:2}
+.cw-foot button{flex:1;min-width:0;padding:10px 8px;font-size:13px}
+@media (min-width:480px){.cw-foot button{flex:0 0 auto}}
 .cw-sum{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:12.5px}
 .cw-sum span{color:var(--text-mute)}
 .cw-sum b{text-align:right;font-variant-numeric:tabular-nums}
@@ -413,9 +426,9 @@ function _updateLive(s, m) {
     const card = _currentCard();
     if (!card) return;
     const mock = card.querySelector('[data-cw-mock]');
-    if (mock) mock.innerHTML = renderChipMockup(_cfg(s), { size: 200 });
+    if (mock) mock.innerHTML = renderChipMockup(_cfg(s), { size: 148 });
     const radar = card.querySelector('[data-cw-radar]');
-    if (radar) radar.innerHTML = (m && m.stats) ? renderChipRadarChart(m.stats, { size: 170 }) : '';
+    if (radar) radar.innerHTML = (m && m.stats) ? renderChipRadarChart(m.stats, { size: 150 }) : '';
     const live = card.querySelector('[data-cw-metrics]');
     if (live) live.innerHTML = _liveHtml(m);
 }
@@ -435,7 +448,7 @@ function _render() {
         const cls = i === s.step ? 'active' : (i < s.step ? 'done' : '');
         const label = _tf('chip.wiz.step' + i, STEP_FB[i][0], STEP_FB[i][1]);
         return '<li class="' + cls + '"' + (i === s.step ? ' aria-current="step"' : '') + '><b>' +
-            (i < s.step ? '✓' : i) + '</b>' + escapeHtml(label) + '</li>';
+            (i < s.step ? '✓' : i) + '</b><span class="cw-lbl">' + escapeHtml(label) + '</span></li>';
     }).join('');
 
     const header =
@@ -448,11 +461,8 @@ function _render() {
 
     card.innerHTML = '<div class="cw-root">' + header +
         '<ol class="cw-steps">' + stepper + '</ol>' +
-        '<div class="chip-preview-layout">' +
-        '<div class="chip-preview-left"><div class="chip-preview-device" data-cw-mock></div>' +
+        '<div class="cw-top"><div class="cw-mock" data-cw-mock></div>' +
         '<div class="cw-live" data-cw-metrics></div></div>' +
-        '<div class="chip-preview-right"><div class="chip-preview-radar radar-chart-wrap chip-radar" data-cw-radar></div></div>' +
-        '</div>' +
         '<div class="cw-body">' + _stepBody(s, cs, m) + '</div>' +
         _footer(s) + '</div>';
 
