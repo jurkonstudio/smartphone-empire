@@ -18,3 +18,33 @@
                mask-image: linear-gradient(90deg, transparent, #000 30px, #000 calc(100% - 30px), transparent); }
 }
 @media (prefers-reduced-motion: reduce) { .subtab-bar, .settings-tabs, .chip-bar { scroll-behavior: auto; } }
+
+/* ===== Panel Tim (HQ > Team): lebih ringkas, mudah dipindai, target tap >= 44px ===== */
+@media (max-width: 767px) {
+  /* Roster: 4 statistik dalam satu baris, bukan kotak 2x2 */
+  html:root #app-view .team-dropdown + .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  html:root #app-view .team-dropdown + .kpi-grid .kpi { padding: 8px 8px 7px; min-width: 0; }
+  html:root #app-view .team-dropdown + .kpi-grid .kpi-label { font-size: 9px; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  html:root #app-view .team-dropdown + .kpi-grid .kpi-value { font-size: 15px !important; white-space: nowrap; }
+
+  /* Rekrut: kartu kebutuhan role ringkas; deskripsi muncul saat kartu diketuk */
+  html:root #app-view .recruit-need { cursor: pointer; padding: 8px; transition: border-color .15s; }
+  html:root #app-view .recruit-need-hint { display: none; margin-top: 4px; }
+  html:root #app-view .recruit-need.is-open { grid-column: 1 / -1; border-color: var(--accent); }
+  html:root #app-view .recruit-need.is-open .recruit-need-hint { display: block; }
+  html:root #app-view .recruit-next { padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--bg-2); border-radius: 0 8px 8px 0; }
+  html:root #app-view .recruit-quest { padding-left: 13px; }
+
+  /* Tombol rekrut mudah ditekan */
+  html:root #app-view .cand-cta { min-width: 44px; min-height: 44px; }
+  html:root #app-view .cand-row { padding-top: 12px; padding-bottom: 12px; }
+
+  /* Tombol asisten pindah ke pojok kanan-bawah (di atas nav), kecil, selama daftar kandidat tampil */
+  body:has(.cand-list) .advisor-fab { top: auto !important; left: auto !important; right: 10px !important; bottom: 92px !important; transform: scale(.82); opacity: .75; }
+
+  /* Roster kosong: ringkas + tombol aksi */
+  html:root #app-view .team-dropdown ~ .empty { padding-top: 20px; padding-bottom: 16px; }
+  .se-empty-cta { display: block; margin: 12px auto 0; min-height: 44px; padding: 0 22px; border: 0; border-radius: 12px;
+    background: var(--accent); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+  .se-empty-cta:active { transform: scale(.97); }
+}
