@@ -1380,6 +1380,21 @@ function _tierPanelHtml(s, id) {
         </section>`;
 }
 
+// [Tahap 6A] Perkiraan penjualan 30 hari pertama sebagai rentang (rendah–tinggi), dari faktor permintaan
+// yang sama dengan simulasi (ProductSystem.getLaunchForecast). Kosong bila tidak tersedia.
+function _forecastRowHtml(it) {
+    try {
+        const ps = window.__game && window.__game.products;
+        if (!ps || typeof ps.getLaunchForecast !== 'function') return '';
+        const f = ps.getLaunchForecast(it.cfg, it.cfg.productionQty);
+        if (!f || !isFinite(f.low) || !isFinite(f.high)) return '';
+        const range = t('wiz.forecast.range', { low: f.low.toLocaleString('en-US'), high: f.high.toLocaleString('en-US') });
+        return '<div class="preview-row"><span>' + escapeHtml(t('wiz.forecast.label')) + '</span>' +
+            '<b>' + escapeHtml(range) + (f.capped ? ' ' + escapeHtml(t('wiz.forecast.capped')) : '') + '</b></div>' +
+            '<div style="font-size:11px;color:var(--text-mute);margin:0 0 6px;">' + escapeHtml(t('wiz.forecast.note')) + '</div>';
+    } catch (e) { return ''; }
+}
+
 function _familySummaryHtml(s) {
     const q = _quoteFamily(s);
     if (!q.items.length) {
@@ -1390,7 +1405,8 @@ function _familySummaryHtml(s) {
     const rows = q.items.map(function (it) {
         const label = TIER_LABEL[it.tier] || it.tier;
         return '<div class="preview-row"><span>' + escapeHtml(it.cfg.name || label) + ' · ' + escapeHtml(label) + '</span>' +
-            '<b>' + it.cfg.productionQty.toLocaleString('en-US') + ' unit · ' + _fmtUsd(it.cost) + '</b></div>';
+            '<b>' + it.cfg.productionQty.toLocaleString('en-US') + ' unit · ' + _fmtUsd(it.cost) + '</b></div>'; +
+            _forecastRowHtml(it);
     }).join('');
     const total = '<div class="preview-row"><span>' + escapeHtml(_pick('Total desain seri (sekali bayar)', 'Family design total (paid once)')) +
         '</span><b>' + _fmtUsd(q.total) + '</b></div>';

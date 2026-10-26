@@ -519,6 +519,38 @@ function _bindLang() {
 }
 _bindLang();
 
+// [Tahap 6A] Kartu "Kenapa penjualannya begini?": 3 faktor paling merugikan dan 3 paling membantu,
+// diambil dari getDemandBreakdown (faktor yang sama dengan simulasi penjualan). Hanya untuk produk yang dijual.
+function _whyCardHtml(p) {
+    try {
+        if (!p || p.status !== 'selling') return '';
+        var ps = window.__game && window.__game.products;
+        if (!ps || typeof ps.getDemandBreakdown !== 'function') return '';
+        var bd = ps.getDemandBreakdown(p);
+        var bad = bd.factors.filter(function (f) { return f.sentiment === 'bad'; })
+            .sort(function (a, b) { return a.multiplier - b.multiplier; }).slice(0, 3);
+        var good = bd.factors.filter(function (f) { return f.sentiment === 'good'; })
+            .sort(function (a, b) { return b.multiplier - a.multiplier; }).slice(0, 3);
+        function row(f, withAdvice) {
+            var vars = {};
+            if (f.key === 'price' && typeof f.ratio === 'number' && isFinite(f.ratio)) vars.pct = Math.max(0, Math.round((f.ratio - 1) * 100));
+            var advice = withAdvice
+                ? '<div style="font-size:11px;color:var(--text-mute);margin:1px 0 6px;">' + escapeHtml(t('why.advice.' + f.key, vars)) + '</div>'
+                : '';
+            return '<div class="sum-row"><span>' + escapeHtml(t(f.labelKey)) + '</span><b>×' + f.multiplier.toFixed(2) + '</b></div>' + advice;
+        }
+        return '<div class="card-title" style="margin-top:12px;">' + escapeHtml(t('why.title')) + '</div>' +
+            '<div style="font-size:11px;color:var(--text-mute);margin-bottom:6px;">' + escapeHtml(t('why.note')) + '</div>' +
+            '<div style="font-size:12px;font-weight:600;margin:4px 0;">' + escapeHtml(t('why.hurts')) + '</div>' +
+            (bad.length ? bad.map(function (f) { return row(f, true); }).join('') : '<div class="empty-hint">' + escapeHtml(t('why.none_bad')) + '</div>') +
+            '<div style="font-size:12px;font-weight:600;margin:8px 0 4px;">' + escapeHtml(t('why.helps')) + '</div>' +
+            (good.length ? good.map(function (f) { return row(f, false); }).join('') : '<div class="empty-hint">' + escapeHtml(t('why.none_good')) + '</div>');
+    } catch (err) {
+        console.error('[ProductPanel] why-card error:', err);
+        return '';
+    }
+}
+
 export function openProductDetailModal(params) {
     try {
         var productId = params && params.productId;
@@ -580,6 +612,7 @@ export function openProductDetailModal(params) {
             '<div class="sum-row"><span>' + t('prod.detail.revenue') + '</span><b>$' + p.totalRevenue.toLocaleString('en-US') + '</b></div>' +
             '<div class="sum-row"><span>' + t('prod.detail.stock') + '</span><b>' + p.stock.toLocaleString('en-US') + '</b></div>' +
             '<div class="sum-row"><span>' + t('prod.detail.review_avg') + '</span><b>' + avg + '/10 (' + p.reviews.length + ')</b></div>' +
+            _whyCardHtml(p) +
             '<div class="card-title" style="margin-top:12px;">' + t('prod.detail.section_spec') + '</div>' +
             specRows +
             autoSection +
