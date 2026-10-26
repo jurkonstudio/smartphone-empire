@@ -84,7 +84,13 @@ export function renderOsCountryPreview(data) {
         return head + '<div class="ou-empty-row">' + L('Belum ada pengguna per negara. Jual ponsel ber-OS sendiri dulu.', 'No per-country users yet. Sell phones running your own OS first.') + '</div>';
     }
     var rows = u.list.slice(0, 5).map(function (r, i) { return _countryRow(r, i + 1, u.list[0].active); }).join('');
-    return head + '<div class="ou-list cm-tap" data-os-countries role="button" tabindex="0">' + rows +
+    var nowYear = (data && data.time && data.time.currentYear) || 2000;
+    var map = renderWorldMap({
+        id: 'wm-os-tab', year: nowYear, tabs: true,
+        items: u.list.map(function (r) { return { id: r.country.id, value: r.active, share: r.share }; }),
+        valueText: function (it) { return formatUsers(it.value) + ' · ' + pct(it.share); }
+    });
+    return head + map + '<div class="ou-list cm-tap" data-os-countries role="button" tabindex="0">' + rows +
         '<div class="cm-more">' + L('Lihat semua ', 'See all ') + u.countryCount + ' ' + L('negara ›', 'countries ›') + '</div></div>';
 }
 
@@ -108,7 +114,7 @@ export function openOsCountriesModal() {
     var u = computeOsCountryUsage(data);
     var nowYear = (data.time && data.time.currentYear) || 2000;
     var map = renderWorldMap({
-        id: 'wm-os', year: nowYear, tabs: true,
+        id: 'wm-os-modal', year: nowYear, tabs: true,
         items: u.list.map(function (r) { return { id: r.country.id, value: r.active, share: r.share }; }),
         valueText: function (it) { return formatUsers(it.value) + ' · ' + pct(it.share); }
     });
