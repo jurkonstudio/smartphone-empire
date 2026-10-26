@@ -81,6 +81,7 @@ import { enterOffice } from './ui/campus/CampusOfficeBridge.js';
 import { openStaffDetailModal } from './ui/panels/StaffDetailModal.js';
 import { openChipDesigner } from './ui/panels/ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './ui/panels/FabPanel.js';
+import { openWholesalePanel, refreshWholesalePanel, initWholesaleNotifications } from './ui/panels/WholesalePanel.js';
 import { openNewsArticleModal } from './ui/panels/NewsArticleModal.js';
 import { openEraEventModal } from './ui/panels/EraEventModal.js';
 import { openAnnualReviewModal } from './ui/panels/AnnualReviewModal.js';
@@ -939,6 +940,22 @@ function bindGlobalClicks() {
             return;
         }
 
+        var whAction = e.target.closest('[data-wholesale-action]');
+        if (whAction) {
+            e.preventDefault(); vibrate(8);
+            var whA = whAction.dataset.wholesaleAction;
+            if (whA === 'open') { openWholesalePanel(wholesaleSystem); return; }
+            var whR = whA === 'accept'
+                ? wholesaleSystem.accept(whAction.dataset.wholesaleId)
+                : wholesaleSystem.decline(whAction.dataset.wholesaleId);
+            if (whR.ok) {
+                if (whA === 'accept') ToastService.success('Kontrak grosir diterima. Pembayaran menyusul setelah pengiriman.');
+                refreshWholesalePanel(wholesaleSystem);
+                renderAll();
+            } else ToastService.error(whR.reason);
+            return;
+        }
+
         var mfAction = e.target.closest('[data-mf-action]');
         if (mfAction) {
             e.preventDefault(); vibrate(8);
@@ -1606,6 +1623,7 @@ async function boot() {
         componentPlants.start();
         assemblySystem.start();
         wholesaleSystem.start();
+        initWholesaleNotifications(function () { return wholesaleSystem; });
         companyHistory.start();
         NewsSystem.start();
         eraEvents.start();
