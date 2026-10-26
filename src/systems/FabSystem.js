@@ -53,6 +53,8 @@ export class FabSystem {
         if (typeof data.fab.inventory !== 'number') data.fab.inventory = 0;
         if (!Array.isArray(data.fab.history)) data.fab.history = [];
         if (typeof data.fab.totalProduced !== 'number') data.fab.totalProduced = 0;
+        // Stok per desain chip (chipId -> unit). Dipakai pabrik SoC.
+        if (!data.fab.stockByChip || typeof data.fab.stockByChip !== 'object') data.fab.stockByChip = {};
     }
 
     getFabLevelInfo(level) {
@@ -270,6 +272,8 @@ export class FabSystem {
 
         if (p.progressUnits >= p.totalUnits) {
             data.fab.inventory += p.totalUnits;
+            data.fab.stockByChip = data.fab.stockByChip || {};
+            data.fab.stockByChip[p.chipId] = (data.fab.stockByChip[p.chipId] || 0) + p.totalUnits;
             data.fab.totalProduced += p.totalUnits;
             data.fab.history.unshift({
                 chipId: p.chipId,

@@ -13,6 +13,7 @@ import {
 } from '../data/components.data.js';
 import { getCampaignById, MARKETING_CAMPAIGNS } from '../data/marketing.data.js';
 import { resolveComponentCost, getMarketPrice, getBuiltPlantEffect, getPlantTypeForCategory } from '../data/material-plants.data.js';
+import { isDesignChipId } from '../data/chip-design-registry.js';
 import { getLicenseById, getLicenseStatsAtYear } from '../data/os.data.js';
 import { computeTechEdge, getMasteryStatBonus, RND_TRACKS } from '../data/research.data.js';
 import { getFeatureStats, getFeatureUnitCost, getFeatureAnalysis, validateFeatureSelection, getStorageGBForComponent } from '../data/features.data.js';
@@ -405,6 +406,10 @@ export class ProductSystem {
         for (var i = 0; i < required.length; i++) {
             var k = required[i];
             if (!base[k]) return { ok: false, reason: 'Komponen belum lengkap: ' + k };
+        }
+        // Chip hasil desain harus sudah rilis (ada di katalog chip).
+        if (isDesignChipId(base.chipId) && !getComponentById(base.chipId)) {
+            return { ok: false, reason: 'Chip desain ini belum tersedia di katalog.' };
         }
         if (!base.osOptionId) return { ok: false, reason: 'Pilih OS.' };
 

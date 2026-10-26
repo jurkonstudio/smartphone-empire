@@ -27,6 +27,9 @@ import { WalletService } from './WalletService.js';
 import { FAB_LEVELS } from './FabSystem.js';
 import { COMPONENTS, getComponentById } from '../data/components.data.js';
 import {
+    setChipDesignSource, getDesignChipComponents, isDesignChipId, CHIP_DESIGN_PREFIX
+} from '../data/chip-design-registry.js';
+import {
     PLANT_TYPES, PLANT_MIN_ORDER, PLANT_CYCLE_DAYS,
     getPlantTypeById, getPlantLevelInfo, getPlantYield, resolveComponentCost, getMarketPrice,
     getPlantMaintenance, getPlantCapital,
@@ -38,6 +41,9 @@ const REFUND_UPGRADE = 0.4;
 const REFUND_PRODUCTION = 0.5;
 const HISTORY_LIMIT = 20;
 const PLANT_IDLE_WARN_DAYS = 60;   // peringatan jika pabrik menganggur selama ini
+// Harga chip desain naik sampai +50% saat stok Fab untuk desain itu kosong.
+// Naik-turunnya mengikuti rasio stok terhadap kapasitas bulanan fab.
+const DESIGN_SCARCITY_MAX = 0.5;
 
 function _money(n) { return '$' + Math.round(n || 0).toLocaleString('en-US'); }
 
@@ -49,6 +55,8 @@ export class ComponentPlantSystem {
     constructor(gameState) {
         this.state = gameState;
         this._unsubs = [];
+        // Chip hasil desain pemain dibaca malas dari state saat dibutuhkan.
+        setChipDesignSource(() => this._designChipComponents());
     }
 
     start() {
@@ -83,6 +91,7 @@ export class ComponentPlantSystem {
         if (typeof cp.pendingRevenue !== 'number') cp.pendingRevenue = 0;
         if (typeof cp.taxPaid !== 'number') cp.taxPaid = 0;
         if (!cp.external || typeof cp.external !== 'object') cp.external = { key: '', sold: {} };
+        if (data.fab && (!data.fab.stockByChip || typeof data.fab.stockByChip !== 'object')) data.fab.stockByChip = {};
 
         PLANT_TYPES.forEach(pt => {
             const ps = cp.plants[pt.id];
@@ -134,6 +143,7 @@ export class ComponentPlantSystem {
             .filter(c => c.category === pt.category)
             .filter(c => (c.minYear || 0) <= year)
             .filter(c => !c.requiresResearch || completed.indexOf(c.requiresResearch) !== -1)
+            .concat(pt.category === 'chip' ? getDesignChipComponents().filter(c => (c.minYear || 0) <= year) : [])
             .sort((a, b) => (a.tier - b.tier) || (a.minYear - b.minYear));
     }
 
@@ -374,9 +384,21 @@ export class ComponentPlantSystem {
         }
 
         const info = getPlantLevelInfo(typeId, ps.level);
-        const allowedQty = Math.min(qty, info.capacityMonthly);
+        let allowedQty = Math.min(qty, info.capacityMonthly);
+        // Chip desain: setiap unit SoC memakai satu die dari stok Fab untuk desain itu.
+        const isDesign = isDesignChipId(comp.id);
+        if (isDesign) {
+            const fabStock = this._fabStockFor(comp.designId);
+            if (fabStock < PLANT_MIN_ORDER) {
+                return { ok: false, reason: 'Stok fab untuk ' + comp.name + ' kurang (' + fabStock.toLocaleString('en-US') + ' unit, minimal ' + PLANT_MIN_ORDER.toLocaleString('en-US') + ').' };
+            }
+            allowedQty = Math.min(allowedQty, fabStock);
+        }
         if (allowedQty < qty) {
-            ToastService.warning('Kapasitas pabrik terbatas: maks ' + allowedQty.toLocaleString('en-US') + ' unit/bulan.');
+            const limitMsg = isDesign
+                ? 'Stok fab untuk ' + comp.name + ' membatasi produksi: maks ' + allowedQty.toLocaleString('en-US') + ' unit.'
+                : 'Kapasitas pabrik terbatas: maks ' + allowedQty.toLocaleString('en-US') + ' unit/bulan.';
+            ToastService.warning(limitMsg);
         }
 
         const unitCost = this.getUnitCost(componentId);
@@ -386,6 +408,7 @@ export class ComponentPlantSystem {
         }
 
         WalletService.pay(totalCost, 'plant-produce');
+        if (isDesign) this._consumeFabStock(comp.designId, allowedQty);
 
         const yieldRate = getPlantYield(ps.level);
         const totalUnits = Math.floor(allowedQty * yieldRate);
@@ -402,7 +425,9 @@ export class ComponentPlantSystem {
             durationDays: durationDays,
             yieldRate: yieldRate,
             unitCost: unitCost,
-            costPaid: totalCost
+            costPaid: totalCost,
+            fabDesignId: isDesign ? comp.designId : null,
+            fabDies: isDesign ? allowedQty : 0
         };
 
         this.state.addLog('Produksi ' + pt.name + ': ' + comp.name + ' ' + allowedQty.toLocaleString('en-US') + ' unit (' + _money(totalCost) + ').', LOG_TYPES.info);
@@ -418,6 +443,9 @@ export class ComponentPlantSystem {
         if (!ps || !ps.producing) return { ok: false, reason: 'Tidak ada produksi aktif.' };
         const refund = Math.floor(ps.producing.costPaid * REFUND_PRODUCTION);
         this.state.addCash(refund);
+        if (ps.producing.fabDies > 0 && ps.producing.fabDesignId) {
+            this._refundFabStock(ps.producing.fabDesignId, ps.producing.fabDies);
+        }
         ps.producing = null;
         ToastService.info('Produksi dibatalkan (refund ' + _money(refund) + ').');
         bus.emit('state:changed', data);
@@ -457,6 +485,73 @@ export class ComponentPlantSystem {
             shortfall: shortfall,
             marketCost: Math.round(getMarketPrice(this.state.data, comp) * shortfall * 100) / 100
         };
+    }
+
+    // ============================================================
+    // CHIP DESAIN PEMAIN (Desainer Chip -> Fab -> Pabrik SoC)
+    // ============================================================
+    _fabStockFor(designId) {
+        const f = this.state.data.fab;
+        return (f && f.stockByChip && f.stockByChip[designId]) || 0;
+    }
+
+    _consumeFabStock(designId, n) {
+        const f = this.state.data.fab;
+        if (!f) return;
+        f.stockByChip = f.stockByChip || {};
+        f.stockByChip[designId] = Math.max(0, (f.stockByChip[designId] || 0) - n);
+        f.inventory = Math.max(0, (f.inventory || 0) - n);
+    }
+
+    _refundFabStock(designId, n) {
+        const f = this.state.data.fab;
+        if (!f) return;
+        f.stockByChip = f.stockByChip || {};
+        f.stockByChip[designId] = (f.stockByChip[designId] || 0) + n;
+        f.inventory = (f.inventory || 0) + n;
+    }
+
+    // Kapasitas bulanan fab yang berdiri (dasar Small Fab bila belum dibangun).
+    _fabCapacityMonthly() {
+        const f = this.state.data.fab;
+        const base = FAB_LEVELS[0].capacityMonthly;
+        if (!f || !f.built || !f.level) return base;
+        const info = FAB_LEVELS.find(l => l.level === f.level);
+        return info ? info.capacityMonthly : base;
+    }
+
+    // Komponen untuk setiap chip desain yang sudah rilis. Harga = biaya per unit
+    // desain, dinaikkan bila stok Fab untuk desain itu menipis.
+    _designChipComponents() {
+        const data = this.state && this.state.data;
+        const catalog = (data && data.chips && Array.isArray(data.chips.catalog)) ? data.chips.catalog : [];
+        const cap = this._fabCapacityMonthly();
+        return catalog.map(d => {
+            const st = d.stats || {};
+            const stock = this._fabStockFor(d.id);
+            const scarcity = 1 + DESIGN_SCARCITY_MAX * (1 - Math.min(1, stock / cap));
+            const base = Math.max(1, st.costPerUnit || 0);
+            const cfg = d.config || {};
+            const year = (d.releaseDate && d.releaseDate.year) || data.time.currentYear;
+            return {
+                id: CHIP_DESIGN_PREFIX + d.id,
+                designId: d.id,
+                category: 'chip',
+                tier: 5,
+                minYear: year,
+                requiresResearch: null,
+                isPlayerDesign: true,
+                name: d.name,
+                icon: 'cpu',
+                description: 'Chip desain sendiri: ' + (st.archName || '') + ', ' + (st.nodeName || '') +
+                    ', ' + (cfg.cores || 1) + ' core.',
+                costPerUnit: Math.round(base * scarcity * 100) / 100,
+                stats: {
+                    performance: Math.round(st.performance || 0),
+                    quality: Math.round(st.efficiency || 0)
+                }
+            };
+        });
     }
 
     // ============================================================
