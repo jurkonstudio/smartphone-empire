@@ -1,6 +1,81 @@
 {
-  "latest": "0.2.9",
+  "latest": "0.2.11",
   "releases": [
+    {
+      "version": "0.2.11",
+      "date": "2026-10-27",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Produk → Desain kini punya kategori: Ponsel, Tablet, Earbuds nirkabel, Jam pintar, dan Charger. Tiap kategori menampilkan mockup, tahun dibuka, dan popularitas yang berubah mengikuti tahun dalam game. Tablet masih segera hadir.",
+            "en": "Product → Design now has categories: Phone, Tablet, Wireless earbuds, Smartwatch, and Charger. Each shows a mockup, the year it opens, and popularity that follows the game year. Tablet design is still coming soon."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Pengaturan lini aksesori (tier, harga, buka/tutup) pindah dari Pasar → Ekosistem ke Produk → Desain. Sub-tab Aksesori dihapus; Pasar → Ekosistem kini berisi ringkasan, App Store, dan layanan berlangganan.",
+            "en": "Accessory line settings (tier, price, open/close) moved from Market → Ecosystem to Product → Design. The Accessories sub-tab is removed; Market → Ecosystem now holds the summary, App Store, and subscription services."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Katalog punya filter kategori Semua / Ponsel / Aksesori. Lini aksesori tampil sebagai kartu dengan status, harga, tier, unit terjual, pendapatan, dan popularitas, serta tombol ke Desain.",
+            "en": "The catalog has a category filter: All / Phones / Accessories. Accessory lines appear as cards with status, price, tier, units sold, revenue, and popularity, plus a button to Design."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Landing page (web.html) punya bagian Apa yang baru yang diambil dari item rilis terbaru di patches.json. Bagian ini disembunyikan secara default; tampilkan dengan mengubah SHOW_WHATS_NEW menjadi true.",
+            "en": "The landing page (web.html) has a What's new section built from the latest release in patches.json. It is hidden by default; show it by setting SHOW_WHATS_NEW to true."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Versi game dinaikkan ke 0.2.11 di src/config/app.config.js dan package.json. Patch 0.2.11 tidak mengubah logika permainan.",
+            "en": "The game version is now 0.2.11 in src/config/app.config.js and package.json. Patch 0.2.11 does not change game logic."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "src/patches.json sebelumnya belum memuat 0.2.10 dan tidak identik dengan patches.json di root. Keduanya kini identik dan memuat riwayat sampai 0.2.11.",
+            "en": "src/patches.json previously lacked 0.2.10 and differed from the root patches.json. Both are now identical and include history up to 0.2.11."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.10",
+      "date": "2026-10-26",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Tampilan aksesori (earbuds, jam pintar, charger) kini animasi: LED, gelombang suara, jarum jam, dan aliran daya. Tier Premium memakai aksen emas.",
+            "en": "Accessory visuals (earbuds, smartwatch, charger) are now animated: LEDs, sound waves, watch hands, and power flow. Premium tier uses gold accents."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Overview (HQ) lebih hidup: sparkline kas di kartu utama, bar runway, dan strip perhatian yang muncul saat ada masalah (runway kritis, tim kosong, reputasi rendah, tidak ada produk dijual).",
+            "en": "The Overview (HQ) is livelier: a cash sparkline on the main card, a runway bar, and an attention strip that appears when something needs action (critical runway, empty team, low reputation, no product selling)."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Aksi cepat Rekrut dan Rilis disorot otomatis saat relevan, dan angka runway di Overview ikut diperbarui langsung saat kas berubah.",
+            "en": "Quick actions Hire and Release are highlighted automatically when relevant, and the runway figures on the Overview update live as cash changes."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.9",
       "date": "2026-10-26",
