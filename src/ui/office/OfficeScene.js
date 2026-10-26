@@ -1723,6 +1723,7 @@ export function createOfficeScene(THREE, container, gameState) {
 
     function goTo(g) {
         if (!g) return;
+        if (g.enter) { bus.emit('office:enter', { to: g.enter }); return; }
         bus.emit('advisor:go', { nav: g.nav, subtab: g.subtab, staffId: g.staffId || null, mode: g.mode || null });
     }
 

@@ -64,7 +64,7 @@ export var ROOM_DEFS = [
     { id: 'ceo', pat: 'wood',       x0: -9,   x1: -5.5, z0: -6,   z1: -1.5, tone: 0xe9d8c4, go: { nav: 'profile' } },
     { id: 'lab', pat: 'tile',       x0: -5.5, x1: -1,   z0: -6,   z1: -1.5, tone: 0xd6e8f5, go: { nav: 'research', subtab: 'tech' } },
     { id: 'design', pat: 'dots',    x0: -1,   x1: 3,    z0: -6,   z1: -1.5, tone: 0xe6dcf5, go: { nav: 'products', subtab: 'design' } },
-    { id: 'server', pat: 'grid',    x0: 3,    x1: 6.5,  z0: -6,   z1: -1.5, tone: 0xd5ecea, go: { nav: 'research', subtab: 'os' } },
+    { id: 'server', pat: 'grid',    x0: 3,    x1: 6.5,  z0: -6,   z1: -1.5, tone: 0xd5ecea, go: { nav: 'research', subtab: 'os' }, enter: 'server' },
     { id: 'chip', pat: 'grid',      x0: 6.5,  x1: 9,    z0: -6,   z1: -1.5, tone: 0xf3e3cf, go: { nav: 'products', subtab: 'chip' } },
     { id: 'work', pat: 'carpet',      x0: -9,   x1: 3,    z0: -1.5, z1: 6,    tone: 0xe8ecf2, go: { nav: 'team', subtab: 'team' },
                        go2: { nav: 'team', subtab: 'team', mode: 'recruit', labelKey: 'office.btn.recruit' } },
