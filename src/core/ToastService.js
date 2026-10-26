@@ -24,12 +24,13 @@ function _isDuplicate(message, type) {
 export var ToastService = {
     /**
      * show(message, type, durationMs, options)
-     * options: { action: { label: 'Baca', onClick: function } }
+     * options: { action: { label: 'Baca', onClick: function }, force: boolean }
      */
     show: function (message, type, durationMs, options) {
         if (!message) return 0;
         // Pengaturan notifikasi: default MATI. Gerbang tunggal untuk semua toast.
-        if (!NotificationPrefs.isTypeEnabled(type || 'info')) return 0;
+        // options.force = true: pesan sistem penting (mis. versi baru) melewati saklar notifikasi.
+        if (!(options && options.force) && !NotificationPrefs.isTypeEnabled(type || 'info')) return 0;
         if (_isDuplicate(message, type || 'info')) return 0;
         var id = _nextId++;
         var payload = {
