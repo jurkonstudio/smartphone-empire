@@ -1,6 +1,33 @@
 {
-  "latest": "0.2.9",
+  "latest": "0.2.10",
   "releases": [
+    {
+      "version": "0.2.10",
+      "date": "2026-10-26",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Tampilan aksesori (earbuds, jam pintar, charger) kini animasi: LED, gelombang suara, jarum jam, dan aliran daya. Tier Premium memakai aksen emas.",
+            "en": "Accessory visuals (earbuds, smartwatch, charger) are now animated: LEDs, sound waves, watch hands, and power flow. Premium tier uses gold accents."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Overview (HQ) lebih hidup: sparkline kas di kartu utama, bar runway, dan strip perhatian yang muncul saat ada masalah (runway kritis, tim kosong, reputasi rendah, tidak ada produk dijual).",
+            "en": "The Overview (HQ) is livelier: a cash sparkline on the main card, a runway bar, and an attention strip that appears when something needs action (critical runway, empty team, low reputation, no product selling)."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Aksi cepat Rekrut dan Rilis disorot otomatis saat relevan, dan angka runway di Overview ikut diperbarui langsung saat kas berubah.",
+            "en": "Quick actions Hire and Release are highlighted automatically when relevant, and the runway figures on the Overview update live as cash changes."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.9",
       "date": "2026-10-26",

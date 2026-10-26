@@ -1,6 +1,6 @@
 {
   "name": "smartphone-empire",
-  "version": "0.2.8",
+  "version": "0.2.10",
   "private": true,
   "type": "module",
   "description": "Smartphone Empire (Jurkon Studio). Dev tooling only; the game itself runs without a build step.",
