@@ -82,6 +82,7 @@ const keys = ['title', 'note', 'hurts', 'helps', 'none_bad', 'none_good'].map(k 
 const fk = ['quality', 'price', 'reputation', 'marketing', 'os', 'trend', 'competitor', 'lifecycle', 'tech', 'nav', 'event', 'feature', 'channel', 'afterSales', 'ecosystem'];
 fk.forEach(k => { keys.push('why.factor.' + k); keys.push('why.advice.' + k); });
 ['label', 'range', 'capped', 'note'].forEach(k => keys.push('wiz.forecast.' + k));
+['why.advice.lifecycle_rise', 'why.age'].forEach(k => keys.push(k)); // [P2]
 const idMod = await load(root, 'data/i18n/id.js'), enMod = await load(root, 'data/i18n/en.js');
 const dict = m => { for (const k of Object.keys(m)) if (m[k] && typeof m[k] === 'object' && !Array.isArray(m[k]) && Object.keys(m[k]).some(x => x.startsWith('prod.detail'))) return m[k]; return m.default || {}; };
 const D_id = dict(idMod), D_en = dict(enMod);
@@ -89,6 +90,47 @@ const miss = keys.filter(k => !D_id[k] || !D_en[k]);
 ok(miss.length === 0, 'semua ' + keys.length + ' kunci i18n ada di id dan en' + (miss.length ? ' (hilang: ' + miss.join(',') + ')' : ''));
 const bothVars = ['why.advice.price', 'wiz.forecast.range'].every(k => /\{(pct|low)\}/.test(D_id[k] || '') && /\{(pct|low)\}/.test(D_en[k] || ''));
 ok(bothVars, 'placeholder {pct}/{low} ada di id dan en');
+
+// (5) [P2] saran pemasaran: berdasar ADA/TIDAK kampanye aktif, bukan nilai pengali (pengali >= 1)
+{
+  const tm = state.data.time; tm.currentYear = 2010; nav._ctxKey = null;
+  const mm = getMacro(tm, BALANCE.macro);
+  const pp = mk('mk1', 60, mm.priceRef, false);
+  const b0 = ps.getDemandBreakdown(pp);
+  ok(b0.noCampaign === true, 'tanpa kampanye: noCampaign = true');
+  ok(fc(b0, 'marketing').multiplier === 1 && fc(b0, 'marketing').sentiment === 'neutral', 'tanpa kampanye: pengali marketing 1,00 (netral) - rumus tidak berubah');
+  state.data.marketing.activeCampaigns.push({ productId: 'mk1', effectiveReach: 0.2 });
+  const b1 = ps.getDemandBreakdown(pp);
+  ok(b1.noCampaign === false && fc(b1, 'marketing').multiplier > 1, 'dengan kampanye aktif: noCampaign = false, pengali > 1');
+  state.data.marketing.activeCampaigns.pop();
+  const other = ps.getDemandBreakdown(mk('mk2', 60, mm.priceRef, false));
+  ok(other.noCampaign === true, 'kampanye produk lain tidak dihitung');
+  ok(ps.getDemandBreakdown(pp).noCampaign === true, 'getDemandBreakdown tidak menyisakan kampanye');
+}
+
+// (6) [P2] usia produk: fase dan hari, sesuai kurva lifecycle yang sama dengan simulasi
+{
+  const lc = BALANCE.products.lifecycle, now = state.data.time.elapsedGameMinutes || 0;
+  const cases = [[10, 'rise'], [90, 'peak'], [150, 'decline'], [300, 'late'], [400, 'dead']];
+  let allOk = true;
+  for (const [age, phase] of cases) {
+    const q = mk('lc' + age, 60, 100, false); q.releaseGameMinute = now - age * 1440;
+    const L = ps.getDemandBreakdown(q).lifecycle;
+    const m = fc(ps.getDemandBreakdown(q), 'lifecycle').multiplier;
+    if (!L || L.phase !== phase || Math.abs(L.ageDays - age) > 1e-6 || L.declineStart !== lc.peakDays || L.deadDays !== lc.deadDays) { allOk = false; console.log('  beda usia', age, JSON.stringify(L)); }
+    if (Math.abs(m - ps._getLifecycleFactor(q)) > 1e-12) { allOk = false; console.log('  beda pengali', age); }
+  }
+  ok(allOk, 'bd.lifecycle: fase rise/peak/decline/late/dead + hari + batas sesuai BALANCE; pengali = _getLifecycleFactor');
+}
+
+// (7) [P2] format angka kartu mengikuti bahasa
+{
+  const { formatMultiplier } = await load(root, 'utils/format.js');
+  ok(formatMultiplier(1.05, 'id') === '×1,05' && formatMultiplier(0.5, 'id') === '×0,50', 'id: koma desimal');
+  ok(formatMultiplier(1.05, 'en') === '×1.05' && formatMultiplier(2.378, 'en') === '×2.38', 'en: titik desimal, 2 digit');
+  ok(formatMultiplier(NaN, 'id') === '×1,00' && formatMultiplier(Infinity, 'en') === '×1.00', 'NaN/Infinity aman');
+  ok(/×1,00/.test(D_id['why.note']) && /×1\.00/.test(D_en['why.note']), 'why.note memakai contoh angka sesuai bahasa');
+}
 
 console.log(fail ? fail + ' GAGAL' : 'SEMUA LULUS');
 process.exit(fail ? 1 : 0);

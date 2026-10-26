@@ -26,6 +26,7 @@ const TESTS = [
   { file: 'tools/assembly-test.mjs', src: true },
   { file: 'tools/channels-test.mjs', src: true },
   { file: 'tools/demand-breakdown.test.mjs', src: true },
+  { file: 'tools/why-card.test.mjs', src: true },
   { file: 'tools/dynamic-events-test.mjs', src: true },
   { file: 'tools/eco-render-check.mjs', src: true },
   { file: 'tools/eco-services-sim.mjs', src: true },
