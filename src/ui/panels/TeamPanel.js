@@ -1,6 +1,7 @@
 import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/TeamPanel.js
 // v2027.10a — i18n: pakai t() untuk semua string UI.
+// v2027.11a — redesign moral: kartu ringkasan moral, meter per staf, tren bulanan.
 // v2027.10b — i18n penuh (Fase 2): label role/tier/trait via key (fallback ke data),
 //             KPI memakai team.kpi.*, modal kandidat render ulang saat 'lang:changed',
 //             variabel `t` yang tertimpa di callback trait diganti `trait`.
@@ -11,6 +12,7 @@ import { renderIcon } from '../icons/FeatureIcons.js';
 import { Modal } from '../modal.js';
 import { bus } from '../../core/EventBus.js';
 import { t } from '../../core/LanguageService.js';
+import { renderMoraleCard, renderMoraleInline, moraleStyle, moraleTier } from './MoraleMeter.js';
 
 let _recruitFilter = 'all';
 let _teamMode = 'roster';
@@ -159,7 +161,7 @@ function _renderActive(data, teamSystem) {
         const list = byRole[role.id] || [];
         if (!list.length) return '';
         const rows = list.map(function(s) {
-            try { return _renderStaffRow(s); }
+            try { return _renderStaffRow(s, staff); }
             catch (err) {
                 console.error('[TeamPanel] staff row error:', err, s);
                 return '<div class="staff-row" style="opacity:0.5;"><div style="flex:1;">' + escapeHtml(t('team.roster.corrupt')) + '</div></div>';
@@ -175,17 +177,17 @@ function _renderActive(data, teamSystem) {
         `;
     }).join('');
 
-    return _rosterStyle() + summary + roleSections;
+    return _rosterStyle() + summary + renderMoraleCard(staff) + roleSections;
 }
 
-function _renderStaffRow(s) {
+function _renderStaffRow(s, list) {
     if (!s) return '';
 
     const role = getRoleById(s.role) || { color: '#666', icon: 'cpu' };
     const tier = getSkillTier(s.skill || 1) || { color: '#999', label: '' };
     const morale = (typeof s.morale === 'number') ? s.morale : 75;
     const salary = (typeof s.salary === 'number') ? s.salary : 0;
-    const moraleColor = morale >= 70 ? 'var(--success)' : morale >= 40 ? 'var(--warn)' : 'var(--danger)';
+    const isLow = moraleTier(morale).key === 'low';
 
     const traitList = Array.isArray(s.traits) ? s.traits : [];
     const traitIcons = traitList.map(function(tid) {
@@ -202,7 +204,7 @@ function _renderStaffRow(s) {
     const nameLabel = s.name || t('team.roster.unnamed');
 
     return `
-        <div class="staff-row" data-staff-detail="${s.id || ''}">
+        <div class="staff-row${isLow ? ' mm-row-low' : ''}" data-staff-detail="${s.id || ''}">
             ${avatar}
             <div class="staff-info">
                 <div class="staff-name-row">
@@ -213,9 +215,8 @@ function _renderStaffRow(s) {
                 </div>
                 <div class="staff-meta-row">
                     <span>$${salary.toLocaleString('en-US')}${escapeHtml(t('team.recruit.per_month'))}</span>
-                    <span>•</span>
-                    <span style="color:${moraleColor};">${escapeHtml(t('team.roster.morale'))} ${morale}</span>
                 </div>
+                ${renderMoraleInline(s, list)}
                 ${_progressHtml(s)}
             </div>
             <div class="staff-arrow">›</div>
@@ -741,7 +742,7 @@ function _renderInfo(data, teamSystem) {
 
 // ---------- Progres skill & tawar gaji (v2027.10d) ----------
 function _rosterStyle() {
-    return '<style>' +
+    return moraleStyle() + '<style>' +
         '.skill-prog{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:10.5px;color:var(--text-tertiary);}' +
         '.skill-prog-track{flex:1;max-width:120px;height:4px;border-radius:2px;background:var(--bg-3);overflow:hidden;}' +
         '.skill-prog-fill{height:100%;background:var(--accent);border-radius:2px;}' +

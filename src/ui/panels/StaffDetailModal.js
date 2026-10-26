@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../utils/html.js';
 // FILE: src/ui/panels/StaffDetailModal.js
-// v2027.13c — i18n.
+// v2027.13c — i18n. v2027.11a — morale: meter, tier, dan tren bulanan.
 // Modal detail staff: info lengkap + tombol Fire + Training.
 import { Modal } from '../modal.js';
 import { getRoleById, getSkillTier, getTraitById } from '../../data/staff.data.js';
@@ -8,6 +8,7 @@ import { BALANCE } from '../../data/balance.data.js';
 import { generateAvatar } from '../avatars/AvatarGenerator.js';
 import { t } from '../../core/LanguageService.js';
 import { WalletService } from '../../systems/WalletService.js';
+import { renderMoraleMeter, renderMoraleTrend, moraleDeltaPerMonth, moraleStyle } from './MoraleMeter.js';
 
 
 function renderSkillTier(skill) {
@@ -48,7 +49,6 @@ export function openStaffDetailModal(params) {
         }).join('')
         : '<div style="font-size:12px;color:var(--text-mute);">' + t('staff.detail.no_traits') + '</div>';
 
-    const moraleColor = s.morale >= 70 ? 'var(--success)' : s.morale >= 40 ? 'var(--warn)' : 'var(--danger)';
     const severance = s.salary * ((BALANCE.team && BALANCE.team.severanceMonths) || 2);
     const trainingCost = s.salary * 2;
     const canTrain = s.skill < 5 && WalletService.canAfford(trainingCost);
@@ -79,7 +79,11 @@ export function openStaffDetailModal(params) {
         ` : '<div class="empty-hint" style="margin-top:10px;">' + t('staff.detail.max_tier') + '</div>'}
 
         <div class="sum-row" style="margin-top:14px;"><span>${t('staff.detail.salary')}</span><b style="color:var(--accent);">$${s.salary.toLocaleString('en-US')}</b></div>
-        <div class="sum-row"><span>${t('staff.detail.morale')}</span><b style="color:${moraleColor};">${s.morale}/100</b></div>
+        <div class="sm-morale">
+            <div class="sm-morale-head"><span>${t('staff.detail.morale')}</span>${renderMoraleTrend(moraleDeltaPerMonth(s, data.staff))}</div>
+            ${renderMoraleMeter(typeof s.morale === 'number' ? s.morale : 75)}
+            <div class="sm-morale-hint">${t('team.morale.modal_hint')}</div>
+        </div>
 
         <div class="card-title" style="margin-top:14px;">${t('staff.detail.traits_title')}</div>
         ${traitsHtml}
@@ -100,5 +104,5 @@ export function openStaffDetailModal(params) {
 
         <button class="btn-secondary" data-modal-close style="width:100%;margin-top:8px;">${t('staff.detail.close')}</button>
     `;
-    Modal.open('staff-detail', html);
+    Modal.open('staff-detail', moraleStyle() + '<style>.sm-morale{margin-top:14px;}.sm-morale-head{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--text-dim);margin-bottom:6px;}.sm-morale-hint{font-size:10.5px;color:var(--text-tertiary);margin-top:6px;line-height:1.4;}</style>' + html);
 }
