@@ -41,16 +41,9 @@ var CSS = [
     '.home-switch-btn.active{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent-soft);}',
     '.home-switch-btn:active{transform:scale(.96);}',
     '.home-switch-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}',
-    /* baris sakelar + tombol Server (v2027.73) */
+    /* baris sakelar (Home) */
     '.home-topbar{display:flex;gap:8px;align-items:stretch;}',
-    '.home-topbar .home-switch{flex:1 1 auto;min-width:0;}',
-    '.home-server-chip{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;',
-    'border:1px solid var(--border);border-radius:14px;background:var(--bg-2);color:var(--text-tertiary);font:inherit;font-size:12.5px;font-weight:700;',
-    'cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .18s ease,color .18s ease,transform .12s ease;}',
-    '.home-server-chip svg{flex:0 0 auto;width:17px;height:17px;display:block;}',
-    '.home-server-chip.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent-soft);}',
-    '.home-server-chip:active{transform:scale(.96);}',
-    '.home-server-chip:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}'
+    '.home-topbar .home-switch{flex:1 1 auto;min-width:0;}'
 ].join('');
 
 var _inOffice = false;      // true = Home menampilkan Office (dibuka dari gedung HQ), bukan peta kampus
@@ -113,11 +106,6 @@ function syncSwitch() {
         var on = isManuBtn ? _inManu : (!_inManu && !_inServer);
         btns[i].classList.toggle('active', on);
         btns[i].setAttribute('aria-selected', on ? 'true' : 'false');
-    }
-    var chip = document.querySelector('.home-server-chip');
-    if (chip) {
-        chip.classList.toggle('active', _inServer);
-        chip.setAttribute('aria-pressed', _inServer ? 'true' : 'false');
     }
 }
 
@@ -306,14 +294,11 @@ if (typeof document !== 'undefined') {
         else if (_inServer) exitServer(box);
         else if (_inOffice) exitOffice(box);
     });
-    // Tombol "Server" di samping sakelar: buka / tutup Peta Server 3D.
-    document.addEventListener('click', function (e) {
-        var chip = e.target && e.target.closest && e.target.closest('.home-server-chip');
-        if (!chip) return;
+    // Ruang Server di Office 3D: ketuk ruangan -> "Masuk Server" membuka Peta Server (tanpa tombol di Home).
+    bus.on('office:enter', function (p) {
+        if (!p || p.to !== 'server') return;
         var box = document.getElementById('campus-map');
-        if (!box) return;
-        e.preventDefault();
-        if (_inServer) exitServer(box); else enterServer(box);
+        if (box) enterServer(box);
     });
     // Pindah ke tab lain => kembali ke mode kampus (kantor ditutup oleh renderView di main.js).
     bus.on('view:changed', function (p) {
