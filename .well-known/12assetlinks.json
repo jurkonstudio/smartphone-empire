@@ -1,8 +1,0 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "id.my.smartphone_empire.twa",
-        "sha256_cert_fingerprints": ["9C:B6:CA:7F:9B:AB:46:F3:97:65:C7:13:10:59:46:B2:71:57:0F:E4:6D:CC:F6:F2:E7:48:27:90:14:AA:F1:AA"]
-      }
-    }]
