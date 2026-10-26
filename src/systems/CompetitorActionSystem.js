@@ -231,4 +231,15 @@ export class CompetitorActionSystem {
         const m = this.state.data.competitorState.actionMods[id];
         return m ? { modifier: m.modifier, untilTick: m.untilTick, lastAction: m.lastAction } : null;
     }
+
+    // Pasokan dari pemain (kontrak grosir diterima): merek pembeli mendapat dorongan pangsa
+    // lewat jalur modifier yang sama (cap dan peluruhan berlaku). Dipanggil WholesaleContractSystem.
+    applyWholesaleSupply(competitorId, relEffect, durationTicks) {
+        this._ensureState();
+        const comp = this._byId.get(competitorId);
+        if (!comp || comp.isEcosystem) return;
+        const snap = this.state.data.time;
+        this._apply(comp.id, comp, 'wholesale_supply', relEffect, durationTicks,
+            absMonth(snap.currentYear, snap.currentMonth), snap.currentYear, snap.currentMonth, 'wholesale');
+    }
 }

@@ -30,7 +30,11 @@ export class WholesaleContractSystem {
     constructor(gameState) {
         this.state = gameState;
         this._unsubs = [];
+        this._competitorActions = null;
     }
+
+    // Dipasang dari main.js. Tanpa ini, penjualan tetap jalan tanpa dorongan ke pembeli.
+    setCompetitorActions(ca) { this._competitorActions = ca || null; }
 
     start() {
         this._unsubs.push(bus.on('time:month-changed', (s) => this._onMonth(s)));
@@ -95,7 +99,11 @@ export class WholesaleContractSystem {
         const range = WHOLESALE.priceByPersonality[buyer.personality] || WHOLESALE.priceDefault;
         const qRel = quality / WHOLESALE.qualityRef - 1;
         const ratio = _clamp(_rand(range[0], range[1]) * (1 + WHOLESALE.qualityPriceBonus * qRel), WHOLESALE.priceMin, WHOLESALE.priceMax);
-        const unitPrice = Math.max(1, Math.round((p.price || 0) * ratio));
+        // Lantai biaya: harga grosir tidak pernah di bawah biaya produksi.
+        const floor = Math.ceil(Math.max(0, p.unitCost || 0) * WHOLESALE.costFloorMult);
+        // Bila lantai biaya sudah di atas batas harga ritel, tidak ada tawaran yang layak.
+        if (floor > (p.price || 0) * WHOLESALE.priceMax) return null;
+        const unitPrice = Math.max(1, floor, Math.round((p.price || 0) * ratio));
         const share = _rand(WHOLESALE.qtyShare.min, WHOLESALE.qtyShare.max);
         const qty = Math.min(p.stock, Math.max(WHOLESALE.minQty, Math.floor(p.stock * share)));
         const days = Math.round(_rand(WHOLESALE.offerDays.min, WHOLESALE.offerDays.max));
@@ -153,6 +161,10 @@ export class WholesaleContractSystem {
         w.contracts.push(contract);
         this.state.addLog('Kontrak grosir diterima: ' + o.qty.toLocaleString('en-US') + ' unit "' + p.name + '" ke ' + o.buyerName + ' (' + _money(o.total) + ', kirim ' + days + ' hari).', LOG_TYPES.info);
         bus.emit('wholesale:accepted', contract);
+        // Pembeli mendapat dorongan pangsa (lewat jalur modifier kompetitor, dibatasi cap).
+        if (this._competitorActions && WHOLESALE.buyerBoost) {
+            this._competitorActions.applyWholesaleSupply(o.buyerId, WHOLESALE.buyerBoost.relEffect, WHOLESALE.buyerBoost.durationTicks);
+        }
         bus.emit('state:changed', data);
         return { ok: true, contract: contract };
     }
