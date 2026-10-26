@@ -1,6 +1,54 @@
 {
-  "latest": "0.2.12",
+  "latest": "0.2.13",
   "releases": [
+    {
+      "version": "0.2.13",
+      "date": "2026-10-27",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Siklus hype untuk flagship: satu flagship per tahun kalender. Seri baru ditolak bila flagship tahun itu sudah dirilis. Varian Basic, Pro, dan Pro Max tetap dalam satu seri.",
+            "en": "Hype cycle for flagships: one flagship per calendar year. A new series is refused if this year's flagship has already shipped. Basic, Pro, and Pro Max variants stay inside one series."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Antisipasi publik naik saat flagship dirilis (lonjakan 0.4x sampai 1.5x, tergantung kualitas OS dan chip), teaser muncul di bulan ke-6, kebocoran acak di bulan ke-9, lalu meluruh 7% per bulan. Antisipasi menambah permintaan hingga +25%.",
+            "en": "Public anticipation rises when a flagship ships (0.4x to 1.5x, depending on the quality of your OS and chip). A teaser appears in month 6, a random leak in month 9, and anticipation decays 7% per month. It adds up to +25% demand."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Kualitas produk ikut menentukan hype: OS sendiri yang stabil dan bebas bug menambah lonjakan, chip sendiri yang unggul menambah lonjakan, dan OS plus chip sendiri bersama-sama mendapat bonus sinergi. Produk pihak ketiga tetap bisa dipakai, dengan lonjakan lebih kecil.",
+            "en": "Product quality also shapes hype: a stable, bug-free OS of your own adds to the spike, a stronger chip of your own adds to it, and an OS plus chip of your own together get a synergy bonus. Third-party products still work, with a smaller spike."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Peta dunia kini tampil di tab OS → Pengguna (di atas daftar 5 negara teratas) dan di daftar Negara yang akan dipasok. Penanda berukuran sesuai jumlah pengguna atau porsi, dengan zoom Dunia, Amerika, Eropa & Afrika, dan Asia-Pasifik. Ketuk penanda untuk melihat detail negara.",
+            "en": "A world map now appears on the OS → Users tab (above the top 5 countries) and in the Countries to be supplied list. Markers are sized by users or share, with World, Americas, Europe & Africa, and Asia-Pacific zooms. Tap a marker for country details."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Rantai produksi di Manufaktur → Ringkasan memakai aksen warna per tahap (Chip, Komponen, Assembly, Produk), bar progres, dan ikon SVG inline (MfIcons.js). Emoji dan font ikon eksternal tidak lagi dipakai.",
+            "en": "The production chain in Manufacturing → Overview now uses a per-stage accent color (Chip, Components, Assembly, Products), progress bars, and inline SVG icons (MfIcons.js). Emoji and external icon fonts are no longer used."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Versi game dinaikkan ke 0.2.13 di src/config/app.config.js, package.json, patches.json (root dan src), dan web.html. Patch ini mengubah logika permainan: aturan flagship dan siklus hype memengaruhi permintaan dan rilis.",
+            "en": "Game version raised to 0.2.13 in src/config/app.config.js, package.json, patches.json (root and src), and web.html. This patch changes game logic: the flagship rule and the hype cycle affect demand and releases."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.12",
       "date": "2026-10-27",
