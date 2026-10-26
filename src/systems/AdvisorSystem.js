@@ -1,4 +1,6 @@
 // FILE: src/systems/AdvisorSystem.js
+// v2028.43 — Saran beres hilang otomatis (pemantauan berkala + event 'advisor:resolved'),
+//   pemain bisa menandai saran "selesai" (dapat dibatalkan), dan lencana ikut diperbarui.
 // v2028.42 — Pemberitahuan patch & perbaikan bug.
 import { bus } from '../core/EventBus.js';
 import { LanguageService } from '../core/LanguageService.js';
@@ -19,6 +21,7 @@ const SNAPSHOT_EVERY_DAYS = 7;
 const MAX_SNAPSHOTS = 26;
 const MAX_ADVICE = 8;
 const SEV = { critical: 0, warn: 1, tip: 2, info: 3 };
+const WATCH_MS = 2000;           // [v2028.43] interval pemantauan perubahan game
 
 // ------------------------------------------------------------
 // Teks (id / en). 
@@ -53,6 +56,20 @@ const DICT = {
         'app_issue.t': 'Masalah teknis terdeteksi',
         'app_issue.d': '{n} anomali data atau error terdeteksi. Salin laporan dan kirim ke pengembang agar cepat diperbaiki.',
         'ui.briefing': 'Sejak terakhir kamu cek',
+        'ui.done': 'Tandai selesai',
+        'ui.undo': 'Batalkan',
+        'ui.done_ok': 'Ditandai selesai. Saran ini tidak muncul lagi sampai kondisinya kembali.',
+        'ui.done_count': '{n} sudah ditandai selesai',
+        'ui.beres': 'Beres: {t}',
+        'ui.filter_all': 'Semua',
+        'ui.filter_urgent': 'Mendesak',
+        'ui.filter_info': 'Info',
+        'ui.empty_filter': 'Tidak ada saran di kategori ini.',
+        'ui.live': 'Diperbarui otomatis',
+        'ui.sev_critical': 'Darurat',
+        'ui.sev_warn': 'Penting',
+        'ui.sev_tip': 'Tip',
+        'ui.sev_info': 'Info',
         'ui.health': 'Kesehatan bisnis',
         'ui.ai': 'AI',
         'ui.cash_lbl': 'Uang',
@@ -166,6 +183,20 @@ const DICT = {
         'app_issue.t': 'Technical problem detected',
         'app_issue.d': '{n} data anomalies or errors detected. Copy the report and send it to the developer so it can be fixed.',
         'ui.briefing': 'Since you last checked',
+        'ui.done': 'Mark done',
+        'ui.undo': 'Undo',
+        'ui.done_ok': 'Marked as done. It will not show again unless the situation returns.',
+        'ui.done_count': '{n} marked as done',
+        'ui.beres': 'Done: {t}',
+        'ui.filter_all': 'All',
+        'ui.filter_urgent': 'Urgent',
+        'ui.filter_info': 'Info',
+        'ui.empty_filter': 'No suggestions in this category.',
+        'ui.live': 'Updates automatically',
+        'ui.sev_critical': 'Critical',
+        'ui.sev_warn': 'Important',
+        'ui.sev_tip': 'Tip',
+        'ui.sev_info': 'Info',
         'ui.health': 'Business health',
         'ui.ai': 'AI',
         'ui.cash_lbl': 'Cash',
@@ -602,13 +633,13 @@ export class AdvisorSystem {
         var self = this;
         var refresh = function () { self._scheduleRefresh(); };
         ['time:day-changed', 'research:completed', 'research:started', 'product:released',
-         'team:changed', 'product:stock-out', 'lang:changed', 'state:hydrated'].forEach(function (ev) {
+         'product:auto-restocked', 'team:changed', 'product:stock-out', 'lang:changed', 'state:hydrated'].forEach(function (ev) {
             self._unsubs.push(bus.on(ev, refresh));
         });
-        
-        this._unsubs.push(bus.on('time:day-changed', function () { 
-            self._snapshot(); 
-            self._maybeToast(); 
+
+        this._unsubs.push(bus.on('time:day-changed', function () {
+            self._snapshot();
+            self._maybeToast();
             self._checkProactiveAnomalies(); // [UPGRADE]
         }));
 
@@ -616,9 +647,16 @@ export class AdvisorSystem {
         this._unsubs.push(bus.on('state:hydrated', function () { self._patchFreshAck(); }));
         this._patchFreshAck();
         PatchService.start(function () { self._onPatchInfo(); });
-        
+
         if (!this._provider && ADVISOR_CONFIG && ADVISOR_CONFIG.aiEnabled && ADVISOR_CONFIG.endpoint) {
             this.setProvider(createAdvisorProvider(ADVISOR_CONFIG));
+        }
+        // [v2028.43] Pantau perubahan game (stok, produksi, kas, tim) berkala agar panel dan lencana selalu sesuai kondisi terbaru.
+        if (!this._watch) {
+            this._watch = setInterval(function () {
+                if (typeof document !== 'undefined' && document.hidden) return;
+                self._scheduleRefresh();
+            }, WATCH_MS);
         }
         this._scheduleRefresh();
     }
@@ -628,6 +666,7 @@ export class AdvisorSystem {
         this._unsubs = [];
         try { PatchService.stop(); } catch (e) {}
         if (this._timer) { clearTimeout(this._timer); this._timer = null; }
+        if (this._watch) { clearInterval(this._watch); this._watch = null; }
     }
 
     _store() {
@@ -635,6 +674,7 @@ export class AdvisorSystem {
         if (!d.advisor || typeof d.advisor !== 'object') d.advisor = {};
         if (!d.advisor.snoozed) d.advisor.snoozed = {};
         if (!d.advisor.toasted) d.advisor.toasted = {};
+        if (!d.advisor.done || typeof d.advisor.done !== 'object') d.advisor.done = {};
         if (!Array.isArray(d.advisor.hist)) d.advisor.hist = [];
         return d.advisor;
     }
@@ -804,8 +844,15 @@ export class AdvisorSystem {
             try { rule(c, push); } catch (err) { console.warn('[Advisor] aturan gagal:', rule.name, err); }
         });
 
+        // [v2028.43] Tanda "selesai" hanya berlaku selama kondisinya masih ada.
+        // Begitu kondisinya beres sendiri, tanda dihapus agar saran bisa muncul lagi jika masalahnya kembali.
+        var live = {};
+        out.forEach(function (a) { live[a.id] = true; });
+        Object.keys(store.done).forEach(function (id) { if (!live[id]) delete store.done[id]; });
+
         out = out.filter(function (a) {
             if (includeSnoozed) return true;
+            if (store.done[a.id]) return false;
             var until = store.snoozed[a.id];
             return !(typeof until === 'number' && until > c.now);
         });
@@ -817,6 +864,32 @@ export class AdvisorSystem {
                 title: tx('all_good.t'), detail: tx('all_good.d'), action: null });
         }
         return out;
+    }
+
+    // [v2028.43] Pemain menandai saran sebagai selesai -> hilang dari daftar dan lencana.
+    markDone(id) {
+        var a = this.getAdvice({ includeSnoozed: true }).filter(function (x) { return x.id === id; })[0];
+        if (!a || a.id === 'all_good') return false;
+        var now = (this.state.data.time && this.state.data.time.elapsedGameMinutes) || 0;
+        this._store().done[id] = { title: a.title, sev: a.sev, icon: a.icon, at: now };
+        this._lastSig = '';
+        this._scheduleRefresh();
+        return true;
+    }
+
+    undoDone(id) {
+        delete this._store().done[id];
+        this._lastSig = '';
+        this._scheduleRefresh();
+    }
+
+    // Daftar saran yang sudah ditandai selesai (dan kondisinya masih ada), terbaru di atas.
+    getDone() {
+        this.getAdvice({ includeSnoozed: true }); // bersihkan entri yang kondisinya sudah beres
+        var done = this._store().done;
+        return Object.keys(done).map(function (id) {
+            return { id: id, title: done[id].title, sev: done[id].sev, icon: done[id].icon, at: done[id].at || 0 };
+        }).sort(function (a, b) { return b.at - a.at; });
     }
 
     getBadge() {
@@ -1155,14 +1228,35 @@ export class AdvisorSystem {
         if (this._timer) return;
         this._timer = setTimeout(function () {
             self._timer = null;
-            var b = self.getBadge();
-            var pi = PatchService.getInfo();
-            var sig = b.count + ':' + b.critical + ':' + b.total + ':' + curLang() + ':' + (pi ? pi.latest : '') + ':' + ((self._patchStore().ack) || '');
-            if (sig !== self._lastSig) {
-                self._lastSig = sig;
-                bus.emit('advisor:updated', b);
-            }
+            try { self._publish(); } catch (e) { console.warn('[Advisor] refresh gagal:', e); }
         }, 250);
+    }
+
+    // [v2028.43] Hitung ulang saran; kalau berubah, beri tahu UI. Saran yang tadinya tampil lalu
+    // hilang karena kondisinya beres (bukan ditunda / ditandai) dikirim sebagai 'advisor:resolved'.
+    _publish() {
+        var list = this.getAdvice();
+        var real = list.filter(function (a) { return a.id !== 'all_good'; });
+        var b = { count: 0, critical: 0, total: list.length };
+        real.forEach(function (a) { if (a.sev === 'critical') b.critical++; if (a.sev === 'critical' || a.sev === 'warn') b.count++; });
+        var pi = PatchService.getInfo();
+        var sig = real.map(function (a) { return a.id; }).join(',') + '|' + b.count + ':' + b.critical + ':' + b.total + ':' +
+                  curLang() + ':' + (pi ? pi.latest : '') + ':' + ((this._patchStore().ack) || '');
+        if (sig === this._lastSig) return;
+        this._lastSig = sig;
+
+        var store = this._store();
+        var now = (this.state.data.time && this.state.data.time.elapsedGameMinutes) || 0;
+        var nowIds = {};
+        real.forEach(function (a) { nowIds[a.id] = true; });
+        var gone = (this._lastList || []).filter(function (a) {
+            if (nowIds[a.id] || store.done[a.id]) return false;
+            var until = store.snoozed[a.id];
+            return !(typeof until === 'number' && until > now);
+        });
+        this._lastList = real.map(function (a) { return { id: a.id, title: a.title, sev: a.sev }; });
+        if (gone.length) bus.emit('advisor:resolved', { items: gone });
+        bus.emit('advisor:updated', b);
     }
 
     _maybeToast() {
