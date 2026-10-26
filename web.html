@@ -398,7 +398,7 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
   <div class="wrap nav-in">
     <a class="brand" href="#top" aria-label="Smartphone Empire"><img src="./assets/icon/icon-192.png" alt="" width="28" height="28"><span class="brand-tx">Smartphone Empire</span></a>
     <div class="nav-links">
-      <a href="#fitur" data-en="Features">Fitur</a><a href="#cuplikan" data-en="Screenshots">Cuplikan</a><a href="#era" data-en="Eras">Era</a><a href="#bahasa" data-en="Language">Bahasa</a><a href="#silicon">Silicon</a><a href="#pembaruan" data-en="Updates">Pembaruan</a><a href="#studio">Studio</a>
+      <a href="#fitur" data-en="Features">Fitur</a><a href="#cuplikan" data-en="Screenshots">Cuplikan</a><a href="#era" data-en="Eras">Era</a><a href="#bahasa" data-en="Language">Bahasa</a><a href="#silicon">Silicon</a><a href="#apa-baru" id="navNew" hidden data-en="What’s new">Apa yang baru</a><a href="#pembaruan" data-en="Updates">Pembaruan</a><a href="#studio">Studio</a>
     </div>
     <span class="nav-sp"></span>
     <div class="lang" role="group" aria-label="Bahasa" data-en-aria="Language">
@@ -415,7 +415,7 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
 </nav>
 
 <header id="top" class="wrap hero">
-  <div class="eyebrow"><b id="verChip">v0.2.9</b> <span data-en="Jurkon Studio · Independent simulation game">Jurkon Studio · Game simulasi independen</span></div>
+  <div class="eyebrow"><b id="verChip">v0.2.11</b> <span data-en="Jurkon Studio · Independent simulation game">Jurkon Studio · Game simulasi independen</span></div>
   <h1 class="title" data-en="Build your <em>phone</em> empire.<br>From 2000 to the AI era.">Bangun kerajaan <em>ponselmu</em>.<br>Dari 2000 sampai era AI.</h1>
   <p class="lede" data-en="You’re the CEO of a phone company founded on January 1, 2000. Hire a team, research technology, design phones, then take on Nokia, Apple, Samsung, and 29 other competitors all the way to the foldable era and beyond.">Kamu CEO perusahaan ponsel yang baru berdiri pada 1 Januari 2000. Rekrut tim, riset teknologi, rancang ponsel, lalu lawan Nokia, Apple, Samsung, dan 29 kompetitor lain sampai era foldable dan sesudahnya.</p>
   <div class="cta">
@@ -649,6 +649,14 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
     <a class="ib n-sp" href="https://open.spotify.com/playlist/4hiTFBL8p8TaaQZxXFaANj" target="_blank" rel="noopener" aria-label="Spotify"><svg viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.502 17.302c-.225.369-.705.484-1.074.259-3.022-1.845-6.83-2.263-11.317-1.239-.422.096-.843-.164-.938-.586-.096-.422.164-.843.586-.938 4.905-1.12 9.094-.637 12.482 1.431.368.225.483.704.261 1.073zm1.47-3.265c-.283.46-.886.604-1.346.321-3.458-2.126-8.73-2.741-12.82-1.501-.518.158-1.066-.133-1.224-.65-.158-.518.133-1.066.65-1.224 4.68-1.419 10.482-.733 14.42 1.688.459.283.603.886.32 1.346zm.126-3.416c-4.146-2.462-10.986-2.69-14.963-1.484-.635.193-1.304-.166-1.497-.8-.193-.634.166-1.304.8-1.497 4.566-1.385 12.116-1.114 16.857 1.701.571.339.761 1.08.422 1.651-.34.57-1.081.76-1.651.421z"/></svg></a>
     <a class="ib n-tb" href="https://tumblr.com/calvfinka" target="_blank" rel="noopener" aria-label="Tumblr"><svg viewBox="0 0 24 24"><path d="M14.278 23.95c-3.14 0-5.464-1.586-5.464-5.258V11.14H4.839V8.522c3.427-.983 4.973-3.92 5.227-6.887h2.864v6.14h3.835v3.365h-3.835v6.602c0 1.567.74 2.153 1.84 2.153.54 0 1.047-.12 1.492-.33v3.086c-.523.185-1.455.31-2.442.31z"/></svg></a>
   </div>
+</div></section>
+
+<!-- APA YANG BARU (disembunyikan secara default; ubah SHOW_WHATS_NEW di script menjadi true untuk menampilkan) -->
+<section id="apa-baru" hidden><div class="wrap">
+  <div class="kicker"><span data-en="What’s new">Apa yang baru</span> <b class="pt feature" id="newVer"></b></div>
+  <h2 class="h" data-en="What changed in the latest version.">Yang berubah di versi terbaru.</h2>
+  <p class="sub" data-en="Taken from the latest release in patches.json, the same file the game reads.">Diambil dari rilis terbaru di patches.json, file yang sama dengan yang dibaca game.</p>
+  <div class="rels" id="newList" aria-live="polite"></div>
 </div></section>
 
 <!-- RIWAYAT PEMBARUAN (dibaca dari patches.json) -->
@@ -934,6 +942,20 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') zoom.classLi
 const VER_RE = /^\d+(\.\d+){0,3}$/;
 const PT_LABEL = { feature: { id: 'Baru', en: 'New' }, fix: { id: 'Perbaikan', en: 'Fix' }, balance: { id: 'Keseimbangan', en: 'Balance' }, change: { id: 'Perubahan', en: 'Change' } };
 let PATCHES = null;
+// Ubah ke true untuk menampilkan bagian "Apa yang baru" beserta tautan navigasinya. Default: disembunyikan.
+const SHOW_WHATS_NEW = false;
+function renderWhatsNew() {
+  const sec = $('#apa-baru'), nav = $('#navNew'); if (!sec) return;
+  const r = PATCHES && PATCHES[0];
+  const on = SHOW_WHATS_NEW && !!r;
+  sec.hidden = !on; if (nav) nav.hidden = !on;
+  if (!on) return;
+  $('#newVer').textContent = 'v' + r.version + ' · ' + r.date;
+  $('#newList').innerHTML = `<article class="rel"><ul>${r.items.map(it => {
+    const k = PT_LABEL[it.type] ? it.type : 'change';
+    return `<li><span class="pt ${k}">${PT_LABEL[k][lang]}</span><span>${esc(it.text[lang] || it.text.id || it.text.en)}</span></li>`;
+  }).join('')}</ul></article>`;
+}
 function renderPatches() {
   const box = $('#rels'); if (!box) return;
   if (!PATCHES) { box.innerHTML = `<div class="rel"><p style="color:var(--text3);font-size:.9rem">${lang === 'en' ? 'Update history could not be loaded right now.' : 'Riwayat pembaruan belum bisa dimuat sekarang.'}</p></div>`; return; }
@@ -941,6 +963,7 @@ function renderPatches() {
     const k = PT_LABEL[it.type] ? it.type : 'change';
     return `<li><span class="pt ${k}">${PT_LABEL[k][lang]}</span><span>${esc(it.text[lang] || it.text.id || it.text.en)}</span></li>`;
   }).join('')}</ul></article>`).join('');
+  renderWhatsNew();
 }
 function cleanPatches(d) {
   if (!d || !Array.isArray(d.releases)) return null;
@@ -951,6 +974,7 @@ function cleanPatches(d) {
   return out.length ? out : null;
 }
 renderPatches();
+renderWhatsNew();
 fetch('./patches.json', { cache: 'no-store', credentials: 'omit' })
   .then(r => (r.ok ? r.json() : null))
   .then(d => {

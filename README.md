@@ -190,7 +190,7 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 - **Wholesale text is partly untranslated.** The `wh.*` keys used by the Wholesale panel and its notifications aren't in `src/data/i18n/en.js` or `id.js` yet, so the fallback text is shown. The panel's CSS classes (`wh-card`, `wh-compare`, `wh-under`, and others) have no styles, so the panel looks plain.
 - **Wholesale balance is only simulated.** Offer frequency, price bands, and the buyer share boost (`relEffect` 0.04 for about 3 months) come from simulation scripts. They haven't been checked in a browser run with real play.
 - **Business Advisor Edge Function (AI)** has no per-user rate limit and its CORS is open (`*`). Don't enable it for a wide public before that is added. Details in `SECURITY.md`.
-- **Release notes are incomplete.** `src/patches.json` covers 0.2.1 to 0.2.9, but several earlier changes are still missing from it (listed under 0.2.4 in Versions). The version must also match in three places: `src/config/app.config.js`, `patches.json`, and `src/patches.json`. If the game version is lower than `latest`, the Business Advisor tells every player there is a new patch.
+- **Release notes are incomplete.** `src/patches.json` covers 0.2.1 to 0.2.11, but several earlier changes are still missing from it (listed under 0.2.4 in Versions). The version must match in four places: `src/config/app.config.js`, `package.json`, `patches.json`, and `src/patches.json`. If the game version is lower than `latest`, the Business Advisor tells every player there is a new patch.
 - **Landing-page screenshots** (`assets/img/landing/`) need to be retaken. The HQ image still shows the old Office tab and the old Overview layout.
 - **The client-side admin gate is cosmetic only.** Real admin status is verified on the server through `is_admin()`.
 - **2027–2030 content is speculative.** Prices, the RAM index, brand shares, and withdrawal thresholds are game scenarios that still need calibration through play. The details of EU battery rules are not modeled (only the trend effect and news). Real brand names can "withdraw" in the simulation through the share threshold, and that is not a claim about real companies.
@@ -323,7 +323,21 @@ The project is still in progress. Roadmap notes:
 
 ## Versions
 
-Latest recorded version: **0.2.9** (October 26, 2026). Official change lists are in `src/patches.json` and `docs/PERF-CHANGES.md`. The root `patches.json` is kept identical to `src/patches.json`, and `APP_CONFIG.version` in `src/config/app.config.js` must equal `latest`.
+Latest recorded version: **0.2.11** (October 27, 2026). Official change lists are in `src/patches.json` and `docs/PERF-CHANGES.md`. The root `patches.json` is kept identical to `src/patches.json`, and `APP_CONFIG.version` in `src/config/app.config.js` must equal `latest`.
+
+### 0.2.11 — Design categories, catalog, and "What's new" on the landing page
+- Feature: Product → Design has categories (Phone, Tablet, Wireless earbuds, Smartwatch, Charger). Each shows a mockup, the year it opens, and popularity computed from the game year. Tablet design is coming soon. Files: `src/data/design-tracks.data.js`, `src/data/i18n/design-tracks.i18n.js`, `src/ui/panels/DesignTracksPanel.js`, `src/ui/phone/TabletMockup.js`.
+- Change: accessory line controls (tier, price, open/close) moved from Market → Ecosystem to Product → Design through `renderEcoLineCard` in `src/ui/panels/EcosystemPanel.js`. The Accessories sub-tab is removed, and `src/ui/panels/AccessoriesTab.js` and `tools/accessories-mockup-check.mjs` are deleted.
+- Feature: the catalog has a category filter (All / Phones / Accessories). Accessory lines appear as cards with status, price, tier, units, revenue, and popularity. Files: `src/ui/panels/ProductPanel.js`, `src/main.js` (`data-catalog-cat`).
+- Feature: the landing page (`web.html`) has an "What's new" section built from the latest release in `patches.json`. It is hidden by default. Set `SHOW_WHATS_NEW` to `true` in the script to show it and its nav link.
+- Change: `APP_CONFIG.version` and `package.json` are 0.2.11. This patch does not change game logic.
+- Fix: `src/patches.json` lacked 0.2.10 and differed from the root `patches.json`. Both are now identical.
+- Tests: `tools/design-tracks-check.mjs` and `tools/product-tabs-check.mjs` are added to `tools/run-all.mjs`.
+
+### 0.2.10 — Livelier Overview and animated accessories
+- Feature: accessory visuals (earbuds, smartwatch, charger) are animated with LEDs, sound waves, watch hands, and power flow. Premium tier uses gold accents. File: `src/ui/phone/AccessoryMockup.js`.
+- Feature: the Overview (HQ) has a cash sparkline on the main card, a runway bar, and an attention strip that appears when something needs action (critical runway, empty team, low reputation, no product selling). Files: `src/ui/panels/OverviewLive.js`, `OverviewSignals.js`, `KpiCards.js`, `OverviewStyle.js`.
+- Feature: the Hire and Release quick actions highlight automatically when relevant, and runway figures update live as cash changes. Files: `src/ui/panels/DashboardPanel.js`, `OverviewLive.js`.
 
 ### 0.2.9 — Finished-product wholesale contracts
 - Feature: rival brands make monthly offers for part of your finished-phone stock, shown in the Wholesale panel from the Manufacturing overview. Files: `src/systems/WholesaleContractSystem.js`, `src/data/wholesale.data.js`, `src/ui/panels/WholesalePanel.js`.
