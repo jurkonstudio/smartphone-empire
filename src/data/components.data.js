@@ -4,6 +4,7 @@
 // + Body (10) + Sensor (6) + Audio (6) + Form Factor (16) = 116 komponen.
 // Harga (costPerUnit) telah disesuaikan agar lebih logis mendekati harga pabrik dunia nyata, namun tetap seimbang untuk game.
 
+import { isDesignChipId, getDesignChipComponentById } from './chip-design-registry.js';
 export const COMPONENT_CATEGORIES = [
     { id: 'display',     name: 'Layar',    icon: 'monitor' },
     { id: 'camera',      name: 'Kamera',   icon: 'camera' },
@@ -1036,6 +1037,8 @@ export const BODY_COLORS = [
 
 // Utilitas
 export function getComponentById(id) {
+    // Chip hasil desain pemain (ID cd_...) dibaca dari registry, bukan daftar statis.
+    if (isDesignChipId(id)) return getDesignChipComponentById(id);
     return COMPONENTS.find(c => c.id === id) || null;
 }
 export function getComponentsByCategory(catId) {
