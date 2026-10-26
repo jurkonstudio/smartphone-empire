@@ -103,6 +103,12 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
   - Plant stock is used at release and restock. Any shortfall is bought at market price.
   - There is a monthly **maintenance cost** and a 0.2% monthly **infrastructure tax** on installed capital.
   - Surplus stock can be **sold wholesale** (market price × 0.92, monthly quota of 40% of capacity). Low-level plants can lose money on wholesale, high-level plants profit.
+- **Wholesale contracts** (Manufacturing overview, *Kontrak grosir* button): rival brands bid for part of your finished-phone stock. Each month a product that is selling and has at least 100 units in stock can get an offer for 8–35% of its stock (at least 100 units). Offers stay open for 20–60 days, and at most 12 are open at once (2 per product).
+  - Offers appear more often for higher-quality products. The price depends on the buyer's personality: aggressive and declining buyers pay about 50–70% of retail, premium buyers 85–98%, and higher quality raises the price.
+  - Prices never fall below the unit production cost. An offer that can't meet that floor under the retail cap is not made.
+  - Accepting ships the units right away and pays 3–10 days later. Discontinuing a product cancels its open contracts and returns the stock.
+  - Wholesale does not change market share, reputation, or retail sales data. Each accepted contract gives the buyer a temporary share boost (about 3 months, decaying and capped), so selling to a rival has a strategic cost.
+  - Only brands that are active in the current year and haven't withdrawn can buy.
 - **Assembly factory** (Manufacturing tab and 3D island): a final-assembly plant with 4 levels (Manual Line, Semi-Automatic Line, Automated Factory, Robotic Smart Factory). You can start building from 2001, and it starts producing from 2002. Before it operates, production runs through contract manufacturing with no penalty.
   - Workers are modeled as headcount groups per role (operator, QC, technician, supervisor), roughly 120 people at level 1 up to about 1,500 at level 4, with a 14-day training period.
   - Once operating, it cuts restock cost by 5 / 9 / 13 / 17% (scaled by staffing), and production lag depends on queue versus capacity, operator and technician staffing, morale, and overtime. QC keeps the defect rate down (2–6%).
@@ -114,6 +120,7 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
   - Each brand's market share is carried forward to 2030 as a scenario direction: Samsung and Apple edge up, Chinese brands dip then partly recover, and small brands roughly halve by 2028.
   - Every company has active years, historical market share per year, signature products, milestones, and life events.
   - Factuality labels and source notes show what is fact and what was simplified.
+- **Wholesale buyers**: rival brands that buy your wholesale contracts get a temporary share boost (see Manufacturing).
 - **Name mode**: use real names or fictional parody names (for example "Nokio", "Apel", "Samsul").
 - **Dynamic competitor actions**: they can be aggressive, cut prices, or fade, depending on personality and difficulty. While the memory crisis is active, brands cut prices less often and small brands are quieter.
 - **Emergent brand withdrawal** (from 2027): non-ecosystem brands exit the simulation if their share stays below 0.3% for 2 years in a row. This is the result of a data threshold, not a script. In test simulations the brands that left were Meizu (2028), Lenovo (2029), and Asus (2030). The thresholds can be tuned in `src/data/competitor-actions.data.js`.
@@ -179,6 +186,9 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 - **Raw text in some places.** Four translation keys are used without fallback text and aren't in the dictionaries yet: `main.toast.fab_unlocked`, `wiz.warn.volume_cost`, `wiz.preview.unit_design`, `wiz.preview.unit_parts`. Many other keys (for example `team.recruit.*`, `team.nego.*`, `silstore.locked.*`) still rely on fallback text and haven't been merged into `src/data/i18n/en.js` and `id.js`.
 - **`supabase/BACA-DULU.md` is incomplete.** It now lists 01–09, 14, 15, 15b, 18, and 19, but is still missing both file-10 variants, 11, 12, 13, 16, and 17.
 - **SIL → money exchange** needs `supabase/10-tukar-sil.sql`. Without it the call fails and no SIL is deducted.
+- **Chip designs don't reach products or SoC plants.** The Chip Designer feeds `data.chips.catalog`, and the Fab builds those chips into `data.fab.inventory`, but nothing consumes that inventory. The product wizard picks from the static chip list in `components.data.js`, and SoC plants use static component IDs.
+- **Wholesale text is partly untranslated.** The `wh.*` keys used by the Wholesale panel and its notifications aren't in `src/data/i18n/en.js` or `id.js` yet, so the fallback text is shown. The panel's CSS classes (`wh-card`, `wh-compare`, `wh-under`, and others) have no styles, so the panel looks plain.
+- **Wholesale balance is only simulated.** Offer frequency, price bands, and the buyer share boost (`relEffect` 0.04 for about 3 months) come from simulation scripts. They haven't been checked in a browser run with real play.
 - **Business Advisor Edge Function (AI)** has no per-user rate limit and its CORS is open (`*`). Don't enable it for a wide public before that is added. Details in `SECURITY.md`.
 - **Release notes are incomplete.** `src/patches.json` covers 0.2.1 to 0.2.8, but several earlier changes are still missing from it (listed under 0.2.4 in Versions). The version must also match in three places: `src/config/app.config.js`, `patches.json`, and `src/patches.json`. If the game version is lower than `latest`, the Business Advisor tells every player there is a new patch.
 - **Landing-page screenshots** (`assets/img/landing/`) need to be retaken. The HQ image still shows the old Office tab and the old Overview layout.
@@ -286,7 +296,7 @@ The project is still in progress. Roadmap notes:
 - ✅ **Office 3D Map stage 3**: build or upgrade Fabs and train staff straight from the map, 3D Fab construction, livelier staff activity, and a tidier mobile layout
 - ✅ **Office ↔ Team integration**: staff cards open staff details, staff details can jump to the office, and the Work room has a recruit shortcut
 - ✅ **Market Navigation** (data, demand, opinion, Americas & Rest promotions, per-segment promotions, and UI panels in the Market tab)
-- ✅ **Manufacturing**: component plants (Battery, Display, SoC, Camera, RAM), wholesale, infrastructure tax, and the Campus ↔ Manufacturing Island bridge
+- ✅ **Manufacturing**: component plants (Battery, Display, SoC, Camera, RAM), wholesale, finished-product wholesale contracts, infrastructure tax, and the Campus ↔ Manufacturing Island bridge
 - ✅ **Assembly factory**: 4 levels, headcount-based workforce, restock discounts, and a 3D plant on the Manufacturing Island
 - ✅ **Economy brakes and the Invest tab**
 - ✅ **Stock market v2**: player trade impact, more listed companies, world/IDX indices, and company tiers
@@ -306,6 +316,7 @@ The project is still in progress. Roadmap notes:
 - ⏳ **UI Evolution patch**: notification styling that changes per era (monochrome → glossy → flat → Dynamic Island)
 - ⏳ **Bilingual news**: English headlines exist, but some review templates are still Indonesian-only
 - ⏳ **Silicon payments**: reopening top-up with a production payment provider and server-side verification (the server-side switch exists in `supabase/19`, but the UI is not wired to it yet)
+- ⏳ **Chip designs in products**: let the product wizard and SoC plants use chips from the Chip Designer, and draw their stock from Fab output
 - ⏳ **Fixing the known issues** above
 
 ---
@@ -313,6 +324,13 @@ The project is still in progress. Roadmap notes:
 ## Versions
 
 Latest recorded version: **0.2.8** (October 25, 2026). Official change lists are in `src/patches.json` and `docs/PERF-CHANGES.md`. The root `patches.json` is kept identical to `src/patches.json`, and `APP_CONFIG.version` in `src/config/app.config.js` must equal `latest`.
+
+### Unreleased — Finished-product wholesale contracts
+- Feature: rival brands make monthly offers for part of your finished-phone stock, shown in the Wholesale panel from the Manufacturing overview. Files: `src/systems/WholesaleContractSystem.js`, `src/data/wholesale.data.js`, `src/ui/panels/WholesalePanel.js`.
+- Balance: prices never fall below unit production cost (`costFloorMult`). Buyers are only brands active in the current year that haven't withdrawn. Each accepted contract boosts the buyer's share through `CompetitorActionSystem.applyWholesaleSupply` (`buyerBoost`).
+- Panel: each offer shows retail value and margin over production cost. Accept and decline are in the panel.
+- Notifications: competitor offers, expired offers, payments, and cancellations are written to the game log. Toasts appear only when notifications are on.
+- Unchanged: market share, reputation, and retail sales data. Version numbers are not bumped here, so `app.config.js` and both `patches.json` files stay as they are.
 
 ### 0.2.8 — Ecosystem economy recalibrated
 - Balance: measured in the browser on real phone sales (one $250 phone a year, all lines and services open). Ecosystem revenue went from about 2% to about 10–17% of phone revenue (17.3% in 2026), gross margin about 50%. Levers: `fixedScaleExp` 0.3 (fixed costs only; setup keeps sqrt), `lineAttachScale` 0.18→1.7, `storeSpendBase` 0.3→2.1, `maxAttachShare` 0.05→0.12, Cloud attach 0.02→0.10, AI attach 0.015→0.09.
