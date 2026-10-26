@@ -85,6 +85,6 @@ html[data-density="compact"] .chart-wrap,
 html[data-density="compact"] .chart-canvas { height: 130px; }
 
 /* ---------- Desktop: kembalikan sedikit ruang ---------- */
-@media (min-width: 768px) {
+@media (min-width: 768px) and (any-pointer: fine) {
     html[data-density="compact"] .app-view { padding: 12px 12px 0; padding-bottom: 12px; }
 }
