@@ -1153,6 +1153,328 @@ export const DYNAMIC_EVENTS = [
                 effects: { reputation: 1 }
             }
         ]
+    },
+    // ---------------------------------------------------------------- P4 tahap 5a: insiden segmen (scope camera/budget/premium)
+    {
+        id: 'dyn_camera_craze', kind: 'dynamic',
+        minYear: 2005, maxYear: 2050, weight: 1, cooldownMonths: 18, when: 'selling',
+        title: { id: 'Demam Kamera Ponsel', en: 'Phone Camera Craze' },
+        body: {
+            id: 'Pembeli mendadak memburu ponsel dengan kamera bagus dan membandingkan hasil foto di mana-mana. Ponsel tanpa kamera yang layak mulai ditinggalkan.',
+            en: 'Buyers suddenly chase phones with good cameras and compare photos everywhere. Phones without a decent camera are being passed over.'
+        },
+        choices: [
+            {
+                id: 'promote', cost: 5000,
+                label: { id: 'Gencarkan promosi fitur kamera', en: 'Push camera features in your marketing' },
+                outcome: { id: 'Pembeli menyadari kamera ponselmu dan permintaan model berkamera naik.', en: 'Buyers notice your phone cameras and demand for camera models rises.' },
+                effects: { demand: [{ scope: 'camera', mult: 1.1, days: 60 }] }
+            },
+            {
+                id: 'contest', cost: 2000,
+                label: { id: 'Adakan lomba foto pengguna', en: 'Run a user photo contest' },
+                risk: {
+                    p: 0.6,
+                    success: {
+                        outcome: { id: 'Lomba ramai dan hasil fotonya jadi iklan gratis.', en: 'The contest takes off and the photos become free advertising.' },
+                        effects: { demand: [{ scope: 'camera', mult: 1.07, days: 45 }] }
+                    },
+                    fail: {
+                        outcome: { id: 'Lomba sepi dan foto yang masuk justru memperlihatkan kelemahan kameramu.', en: 'The contest is quiet and the photos submitted show up weaknesses in your cameras.' },
+                        effects: { reputation: -1 }
+                    }
+                }
+            },
+            {
+                id: 'ride', cost: 0,
+                label: { id: 'Biarkan tren berjalan sendiri', en: 'Let the trend run on its own' },
+                risk: {
+                    p: 0.4,
+                    success: {
+                        outcome: { id: 'Tren membawa sebagian pembeli ke ponselmu tanpa usaha.', en: 'The trend brings some buyers to your phones with no effort.' },
+                        effects: { demand: [{ scope: 'camera', mult: 1.04, days: 30 }] }
+                    },
+                    fail: {
+                        outcome: { id: 'Pesaing lebih dulu memanfaatkan tren dan pembeli kameramu berkurang.', en: 'Rivals exploit the trend first and your camera buyers dwindle.' },
+                        effects: { demand: [{ scope: 'camera', mult: 0.92, days: 60 }] }
+                    }
+                }
+            }
+        ]
+    },
+    {
+        id: 'dyn_budget_wave', kind: 'dynamic',
+        minYear: 2001, maxYear: 2050, weight: 1, cooldownMonths: 24, when: 'selling',
+        title: { id: 'Gelombang Pembeli Hemat', en: 'Wave of Budget-Minded Buyers' },
+        body: {
+            id: 'Daya beli menurun dan banyak pembeli mencari ponsel murah. Segmen harga rendah ramai, sementara penjualan ponsel yang lebih mahal melambat.',
+            en: 'Purchasing power drops and many buyers look for cheap phones. The low-price segment is busy while pricier phones slow down.'
+        },
+        choices: [
+            {
+                id: 'lineup', cost: 5000,
+                label: { id: 'Siapkan lini ponsel hemat dan promo', en: 'Prepare a budget line and promotions' },
+                outcome: { id: 'Lini hematmu laris, sementara penjualan ponsel mahal sedikit melambat.', en: 'Your budget line sells well while pricier phones slow slightly.' },
+                effects: { demand: [{ scope: 'budget', mult: 1.1, days: 75 }, { scope: 'premium', mult: 0.96, days: 75 }] }
+            },
+            {
+                id: 'discount', cost: 1500,
+                label: { id: 'Beri diskon terbatas pada model yang ada', en: 'Offer limited discounts on current models' },
+                risk: {
+                    p: 0.55,
+                    success: {
+                        outcome: { id: 'Diskon menarik pembeli hemat tanpa merusak citra.', en: 'The discounts attract budget buyers without hurting your image.' },
+                        effects: { demand: [{ scope: 'budget', mult: 1.06, days: 60 }] }
+                    },
+                    fail: {
+                        outcome: { id: 'Diskon dianggap tanda ponselmu kurang laku dan citra premium menurun.', en: 'The discounts are read as a sign your phones sell poorly and your premium image dips.' },
+                        effects: { reputation: -1, demand: [{ scope: 'premium', mult: 0.94, days: 60 }] }
+                    }
+                }
+            },
+            {
+                id: 'hold', cost: 0,
+                label: { id: 'Pertahankan strategi dan harga', en: 'Stick to your strategy and prices' },
+                risk: {
+                    p: 0.4,
+                    success: {
+                        outcome: { id: 'Pembeli setiamu bertahan dan penjualan tidak banyak berubah.', en: 'Your loyal buyers stay and sales barely change.' },
+                        effects: {}
+                    },
+                    fail: {
+                        outcome: { id: 'Segmen hemat direbut pesaing dan penjualanmu menurun.', en: 'Rivals take the budget segment and your sales slip.' },
+                        effects: { demand: [{ scope: 'budget', mult: 0.9, days: 90 }] }
+                    }
+                }
+            }
+        ]
+    },
+    {
+        id: 'dyn_premium_swing', kind: 'dynamic',
+        minYear: 2003, maxYear: 2050, weight: 1, cooldownMonths: 24, when: 'selling',
+        title: { id: 'Selera Pembeli Premium Bergeser', en: 'Premium Buyer Tastes Shift' },
+        body: {
+            id: 'Pembeli kelas atas mendadak lebih berhati-hati membelanjakan uang. Sebagian menganggap ponsel premium investasi, sebagian lagi menilainya pemborosan.',
+            en: 'High-end buyers suddenly grow more careful with their money. Some see premium phones as an investment, others as a waste.'
+        },
+        choices: [
+            {
+                id: 'exclusive', cost: 6000,
+                label: { id: 'Tawarkan layanan eksklusif untuk pemilik premium', en: 'Offer exclusive services to premium owners' },
+                outcome: { id: 'Pemilik premium merasa diistimewakan dan kembali membeli.', en: 'Premium owners feel special and buy again.' },
+                effects: { reputation: 1, demand: [{ scope: 'premium', mult: 1.06, days: 60 }] }
+            },
+            {
+                id: 'tradein', cost: 2500,
+                label: { id: 'Buka program tukar tambah', en: 'Launch a trade-in program' },
+                risk: {
+                    p: 0.55,
+                    success: {
+                        outcome: { id: 'Tukar tambah menghidupkan lagi minat pembeli premium.', en: 'The trade-in revives interest among premium buyers.' },
+                        effects: { demand: [{ scope: 'premium', mult: 1.05, days: 60 }] }
+                    },
+                    fail: {
+                        outcome: { id: 'Program kurang menarik dan hanya menggerus margin.', en: 'The program is unappealing and only erodes margins.' },
+                        effects: { cash: -3000 }
+                    }
+                }
+            },
+            {
+                id: 'wait', cost: 0,
+                label: { id: 'Tunggu selera pembeli kembali', en: 'Wait for buyer tastes to return' },
+                risk: {
+                    p: 0.45,
+                    success: {
+                        outcome: { id: 'Selera premium pulih sendiri dalam beberapa pekan.', en: 'Premium tastes recover on their own within weeks.' },
+                        effects: {}
+                    },
+                    fail: {
+                        outcome: { id: 'Pembeli premium menunda pembelian lebih lama dari perkiraan.', en: 'Premium buyers hold off longer than expected.' },
+                        effects: { demand: [{ scope: 'premium', mult: 0.9, days: 90 }] }
+                    }
+                }
+            }
+        ]
+    },
+    {
+        id: 'dyn_rival_recall', kind: 'dynamic',
+        minYear: 2002, maxYear: 2050, weight: 1, cooldownMonths: 24, when: 'selling',
+        title: { id: 'Pesaing Menarik Produk Unggulannya', en: 'Rival Recalls Its Flagship' },
+        body: {
+            id: 'Pesaing besar menarik ponsel unggulannya karena cacat serius. Pembeli kelas atas mencari alternatif dan toko bertanya apakah kamu punya stok.',
+            en: 'A big rival recalls its flagship phone over a serious defect. High-end buyers look for alternatives and stores ask whether you have stock.'
+        },
+        choices: [
+            {
+                id: 'capture', cost: 5000,
+                label: { id: 'Kampanye merebut pembeli pesaing', en: 'Campaign to win over the rival buyers' },
+                outcome: { id: 'Kampanyemu tepat sasaran dan banyak pembeli premium beralih.', en: 'Your campaign hits the mark and many premium buyers switch.' },
+                effects: { demand: [{ scope: 'premium', mult: 1.1, days: 60 }] }
+            },
+            {
+                id: 'tradein', cost: 2000,
+                label: { id: 'Tawarkan tukar tambah untuk pemilik ponsel itu', en: 'Offer a trade-in to owners of that phone' },
+                risk: {
+                    p: 0.55,
+                    success: {
+                        outcome: { id: 'Pemilik ponsel itu menyambut tawaranmu dan citramu naik.', en: 'Owners of that phone welcome your offer and your image improves.' },
+                        effects: { reputation: 1, demand: [{ scope: 'premium', mult: 1.06, days: 45 }] }
+                    },
+                    fail: {
+                        outcome: { id: 'Kamu dituding memanfaatkan musibah pesaing dan citramu turun.', en: 'You are accused of exploiting the rival\'s misfortune and your image drops.' },
+                        effects: { reputation: -1 }
+                    }
+                }
+            },
+            {
+                id: 'quiet', cost: 0,
+                label: { id: 'Tidak berkomentar soal pesaing', en: 'Stay silent about the rival' },
+                risk: {
+                    p: 0.5,
+                    success: {
+                        outcome: { id: 'Sikap sportifmu dihargai pembeli dan media.', en: 'Buyers and the press appreciate your sportsmanship.' },
+                        effects: { reputation: 1 }
+                    },
+                    fail: {
+                        outcome: { id: 'Peluang lewat begitu saja dan pesaing lain yang menuai pembeli.', en: 'The chance passes and another rival harvests the buyers.' },
+                        effects: {}
+                    }
+                }
+            }
+        ]
+    },
+    // ---------------------------------------------------------------- P4 tahap 5b: insiden peluang
+    {
+        id: 'dyn_investor_offer', kind: 'dynamic',
+        minYear: 2003, maxYear: 2050, weight: 1, cooldownMonths: 24, when: 'selling',
+        title: { id: 'Investor Menawarkan Modal', en: 'Investor Offers Capital' },
+        body: {
+            id: 'Seorang investor tertarik pada perusahaanmu dan menawarkan suntikan modal. Syaratnya berbeda-beda: ada yang meminta pengaruh atas keputusan, ada yang hanya meminta laporan rutin.',
+            en: 'An investor is interested in your company and offers a capital injection. Terms vary: some ask for influence over decisions, others only for regular reports.'
+        },
+        choices: [
+            {
+                id: 'accept', cost: 2000,
+                label: { id: 'Terima tawaran dengan syarat standar', en: 'Accept the offer on standard terms' },
+                outcome: { id: 'Modal masuk setelah biaya hukum dibayar, tetapi investor ikut memengaruhi arah perusahaan.', en: 'Capital arrives after legal fees, but the investor now influences the company\'s direction.' },
+                effects: { cash: 12000, reputation: -1 }
+            },
+            {
+                id: 'negotiate', cost: 1500,
+                label: { id: 'Negosiasi syarat yang lebih ringan', en: 'Negotiate lighter terms' },
+                risk: {
+                    p: 0.5,
+                    success: {
+                        outcome: { id: 'Investor menyetujui syarat ringan dan modal masuk tanpa kehilangan kendali.', en: 'The investor agrees to lighter terms and capital arrives without losing control.' },
+                        effects: { cash: 20000 }
+                    },
+                    fail: {
+                        outcome: { id: 'Investor mundur karena negosiasi alot.', en: 'The investor pulls out after tough negotiations.' },
+                        effects: {}
+                    }
+                }
+            },
+            {
+                id: 'decline', cost: 0,
+                label: { id: 'Tolak dan tumbuh dengan dana sendiri', en: 'Decline and grow with your own funds' },
+                outcome: { id: 'Kamu tetap mandiri dan pasar menghargai kemandirianmu.', en: 'You stay independent and the market respects it.' },
+                effects: { reputation: 1 }
+            }
+        ]
+    },
+    {
+        id: 'dyn_industry_award', kind: 'dynamic',
+        minYear: 2003, maxYear: 2050, weight: 1, cooldownMonths: 30, when: 'selling',
+        title: { id: 'Penghargaan Industri', en: 'Industry Award' },
+        body: {
+            id: 'Sebuah lembaga industri menominasikan ponselmu untuk penghargaan inovasi. Menang akan mengangkat citra, tetapi kampanye dan persiapannya tidak murah.',
+            en: 'An industry body nominates your phone for an innovation award. Winning would lift your image, but campaigning and preparing are not cheap.'
+        },
+        choices: [
+            {
+                id: 'campaign', cost: 6000,
+                label: { id: 'Kampanye penuh untuk memenangkan penghargaan', en: 'Run a full campaign to win the award' },
+                outcome: { id: 'Kampanyemu efektif dan kamu membawa pulang penghargaan.', en: 'Your campaign is effective and you bring home the award.' },
+                effects: { reputation: 3, demand: [{ scope: 'all', mult: 1.05, days: 60 }] }
+            },
+            {
+                id: 'submit', cost: 1500,
+                label: { id: 'Kirim materi standar', en: 'Submit standard materials' },
+                risk: {
+                    p: 0.5,
+                    success: {
+                        outcome: { id: 'Juri menyukai ponselmu dan kamu menang penghargaan.', en: 'The jury likes your phone and you win the award.' },
+                        effects: { reputation: 2, demand: [{ scope: 'all', mult: 1.03, days: 45 }] }
+                    },
+                    fail: {
+                        outcome: { id: 'Ponselmu tidak masuk daftar pemenang, tetapi tetap mendapat sedikit liputan.', en: 'Your phone misses the winners\' list but still gets a little coverage.' },
+                        effects: {}
+                    }
+                }
+            },
+            {
+                id: 'skip', cost: 0,
+                label: { id: 'Abaikan nominasi', en: 'Ignore the nomination' },
+                risk: {
+                    p: 0.35,
+                    success: {
+                        outcome: { id: 'Tanpa kampanye pun juri menyukai ponselmu dan kamu dapat pujian.', en: 'Even without a campaign the jury likes your phone and you earn praise.' },
+                        effects: { reputation: 1 }
+                    },
+                    fail: {
+                        outcome: { id: 'Pesaing yang menang gencar memamerkan penghargaannya dan perhatian pembeli beralih.', en: 'The winning rival flaunts its award and buyer attention shifts.' },
+                        effects: { demand: [{ scope: 'all', mult: 0.97, days: 45 }] }
+                    }
+                }
+            }
+        ]
+    },
+    {
+        id: 'dyn_loyal_community', kind: 'dynamic',
+        minYear: 2008, maxYear: 2050, weight: 1, cooldownMonths: 24, when: 'selling',
+        title: { id: 'Komunitas Pengguna Meminta Dukungan', en: 'User Community Asks for Support' },
+        body: {
+            id: 'Komunitas pengguna setia ponselmu meminta dukungan untuk acara kumpul dan forum resmi. Mereka siap jadi duta merek bila kamu mau terlibat.',
+            en: 'A community of loyal users asks for support for meetups and an official forum. They are ready to become brand ambassadors if you get involved.'
+        },
+        choices: [
+            {
+                id: 'sponsor', cost: 4000,
+                label: { id: 'Sponsori acara dan forum resmi', en: 'Sponsor the events and an official forum' },
+                outcome: { id: 'Komunitas tumbuh dan anggotanya menyebarkan ponselmu dari mulut ke mulut.', en: 'The community grows and its members spread the word about your phones.' },
+                effects: { reputation: 2, demand: [{ scope: 'all', mult: 1.04, days: 90 }] }
+            },
+            {
+                id: 'lend', cost: 1000,
+                label: { id: 'Pinjamkan unit demo dan ruang pertemuan', en: 'Lend demo units and a meeting space' },
+                risk: {
+                    p: 0.65,
+                    success: {
+                        outcome: { id: 'Dukungan kecil itu dihargai dan komunitas tetap bersemangat.', en: 'The small gesture is appreciated and the community stays enthusiastic.' },
+                        effects: { reputation: 1 }
+                    },
+                    fail: {
+                        outcome: { id: 'Acara berjalan buruk dan komunitas merasa kurang diperhatikan.', en: 'The event goes badly and the community feels neglected.' },
+                        effects: { reputation: -1 }
+                    }
+                }
+            },
+            {
+                id: 'leave', cost: 0,
+                label: { id: 'Biarkan komunitas mengurus dirinya sendiri', en: 'Let the community run itself' },
+                risk: {
+                    p: 0.5,
+                    success: {
+                        outcome: { id: 'Komunitas mandiri dan tetap setia tanpa campur tanganmu.', en: 'The community is self-reliant and stays loyal without your involvement.' },
+                        effects: { reputation: 1 }
+                    },
+                    fail: {
+                        outcome: { id: 'Komunitas bubar karena tak ada dukungan dan beberapa anggota pindah merek.', en: 'The community fades without support and some members switch brands.' },
+                        effects: { demand: [{ scope: 'all', mult: 0.97, days: 60 }] }
+                    }
+                }
+            }
+        ]
     }
 ];
 
