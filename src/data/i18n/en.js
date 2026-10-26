@@ -580,6 +580,8 @@ export const en = {
     'why.advice.os': 'The OS is too weak. Update your OS or pick a better license.',
     'why.advice.trend': 'Specs do not match current trends. Check trends in the Market tab.',
     'why.advice.competitor': 'Rivals are pressuring this product. Lower the price or release a successor.',
+    'why.advice.lifecycle_rise': 'New product: sales ramp up gradually until day {rise}. No need to worry.',
+    'why.age': 'Product age: {days} days. Demand starts to fall after day {decline} and nearly dries up by day {dead}.',
     'why.advice.lifecycle': 'The product is aging. Prepare a successor and cut reorders.',
     'why.advice.tech': 'Technology is behind the market standard. Finish the latest research.',
     'why.advice.nav': 'Poor segment or region fit. Check the Market tab and adjust promotions.',
