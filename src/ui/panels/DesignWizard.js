@@ -760,18 +760,28 @@ function _updateConfirmButtonState() {
     const s = _wizardState;
     if (!btn || !s || !s.tierPlans) return;
 
+    // Sumber kebenaran yang sama dengan proses rilis: tombol hanya aktif bila server pasti menerima.
     const plans = _enabledPlans(s);
-    const hasIssues = TIER_ORDER.some(function (id) { return _tierIssues(s, id).length > 0; });
-    const afford = _affordFamily(_quoteFamily(s).total);
-    const canRelease = plans.length > 0 && !hasIssues && afford.ok;
+    const ps = window.__game && window.__game.products;
+    let check = { ok: false, reason: _pick('Produk belum siap.', 'Product not ready.') };
+    if (ps && ps.validateTierFamily) {
+        try { check = ps.validateTierFamily(_baseConfig(s), plans); }
+        catch (e) { check = { ok: false, reason: _pick('Periksa kembali pilihanmu.', 'Please review your choices.') }; }
+    }
+    const canRelease = !!check.ok;
 
     btn.disabled = !canRelease;
     btn.style.opacity = canRelease ? '' : '0.5';
     btn.style.cursor = canRelease ? '' : 'not-allowed';
-    if (canRelease) btn.textContent = t('wiz.step4.release');
-    else if (plans.length === 0) btn.textContent = _pick('Pilih varian', 'Pick a variant');
-    else if (hasIssues) btn.textContent = _pick('Periksa varian', 'Check variants');
-    else btn.textContent = _tf('wiz.cash.short_btn', _pick('Dana tidak cukup', 'Not enough cash'));
+    btn.title = canRelease ? '' : (check.reason || '');
+    if (canRelease) {
+        btn.textContent = t('wiz.step4.release');
+    } else if (plans.length === 0) {
+        btn.textContent = _pick('Pilih varian', 'Pick a variant');
+    } else {
+        const short = String(check.reason || '').replace(/\s+/g, ' ');
+        btn.textContent = short.length > 34 ? short.slice(0, 33) + '…' : short;
+    }
 }
 
 function _confirm() {
