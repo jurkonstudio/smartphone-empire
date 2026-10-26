@@ -825,9 +825,14 @@ export class ProductSystem {
         }
     }
 
-    _computeDailyDemand(p) {
+    // [Tahap 6A] Satu-satunya tempat faktor permintaan dihitung. Dipakai oleh penjualan harian
+    // (_computeDailyDemand), rapor "kenapa laku" (getDemandBreakdown), dan perkiraan rilis
+    // (getLaunchForecast), sehingga ketiganya tidak bisa menyimpang. Urutan faktor = urutan perkalian
+    // lama, jadi hasil floating-point identik. TIDAK mengubah state (noise dihitung di pemanggil).
+    // preview=true: p adalah ponsel yang belum dirilis {config, stats, price} (pemasaran, siklus hidup,
+    // event, pasca-jual, dan ekosistem netral 1.0, sama seperti estimateDemand).
+    _demandFactors(p, preview) {
         var data = this.state.data;
-        var era = data.era || 'feature_phone';
         var macro = getMacro(data.time, BALANCE.macro);
         var baseDemand = macro.baseDemand * macro.demandCycle;
         var ff = getComponentById(p.config.formFactorId);
@@ -838,20 +843,52 @@ export class ProductSystem {
         var qualityF = Math.pow(Math.max(0.2, p.stats.qualityScore / macro.qualityRef), w.quality);
         var priceF   = Math.pow(Math.max(0.2, macro.priceRef / Math.max(1, p.price)), w.price * macro.priceSensitivity);
         var repF     = Math.pow(Math.max(0.2, (data.market.reputation || 10) / refs.reputation), w.reputation);
-        var marketingF = this._getMarketingFactor(p.id);
+        var marketingF = preview ? 1.0 : this._getMarketingFactor(p.id);
         var osFactor = this._getOsFactor(p);
         var trendF = this._getTrendFactor(p.stats);
-        var ecoRelief = this._ecosystem ? this._ecosystem.getCompetitorRelief() : 1.0; // [ekosistem] lock-in menekan tekanan kompetitor
-        var competitorF = Math.max(0.4, 1 / (1 + (p.competitorPressure || 0) * ecoRelief));
-        var lifecycleF = this._getLifecycleFactor(p);
-        var techF = this._getTechFactor(p);
-        var navF = this._nav ? this._nav.getDemandFactor(p) : 1.0;
+        var competitorF;
+        if (preview) {
+            competitorF = this._getCompetitorFactor(p.stats, p.price);
+        } else {
+            var ecoRelief = this._ecosystem ? this._ecosystem.getCompetitorRelief() : 1.0; // [ekosistem] lock-in menekan tekanan kompetitor
+            competitorF = Math.max(0.4, 1 / (1 + (p.competitorPressure || 0) * ecoRelief));
+        }
+        var lifecycleF = preview ? 1.0 : this._getLifecycleFactor(p);
+        var techF = this._getTechFactor(preview ? null : p);
+        var navF = preview
+            ? (this._nav ? this._nav.estimateFactor(p.stats, p.price, p.config) : 1.0)
+            : (this._nav ? this._nav.getDemandFactor(p) : 1.0);
         // [era-event] pengali sementara dari keputusan event 2000–2002 (1.0 bila tidak ada).
-        var eventF = getEraEventDemandFactor(data, p);
+        var eventF = preview ? 1.0 : getEraEventDemandFactor(data, p);
         var featureF = this._getFeatureFactor(p);   // [Fitur Ponsel] 1.0 untuk produk lama
         var channelF = this._channelReach(p);       // [Kanal] 1.0 bila tidak ada kanal aktif
-        var afterSalesF = this._afterSalesFactor(p); // [Pasca-jual] 1.0 bila belum ada data
-        var ecosystemF = this._ecosystemFactor(p);   // [Ekosistem] 1.0 bila belum ada aksesori / App Store
+        var afterSalesF = preview ? 1.0 : this._afterSalesFactor(p); // [Pasca-jual] 1.0 bila belum ada data
+        var ecosystemF = preview ? 1.0 : this._ecosystemFactor(p);   // [Ekosistem] 1.0 bila belum ada aksesori / App Store
+
+        return {
+            base: baseDemand * baseMult,
+            list: [
+                { key: 'quality', value: qualityF },
+                { key: 'price', value: priceF, ratio: p.price / Math.max(1, macro.priceRef) },
+                { key: 'reputation', value: repF },
+                { key: 'marketing', value: marketingF },
+                { key: 'os', value: osFactor },
+                { key: 'trend', value: trendF },
+                { key: 'competitor', value: competitorF },
+                { key: 'lifecycle', value: lifecycleF },
+                { key: 'tech', value: techF },
+                { key: 'nav', value: navF },
+                { key: 'event', value: eventF },
+                { key: 'feature', value: featureF },
+                { key: 'channel', value: channelF },
+                { key: 'afterSales', value: afterSalesF },
+                { key: 'ecosystem', value: ecosystemF }
+            ]
+        };
+    }
+
+    _computeDailyDemand(p) {
+        var f = this._demandFactors(p, false);
 
         // Noise harian dihaluskan (AR1) supaya penjualan tidak naik-turun liar.
         var sm = BALANCE.macro.demandNoiseSmoothing;
@@ -859,11 +896,53 @@ export class ProductSystem {
         p.noiseState = (p.noiseState || 0) * sm + rawNoise * (1 - sm) * 1.8;
         var noise = 1 + Math.max(-BALANCE.products.dailyNoise, Math.min(BALANCE.products.dailyNoise, p.noiseState));
 
-        var demand = baseDemand * baseMult * qualityF * priceF * repF
-                     * marketingF * osFactor * trendF * competitorF
-                     * lifecycleF * techF * navF * eventF * featureF * channelF * afterSalesF * ecosystemF * noise;
+        var demand = f.base;
+        for (var i = 0; i < f.list.length; i++) demand = demand * f.list[i].value;
+        demand = demand * noise;
 
         return Math.max(0, Math.round(demand));
+    }
+
+    // [Tahap 6A] Rincian permintaan harian sebuah produk TANPA noise acak dan tanpa mengubah state.
+    // final = permintaan harian yang dipakai simulasi bila noise = 1 (sebelum plafon pasar dan stok).
+    getDemandBreakdown(p) {
+        var f = this._demandFactors(p, false);
+        return this._buildBreakdown(f);
+    }
+
+    _buildBreakdown(f) {
+        var raw = f.base, factors = [];
+        for (var i = 0; i < f.list.length; i++) {
+            var it = f.list[i];
+            raw = raw * it.value;
+            var m = (typeof it.value === 'number' && isFinite(it.value)) ? it.value : 1;
+            factors.push({
+                key: it.key,
+                labelKey: 'why.factor.' + it.key,
+                multiplier: m,
+                sentiment: m >= 1.05 ? 'good' : (m <= 0.95 ? 'bad' : 'neutral'),
+                ratio: it.ratio
+            });
+        }
+        return { base: f.base, factors: factors, final: Math.max(0, Math.round(raw)) };
+    }
+
+    // [Tahap 6A] Perkiraan penjualan 30 hari pertama sebagai RENTANG, dari faktor yang sama dengan
+    // penjualan nyata. Variasi memakai dailyNoise yang sudah ada di BALANCE. Dibatasi stok produksi.
+    getLaunchForecast(config, qty) {
+        var stats = this.computeStats(config);
+        var pv = { id: null, config: config, stats: stats, price: config.price };
+        var f = this._demandFactors(pv, true);
+        var daily = this._buildBreakdown(f).final;
+        var n = BALANCE.products.dailyNoise;
+        var month = daily * 30;
+        var cap = (typeof qty === 'number' && qty > 0) ? qty : Infinity;
+        return {
+            daily: daily,
+            low: Math.min(cap, Math.round(month * (1 - n))),
+            high: Math.min(cap, Math.round(month * (1 + n))),
+            capped: month * (1 - n) > cap
+        };
     }
 
     _getMarketingFactor(productId) {
