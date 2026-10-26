@@ -14,6 +14,7 @@ import { plantName, plantDesc, plantLevelName } from '../../data/i18n/research-l
 import { PLANT_MIN_ORDER, getPlantYield } from '../../data/material-plants.data.js';
 import { renderAssemblySection, renderAlerts } from './AssemblyPanel.js';
 import { getSection, isOpen, getBatch } from './ManufactureUiState.js';
+import { mfIcon } from '../manufacture/MfIcons.js';
 
 // Ukuran batch default untuk tombol "Produksi" (dibatasi kapasitas pabrik).
 var DEFAULT_BATCH = 50000;
@@ -131,7 +132,7 @@ function _renderOverview(params, ov) {
         var bar = (pct === null || pct === undefined) ? '' :
             '<span class="mfx-node-bar"><i style="width:' + Math.max(0, Math.min(100, Math.round(pct))) + '%"></i></span>';
         return '<button class="mfx-node mfx-st-' + stage + ' ' + tone + '" ' + attrs + '>' +
-            '<span class="mfx-node-i"><i class="ti ti-' + ico + '" aria-hidden="true"></i></span>' +
+            '<span class="mfx-node-i">' + mfIcon(ico) + '</span>' +
             '<span class="mfx-node-n">' + esc(name) + '</span>' +
             '<span class="mfx-node-v">' + esc(val) + '</span>' + bar +
             '<span class="mfx-node-dot" aria-hidden="true"></span></button>';
@@ -148,15 +149,15 @@ function _renderOverview(params, ov) {
     }
     var html = '<div class="mfx-hub"><div class="mfx-hub-t">' + esc(mt('hub')) + '</div><div class="mfx-hub-s">' + esc(mt('hub_sub')) + '</div>' +
         '<div class="mfx-chain">' +
-            node('chip', 'cpu', mt('n_chip'), chipVal, chipTone, null, 'chip', ov.fabBuilt ? 100 : 0) +
-            '<i class="ti ti-chevron-right mfx-arrow" aria-hidden="true"></i>' +
-            node('plants', 'settings-2', mt('n_comp'), mt('v_comp', { b: ov.built, t: ov.plants.length }), compTone, null, 'comp',
+            node('chip', 'chip', mt('n_chip'), chipVal, chipTone, null, 'chip', ov.fabBuilt ? 100 : 0) +
+            '<span class="mfx-arrow">' + mfIcon('chevron', 14) + '</span>' +
+            node('plants', 'gear', mt('n_comp'), mt('v_comp', { b: ov.built, t: ov.plants.length }), compTone, null, 'comp',
                 ov.plants.length ? ov.built / ov.plants.length * 100 : 0) +
-            '<i class="ti ti-chevron-right mfx-arrow" aria-hidden="true"></i>' +
-            node('assembly', 'building-factory-2', mt('n_asm'), asmVal, asmTone, null, 'asm',
+            '<span class="mfx-arrow">' + mfIcon('chevron', 14) + '</span>' +
+            node('assembly', 'factory', mt('n_asm'), asmVal, asmTone, null, 'asm',
                 asm && asm.operating ? asm.utilization * 100 : 0) +
-            '<i class="ti ti-chevron-right mfx-arrow" aria-hidden="true"></i>' +
-            node('', 'package', mt('n_prod'), mt('v_prod', { n: ov.orders }), ov.orders ? 'info' : 'mute', ['products', 'catalog'], 'prod', null) +
+            '<span class="mfx-arrow">' + mfIcon('chevron', 14) + '</span>' +
+            node('', 'box', mt('n_prod'), mt('v_prod', { n: ov.orders }), ov.orders ? 'info' : 'mute', ['products', 'catalog'], 'prod', null) +
         '</div></div>';
 
     // --- statistik ---
