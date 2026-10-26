@@ -14,6 +14,7 @@ const TESTS = [
   { file: 'tools/sw.test.mjs', optional: true },
   { file: 'tools/tutorial-flow.test.mjs' },
   { file: 'tools/notif-prefs.test.mjs' },
+  { file: 'tools/notif-default.test.mjs', src: true },
   // Tanpa argumen
   { file: 'tools/civic-test.mjs' },
   { file: 'tools/people-test.mjs' },

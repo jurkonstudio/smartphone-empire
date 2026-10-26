@@ -7,11 +7,11 @@ const { NotificationPrefs: N } = await import('../src/core/NotificationPrefs.js'
 let fails = 0; const ok = (c, m) => { if (!c) { fails++; console.error('GAGAL:', m); } else console.log('ok   ', m); };
 const T = ['success', 'info', 'warning', 'error', 'news'];
 const on = () => T.filter(x => N.isTypeEnabled(x)).join(',');
-ok(on() === '', 'bawaan: semua mati');
-N.setEnabled(true);
+ok(on() === 'warning,error,news', 'bawaan game baru: hanya penting (peringatan, gagal, berita)');
+N.setImportantOnly(false);
 ok(on() === 'success,info,warning,error,news', 'utama nyala: semua tampil');
 N.setImportantOnly(true);
-ok(on() === 'warning,error,news', 'hanya penting: peringatan, gagal, berita');
+ok(on() === 'warning,error,news', 'hanya penting dinyalakan lagi: peringatan, gagal, berita');
 N.setNews(false);
 ok(on() === 'warning,error', 'berita dimatikan');
 N.setImportantOnly(false);
