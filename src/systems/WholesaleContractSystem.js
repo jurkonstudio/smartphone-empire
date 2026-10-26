@@ -13,7 +13,7 @@
 import { bus } from '../core/EventBus.js';
 import { TIME_CONFIG } from '../config/time.config.js';
 import { LOG_TYPES } from '../config/constants.js';
-import { COMPETITORS } from '../data/competitors.data.js';
+import { getActiveCompetitors } from '../data/competitors.data.js';
 import { WHOLESALE } from '../data/wholesale.data.js';
 
 const MINUTES_PER_DAY = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
@@ -68,7 +68,12 @@ export class WholesaleContractSystem {
         return _clamp(base + _clamp(bq, -6, 10), 0, 100);
     }
 
-    _buyers() { return COMPETITORS.filter(c => c && !c.isEcosystem); }
+    // Pembeli = merek non-ekosistem yang aktif di tahun ini dan belum menarik diri dari pasar.
+    _buyers() {
+        const year = (this.state.data.time && this.state.data.time.currentYear) || 0;
+        const withdrawn = (this.state.data.competitorState && this.state.data.competitorState.withdrawn) || {};
+        return getActiveCompetitors(year).filter(c => c && !c.isEcosystem && !withdrawn[c.id]);
+    }
 
     // ------------------------------------------------------------
     // TAWARAN BULANAN
