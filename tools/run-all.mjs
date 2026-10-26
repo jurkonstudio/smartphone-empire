@@ -14,6 +14,7 @@ const TESTS = [
   // jadi dilewati dengan peringatan. Hapus `optional` begitu berkasnya masuk repo.
   { file: 'tools/sw.test.mjs', optional: true },
   { file: 'tools/tutorial-flow.test.mjs' },
+  { file: 'tools/advisor-done-test.mjs' },
   { file: 'tools/notif-prefs.test.mjs' },
   { file: 'tools/notif-default.test.mjs', src: true },
   // Tanpa argumen
