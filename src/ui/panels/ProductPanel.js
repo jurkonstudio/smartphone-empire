@@ -15,6 +15,7 @@ import { openChipDesigner } from './ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './FabPanel.js';
 import { renderChipMockup } from '../phone/ChipMockup.js';
 import { renderPhoneMockup } from '../phone/PhoneMockup.js';
+import { renderPhoneGenerations } from '../phone/PhoneGenerations.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
 import { formatMultiplier } from '../../utils/format.js';
 import { bus } from '../../core/EventBus.js';
@@ -172,7 +173,9 @@ function _renderDesignTab(productSystem, ecosystemSystem) {
             renderSupplyCard(dev, data.time.currentYear);
     }
 
-    var phoneCard = '<div class="card">' +
+    // 0.2.12: galeri generasi (hero + timeline 17 milestone) di atas kartu "Mulai desain".
+    var generations = safe(function () { return renderPhoneGenerations(); }, '');
+    var phoneCard = generations + '<div class="card">' +
         '<div class="card-title">' + t('prod.design.title') + '</div>' +
         '<div style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;">' + t('prod.design.desc') + '</div>' +
         '<button class="btn-primary" data-prod-action="open-wizard" style="width:100%;">' + t('prod.design.start') + '</button>' +
