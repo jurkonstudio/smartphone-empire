@@ -1,11 +1,10 @@
-// FILE: src/ui/panels/AdvisorPanel.js  (REPLACE — v2028.42: navigasi tab + layout ringkas)
-// v2028.42 — sheet Asisten dibuat ringkas: tab "Saran | Tanya asisten" (hanya satu bagian tampil),
-//   ringkasan sejak terakhir dicek jadi satu baris, saran ditampilkan satu per satu ("Lihat semua"),
-//   chat berukuran tetap sehingga kolom input selalu terlihat, dan tinggi sheet dibatasi.
-// v2028.41 — tombol asisten (FAB) + panel saran + CHAT asisten.
-// Baru: kartu kesehatan bisnis (6 dimensi, bisa dibuka), ringkasan perubahan sejak terakhir dilihat,
-// format chat berdaftar (bullet rapi), label jawaban AI, dan aksesibilitas (aria-live, label).
-// Navigasi memakai bus 'advisor:go' ({nav, subtab}); handler-nya sudah ada di main.js.
+// FILE: src/ui/panels/AdvisorPanel.js  (REPLACE — v2028.43: panel langsung sinkron + tandai selesai)
+// v2028.43 — Panel Asisten kini ikut berubah saat game berjalan: saran yang sudah beres hilang
+//   otomatis dengan notifikasi "Beres", pemain bisa menandai saran "Tandai selesai" (dan membatalkannya),
+//   ada filter Semua / Mendesak / Info, dan daftar "sudah ditandai" yang bisa dibuka lagi.
+//   Target sentuh diperbesar dan tata letak dibuat lebih rapat untuk layar ponsel.
+// v2028.42 — navigasi tab + layout ringkas; v2028.41 — tombol asisten (FAB) + chat.
+// Navigasi memakai bus 'advisor:go' ({nav, subtab}); handler-nya ada di main.js.
 import { Modal } from '../modal.js';
 import { bus } from '../../core/EventBus.js';
 import { tx } from '../../systems/AdvisorSystem.js';
@@ -15,10 +14,12 @@ import { openDiagnosticModal } from '../../diagnostics/DiagnosticUI.js';
 
 var MODAL_ID = 'advisor';
 var STYLE_ID = 'advisor-chat-style';
+var PREVIEW_N = 3;        // jumlah saran yang tampil sebelum "Lihat semua"
+var FLASH_MS = 3200;      // lama notifikasi "Beres" tampil
 
 function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    return String(s == null ? '' : s).replace(/[&<>\"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' }[c];
     });
 }
 // Teks bot -> HTML aman: escape dulu, baru **tebal**.
@@ -37,6 +38,14 @@ function fmt(s) {
     }).join('');
 }
 function healthBand(score) { return score >= 80 ? 'good' : score >= 60 ? 'ok' : score >= 40 ? 'warn' : 'bad'; }
+function signed(v) { return (v >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(v)).toLocaleString('en-US'); }
+function isUrgent(a) { return a.sev === 'critical' || a.sev === 'warn'; }
+function matchFilter(a, f) {
+    if (f === 'urgent') return isUrgent(a);
+    if (f === 'info') return !isUrgent(a);
+    return true;
+}
+function realOnly(list) { return list.filter(function (a) { return a.id !== 'all_good'; }); }
 
 function ensureStyles() {
     ensureIconStyles();
@@ -44,130 +53,149 @@ function ensureStyles() {
     var st = document.createElement('style');
     st.id = STYLE_ID;
     st.textContent =
+        // --- kepala & kesehatan ---
         '.adv-head{display:flex;align-items:center;gap:10px;}' +
-        '.adv-avatar{width:36px;height:36px;border-radius:12px;background:var(--accent-soft);color:var(--accent);' +
-            'display:flex;align-items:center;justify-content:center;flex-shrink:0;}' +
-        '.adv-health{margin-left:auto;padding:3px 10px;border-radius:var(--r-pill);background:var(--accent-soft);border:none;font-family:inherit;cursor:pointer;' +
-            'color:var(--accent);font-size:var(--fs-xs);font-weight:var(--fw-bold);white-space:nowrap;}' +
+        '.adv-avatar{width:36px;height:36px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;}' +
+        '.adv-hd-txt{min-width:0;flex:1;}' +
+        '.adv-sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
+        '.adv-health{margin-left:auto;min-height:32px;padding:3px 12px;border-radius:var(--r-pill);background:var(--accent-soft);border:none;font-family:inherit;cursor:pointer;color:var(--accent);font-size:var(--fs-xs);font-weight:var(--fw-bold);white-space:nowrap;}' +
         '.adv-health.band-warn{background:var(--warn-soft);color:var(--warn);}.adv-health.band-bad{background:var(--danger-soft);color:var(--danger);}' +
-        '.adv-hbox{margin-top:10px;padding:10px 12px;border-radius:var(--r-lg);background:var(--bg-3);border:1px solid var(--border);}' +
+        '.adv-hbox{margin-top:8px;padding:10px 12px;border-radius:var(--r-lg);background:var(--bg-3);border:1px solid var(--border);}' +
         '.adv-hbox[hidden]{display:none;}' +
         '.adv-hrow{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:var(--fs-xs);color:var(--text-secondary);}' +
         '.adv-hrow .lb{width:84px;flex-shrink:0;}.adv-hrow .vl{width:30px;text-align:right;font-weight:var(--fw-bold);color:var(--text-primary);}' +
         '.adv-bar{flex:1;height:6px;border-radius:var(--r-pill);background:var(--border);overflow:hidden;}' +
-        '.adv-bar>i{display:block;height:100%;border-radius:inherit;background:var(--accent);}' +
+        '.adv-bar>i{display:block;height:100%;border-radius:inherit;background:var(--accent);transition:width .4s ease;}' +
         '.adv-bar.band-warn>i{background:var(--warn);}.adv-bar.band-bad>i{background:var(--danger);}.adv-bar.band-good>i{background:var(--success);}' +
         '.adv-hnote{margin-top:6px;font-size:var(--fs-xs);color:var(--text-tertiary);}' +
-        '.adv-brief{margin-top:10px;padding:10px 12px;border-radius:var(--r-lg);background:var(--accent-soft);border:1px solid var(--border);}' +
-        '.adv-brief-t{font-size:var(--fs-xs);font-weight:var(--fw-bold);letter-spacing:.5px;text-transform:uppercase;color:var(--accent);margin-bottom:4px;}' +
-        '.adv-brief-l{font-size:var(--fs-sm);color:var(--text-primary);line-height:1.5;}' +
+        // --- ringkasan sejak terakhir ---
+        '.adv-brief{margin-top:8px;padding:7px 10px;border-radius:var(--r-md);background:var(--accent-soft);border:1px solid var(--border);}' +
+        '.adv-brief-t{font-size:10px;font-weight:var(--fw-bold);letter-spacing:.5px;text-transform:uppercase;color:var(--accent);margin-bottom:2px;}' +
+        '.adv-brief-l{font-size:var(--fs-xs);color:var(--text-primary);line-height:1.4;}' +
         '.adv-up{color:var(--success);font-weight:var(--fw-bold);}.adv-down{color:var(--danger);font-weight:var(--fw-bold);}' +
-        '.adv-gap{height:6px;}.adv-li{display:flex;gap:6px;}.adv-dot{flex-shrink:0;min-width:1em;color:var(--text-tertiary);}' +
-        '.adv-ai-tag{display:inline-block;margin-top:4px;padding:1px 7px;border-radius:var(--r-pill);background:var(--accent-soft);color:var(--accent);font-size:10px;font-weight:var(--fw-bold);}' +
-        '.adv-section{display:flex;align-items:center;justify-content:space-between;margin:12px 2px 6px;' +
-            'font-size:var(--fs-2xs);font-weight:var(--fw-bold);letter-spacing:.7px;text-transform:uppercase;color:var(--text-tertiary);}' +
-        '.adv-link{background:none;border:none;color:var(--accent);font-family:inherit;font-size:var(--fs-xs);font-weight:var(--fw-bold);cursor:pointer;padding:2px 4px;}' +
-        '.adv-chat{display:flex;flex-direction:column;gap:8px;max-height:36vh;overflow-y:auto;padding:2px;scroll-behavior:smooth;}' +
-        '.adv-msg{display:flex;gap:8px;max-width:92%;}' +
-        '.adv-msg.user{align-self:flex-end;}' +
-        '.adv-bubble{padding:9px 12px;border-radius:14px;font-size:var(--fs-sm);line-height:1.45;word-break:break-word;}' +
-        '.adv-msg.bot .adv-bubble{background:var(--bg-3);border:1px solid var(--border);color:var(--text-primary);border-top-left-radius:4px;}' +
-        '.adv-msg.user .adv-bubble{background:var(--accent);color:#fff;border-top-right-radius:4px;white-space:pre-wrap;}' +
-        '.adv-bubble b{font-weight:var(--fw-bold);}' +
-        '.adv-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}' +
-        '.adv-acts .advisor-btn{display:inline-flex;align-items:center;gap:6px;}' +
-        '.adv-typing{display:inline-flex;gap:4px;padding:12px 14px;}' +
-        '.adv-typing i{width:6px;height:6px;border-radius:50%;background:var(--text-tertiary);animation:advDot 1s infinite ease-in-out;}' +
-        '.adv-typing i:nth-child(2){animation-delay:.15s}.adv-typing i:nth-child(3){animation-delay:.3s}' +
-        '@keyframes advDot{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}' +
-        '.adv-chips{display:flex;gap:6px;overflow-x:auto;padding:8px 2px 2px;scrollbar-width:none;' +
-            'background:color-mix(in srgb,var(--bg-2,#141414) 55%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:var(--r-lg);}' +
-        '.adv-chips::-webkit-scrollbar{display:none}' +
-        '.adv-chip{flex-shrink:0;padding:6px 12px;border-radius:var(--r-pill);background:color-mix(in srgb,var(--bg-3) 60%,transparent);border:1px solid var(--border);' +
-            'color:var(--text-secondary);font-family:inherit;font-size:var(--fs-xs);font-weight:var(--fw-semibold);cursor:pointer;' +
-            'transition:border-color .15s,color .15s,transform .06s;}' +
-        '.adv-chip:hover{border-color:var(--accent);color:var(--accent);}.adv-chip:active{transform:scale(.96);}' +
-        '.adv-inputrow{display:flex;gap:6px;margin-top:8px;}' +
-        '.adv-inputrow .advisor-input{flex:1;min-width:0;}' +
-        '.adv-send{width:40px;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0;}' +
-        // --- v2028.42: layout ringkas ---
-        '.adv-hd-txt{min-width:0;flex:1;}' +
-        '.adv-sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
-        '.adv-brief{margin-top:8px;padding:7px 10px;border-radius:var(--r-md);background:var(--accent-soft);}' +
-        '.adv-brief-t{margin-bottom:2px;}' +
-        '.adv-brief-l{font-size:var(--fs-xs);line-height:1.4;}' +
+        // --- tab ---
         '.adv-tabs{display:flex;gap:4px;padding:3px;margin:10px 0 6px;border-radius:var(--r-pill);background:var(--bg-3);border:1px solid var(--border);}' +
-        '.adv-tab{flex:1;min-height:36px;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 8px;border:none;border-radius:var(--r-pill);' +
+        '.adv-tab{flex:1;min-height:40px;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 8px;border:none;border-radius:var(--r-pill);' +
             'background:transparent;color:var(--text-secondary);font-family:inherit;font-size:var(--fs-sm);font-weight:var(--fw-bold);cursor:pointer;}' +
         '.adv-tab[aria-selected="true"]{background:var(--accent);color:#fff;}' +
         '.adv-count{min-width:18px;height:18px;padding:0 5px;border-radius:var(--r-pill);background:var(--danger);color:#fff;font-size:10px;line-height:18px;text-align:center;}' +
         '.adv-count[hidden]{display:none;}' +
         '.adv-tab[aria-selected="true"] .adv-count{background:#fff;color:var(--accent,#2563eb);}' +
         '.adv-panel[hidden]{display:none;}' +
-        '.adv-row{display:flex;justify-content:flex-end;min-height:24px;margin-bottom:2px;}' +
-        '.adv-advice .advisor-list{max-height:36vh;overflow-y:auto;overscroll-behavior:contain;padding:2px;}' +
-        '.adv-advice .advisor-item{padding:8px 10px;gap:8px;}' +
+        // --- toolbar filter & indikator live ---
+        '.adv-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}' +
+        '.adv-filters{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;min-width:0;}' +
+        '.adv-filters::-webkit-scrollbar{display:none}' +
+        '.adv-filter{flex-shrink:0;min-height:34px;padding:0 12px;border-radius:var(--r-pill);border:1px solid var(--border);background:var(--bg-3);' +
+            'color:var(--text-secondary);font-family:inherit;font-size:var(--fs-xs);font-weight:var(--fw-bold);cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:border-color .15s,color .15s,background .15s;}' +
+        '.adv-filter[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}' +
+        '.adv-filter .n{font-size:10px;opacity:.8;}' +
+        '.adv-live{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--text-tertiary);white-space:nowrap;}' +
+        '.adv-live i{width:6px;height:6px;border-radius:50%;background:var(--success);animation:advPulse 2s infinite ease-in-out;}' +
+        // --- notifikasi "Beres" ---
+        '.adv-flash{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:6px;border-radius:var(--r-md);' +
+            'background:var(--success-soft,rgba(34,197,94,.14));color:var(--success);font-size:var(--fs-xs);font-weight:var(--fw-bold);animation:advIn .25s ease;transition:opacity .4s ease;}' +
+        '.adv-flash span{min-width:0;overflow:hidden;text-overflow:ellipsis;}' +
+        '.adv-flash.out{opacity:0;}' +
+        // --- kartu saran ---
+        '.adv-advice .advisor-list{max-height:34vh;overflow-y:auto;overscroll-behavior:contain;padding:2px;}' +
+        '.adv-advice .advisor-item{padding:9px 10px;gap:8px;}' +
         '.adv-advice .advisor-ico{font-size:18px;}' +
         '.adv-advice .advisor-title{font-size:var(--fs-sm);}' +
         '.adv-advice .advisor-detail{font-size:var(--fs-xs);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}' +
         '.adv-advice .advisor-actions{margin-top:6px;}' +
-        '.adv-advice .advisor-btn{padding:5px 10px;font-size:var(--fs-xs);}' +
+        '.adv-advice .advisor-btn{min-height:34px;padding:5px 10px;font-size:var(--fs-xs);display:inline-flex;align-items:center;gap:5px;}' +
+        '.adv-item-head{display:flex;align-items:center;gap:6px;margin-bottom:2px;}' +
+        '.adv-sev{font-size:10px;font-weight:var(--fw-bold);padding:1px 7px;border-radius:var(--r-pill);text-transform:uppercase;letter-spacing:.4px;}' +
+        '.adv-sev.sev-critical{background:var(--danger-soft);color:var(--danger);}' +
+        '.adv-sev.sev-warn{background:var(--warn-soft);color:var(--warn);}' +
+        '.adv-sev.sev-tip{background:var(--accent-soft);color:var(--accent);}' +
+        '.adv-sev.sev-info{background:var(--bg-3);color:var(--text-secondary);}' +
+        '.adv-empty{padding:18px 12px;text-align:center;font-size:var(--fs-xs);color:var(--text-tertiary);}' +
+        '.adv-more{width:100%;min-height:40px;margin-top:8px;border-radius:var(--r-md);background:transparent;border:1px dashed var(--border);' +
+            'color:var(--accent);font-family:inherit;font-size:var(--fs-xs);font-weight:var(--fw-bold);cursor:pointer;}' +
+        // --- daftar sudah ditandai selesai ---
+        '.adv-done{margin-top:10px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--bg-3);}' +
+        '.adv-done summary{list-style:none;cursor:pointer;min-height:40px;padding:9px 12px;display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--text-secondary);}' +
+        '.adv-done summary::-webkit-details-marker{display:none;}' +
+        '.adv-done-row{display:flex;align-items:center;gap:8px;padding:4px 12px;border-top:1px solid var(--border);font-size:var(--fs-xs);color:var(--text-secondary);}' +
+        '.adv-done-row .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
+        '.adv-undo{min-height:36px;padding:0 8px;background:none;border:none;color:var(--accent);font-family:inherit;font-weight:var(--fw-bold);cursor:pointer;}' +
+        // --- chat asisten ---
+        '.adv-row{display:flex;justify-content:flex-end;min-height:24px;margin-bottom:2px;}' +
+        '.adv-link{background:none;border:none;color:var(--accent);font-family:inherit;font-size:var(--fs-xs);font-weight:var(--fw-bold);cursor:pointer;padding:2px 4px;}' +
+        '.adv-chat{display:flex;flex-direction:column;gap:8px;max-height:36vh;overflow-y:auto;padding:2px;scroll-behavior:smooth;}' +
         '.adv-chatp .adv-chat{height:auto;max-height:clamp(140px,30vh,280px);}' +
+        '.adv-msg{display:flex;gap:8px;max-width:92%;}' +
+        '.adv-msg.user{align-self:flex-end;}' +
+        '.adv-bubble{padding:9px 12px;border-radius:14px;font-size:var(--fs-sm);line-height:1.45;word-break:break-word;}' +
+        '.adv-msg.bot .adv-bubble{background:var(--bg-3);border:1px solid var(--border);color:var(--text-primary);border-top-left-radius:4px;}' +
+        '.adv-msg.user .adv-bubble{background:var(--accent);color:#fff;border-top-right-radius:4px;white-space:pre-wrap;}' +
+        '.adv-bubble b{font-weight:var(--fw-bold);}' +
+        '.adv-gap{height:6px;}.adv-li{display:flex;gap:6px;}.adv-dot{flex-shrink:0;min-width:1em;color:var(--text-tertiary);}' +
+        '.adv-ai-tag{display:inline-block;margin-top:4px;padding:1px 7px;border-radius:var(--r-pill);background:var(--accent-soft);color:var(--accent);font-size:10px;font-weight:var(--fw-bold);}' +
+        '.adv-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}' +
+        '.adv-acts .advisor-btn{display:inline-flex;align-items:center;gap:6px;}' +
+        '.adv-typing{display:inline-flex;gap:4px;padding:12px 14px;}' +
+        '.adv-typing i{width:6px;height:6px;border-radius:50%;background:var(--text-tertiary);animation:advDot 1s infinite ease-in-out;}' +
+        '.adv-typing i:nth-child(2){animation-delay:.15s}.adv-typing i:nth-child(3){animation-delay:.3s}' +
+        '.adv-chips{display:flex;gap:6px;overflow-x:auto;padding:8px 2px 2px;scrollbar-width:none;background:color-mix(in srgb,var(--bg-2,#141414) 55%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:var(--r-lg);}' +
+        '.adv-chips::-webkit-scrollbar{display:none}' +
+        '.adv-chip{flex-shrink:0;min-height:34px;padding:6px 12px;border-radius:var(--r-pill);background:color-mix(in srgb,var(--bg-3) 60%,transparent);border:1px solid var(--border);' +
+            'color:var(--text-secondary);font-family:inherit;font-size:var(--fs-xs);font-weight:var(--fw-semibold);cursor:pointer;transition:border-color .15s,color .15s,transform .06s;}' +
+        '.adv-chip:hover{border-color:var(--accent);color:var(--accent);}.adv-chip:active{transform:scale(.96);}' +
         '.adv-chatp .adv-chips{padding-top:6px;}' +
+        '.adv-inputrow{display:flex;gap:6px;margin-top:8px;}' +
+        '.adv-inputrow .advisor-input{flex:1;min-width:0;}' +
+        '.adv-send{width:44px;min-height:44px;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0;}' +
         '.adv-chatp .adv-inputrow{margin-top:6px;}' +
         '.adv-close{width:100%;margin-top:10px;min-height:44px;}' +
-        '.modal-backdrop[data-modal-id="advisor"] .modal-card{max-height:min(76vh,640px);}' +
-        '@media (prefers-reduced-motion:reduce){.adv-typing i{animation:none}.adv-chat{scroll-behavior:auto}}';
+        '.modal-backdrop[data-modal-id="advisor"] .modal-card{max-height:min(78vh,660px);}' +
+        '@keyframes advPulse{0%,100%{opacity:1}50%{opacity:.35}}' +
+        '@keyframes advIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}' +
+        '@keyframes advDot{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}' +
+        '@media (prefers-reduced-motion:reduce){.adv-typing i,.adv-live i{animation:none}.adv-chat{scroll-behavior:auto}.adv-flash{animation:none}}';
     document.head.appendChild(st);
 }
 
-function renderItems(advisor, all) {
-    var list = advisor.getAdvice();
-    var shown = all ? list : list.slice(0, 1);
-    return shown.map(function (a) {
-        var go = (a.action && a.action.patch)
-            ? (a.action.patch === 'reload'
-                ? '<button class="btn-primary advisor-btn" type="button" data-adv-patch="reload">' + esc(tx('ui.patch_reload')) + '</button>'
-                : '<button class="btn-primary advisor-btn" type="button" data-adv-patch="ack" data-adv-ver="' + esc(a.action.ver || '') + '">' + esc(tx('ui.patch_ack')) + '</button>')
-            : (a.action && a.action.report)
-            ? '<button class="btn-primary advisor-btn" type="button" data-adv-report="copy">' + esc(tx('ui.copy_report')) + '</button>' +
-              '<button class="btn-secondary advisor-btn" type="button" data-adv-report="open">' + esc(tx('ui.open_report')) + '</button>'
-            : a.action
-            ? '<button class="btn-primary advisor-btn" type="button" data-adv-go="1"' +
-              ' data-adv-nav="' + esc(a.action.nav) + '"' +
-              ' data-adv-subtab="' + esc(a.action.subtab || '') + '">' + esc(tx('ui.open')) + '</button>'
-            : '';
-        var snooze = a.id !== 'all_good'
-            ? '<button class="btn-secondary advisor-btn" type="button" data-adv-snooze="' + esc(a.id) + '">' +
-              esc(tx('ui.snooze')) + '</button>'
-            : '';
-        return '' +
-            '<div class="advisor-item sev-' + a.sev + '">' +
-                '<div class="advisor-ico" aria-hidden="true">' + gIcon(a.icon, 18) + '</div>' +
-                '<div class="advisor-body">' +
-                    '<div class="advisor-title">' + esc(a.title) + '</div>' +
-                    '<div class="advisor-detail">' + esc(a.detail) + '</div>' +
-                    ((go || snooze) ? '<div class="advisor-actions">' + go + snooze + '</div>' : '') +
-                '</div>' +
-            '</div>';
-    }).join('');
+// Ikon/teks ringkas per tingkat keparahan.
+function sevLabel(sev) { return tx('ui.sev_' + sev); }
+
+function renderItem(a) {
+    var go = '';
+    if (a.action && a.action.patch) {
+        go = a.action.patch === 'reload'
+            ? '<button class="btn-primary advisor-btn" type="button" data-adv-patch="reload">' + esc(tx('ui.patch_reload')) + '</button>'
+            : '<button class="btn-primary advisor-btn" type="button" data-adv-patch="ack" data-adv-ver="' + esc(a.action.ver || '') + '">' + esc(tx('ui.patch_ack')) + '</button>';
+    } else if (a.action && a.action.report) {
+        go = '<button class="btn-primary advisor-btn" type="button" data-adv-report="copy" data-adv-id="' + esc(a.id) + '">' + esc(tx('ui.copy_report')) + '</button>' +
+             '<button class="btn-secondary advisor-btn" type="button" data-adv-report="open">' + esc(tx('ui.open_report')) + '</button>';
+    } else if (a.action) {
+        go = '<button class="btn-primary advisor-btn" type="button" data-adv-go="1"' +
+             ' data-adv-nav="' + esc(a.action.nav) + '"' +
+             ' data-adv-subtab="' + esc(a.action.subtab || '') + '">' + esc(tx('ui.open')) + '</button>';
+    }
+    // Tandai selesai: untuk saran biasa (patch sudah punya "Tandai dibaca" sendiri).
+    var done = (a.id !== 'all_good' && !(a.action && a.action.patch))
+        ? '<button class="btn-secondary advisor-btn" type="button" data-adv-done="' + esc(a.id) + '">' + gIcon('check-circle', 14) + esc(tx('ui.done')) + '</button>'
+        : '';
+    var snooze = a.id !== 'all_good'
+        ? '<button class="btn-secondary advisor-btn" type="button" data-adv-snooze="' + esc(a.id) + '">' + esc(tx('ui.snooze')) + '</button>'
+        : '';
+    var pill = a.id === 'all_good' ? '' : '<span class="adv-sev sev-' + a.sev + '">' + esc(sevLabel(a.sev)) + '</span>';
+    var acts = go + done + snooze;
+    return '' +
+        '<div class="advisor-item sev-' + a.sev + '">' +
+            '<div class="advisor-ico" aria-hidden="true">' + gIcon(a.icon, 18) + '</div>' +
+            '<div class="advisor-body">' +
+                (pill ? '<div class="adv-item-head">' + pill + '</div>' : '') +
+                '<div class="advisor-title">' + esc(a.title) + '</div>' +
+                '<div class="advisor-detail">' + esc(a.detail) + '</div>' +
+                (acts ? '<div class="advisor-actions">' + acts + '</div>' : '') +
+            '</div>' +
+        '</div>';
 }
 
-function signed(v) { return (v >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(v)).toLocaleString('en-US'); }
-
-function renderBriefing(b) {
-    if (!b) return '';
-    var rows = [];
-    rows.push('<div>' + esc(tx('ui.cash_lbl')) + ' <span class="' + (b.cashDelta >= 0 ? 'adv-up' : 'adv-down') + '">' + signed(b.cashDelta) + '</span>' +
-        (b.soldDelta > 0 ? ' · ' + esc(tx('ui.sold_lbl')) + ' <b>' + b.soldDelta.toLocaleString('en-US') + '</b>' : '') +
-        (b.healthDelta ? ' · ' + esc(tx('ui.health_lbl')) + ' <span class="' + (b.healthDelta > 0 ? 'adv-up' : 'adv-down') + '">' + (b.healthDelta > 0 ? '+' : '−') + Math.abs(b.healthDelta) + '</span>' : '') + '</div>');
-    if (b.resolved) rows.push('<div>' + esc(tx('ui.resolved_lbl', { n: b.resolved })) + '</div>');
-    b.fresh.forEach(function (a) { rows.push('<div>• ' + esc(a.title) + '</div>'); });
-    return '<div class="adv-brief"><div class="adv-brief-t">' + esc(tx('ui.briefing')) + ' · ' + esc(tx('ui.days_lbl', { n: b.days })) + '</div>' +
-        '<div class="adv-brief-l">' + rows.join('') + '</div></div>';
-}
-
-// Ringkasan "sejak terakhir" dalam satu baris (kotak besar dihapus agar sheet tidak penuh).
 function renderBriefingLine(b) {
     if (!b) return '';
     var parts = [esc(tx('ui.cash_lbl')) + ' <span class="' + (b.cashDelta >= 0 ? 'adv-up' : 'adv-down') + '">' + signed(b.cashDelta) + '</span>'];
@@ -178,7 +206,16 @@ function renderBriefingLine(b) {
         '<div class="adv-brief-l">' + parts.join(' · ') + '</div></div>';
 }
 
-// Tab segmen: Saran (dengan jumlah) | Tanya asisten.
+function renderHealthBox(h) {
+    var rows = h.parts.map(function (p) {
+        return '<div class="adv-hrow"><span class="lb">' + esc(p.label) + '</span>' +
+            '<span class="adv-bar band-' + healthBand(p.score) + '"><i style="width:' + p.score + '%"></i></span>' +
+            '<span class="vl">' + p.score + '</span></div>';
+    }).join('');
+    var note = h.weakest ? '<div class="adv-hnote">' + esc(tx('ui.weakest_lbl', { name: h.weakest.label })) + '</div>' : '';
+    return rows + note;
+}
+
 function renderTabs(count, tab) {
     function tabBtn(id, label, extra) {
         var on = tab === id;
@@ -190,16 +227,6 @@ function renderTabs(count, tab) {
         tabBtn('advice', tx('ui.advice'), '<span class="adv-count" data-adv-count' + (count ? '' : ' hidden') + '>' + count + '</span>') +
         tabBtn('chat', tx('ui.chat')) +
         '</div>';
-}
-
-function renderHealthBox(h) {
-    var rows = h.parts.map(function (p) {
-        return '<div class="adv-hrow"><span class="lb">' + esc(p.label) + '</span>' +
-            '<span class="adv-bar band-' + healthBand(p.score) + '"><i style="width:' + p.score + '%"></i></span>' +
-            '<span class="vl">' + p.score + '</span></div>';
-    }).join('');
-    var note = h.weakest ? '<div class="adv-hnote">' + esc(tx('ui.weakest_lbl', { name: h.weakest.label })) + '</div>' : '';
-    return rows + note;
 }
 
 function renderMsg(m) {
@@ -241,68 +268,191 @@ function copyText(text) {
     });
 }
 
-function handleReport(advisor, mode) {
+// onDone: dipanggil setelah laporan berhasil disalin (dipakai untuk menandai saran selesai).
+function handleReport(advisor, mode, id, onDone) {
     if (mode === 'open') { Modal.close(MODAL_ID, true); openDiagnosticModal(); return; }
     var text = '';
     try { text = advisor.buildBugReportText(); } catch (e) {}
     if (!text) { ToastService.warning(tx('ui.report_failed')); return; }
-    copyText(text).then(function () { ToastService.success(tx('ui.report_copied')); },
-                        function () { ToastService.warning(tx('ui.report_failed')); });
+    copyText(text).then(function () {
+        ToastService.success(tx('ui.report_copied'));
+        if (id) advisor.markDone(id);
+        if (onDone) onDone();
+    }, function () { ToastService.warning(tx('ui.report_failed')); });
+}
+
+// Pertahankan fokus keyboard/pointer pada tombol yang sama setelah panel diperbarui.
+function keepFocus(node, fn) {
+    var ae = document.activeElement, sel = null;
+    if (ae && node.contains(ae) && ae.attributes) {
+        for (var i = 0; i < ae.attributes.length; i++) {
+            var at = ae.attributes[i];
+            if (at.name.indexOf('data-adv-') === 0) {
+                sel = '[' + at.name + '="' + (window.CSS && CSS.escape ? CSS.escape(at.value) : at.value.replace(/"/g, '\\"')) + '"]';
+                break;
+            }
+        }
+    }
+    fn();
+    if (sel) {
+        var el = node.querySelector(sel);
+        if (el) { try { el.focus({ preventScroll: true }); } catch (e) {} }
+    }
 }
 
 export function openAdvisor(advisor) {
     ensureStyles();
     var chat = advisor.getChat();
     var h = advisor.brain.health();
-    var showAll = false;
     var briefing = null;
     try { briefing = advisor.getBriefing(); } catch (e) {}
-    function realCount() { return advisor.getAdvice().filter(function (a) { return a.id !== 'all_good'; }).length; }
-    var count = realCount();
-    // Tab awal: saran bila ada yang perlu dilihat; kalau tidak, langsung ke chat.
-    var tab = count > 0 ? 'advice' : 'chat';
+
+    var st = { filter: 'all', expanded: false, doneOpen: false };
+    var tab = realOnly(advisor.getAdvice()).length > 0 ? 'advice' : 'chat';
+    var node = null;
+    var unsubs = [];
+    var busy = false;
+
+    function cleanup() {
+        unsubs.forEach(function (u) { try { u(); } catch (e) {} });
+        unsubs = [];
+    }
+    // Modal sudah tertutup / diganti -> lepas pendengar event agar tidak bocor.
+    function alive() {
+        if (node && node.isConnected) return true;
+        cleanup();
+        return false;
+    }
 
     var html = '' +
-        '<div class=\"adv-head\">' +
-            '<div class=\"adv-avatar\">' + gIcon('spark', 18) + '</div>' +
-            '<div class=\"adv-hd-txt\"><div class=\"modal-title\" style=\"margin:0\">' + esc(tx('ui.title')) + '</div>' +
-            '<div class=\"modal-sub adv-sub\" style=\"margin:0\">' + esc(advisor.getSummary()) + '</div></div>' +
-            '<button type=\"button\" class=\"adv-health band-' + healthBand(h.score) + '\" data-adv-health aria-expanded=\"false\" aria-label=\"' + esc(tx('ui.health')) + '\">' + h.score + '/100</button>' +
+        '<div class="adv-head">' +
+            '<div class="adv-avatar">' + gIcon('spark', 18) + '</div>' +
+            '<div class="adv-hd-txt"><div class="modal-title" style="margin:0">' + esc(tx('ui.title')) + '</div>' +
+            '<div class="modal-sub adv-sub" data-adv-summary style="margin:0"></div></div>' +
+            '<button type="button" class="adv-health" data-adv-health aria-expanded="false"></button>' +
         '</div>' +
-        '<div class=\"adv-hbox\" data-adv-hbox hidden>' + renderHealthBox(h) + '</div>' +
+        '<div class="adv-hbox" data-adv-hbox hidden><div data-adv-hbox-body></div></div>' +
         renderBriefingLine(briefing) +
-        renderTabs(count, tab) +
-        '<div class=\"adv-panel adv-advice\" data-adv-panel=\"advice\" id=\"adv-p-advice\" role=\"tabpanel\" aria-labelledby=\"adv-t-advice\"' + (tab === 'advice' ? '' : ' hidden') + '>' +
-            '<div class=\"adv-row\"><button class=\"adv-link\" type=\"button\" data-adv-toggle>' + esc(tx('ui.show_all')) + '</button></div>' +
-            '<div class=\"advisor-list\" data-adv-list>' + renderItems(advisor, false) + '</div>' +
+        renderTabs(realOnly(advisor.getAdvice()).length, tab) +
+        '<div class="adv-panel adv-advice" data-adv-panel="advice" id="adv-p-advice" role="tabpanel" aria-labelledby="adv-t-advice"' + (tab === 'advice' ? '' : ' hidden') + '>' +
+            '<div class="adv-toolbar">' +
+                '<div class="adv-filters" data-adv-filterbar role="group" aria-label="' + esc(tx('ui.advice')) + '"></div>' +
+                '<span class="adv-live"><i aria-hidden="true"></i>' + esc(tx('ui.live')) + '</span>' +
+            '</div>' +
+            '<div data-adv-flashes aria-live="polite"></div>' +
+            '<div class="advisor-list" data-adv-list></div>' +
+            '<div data-adv-more></div>' +
+            '<div data-adv-donebox></div>' +
         '</div>' +
-        '<div class=\"adv-panel adv-chatp\" data-adv-panel=\"chat\" id=\"adv-p-chat\" role=\"tabpanel\" aria-labelledby=\"adv-t-chat\"' + (tab === 'chat' ? '' : ' hidden') + '>' +
-            '<div class=\"adv-row\"><button class=\"adv-link\" type=\"button\" data-adv-clear>' + esc(tx('ui.clear')) + '</button></div>' +
-            '<div class=\"adv-chat\" data-adv-chat role=\"log\" aria-live=\"polite\" aria-label=\"' + esc(tx('ui.chat')) + '\">' + chat.map(renderMsg).join('') + '</div>' +
-            '<div class=\"adv-chips\" data-adv-chips>' + renderChips(chat[chat.length - 1].chips) + '</div>' +
-            '<div class=\"adv-inputrow\">' +
-                '<input class=\"advisor-input\" type=\"text\" maxlength=\"300\" data-adv-input autocomplete=\"off\" enterkeyhint=\"send\" aria-label=\"' + esc(tx('ui.chat')) + '\" placeholder=\"' + esc(tx('ui.ask_ph')) + '\">' +
-                '<button class=\"btn-primary advisor-btn adv-send\" type=\"button\" data-adv-send=\"1\" aria-label=\"' + esc(tx('ui.ask_send')) + '\">' + gIcon('send', 16) + '</button>' +
+        '<div class="adv-panel adv-chatp" data-adv-panel="chat" id="adv-p-chat" role="tabpanel" aria-labelledby="adv-t-chat"' + (tab === 'chat' ? '' : ' hidden') + '>' +
+            '<div class="adv-row"><button class="adv-link" type="button" data-adv-clear>' + esc(tx('ui.clear')) + '</button></div>' +
+            '<div class="adv-chat" data-adv-chat role="log" aria-live="polite" aria-label="' + esc(tx('ui.chat')) + '">' + chat.map(renderMsg).join('') + '</div>' +
+            '<div class="adv-chips" data-adv-chips>' + renderChips(chat[chat.length - 1].chips) + '</div>' +
+            '<div class="adv-inputrow">' +
+                '<input class="advisor-input" type="text" maxlength="300" data-adv-input autocomplete="off" enterkeyhint="send" aria-label="' + esc(tx('ui.chat')) + '" placeholder="' + esc(tx('ui.ask_ph')) + '">' +
+                '<button class="btn-primary advisor-btn adv-send" type="button" data-adv-send="1" aria-label="' + esc(tx('ui.ask_send')) + '">' + gIcon('send', 16) + '</button>' +
             '</div>' +
         '</div>' +
-        '<button class=\"btn-secondary adv-close\" data-modal-close type=\"button\">' + esc(tx('ui.close')) + '</button>';
+        '<button class="btn-secondary adv-close" data-modal-close type="button">' + esc(tx('ui.close')) + '</button>';
 
-    Modal.open(MODAL_ID, html);
+    Modal.open(MODAL_ID, html, { onClose: cleanup });
 
-    var node = document.querySelector('[data-modal-id=\"' + MODAL_ID + '\"]');
+    node = document.querySelector('[data-modal-id="' + MODAL_ID + '"]');
     if (!node) return;
     try { advisor.markSeen(); } catch (e) {}
+
     var log = node.querySelector('[data-adv-chat]');
     var chipsEl = node.querySelector('[data-adv-chips]');
     var input = node.querySelector('[data-adv-input]');
     function scroll() { if (log) log.scrollTop = log.scrollHeight; }
     scroll();
 
-    function paintCount() {
-        var c = realCount();
+    // ---------- pembaruan langsung ----------
+    function paintHead() {
+        var hh = advisor.brain.health();
+        var sum = node.querySelector('[data-adv-summary]');
+        if (sum) sum.textContent = advisor.getSummary();
+        var hb = node.querySelector('[data-adv-health]');
+        if (hb) {
+            hb.textContent = hh.score + '/100';
+            hb.className = 'adv-health band-' + healthBand(hh.score);
+            hb.setAttribute('aria-label', tx('ui.health') + ' ' + hh.score + '/100');
+        }
+        var hbody = node.querySelector('[data-adv-hbox-body]');
+        if (hbody) hbody.innerHTML = renderHealthBox(hh);
+    }
+
+    function paintTabs() {
+        var c = realOnly(advisor.getAdvice()).length;
         var el = node.querySelector('[data-adv-count]');
         if (el) { el.textContent = String(c); el.hidden = c === 0; }
     }
+
+    function renderAdvice() {
+        var all = advisor.getAdvice();
+        var real = realOnly(all);
+        var counts = { all: real.length, urgent: 0, info: 0 };
+        real.forEach(function (a) { counts[isUrgent(a) ? 'urgent' : 'info']++; });
+
+        node.querySelector('[data-adv-filterbar]').innerHTML = ['all', 'urgent', 'info'].map(function (f) {
+            var on = st.filter === f;
+            return '<button type="button" class="adv-filter" data-adv-filter="' + f + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
+                esc(tx('ui.filter_' + f)) + ' <span class="n">' + counts[f] + '</span></button>';
+        }).join('');
+
+        // Tanpa saran nyata, tampilkan kartu "Semua terkendali" apa adanya.
+        var list = real.length ? real.filter(function (a) { return matchFilter(a, st.filter); }) : all;
+        var visible = st.expanded ? list : list.slice(0, PREVIEW_N);
+        var listEl = node.querySelector('[data-adv-list]');
+        var pos = listEl.scrollTop;
+        listEl.innerHTML = visible.length
+            ? visible.map(renderItem).join('')
+            : '<div class="adv-empty">' + esc(tx('ui.empty_filter')) + '</div>';
+        listEl.scrollTop = pos;
+
+        node.querySelector('[data-adv-more]').innerHTML = list.length > PREVIEW_N
+            ? '<button class="adv-more" type="button" data-adv-more-btn>' +
+              esc(st.expanded ? tx('ui.hide') : tx('ui.show_all')) + ' (' + list.length + ')</button>'
+            : '';
+
+        var dbox = node.querySelector('[data-adv-donebox]');
+        var done = advisor.getDone();
+        if (!done.length) {
+            dbox.innerHTML = '';
+        } else {
+            dbox.innerHTML = '<details class="adv-done" data-adv-details' + (st.doneOpen ? ' open' : '') + '>' +
+                '<summary>' + gIcon('check-circle', 14) + esc(tx('ui.done_count', { n: done.length })) + '</summary>' +
+                done.map(function (d) {
+                    return '<div class="adv-done-row"><span class="t">' + esc(d.title) + '</span>' +
+                        '<button type="button" class="adv-undo" data-adv-undo="' + esc(d.id) + '">' + esc(tx('ui.undo')) + '</button></div>';
+                }).join('') + '</details>';
+            var det = dbox.querySelector('[data-adv-details]');
+            if (det) det.addEventListener('toggle', function () { st.doneOpen = det.open; });
+        }
+    }
+
+    function renderAll() {
+        keepFocus(node, function () { paintHead(); paintTabs(); renderAdvice(); });
+    }
+
+    // Notifikasi kecil "Beres: ..." saat saran hilang karena sudah dikerjakan.
+    function showFlash(items) {
+        var box = node.querySelector('[data-adv-flashes]');
+        if (!box || !items || !items.length) return;
+        items.slice(0, 2).forEach(function (a) {
+            var el = document.createElement('div');
+            el.className = 'adv-flash';
+            el.setAttribute('role', 'status');
+            el.innerHTML = gIcon('check-circle', 16) + '<span>' + esc(tx('ui.beres', { t: a.title })) + '</span>';
+            box.appendChild(el);
+            setTimeout(function () {
+                el.classList.add('out');
+                setTimeout(function () { el.remove(); }, 400);
+            }, FLASH_MS);
+        });
+        while (box.children.length > 3) box.removeChild(box.firstChild);
+    }
+
     function setTab(name) {
         if (name !== 'advice' && name !== 'chat') return;
         tab = name;
@@ -314,18 +464,19 @@ export function openAdvisor(advisor) {
         node.querySelectorAll('[data-adv-panel]').forEach(function (p) {
             p.hidden = p.dataset.advPanel !== name;
         });
-        if (name === 'chat') scroll();      // panel chat baru tampil: geser ke pesan terakhir
+        if (name === 'chat') scroll();
     }
 
-    // Tekan chip tidak boleh memindahkan fokus: kalau input sedang fokus, keyboard tetap
-    // seperti semula (tidak tertutup lalu terbuka lagi, yang membuat layar naik-turun).
+    // Saat game berjalan: daftar dan lencana ikut berubah; saran yang beres memunculkan "Beres".
+    unsubs.push(bus.on('advisor:updated', function () { if (alive()) renderAll(); }));
+    unsubs.push(bus.on('advisor:resolved', function (p) { if (alive()) showFlash(p && p.items); }));
+
+    // Tekan chip tidak boleh memindahkan fokus: keyboard tetap seperti semula.
     chipsEl.addEventListener('pointerdown', function (e) {
         if (e.target.closest('[data-adv-chip]')) e.preventDefault();
     });
 
-    var busy = false;
     // opts.fromInput: true hanya jika pesan diketik/dikirim lewat kolom input.
-    // Keyboard hanya dibuka lagi untuk kasus itu, bukan saat pesan cepat ditekan.
     async function send(text, opts) {
         text = String(text || '').trim();
         if (!text || busy) return;
@@ -335,12 +486,12 @@ export function openAdvisor(advisor) {
         input.value = '';
         var typing = document.createElement('div');
         typing.className = 'adv-msg bot';
-        typing.innerHTML = '<div class=\"adv-bubble adv-typing\"><i></i><i></i><i></i></div>';
+        typing.innerHTML = '<div class="adv-bubble adv-typing"><i></i><i></i><i></i></div>';
         log.appendChild(typing);
         scroll();
         var started = Date.now();
         var res = await advisor.chat(text);
-        var wait = Math.max(0, 380 - (Date.now() - started));       // jeda singkat agar terasa \"berpikir\"
+        var wait = Math.max(0, 380 - (Date.now() - started));
         await new Promise(function (r) { setTimeout(r, wait); });
         typing.remove();
         if (res) {
@@ -355,43 +506,60 @@ export function openAdvisor(advisor) {
         if (opts && opts.fromInput && input) input.focus();
     }
 
+    paintHead();
+    paintTabs();
+    renderAdvice();
+
     node.addEventListener('click', function (e) {
-        var tb = e.target.closest('[data-adv-tab]');
-        if (tb) { setTab(tb.dataset.advTab); return; }
-        var goBtn = e.target.closest('[data-adv-go]');
-        if (goBtn) {
-            bus.emit('advisor:go', { nav: goBtn.dataset.advNav, subtab: goBtn.dataset.advSubtab || null });
+        var t;
+        if ((t = e.target.closest('[data-adv-tab]'))) { setTab(t.dataset.advTab); return; }
+        if ((t = e.target.closest('[data-adv-filter]'))) {
+            st.filter = t.dataset.advFilter;
+            st.expanded = false;
+            keepFocus(node, renderAdvice);
             return;
         }
-        var pt = e.target.closest('[data-adv-patch]');
-        if (pt) {
-            if (pt.dataset.advPatch === 'reload') { advisor.applyUpdate(); pt.disabled = true; return; }
-            advisor.ackPatch(pt.dataset.advVer);
-            pt.disabled = true;
-            node.querySelector('[data-adv-list]').innerHTML = renderItems(advisor, showAll);
-            paintCount();
+        if ((t = e.target.closest('[data-adv-more-btn]'))) {
+            st.expanded = !st.expanded;
+            keepFocus(node, renderAdvice);
             return;
         }
-        var rep = e.target.closest('[data-adv-report]');
-        if (rep) { handleReport(advisor, rep.dataset.advReport); return; }
-        var snz = e.target.closest('[data-adv-snooze]');
-        if (snz) {
-            advisor.snooze(snz.dataset.advSnooze);
-            node.querySelector('[data-adv-list]').innerHTML = renderItems(advisor, showAll);
-            paintCount();
+        if ((t = e.target.closest('[data-adv-go]'))) {
+            bus.emit('advisor:go', { nav: t.dataset.advNav, subtab: t.dataset.advSubtab || null });
             return;
         }
-        var hb = e.target.closest('[data-adv-health]');
-        if (hb) {
+        if ((t = e.target.closest('[data-adv-done]'))) {
+            if (advisor.markDone(t.dataset.advDone)) {
+                try { ToastService.success(tx('ui.done_ok')); } catch (err) {}
+            }
+            renderAll();
+            return;
+        }
+        if ((t = e.target.closest('[data-adv-undo]'))) {
+            advisor.undoDone(t.dataset.advUndo);
+            renderAll();
+            return;
+        }
+        if ((t = e.target.closest('[data-adv-patch]'))) {
+            if (t.dataset.advPatch === 'reload') { advisor.applyUpdate(); t.disabled = true; return; }
+            advisor.ackPatch(t.dataset.advVer);
+            t.disabled = true;
+            renderAll();
+            return;
+        }
+        if ((t = e.target.closest('[data-adv-report]'))) {
+            handleReport(advisor, t.dataset.advReport, t.dataset.advId || '', renderAll);
+            return;
+        }
+        if ((t = e.target.closest('[data-adv-snooze]'))) {
+            advisor.snooze(t.dataset.advSnooze);
+            renderAll();
+            return;
+        }
+        if ((t = e.target.closest('[data-adv-health]'))) {
             var box = node.querySelector('[data-adv-hbox]');
             box.hidden = !box.hidden;
-            hb.setAttribute('aria-expanded', box.hidden ? 'false' : 'true');
-            return;
-        }
-        if (e.target.closest('[data-adv-toggle]')) {
-            showAll = !showAll;
-            node.querySelector('[data-adv-list]').innerHTML = renderItems(advisor, showAll);
-            node.querySelector('[data-adv-toggle]').textContent = tx(showAll ? 'ui.hide' : 'ui.show_all');
+            t.setAttribute('aria-expanded', box.hidden ? 'false' : 'true');
             return;
         }
         if (e.target.closest('[data-adv-clear]')) {
@@ -402,8 +570,7 @@ export function openAdvisor(advisor) {
             scroll();
             return;
         }
-        var chip = e.target.closest('[data-adv-chip]');
-        if (chip) { send(chip.dataset.advChip); return; }
+        if ((t = e.target.closest('[data-adv-chip]'))) { send(t.dataset.advChip); return; }
         if (e.target.closest('[data-adv-send]')) send(input.value, { fromInput: true });
     });
 
@@ -412,7 +579,7 @@ export function openAdvisor(advisor) {
         if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
         var next = tab === 'advice' ? 'chat' : 'advice';
         setTab(next);
-        var nb = node.querySelector('[data-adv-tab=\"' + next + '\"]');
+        var nb = node.querySelector('[data-adv-tab="' + next + '"]');
         if (nb) nb.focus();
         e.preventDefault();
     });
