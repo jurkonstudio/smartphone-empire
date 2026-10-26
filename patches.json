@@ -1,6 +1,47 @@
 {
-  "latest": "0.2.8",
+  "latest": "0.2.9",
   "releases": [
+    {
+      "version": "0.2.9",
+      "date": "2026-10-26",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Kontrak grosir produk jadi: merek kompetitor menawar sebagian stok ponselmu tiap bulan. Buka dari Pabrik > Kontrak grosir, lalu terima atau tolak. Pembayaran masuk 3–10 hari setelah pengiriman.",
+            "en": "Finished-product wholesale contracts: rival brands bid each month for part of your phone stock. Open them from Manufacturing > Kontrak grosir, then accept or decline. Payment arrives 3–10 days after shipping."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Panel grosir menampilkan nilai ritel untuk unit yang sama dan selisih di atas biaya produksi, sebagai pembanding saat memutuskan.",
+            "en": "The wholesale panel shows the retail value of the same units and the margin over production cost to help you decide."
+          }
+        },
+        {
+          "type": "balance",
+          "text": {
+            "id": "Harga grosir tidak pernah di bawah biaya produksi per unit. Merek yang membeli kontrakmu mendapat dorongan pangsa sementara (sekitar 3 bulan, dibatasi batas atas).",
+            "en": "Wholesale prices never fall below unit production cost. A brand that buys your contract gets a temporary share boost (about 3 months, capped)."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Pembeli grosir hanya merek yang aktif di tahun berjalan dan belum keluar dari pasar.",
+            "en": "Wholesale buyers are now only brands active in the current year that have not left the market."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Kontrak grosir dibatalkan saat produknya dihentikan (stok dikembalikan). Tawaran baru, tawaran kedaluwarsa, dan pembatalan tercatat di log permainan.",
+            "en": "Wholesale contracts are cancelled when their product is discontinued (stock is returned). New offers, expired offers, and cancellations are written to the game log."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.8",
       "date": "2026-10-25",
