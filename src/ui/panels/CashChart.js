@@ -1,7 +1,7 @@
 // FILE: src/ui/panels/CashChart.js
 // v2027.31a — Chart keuangan: skala Y otomatis "nice", outlier di-clip + ditandai,
 // gutter label sumbu (tidak menimpa garis), gradien area, tooltip sentuh/geser.
-import { t } from '../../core/LanguageService.js';
+import { t, LanguageService } from '../../core/LanguageService.js';
 import { formatCurrency, formatCompactMoney } from '../../utils/format.js';
 
 // ---------------- SKALA Y (murni, bisa diuji) ----------------
@@ -52,10 +52,41 @@ export function computeCashScale(values, intervals) {
     return { min: min, max: max, step: step, ticks: ticks, clipped: clipped, rawMax: rawMax };
 }
 
+// ---------------- RENTANG (6 / 12 / 24 bulan) ----------------
+// Pilihan rentang hanya disimpan di memori tampilan (bukan di save game). Riwayat di state
+// disimpan terbaru di depan, maksimal 24 bulan (EconomySystem), jadi rentang cukup memotong awal.
+export var CASH_RANGES = [6, 12, 24];
+var _range = 24;
+
+// Murni: potong riwayat (urutan terbaru di depan) ke rentang yang dipilih.
+export function cashHistoryView(hist, range) {
+    var arr = Array.isArray(hist) ? hist : [];
+    var n = CASH_RANGES.indexOf(range) >= 0 ? range : 24;
+    return arr.slice(0, n);
+}
+
+function _rangeLabel(n) {
+    var en = false;
+    try { en = LanguageService.getLang() === 'en'; } catch (e) {}
+    return n + (en ? ' mo' : ' bln');
+}
+
+function _rangeControl() {
+    var en = false;
+    try { en = LanguageService.getLang() === 'en'; } catch (e) {}
+    var lbl = en ? 'Time range' : 'Rentang waktu';
+    return '<div class="cc-range" role="group" aria-label="' + lbl + '">' +
+        CASH_RANGES.map(function (n) {
+            return '<button type="button" data-cash-range="' + n + '" aria-pressed="' + (n === _range) + '">' +
+                _rangeLabel(n) + '</button>';
+        }).join('') +
+        '</div>';
+}
+
 // ---------------- MARKUP ----------------
 export function renderCashChart(state) {
     var id = 'cash-chart-' + Math.random().toString(36).slice(2, 8);
-    var hist = (state.finance && state.finance.history) || [];
+    var hist = cashHistoryView((state.finance && state.finance.history) || [], _range);
     var hasData = hist.length >= 2;
 
     var pill = '';
@@ -71,6 +102,7 @@ export function renderCashChart(state) {
             '<h3 class="ov-sec-title">' + t('chart.cash_title') + '</h3>' +
             pill +
         '</div>' +
+        _rangeControl() +
         '<div class="chart-wrap" id="' + id + '">' +
             '<canvas class="chart-canvas" data-chart-id="' + id + '"></canvas>' +
             (hasData ? '' : '<div class="chart-empty">' + t('chart.cash_empty') + '</div>') +
@@ -117,7 +149,7 @@ export function drawCashChart(container) {
     var game = window.__game;
     if (!game || !game.state) return;
     var st = game.state.get();
-    var hist = ((st.finance && st.finance.history) || []).slice().reverse(); // lama -> baru
+    var hist = cashHistoryView((st.finance && st.finance.history) || [], _range).slice().reverse(); // lama -> baru
     if (hist.length < 2) return;
 
     var cssW = container.clientWidth || 320;
@@ -295,4 +327,31 @@ export function drawCashChart(container) {
             if (ev.pointerType === 'mouse') { canvas.__ovGeom.sel = null; canvas.__ovDraw(null); }
         });
     }
+}
+
+// ---------------- KLIK RENTANG ----------------
+// Satu listener untuk seluruh dokumen. Bagian Overview digambar ulang dari state, jadi pill selisih
+// dan grafik selalu cocok dengan rentang yang dipilih. Fokus keyboard dikembalikan ke tombol yang dipilih.
+function _onRangeClick(ev) {
+    var b = ev.target && ev.target.closest ? ev.target.closest('[data-cash-range]') : null;
+    if (!b) return;
+    var n = Number(b.getAttribute('data-cash-range'));
+    if (CASH_RANGES.indexOf(n) < 0 || n === _range) return;
+    _range = n;
+    var g = window.__game;
+    var sec = document.querySelector('.ov-chart');
+    if (!sec || !g || !g.state) return;
+    var tmp = document.createElement('div');
+    tmp.innerHTML = renderCashChart(g.state.get());
+    var fresh = tmp.firstElementChild;
+    if (!fresh) return;
+    sec.replaceWith(fresh);
+    var c = fresh.querySelector('.chart-wrap');
+    if (c) drawCashChart(c);
+    var again = fresh.querySelector('[data-cash-range="' + n + '"]');
+    if (again) again.focus();
+}
+if (typeof document !== 'undefined' && !window.__cashRangeBound) {
+    window.__cashRangeBound = true;
+    document.addEventListener('click', _onRangeClick);
 }

@@ -8,6 +8,11 @@ var CSS = [
     '.ov-spark{width:100%;height:46px;display:block;overflow:visible}',
     '.ov-spark polyline{stroke-dasharray:1200;stroke-dashoffset:1200;animation:ov2-draw 1.1s ease-out forwards}',
     '@keyframes ov2-draw{to{stroke-dashoffset:0}}',
+    // pemilih rentang grafik kas (6 / 12 / 24 bulan)
+    '.cc-range{display:inline-flex;gap:4px;padding:3px;border-radius:999px;background:var(--bg-4,rgba(255,255,255,.06));margin:2px 0 8px}',
+    '.cc-range button{border:0;background:none;color:var(--text-tertiary);font-family:inherit;font-weight:600;font-size:11px;line-height:1;padding:7px 11px;min-height:28px;border-radius:999px;cursor:pointer;transition:background .2s,color .2s}',
+    '.cc-range button[aria-pressed="true"]{background:var(--bg-2,#161b24);color:var(--text-primary);box-shadow:0 1px 2px rgba(0,0,0,.25)}',
+    '.cc-range button:focus-visible{outline:2px solid var(--info);outline-offset:1px}',
     // bar runway
     '.ov-runway-bar{height:5px;border-radius:99px;background:var(--bg-4,rgba(255,255,255,.08));overflow:hidden;margin-top:8px}',
     '.ov-runway-bar i{display:block;height:100%;border-radius:99px;background:var(--ov-tone,var(--info));transition:width .6s ease,background .3s}',
