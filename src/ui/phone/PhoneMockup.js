@@ -1722,7 +1722,8 @@ export function renderPhoneMockup(config, opts) {
     const sensors = resolveSensorVisuals(completed);
     const netLabel = resolveNetworkLabel(completed);
 
-    const spec = resolveSpec(year, completed);
+    // opts.spec (0.2.12): paksa generasi tertentu, dipakai Galeri Generasi.
+    const spec = opts.spec || resolveSpec(year, completed);
     const era = eraForSpec(spec, year);
 
     const formFactor = (config && config.formFactorId) || 'ff_candybar';
