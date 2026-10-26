@@ -5,6 +5,7 @@
 import { LanguageService } from '../../core/LanguageService.js';
 import { ASSEMBLY_ROLES, ASSEMBLY_OPERATE_YEAR, ASSEMBLY_UNLOCK_YEAR, ASSEMBLY_TRAIN_DAYS, ASSEMBLY_OVERTIME_BOOST, getAssemblyLevel } from '../../data/assembly.data.js';
 import { isOpen } from './ManufactureUiState.js';
+import { gIcon, ensureIconStyles } from '../icons/GameIcons.js';
 
 var TX = {
     id: {
@@ -39,7 +40,13 @@ var TX = {
         a_overload: 'Beban {u}% dari kapasitas: jeda produksi memanjang.', a_defect: 'Tingkat cacat {v}%. Tambah inspektur QC.',
         a_training: '{n} pekerja baru sedang dilatih.', a_roi_neg: 'Biaya tetap lebih besar dari hemat restock 30 hari (selisih {v}). Naikkan volume produksi atau kurangi staf.',
         act_fill: 'Isi tim', act_ot_off: 'Matikan lembur', on: 'Aktif', off: 'Mati',
-        lv1: 'Lini Rakit Manual', lv2: 'Lini Semi-Otomatis', lv3: 'Pabrik Otomatis', lv4: 'Smart Factory Robotik', level: 'Level'
+        lv1: 'Lini Rakit Manual', lv2: 'Lini Semi-Otomatis', lv3: 'Pabrik Otomatis', lv4: 'Smart Factory Robotik', level: 'Level',
+        grade_h: 'Kelas produksi', grade_sub: 'Pilih cara setiap batch dirakit. Memengaruhi biaya, kapasitas, dan kualitas ponsel.',
+        g_eco: 'Hemat', g_std: 'Standar', g_pre: 'Premium',
+        g_eco_d: 'Biaya dan waktu lebih rendah, mutu sedikit di bawah standar.', g_std_d: 'Keseimbangan biaya, waktu, dan mutu.', g_pre_d: 'Mutu lebih baik, tetapi biaya dan waktu lebih besar.',
+        grade_cost: 'Biaya', grade_cap: 'Kapasitas', grade_q: 'Kualitas', grade_now: 'Aktif', grade_pick: 'Pilih', grade_locked: 'Butuh otomasi lebih tinggi',
+        learn_h: 'Pengalaman lini', learn_sub: 'Makin banyak unit dirakit, makin hemat restock dan makin sedikit cacat.',
+        batch_q: 'Bonus kualitas batch', batch_hint: 'dari kelas, QC, dan pengalaman lini'
     },
     en: {
         title: 'Assembly', sub: 'Final phone assembly: plant components feed the lines and finished phones become product stock. Workers are counted as role groups.',
@@ -73,7 +80,13 @@ var TX = {
         a_overload: 'Load is {u}% of capacity: lead times are growing.', a_defect: 'Defect rate {v}%. Add QC inspectors.',
         a_training: '{n} new workers are in training.', a_roi_neg: 'Fixed costs exceed 30-day restock savings (gap {v}). Raise production volume or trim staff.',
         act_fill: 'Fill crew', act_ot_off: 'Turn off overtime', on: 'On', off: 'Off',
-        lv1: 'Manual Assembly Line', lv2: 'Semi-Automatic Line', lv3: 'Automated Factory', lv4: 'Robotic Smart Factory', level: 'Level'
+        lv1: 'Manual Assembly Line', lv2: 'Semi-Automatic Line', lv3: 'Automated Factory', lv4: 'Robotic Smart Factory', level: 'Level',
+        grade_h: 'Production grade', grade_sub: 'Choose how each batch is assembled. It affects cost, capacity and phone quality.',
+        g_eco: 'Economy', g_std: 'Standard', g_pre: 'Premium',
+        g_eco_d: 'Lower cost and time, quality slightly below standard.', g_std_d: 'A balance of cost, time and quality.', g_pre_d: 'Better quality, but higher cost and longer time.',
+        grade_cost: 'Cost', grade_cap: 'Capacity', grade_q: 'Quality', grade_now: 'Active', grade_pick: 'Select', grade_locked: 'Needs higher automation',
+        learn_h: 'Line experience', learn_sub: 'The more units assembled, the cheaper restock gets and the fewer defects.',
+        batch_q: 'Batch quality bonus', batch_hint: 'from grade, QC and line experience'
     }
 };
 function dict() { var l = 'id'; try { l = LanguageService.getLang(); } catch (e) {} return l === 'id' ? TX.id : TX.en; }
@@ -110,6 +123,88 @@ export function renderAlerts(alerts) {
     }).join('') + '</div>';
 }
 
+var ROLE_ICO = { operator: 'users', qc: 'target', technician: 'bolt', supervisor: 'star' };
+var GRADE_ICO = { economy: 'cash', standard: 'check-circle', premium: 'gem-s' };
+
+// Gaya panel (disuntik sekali): memakai variabel tema game, tidak mengubah style.css.
+var ASM_STYLE_ID = 'asm2-svg-style';
+function ensureAsmStyles() {
+    if (typeof document === 'undefined' || document.getElementById(ASM_STYLE_ID)) return;
+    var st = document.createElement('style');
+    st.id = ASM_STYLE_ID;
+    st.textContent =
+        '.asm2-grades{display:grid;gap:8px;margin:0 0 8px;}' +
+        '.asm2-grade{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px;border-radius:14px;background:var(--mfx-card);border:1px solid var(--border);transition:border-color .15s,box-shadow .15s;}' +
+        '.asm2-grade.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}' +
+        '.asm2-grade.lock{opacity:.6;}' +
+        '.asm2-grade-ico{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);}' +
+        '.asm2-grade.lock .asm2-grade-ico{background:var(--bg-4);color:var(--text-tertiary);}' +
+        '.asm2-grade-t{font-weight:700;font-size:13.5px;}' +
+        '.asm2-grade-d{font-size:11.5px;color:var(--text-dim);line-height:1.35;margin-top:2px;}' +
+        '.asm2-grade-m{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:11px;color:var(--text-dim);}' +
+        '.asm2-grade-m b{color:var(--text);font-weight:700;}' +
+        '.asm2-grade-m .up{color:var(--mfx-ok);}' +
+        '.asm2-grade-m .dn{color:var(--mfx-bad);}' +
+        '.asm2-grade-btn{min-width:84px;}' +
+        '.asm2-learn{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:var(--mfx-card);margin:0 0 8px;}' +
+        '.asm2-ring{flex:0 0 auto;color:var(--text);}' +
+        '.asm2-learn-t{font-weight:700;font-size:13.5px;}' +
+        '.asm2-learn-s{font-size:11.5px;color:var(--text-dim);line-height:1.35;margin-top:2px;}' +
+        '.asm2-learn-q{font-size:12px;margin-top:6px;color:var(--text-dim);}' +
+        '.asm2-learn-q b{color:var(--text);}';
+    document.head.appendChild(st);
+}
+
+// Cincin progres SVG (warna tema, gaya garis sama dengan ikon game).
+function asmRing(p, label) {
+    var r = 26, c = 2 * Math.PI * r, off = c * (1 - _c01(p));
+    return '<svg class="asm2-ring" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">' +
+        '<circle cx="32" cy="32" r="' + r + '" fill="none" stroke="var(--border-strong, rgba(127,127,127,.25))" stroke-width="6"/>' +
+        '<circle cx="32" cy="32" r="' + r + '" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" ' +
+        'stroke-dasharray="' + c.toFixed(1) + '" stroke-dashoffset="' + off.toFixed(1) + '" transform="rotate(-90 32 32)"/>' +
+        '<text x="32" y="36" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor">' + esc(label) + '</text></svg>';
+}
+function _c01(v) { return Math.max(0, Math.min(1, v || 0)); }
+function signedPct(f) { var v = Math.round((f - 1) * 100); return v === 0 ? '0%' : (v > 0 ? '+' : '−') + Math.abs(v) + '%'; }
+
+// Pemilih kelas produksi (3 kartu). Kelas terkunci tampil redup dengan alasan.
+function gradeSection(s) {
+    var grades = s.gradeList || [];
+    var html = '<div class="asm2-sec">' + esc(at('grade_h')) + '</div>' +
+        '<div class="asm2-note" style="margin:0 0 8px;">' + esc(at('grade_sub')) + '</div><div class="asm2-grades">';
+    grades.forEach(function (g) {
+        var name = at(g.id === 'economy' ? 'g_eco' : (g.id === 'premium' ? 'g_pre' : 'g_std'));
+        var desc = at(g.id === 'economy' ? 'g_eco_d' : (g.id === 'premium' ? 'g_pre_d' : 'g_std_d'));
+        var qd = Math.round(g.qualityDelta);
+        var qTxt = (qd > 0 ? '+' : (qd < 0 ? '−' : '')) + Math.abs(qd);
+        var qCls = qd > 0 ? 'up' : (qd < 0 ? 'dn' : '');
+        var btn;
+        if (g.selected) btn = '<button class="btn-secondary mf-buy-btn asm2-grade-btn" disabled>' + esc(at('grade_now')) + '</button>';
+        else if (!g.unlocked) btn = '<button class="btn-secondary mf-buy-btn asm2-grade-btn" disabled>' + esc(at('grade_locked')) + '</button>';
+        else btn = '<button class="btn-primary mf-buy-btn asm2-grade-btn" data-asm-action="grade" data-asm-grade="' + esc(g.id) + '">' + esc(at('grade_pick')) + '</button>';
+        html += '<div class="asm2-grade' + (g.selected ? ' on' : '') + (g.unlocked ? '' : ' lock') + '">' +
+            '<div class="asm2-grade-ico">' + gIcon(GRADE_ICO[g.id] || 'check-circle', 18) + '</div>' +
+            '<div><div class="asm2-grade-t">' + esc(name) + '</div><div class="asm2-grade-d">' + esc(desc) + '</div>' +
+            '<div class="asm2-grade-m"><span>' + esc(at('grade_cost')) + ' <b>' + signedPct(g.costMult) + '</b></span>' +
+            '<span>' + esc(at('grade_cap')) + ' <b>' + signedPct(g.capMult) + '</b></span>' +
+            '<span>' + esc(at('grade_q')) + ' <b class="' + qCls + '">' + qTxt + '</b></span></div></div>' +
+            btn + '</div>';
+    });
+    html += '</div>';
+    return html;
+}
+
+// Pengalaman lini (cincin SVG) + bonus kualitas batch saat ini.
+function learningSection(s) {
+    var pctL = Math.round((s.learning || 0) * 100);
+    var bq = s.batchQuality || 0;
+    return '<div class="asm2-sec">' + esc(at('learn_h')) + '</div>' +
+        '<div class="asm2-learn">' + asmRing(s.learning || 0, pctL + '%') +
+        '<div style="flex:1 1 auto;min-width:0;"><div class="asm2-learn-t">' + esc(at('learn_h')) + '</div>' +
+        '<div class="asm2-learn-s">' + esc(at('learn_sub')) + '</div>' +
+        '<div class="asm2-learn-q">' + esc(at('batch_q')) + ' <b>' + (bq > 0 ? '+' : '') + bq + '</b> <span>· ' + esc(at('batch_hint')) + '</span></div></div></div>';
+}
+
 function statusOf(s, un) {
     if (s.upgrade) return { tone: 'warn', text: at(s.upgrade.isBuild ? 'st_building' : 'st_upgrading') + ' · ' + Math.round(Math.min(1, s.upgrade.progressDays / s.upgrade.durationDays) * 100) + '%' };
     if (!s.built) return { tone: un.ok ? 'info' : 'mute', text: un.ok ? at('st_ready') : at('st_locked') };
@@ -120,13 +215,14 @@ function statusOf(s, un) {
 export function renderAssemblySection(sys, ctx) {
     if (!sys) return '';
     ctx = ctx || {};
+    try { ensureIconStyles(); ensureAsmStyles(); } catch (e) {}
     var data = window.__game.state.get(), cash = data.cash || 0;
     var s = sys.getSnapshot(), un = sys.isUnlocked(), st = statusOf(s, un);
 
     // ---- hero ----
     var heroSub = s.built ? at('level') + ' ' + s.level + ' · ' + assemblyLevelName(s.level) : at('sub');
     var html = '<div class="asm2-hero">' +
-        '<div class="asm2-hero-top"><div class="asm2-hero-ico">🏭</div><div class="asm2-hero-tt"><div class="asm2-hero-name">' + esc(at('title')) + '</div>' +
+        '<div class="asm2-hero-top"><div class="asm2-hero-ico">' + gIcon('factory', 22) + '</div><div class="asm2-hero-tt"><div class="asm2-hero-name">' + esc(at('title')) + '</div>' +
         '<div class="asm2-hero-sub">' + esc(heroSub) + '</div></div><span class="asm2-chip ' + st.tone + '">' + esc(st.text) + '</span></div>';
     if (s.built && s.operating) {
         var u = s.utilization, uw = Math.min(100, Math.round(u * 100));
@@ -169,11 +265,11 @@ export function renderAssemblySection(sys, ctx) {
     Object.keys(inv).forEach(function (k) { stock += inv[k] || 0; });
     var orders = sys.getPendingOrders();
     html += '<div class="asm2-flow">' +
-        '<button class="asm2-node" data-mf-ui="sec:plants"><span class="asm2-node-t">⚙️ ' + esc(at('f_comp')) + '</span><span class="asm2-node-v">' + esc(at('f_comp_v', { b: built, t: plantSum.length, s: num(stock) })) + '</span></button>' +
+        '<button class="asm2-node" data-mf-ui="sec:plants"><span class="asm2-node-t">' + gIcon('bolt', 13) + ' ' + esc(at('f_comp')) + '</span><span class="asm2-node-v">' + esc(at('f_comp_v', { b: built, t: plantSum.length, s: num(stock) })) + '</span></button>' +
         '<span class="asm2-arrow">›</span>' +
-        '<div class="asm2-node on"><span class="asm2-node-t">🏭 ' + esc(at('f_asm')) + '</span><span class="asm2-node-v">' + esc(at('f_asm_v', { u: Math.round(s.utilization * 100) })) + '</span></div>' +
+        '<div class="asm2-node on"><span class="asm2-node-t">' + gIcon('factory', 13) + ' ' + esc(at('f_asm')) + '</span><span class="asm2-node-v">' + esc(at('f_asm_v', { u: Math.round(s.utilization * 100) })) + '</span></div>' +
         '<span class="asm2-arrow">›</span>' +
-        '<button class="asm2-node" data-nav="products" data-nav-sub="catalog"><span class="asm2-node-t">📦 ' + esc(at('f_prod')) + '</span><span class="asm2-node-v">' + esc(at('f_prod_v', { n: orders.length })) + '</span></button></div>';
+        '<button class="asm2-node" data-nav="products" data-nav-sub="catalog"><span class="asm2-node-t">' + gIcon('package', 13) + ' ' + esc(at('f_prod')) + '</span><span class="asm2-node-v">' + esc(at('f_prod_v', { n: orders.length })) + '</span></button></div>';
 
     // ---- KPI per kelompok ----
     var pj = sys.getProjection();
@@ -184,11 +280,14 @@ export function renderAssemblySection(sys, ctx) {
             K(at('k_crew'), num(s.total) + (s.training ? ' <small>+' + num(s.training) + '</small>' : '')) + '</div></div>' +
         '<div class="asm2-group"><div class="asm2-group-t">' + esc(at('g_qual')) + '</div><div class="asm2-kpis">' +
             K(at('k_defect'), (s.defectRate * 100).toFixed(1) + '%', s.defectRate > 0.045) + K(at('k_morale'), Math.round(s.morale) + '%', s.morale < 50) +
-            K(at('k_save'), pct(1 - s.costFactor)) + '</div></div>' +
+            K(at('k_save'), pct(1 - s.costFactor)) + K(at('batch_q'), (s.batchQuality > 0 ? '+' : '') + s.batchQuality) + '</div></div>' +
         '<div class="asm2-group"><div class="asm2-group-t">' + esc(at('g_fin')) + '</div><div class="asm2-kpis">' +
             K(at('k_cost'), money(s.wages + s.upkeep)) + K(at('k_saved30'), pj.hasData ? money(pj.saved30) : '—', false, at('est')) +
             K(at('k_net'), pj.hasData ? smoney(pj.net30) : '—', pj.hasData && pj.net30 < 0, at('est')) +
             (s.unpaid > 0 ? K(at('k_unpaid'), money(s.unpaid), true) : K(at('k_saved_all'), money(s.savedTotal), false, at('est'))) + '</div></div></div>';
+
+    // ---- kelas produksi & pengalaman lini ----
+    html += gradeSection(s) + learningSection(s);
 
     // ---- antrean produksi ----
     html += '<div class="asm2-sec">' + esc(at('queue')) + (orders.length ? ' <span class="asm2-count">' + orders.length + '</span>' : '') + '</div>';
@@ -213,7 +312,7 @@ export function renderAssemblySection(sys, ctx) {
         var need = li.crew[r.id] || 0, have = s.workers[r.id] || 0, tr = sys.getTrainingCount(r.id), room = sys.getHireRoom(r.id);
         var ratio = need ? have / need : 0, fill = Math.min(100, Math.round(ratio * 100));
         var h10 = Math.min(10, room), h50 = Math.min(50, room);
-        html += '<div class="asm2-role"><div class="asm2-role-h"><b>' + esc(at('r_' + r.id)) + '</b>' +
+        html += '<div class="asm2-role"><div class="asm2-role-h"><b>' + gIcon(ROLE_ICO[r.id] || 'users', 14) + ' ' + esc(at('r_' + r.id)) + '</b>' +
             '<span class="asm2-role-c ' + tone(ratio) + '">' + num(have) + '/' + num(need) + (tr ? ' <small>(+' + num(tr) + ')</small>' : '') + '</span></div>' +
             '<div class="asm2-gauge ' + tone(ratio) + ' sm"><i style="width:' + fill + '%"></i></div>' +
             '<div class="asm2-role-m">' + esc(at('d_' + r.id)) + ' · ' + esc(at('wage')) + ' ' + money(sys.getRoleWage(r)) + esc(at('per_head')) + '</div>' +
