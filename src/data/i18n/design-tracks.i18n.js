@@ -22,7 +22,14 @@ export const DESIGN_TRACKS_I18N = {
         'dt.desc.tablet': 'Layar besar untuk membaca, menonton, dan kerja ringan. Desain tablet segera hadir.',
         'dt.desc.earbuds': 'Earbuds tanpa kabel. Lini dikelola di Pasar → Ekosistem.',
         'dt.desc.watch': 'Jam pintar untuk notifikasi, olahraga, dan kesehatan. Lini dikelola di Pasar → Ekosistem.',
-        'dt.desc.charger': 'Pengisi daya dan kabel. Lini dikelola di Pasar → Ekosistem.'
+        'dt.desc.charger': 'Pengisi daya dan kabel. Lini dikelola di Pasar → Ekosistem.',
+        'cat.all': 'Semua',
+        'cat.phones': 'Ponsel',
+        'cat.acc': 'Aksesori',
+        'cat.hud.lines': 'Lini aksesori',
+        'cat.acc.locked': 'Terbuka {year}',
+        'cat.acc.open': 'Dijual',
+        'cat.acc.manage': 'Atur di Desain'
     },
     en: {
         'dt.track.phone': 'Phone',
@@ -45,6 +52,13 @@ export const DESIGN_TRACKS_I18N = {
         'dt.desc.tablet': 'Large screen for reading, video, and light work. Tablet design is coming soon.',
         'dt.desc.earbuds': 'Cable-free earbuds. Line is managed in Market → Ecosystem.',
         'dt.desc.watch': 'Smartwatch for notifications, fitness, and health. Line is managed in Market → Ecosystem.',
-        'dt.desc.charger': 'Chargers and cables. Line is managed in Market → Ecosystem.'
+        'dt.desc.charger': 'Chargers and cables. Line is managed in Market → Ecosystem.',
+        'cat.all': 'All',
+        'cat.phones': 'Phones',
+        'cat.acc': 'Accessories',
+        'cat.hud.lines': 'Accessory lines',
+        'cat.acc.locked': 'Opens {year}',
+        'cat.acc.open': 'On sale',
+        'cat.acc.manage': 'Manage in Design'
     }
 };
