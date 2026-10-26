@@ -24,6 +24,7 @@ import {
 } from '../../data/features.data.js';
 import { nodeNameById } from '../../data/i18n/research-localize.js';
 import { getTierAssemblyEffort } from '../../data/product-tiers.data.js';
+import { getDesignChipComponents } from '../../data/chip-design-registry.js';
 
 let _wizardState = null;
 let _wizardView = 'front';
@@ -370,11 +371,16 @@ function filterComponentsByEra(catId) {
     const year = DesignEraService.getCurrentYear();
     const completed = state.get().research.completed || [];
     const all = getComponentsByCategory(catId);
-    return all.filter(function (c) {
+    const list = all.filter(function (c) {
         if (typeof c.minYear === 'number' && year < c.minYear) return false;
         if (c.requiresResearch && completed.indexOf(c.requiresResearch) === -1) return false;
         return true;
     });
+    // Chip hasil Desainer Chip ikut tersedia sebagai pilihan chip.
+    if (catId === 'chip') {
+        return list.concat(getDesignChipComponents().filter(function (c) { return (c.minYear || 0) <= year; }));
+    }
+    return list;
 }
 
 function filterFormFactorsByEra() {
@@ -885,9 +891,14 @@ function _step2(s) {
         let options = list.map(function (c) {
             const unitNow = resolveComponentCost(state.get(), c);
             const inHouse = unitNow < getMarketPrice(state.get(), c);
+            // Chip desain: tampilkan stok Fab-nya, karena harga dan ketersediaan mengikutinya.
+            const fabStockMap = (state.get().fab && state.get().fab.stockByChip) || {};
+            const fabTag = c.isPlayerDesign
+                ? ' · <span class="wiz-opt-tag">' + escapeHtml(_tf('wiz.step2.fab_stock', 'Stok fab') + ': ' + (fabStockMap[c.designId] || 0).toLocaleString('en-US')) + '</span>'
+                : '';
             return '<button class="wiz-option ' + (selected === c.id ? 'selected' : '') + '" data-wiz-pick="' + stateKey + ':' + c.id + '">' +
                 '<div class="wiz-opt-name">' + escapeHtml(c.name) + '</div>' +
-                '<div class="wiz-opt-meta">' + _perUnit(unitNow) + (inHouse ? ' · <span class="wiz-opt-tag">' + escapeHtml(_tf('wiz.step2.in_house', 'Internal')) + '</span>' : '') + (_statTag(c) ? ' · <span class="wiz-opt-tag">' + escapeHtml(_statTag(c)) + '</span>' : '') + '</div>' +
+                '<div class="wiz-opt-meta">' + _perUnit(unitNow) + (inHouse ? ' · <span class="wiz-opt-tag">' + escapeHtml(_tf('wiz.step2.in_house', 'Internal')) + '</span>' : '') + (_statTag(c) ? ' · <span class="wiz-opt-tag">' + escapeHtml(_statTag(c)) + '</span>' : '') + fabTag + '</div>' +
                 '</button>';
         }).join('');
 
