@@ -585,8 +585,18 @@ function _render() {
             '<b>' + (i < s.step ? '✓' : i) + '</b><span>' + escapeHtml(_stepTitle(i)) + '</span></li>';
     }).join('');
 
+    const ps = window.__game && window.__game.products;
+    const lock = ps && ps.getFlagshipLock ? ps.getFlagshipLock() : { ok: true };
+    const lockHtml = lock.ok ? '' :
+        '<div class="wz-flagship-lock" role="alert" style="margin:0 0 10px;padding:8px 12px;border-radius:10px;'+
+        'background:rgba(255,159,10,0.12);border:1px solid var(--warn);color:var(--warn);font-size:12px;font-weight:600;">' +
+        '⚠ ' + escapeHtml(lock.reason || _pick('Flagship tahun ini sudah dirilis.', 'This year\'s flagship is already released.')) +
+        '<div style="font-weight:400;color:var(--text-tertiary);margin-top:2px;">' +
+        escapeHtml(_pick('Desain tetap bisa disusun, tapi rilis baru terbuka di tahun berikutnya.', 'You can still design, but release opens next year.')) + '</div></div>';
+
     const html = `
         <div class="wz-stage" data-era="${era.id}">
+            ${lockHtml}
             <ol class="wz-steps" aria-label="${escapeHtml(t('wiz.step_of', { n: s.step, title: _stepTitle(s.step) }))}">${stepper}</ol>
             <div class="wz-stage-body">
                 <div class="wz-phone" data-wiz-mockup-container></div>
