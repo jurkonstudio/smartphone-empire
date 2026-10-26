@@ -1,24 +1,28 @@
-// FILE: src/data/design-tracks.data.js  (BARU — 0.2.9: kategori desain di tab Produk → Desain)
+// FILE: src/data/design-tracks.data.js  (0.2.9 → 0.2.10: kategori desain + katalog terpadu)
 // Kategori: Ponsel (inti), Tablet, Earbuds nirkabel, Jam pintar, Charger.
-// Tahun dibuka & puncak diambil dari sejarah dunia nyata (rujukan, bukan simulasi). Popularitas
-// dihitung dari tahun dalam game (state.data.time.currentYear), jadi kartu ikut berkembang seiring waktu.
-// Lini aksesori (earbuds, watch, charger) tetap dikelola di Pasar → Ekosistem; ini hanya tampilan desain.
+// intro/peak = sejarah dunia nyata; dipakai untuk kurva popularitas (tahun game = state.data.time.currentYear).
+// Untuk lini aksesori, gerbang buka mengikuti minYear di ecosystem.data.js (aturan permainan),
+// sehingga tab Desain dan Market tidak berbeda soal kapan lini bisa dibuka.
+import { getEcoLine } from './ecosystem.data.js';
 
 export const DESIGN_TRACKS = [
     { id: 'phone',   nameKey: 'dt.track.phone',   core: true },
-    // iPad 2010; tablet mencapai puncak minat pasar sekitar 2014
     { id: 'tablet',  nameKey: 'dt.track.tablet',  intro: 2010, peak: 2014, floor: 0.35, mock: 'tablet' },
-    // Earbuds nirkabel sejati mulai arus utama 2016 (AirPods); puncak tren sekitar 2021
     { id: 'earbuds', nameKey: 'dt.track.earbuds', intro: 2016, peak: 2021, floor: 0.35, mock: 'line', lineId: 'earbuds' },
-    // Jam pintar arus utama sejak 2015 (Apple Watch); puncak sekitar 2020
     { id: 'watch',   nameKey: 'dt.track.watch',   intro: 2015, peak: 2020, floor: 0.35, mock: 'line', lineId: 'watch' },
-    // Charger cepat/USB-C menguat sejak 2014; kategori sudah ada jauh sebelumnya
     { id: 'charger', nameKey: 'dt.track.charger', intro: 2000, peak: 2016, floor: 0.35, mock: 'line', lineId: 'charger' }
 ];
 
 export function getDesignTrack(id) {
     for (var i = 0; i < DESIGN_TRACKS.length; i++) if (DESIGN_TRACKS[i].id === id) return DESIGN_TRACKS[i];
     return null;
+}
+
+// Tahun ketika kategori bisa dibuka di dalam game.
+export function gateYear(track) {
+    if (track.core) return 0;
+    if (track.lineId) { var l = getEcoLine(track.lineId); if (l) return l.minYear; }
+    return track.intro;
 }
 
 // Popularitas 0..1: naik kuadratik dari tahun dibuka sampai puncak, lalu menurun pelan hingga 'floor'.
@@ -35,9 +39,9 @@ export function trackPopularity(track, year) {
 // Tahap: core | locked | early | rising | peak | declining
 export function trackStage(track, year) {
     if (track.core) return 'core';
-    if (year < track.intro) return 'locked';
+    if (year < gateYear(track)) return 'locked';
     if (year > track.peak + 1) return 'declining';
-    if (year >= track.peak - 1 && year <= track.peak + 1) return 'peak';
+    if (year >= track.peak - 1) return 'peak';
     var t = (year - track.intro) / Math.max(1, track.peak - track.intro);
     return t < 0.5 ? 'early' : 'rising';
 }
