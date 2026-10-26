@@ -438,7 +438,7 @@ function describeFab(info, st, d) {
         }
     }
     info.go = { nav: 'products', subtab: 'chip', label: ms('go.chip') };
-    info.go2 = { nav: 'research', subtab: 'manufaktur', label: ms('go.manu') };
+    info.go2 = { nav: 'research', subtab: 'manufaktur', section: 'chip', label: ms('go.manu') };
     return info;
 }
 
@@ -507,7 +507,7 @@ function describePlant(info, st, d, id) {
             }
         }
     }
-    info.go = { nav: 'research', subtab: 'manufaktur', label: ms('go.manu') };
+    info.go = { nav: 'research', subtab: 'manufaktur', section: 'plants', label: ms('go.manu') };
     return info;
 }
 
@@ -549,7 +549,7 @@ function describeAssembly(info, st, d) {
             } else info.lines.push(ms('maxed'));
         }
     }
-    info.go = { nav: 'research', subtab: 'manufaktur', label: ms('go.assembly') };
+    info.go = { nav: 'research', subtab: 'manufaktur', section: 'assembly', label: ms('go.assembly') };
     return info;
 }
 
@@ -570,7 +570,7 @@ function describeHub(info, st, d) {
     info.lines.push(ms('hubUpkeep', { v: fmtMoney(upkeep) }) + ' · ' + ms('hubTax', { v: fmtMoney(tax) }));
     info.lines.push(ms('hubSave', { v: fmtMoney(cp.savings || 0) }) + ' · ' + ms('hubRev', { v: fmtMoney(cp.externalRevenue || 0) }));
     if (unpaid > 0) info.lines.push(ms('hubDebt', { v: fmtMoney(unpaid) }));
-    info.go = { nav: 'research', subtab: 'manufaktur', label: ms('go.manu') };
+    info.go = { nav: 'research', subtab: 'manufaktur', section: 'overview', label: ms('go.manu') };
     info.go2 = { nav: 'products', subtab: 'design', label: ms('go.design') };
     return info;
 }

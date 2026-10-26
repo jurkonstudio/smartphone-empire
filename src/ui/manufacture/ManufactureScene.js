@@ -1918,7 +1918,7 @@ export function createManufactureScene(THREE, container, gameState) {
         }
         lastCentered = selId || null;
     }
-    function goTo(g) { if (g) bus.emit('advisor:go', { nav: g.nav, subtab: g.subtab }); }
+    function goTo(g) { if (g) bus.emit('advisor:go', { nav: g.nav, subtab: g.subtab, section: g.section }); }
     function doAction(a) {
         if (!a || busy) return;
         if (a.disabled) { try { if (a.note) ToastService.info(a.note); } catch (e) {} return; }
