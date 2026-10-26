@@ -29,10 +29,9 @@ function _esc(s) { return escapeHtml(String(s == null ? '' : s)); }
 function _money(n) { return '$' + Math.round(n || 0).toLocaleString('en-US'); }
 function _num(n) { return Math.round(n || 0).toLocaleString('en-US'); }
 
-function _productStock(productId) {
+function _productOf(productId) {
     var list = (state.data.products && state.data.products.catalog) || [];
-    var p = list.find(function (x) { return x.id === productId; });
-    return p ? (p.stock || 0) : 0;
+    return list.find(function (x) { return x.id === productId; }) || null;
 }
 
 function _stat(label, value) {
@@ -40,15 +39,26 @@ function _stat(label, value) {
 }
 
 function _offerCard(o) {
-    var stock = _productStock(o.productId);
+    var p = _productOf(o.productId);
+    var stock = p ? (p.stock || 0) : 0;
     var enough = stock >= o.qty;
     var id = _esc(o.id);
+    // Pembanding: nilai ritel untuk unit yang sama, dan selisih terhadap biaya produksi.
+    var retail = p ? (p.price || 0) * o.qty : 0;
+    var cost = p ? (p.unitCost || 0) * o.qty : 0;
+    var pct = retail > 0 ? Math.round(o.total / retail * 100) : 0;
+    var compare = retail > 0
+        ? '<div class="wh-compare' + (o.total < retail ? ' wh-under' : '') + '">' +
+            _esc(_tf('wh.compare', 'Nilai ritel {r} · tawaran {p}% dari ritel · di atas biaya produksi {g}',
+                { r: _money(retail), p: pct, g: _money(o.total - cost) })) +
+          '</div>'
+        : '';
     return '<div class="wh-card">' +
         '<div class="wh-card-h"><strong>' + _esc(o.buyerName) + '</strong> · ' + _esc(o.productName) + '</div>' +
         '<div class="wh-card-b">' +
             _num(o.qty) + ' unit × ' + _money(o.unitPrice) + ' = <strong>' + _money(o.total) + '</strong>' +
             ' · ' + _esc(_tf('wh.days_left', 'sisa {n} hari', { n: o.daysLeft })) +
-        '</div>' +
+        '</div>' + compare +
         (enough ? '' : '<div class="wh-warn">' + _esc(_tf('wh.not_enough', 'Stok hanya {n} unit', { n: _num(stock) })) + '</div>') +
         '<div class="wh-actions">' +
             '<button class="btn-primary" data-wholesale-action="accept" data-wholesale-id="' + id + '"' + (enough ? '' : ' disabled') + '>' + _esc(_tf('wh.accept', 'Terima')) + '</button>' +
