@@ -10,7 +10,7 @@
 // Jarum diperbarui tiap detik lewat satu timer bersama, dan timer berhenti sendiri bila tidak ada jam
 // yang terpasang di halaman. Dengan "kurangi gerakan" aktif, jarum tetap pada jam saat render.
 //
-// API tidak berubah, supaya AccessoriesTab.js tetap bekerja:
+// API tidak berubah, supaya kategori desain (DesignTracksPanel) tetap bekerja:
 //   renderAccessoryMockup(lineId, tier, { size, open, closedLabel, caption, now })
 //   renderAccessoryThumbnail(lineId, tier, size, open)
 // opts.now (ms, opsional) hanya untuk uji; biasanya dibaca dari jam dunia nyata.
