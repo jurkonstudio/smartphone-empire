@@ -1050,7 +1050,7 @@ export class ProductSystem {
         WalletService.pay(totalCost, 'restock');
         this._recordProd(qty);
         var effort = getTierAssemblyEffort(p.config && p.config.tier);
-        if (this._assembly) { try { this._assembly.recordOrder(qty, effort); } catch (e) {} }
+        if (this._assembly) { try { this._assembly.recordOrder(qty, effort, totalCost); } catch (e) {} }
         this._settleComponents(p.config, qty);
 
         var days = this.getManualRestockDays(qty, p.config && p.config.tier);
