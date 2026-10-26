@@ -113,6 +113,11 @@ body {
     padding-top: env(safe-area-inset-top);
     position: sticky; top: 0; z-index: 10;
 }
+/* Mode fullscreen (APK/PWA): jangan sisakan ruang kosong setinggi status bar.
+   Sisakan sedikit saja (35% dari safe-area) supaya header tetap aman dari lubang kamera. */
+@media (display-mode: fullscreen) {
+    .app-header { padding-top: calc(env(safe-area-inset-top, 0px) * 0.35); }
+}
 .header-inner { display: flex; flex-direction: column; gap: 3px; padding: 10px 14px 11px; }
 .header-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 22px; }
 .header-company-btn {
