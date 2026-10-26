@@ -1,16 +1,24 @@
-// FILE: src/ui/phone/AccessoryMockup.js  (PATCH 0.2.9 — mockup aksesori animasi)
+// FILE: src/ui/phone/AccessoryMockup.js  (PATCH 0.2.10 — mockup aksesori; jam pintar ikut jam nyata)
 // ============================================================
 // AccessoryMockup — SVG mockup aksesori ekosistem: earbuds nirkabel, jam pintar, charger & daya.
 // Tanpa aset gambar. Animasi memakai CSS (disuntikkan sekali lewat ensureAccessoryStyle, pola sama
 // dengan RegionalStyle.js) dan hanya berjalan saat lini terbuka. Lini tertutup tampil statis, abu-abu.
 //
+// Jam pintar memakai SUMBER WAKTU yang sama dengan panel lain (jam perangkat, sama seperti layar
+// ponsel dan status bar): createDayClock() dari DayCycle.js. Jadi ?hour= untuk uji ikut berlaku, dan
+// layar jam ikut meredup pada malam hari sesuai siklus peta dan tema UI.
+// Jarum diperbarui tiap detik lewat satu timer bersama, dan timer berhenti sendiri bila tidak ada jam
+// yang terpasang di halaman. Dengan "kurangi gerakan" aktif, jarum tetap pada jam saat render.
+//
 // API tidak berubah, supaya AccessoriesTab.js tetap bekerja:
-//   renderAccessoryMockup(lineId, tier, { size, open, closedLabel, caption })
+//   renderAccessoryMockup(lineId, tier, { size, open, closedLabel, caption, now })
 //   renderAccessoryThumbnail(lineId, tier, size, open)
+// opts.now (ms, opsional) hanya untuk uji; biasanya dibaca dari jam dunia nyata.
 // Teks di dalam SVG hanya label "belum dibuka" dan dilewatkan lewat opts.closedLabel (sudah
 // diterjemahkan pemanggil), jadi modul ini tidak punya teks UI sendiri.
 // Angka dan status tetap diambil dari EcosystemSystem.getLinePreview(); modul ini hanya tampilan.
 // ============================================================
+import { createDayClock, nightAmount } from '../campus/DayCycle.js';
 
 // Palet per tier. body = bodi utama, shade = sisi gelap, accent = aksen, hi = sorotan.
 var TIER_PALETTE = {
@@ -19,6 +27,18 @@ var TIER_PALETTE = {
     premium: { body: '#23262d', shade: '#0f1115', accent: '#d4af37', hi: '#5a5f6b', strap: '#171a20', glass: '#05070b', metal: true }
 };
 var CLOSED_PALETTE = { body: '#c7c9ce', shade: '#a3a6ad', accent: '#8d9099', hi: '#dcdee2', strap: '#9a9da4', glass: '#6e7178', metal: false };
+var NIGHT_GLASS = '#02040a';
+
+// Campur dua warna string '#rrggbb' (t 0..1). Helper pewarnaan DayCycle memakai angka, jadi tidak dipakai.
+function _mixHex(a, b, t) {
+    t = Math.max(0, Math.min(1, t));
+    var ai = parseInt(String(a).slice(1), 16), bi = parseInt(String(b).slice(1), 16);
+    var out = [16, 8, 0].map(function (sh) {
+        var x = (ai >> sh) & 255, y = (bi >> sh) & 255;
+        return Math.round(x + (y - x) * t);
+    });
+    return '#' + out.map(function (v) { return ('0' + v.toString(16)).slice(-2); }).join('');
+}
 
 var STYLE_ID = 'acc-mockup-style';
 var CSS = [
@@ -41,12 +61,6 @@ var CSS = [
     // halo di belakang produk
     '.acc-halo{transform-box:fill-box;transform-origin:center;animation:acc-halo 3.4s ease-in-out infinite}',
     '@keyframes acc-halo{0%,100%{opacity:.35;transform:scale(.96)}50%{opacity:.8;transform:scale(1.04)}}',
-    // jam: jarum berputar di pusat layar
-    '.acc-hand{transform-box:view-box;transform-origin:50px 50px}',
-    '.acc-sec{animation:acc-spin 6s linear infinite}',
-    '.acc-min{animation:acc-spin 40s linear infinite}',
-    '.acc-hr{animation:acc-spin 120s linear infinite}',
-    '@keyframes acc-spin{to{transform:rotate(360deg)}}',
     // kilau menyapu bodi jam
     '.acc-shine{animation:acc-shine 3.6s ease-in-out infinite}',
     '@keyframes acc-shine{0%{transform:translateX(-46px);opacity:0}15%{opacity:.55}55%,100%{transform:translateX(46px);opacity:0}}',
@@ -55,7 +69,7 @@ var CSS = [
     '@keyframes acc-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}',
     // kurangi gerak: semua berhenti, tampilan tetap utuh
     '@media (prefers-reduced-motion:reduce){',
-    '.acc-led,.acc-wave,.acc-flow,.acc-bolt,.acc-ring,.acc-halo,.acc-sec,.acc-min,.acc-hr,.acc-shine,.acc-float{animation:none}',
+    '.acc-led,.acc-wave,.acc-flow,.acc-bolt,.acc-ring,.acc-halo,.acc-shine,.acc-float{animation:none}',
     '.acc-wave{opacity:0}',
     '}'
 ].join('');
@@ -89,6 +103,70 @@ function _c(open, name, extra) {
 function _grad(id, c1, c2) {
     return '<linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1">' +
         '<stop offset="0" stop-color="' + c1 + '"/><stop offset="1" stop-color="' + c2 + '"/></linearGradient>';
+}
+
+// ---------- JAM NYATA: sudut jarum dari waktu perangkat ----------
+// Jarum jam ikut menit (bergerak halus), jarum menit ikut detik, jarum detik melompat per detik.
+export function watchHandAngles(ms) {
+    var d = new Date(ms);
+    var s = d.getSeconds();
+    var m = d.getMinutes();
+    var h = d.getHours() % 12;
+    return { hr: (h + m / 60) * 30, min: m * 6 + s * 0.1, sec: s * 6 };
+}
+
+var _clk = null;
+function _clock() {
+    if (!_clk) _clk = createDayClock();
+    return _clk;
+}
+// Tingkat malam 0..1 untuk waktu ms tertentu, mengikuti aturan siklus peta (atau tema bila siklus mati).
+function _nightAt(ms) {
+    var clk = _clock();
+    if (!clk.enabled) return _isDark() ? 1 : 0;
+    var d = new Date(ms);
+    return nightAmount(d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600);
+}
+function _isDark() {
+    return typeof document !== 'undefined' && !!document.documentElement &&
+        document.documentElement.getAttribute('data-theme') === 'dark';
+}
+
+// Satu timer bersama untuk semua jam yang terpasang. Berhenti sendiri bila tidak ada jam di halaman.
+var _timer = null;
+function _paintWatch(el, ms, night) {
+    var a = watchHandAngles(ms);
+    var hands = el.querySelectorAll('[data-hand]');
+    for (var i = 0; i < hands.length; i++) {
+        var key = hands[i].getAttribute('data-hand');
+        hands[i].setAttribute('transform', 'rotate(' + a[key].toFixed(2) + ' 50 50)');
+    }
+    var glass = el.querySelector('[data-acc-glass]');
+    if (glass) {
+        glass.setAttribute('fill', _mixHex(glass.getAttribute('data-base'), NIGHT_GLASS, 0.55 * night));
+    }
+}
+function _tick() {
+    try {
+        if (typeof document === 'undefined' || typeof document.querySelectorAll !== 'function') return;
+        var ws = document.querySelectorAll('[data-acc-watch]');
+        if (!ws.length) { _stop(); return; }
+        var clk = _clock();
+        var ms = clk.now();
+        var night = _nightAt(ms);
+        for (var i = 0; i < ws.length; i++) _paintWatch(ws[i], ms, night);
+    } catch (e) { /* jam tidak boleh menggagalkan halaman */ }
+}
+function _start() {
+    if (_timer !== null || typeof setInterval !== 'function') return;
+    if (typeof window !== 'undefined' && window.matchMedia) {
+        try { if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch (e) { /* abaikan */ }
+    }
+    _timer = setInterval(_tick, 1000);
+    if (_timer && typeof _timer === 'object' && _timer.unref) _timer.unref();
+}
+function _stop() {
+    if (_timer !== null) { clearInterval(_timer); _timer = null; }
 }
 
 // ---------- EARBUDS: kotak pengisi + dua earbud + gelombang suara ----------
@@ -125,8 +203,9 @@ function _earbuds(p, g, tier, open) {
     return s;
 }
 
-// ---------- JAM PINTAR: layar, jarum, kilau, tali ----------
-function _watch(p, g, tier, open) {
+// ---------- JAM PINTAR: layar, jarum (jam nyata), kilau, tali ----------
+// ctx = { ang: sudut jarum dari watchHandAngles, night: 0..1 dari siklus siang-malam }
+function _watch(p, g, tier, open, ctx) {
     var s = '';
     // tali atas & bawah
     s += '<rect x="36" y="6" width="28" height="30" rx="8" fill="' + p.strap + '"/>';
@@ -142,8 +221,10 @@ function _watch(p, g, tier, open) {
     s += '<circle cx="50" cy="50" r="23" fill="none" stroke="' + (tier === 'premium' && open ? p.accent : p.shade) +
         '" stroke-width="' + (tier === 'basic' || !open ? 1 : 2) + '"' + (tier === 'premium' ? _c(open, 'acc-ring') : '') + '/>';
     s += '<rect x="72" y="44" width="4" height="12" rx="2" fill="' + p.shade + '"/>'; // mahkota
-    // layar
-    s += '<circle cx="50" cy="50" r="18" fill="' + p.glass + '"/>';
+    // layar: warnanya meredup pada malam (data-base menyimpan warna siang untuk pembaruan live)
+    var night = ctx && ctx.night ? ctx.night : 0;
+    var glass = open && night > 0 ? _mixHex(p.glass, NIGHT_GLASS, 0.55 * night) : p.glass;
+    s += '<circle cx="50" cy="50" r="18" fill="' + glass + '" data-acc-glass="1" data-base="' + p.glass + '"/>';
     if (open) {
         // penanda jam
         for (var i = 0; i < 12; i++) {
@@ -153,10 +234,11 @@ function _watch(p, g, tier, open) {
                 '" stroke="#ffffff" stroke-width="0.6" opacity=".7"/>';
         }
         var hc = tier === 'basic' ? '#ffffff' : p.accent;
-        // jarum: jam 10:10 saat statis (dipakai saat kurangi gerak), berputar saat animasi jalan
-        s += '<g transform="rotate(300 50 50)"><g class="acc-hand acc-hr"><path d="M50 50 V38" stroke="' + hc + '" stroke-width="2.2" stroke-linecap="round"/></g></g>';
-        s += '<g transform="rotate(60 50 50)"><g class="acc-hand acc-min"><path d="M50 50 V33" stroke="' + hc + '" stroke-width="1.5" stroke-linecap="round"/></g></g>';
-        s += '<g class="acc-hand acc-sec"><path d="M50 56 V30" stroke="' + (tier === 'premium' ? p.accent : '#ff453a') + '" stroke-width="0.7" stroke-linecap="round"/></g>';
+        var ang = (ctx && ctx.ang) || watchHandAngles(Date.now());
+        // jarum: sudut dihitung dari jam nyata; diperbarui tiap detik oleh timer bersama
+        s += '<g data-hand="hr" transform="rotate(' + ang.hr.toFixed(2) + ' 50 50)"><path d="M50 50 V38" stroke="' + hc + '" stroke-width="2.2" stroke-linecap="round"/></g>';
+        s += '<g data-hand="min" transform="rotate(' + ang.min.toFixed(2) + ' 50 50)"><path d="M50 50 V33" stroke="' + hc + '" stroke-width="1.5" stroke-linecap="round"/></g>';
+        s += '<g data-hand="sec" transform="rotate(' + ang.sec.toFixed(2) + ' 50 50)"><path d="M50 56 V30" stroke="' + (tier === 'premium' ? p.accent : '#ff453a') + '" stroke-width="0.7" stroke-linecap="round"/></g>';
         s += '<circle cx="50" cy="50" r="1.8" fill="#ffffff"/>';
         // kilau menyapu layar (dipotong lingkaran layar)
         s += '<clipPath id="acc-clip-watch"><circle cx="50" cy="50" r="18"/></clipPath>';
@@ -203,6 +285,7 @@ var SHAPES = { earbuds: _earbuds, watch: _watch, charger: _charger };
 //   opts.open        : true = berwarna sesuai tier dan animasi aktif, false = abu-abu statis
 //   opts.closedLabel : teks label saat tertutup (sudah diterjemahkan pemanggil)
 //   opts.caption     : false untuk menyembunyikan label (dipakai thumbnail)
+//   opts.now         : ms epoch (opsional, untuk uji); default jam perangkat / ?hour=
 export function renderAccessoryMockup(lineId, tier, opts) {
     opts = opts || {};
     var size = Number(opts.size);
@@ -217,17 +300,27 @@ export function renderAccessoryMockup(lineId, tier, opts) {
     var p = _pal(tier, open);
     var gid = 'acc_' + lineId + '_' + tier + '_' + (open ? 'o' : 'c');
     var showLabel = !open && opts.caption !== false && opts.closedLabel && size >= 96;
+    var live = open && lineId === 'watch';
+
+    var ctx = null;
+    if (live) {
+        var clk = _clock();
+        var ms = opts.now != null && isFinite(Number(opts.now)) ? Number(opts.now) : clk.now();
+        ctx = { ang: watchHandAngles(ms), night: _nightAt(ms) };
+    }
 
     var s = '<svg class="acc-mockup" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="' + size + '" height="' + size + '" ' +
-        'role="img" aria-hidden="true" style="display:block;margin:0 auto;max-width:100%;height:auto">';
+        'role="img" aria-hidden="true"' + (live ? ' data-acc-watch="1"' : '') +
+        ' style="display:block;margin:0 auto;max-width:100%;height:auto">';
     s += '<defs>' + _grad(gid, p.hi, p.body) + '</defs>';
     s += '<ellipse cx="50" cy="94" rx="30" ry="3" fill="#000000" opacity="0.12"/>';   // bayangan alas
-    s += '<g' + (open ? '' : ' opacity="0.75"') + '>' + draw(p, gid, tier, open) + '</g>';
+    s += '<g' + (open ? '' : ' opacity="0.75"') + '>' + draw(p, gid, tier, open, ctx) + '</g>';
     if (showLabel) {
         s += '<rect x="22" y="44" width="56" height="12" rx="6" fill="#000000" opacity="0.55"/>';
         s += '<text x="50" y="52.6" text-anchor="middle" font-size="6" font-family="sans-serif" fill="#ffffff">' + _esc(opts.closedLabel) + '</text>';
     }
     s += '</svg>';
+    if (live) _start();
     return s;
 }
 
