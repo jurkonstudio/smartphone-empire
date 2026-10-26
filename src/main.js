@@ -62,6 +62,7 @@ import { initSeasonEndScreen } from './ui/panels/SeasonEndScreen.js';
 import { SeasonEndSystem } from './systems/SeasonEndSystem.js';
 import { Modal } from './ui/modal.js';
 import { mountAdvisorButton } from './ui/panels/AdvisorPanel.js';
+import { handleUiToken as handleManufactureUi, setSection as setManufactureSection } from './ui/panels/ManufactureUiState.js';
 import { renderResearchPanel, setFilterCategory, setTimelineFilter, getChipResearchFilter, setChipResearchFilter, openNodeDetailModal, openOsWizardModal, openCreateOsModal, openFeatureDetailModal, openChipNodeModal } from './ui/panels/ResearchPanel.js';
 import { renderProductPanel, setCatalogView, openProductDetailModal, openCampaignModal, openOrderProductionModal } from './ui/panels/ProductPanel.js';
 import { openDesignWizard } from './ui/panels/DesignWizard.js';
@@ -924,6 +925,17 @@ function bindGlobalClicks() {
         var timelineFilter = e.target.closest('[data-timeline-filter]');
         if (timelineFilter) { e.preventDefault(); setTimelineFilter(timelineFilter.dataset.timelineFilter); renderView(); return; }
 
+        var mfUi = e.target.closest('[data-mf-ui]');
+        if (mfUi) {
+            e.preventDefault(); vibrate(6);
+            var mfTok = mfUi.dataset.mfUi;
+            if (handleManufactureUi(mfTok)) {
+                renderView();
+                if (mfTok.indexOf('sec:') === 0 && els.view) els.view.scrollTop = 0;
+            }
+            return;
+        }
+
         var mfAction = e.target.closest('[data-mf-action]');
         if (mfAction) {
             e.preventDefault(); vibrate(8);
@@ -942,13 +954,14 @@ function bindGlobalClicks() {
         var asmAction = e.target.closest('[data-asm-action]');
         if (asmAction) {
             e.preventDefault(); vibrate(8);
-            var aA = asmAction.dataset.asmAction, aN = parseInt(asmAction.dataset.asmN, 10) || 0, aR = null;
+            var aA = asmAction.dataset.asmAction, aN = asmAction.dataset.asmN === 'max' ? 'max' : (parseInt(asmAction.dataset.asmN, 10) || 0), aR = null;
             if (aA === 'build') aR = assemblySystem.build();
             else if (aA === 'upgrade') aR = assemblySystem.upgrade();
             else if (aA === 'cancel') aR = assemblySystem.cancelUpgrade();
             else if (aA === 'hire') aR = assemblySystem.hire(asmAction.dataset.asmRole, aN);
             else if (aA === 'fire') aR = assemblySystem.fire(asmAction.dataset.asmRole, aN);
             else if (aA === 'overtime') aR = assemblySystem.setOvertime(aN === 1);
+            else if (aA === 'fill') aR = assemblySystem.hireFill();
             if (aR && !aR.ok) ToastService.error(aR.reason);
             else if (aR) renderAll();
             return;
@@ -1279,6 +1292,10 @@ function bindProgressEvents() {
     bus.on('research:completed', function () { if (activeView === 'research' && activeSubtab === 'tech') renderView({ soft: true }); });
     bus.on('research:cancelled', function () { if (activeView === 'research' && activeSubtab === 'tech') renderView({ soft: true }); });
 
+    ['assembly:built', 'assembly:upgraded', 'assembly:hired', 'assembly:progress'].forEach(function (ev) {
+        bus.on(ev, function () { if (activeView === 'research' && activeSubtab === 'manufaktur') renderView({ soft: true }); });
+    });
+
     bus.on('chip-research:started',   function () { if (activeView === 'research' && activeSubtab === 'chip') renderView({ soft: true }); });
     bus.on('chip-research:completed', function () { if (activeView === 'research' && activeSubtab === 'chip') renderView({ soft: true }); });
     bus.on('chip-research:cancelled', function () { if (activeView === 'research' && activeSubtab === 'chip') renderView({ soft: true }); });
@@ -1406,6 +1423,7 @@ function bindStateEvents() {
             else if (p.nav === 'market') activeMarketSubtab = p.subtab;
             else if (p.nav === 'team') activeHqSubtab = p.subtab;
         }
+        if (p.nav === 'research' && p.subtab === 'manufaktur' && p.section) setManufactureSection(p.section);
         if (p.nav === 'team' && p.mode === 'recruit') setTeamMode('recruit');
         if (p.nav === activeView) renderView(); else navigate(p.nav);
         // Integrasi peta kantor <-> panel Team
