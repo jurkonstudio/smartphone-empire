@@ -37,3 +37,4 @@ for (let i = 0; i < 200; i++) { const nv = easeTowards(v, 1000, 16); if (nv < pr
 chk(mono && v === 1000, 'tween monoton & konvergen ke target');
 chk(easeTowards(100, 1000, 16) === 1000, 'lompatan besar di-snap');
 console.log(fails ? fails + ' GAGAL' : 'SEMUA LULUS');
+process.exit(fails ? 1 : 0);

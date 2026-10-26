@@ -7,6 +7,7 @@ const { MarketNavSystem } = await load(root, 'systems/MarketNavSystem.js');
 const { VIRAL_RESPONSES } = await load(root, 'data/feedback.data.js');
 const md = await load(root, 'data/market-nav.data.js');
 const log=(k,v)=>console.log(k.padEnd(34),v);
+let fails=0; // jumlah pemuatan save yang gagal (lihat catch di bawah)
 state.reset('normal');
 state.data.cash = 1e9; if (state.addCash) state.addCash(1e9);
 const op = new PublicOpinionSystem(state); op._onHydrated();
@@ -40,6 +41,8 @@ const json = JSON.stringify(state.data);
 log('serialize berisi marketNav', json.includes('"marketNav"'));
 const old = JSON.parse(json); delete old.marketNav;
 const s2 = state; 
-try { if (s2.hydrate) s2.hydrate(old); const n2 = new MarketNavSystem(s2); n2._ensure(); log('save lama dimuat -> ext dibuat', Object.keys(s2.data.marketNav.ext).join(',')); } catch(e){ log('hydrate save lama GAGAL', e.message); }
-try { s2.hydrate(JSON.parse(json)); log('save baru dimuat, connectivity', s2.data.marketNav && s2.data.marketNav.ext.connectivity); } catch(e){ log('hydrate save baru GAGAL', e.message); }
+try { if (s2.hydrate) s2.hydrate(old); const n2 = new MarketNavSystem(s2); n2._ensure(); log('save lama dimuat -> ext dibuat', Object.keys(s2.data.marketNav.ext).join(',')); } catch(e){ fails++; log('hydrate save lama GAGAL', e.message); }
+try { s2.hydrate(JSON.parse(json)); log('save baru dimuat, connectivity', s2.data.marketNav && s2.data.marketNav.ext.connectivity); } catch(e){ fails++; log('hydrate save baru GAGAL', e.message); }
 log('validateMarketNavData', JSON.stringify(md.validateMarketNavData()));
+console.log(fails ? fails + ' GAGAL' : 'SEMUA LULUS');
+process.exit(fails ? 1 : 0);

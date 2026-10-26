@@ -54,7 +54,7 @@ class Mesh { constructor(geometry, material) {
 class Sprite { constructor(material) { this.material = material; return loose(obj3d(this)); } }
 class Mat { constructor(p) { Object.assign(this, p || {}); this.color = this.color instanceof Color ? this.color : new Color(typeof (p && p.color) === 'number' ? p.color : 0); this.emissive = new Color(0); this.dispose = () => {}; return loose(this); } }
 class Geo { constructor() { const att = { count: 0, getX: () => 0, getY: () => 0, getZ: () => 0, setXY() {}, needsUpdate: false };
-  this.attributes = { position: att, uv: att }; this.dispose = () => {}; this.rotateX = () => this; this.translate = () => this; return loose(this); } }
+  this.attributes = { position: att, normal: att, uv: att }; this.dispose = () => {}; this.rotateX = () => this; this.translate = () => this; return loose(this); } }
 class Tex { constructor() { this.repeat = new V(); this.offset = new V(); this.dispose = () => {}; return loose(this); } }
 class Light { constructor() { obj3d(this); this.shadow = { camera: new Cam(), mapSize: new V() }; this.target = new Group(); this.color = new Color(); this.groundColor = new Color(); this.intensity = 1; this.dispose = () => {}; return loose(this); } }
 class Cam { constructor() { obj3d(this); this.left = this.right = this.top = this.bottom = 0; this.zoom = 1; this.updateProjectionMatrix = () => {}; return loose(this); } }
@@ -70,7 +70,7 @@ const THREE = {
   Group, Scene, Mesh, Sprite, Vector3: V, Vector2: V, Color,
   MeshBasicMaterial: Mat, MeshStandardMaterial: Mat, SpriteMaterial: Mat,
   BoxGeometry: Geo, CylinderGeometry: Geo, SphereGeometry: Geo, ConeGeometry: Geo, TorusGeometry: Geo, PlaneGeometry: Geo,
-  CircleGeometry: Geo, RingGeometry: Geo, IcosahedronGeometry: Geo, ExtrudeGeometry: Geo,
+  CircleGeometry: Geo, RingGeometry: Geo, CapsuleGeometry: Geo, IcosahedronGeometry: Geo, ExtrudeGeometry: Geo,
   Shape: class { constructor() { return loose({}); } }, BufferAttribute: class { constructor() { return loose({}); } },
   CanvasTexture: Tex, DirectionalLight: Light, HemisphereLight: Light, OrthographicCamera: Cam, WebGLRenderer: Renderer,
   PMREMGenerator: PMREM, Raycaster: Ray,
@@ -82,7 +82,7 @@ function el() {
     classList: { add() {}, remove() {}, toggle() {}, contains: () => false }, dataset: {},
     setAttribute() {}, addEventListener() {}, removeEventListener() {}, removeChild() {}, querySelector: () => null, querySelectorAll: () => [],
     appendChild(c) { return c; }, insertBefore(c) { return c; }, getBoundingClientRect: () => ({ left: 0, top: 0, width: 400, height: 700 }),
-    getContext: () => loose({ measureText: () => ({ width: 10 }), createLinearGradient: () => loose({}), createRadialGradient: () => loose({}) }) });
+    getContext: () => loose({ createImageData: (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }), measureText: () => ({ width: 10 }), createLinearGradient: () => loose({}), createRadialGradient: () => loose({}) }) });
   return e;
 }
 document.createElement = el;

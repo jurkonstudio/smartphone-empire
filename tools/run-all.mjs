@@ -1,7 +1,8 @@
 // Menjalankan skrip tes yang berdiri sendiri satu per satu. Jalankan dari akar repo: npm test
 // Exit code 1 bila ada yang gagal.
-// Gagal = exit code bukan 0, ATAU keluaran memuat baris "GAGAL" / "N GAGAL" (N>0). Ini perlu karena
-// beberapa skrip lama (mis. live.mjs) mencetak GAGAL tanpa mengatur exit code.
+// Gagal = exit code bukan 0, ATAU keluaran memuat baris "GAGAL" / "N GAGAL" (N>0). Semua skrip di bawah
+// kini mengatur exit code sendiri (live.mjs dan beh.mjs sejak P3); deteksi lewat teks tinggal jaring pengaman
+// untuk skrip lama. Keduanya hanya ditandai sebagai satu baris GAGAL, tidak dihitung dua kali.
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
@@ -39,6 +40,7 @@ const TESTS = [
   { file: 'tools/road-graph-test.mjs', src: true },
   { file: 'tools/runway.mjs', src: true },
   { file: 'tools/scene-smoke.mjs', src: true },
+  { file: 'tools/office-smoke.mjs', src: true }, // tiruan THREE/canvas diperbarui di P3
   // Skrip simulasi/kalibrasi: tidak punya assertion, hanya memastikan berjalan tanpa error (smoke).
   { file: 'tools/asm-balance.mjs', src: true },
   { file: 'tools/beh.mjs', src: true },
@@ -56,9 +58,6 @@ const TESTS = [
 //      butuh src/ui/manufacture/ManufactureScene.probe.js (salinan ManufactureScene.js + baris __probe,
 //      lihat tools/README.md). Probe tidak ikut repo.
 //  - geo-test: butuh ../proj-orig (salinan src/ sebelum sesi 2), tidak ada di repo.
-//  - office-smoke: gagal di baseline (OfficeProps.js memakai createImageData dan BufferAttribute yang
-//      tidak ada di THREE/canvas tiruan skrip itu). Penyebabnya tiruan yang usang, bukan logika game
-//      (dicatat sebagai Temuan). Masukkan lagi setelah tiruannya diperbarui.
 //  - boot.mjs: pustaka bantu, bukan tes.
 
 const FAIL_RE = /(^|\n)\s*GAGAL\b(?! total: 0\b)|\b[1-9]\d*\s+GAGAL\b|ADA GAGAL/;
