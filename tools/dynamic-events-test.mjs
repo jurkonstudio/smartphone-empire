@@ -47,7 +47,7 @@ ok(r50.choices[0].cost === r1.choices[0].cost * 50, 'biaya diskalakan 50x: ' + r
 ok(DYNAMIC_EVENTS[0].choices[0].cost === 9000, 'data asli tidak berubah');
 console.log('  risk teks:', describeEffects(r1.choices[1]).map(l => l.text).join(' | '));
 
-section('P4: 20 insiden baru (gerbang tahun, bobot, cooldown, isi)');
+section('P4: 27 insiden baru (gerbang tahun, bobot, cooldown, isi)');
 // id -> [minYear, maxYear, weight, cooldownMonths]  (daftar yang disetujui pemilik, 26 Okt 2026)
 const NEW_EVENTS = {
   dyn_screen_defect_batch: [2000, 2050, 1, 18], dyn_factory_disruption: [2000, 2050, 1, 18],
@@ -59,9 +59,22 @@ const NEW_EVENTS = {
   dyn_influencer_review: [2010, 2050, 1, 18], dyn_bad_os_update: [2010, 2050, 1, 18],
   dyn_rare_material_cost: [2010, 2050, 1, 18], dyn_charger_regulation: [2012, 2050, 1, 24],
   dyn_ransomware: [2016, 2050, 0.6, 30], dyn_trade_tariff: [2018, 2050, 1, 24],
-  dyn_chip_shortage: [2020, 2024, 1, 24], dyn_ai_feature_hype: [2023, 2050, 1, 18]
+  dyn_chip_shortage: [2020, 2024, 1, 24], dyn_ai_feature_hype: [2023, 2050, 1, 18],
+  // tahap 5: insiden segmen (scope) & peluang
+  dyn_camera_craze: [2005, 2050, 1, 18], dyn_budget_wave: [2001, 2050, 1, 24],
+  dyn_premium_swing: [2003, 2050, 1, 24], dyn_investor_offer: [2003, 2050, 1, 24],
+  dyn_industry_award: [2003, 2050, 1, 30], dyn_loyal_community: [2008, 2050, 1, 24],
+  dyn_rival_recall: [2002, 2050, 1, 24]
 };
-ok(DYNAMIC_EVENTS.length === 25, 'total 25 insiden (5 lama + 20 baru): ' + DYNAMIC_EVENTS.length);
+// Insiden segmen wajib benar-benar memakai scope-nya (bukan 'all' saja).
+const SEGMENT_SCOPE = { dyn_camera_craze: 'camera', dyn_budget_wave: 'budget', dyn_premium_swing: 'premium', dyn_rival_recall: 'premium' };
+ok(DYNAMIC_EVENTS.length === 32, 'total 32 insiden (5 lama + 27 baru): ' + DYNAMIC_EVENTS.length);
+for (const id in SEGMENT_SCOPE) {
+  const e = DYNAMIC_EVENTS.find(x => x.id === id);
+  const scopes = new Set();
+  if (e) for (const c of e.choices) for (const fx of [c.effects].concat(c.risk ? [c.risk.success.effects, c.risk.fail.effects] : [])) for (const m of (fx && fx.demand) || []) scopes.add(m.scope);
+  ok(e && scopes.has(SEGMENT_SCOPE[id]), id + ' memakai scope ' + SEGMENT_SCOPE[id]);
+}
 for (const id in NEW_EVENTS) {
   const e = DYNAMIC_EVENTS.find(x => x.id === id), g = NEW_EVENTS[id];
   ok(!!e, 'insiden baru ada: ' + id);
