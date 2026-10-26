@@ -32,6 +32,8 @@ const TESTS = [
   { file: 'tools/chip-design-plant-test.mjs', src: true },
   { file: 'tools/dynamic-events-test.mjs', src: true },
   { file: 'tools/eco-render-check.mjs', src: true },
+  { file: 'tools/accessories-mockup-check.mjs', src: true },
+  { file: 'tools/overview-v2-check.mjs', src: true },
   { file: 'tools/eco-services-sim.mjs', src: true },
   { file: 'tools/econ-brakes.mjs', src: true },
   { file: 'tools/era-events-test.mjs', src: true },
