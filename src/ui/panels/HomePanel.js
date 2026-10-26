@@ -9,7 +9,6 @@ import { bus } from '../../core/EventBus.js';
 import { TIME_CONFIG } from '../../config/time.config.js';
 import { renderCampusLoading } from '../campus/CampusFallback.js';
 import { isOfficeMode, isManufactureMode, isServerMode, ensureBridgeStyle } from '../campus/CampusOfficeBridge.js';
-import { serverChipLabels } from '../server/ServerMap.js';
 import { getBridgeStrings } from '../campus/CampusInfo.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { renderNewsListPanel } from './NewsListPanel.js';
@@ -347,8 +346,7 @@ export function renderHomePanel() {
     const manu = isManufactureMode();
     const srv = isServerMode();
     const L = getBridgeStrings();
-    const SL = serverChipLabels();
-    // Sakelar tetap DUA tab (Kampus | Manufaktur). Server dibuka lewat tombol kecil di sampingnya, bukan tab baru.
+    // Sakelar tetap DUA tab (Kampus | Manufaktur). Server tidak ada di Home; dibuka dari ruangan Server di Office 3D.
     const switchHtml =
         '<div class="home-topbar">' +
         '<div class="home-switch" role="tablist">' +
@@ -357,8 +355,6 @@ export function renderHomePanel() {
             '<button type="button" role="tab" class="home-switch-btn' + (manu ? ' active' : '') + '" data-home-switch="manufacture" aria-selected="' + (manu ? 'true' : 'false') + '">' +
                 renderIcon('factory', 17) + '<span>' + L.tabManufacture + '</span></button>' +
         '</div>' +
-        '<button type="button" class="home-server-chip' + (srv ? ' active' : '') + '" data-home-server="' + (srv ? 'close' : 'open') + '" aria-pressed="' + (srv ? 'true' : 'false') + '">' +
-            renderIcon('database', 17) + '<span>' + (srv ? SL.back : SL.open) + '</span></button>' +
         '</div>';
 
     return '<div class="home-wrapper">' +
