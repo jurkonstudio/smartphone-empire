@@ -21,6 +21,8 @@ import { bus } from '../../core/EventBus.js';
 import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
 import { renderSupplyCard } from './CountryPanels.js';
 import { renderAccessoriesTab } from './AccessoriesTab.js';
+import { renderDesignTracks } from './DesignTracksPanel.js';
+export { setDesignTrack } from './DesignTracksPanel.js';
 
 
 function safe(fn, fallback) {
@@ -170,11 +172,12 @@ function _renderDesignTab(productSystem) {
             renderSupplyCard(dev, data.time.currentYear);
     }
 
-    return '<div class="card">' +
+    var phoneCard = '<div class="card">' +
         '<div class="card-title">' + t('prod.design.title') + '</div>' +
         '<div style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;">' + t('prod.design.desc') + '</div>' +
         '<button class="btn-primary" data-prod-action="open-wizard" style="width:100%;">' + t('prod.design.start') + '</button>' +
         '</div>';
+    return renderDesignTracks({ year: data.time.currentYear, phoneHtml: phoneCard });
 }
 
 // ============================================================
