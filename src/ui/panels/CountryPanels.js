@@ -12,6 +12,7 @@ import { Modal } from '../modal.js';
 import { LanguageService } from '../../core/LanguageService.js';
 import { computeSupplyTable, computeOsCountryUsage } from '../../systems/CountryMarketModel.js';
 import { formatUsers } from '../../systems/OsAdoptionModel.js';
+import { renderWorldMap } from '../components/WorldMap.js';
 
 // Indonesia hanya untuk bahasa 'id'; semua bahasa lain (en, zh, ja, ...) memakai Inggris.
 function L(id, en) { return LanguageService.getLang() === 'id' ? id : en; }
@@ -54,10 +55,16 @@ export function renderSupplyCard(dev, year) {
         ? '<div class="cm-next">' + L('Segera terbuka: ', 'Opening soon: ') +
           tbl.next.map(function (c) { return c.flag + ' ' + escapeHtml(cname(c)) + ' (' + c.since + ')'; }).join(' · ') + '</div>' : '';
 
+    var map = renderWorldMap({
+        id: 'wm-supply', year: year, tabs: true,
+        items: tbl.rows.map(function (r) { return { id: r.country.id, value: r.units, share: r.share, units: r.units }; }),
+        valueText: function (it) { return pct(it.share) + ' · ' + units(it.units) + ' ' + L('unit', 'units'); }
+    });
+
     return '<div class="card cm-card">' +
         '<div class="card-title">' + L('Negara yang akan dipasok', 'Countries to be supplied') + '</div>' +
         '<div class="cm-sub">' + tbl.openCount + '/' + tbl.totalCount + ' ' + L('negara terbuka di ', 'countries open in ') + year +
-        ' · ' + escapeHtml(units(qty)) + ' ' + L('unit', 'units') + '</div>' +
+        ' · ' + escapeHtml(units(qty)) + ' ' + L('unit', 'units') + '</div>' + map +
         '<div class="cm-head"><span></span><span>' + L('Negara', 'Country') + '</span><span>' + L('Porsi', 'Share') + '</span><span>' + L('Unit', 'Units') + '</span></div>' +
         rowsHtml + more + next +
         '<div class="cm-note">' + L('Perkiraan: ikut populasi, penetrasi ponsel, dan kecocokan harga tiap negara.', 'Estimate: based on population, phone penetration and price fit per country.') + '</div>' +
@@ -99,6 +106,12 @@ export function openOsCountriesModal() {
     var data = window.__game && window.__game.state ? window.__game.state.get() : null;
     if (!data) return;
     var u = computeOsCountryUsage(data);
+    var nowYear = (data.time && data.time.currentYear) || 2000;
+    var map = renderWorldMap({
+        id: 'wm-os', year: nowYear, tabs: true,
+        items: u.list.map(function (r) { return { id: r.country.id, value: r.active, share: r.share }; }),
+        valueText: function (it) { return formatUsers(it.value) + ' · ' + pct(it.share); }
+    });
     var body;
     if (!u.list.length) {
         body = '<div class="ou-empty-row">' + L('Belum ada pengguna OS. Rilis ponsel ber-OS sendiri dan mulai menjual.', 'No OS users yet. Release a phone with your own OS and start selling.') + '</div>';
@@ -114,7 +127,7 @@ export function openOsCountriesModal() {
         '<div class="modal-title">' + L('Pengguna OS per negara', 'OS users by country') + '</div>' +
         '<div class="modal-sub">' + L('Total pengguna aktif ', 'Total active users ') + '<b>' + escapeHtml(formatUsers(u.total)) + '</b> · ' +
         u.countryCount + ' ' + L('negara', 'countries') + '</div>' +
-        body + next +
+        map + body + next +
         '<button class="btn-secondary" data-modal-close style="width:100%;margin-top:14px;">' + L('Tutup', 'Close') + '</button>');
 }
 
