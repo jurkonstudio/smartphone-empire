@@ -963,6 +963,7 @@ function bindGlobalClicks() {
             else if (aA === 'fire') aR = assemblySystem.fire(asmAction.dataset.asmRole, aN);
             else if (aA === 'overtime') aR = assemblySystem.setOvertime(aN === 1);
             else if (aA === 'fill') aR = assemblySystem.hireFill();
+            else if (aA === 'grade') aR = assemblySystem.setGrade(asmAction.dataset.asmGrade);
             if (aR && !aR.ok) ToastService.error(aR.reason);
             else if (aR) renderAll();
             return;
