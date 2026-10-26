@@ -680,7 +680,7 @@ export class ProductSystem {
     // Rilis seri: setiap varian menjadi produk katalog sendiri.
     _releaseProduct(d) {
         var data = this.state.data;
-        if (this._hype) this._hype.onFlagshipReleased();
+        if (this._hype) this._hype.onFlagshipReleased(d);
         var variants = (Array.isArray(d.family) && d.family.length) ? d.family : [{
             id: d.id,
             tier: 'basic',
