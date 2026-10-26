@@ -1,0 +1,20 @@
+/* ux-polish.css — lapisan rapi-rapi untuk navigasi tab (aditif, aman dihapus). */
+@media (max-width: 767px) {
+  /* Tab/chip yang bisa digeser: snap + petunjuk tepi (fade) saat masih ada isi tersembunyi */
+  .subtab-bar:not(.hq-tabs), .settings-tabs, .chip-bar {
+    overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
+  }
+  .subtab-bar:not(.hq-tabs)::-webkit-scrollbar { display: none; }
+  .subtab-bar:not(.hq-tabs) .subtab-btn {
+    flex: 1 0 auto; white-space: nowrap; padding: 9px 14px; min-height: 40px; scroll-snap-align: center;
+  }
+  .settings-tab, .chip-bar > * { scroll-snap-align: center; }
+  .se-fade-r { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 30px), transparent);
+               mask-image: linear-gradient(90deg, #000 calc(100% - 30px), transparent); }
+  .se-fade-l { -webkit-mask-image: linear-gradient(270deg, #000 calc(100% - 30px), transparent);
+               mask-image: linear-gradient(270deg, #000 calc(100% - 30px), transparent); }
+  .se-fade-l.se-fade-r { -webkit-mask-image: linear-gradient(90deg, transparent, #000 30px, #000 calc(100% - 30px), transparent);
+               mask-image: linear-gradient(90deg, transparent, #000 30px, #000 calc(100% - 30px), transparent); }
+}
+@media (prefers-reduced-motion: reduce) { .subtab-bar, .settings-tabs, .chip-bar { scroll-behavior: auto; } }
