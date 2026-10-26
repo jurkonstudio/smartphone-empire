@@ -5374,3 +5374,15 @@ html[data-perf="lite"] .home-map .map-hint { -webkit-backdrop-filter: none; back
 }
 [data-theme="light"] .asm2-chip.warn { color: #b45309; }
 [data-theme="light"] .mfx-seg-b.active { box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+/* ============================================================================
+   [a11y] Modal & sentuhan (Tahap 2)
+   - Pinch-zoom halaman diizinkan (meta viewport); kontrol game memakai
+     touch-action: manipulation agar ketukan ganda tidak memicu zoom.
+   - Kartu modal fokus programatik tanpa outline; scroll tidak merambat ke belakang.
+   ============================================================================ */
+button, [role="button"], .nav-btn, .subtab-btn, .sil-speed-btn,
+.btn-primary, .btn-secondary, .toggle-switch { touch-action: manipulation; }
+.modal-backdrop, .modal-card { overscroll-behavior: contain; }
+.modal-card:focus { outline: none; }
+body.modal-open { overflow: hidden; }
