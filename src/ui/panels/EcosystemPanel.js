@@ -163,14 +163,19 @@ function _serviceCard(sys, svc) {
         '</div>';
 }
 
+// Kartu kontrol satu lini aksesori (tier, harga, buka/tutup). Dipakai juga di Produk → Desain.
+export function renderEcoLineCard(sys, lineId) {
+    var line = null;
+    for (var i = 0; i < ECO_LINES.length; i++) if (ECO_LINES[i].id === lineId) line = ECO_LINES[i];
+    return line && sys ? _lineCard(sys, line) : '';
+}
+
 export function renderEcosystemPanel(params) {
     ensureRegionalStyle();
     var sys = params.ecosystemSystem;
     if (!sys) return '';
     var sum = sys.getSummary();
     var sp = sys.getStorePreview();
-    var lines = ECO_LINES.map(function (l) { return _lineCard(sys, l); }).join('');
-    var link = '<div class="rg-btn-row"><button class="btn-secondary" data-nav="products" data-nav-sub="accessories">' + esc(t('eco.prod.view')) + '</button></div>';
     var services = ECO_SERVICES.map(function (v) { return _serviceCard(sys, v); }).join('');
-    return _summaryCard(sum) + link + _storeCard(sp) + services + lines;
+    return _summaryCard(sum) + _storeCard(sp) + services;
 }

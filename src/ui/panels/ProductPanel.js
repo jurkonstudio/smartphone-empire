@@ -20,8 +20,10 @@ import { formatMultiplier } from '../../utils/format.js';
 import { bus } from '../../core/EventBus.js';
 import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
 import { renderSupplyCard } from './CountryPanels.js';
-import { renderAccessoriesTab } from './AccessoriesTab.js';
 import { renderDesignTracks } from './DesignTracksPanel.js';
+import { renderAccessoryThumbnail } from '../phone/AccessoryMockup.js';
+import { getDesignTrack, trackStage, trackPopularity } from '../../data/design-tracks.data.js';
+import { ECO_LINES, ECO_TIER_META } from '../../data/ecosystem.data.js';
 export { setDesignTrack } from './DesignTracksPanel.js';
 
 
@@ -102,6 +104,7 @@ function isFabUnlocked() {
 export function renderProductPanel(params) {
     params = params || {};
     var subtab = params.subtab || 'design';
+    if (subtab === 'accessories') subtab = 'design'; // tab Aksesori dipindah ke Desain (0.2.10)
     var productSystem = params.productSystem;
     var researchSystem = params.researchSystem;
     var osSystem = params.osSystem;
@@ -113,7 +116,6 @@ export function renderProductPanel(params) {
     var subtabs = [
         { id: 'design',  label: t('prod.subtab.design') },
         { id: 'catalog', label: t('prod.subtab.catalog') },
-        { id: 'accessories', label: t('prod.subtab.accessories') },
         { id: 'sales',   label: t('prod.subtab.sales') }
     ];
     if (chipUnlocked) subtabs.push({ id: 'chip', label: t('prod.subtab.chip') });
@@ -127,15 +129,13 @@ export function renderProductPanel(params) {
 
     var body = '';
     if (subtab === 'catalog') {
-        body = safe(function () { return _renderCatalog(); }, '<div class="empty"><div class="empty-title">' + tx('prod.error', 'Error') + '</div></div>');
-    } else if (subtab === 'accessories') {
-        body = safe(function () { return renderAccessoriesTab({ ecosystemSystem: ecosystemSystem }); }, '<div class="empty"><div class="empty-title">' + tx('prod.error', 'Error') + '</div></div>');
+        body = safe(function () { return _renderCatalog(ecosystemSystem); }, '<div class="empty"><div class="empty-title">' + tx('prod.error', 'Error') + '</div></div>');
     } else if (subtab === 'sales') {
         body = safe(function () { return _renderSales(); }, '<div class="empty"><div class="empty-title">' + tx('prod.error', 'Error') + '</div></div>');
     } else if (subtab === 'chip') {
         body = safe(function () { return _renderChipTab(); }, '<div class="empty"><div class="empty-title">' + tx('prod.error', 'Error') + '</div></div>');
     } else {
-        body = safe(function () { return _renderDesignTab(productSystem); }, '<div class="empty"><div class="empty-title">' + tx('prod.error', 'Error') + '</div></div>');
+        body = safe(function () { return _renderDesignTab(productSystem, ecosystemSystem); }, '<div class="empty"><div class="empty-title">' + tx('prod.error', 'Error') + '</div></div>');
     }
 
     return subtabBar + body;
@@ -144,7 +144,7 @@ export function renderProductPanel(params) {
 // ============================================================
 // SUB-TAB DESAIN
 // ============================================================
-function _renderDesignTab(productSystem) {
+function _renderDesignTab(productSystem, ecosystemSystem) {
     var data = state.get();
     var dev = data.products ? data.products.development : null;
 
@@ -177,7 +177,7 @@ function _renderDesignTab(productSystem) {
         '<div style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;">' + t('prod.design.desc') + '</div>' +
         '<button class="btn-primary" data-prod-action="open-wizard" style="width:100%;">' + t('prod.design.start') + '</button>' +
         '</div>';
-    return renderDesignTracks({ year: data.time.currentYear, phoneHtml: phoneCard });
+    return renderDesignTracks({ year: data.time.currentYear, phoneHtml: phoneCard, ecosystemSystem: ecosystemSystem });
 }
 
 // ============================================================
@@ -194,10 +194,12 @@ function tx(key, fallback, vars) {
 
 var _catalogFilter = 'all';     // all | selling | disc
 var _catalogSort = 'newest';    // newest | sold | rating | stock
+var _catalogCat = 'all';        // all | phones | acc (0.2.10)
 
 export function setCatalogView(kind, value) {
     if (kind === 'filter') _catalogFilter = value;
     else if (kind === 'sort') _catalogSort = value;
+    else if (kind === 'cat') _catalogCat = value;
 }
 
 function _avgReview(p) {
@@ -257,10 +259,47 @@ function _segMeter(pct, cls) {
     return '<div class="cat2-meter ' + cls + '" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '">' + h + '</div>';
 }
 
-function _renderCatalog() {
+// Lini aksesori untuk katalog (0.2.10): data dari EcosystemSystem, tampilan dari design-tracks.
+function _ecoLines(sys) {
+    if (!sys) return [];
+    return ECO_LINES.map(function (l) { return { line: l, p: sys.getLinePreview(l.id) }; })
+        .filter(function (x) { return !!x.p; });
+}
+
+function _accCatalogCard(line, p, year) {
+    var track = getDesignTrack(line.id);
+    var pop = track ? Math.round(trackPopularity(track, year) * 100) : 0;
+    var stage = track ? trackStage(track, year) : 'locked';
+    var health = p.open ? 'ok' : 'disc';
+    var status = !p.yearOk ? tx('cat.acc.locked', 'Terbuka {year}', { year: line.minYear })
+        : (p.open ? t('cat.acc.open') : t('eco.line.notOpen'));
+    var thumb = renderAccessoryThumbnail(line.id, p.tier || 'mid', 78, !!(p.open && p.yearOk));
+    var tierName = (p.open && ECO_TIER_META[p.tier]) ? t(ECO_TIER_META[p.tier].nameKey) : '–';
+    var priceCell = p.open ? '$' + _fmt(p.price) : _fmtShort(p.setupCost);
+    return '<article class="cat2-card is-' + health + '">' +
+        '<header class="cat2-head"><div class="cat2-thumb">' + thumb + '</div>' +
+        '<div class="cat2-id"><div class="cat2-name">' + t(line.nameKey) + '</div>' +
+        '<div class="cat2-date">' + t('dt.stage.' + stage) + '</div>' +
+        '<div class="cat2-tags"><span class="cat2-led ' + health + '"></span><span class="cat2-status ' + (p.open ? 'selling' : 'disc') + '">' + status + '</span></div>' +
+        '</div></header>' +
+        '<div class="cat2-stats">' +
+          '<div><span class="cat2-sl">' + tx('prod.catalog.l_price', 'Harga') + '</span><span class="cat2-sv">' + priceCell + '</span></div>' +
+          '<div><span class="cat2-sl">' + t('eco.line.tier') + '</span><span class="cat2-sv">' + tierName + '</span></div>' +
+          '<div><span class="cat2-sl">' + tx('prod.catalog.l_sold', 'Terjual') + '</span><span class="cat2-sv">' + _fmt(p.units) + '</span></div>' +
+          '<div><span class="cat2-sl">' + tx('prod.catalog.l_revenue', 'Pendapatan') + '</span><span class="cat2-sv money">' + _fmtShort(p.revenue) + '</span></div>' +
+        '</div>' +
+        '<div class="cat2-trend"><div class="cat2-trend-l"><span class="cat2-sl">' + t('dt.popularity', { year: year }) + '</span><span class="cat2-delta">' + pop + '%</span></div>' + _segMeter(pop, '') + '</div>' +
+        '<div class="cat2-foot"><button class="btn-secondary" data-design-track="' + line.id + '">' + t('cat.acc.manage') + '</button></div>' +
+        '</article>';
+}
+
+function _renderCatalog(ecosystemSystem) {
     var data = state.get();
+    var year = data.time.currentYear;
     var catalog = (data.products && data.products.catalog) ? data.products.catalog : [];
-    if (!catalog.length) {
+    var lines = _ecoLines(ecosystemSystem);
+    var openLines = lines.filter(function (x) { return x.p.open; }).length;
+    if (!catalog.length && !openLines) {
         return '<div class="empty"><div class="empty-ico">📦</div><div class="empty-title">' + t('prod.catalog.empty') + '</div><div class="empty-desc">' + t('prod.catalog.empty_desc') + '</div></div>';
     }
 
@@ -273,17 +312,31 @@ function _renderCatalog() {
         '<div class="cat2-hud-tile ' + (lowStock ? 'warn' : 'ok') + '"><span class="cat2-hud-l">' + tx('prod.catalog.sum_low', 'Stok menipis') + '</span><span class="cat2-hud-v">' + lowStock + '</span></div>' +
         '<div class="cat2-hud-tile"><span class="cat2-hud-l">' + tx('prod.catalog.sum_units', 'Unit terjual') + '</span><span class="cat2-hud-v">' + _fmtShort(totalSold).replace('$', '') + '</span></div>' +
         '<div class="cat2-hud-tile accent"><span class="cat2-hud-l">' + tx('prod.catalog.sum_rev', 'Pendapatan') + '</span><span class="cat2-hud-v">' + _fmtShort(totalRev) + '</span></div>' +
+        '<div class="cat2-hud-tile"><span class="cat2-hud-l">' + t('cat.hud.lines') + '</span><span class="cat2-hud-v">' + openLines + '<small>/' + lines.length + '</small></span></div>' +
         '</div>';
 
     var filters = [['all', tx('prod.catalog.f_all', 'Semua')], ['selling', t('prod.catalog.status_selling')], ['disc', t('prod.catalog.status_discontinued')]];
     var sorts = [['newest', tx('prod.catalog.s_new', 'Terbaru')], ['sold', tx('prod.catalog.s_sold', 'Terlaris')], ['rating', tx('prod.catalog.s_rating', 'Rating')], ['stock', tx('prod.catalog.s_stock', 'Stok')]];
-    var bar = '<div class="cat2-toolbar"><div class="cat2-seg" role="group" aria-label="Filter">';
+    var catSeg = '<div class="cat2-seg" role="group" aria-label="Kategori">';
+    [['all', t('cat.all')], ['phones', t('cat.phones')], ['acc', t('cat.acc')]].forEach(function (c) {
+        catSeg += '<button class="cat2-seg-btn ' + (_catalogCat === c[0] ? 'active' : '') + '" data-catalog-cat="' + c[0] + '">' + c[1] + '</button>';
+    });
+    catSeg += '</div>';
+    var bar = '<div class="cat2-toolbar">' + catSeg + '<div class="cat2-seg" role="group" aria-label="Filter">';
     filters.forEach(function (f) { bar += '<button class="cat2-seg-btn ' + (_catalogFilter === f[0] ? 'active' : '') + '" data-catalog-filter="' + f[0] + '">' + f[1] + '</button>'; });
     bar += '</div><div class="cat2-seg cat2-seg-sort" role="group" aria-label="Sort"><span class="cat2-seg-cap">' + tx('prod.catalog.sort_by', 'Urut') + '</span>';
     sorts.forEach(function (f) { bar += '<button class="cat2-seg-btn ' + (_catalogSort === f[0] ? 'active' : '') + '" data-catalog-sort="' + f[0] + '">' + f[1] + '</button>'; });
     bar += '</div></div>';
 
-    var list = catalog.slice().filter(function (p) {
+    var accList = (_catalogCat === 'phones') ? [] : lines.filter(function (x) {
+        if (_catalogFilter === 'selling') return x.p.open;
+        if (_catalogFilter === 'disc') return !x.p.open;
+        return true;
+    });
+    if (_catalogSort === 'sold') accList.sort(function (a, b) { return (b.p.units || 0) - (a.p.units || 0); });
+    if (_catalogSort === 'newest') accList.sort(function (a, b) { return (b.p.open ? 1 : 0) - (a.p.open ? 1 : 0); });
+
+    var list = (_catalogCat === 'acc') ? [] : catalog.slice().filter(function (p) {
         if (_catalogFilter === 'selling') return p.status === 'selling';
         if (_catalogFilter === 'disc') return p.status !== 'selling';
         return true;
@@ -294,7 +347,7 @@ function _renderCatalog() {
         if (_catalogSort === 'stock') return (a.stock || 0) - (b.stock || 0);
         return (b.releaseGameMinute || 0) - (a.releaseGameMinute || 0);
     });
-    if (!list.length) {
+    if (!list.length && !accList.length) {
         return summary + bar + '<div class="empty"><div class="empty-desc">' + tx('prod.catalog.none_match', 'Tidak ada produk pada filter ini.') + '</div></div>';
     }
 
@@ -350,7 +403,8 @@ function _renderCatalog() {
             toggle +
             '</article>';
     }
-    return summary + bar + '<div class="cat2-list">' + cards + '</div>';
+    var accCards = accList.map(function (x) { return _accCatalogCard(x.line, x.p, year); }).join('');
+    return summary + bar + '<div class="cat2-list">' + cards + accCards + '</div>';
 }
 
 // ============================================================
