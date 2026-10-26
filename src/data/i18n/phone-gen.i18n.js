@@ -1,0 +1,50 @@
+// FILE: src/data/i18n/phone-gen.i18n.js  (BARU 0.2.12)
+// Kamus Galeri Generasi (Produk → Desain → Ponsel). Digabung di index.js.
+export const PHONE_GEN_I18N = {
+    id: {
+        'gen.title': 'Galeri Generasi',
+        'gen.hero.sample': 'Contoh standar · belum ada ponsel',
+        'gen.hero.last': 'Ponsel terakhir: {name}',
+        'gen.hero.last_unnamed': 'Ponsel terakhir Anda',
+        'gen.chip.era': 'Era',
+        'gen.chip.no_lens': 'Tanpa kamera',
+        'gen.chip.lenses': '{n} lensa kamera',
+        'gen.mat.aluminum': 'Aluminium',
+        'gen.mat.glass': 'Kaca',
+        'gen.mat.plastic': 'Plastik',
+        'gen.mat.titanium': 'Titanium',
+        'gen.years.now': 'sekarang',
+        'gen.st.live': 'Aktif',
+        'gen.st.now': 'Sedang berjalan',
+        'gen.st.past': 'Sudah lewat',
+        'gen.st.future': 'Terbuka {year}',
+        'gen.st.research': 'Perlu riset',
+        'gen.gen_no': 'Generasi {n}',
+        'gen.rail.title': 'Evolusi dari generasi pertama',
+        'gen.rail.count': '{n} dari {total} generasi terbuka',
+        'gen.note': 'Galeri ini mengikuti tahun dalam game dan riset yang sudah selesai. Ponsel terakhir Anda tampil sebagai hero, dan tiap generasi dirender dengan spesifikasinya sendiri.'
+    },
+    en: {
+        'gen.title': 'Generation Gallery',
+        'gen.hero.sample': 'Sample design · no phone yet',
+        'gen.hero.last': 'Latest phone: {name}',
+        'gen.hero.last_unnamed': 'Your latest phone',
+        'gen.chip.era': 'Era',
+        'gen.chip.no_lens': 'No camera',
+        'gen.chip.lenses': '{n} camera lens',
+        'gen.mat.aluminum': 'Aluminum',
+        'gen.mat.glass': 'Glass',
+        'gen.mat.plastic': 'Plastic',
+        'gen.mat.titanium': 'Titanium',
+        'gen.years.now': 'now',
+        'gen.st.live': 'Live',
+        'gen.st.now': 'Running now',
+        'gen.st.past': 'Passed',
+        'gen.st.future': 'Opens {year}',
+        'gen.st.research': 'Needs research',
+        'gen.gen_no': 'Gen {n}',
+        'gen.rail.title': 'Evolution from the first generation',
+        'gen.rail.count': '{n} of {total} generations open',
+        'gen.note': 'This gallery follows the in-game year and completed research. Your latest phone is the hero, and each generation is rendered with its own spec.'
+    }
+};
