@@ -1,8 +1,14 @@
-// FILE: src/data/assembly.data.js  (BARU — Pabrik Perakitan / Assembly)
+// FILE: src/data/assembly.data.js  (REPLACE — v2: kelas produksi & kurva belajar)
 // ============================================================
 // Pabrik perakitan akhir: merakit komponen (baterai, layar, SoC, kamera, RAM, penyimpanan)
 // menjadi ponsel jadi. Tenaga kerja dimodelkan sebagai KELOMPOK (headcount per peran),
 // bukan individu, supaya tetap ringan walau jumlahnya ribuan.
+//
+// v2 menambahkan:
+//   - Kelas produksi per batch (ASSEMBLY_GRADES): hemat / standar / premium. Mengubah biaya,
+//     kapasitas, dan bonus kualitas produk yang dihasilkan.
+//   - Kurva belajar (ASSEMBLY_LEARNING_*): lini yang sudah banyak memproduksi menjadi lebih
+//     hemat dan cacatnya turun perlahan. Maksimal kecil agar tidak mengubah keseimbangan awal.
 //
 // Jadwal sejarah: tahap konstruksi boleh dimulai 2001 (peta 3D menampilkan bangunan yang
 // sedang dibangun), pabrik baru boleh BERPRODUKSI mulai 2002.
@@ -15,6 +21,15 @@ export const ASSEMBLY_REFUND_UPGRADE = 0.4;
 export const ASSEMBLY_OVERTIME_BOOST = 1.2;   // kapasitas saat lembur
 export const ASSEMBLY_RECENT_DAYS = 30;       // jendela hitung utilisasi
 export const ASSEMBLY_MAX_LEAD_DAYS = 45;
+
+// ---- Kurva belajar ----
+// Unit yang sudah dirakit menaikkan "pengalaman" lini sampai ASSEMBLY_LEARNING_UNITS.
+// Pada pengalaman penuh: biaya turun sebesar ASSEMBLY_LEARNING_COST_MAX dan cacat turun
+// sebesar ASSEMBLY_LEARNING_DEFECT_MAX (poin pecahan).
+export const ASSEMBLY_LEARNING_UNITS = 2000000;
+export const ASSEMBLY_LEARNING_COST_MAX = 0.06;
+export const ASSEMBLY_LEARNING_DEFECT_MAX = 0.015;
+export const ASSEMBLY_DEFECT_FLOOR = 0.01;    // cacat tidak pernah di bawah 1%
 
 export const ASSEMBLY_ROLES = [
     { id: 'operator',   wage: 700,  icon: 'users'  },
@@ -41,6 +56,23 @@ export const ASSEMBLY_LEVELS = [
       discount: 0.17, maintenanceMonthly: 1600000,
       crew: { operator: 1100, qc: 200, technician: 120, supervisor: 80 }, automation: 3 }
 ];
+
+// ---- Kelas produksi per batch ----
+// costMult    : pengali tagihan produksi batch (1 = standar).
+// capMult     : pengali kapasitas lini (lebih mahal = lebih lambat, karena butuh proses ekstra).
+// qualityDelta: bonus/penalti kualitas produk (poin skor kualitas 0..100).
+// minAutomation: level otomasi minimum agar kelas ini bisa dipilih.
+export const ASSEMBLY_GRADES = [
+    { id: 'economy',  name: 'Hemat',   costMult: 0.90, capMult: 1.10, qualityDelta: -3, minAutomation: 0, icon: 'target' },
+    { id: 'standard', name: 'Standar', costMult: 1.00, capMult: 1.00, qualityDelta:  0, minAutomation: 0, icon: 'cpu' },
+    { id: 'premium',  name: 'Premium', costMult: 1.18, capMult: 0.85, qualityDelta:  4, minAutomation: 1, icon: 'shield' }
+];
+export const ASSEMBLY_DEFAULT_GRADE = 'standard';
+
+export function getAssemblyGrade(id) {
+    for (var i = 0; i < ASSEMBLY_GRADES.length; i++) if (ASSEMBLY_GRADES[i].id === id) return ASSEMBLY_GRADES[i];
+    return ASSEMBLY_GRADES[1];
+}
 
 // Indeks upah/perawatan menurut tahun: nilai `wage` & `maintenanceMonthly` di atas adalah
 // nilai tahun 2026 (=1.0). Tahun 2002 baru ~0.35, naik ~5%/tahun. Tanpa ini Lv1 selalu rugi
