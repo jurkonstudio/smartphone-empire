@@ -81,9 +81,15 @@ export class ProductSystem {
         var vm = this._volMult(qty);
         return { volMult: vm, total: Math.round(this.computeUnitCost(config, true) * qty * vm) + BALANCE.products.productionSetupCost };
     }
-    quoteProduction(config, qty) {
+    quoteProduction(config, qty, gradeId) {
         var parts = this.computeUnitCost(config, true) * qty + this._quoteComponents(config, qty);
-        if (this._assembly) { try { parts = parts * this._assembly.getCostFactor(); } catch (e) {} }
+        if (this._assembly) {
+            try {
+                if (this._assembly.isOperating()) {
+                    parts = parts * this._assembly.getCostFactor() * this._assembly.getGradeCostFactor(gradeId);
+                }
+            } catch (e) {}
+        }
         var vm = this._volMult(qty);
         return { volMult: vm, parts: Math.round(parts), total: Math.round(parts * vm + BALANCE.products.productionSetupCost) };
     }
@@ -840,7 +846,7 @@ export class ProductSystem {
         var w = BALANCE.products.weights;
         var refs = BALANCE.products.refs;
 
-        var qualityF = Math.pow(Math.max(0.2, p.stats.qualityScore / macro.qualityRef), w.quality);
+        var qualityF = Math.pow(Math.max(0.2, this._effectiveQuality(p) / macro.qualityRef), w.quality);
         var priceF   = Math.pow(Math.max(0.2, macro.priceRef / Math.max(1, p.price)), w.price * macro.priceSensitivity);
         var repF     = Math.pow(Math.max(0.2, (data.market.reputation || 10) / refs.reputation), w.reputation);
         var marketingF = preview ? 1.0 : this._getMarketingFactor(p.id);
@@ -1025,7 +1031,8 @@ export class ProductSystem {
             if (p.stock + neededQty > maxStock) neededQty = maxStock - p.stock;
             if (neededQty <= 0) continue;
 
-            var totalCost = this.quoteProduction(p.config, neededQty).total;
+            // [v2] Auto-restock tidak mencatat batch, jadi selalu memakai kelas Standar (tanpa premi/hemat).
+            var totalCost = this.quoteProduction(p.config, neededQty, 'standard').total;
 
             if (data.cash < totalCost) {
                 if ((now - (ar.lastWarnMinute || 0)) >= warnInterval) {
@@ -1125,6 +1132,22 @@ export class ProductSystem {
     // ============================================================
     // STOK & PRODUKSI
     // ============================================================
+    // [v2] Kualitas efektif = skor desain + bonus batch rata-rata stok (dari Pabrik Perakitan).
+    // Produk tanpa batchQuality (lama / produksi awal) -> sama seperti sebelumnya.
+    _effectiveQuality(p) {
+        var base = (p && p.stats && p.stats.qualityScore) || 0;
+        var bq = (p && typeof p.batchQuality === 'number') ? p.batchQuality : 0;
+        return Math.max(0, Math.min(100, base + Math.max(-6, Math.min(10, bq))));
+    }
+    // [v2] Gabungkan unit baru ke rata-rata kualitas stok (berbobot jumlah unit).
+    _mergeBatchQuality(p, qty, bonus) {
+        var prevQty = Math.max(0, p.stock || 0);
+        var prevQ = (typeof p.batchQuality === 'number') ? p.batchQuality : 0;
+        var total = prevQty + (qty || 0);
+        if (total <= 0) { p.batchQuality = 0; return; }
+        p.batchQuality = Math.round(((prevQ * prevQty) + ((bonus || 0) * (qty || 0))) / total * 10) / 10;
+    }
+
     // Jeda hari produksi manual (makin banyak unit, makin lama).
     getManualRestockDays(qty, tier) {
         if (this._assembly) {
@@ -1142,19 +1165,20 @@ export class ProductSystem {
         return Math.max(1, Math.min(c.maxDays, days));
     }
 
-    orderProduction(productId, qty) {
+    orderProduction(productId, qty, gradeId) {
         var data = this.state.data;
         var p = data.products.catalog.find(function (x) { return x.id === productId; });
         if (!p) return { ok: false, reason: 'Produk tidak ditemukan.' };
         if (p.status !== 'selling') return { ok: false, reason: 'Produk sudah tidak dijual.' };
         if (qty < 100) return { ok: false, reason: 'Minimal 100 unit.' };
-        var totalCost = this.quoteProduction(p.config, qty).total;
+        var totalCost = this.quoteProduction(p.config, qty, gradeId).total;
         if (!WalletService.canAfford(totalCost)) return { ok: false, reason: 'Uang tidak cukup.' };
 
         WalletService.pay(totalCost, 'restock');
         this._recordProd(qty);
         var effort = getTierAssemblyEffort(p.config && p.config.tier);
-        if (this._assembly) { try { this._assembly.recordOrder(qty, effort, totalCost); } catch (e) {} }
+        var batch = { ok: false, grade: null, qualityBonus: 0 };
+        if (this._assembly) { try { batch = this._assembly.recordOrder(qty, effort, totalCost, gradeId) || batch; } catch (e) {} }
         this._settleComponents(p.config, qty);
 
         var days = this.getManualRestockDays(qty, p.config && p.config.tier);
@@ -1164,6 +1188,8 @@ export class ProductSystem {
             qty: qty,
             effort: effort,
             cost: totalCost,
+            grade: batch.grade || null,
+            qualityBonus: batch.qualityBonus || 0,
             days: days,
             orderedAtMinute: data.time.elapsedGameMinutes,
             readyAtMinute: data.time.elapsedGameMinutes + days * MINUTES_PER_DAY
@@ -1188,6 +1214,7 @@ export class ProductSystem {
             for (var j = 0; j < p.pendingProduction.length; j++) {
                 var o = p.pendingProduction[j];
                 if (o.readyAtMinute <= now) {
+                    this._mergeBatchQuality(p, o.qty, o.qualityBonus || 0);
                     p.stock += o.qty;
                     p.totalProduced += o.qty;
                     changed = true;
@@ -1243,7 +1270,7 @@ export class ProductSystem {
         var sources = REVIEW_SOURCES[era] || REVIEW_SOURCES.feature_phone;
         var source = sources[Math.floor(Math.random() * sources.length)];
         var macro = getMacro(this.state.data.time, BALANCE.macro);
-        var q = product.stats.qualityScore + (BALANCE.products.refs.quality - macro.qualityRef);
+        var q = this._effectiveQuality(product) + (BALANCE.products.refs.quality - macro.qualityRef);
         var base = reviewBaseScore(q);
         var expectedPrice = macro.priceRef * Math.pow(Math.max(0.3, q / BALANCE.products.refs.quality), 1.2);
         var valueAdj = -BALANCE.macro.reviewValueWeight * Math.log(Math.max(1, product.price) / expectedPrice);
