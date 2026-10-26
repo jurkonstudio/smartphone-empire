@@ -30,5 +30,10 @@ export const WHOLESALE = {
     qualityPriceBonus: 0.12,        // kualitas di atas acuan menaikkan harga (per 1.0 relatif)
     priceMin: 0.40,
     priceMax: 1.05,
+    // Harga grosir tidak boleh di bawah biaya produksi (x faktor ini). Tawaran yang tidak
+    // bisa memenuhi lantai ini dan tetap di bawah batas harga ritel tidak dibuat.
+    costFloorMult: 1.0,
+    // Efek ke merek pembeli per kontrak diterima (lewat CompetitorActionSystem, dibatasi cap).
+    buyerBoost: { relEffect: 0.04, durationTicks: 3 },
     historyLimit: 20
 };
