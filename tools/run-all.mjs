@@ -19,6 +19,7 @@ const TESTS = [
   { file: 'tools/notif-default.test.mjs', src: true },
   // Tanpa argumen
   { file: 'tools/civic-test.mjs' },
+  { file: 'tools/world-map-test.mjs' },
   { file: 'tools/people-test.mjs' },
   { file: 'tools/weather-test.mjs' },
   { file: 'tools/eco-i18n-check.mjs' },
