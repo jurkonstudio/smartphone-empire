@@ -1,0 +1,50 @@
+// FILE: src/data/i18n/design-tracks.i18n.js  (BARU — 0.2.9)
+// Kamus kategori desain (prefiks dt.). Digabung di src/data/i18n/index.js.
+export const DESIGN_TRACKS_I18N = {
+    id: {
+        'dt.track.phone': 'Ponsel',
+        'dt.track.tablet': 'Tablet',
+        'dt.track.earbuds': 'Earbuds nirkabel',
+        'dt.track.watch': 'Jam pintar',
+        'dt.track.charger': 'Charger',
+        'dt.stage.core': 'Inti',
+        'dt.stage.locked': 'Terkunci',
+        'dt.stage.early': 'Baru muncul',
+        'dt.stage.rising': 'Naik daun',
+        'dt.stage.peak': 'Populer',
+        'dt.stage.declining': 'Menurun',
+        'dt.opens': 'Terbuka sejak {year}',
+        'dt.locked_for': 'Terbuka {year} (sisa {n} tahun)',
+        'dt.popularity': 'Popularitas {year}',
+        'dt.trend': 'Tren {from}–{to}',
+        'dt.soon': 'Segera hadir',
+        'dt.manage_line': 'Kelola di Pasar → Ekosistem',
+        'dt.desc.tablet': 'Layar besar untuk membaca, menonton, dan kerja ringan. Desain tablet segera hadir.',
+        'dt.desc.earbuds': 'Earbuds tanpa kabel. Lini dikelola di Pasar → Ekosistem.',
+        'dt.desc.watch': 'Jam pintar untuk notifikasi, olahraga, dan kesehatan. Lini dikelola di Pasar → Ekosistem.',
+        'dt.desc.charger': 'Pengisi daya dan kabel. Lini dikelola di Pasar → Ekosistem.'
+    },
+    en: {
+        'dt.track.phone': 'Phone',
+        'dt.track.tablet': 'Tablet',
+        'dt.track.earbuds': 'Wireless earbuds',
+        'dt.track.watch': 'Smartwatch',
+        'dt.track.charger': 'Charger',
+        'dt.stage.core': 'Core',
+        'dt.stage.locked': 'Locked',
+        'dt.stage.early': 'Just emerging',
+        'dt.stage.rising': 'Rising',
+        'dt.stage.peak': 'Popular',
+        'dt.stage.declining': 'Declining',
+        'dt.opens': 'Open since {year}',
+        'dt.locked_for': 'Opens {year} ({n} years left)',
+        'dt.popularity': 'Popularity in {year}',
+        'dt.trend': 'Trend {from}–{to}',
+        'dt.soon': 'Coming soon',
+        'dt.manage_line': 'Manage in Market → Ecosystem',
+        'dt.desc.tablet': 'Large screen for reading, video, and light work. Tablet design is coming soon.',
+        'dt.desc.earbuds': 'Cable-free earbuds. Line is managed in Market → Ecosystem.',
+        'dt.desc.watch': 'Smartwatch for notifications, fitness, and health. Line is managed in Market → Ecosystem.',
+        'dt.desc.charger': 'Chargers and cables. Line is managed in Market → Ecosystem.'
+    }
+};
