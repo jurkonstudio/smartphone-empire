@@ -21,3 +21,23 @@ export const HYPE_BALANCE = {
     leakPositive: 10,
     leakNegative: 8
 };
+
+// ---- v2: hype dipengaruhi OS & chip buatan sendiri ----
+export const HYPE_QUALITY = {
+    osStabilityScale: 200,    // stabilitas OS: (stabilitas - 50) / skala → pengaruh ke lonjakan
+    osMax: 0.15,              // batas bonus/penalti dari stabilitas OS
+    bugPenalty: 0.06,         // penalti per bug OS aktif (maks 3 bug)
+    maxBugs: 3,
+    thirdPartyOsPenalty: -0.10,   // OS pihak ketiga: lonjakan lebih kecil
+    thirdPartyChipPenalty: -0.10, // chip pihak ketiga: lonjakan lebih kecil
+    chipMax: 0.20,            // batas bonus/penalti dari keunggulan chip
+    synergy: 0.10,            // OS + chip sendiri
+    minSpikeMult: 0.4,
+    maxSpikeMult: 1.5,
+    teaserNoDevFactor: 0.3,   // belum ada desain dikembangkan: teaser tipis
+    teaserThirdPartyFactor: 0.5, // desain dikembangkan tanpa OS/chip sendiri
+    leakChipBonus: 0.2,       // peluang bocoran positif bila chip sendiri unggul
+    leakBugPenalty: 0.2,      // peluang bocoran positif turun bila bug OS aktif
+    leakMin: 0.1,
+    leakMax: 0.9
+};
