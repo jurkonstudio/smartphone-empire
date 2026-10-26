@@ -1,0 +1,19 @@
+{
+  "name": "smartphone-empire",
+  "version": "0.2.8",
+  "private": true,
+  "type": "module",
+  "description": "Smartphone Empire (Jurkon Studio). Dev tooling only; the game itself runs without a build step.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node tools/run-all.mjs",
+    "lint": "eslint .",
+    "check": "node tools/check-syntax.mjs"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0"
+  }
+}

@@ -215,7 +215,20 @@ Then open `http://localhost:8000`. There is no build step and no `npm install`.
 - **Supabase** (`supabase-js` 2.49.4 from a CDN) for auth, cloud save, profiles, messages, and avatar storage.
 - Systems communicate through an **event bus** (`src/core/EventBus.js`). The event list is in `src/config/event.md`.
 - Code size: **332 JS files** with about **94 thousand lines** in `src/`.
-- There are no official automated tests, linter, or `package.json` yet. The `tools/` folder holds **37 manual test scripts** (Node, ES Modules) for calibration, demand simulation, economy brakes, promotions, panel rendering, the 2027–2030 package, and the Manufacturing and Assembly scenes (ships, cranes, trucks, road graph, weather, workers). These scripts are not loaded by the game. See `tools/README.md` for the ones that need a probe or a reference copy. Examples: `node --experimental-default-type=module tools/sim.mjs src` and `node tools/paket2027.mjs src`.
+- `package.json` holds dev tooling only (no runtime dependencies; the game still runs without a build step). `npm test` runs the standalone scripts in `tools/` through `tools/run-all.mjs`, `npm run check` runs `node --check` on `src/` and `sw.js`, and `npm run lint` runs a loose ESLint config. The `tools/` folder holds **37 manual test scripts** (Node, ES Modules) for calibration, demand simulation, economy brakes, promotions, panel rendering, the 2027–2030 package, and the Manufacturing and Assembly scenes (ships, cranes, trucks, road graph, weather, workers). These scripts are not loaded by the game. See `tools/README.md` for the ones that need a probe or a reference copy. Examples: `node --experimental-default-type=module tools/sim.mjs src` and `node tools/paket2027.mjs src`.
+
+### Development
+
+Requires Node 20 or newer. Running the game itself does not need Node or `npm install` (see "Run locally").
+
+```
+npm install       # dev tools only (ESLint)
+npm test          # tools/run-all.mjs: table of pass/fail, exit code 1 on failure
+npm run check     # node --check on src/**/*.js and sw.js
+npm run lint      # ESLint (loose: only real bugs are errors)
+```
+
+Scripts that need a probe or `../proj-orig` are not part of `npm test`; the reasons are listed as comments in `tools/run-all.mjs`.
 
 ### Folder structure
 
