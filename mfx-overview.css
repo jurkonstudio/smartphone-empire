@@ -2,7 +2,6 @@
    MANUFAKTUR — Ringkasan (rantai produksi horizontal)
    Dimuat setelah style.css. Aman untuk tema gelap & terang.
    ============================================================ */
-@import url("https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css");
 
 .mfx-st-chip { --st: #60a5fa; }
 .mfx-st-comp { --st: #2dd4bf; }
@@ -44,7 +43,7 @@
     background: color-mix(in srgb, var(--st) 18%, transparent);
     color: var(--st);
 }
-.mfx-node-i .ti { font-size: 17px; line-height: 1; }
+.mfx-node-i svg { display: block; }
 .mfx-node-n { font-size: 11.5px; font-weight: 700; line-height: 1.2; margin-top: 2px; }
 .mfx-node-v { font-size: 10px; color: var(--text-mute); line-height: 1.25; overflow-wrap: anywhere; }
 
