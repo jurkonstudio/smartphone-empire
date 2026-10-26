@@ -907,7 +907,32 @@ export class ProductSystem {
     // final = permintaan harian yang dipakai simulasi bila noise = 1 (sebelum plafon pasar dan stok).
     getDemandBreakdown(p) {
         var f = this._demandFactors(p, false);
-        return this._buildBreakdown(f);
+        var bd = this._buildBreakdown(f);
+        // [P2] Hanya info tampilan (tidak masuk rumus): ada/tidaknya kampanye, dan fase usia produk.
+        bd.noCampaign = !this._hasMarketingSupport(p.id);
+        bd.lifecycle = this._getLifecycleInfo(p);
+        return bd;
+    }
+
+    // [P2] Sama dengan kondisi sum <= 0 di _getMarketingFactor: tidak ada kampanye aktif / promosi untuk produk ini.
+    _hasMarketingSupport(productId) {
+        var sum = 0;
+        this.state.data.marketing.activeCampaigns.forEach(function (c) {
+            if (c.productId === productId) sum += c.effectiveReach || 0;
+        });
+        if (this._promotion) sum += this._promotion.getLiftForProduct(productId);
+        return sum > 0;
+    }
+
+    // [P2] Usia produk dan fasenya (batas fase sama dengan _getLifecycleFactor).
+    _getLifecycleInfo(p) {
+        var ageDays = (this.state.data.time.elapsedGameMinutes - p.releaseGameMinute) / MINUTES_PER_DAY;
+        var lc = BALANCE.products.lifecycle;
+        var phase = ageDays < lc.riseDays ? 'rise'
+            : ageDays < lc.peakDays ? 'peak'
+            : ageDays < lc.declineDays ? 'decline'
+            : ageDays < lc.deadDays ? 'late' : 'dead';
+        return { ageDays: ageDays, phase: phase, riseDays: lc.riseDays, declineStart: lc.peakDays, deadDays: lc.deadDays };
     }
 
     _buildBreakdown(f) {
