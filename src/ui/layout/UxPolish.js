@@ -22,8 +22,30 @@ function setup(bar) {
     fade(bar);
 }
 
+// Panel Tim: tombol aksi di roster kosong (memakai label menu Rekrut yang sudah dilokalkan).
+function teamEmptyCta() {
+    var empty = document.querySelector('.team-dropdown ~ .empty');
+    if (!empty || empty.querySelector('.se-empty-cta')) return;
+    var cur = document.querySelector('.team-dropdown-item.active');
+    var rec = document.querySelector('.team-dropdown-item[data-team-mode="recruit"]');
+    if (!rec || (cur && cur.getAttribute('data-team-mode') === 'recruit')) return;
+    var lab = rec.querySelector('.team-dropdown-item-label');
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'se-empty-cta';
+    b.textContent = lab ? lab.textContent : 'Recruit';
+    b.addEventListener('click', function () { rec.click(); });
+    empty.appendChild(b);
+}
+
+document.addEventListener('click', function (e) {
+    var card = e.target.closest && e.target.closest('.recruit-need');
+    if (card) card.classList.toggle('is-open');
+});
+
 function scan() {
     queued = false;
+    teamEmptyCta();
     var bars = document.querySelectorAll(SEL);
     for (var i = 0; i < bars.length; i++) setup(bars[i]);
 }
