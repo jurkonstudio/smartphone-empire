@@ -136,6 +136,7 @@ var eraSystem         = new EraSystem(state);
 var seasonEnd         = new SeasonEndSystem(state);
 var teamSystem        = new TeamSystem(state);
 var chipSystem        = new ChipSystem(state);
+hypeCycle.setSources({ os: os, chip: chipSystem });
 var fabSystem         = new FabSystem(state);
 var componentPlants   = new ComponentPlantSystem(state);
 var assemblySystem    = new AssemblySystem(state);
