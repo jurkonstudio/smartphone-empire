@@ -15,7 +15,8 @@ import { openChipDesigner } from './ChipDesignerPanel.js';
 import { openFabPanel, openProductionQtyModal } from './FabPanel.js';
 import { renderChipMockup } from '../phone/ChipMockup.js';
 import { renderPhoneMockup } from '../phone/PhoneMockup.js';
-import { t } from '../../core/LanguageService.js';
+import { t, LanguageService } from '../../core/LanguageService.js';
+import { formatMultiplier } from '../../utils/format.js';
 import { bus } from '../../core/EventBus.js';
 import { renderSilSpeedBar } from '../components/SilSpeedBar.js';
 import { renderSupplyCard } from './CountryPanels.js';
@@ -521,7 +522,7 @@ _bindLang();
 
 // [Tahap 6A] Kartu "Kenapa penjualannya begini?": 3 faktor paling merugikan dan 3 paling membantu,
 // diambil dari getDemandBreakdown (faktor yang sama dengan simulasi penjualan). Hanya untuk produk yang dijual.
-function _whyCardHtml(p) {
+export function _whyCardHtml(p) {
     try {
         if (!p || p.status !== 'selling') return '';
         var ps = window.__game && window.__game.products;
@@ -531,18 +532,35 @@ function _whyCardHtml(p) {
             .sort(function (a, b) { return a.multiplier - b.multiplier; }).slice(0, 3);
         var good = bd.factors.filter(function (f) { return f.sentiment === 'good'; })
             .sort(function (a, b) { return b.multiplier - a.multiplier; }).slice(0, 3);
+        var lang = LanguageService.getLang();
+        var lcInfo = bd.lifecycle;
+        function noteHtml(txt) {
+            return '<div style="font-size:11px;color:var(--text-mute);margin:1px 0 6px;">' + escapeHtml(txt) + '</div>';
+        }
         function row(f, withAdvice) {
-            var vars = {};
+            var vars = {}, adviceKey = 'why.advice.' + f.key, extra = '';
             if (f.key === 'price' && typeof f.ratio === 'number' && isFinite(f.ratio)) vars.pct = Math.max(0, Math.round((f.ratio - 1) * 100));
-            var advice = withAdvice
-                ? '<div style="font-size:11px;color:var(--text-mute);margin:1px 0 6px;">' + escapeHtml(t('why.advice.' + f.key, vars)) + '</div>'
-                : '';
-            return '<div class="sum-row"><span>' + escapeHtml(t(f.labelKey)) + '</span><b>×' + f.multiplier.toFixed(2) + '</b></div>' + advice;
+            if (f.key === 'lifecycle' && lcInfo) {
+                // Produk baru (fase naik) bukan "menua": pakai saran lain, dan tampilkan usia + kurva.
+                if (lcInfo.phase === 'rise') { adviceKey = 'why.advice.lifecycle_rise'; vars.rise = Math.round(lcInfo.riseDays); }
+                extra = noteHtml(t('why.age', { days: Math.floor(lcInfo.ageDays), decline: lcInfo.declineStart, dead: lcInfo.deadDays }));
+            }
+            var advice = withAdvice ? noteHtml(t(adviceKey, vars)) + extra : '';
+            return '<div class="sum-row"><span>' + escapeHtml(t(f.labelKey)) + '</span><b>' + formatMultiplier(f.multiplier, lang) + '</b></div>' + advice;
+        }
+        // [P2] Saran pemasaran memakai kondisi "tidak ada kampanye aktif" (pengali marketing memang tidak pernah < 1).
+        // Tidak disarankan untuk produk yang sudah di masa surut (permintaan sudah <= 50%).
+        var lcF = bd.factors.filter(function (f) { return f.key === 'lifecycle'; })[0];
+        var suggestMkt = bd.noCampaign && !(lcF && lcF.multiplier < 0.5);
+        var mktRow = '';
+        if (suggestMkt) {
+            var mf = bd.factors.filter(function (f) { return f.key === 'marketing'; })[0];
+            mktRow = '<div class="sum-row"><span>' + escapeHtml(t('why.factor.marketing')) + '</span><b>' + formatMultiplier(mf ? mf.multiplier : 1, lang) + '</b></div>' + noteHtml(t('why.advice.marketing'));
         }
         return '<div class="card-title" style="margin-top:12px;">' + escapeHtml(t('why.title')) + '</div>' +
             '<div style="font-size:11px;color:var(--text-mute);margin-bottom:6px;">' + escapeHtml(t('why.note')) + '</div>' +
             '<div style="font-size:12px;font-weight:600;margin:4px 0;">' + escapeHtml(t('why.hurts')) + '</div>' +
-            (bad.length ? bad.map(function (f) { return row(f, true); }).join('') : '<div class="empty-hint">' + escapeHtml(t('why.none_bad')) + '</div>') +
+            (bad.length ? bad.map(function (f) { return row(f, true); }).join('') : (mktRow ? '' : '<div class="empty-hint">' + escapeHtml(t('why.none_bad')) + '</div>')) + mktRow +
             '<div style="font-size:12px;font-weight:600;margin:8px 0 4px;">' + escapeHtml(t('why.helps')) + '</div>' +
             (good.length ? good.map(function (f) { return row(f, false); }).join('') : '<div class="empty-hint">' + escapeHtml(t('why.none_good')) + '</div>');
     } catch (err) {
