@@ -65,7 +65,7 @@ import { Modal } from './ui/modal.js';
 import { mountAdvisorButton } from './ui/panels/AdvisorPanel.js';
 import { handleUiToken as handleManufactureUi, setSection as setManufactureSection } from './ui/panels/ManufactureUiState.js';
 import { renderResearchPanel, setFilterCategory, setTimelineFilter, getChipResearchFilter, setChipResearchFilter, openNodeDetailModal, openOsWizardModal, openCreateOsModal, openFeatureDetailModal, openChipNodeModal } from './ui/panels/ResearchPanel.js';
-import { renderProductPanel, setCatalogView, openProductDetailModal, openCampaignModal, openOrderProductionModal } from './ui/panels/ProductPanel.js';
+import { renderProductPanel, setCatalogView, openProductDetailModal, openCampaignModal, openOrderProductionModal, setDesignTrack } from './ui/panels/ProductPanel.js';
 import { openDesignWizard } from './ui/panels/DesignWizard.js';
 import { renderMarketPanel, drawShareChart } from './ui/panels/MarketPanel.js';
 import { openCompetitorDetailModal } from './ui/panels/CompetitorDetailModal.js';
@@ -1037,6 +1037,8 @@ function bindGlobalClicks() {
 
         var prodSub = e.target.closest('[data-prod-subtab]');
         if (prodSub) { e.preventDefault(); activeProdSubtab = prodSub.dataset.prodSubtab; renderView(); return; }
+        var designTrackBtn = e.target.closest('[data-design-track]');
+        if (designTrackBtn) { e.preventDefault(); setDesignTrack(designTrackBtn.dataset.designTrack); renderView(); return; }
         var prodAction = e.target.closest('[data-prod-action]');
         if (prodAction) {
             e.preventDefault();
