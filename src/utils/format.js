@@ -56,3 +56,10 @@ export function roundScore(value) {
   if (value == null || !Number.isFinite(v)) return 0;
   return Math.max(0, Math.min(100, Math.round(v)));
 }
+
+// [P2] Pengali permintaan untuk kartu rapor: "×1,05" (id) atau "×1.05" (en). NaN/Infinity dianggap netral (1,00).
+export function formatMultiplier(value, lang) {
+  var v = (typeof value === 'number' && isFinite(value)) ? value : 1;
+  var s = v.toFixed(2);
+  return '×' + (lang === 'id' ? s.replace('.', ',') : s);
+}
