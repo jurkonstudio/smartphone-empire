@@ -7,6 +7,7 @@ const { state } = await load(root, 'core/GameState.js');
 const { LanguageService } = await load(root, 'core/LanguageService.js');
 const { EcosystemSystem, ensureEcosystemState } = await load(root, 'systems/EcosystemSystem.js');
 const { renderAccessoriesTab } = await load(root, 'ui/panels/AccessoriesTab.js');
+const { renderAccessoryMockup, watchHandAngles } = await load(root, 'ui/phone/AccessoryMockup.js');
 let fails = 0; const chk = (c, m) => { if (!c) fails++; console.log((c ? 'PASS ' : 'FAIL ') + m); };
 state.reset('normal');
 const d = state.data;
@@ -27,8 +28,23 @@ for (const lang of ['id', 'en']) {
     const bad = html.match(/NaN|undefined|eco\.[a-z.]+/g) || [];
     chk(bad.length === 0, `${lang}/${year}: tanpa NaN/undefined/key mentah`);
     chk((html.match(/<svg class="acc-mockup"/g) || []).length >= 3, `${lang}/${year}: tiga mockup dirender`);
-    chk(!html.includes('acc-hr') && html.includes('acc-led') === true, `${lang}/${year}: jam tertutup tanpa jarum bergerak`);
+    chk(!html.includes('data-hand') && !html.includes('data-acc-watch'), `${lang}/${year}: jam tertutup tanpa jarum/hidup`);
   }
 }
+
+// Jam pintar terbuka: sudut jarum harus sesuai waktu yang diberikan (10:10:30 pagi).
+const t = new Date(2026, 0, 1, 10, 10, 30).getTime();
+const a = watchHandAngles(t);
+chk(Math.abs(a.hr - 305) < 0.01, `sudut jam 10:10:30 = ${a.hr.toFixed(2)} (harap 305)`);
+chk(Math.abs(a.min - 63) < 0.01, `sudut menit 10:10:30 = ${a.min.toFixed(2)} (harap 63)`);
+chk(Math.abs(a.sec - 180) < 0.01, `sudut detik 30 = ${a.sec.toFixed(2)} (harap 180)`);
+const w = renderAccessoryMockup('watch', 'premium', { size: 120, open: true, now: t });
+chk(w.includes('data-acc-watch="1"'), 'jam terbuka ditandai hidup');
+chk(w.includes('data-hand="hr" transform="rotate(305.00 50 50)"'), 'jarum jam memakai waktu nyata');
+chk(w.includes('data-hand="min" transform="rotate(63.00 50 50)"'), 'jarum menit memakai waktu nyata');
+chk(w.includes('data-hand="sec" transform="rotate(180.00 50 50)"'), 'jarum detik memakai waktu nyata');
+chk(!w.includes('acc-sec') && !w.includes('acc-hr'), 'jarum tidak lagi memakai loop CSS tetap');
+const wc = renderAccessoryMockup('watch', 'premium', { size: 120, open: false });
+chk(!wc.includes('data-hand') && !wc.includes('data-acc-watch'), 'jam tertutup statis');
 console.log(fails ? `GAGAL: ${fails}` : 'SEMUA RENDER LULUS');
 process.exit(fails ? 1 : 0);
