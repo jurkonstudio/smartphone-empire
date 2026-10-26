@@ -9,6 +9,12 @@ import { renderHeroFinance, renderMetricsGrid, ovIcon } from './KpiCards.js';
 import { renderTimelinePanel } from './TimelinePanel.js';
 import { renderCashChart } from './CashChart.js';
 import { t } from '../../core/LanguageService.js';
+import { computeAttention, renderAttentionStrip } from './OverviewSignals.js';
+import { ensureOverviewStyle } from './OverviewStyle.js';
+import { initOverviewLive } from './OverviewLive.js';
+
+// Pembaruan live dipasang sekali saat modul dimuat (idempotent).
+initOverviewLive();
 
 
 // ---------------- BAGIAN 3 — LIVE FEED (3 log terbaru) ----------------
@@ -41,9 +47,10 @@ function _renderLiveFeed(state) {
 }
 
 // ---------------- BAGIAN 5 — QUICK ACTIONS ----------------
-function _renderQuickActions() {
-    function btn(attr, icon, tone, label) {
-        return '<button type="button" class="ov-qa" ' + attr + ' style="--ov-tone:' + tone + ';">' +
+function _renderQuickActions(hot) {
+    hot = hot || {};
+    function btn(attr, icon, tone, label, key) {
+        return '<button type="button" class="ov-qa' + (hot[key] ? ' ov-qa--hot' : '') + '" ' + attr + ' style="--ov-tone:' + tone + ';">' +
             '<span class="ov-chip">' + ovIcon(icon, 18) + '</span>' +
             '<span class="ov-qa-label">' + label + '</span>' +
         '</button>';
@@ -51,9 +58,9 @@ function _renderQuickActions() {
     return '<section class="ov-sec">' +
         '<div class="ov-sec-head"><h3 class="ov-sec-title">' + t('ov.qa.title') + '</h3></div>' +
         '<div class="ov-qa-grid">' +
-            btn('data-nav="research"',     'flask',  'var(--info)',    t('ov.qa.research')) +
-            btn('data-nav="products"',     'rocket', 'var(--warn)',    t('ov.qa.release')) +
-            btn('data-hq-subtab="team"',   'hire',   'var(--success)', t('ov.qa.hire')) +
+            btn('data-nav="research"',     'flask',  'var(--info)',    t('ov.qa.research'), 'research') +
+            btn('data-nav="products"',     'rocket', 'var(--warn)',    t('ov.qa.release'),  'release') +
+            btn('data-hq-subtab="team"',   'hire',   'var(--success)', t('ov.qa.hire'),     'team') +
         '</div>' +
     '</section>';
 }
@@ -103,12 +110,18 @@ function _renderTimelineCollapsible() {
 }
 
 export function renderDashboard(state, timeSnapshot, researchSystem, teamSystem) {
+    ensureOverviewStyle();
+    // Perhatian dihitung sekali: dipakai untuk strip di bawah hero dan untuk menyorot aksi cepat.
+    var attention = computeAttention(state, teamSystem);
+    var hot = {};
+    attention.forEach(function (it) { hot[it.key] = true; });
     return '<div class="ov-wrap">' +
         renderHeroFinance(state) +                          // ① Hero Finance
+        renderAttentionStrip(attention) +                   //    Perhatian (hanya bila ada)
         renderMetricsGrid(state, timeSnapshot, teamSystem) + // ② Metrics 2×2
         _renderLiveFeed(state) +                            // ③ Live Feed
         renderCashChart(state) +                            // ④ Chart 24 bulan
-        _renderQuickActions() +                             // ⑤ Quick Actions
+        _renderQuickActions(hot) +                          // ⑤ Quick Actions (disorot bila relevan)
         _renderPublicPulse(state) +                         //    Sorotan Publik (ringkas)
         _renderTimelineCollapsible() +                      //    Timeline (collapsible)
         '</div>';

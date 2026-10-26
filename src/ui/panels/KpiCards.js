@@ -5,6 +5,7 @@ import { t } from '../../core/LanguageService.js';
 import { formatCurrency, formatCompactMoney, roundScore } from '../../utils/format.js';
 import { BALANCE } from '../../data/balance.data.js';
 import { getEraById, getEraForYear } from '../../data/ui-era.data.js';
+import { computeRunway, runwayText } from './OverviewSignals.js';
 
 // ---- Ikon SVG kecil (stroke, mengikuti currentColor) ----
 var _ICONS = {
@@ -42,6 +43,25 @@ function _hist(state) {
     return (state.finance && Array.isArray(state.finance.history)) ? state.finance.history : [];
 }
 
+// Sparkline kas dari riwayat keuangan (lama -> baru). Kosong bila data belum cukup.
+function _sparkCash(state) {
+    var hist = _hist(state).slice().reverse();
+    if (hist.length < 2) return '';
+    var vals = hist.map(function (h) { return Number(h.cash) || 0; });
+    var w = 300, h = 46, mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+    if (mx === mn) { mx += 1; mn -= 1; }
+    var pts = vals.map(function (v, i) {
+        var x = (i / (vals.length - 1)) * w;
+        var y = h - ((v - mn) / (mx - mn)) * (h - 6) - 3;
+        return x.toFixed(1) + ',' + y.toFixed(1);
+    });
+    var area = '0,' + h + ' ' + pts.join(' ') + ' ' + w + ',' + h;
+    return '<div class="ov-spark-wrap"><svg class="ov-spark" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" aria-hidden="true">' +
+        '<polygon points="' + area + '" fill="var(--ov-tone,var(--accent))" opacity=".12"/>' +
+        '<polyline points="' + pts.join(' ') + '" fill="none" stroke="var(--ov-tone,var(--accent))" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' +
+        '</svg></div>';
+}
+
 // ============================================================
 // BAGIAN 1 — HERO FINANCE
 // ============================================================
@@ -65,22 +85,11 @@ export function renderHeroFinance(state) {
         deltaHtml = '<span class="ov-muted">' + t('ov.no_report') + '</span>';
     }
 
-    // --- runway ---
-    var runTone = 'var(--text-secondary)';
-    var runText;
-    if (!last) {
-        runText = t('ov.runway.nodata');
-    } else if (cash <= 0) {
-        runTone = 'var(--danger)';
-        runText = t('ov.runway.empty');
-    } else if (income >= expense) {
-        runTone = 'var(--success)';
-        runText = t('ov.runway.positive');
-    } else {
-        var months = cash / (expense - income);
-        runTone = months < 2 ? 'var(--danger)' : months < 6 ? 'var(--warn)' : 'var(--info)';
-        runText = t('ov.runway.months', { n: (Math.round(months * 10) / 10).toString() });
-    }
+    // --- runway (dihitung di OverviewSignals agar sama dengan daftar perhatian) ---
+    var rw = computeRunway(state);
+    var runTone = rw.tone;
+    var runText = runwayText(rw);
+    var runPct = rw.pct;
 
     var warnHtml = '';
     if (negMonths > 0) {
@@ -95,6 +104,7 @@ export function renderHeroFinance(state) {
         '</div>' +
         '<div class="ov-hero-value" data-cash' + (cash < 0 ? ' style="color:var(--danger);"' : '') + '>' + formatCurrency(cash) + '</div>' +
         '<div class="ov-hero-sub">' + deltaHtml + '</div>' +
+        _sparkCash(state) +
         '<div class="ov-split">' +
             '<div class="ov-stat" style="--ov-tone:var(--success);">' +
                 '<div class="ov-stat-top"><span class="ov-label">' + t('ov.income') + '</span>' + ovIcon('up', 14) + '</div>' +
@@ -105,7 +115,8 @@ export function renderHeroFinance(state) {
                 '<div class="ov-stat-value">' + (last ? formatCompactMoney(expense) : '—') + '</div>' +
             '</div>' +
         '</div>' +
-        '<div class="ov-runway" style="--ov-tone:' + runTone + ';">' + ovIcon('clock', 14) + '<span>' + runText + '</span></div>' +
+        '<div class="ov-runway" style="--ov-tone:' + runTone + ';">' + ovIcon('clock', 14) + '<span data-ov-live="runway-text">' + runText + '</span></div>' +
+        '<div class="ov-runway-bar" style="--ov-tone:' + runTone + ';"><i data-ov-live="runway-bar" style="width:' + runPct.toFixed(1) + '%;"></i></div>' +
         warnHtml +
     '</section>';
 }
