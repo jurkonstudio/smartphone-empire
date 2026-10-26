@@ -381,6 +381,11 @@ export const BALANCE = {
         aiResearchTierPerYear: 0.3,
         aiResearchCostScale: 0.9,
         aiReleaseIntervalMonths: 8,
+        // [rilis hidup] Jeda ponsel pengisi (non-ikonik) per watak merek, dalam bulan.
+        // Ponsel ikonik (signatureProducts) dirilis di tahun aslinya, terlepas dari jeda ini.
+        aiReleaseIntervalByPersonality: {
+            dominant: 5, aggressive: 5, innovator: 6, follower: 7, premium: 9, declining: 12
+        },
         aiReactionSensitivity: 0.3,
 
         // [v2027.4] Tekanan kompetitor ke penjualan produk pemain.
