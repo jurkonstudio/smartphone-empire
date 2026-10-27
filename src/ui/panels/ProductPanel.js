@@ -195,12 +195,24 @@ function tx(key, fallback, vars) {
     });
 }
 
-var _catalogFilter = 'all';     // all | selling | disc
+var CATALOG_FILTER_KEY = 'smartphone-empire:catalog-filter:v1';
+function _loadCatalogFilter() {
+    // Bawaan: sembunyikan produk discontinued ('selling'). Pilihan pemain diingat.
+    try {
+        var v = localStorage.getItem(CATALOG_FILTER_KEY);
+        if (v === 'all' || v === 'selling' || v === 'disc') return v;
+    } catch (e) {}
+    return 'selling';
+}
+var _catalogFilter = _loadCatalogFilter();   // all | selling | disc
 var _catalogSort = 'newest';    // newest | sold | rating | stock
 var _catalogCat = 'all';        // all | phones | acc (0.2.10)
 
 export function setCatalogView(kind, value) {
-    if (kind === 'filter') _catalogFilter = value;
+    if (kind === 'filter') {
+        _catalogFilter = value;
+        try { localStorage.setItem(CATALOG_FILTER_KEY, value); } catch (e) {}
+    }
     else if (kind === 'sort') _catalogSort = value;
     else if (kind === 'cat') _catalogCat = value;
 }
@@ -330,6 +342,17 @@ function _renderCatalog(ecosystemSystem) {
     bar += '</div><div class="cat2-seg cat2-seg-sort" role="group" aria-label="Sort"><span class="cat2-seg-cap">' + tx('prod.catalog.sort_by', 'Urut') + '</span>';
     sorts.forEach(function (f) { bar += '<button class="cat2-seg-btn ' + (_catalogSort === f[0] ? 'active' : '') + '" data-catalog-sort="' + f[0] + '">' + f[1] + '</button>'; });
     bar += '</div></div>';
+
+    // Keterangan: berapa produk discontinued yang sedang disembunyikan + tombol untuk menampilkannya
+    if (_catalogFilter === 'selling') {
+        var hiddenN = 0;
+        if (_catalogCat !== 'acc') hiddenN += catalog.filter(function (p) { return p.status !== 'selling'; }).length;
+        if (_catalogCat !== 'phones') hiddenN += lines.filter(function (x) { return !x.p.open; }).length;
+        if (hiddenN > 0) {
+            bar += '<div class="cat2-hidden-note"><span>' + tx('prod.catalog.hidden_n', '{n} produk discontinued disembunyikan', { n: hiddenN }) + '</span>' +
+                   '<button type="button" class="cat2-hidden-btn" data-catalog-filter="all">' + tx('prod.catalog.show_all', 'Tampilkan') + '</button></div>';
+        }
+    }
 
     var accList = (_catalogCat === 'phones') ? [] : lines.filter(function (x) {
         if (_catalogFilter === 'selling') return x.p.open;
