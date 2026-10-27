@@ -22,9 +22,19 @@ var _running = false;
 var _credited = {};   // id hadiah yang sudah dikreditkan ke kas di sesi ini
 var _hello = false;      // ringkasan "pesan belum dibaca" cukup sekali per sesi
 
+// Pesan lokal (survei Kontrol Pengguna): disimpan di save game (data.userControl.surveys), id negatif, tanpa server.
+function _localList() {
+    try {
+        var uc = state.get().userControl;
+        return (uc && Array.isArray(uc.surveys)) ? uc.surveys : [];
+    } catch (e) { return []; }
+}
+
 function _unread() {
     var n = 0;
     for (var i = 0; i < _items.length; i++) if (!_items[i].read_at) n++;
+    var loc = _localList();
+    for (var j = 0; j < loc.length; j++) if (!loc[j].read_at) n++;
     return n;
 }
 
@@ -134,7 +144,26 @@ export var InboxService = {
         document.addEventListener('visibilitychange', function () { if (!document.hidden && _running) _load(false); });
         _start();
     },
-    getItems: function () { return _items.slice(); },
+    getItems: function () {
+        var loc = _localList();
+        if (!loc.length) return _items.slice();
+        return _items.concat(loc).sort(function (a, b) { return String(b.created_at || '').localeCompare(String(a.created_at || '')); });
+    },
+    // Tambah pesan lokal (tanpa server). m = { kind, title, body }.
+    addLocal: function (m) {
+        var uc;
+        try { uc = state.get().userControl; } catch (e) { return false; }
+        if (!uc || typeof uc !== 'object') return false;
+        if (!Array.isArray(uc.surveys)) uc.surveys = [];
+        var maxN = 0;
+        for (var i = 0; i < uc.surveys.length; i++) maxN = Math.max(maxN, -uc.surveys[i].id || 0);
+        var item = { id: -(maxN + 1), kind: m.kind || 'system', title: m.title || '', body: m.body || '', created_at: new Date().toISOString(), read_at: null, local: true };
+        uc.surveys.unshift(item);
+        if (uc.surveys.length > 12) uc.surveys.length = 12;
+        _toast(item);
+        _changed();
+        return true;
+    },
     getUnread: function () { return _unread(); },
     refresh: function () { return _running ? _load(false) : Promise.resolve(false); },
 
@@ -144,18 +173,31 @@ export var InboxService = {
         for (var j = 0; j < _items.length; j++) {
             if (set[_items[j].id] && !_items[j].read_at) { _items[j].read_at = now; any = true; }
         }
+        var loc = _localList(), anyLocal = false;
+        for (var q = 0; q < loc.length; q++) {
+            if (set[loc[q].id] && !loc[q].read_at) { loc[q].read_at = now; any = true; anyLocal = true; }
+        }
         if (!any) return;
         _changed();
-        SupabaseAdapter.inboxMarkRead(ids).catch(function () {});
+        var cloudIds = ids.filter(function (x) { return x > 0; });
+        if (cloudIds.length) SupabaseAdapter.inboxMarkRead(cloudIds).catch(function () {});
     },
     markAllRead: function () {
         var now = new Date().toISOString(), any = false;
         for (var i = 0; i < _items.length; i++) if (!_items[i].read_at) { _items[i].read_at = now; any = true; }
+        var loc = _localList();
+        for (var q = 0; q < loc.length; q++) if (!loc[q].read_at) { loc[q].read_at = now; any = true; }
         if (!any) return;
         _changed();
-        SupabaseAdapter.inboxMarkRead(null).catch(function () {});
+        if (_running) SupabaseAdapter.inboxMarkRead(null).catch(function () {});
     },
     remove: function (id) {
+        if (id < 0) {
+            var uc = null; try { uc = state.get().userControl; } catch (e) {}
+            if (uc && Array.isArray(uc.surveys)) uc.surveys = uc.surveys.filter(function (m) { return m.id !== id; });
+            _changed();
+            return;
+        }
         _items = _items.filter(function (m) { return m.id !== id; });
         _changed();
         SupabaseAdapter.inboxDelete([id]).catch(function () {});
@@ -229,7 +271,8 @@ export var InboxService = {
     clear: function () {
         // Hadiah yang belum diklaim tidak ikut dihapus (server juga menolaknya).
         _items = _items.filter(function (m) { return m.reward_cash && !m.reward_claimed_at; });
+        try { var uc = state.get().userControl; if (uc && Array.isArray(uc.surveys)) uc.surveys = []; } catch (e) {}
         _changed();
-        SupabaseAdapter.inboxDelete(null).catch(function () {});
+        if (_running) SupabaseAdapter.inboxDelete(null).catch(function () {});
     }
 };
