@@ -30,6 +30,7 @@ let _wizardState = null;
 let _wizardView = 'front';
 
 const OPTIONAL_CATEGORIES = ['camera', 'ram', 'storage'];
+const OPENABLE_FORMS = ['ff_fold', 'ff_tri_fold', 'ff_fold_wide', 'ff_book_crease_free', 'ff_tri_fold_c'];
 let _phoneShown = false;
 
 function _isEn() {
@@ -101,7 +102,10 @@ const NAME_FF_WORDS = {
     ff_dual:         ['Duo', 'Dual', 'Twin', 'Pair'],
     ff_fold:         ['Fold', 'Flex', 'Book', 'Z'],
     ff_flip_fold:    ['Flip', 'Petal', 'Pocket', 'Clam'],
-    ff_tri_fold:     ['Tri', 'Triple', 'Trio', 'Origami']
+    ff_tri_fold:     ['Tri', 'Triple', 'Trio', 'Origami'],
+    ff_fold_wide:    ['Wide', 'Broad', 'Panorama', 'Expanse'],
+    ff_book_crease_free: ['Seamless', 'Smooth', 'Flawless', 'Crisp'],
+    ff_tri_fold_c:   ['Cee', 'Curve', 'Helix', 'Trine']
 };
 
 const NAME_CODENAMES = ['Garuda', 'Rinjani', 'Komodo', 'Merapi', 'Bromo', 'Krakatau', 'Kancil', 'Anggrek', 'Maleo',
@@ -577,7 +581,7 @@ function _render() {
     const lblBack  = _tf('wiz.view.back', _pick('Belakang', 'Back'));
     const lblBox   = _tf('wiz.view.box', _pick('Kemasan', 'Box'));
     const lblOpen  = _tf('wiz.view.open', _pick('Terbuka', 'Open'));
-    const canOpen  = s.formFactorId === 'ff_fold' || s.formFactorId === 'ff_tri_fold';
+    const canOpen  = OPENABLE_FORMS.indexOf(s.formFactorId) >= 0;
 
     const stepper = [1, 2, 3, 4].map(function (i) {
         const cls = i === s.step ? 'active' : (i < s.step ? 'done' : '');
