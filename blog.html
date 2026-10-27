@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Berita Smartphone Empire — Spek, Rumor &amp; Jadwal Rilis</title>
+<meta name="description" content="Berita, spek, rumor, dan jadwal rilis smartphone dan gadget.">
+<link rel="icon" href="assets/icon/favicon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg: #fbfbfd; --card: #ffffff; --text: #1d1d1f; --sub: #6e6e73;
+    --border: #d2d2d7; --accent: #0071e3; --accent-h: #0077ed;
+    --rumor: #b25e00; --rumor-bg: #fff3e0; --ok: #1f7a3a; --ok-bg: #e6f6ea;
+    --danger: #d70015;
+    --radius: 16px;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #000000; --card: #1c1c1e; --text: #f5f5f7; --sub: #98989d;
+      --border: #38383a; --accent: #2997ff; --accent-h: #47a6ff;
+      --rumor: #ffb14a; --rumor-bg: #3a2a12; --ok: #5ddc7d; --ok-bg: #12301b;
+      --danger: #ff5a6a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #000000; --card: #1c1c1e; --text: #f5f5f7; --sub: #98989d;
+    --border: #38383a; --accent: #2997ff; --accent-h: #47a6ff;
+    --rumor: #ffb14a; --rumor-bg: #3a2a12; --ok: #5ddc7d; --ok-bg: #12301b;
+    --danger: #ff5a6a;
+  }
+  * { box-sizing: border-box; }
+  [hidden], .hidden { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.55; }
+  a { color: var(--accent); text-decoration: none; }
+  img { max-width: 100%; display: block; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+
+  .top { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--card) 88%, transparent);
+         backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--border); }
+  .top-inner { max-width: 1100px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .brand { font-weight: 700; color: var(--text); font-size: 1.05rem; margin-right: auto; }
+  .brand span { color: var(--accent); }
+  .nav-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  .btn { border: 1px solid var(--border); background: var(--card); border-radius: 999px; padding: 7px 14px; cursor: pointer; font-size: .9rem; }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-h); }
+  .btn.danger { color: var(--danger); }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 18px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--border); background: var(--card); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-size: .85rem; }
+  .chip[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .search { flex: 1; min-width: 180px; border: 1px solid var(--border); background: var(--card); border-radius: 999px; padding: 8px 14px; }
+
+  .layout { display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+
+  .featured { display: block; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+              overflow: hidden; margin-bottom: 22px; color: var(--text); }
+  .featured .cover { aspect-ratio: 16 / 8; width: 100%; object-fit: cover; background: var(--border); }
+  .featured .body { padding: 18px 20px 22px; }
+  .featured h2 { font-size: clamp(1.4rem, 3.5vw, 1.9rem); line-height: 1.2; margin: 8px 0; letter-spacing: -.01em; }
+  .featured p { color: var(--sub); margin: 0; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+  .card { display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+          overflow: hidden; color: var(--text); }
+  .card:hover { border-color: var(--accent); }
+  .card .cover { aspect-ratio: 16 / 9; width: 100%; object-fit: cover; background: var(--border); }
+  .card .body { padding: 14px 16px 16px; }
+  .card h3 { font-size: 1.05rem; line-height: 1.3; margin: 6px 0; }
+  .card p { color: var(--sub); font-size: .92rem; margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+  .meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .8rem; color: var(--sub); }
+  .tag { display: inline-block; border-radius: 6px; padding: 2px 8px; font-size: .75rem; font-weight: 600; background: var(--border); color: var(--text); }
+  .tag.t-rumor, .tag.st-rumor { background: var(--rumor-bg); color: var(--rumor); }
+  .tag.st-dikonfirmasi, .tag.st-resmi { background: var(--ok-bg); color: var(--ok); }
+  .tag.draft { background: var(--danger); color: #fff; }
+
+  aside h2 { font-size: 1.05rem; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .rel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 0; }
+  .rel-item { padding: 10px 16px; border-top: 1px solid var(--border); display: grid; gap: 4px; }
+  .rel-item:first-child { border-top: 0; }
+  .rel-item strong { font-size: .95rem; }
+  .rel-item small { color: var(--sub); }
+  .rel-item .row { display: flex; gap: 6px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .rel-item .del { font-size: .75rem; color: var(--danger); background: none; border: 0; cursor: pointer; padding: 2px; }
+  .empty { color: var(--sub); padding: 24px; text-align: center; background: var(--card); border: 1px dashed var(--border); border-radius: var(--radius); }
+
+  .article { max-width: 720px; margin: 0 auto; }
+  .article h1 { font-size: clamp(1.7rem, 4.5vw, 2.5rem); line-height: 1.15; letter-spacing: -.02em; margin: 12px 0; }
+  .article .lead { font-size: 1.12rem; color: var(--sub); margin: 0 0 18px; }
+  .article .cover { border-radius: var(--radius); margin: 18px 0; width: 100%; }
+  .article .content p { margin: 0 0 1.1em; font-size: 1.02rem; }
+  .article .actions { display: flex; gap: 8px; margin-top: 24px; flex-wrap: wrap; }
+  .article .source { margin-top: 18px; font-size: .9rem; color: var(--sub); }
+  .back { display: inline-block; margin-bottom: 10px; }
+
+  dialog { border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); color: var(--text);
+           width: min(680px, calc(100vw - 32px)); padding: 0; }
+  dialog::backdrop { background: rgba(0,0,0,.45); }
+  .dlg-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .dlg-head h2 { margin: 0; font-size: 1.1rem; }
+  .dlg-body { padding: 18px 20px 20px; display: grid; gap: 12px; max-height: 75vh; overflow: auto; }
+  .field { display: grid; gap: 4px; }
+  .field label { font-size: .85rem; color: var(--sub); }
+  .field input, .field select, .field textarea { border: 1px solid var(--border); background: var(--bg); border-radius: 10px; padding: 9px 11px; width: 100%; }
+  .field textarea { min-height: 180px; resize: vertical; }
+  .field .hint { font-size: .78rem; color: var(--sub); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 560px) { .two { grid-template-columns: 1fr; } }
+  .check { display: flex; gap: 8px; align-items: center; font-size: .92rem; }
+  .dlg-foot { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; padding-top: 4px; }
+  .status-line { font-size: .85rem; color: var(--sub); min-height: 1.2em; }
+
+  #toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--text); color: var(--bg);
+           padding: 10px 16px; border-radius: 12px; font-size: .9rem; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: calc(100vw - 32px); z-index: 50; }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <a class="brand" href="blog.html">Smartphone Empire <span>Berita</span></a>
+    <nav class="nav-actions">
+      <a class="btn" href="./">Main game</a>
+      <button class="btn" id="btnLogin" type="button">Masuk admin</button>
+      <button class="btn primary" id="btnNewPost" type="button" hidden>+ Tulis artikel</button>
+      <button class="btn" id="btnLogout" type="button" hidden>Keluar</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ====== DAFTAR (portal) ====== -->
+  <section id="viewList">
+    <div class="toolbar">
+      <div class="chips" id="chips" role="group" aria-label="Kategori"></div>
+      <input class="search" id="search" type="search" placeholder="Cari artikel…" aria-label="Cari artikel">
+    </div>
+
+    <div class="layout">
+      <div>
+        <div id="featuredWrap"></div>
+        <div class="grid" id="grid"></div>
+        <div class="empty" id="emptyList" hidden>Belum ada artikel di kategori ini.</div>
+      </div>
+
+      <aside>
+        <h2>Jadwal rilis
+          <button class="btn" id="btnNewRelease" type="button" hidden>+ Jadwal</button>
+        </h2>
+        <div class="rel" id="releases"></div>
+        <p class="status-line" style="margin-top:10px">Tanggal berstatus <em>Rumor</em> belum dikonfirmasi produsen.</p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ====== ARTIKEL ====== -->
+  <section id="viewPost" hidden>
+    <a class="back btn" href="#/">← Kembali ke berita</a>
+    <article class="article" id="postArticle"></article>
+  </section>
+</main>
+
+<!-- ====== DIALOG LOGIN ====== -->
+<dialog id="dlgLogin">
+  <form id="formLogin" method="dialog">
+    <div class="dlg-head"><h2>Masuk admin</h2><button class="btn" type="button" data-close>Tutup</button></div>
+    <div class="dlg-body">
+      <div class="field"><label for="loginEmail">Email</label><input id="loginEmail" type="email" required autocomplete="username"></div>
+      <div class="field"><label for="loginPass">Password</label><input id="loginPass" type="password" required autocomplete="current-password"></div>
+      <p class="status-line" id="loginStatus"></p>
+      <div class="dlg-foot"><button class="btn primary" type="submit" id="btnDoLogin">Masuk</button></div>
+    </div>
+  </form>
+</dialog>
+
+<!-- ====== DIALOG ARTIKEL ====== -->
+<dialog id="dlgPost">
+  <form id="formPost">
+    <div class="dlg-head"><h2 id="postDlgTitle">Tulis artikel</h2><button class="btn" type="button" data-close>Tutup</button></div>
+    <div class="dlg-body">
+      <div class="field"><label for="pTitle">Judul</label><input id="pTitle" required maxlength="200"></div>
+      <div class="two">
+        <div class="field"><label for="pSlug">Slug (alamat artikel)</label><input id="pSlug" maxlength="80" pattern="[a-z0-9][a-z0-9-]{2,79}" placeholder="otomatis dari judul"><span class="hint">Huruf kecil, angka, dan tanda hubung.</span></div>
+        <div class="field"><label for="pCat">Kategori</label>
+          <select id="pCat">
+            <option value="rilis">Rilis</option>
+            <option value="spek">Spek</option>
+            <option value="rumor">Rumor</option>
+            <option value="jadwal">Jadwal</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label for="pExcerpt">Ringkasan</label><textarea id="pExcerpt" rows="2" maxlength="300" style="min-height:0"></textarea></div>
+      <div class="field"><label for="pBody">Isi artikel</label><textarea id="pBody" maxlength="30000"></textarea><span class="hint">Pisahkan paragraf dengan satu baris kosong.</span></div>
+      <div class="two">
+        <div class="field"><label for="pCover">Gambar sampul (opsional, maks. 5 MB)</label><input id="pCover" type="file" accept="image/*"></div>
+        <div class="field"><label for="pSource">Link sumber (opsional)</label><input id="pSource" type="url" placeholder="https://…"></div>
+      </div>
+      <div class="two">
+        <label class="check"><input type="checkbox" id="pFeatured"> Jadikan artikel utama</label>
+        <div class="field"><label for="pStatus">Status</label>
+          <select id="pStatus"><option value="published">Terbitkan</option><option value="draft">Simpan sebagai draf</option></select>
+        </div>
+      </div>
+      <p class="status-line" id="postStatus"></p>
+      <div class="dlg-foot">
+        <button class="btn danger" type="button" id="btnDeletePost" hidden>Hapus</button>
+        <button class="btn primary" type="submit" id="btnSavePost">Simpan</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<!-- ====== DIALOG JADWAL RILIS ====== -->
+<dialog id="dlgRelease">
+  <form id="formRelease">
+    <div class="dlg-head"><h2 id="relDlgTitle">Tambah jadwal rilis</h2><button class="btn" type="button" data-close>Tutup</button></div>
+    <div class="dlg-body">
+      <div class="field"><label for="rName">Nama perangkat</label><input id="rName" required maxlength="120"></div>
+      <div class="two">
+        <div class="field"><label for="rBrand">Merek</label><input id="rBrand" maxlength="60"></div>
+        <div class="field"><label for="rStatus">Status</label>
+          <select id="rStatus"><option value="rumor">Rumor</option><option value="dikonfirmasi">Dikonfirmasi</option><option value="resmi">Resmi</option></select>
+        </div>
+      </div>
+      <div class="two">
+        <div class="field"><label for="rDate">Tanggal (jika pasti)</label><input id="rDate" type="date"></div>
+        <div class="field"><label for="rLabel">Perkiraan (jika belum pasti)</label><input id="rLabel" maxlength="60" placeholder="mis. Q3 2027"></div>
+      </div>
+      <div class="field"><label for="rSource">Link sumber</label><input id="rSource" type="url" placeholder="https://…"></div>
+      <div class="field"><label for="rNotes">Catatan</label><textarea id="rNotes" rows="2" maxlength="1000" style="min-height:0"></textarea></div>
+      <p class="status-line" id="relStatus"></p>
+      <div class="dlg-foot">
+        <button class="btn danger" type="button" id="btnDeleteRelease" hidden>Hapus</button>
+        <button class="btn primary" type="submit" id="btnSaveRelease">Simpan</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/+esm';
+
+// Kunci publishable boleh terlihat di frontend; keamanan data dijaga oleh RLS (lihat supabase/20-blog.sql).
+const SUPABASE_URL = 'https://iyuleatpewampdjeuzrb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_HZUb3YP1Ztz57cV6EGHBPQ_obiCJ3L7';
+const BUCKET = 'blog-media';
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const TZ = 'Asia/Jakarta';
+
+const CATS = { rilis: 'Rilis', spek: 'Spek', rumor: 'Rumor', jadwal: 'Jadwal' };
+const STATUS_LABEL = { rumor: 'Rumor', dikonfirmasi: 'Dikonfirmasi', resmi: 'Resmi' };
+
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { storageKey: 'smartphone-empire:blog-auth', persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+});
+
+const $ = (id) => document.getElementById(id);
+const state = { isAdmin: false, posts: [], releases: [], cat: 'semua', query: '', editingPostId: null, editingReleaseId: null };
+
+// ---------- util ----------
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const safeUrl = (u) => (typeof u === 'string' && /^https?:\/\//i.test(u) ? u : '');
+const fmtDate = (v, dateOnly = false) => {
+  if (!v) return '';
+  const d = dateOnly ? new Date(v + 'T00:00:00+07:00') : new Date(v);
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', timeZone: TZ });
+};
+const slugify = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+const postDate = (p) => p.published_at || p.created_at;
+let toastTimer;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ---------- autentikasi ----------
+async function refreshAuth() {
+  const { data: { session } } = await sb.auth.getSession();
+  state.isAdmin = false;
+  if (session) {
+    const { data, error } = await sb.rpc('is_admin');
+    state.isAdmin = !error && data === true;
+    if (!state.isAdmin) {
+      await sb.auth.signOut();
+      toast('Akun ini bukan admin.');
+    }
+  }
+  const signedIn = state.isAdmin;
+  $('btnLogin').hidden = signedIn;
+  $('btnLogout').hidden = !signedIn;
+  $('btnNewPost').hidden = !signedIn;
+  $('btnNewRelease').hidden = !signedIn;
+}
+
+// ---------- muat data ----------
+async function loadPosts() {
+  let q = sb.from('blog_posts')
+    .select('id,slug,title,category,excerpt,body,cover_url,source_url,is_featured,status,published_at,created_at')
+    .limit(200);
+  if (!state.isAdmin) q = q.eq('status', 'published');
+  const { data, error } = await q;
+  if (error) { toast('Gagal memuat artikel: ' + error.message); return; }
+  state.posts = (data || []).sort((a, b) => new Date(postDate(b)) - new Date(postDate(a)));
+}
+
+async function loadReleases() {
+  const { data, error } = await sb.from('blog_releases')
+    .select('*')
+    .order('expected_date', { ascending: true, nullsFirst: false })
+    .limit(100);
+  if (error) { toast('Gagal memuat jadwal: ' + error.message); return; }
+  state.releases = data || [];
+}
+
+async function loadAll() {
+  await Promise.all([loadPosts(), loadReleases()]);
+  renderAll();
+}
+
+// ---------- render portal ----------
+function renderChips() {
+  const items = [['semua', 'Semua'], ...Object.entries(CATS)];
+  $('chips').innerHTML = items.map(([k, label]) =>
+    `<button class="chip" type="button" data-cat="${k}" aria-pressed="${state.cat === k}">${label}</button>`).join('');
+}
+
+function cardHtml(p) {
+  const cover = safeUrl(p.cover_url)
+    ? `<img class="cover" src="${esc(safeUrl(p.cover_url))}" alt="" loading="lazy">`
+    : `<div class="cover" aria-hidden="true"></div>`;
+  return `<a class="card" href="#/a/${esc(p.slug)}">${cover}
+    <div class="body">
+      <div class="meta"><span class="tag t-${esc(p.category)}">${esc(CATS[p.category])}</span>
+        ${p.status === 'draft' ? '<span class="tag draft">Draf</span>' : ''}
+        <span>${esc(fmtDate(postDate(p)))}</span></div>
+      <h3>${esc(p.title)}</h3>
+      <p>${esc(p.excerpt || '')}</p>
+    </div></a>`;
+}
+
+function renderList() {
+  const q = state.query.trim().toLowerCase();
+  const list = state.posts.filter((p) =>
+    (state.cat === 'semua' || p.category === state.cat) &&
+    (!q || (p.title + ' ' + (p.excerpt || '')).toLowerCase().includes(q)));
+
+  const featured = list.find((p) => p.is_featured && p.status === 'published') || list[0];
+  const rest = list.filter((p) => p !== featured);
+
+  $('featuredWrap').innerHTML = featured ? (() => {
+    const cover = safeUrl(featured.cover_url)
+      ? `<img class="cover" src="${esc(safeUrl(featured.cover_url))}" alt="">`
+      : `<div class="cover" aria-hidden="true"></div>`;
+    return `<a class="featured" href="#/a/${esc(featured.slug)}">${cover}
+      <div class="body">
+        <div class="meta"><span class="tag t-${esc(featured.category)}">${esc(CATS[featured.category])}</span>
+          ${featured.status === 'draft' ? '<span class="tag draft">Draf</span>' : ''}
+          <span>${esc(fmtDate(postDate(featured)))}</span></div>
+        <h2>${esc(featured.title)}</h2>
+        <p>${esc(featured.excerpt || '')}</p>
+      </div></a>`;
+  })() : '';
+
+  $('grid').innerHTML = rest.map(cardHtml).join('');
+  $('emptyList').hidden = list.length > 0;
+}
+
+function renderReleases() {
+  const box = $('releases');
+  if (!state.releases.length) { box.innerHTML = '<div class="rel-item"><small>Belum ada jadwal.</small></div>'; return; }
+  box.innerHTML = state.releases.map((r) => {
+    const when = r.expected_date ? fmtDate(r.expected_date, true) : (r.expected_label || 'Belum pasti');
+    const src = safeUrl(r.source_url);
+    return `<div class="rel-item">
+      <div class="row"><strong>${esc(r.device_name)}</strong>
+        <span class="tag st-${esc(r.status)}">${esc(STATUS_LABEL[r.status] || r.status)}</span></div>
+      <small>${esc(r.brand || '')}${r.brand ? ' · ' : ''}${esc(when)}</small>
+      ${r.notes ? `<small>${esc(r.notes)}</small>` : ''}
+      <div class="row">
+        ${src ? `<a href="${esc(src)}" target="_blank" rel="noopener nofollow" style="font-size:.8rem">Sumber</a>` : '<span></span>'}
+        ${state.isAdmin ? `<span><button class="del" type="button" data-edit-release="${esc(r.id)}">Ubah</button>
+           <button class="del" type="button" data-del-release="${esc(r.id)}">Hapus</button></span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAll() {
+  renderChips();
+  renderList();
+  renderReleases();
+  route();
+}
+
+// ---------- artikel ----------
+function showPost(slug) {
+  const p = state.posts.find((x) => x.slug === slug);
+  const article = $('postArticle');
+  if (!p) {
+    article.innerHTML = `<p class="empty">Artikel tidak ditemukan atau belum diterbitkan.</p>`;
+  } else {
+    const paragraphs = (p.body || '').split(/\n\s*\n/).filter((s) => s.trim())
+      .map((s) => `<p>${esc(s.trim()).replace(/\n/g, '<br>')}</p>`).join('');
+    const cover = safeUrl(p.cover_url) ? `<img class="cover" src="${esc(safeUrl(p.cover_url))}" alt="">` : '';
+    const src = safeUrl(p.source_url);
+    article.innerHTML = `
+      <div class="meta"><span class="tag t-${esc(p.category)}">${esc(CATS[p.category])}</span>
+        ${p.status === 'draft' ? '<span class="tag draft">Draf</span>' : ''}
+        <span>${esc(fmtDate(postDate(p)))}</span></div>
+      <h1>${esc(p.title)}</h1>
+      ${p.excerpt ? `<p class="lead">${esc(p.excerpt)}</p>` : ''}
+      ${cover}
+      <div class="content">${paragraphs}</div>
+      ${src ? `<p class="source">Sumber: <a href="${esc(src)}" target="_blank" rel="noopener nofollow">${esc(src)}</a></p>` : ''}
+      ${state.isAdmin ? `<div class="actions"><button class="btn" type="button" data-edit-post="${esc(p.id)}">Ubah artikel</button></div>` : ''}`;
+  }
+  $('viewList').hidden = true;
+  $('viewPost').hidden = false;
+  window.scrollTo({ top: 0 });
+  document.title = p ? `${p.title} — Berita Smartphone Empire` : 'Artikel — Berita Smartphone Empire';
+}
+
+function showList() {
+  $('viewPost').hidden = true;
+  $('viewList').hidden = false;
+  document.title = 'Berita Smartphone Empire — Spek, Rumor & Jadwal Rilis';
+}
+
+function route() {
+  const m = /^#\/a\/(.+)$/.exec(location.hash);
+  if (m) showPost(decodeURIComponent(m[1])); else showList();
+}
+
+// ---------- form artikel ----------
+function openPostDialog(post = null) {
+  state.editingPostId = post ? post.id : null;
+  $('postDlgTitle').textContent = post ? 'Ubah artikel' : 'Tulis artikel';
+  $('pTitle').value = post?.title || '';
+  $('pSlug').value = post?.slug || '';
+  $('pCat').value = post?.category || 'rilis';
+  $('pExcerpt').value = post?.excerpt || '';
+  $('pBody').value = post?.body || '';
+  $('pCover').value = '';
+  $('pSource').value = post?.source_url || '';
+  $('pFeatured').checked = !!post?.is_featured;
+  $('pStatus').value = post?.status || 'published';
+  $('btnDeletePost').hidden = !post;
+  $('postStatus').textContent = '';
+  $('dlgPost').showModal();
+}
+
+$('pTitle').addEventListener('input', () => {
+  if (!state.editingPostId && !$('pSlug').dataset.touched) $('pSlug').value = slugify($('pTitle').value);
+});
+$('pSlug').addEventListener('input', () => { $('pSlug').dataset.touched = '1'; });
+
+async function uploadCover(file) {
+  if (file.size > MAX_IMAGE_BYTES) throw new Error('Ukuran gambar maksimal 5 MB.');
+  const path = `${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
+  const { error } = await sb.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+  if (error) throw error;
+  return sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
+$('formPost').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('btnSavePost');
+  btn.disabled = true; $('postStatus').textContent = 'Menyimpan…';
+  try {
+    const payload = {
+      title: $('pTitle').value.trim(),
+      slug: ($('pSlug').value.trim() || slugify($('pTitle').value)).toLowerCase(),
+      category: $('pCat').value,
+      excerpt: $('pExcerpt').value.trim() || null,
+      body: $('pBody').value.trim(),
+      source_url: $('pSource').value.trim() || null,
+      is_featured: $('pFeatured').checked,
+      status: $('pStatus').value
+    };
+    const file = $('pCover').files[0];
+    if (file) payload.cover_url = await uploadCover(file);
+    else if (state.editingPostId) {
+      const cur = state.posts.find((p) => p.id === state.editingPostId);
+      payload.cover_url = cur?.cover_url || null;
+    } else payload.cover_url = null;
+
+    // Hanya satu artikel boleh berstatus utama: lepas tanda utama dari artikel lain.
+    if (payload.is_featured) {
+      let un = sb.from('blog_posts').update({ is_featured: false }).eq('is_featured', true);
+      if (state.editingPostId) un = un.neq('id', state.editingPostId);
+      await un;
+    }
+
+    const res = state.editingPostId
+      ? await sb.from('blog_posts').update(payload).eq('id', state.editingPostId).select('slug').single()
+      : await sb.from('blog_posts').insert(payload).select('slug').single();
+    if (res.error) throw res.error;
+
+    $('dlgPost').close();
+    toast('Artikel tersimpan.');
+    await loadPosts(); renderAll();
+    if (payload.status === 'published') location.hash = '#/a/' + res.data.slug;
+  } catch (err) {
+    const dup = /duplicate key|unique/i.test(err.message || '');
+    $('postStatus').textContent = dup ? 'Slug sudah dipakai artikel lain. Ganti slug-nya.' : 'Gagal menyimpan: ' + (err.message || err);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$('btnDeletePost').addEventListener('click', async () => {
+  if (!state.editingPostId || !confirm('Hapus artikel ini secara permanen?')) return;
+  const { error } = await sb.from('blog_posts').delete().eq('id', state.editingPostId);
+  if (error) { $('postStatus').textContent = 'Gagal menghapus: ' + error.message; return; }
+  $('dlgPost').close();
+  toast('Artikel dihapus.');
+  await loadPosts(); renderAll();
+  location.hash = '#/';
+});
+
+// ---------- form jadwal rilis ----------
+function openReleaseDialog(rel = null) {
+  state.editingReleaseId = rel ? rel.id : null;
+  $('relDlgTitle').textContent = rel ? 'Ubah jadwal rilis' : 'Tambah jadwal rilis';
+  $('rName').value = rel?.device_name || '';
+  $('rBrand').value = rel?.brand || '';
+  $('rStatus').value = rel?.status || 'rumor';
+  $('rDate').value = rel?.expected_date || '';
+  $('rLabel').value = rel?.expected_label || '';
+  $('rSource').value = rel?.source_url || '';
+  $('rNotes').value = rel?.notes || '';
+  $('btnDeleteRelease').hidden = !rel;
+  $('relStatus').textContent = '';
+  $('dlgRelease').showModal();
+}
+
+$('formRelease').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('btnSaveRelease');
+  btn.disabled = true; $('relStatus').textContent = 'Menyimpan…';
+  const payload = {
+    device_name: $('rName').value.trim(),
+    brand: $('rBrand').value.trim() || null,
+    status: $('rStatus').value,
+    expected_date: $('rDate').value || null,
+    expected_label: $('rLabel').value.trim() || null,
+    source_url: $('rSource').value.trim() || null,
+    notes: $('rNotes').value.trim() || null
+  };
+  const res = state.editingReleaseId
+    ? await sb.from('blog_releases').update(payload).eq('id', state.editingReleaseId)
+    : await sb.from('blog_releases').insert(payload);
+  btn.disabled = false;
+  if (res.error) { $('relStatus').textContent = 'Gagal menyimpan: ' + res.error.message; return; }
+  $('dlgRelease').close();
+  toast('Jadwal tersimpan.');
+  await loadReleases(); renderReleases();
+});
+
+$('btnDeleteRelease').addEventListener('click', async () => {
+  if (!state.editingReleaseId || !confirm('Hapus jadwal ini?')) return;
+  const { error } = await sb.from('blog_releases').delete().eq('id', state.editingReleaseId);
+  if (error) { $('relStatus').textContent = 'Gagal menghapus: ' + error.message; return; }
+  $('dlgRelease').close();
+  toast('Jadwal dihapus.');
+  await loadReleases(); renderReleases();
+});
+
+// ---------- login / logout ----------
+$('btnLogin').addEventListener('click', () => { $('loginStatus').textContent = ''; $('dlgLogin').showModal(); });
+$('formLogin').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('btnDoLogin').disabled = true; $('loginStatus').textContent = 'Memeriksa…';
+  const { error } = await sb.auth.signInWithPassword({ email: $('loginEmail').value.trim(), password: $('loginPass').value });
+  $('btnDoLogin').disabled = false;
+  if (error) { $('loginStatus').textContent = 'Email atau password salah.'; return; }
+  $('loginPass').value = '';
+  $('dlgLogin').close();
+});
+$('btnLogout').addEventListener('click', async () => { await sb.auth.signOut(); toast('Sudah keluar.'); });
+
+sb.auth.onAuthStateChange(async (event) => {
+  if (event !== 'SIGNED_IN' && event !== 'SIGNED_OUT') return;
+  await refreshAuth();
+  await loadAll();
+});
+
+// ---------- interaksi umum ----------
+$('btnNewPost').addEventListener('click', () => openPostDialog());
+$('btnNewRelease').addEventListener('click', () => openReleaseDialog());
+document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', (e) => e.target.closest('dialog').close()));
+
+$('chips').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-cat]'); if (!b) return;
+  state.cat = b.dataset.cat; renderChips(); renderList();
+});
+$('search').addEventListener('input', (e) => { state.query = e.target.value; renderList(); });
+window.addEventListener('hashchange', route);
+
+document.addEventListener('click', (e) => {
+  const edP = e.target.closest('[data-edit-post]');
+  if (edP) { openPostDialog(state.posts.find((p) => p.id === edP.dataset.editPost)); return; }
+  const edR = e.target.closest('[data-edit-release]');
+  if (edR) { openReleaseDialog(state.releases.find((r) => r.id === edR.dataset.editRelease)); return; }
+  const delR = e.target.closest('[data-del-release]');
+  if (delR && confirm('Hapus jadwal ini?')) {
+    sb.from('blog_releases').delete().eq('id', delR.dataset.delRelease)
+      .then(({ error }) => { if (error) toast('Gagal menghapus: ' + error.message); else { toast('Jadwal dihapus.'); loadReleases().then(renderReleases); } });
+  }
+});
+
+// ---------- mulai ----------
+(async function init() {
+  await refreshAuth();
+  await loadAll();
+})();
+</script>
+</body>
+</html>
