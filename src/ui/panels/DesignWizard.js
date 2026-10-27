@@ -9,7 +9,8 @@ import {
     COMPONENTS, COMPONENT_CATEGORIES, BODY_COLORS,
     getComponentById, getComponentsByCategory, getBodyColorById
 } from '../../data/components.data.js';
-import { renderPhoneMockup, renderPackagingCaption } from '../phone/PhoneMockup.js';
+import { renderPhoneMockup, renderPackagingCaption, phoneClockText } from '../phone/PhoneMockup.js';
+import { FOLD_3D_FORMS, mountFoldMockup3D, disposeFoldMockup3D } from '../phone/FoldMockup3D.js';
 import { getDesignEraForYear, isFormFactorSelectable } from '../../data/era-design.data.js';
 import { resolveSpec } from '../../data/phone-specs.data.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
@@ -1596,27 +1597,59 @@ function _getAdaptiveSize() {
     return window.innerWidth < 380 ? 124 : 140;
 }
 
+function _renderSvgMockup(mockupContainer) {
+    try {
+        const size = _getAdaptiveSize();
+        mockupContainer.innerHTML = renderPhoneMockup(_wizardState, {
+            size: size,
+            view: _wizardView,
+            isStatic: _phoneShown,
+            showBrand: false,
+            packCaption: false
+        });
+        _phoneShown = true;
+    } catch (e) {
+        console.error('[DesignWizard] Mockup error:', e);
+        mockupContainer.innerHTML = '';
+    }
+}
+
+// Model 3D untuk bentuk lipat. Jika WebGL/modul gagal, kembali ke SVG.
+function _mountFold3D(mockupContainer) {
+    try {
+        const yr = DesignEraService.getCurrentYear();
+        const era = getDesignEraForYear(yr);
+        const body = getBodyColorById(_wizardState.bodyColorId);
+        mountFoldMockup3D(mockupContainer, {
+            formFactorId: _wizardState.formFactorId,
+            bodyHex: body ? body.hex : '#1a1a1a',
+            era: era.aesthetic,
+            clock: phoneClockText(),
+            width: _getAdaptiveSize(),
+            pose: _wizardView === 'open' ? 'open' : 'closed'
+        }).catch(function (e) {
+            console.warn('[DesignWizard] 3D mockup gagal, pakai SVG:', e);
+            _renderSvgMockup(mockupContainer);
+        });
+    } catch (e) {
+        console.warn('[DesignWizard] 3D mockup gagal, pakai SVG:', e);
+        _renderSvgMockup(mockupContainer);
+    }
+}
+
 function _refreshPreview() {
     const root = document.querySelector('[data-modal-id="design-wizard"]');
     if (!root) return;
 
     const mockupContainer = root.querySelector('[data-wiz-mockup-container]');
     if (mockupContainer) {
-        try {
-            const size = _getAdaptiveSize();
-            const yr = DesignEraService.getCurrentYear();
-            const sp = resolveSpec(yr, state.get().research.completed || []);
-            mockupContainer.innerHTML = renderPhoneMockup(_wizardState, {
-                size: size,
-                view: _wizardView,
-                isStatic: _phoneShown,
-                showBrand: false,
-                packCaption: false
-            });
-            _phoneShown = true;
-        } catch (e) {
-            console.error('[DesignWizard] Mockup error:', e);
-            mockupContainer.innerHTML = '';
+        const want3d = FOLD_3D_FORMS.indexOf(_wizardState.formFactorId) >= 0 &&
+            (_wizardView === 'front' || _wizardView === 'open');
+        if (want3d) {
+            _mountFold3D(mockupContainer);
+        } else {
+            disposeFoldMockup3D(mockupContainer);
+            _renderSvgMockup(mockupContainer);
         }
     }
 
