@@ -142,7 +142,7 @@ export const DESIGN_ERAS = [
         screenStyle: 'flexible',
         uiTheme: 'futuristic',
         bodyColors: ['color_black', 'color_titanium', 'color_green', 'color_white', 'color_violet', 'color_graphite', 'color_wine', 'color_lavender', 'color_midnight', 'color_sand', 'color_teal', 'color_mint'],
-        formFactors: ['ff_fullscreen', 'ff_bezel', 'ff_edge', 'ff_dual', 'ff_fold', 'ff_flip_fold', 'ff_tri_fold'],
+        formFactors: ['ff_fullscreen', 'ff_bezel', 'ff_edge', 'ff_dual', 'ff_fold', 'ff_flip_fold', 'ff_tri_fold', 'ff_fold_wide', 'ff_book_crease_free', 'ff_tri_fold_c'],
         aesthetic: {
             primary: '#080810',
             accent: '#a855f7',

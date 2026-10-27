@@ -72,6 +72,11 @@ export const RESEARCH_NODES = [
       description: 'Panel fleksibel untuk ponsel lipat.',
       cost: 350000, durationDays: 110, prerequisites: ['layar_hfr'],
       effects: { unlocksComponents: ['scr_fold'], statBonuses: { display: 90 }, unlocksOsFeatures: [] } },
+    { id: 'layar_crease_free', category: 'display', tier: 5, minYear: 2025,
+      name: 'Layar Tanpa Lipatan',
+      description: 'Panel fleksibel generasi baru dengan garis lipatan nyaris tak terlihat di layar dalam.',
+      cost: 500000, durationDays: 130, prerequisites: ['layar_foldable'],
+      effects: { unlocksComponents: [], statBonuses: { display: 95 }, unlocksOsFeatures: [] } },
 
     // ==================== KAMERA (Asli + Tambahan) ====================
     { id: 'cam_vga', category: 'camera', tier: 1, minYear: 2001,

@@ -860,6 +860,30 @@ export const COMPONENTS = [
       baseDemandMultiplier: 1.35,
       realReference: 'Huawei Mate XT (2024)', milestone: true, requiresResearch: 'layar_foldable' },
 
+    { id: 'ff_fold_wide', category: 'form_factor', tier: 5, minYear: 2026,
+      name: 'Lipat Lebar (Wide Fold)', icon: 'phone',
+      description: 'Buku lipat dengan layar sampul lebar. Saat terbuka mendekati rasio tablet kecil, nyaman untuk multitasking.',
+      costPerUnit: 70, stats: { usability: 72, design: 90 },
+      specs: { type: 'Wide Fold', foldCount: 1, hasKeyboard: false, sizeUnfoldedCm: '17.5 x 9.0 x 0.6', weightG: 255, ergonomics: 'two_hand' },
+      baseDemandMultiplier: 1.28,
+      realReference: 'Galaxy Z Fold8 Wide (dilaporkan, 2026)', milestone: true, requiresResearch: 'layar_foldable' },
+
+    { id: 'ff_book_crease_free', category: 'form_factor', tier: 5, minYear: 2026,
+      name: 'Buku Tanpa Lipatan', icon: 'phone',
+      description: 'Buku lipat dengan layar dalam yang hampir tanpa garis lipatan. Terasa seperti layar ponsel biasa saat dipakai.',
+      costPerUnit: 85, stats: { usability: 66, design: 94 },
+      specs: { type: 'Book (Crease-free)', foldCount: 1, hasKeyboard: false, sizeUnfoldedCm: '15.5 x 7.6 x 0.5', weightG: 230, ergonomics: 'two_hand' },
+      baseDemandMultiplier: 1.3,
+      realReference: 'Rumor iPhone Fold (2026, belum dikonfirmasi)', milestone: true, requiresResearch: 'layar_crease_free' },
+
+    { id: 'ff_tri_fold_c', category: 'form_factor', tier: 5, minYear: 2025,
+      name: 'Tri-Fold C', icon: 'phone',
+      description: 'Tri-fold dengan dua engsel yang melipat ke arah sama (bentuk C). Saat tertutup tanpa layar luar, lebih rapi.',
+      costPerUnit: 105, stats: { usability: 68, design: 96 },
+      specs: { type: 'Tri-Fold C', foldCount: 2, hasKeyboard: false, sizeUnfoldedCm: '21.0 x 14.0 x 0.45', weightG: 300, ergonomics: 'two_hand' },
+      baseDemandMultiplier: 1.33,
+      realReference: 'Samsung Galaxy Z TriFold (2025)', milestone: true, requiresResearch: 'layar_foldable' },
+
     // ============================================================
     // RAM — 10 komponen (opsional di Desain; bisa dibuat di Pabrik RAM)
     // ============================================================

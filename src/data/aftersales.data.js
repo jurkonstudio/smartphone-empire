@@ -75,7 +75,7 @@ export function baseFailureAt(yearFrac) {
     return t[t.length - 1].v;
 }
 
-export const FOLDABLE_FORMS = ['ff_fold', 'ff_flip_fold', 'ff_tri_fold'];
+export const FOLDABLE_FORMS = ['ff_fold', 'ff_flip_fold', 'ff_tri_fold', 'ff_fold_wide', 'ff_book_crease_free', 'ff_tri_fold_c'];
 export const FOLDABLE_FAILURE_MULT = 1.5;
 
 // Biaya klaim: bagian dari biaya produksi per unit (campuran servis ringan dan tukar unit) + biaya penanganan.
