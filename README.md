@@ -59,6 +59,7 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 ### 🏢 Campus, Office, and Team
 
 - **3D Campus map** on Home: buildings grow and level up as you progress (HQ, R&D Lab, Chip Plant, Flagship Store, OS Center, Billboard, Monument, and more). Building style follows the era, there is a day and night cycle that follows the theme, and the city is animated.
+  - Since 0.2.14 the island is **expanded** with decorative districts (sports complex, beach café and pier, lighthouse, botanical garden, solar field, roundabout, parking, amphitheater).
   - The **Manufacturing Island** is linked to the campus by a bridge. Trucks cross between the two islands, and the camera can pan over to it.
 - **3D Office map** (Home → Office): an isometric office interior with **9 rooms** connected to game data.
   - Staff sit at desks. Color shows their role and a small orb shows morale.
@@ -190,7 +191,7 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 - **Wholesale text is partly untranslated.** The `wh.*` keys used by the Wholesale panel and its notifications aren't in `src/data/i18n/en.js` or `id.js` yet, so the fallback text is shown. The panel's CSS classes (`wh-card`, `wh-compare`, `wh-under`, and others) have no styles, so the panel looks plain.
 - **Wholesale balance is only simulated.** Offer frequency, price bands, and the buyer share boost (`relEffect` 0.04 for about 3 months) come from simulation scripts. They haven't been checked in a browser run with real play.
 - **Business Advisor Edge Function (AI)** has no per-user rate limit and its CORS is open (`*`). Don't enable it for a wide public before that is added. Details in `SECURITY.md`.
-- **Release notes are incomplete.** `src/patches.json` covers 0.2.1 to 0.2.12, but several earlier changes are still missing from it (listed under 0.2.4 in Versions). The version must match in four places: `src/config/app.config.js`, `package.json`, `patches.json`, and `src/patches.json`. If the game version is lower than `latest`, the Business Advisor tells every player there is a new patch.
+- **Release notes are incomplete.** `src/patches.json` covers 0.2.1 to 0.2.14, but several earlier changes are still missing from it (listed under 0.2.4 in Versions). The version must match in four places: `src/config/app.config.js`, `package.json`, `patches.json`, and `src/patches.json`. If the game version is lower than `latest`, the Business Advisor tells every player there is a new patch.
 - **Landing-page screenshots** (`assets/img/landing/`) need to be retaken. The HQ image still shows the old Office tab and the old Overview layout.
 - **The client-side admin gate is cosmetic only.** Real admin status is verified on the server through `is_admin()`.
 - **2027–2030 content is speculative.** Prices, the RAM index, brand shares, and withdrawal thresholds are game scenarios that still need calibration through play. The details of EU battery rules are not modeled (only the trend effect and news). Real brand names can "withdraw" in the simulation through the share threshold, and that is not a claim about real companies.
@@ -297,6 +298,7 @@ The project is still in progress. Roadmap notes:
 - ✅ **Office ↔ Team integration**: staff cards open staff details, staff details can jump to the office, and the Work room has a recruit shortcut
 - ✅ **Market Navigation** (data, demand, opinion, Americas & Rest promotions, per-segment promotions, and UI panels in the Market tab)
 - ✅ **Manufacturing**: component plants (Battery, Display, SoC, Camera, RAM), wholesale, finished-product wholesale contracts, infrastructure tax, and the Campus ↔ Manufacturing Island bridge
+- ✅ **3D maps visual refresh (0.2.14)**: expanded Campus island with 8 new districts, plus detail passes on the Server, Manufacturing, and Office maps (visual only)
 - ✅ **Assembly factory**: 4 levels, headcount-based workforce, restock discounts, and a 3D plant on the Manufacturing Island
 - ✅ **Economy brakes and the Invest tab**
 - ✅ **Stock market v2**: player trade impact, more listed companies, world/IDX indices, and company tiers
@@ -323,7 +325,18 @@ The project is still in progress. Roadmap notes:
 
 ## Versions
 
-Latest recorded version: **0.2.13** (October 27, 2026). Official change lists are in `src/patches.json` and `docs/PERF-CHANGES.md`. The root `patches.json` is kept identical to `src/patches.json`, and `APP_CONFIG.version` in `src/config/app.config.js` must equal `latest`.
+Latest recorded version: **0.2.14** (October 27, 2026). Official change lists are in `src/patches.json` and `docs/PERF-CHANGES.md`. The root `patches.json` is kept identical to `src/patches.json`, and `APP_CONFIG.version` in `src/config/app.config.js` must equal `latest`.
+
+### 0.2.14 — Expanded 3D Campus and a visual refresh of the Server, Manufacturing, and Office maps
+- Feature: **Campus island expanded.** `islandRadius` now widens the coastline to the east (radius 22 to 30.4), north (26.2), and south (24.8). The west side is unchanged, so the bridge to the Manufacturing Island does not move. The camera pan limits and the shadow range (`quality.shadowHalf = 34`) grew with it.
+- Feature: **Eight decorative Campus districts** in `src/ui/campus/CampusExpansion.js`, with footprints in `src/data/campus-expansion.data.js`: Sports Complex, Beach Café with a pier and three sailboats, Lighthouse (rotating beam at night), Botanical Garden with a glasshouse, Solar Field, South Roundabout, Parking Lot, and Amphitheater. They have no level, slot, or info card and cannot be tapped. Trees, hills, shrubs, lamps, and grass patches avoid them, and 9 small groves fill the new land.
+- Feature: **Server 3D map (v2027.74).** Seabed caustics, sand ripples, shadows, PMREM environment, kelp, coral, fish schools, jellyfish, an ROV drone, detailed pods and hub, tap-to-focus with a status card, and three quality tiers. Fix: Exp2 fog hid about 96% of the map center and bubble particles were under one pixel. Notes: `src/docs/SERVER-VISUAL-CHANGES-v74.md`.
+- Feature: **Manufacturing 3D map (v2027.80).** `src/ui/manufacture/ManufactureDetail.js` adds pilasters, plinths, parapets, spinning HVAC units, skylights, door canopies, utility pipes, and yard details. Notes: `docs/CHANGES-manufacture-v3.md`.
+- Feature: **Office 3D map (v2027.80 to 2027.83).** Anatomical staff with IK poses, textured monitors, procedural floors, `OfficeExterior.js` (yard and surrounding buildings), and `OfficeLook.js` (bloom, tone mapping, vignette on the high tier). Fix: the theme state (`VS.era`, dark, accent) was never filled in, so old-era monitor screens never showed.
+- Files: `src/ui/campus/CampusExpansion.js` (new), `src/data/campus-expansion.data.js` (new), `src/ui/campus/CampusBuildings.js`, `src/ui/campus/CampusScene.js`, `src/ui/campus/CampusLook.js`, `src/ui/server/ServerScene.js`, `src/ui/server/ServerMap.js`, `src/ui/manufacture/ManufactureDetail.js` (new), `src/ui/manufacture/ManufactureScene.js`, `src/ui/office/OfficeExterior.js` (new), `src/ui/office/OfficeLook.js` (new), `src/ui/office/OfficeScene.js`, `tools/campus-expansion-smoke.mjs` (new), `src/docs/CAMPUS-VISUAL-CHANGES-v73.md` (new).
+- Change: **This patch does not change game logic.** Only the look of the 3D maps changed. Version 0.2.14 is set in `APP_CONFIG.version`, `package.json`, `patches.json`, `src/patches.json`, and `web.html`.
+- Tests: `node tools/campus-expansion-smoke.mjs` passes (west coast unchanged, every district inside the coastline and clear of buildings, no trees inside districts, build and dispose). `tools/check-syntax.mjs` passes. The scene was also built end to end with a mock THREE.
+- Not yet checked: **none of the four maps has been checked in a real browser with WebGL, and not on a real phone.** The Campus district positions and sizes come from calculation, not from looking at the screen. The Server, Manufacturing, and Office notes come from their own change files and were not re-tested here. The shadow range was widened, so shadows may look slightly softer on the high tier (raise `shadowMap` in `CampusLook.js` if so).
 
 ### 0.2.13 — Flagship cycle, hype, world map, and manufacturing overview
 - Feature: **One flagship per calendar year.** `ProductSystem.confirmTierFamily` refuses a new series when this year's flagship has already shipped (`HypeCycleSystem.checkFlagshipSlot`). Basic, Pro, and Pro Max stay inside one series.
