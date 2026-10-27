@@ -474,7 +474,50 @@
 
 <div id="toast" role="status" aria-live="polite"></div>
 
+<script>
+// 7x ketuk tersembunyi pada logo header -> dialog login admin.
+// Skrip biasa (bukan module) supaya tetap jalan walau CDN Supabase gagal dimuat.
+(function () {
+  var NEED = 7, GAP = 2000, n = 0, last = 0;
+  var el = document.getElementById('brand');
+  if (!el) return;
+  function say(msg) {
+    var t = document.getElementById('toast'); if (!t) return;
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(function () { t.classList.remove('show'); }, 3000);
+  }
+  function openAdminLogin() {
+    window.__adminLogin = true;
+    document.getElementById('loginTabs').hidden = true;
+    document.getElementById('btnForgot').hidden = true;
+    document.getElementById('loginHint').textContent = 'Khusus admin.';
+    document.getElementById('loginTitle').textContent = 'Masuk admin';
+    document.getElementById('btnDoLogin').textContent = 'Masuk';
+    document.getElementById('loginPassWrap').hidden = false;
+    document.getElementById('loginPass').required = true;
+    var st = document.getElementById('loginStatus'); st.textContent = '';
+    var dlg = document.getElementById('dlgLogin');
+    if (!dlg.open) dlg.showModal();
+    document.getElementById('loginEmail').focus();
+    setTimeout(function () {
+      if (!window.__blogReady) st.textContent = 'Koneksi ke server gagal (Supabase tidak termuat). Cek internet lalu muat ulang halaman.';
+    }, 1500);
+  }
+  el.addEventListener('click', function (e) {
+    var now = Date.now();
+    n = (now - last > GAP) ? 1 : n + 1;
+    last = now;
+    if (n < NEED) return;
+    n = 0;
+    e.preventDefault();
+    var bar = document.getElementById('adminbar');
+    if (bar && !bar.hidden) { say('Kamu sudah masuk sebagai admin.'); return; }
+    openAdminLogin();
+  });
+})();
+</script>
 <script type="module">
+window.__blogReady = true;  // modul termuat (CDN Supabase berhasil)
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/+esm';
 
 // Kunci publishable boleh terlihat di frontend; keamanan data dijaga oleh RLS (lihat supabase/20-blog.sql).
@@ -1056,37 +1099,13 @@ function setAuthMode(m) {
   $('loginStatus').textContent = '';
 }
 // Login pembaca (dari komentar/jajak pendapat): ada tab Daftar.
-let adminLogin = false;
 function openLogin() {
-  adminLogin = false;
+  window.__adminLogin = false;
   $('loginTabs').hidden = false; $('btnForgot').hidden = false;
   $('loginHint').textContent = 'Pakai akun yang sama dengan game Smartphone Empire.';
   setAuthMode('login'); $('dlgLogin').showModal();
 }
-// Login admin: dibuka lewat 7x ketuk tersembunyi di logo header. Tanpa tab Daftar.
-function openAdminLogin() {
-  adminLogin = true;
-  $('loginTabs').hidden = true; $('btnForgot').hidden = true;
-  $('loginHint').textContent = 'Khusus admin.';
-  setAuthMode('login');
-  $('loginTitle').textContent = 'Masuk admin';
-  $('dlgLogin').showModal();
-  $('loginEmail').focus();
-}
-(function secretTap() {
-  const NEED = 7, GAP = 1500;  // 7 ketukan, jeda antar ketukan maks. 1,5 detik
-  let n = 0, last = 0;
-  $('brand').addEventListener('click', (e) => {
-    const now = Date.now();
-    n = now - last > GAP ? 1 : n + 1;
-    last = now;
-    if (n < NEED) return;
-    n = 0;
-    e.preventDefault();
-    if (state.isAdmin) { toast('Kamu sudah masuk sebagai admin.'); return; }
-    openAdminLogin();
-  });
-})();
+
 function authMsg(e) {
   const m = String(e?.message || '').toLowerCase();
   if (m.includes('invalid login')) return 'Email atau password salah.';
@@ -1118,7 +1137,7 @@ $('formLogin').addEventListener('submit', async (e) => {
       const { error } = await sb.auth.signInWithPassword({ email, password: pass });
       if (error) throw error;
       $('loginPass').value = '';
-      if (adminLogin) {
+      if (window.__adminLogin) {
         const a = await sb.rpc('is_admin');
         if (a.error || a.data !== true) {
           await sb.auth.signOut();
