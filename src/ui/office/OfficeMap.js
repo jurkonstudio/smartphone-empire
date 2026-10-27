@@ -2,6 +2,7 @@
 // Mount/unmount Office 3D Map (tab HQ → Kantor). Three.js dimuat lazy dari CDN (versi dipin,
 // sama dengan peta kampus, jadi modul di-cache browser & tidak diunduh dua kali).
 import { createOfficeScene } from './OfficeScene.js';
+import { bindAmbience } from '../ambience/AmbienceParams.js';
 import { bus } from '../../core/EventBus.js';
 import { t } from '../../core/LanguageService.js';
 import { FX_EVENTS, createThrottle } from './OfficeFx.js';
@@ -105,6 +106,7 @@ export async function mountOfficeMap(containerEl, gameState) {
             bus.on('time:day-changed', queue),
             function () { if (queued) { cancelAnimationFrame(queued); queued = 0; } }
         ].concat(fxUnsubs);
+        unsubs.push(bindAmbience('office', bus, currentData));   // audio ambien adaptif
         _active = { scene: scene, unsubs: unsubs };
     } catch (err) {
         console.warn('[OfficeMap] gagal, pakai fallback:', err);
