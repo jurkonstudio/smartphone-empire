@@ -31,6 +31,7 @@ import { lerpHex } from './DayCycle.js';
 import {
     CAMPUS_RULES, CAMPUS_SLOTS, CAMPUS_SLOT_ORDER, CAMPUS_BY_ID, CAMPUS_RESERVED, CAMPUS_ROADS, campusLevelFor
 } from '../../data/campus-buildings.data.js';
+import { CAMPUS_EXPANSION, EXPAND_GAIN, EXPAND_POWER } from '../../data/campus-expansion.data.js';
 
 // Ukuran dunia visual; koordinat inti lama tetap di tengah agar integrasi tidak bergeser.
 export const CAMPUS_WORLD_SIZE = 100;
@@ -90,7 +91,10 @@ export function islandRadius(th, scale) {
     var c = Math.abs(Math.cos(th)), sn = Math.abs(Math.sin(th)), n = 3.2;
     var sup = Math.pow(Math.pow(c, n) + Math.pow(sn, n), -1 / n);
     var wob = 1 + 0.045 * Math.sin(3 * th + 0.8) + 0.03 * Math.sin(5 * th + 2.1) + 0.02 * Math.sin(9 * th + 0.3);
-    return ISLAND_R * sup * wob * (scale || 1);
+    // v2027.73 — perluasan: pulau melebar ke timur/utara/selatan; sisi barat (th = PI) TETAP supaya jembatan Manufaktur tidak bergeser.
+    var w = (1 + Math.cos(th)) / 2;
+    var grow = 1 + EXPAND_GAIN * Math.pow(w, EXPAND_POWER);
+    return ISLAND_R * sup * wob * grow * (scale || 1);
 }
 
 function _rng(seed) {
@@ -98,8 +102,13 @@ function _rng(seed) {
 }
 // Lahan gedung: pohon/semak/lampu dengan pusat di dalam (+pad) ditiadakan agar tidak menembus bangunan.
 function _onReserved(x, z, pad) {
-    for (var i = 0; i < CAMPUS_RESERVED.length; i++) {
-        var r = CAMPUS_RESERVED[i];
+    var i, r;
+    for (i = 0; i < CAMPUS_RESERVED.length; i++) {
+        r = CAMPUS_RESERVED[i];
+        if (x > r.x0 - pad && x < r.x1 + pad && z > r.z0 - pad && z < r.z1 + pad) return true;
+    }
+    for (i = 0; i < CAMPUS_EXPANSION.length; i++) {      // v2027.73 — distrik perluasan juga lahan terjaga
+        r = CAMPUS_EXPANSION[i];
         if (x > r.x0 - pad && x < r.x1 + pad && z > r.z0 - pad && z < r.z1 + pad) return true;
     }
     return false;
@@ -126,7 +135,7 @@ export var HILLS = (function () {
         var r = 17.5 + rnd() * 6.5;
         var x = Math.cos(th) * r, z = Math.sin(th) * r;
         var rad = 1.8 + rnd() * 1.6;
-        if (_inCore(x, z) || !_inland(x, z, rad + 2.6)) continue;
+        if (_inCore(x, z) || !_inland(x, z, rad + 2.6) || _onReserved(x, z, rad + 0.3)) continue;
         var ok = true;
         for (var i = 0; i < out.length; i++) { if (Math.hypot(out[i][0] - x, out[i][1] - z) < out[i][2] + rad + 1.5) { ok = false; break; } }
         if (ok) out.push([x, z, rad, 0.22 + rnd() * 0.2]);
@@ -162,10 +171,24 @@ export const TREE_SPOTS = (function () {
         var cnt = 5 + Math.floor(rnd() * 5);
         for (var k = 0; k < cnt * 3 && cnt > 0; k++) {
             var x = cx + (rnd() + rnd() - 1) * 3.4, z = cz + (rnd() + rnd() - 1) * 3.4;
-            if (_inCore(x, z) || !_inland(x, z, 2.4) || !free(x, z)) continue;
+            if (_inCore(x, z) || !_inland(x, z, 2.4) || _onReserved(x, z, 0.8) || !free(x, z)) continue;
             outer.push([Math.round(x * 10) / 10, Math.round(z * 10) / 10]);
             if (--cnt === 0) break;
         }
+    }
+    // v2027.73 — kebun & hutan kecil di tanah perluasan (di luar inti, di antara distrik baru), supaya lahan baru tidak gundul.
+    var groves = 0, gtry = 0, rg = _rng(6131);
+    while (groves < 9 && gtry++ < 400) {
+        var gx = -9 + rg() * 40, gz = -25 + rg() * 50;
+        if (_inCore(gx, gz) || !_inland(gx, gz, 4.2) || _onReserved(gx, gz, 2.2)) continue;
+        var gcnt = 4 + Math.floor(rg() * 3), added = 0;
+        for (var gk = 0; gk < gcnt * 4 && added < gcnt; gk++) {
+            var tx = gx + (rg() + rg() - 1) * 2.4, tz = gz + (rg() + rg() - 1) * 2.4;
+            if (_inCore(tx, tz) || !_inland(tx, tz, 2.6) || _onReserved(tx, tz, 0.8) || !free(tx, tz)) continue;
+            outer.push([Math.round(tx * 10) / 10, Math.round(tz * 10) / 10]);
+            added++;
+        }
+        if (added >= 3) groves++;
     }
     return out.concat(outer).filter(function (p) { return !_inLinkCorridor(p[0], p[1]); });   // jalur jembatan bebas pohon
 })();
@@ -617,7 +640,7 @@ export function createAssets(THREE, opts) {
 
 function smooth01(v) { v = Math.max(0, Math.min(1, v)); return v * v * (3 - 2 * v); }
 
-function mesh(A, THREE, geo, role, x, y, z) {
+export function mesh(A, THREE, geo, role, x, y, z) {
     var m = new THREE.Mesh(geo, A.mat(role));
     m.position.set(x, y, z);
     return m;
@@ -625,7 +648,7 @@ function mesh(A, THREE, geo, role, x, y, z) {
 
 // Banyak salinan satu geometri dalam 1 draw call. item = [x,y,z, sx,sy,sz, rotY].
 // tintFn(i, color) opsional: isi warna pengali per-instance (variasi halus tanpa material baru).
-function instanced(A, THREE, geo, role, items, tintFn) {
+export function instanced(A, THREE, geo, role, items, tintFn) {
     var im = new THREE.InstancedMesh(geo, A.mat(role), items.length);
     var m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
     var p = new THREE.Vector3(), s = new THREE.Vector3();
@@ -843,7 +866,7 @@ function addScenery(g, A, THREE) {
         var pa = rnd() * Math.PI * 2, pr = 16 + rnd() * 6;
         var px = Math.cos(pa) * pr, pz = Math.sin(pa) * pr;
         var pw = 2.4 + rnd() * 3, pd = 2 + rnd() * 2.6;
-        if (_inCore(px, pz) || !_inland(px, pz, Math.max(pw, pd) * 0.75 + 1.6)) continue;
+        if (_inCore(px, pz) || !_inland(px, pz, Math.max(pw, pd) * 0.75 + 1.6) || _onReserved(px, pz, Math.max(pw, pd) * 0.5)) continue;
         patches.push([px, 0.012, pz, pw, 1, pd, 0]);
     }
     if (patches.length) g.add(instanced(A, THREE, A.box(1, 0.02, 1), 'grass2', patches));

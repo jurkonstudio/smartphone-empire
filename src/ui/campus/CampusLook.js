@@ -167,7 +167,8 @@ export function createLookRig(THREE, renderer, scene, quality) {
         sun.castShadow = true;
         sun.shadow.mapSize.set(quality.shadowMap, quality.shadowMap);
         var sc = sun.shadow.camera;
-        sc.left = -24; sc.right = 24; sc.top = 24; sc.bottom = -24;
+        var sh = quality.shadowHalf || 24;     // v2027.73: peta kampus yang diperluas memakai 34 (diatur CampusScene)
+        sc.left = -sh; sc.right = sh; sc.top = sh; sc.bottom = -sh;
         sc.near = 1; sc.far = 60;
         sc.updateProjectionMatrix();
         sun.shadow.bias = -0.0004;

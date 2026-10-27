@@ -41,6 +41,7 @@ import { createBeach } from './Beach.js';
 import { createDayClock, blendObj, lerpHex } from './DayCycle.js';
 import { createWeather } from './CampusWeather.js';
 import { createCampusPost } from './CampusPost.js';
+import { buildExpansion } from './CampusExpansion.js';
 
 var BASE_VIEW = 22;
 // DPR maksimum sekarang adaptif per tier kualitas (lihat detectQuality di CampusLook.js).
@@ -72,6 +73,7 @@ function prefersReducedMotion() {
 export function createCampusScene(THREE, container, gameState) {
     var PERF = window.__PERF || {};
     var quality = detectQuality(PERF);
+    quality.shadowHalf = 34;       // v2027.73: bayangan mencakup pulau yang diperluas (ManufactureScene tetap 24)
     var renderer = new THREE.WebGLRenderer({
         antialias: PERF.antialias !== false,
         alpha: true,
@@ -125,6 +127,10 @@ export function createCampusScene(THREE, container, gameState) {
     scene.add(forest.group);
     var shrubs = buildShrubs(A, THREE);
     scene.add(shrubs);
+    // v2027.73 — distrik perluasan (olahraga, pantai, mercusuar, botani, surya, selatan): dekoratif, tidak bisa di-tap.
+    var expansion = buildExpansion(A, THREE);
+    applyShadowFlags(expansion.group, rig.shadowsOn);
+    scene.add(expansion.group);
     // Pulau Manufaktur di seberang selat (barat) + jembatan jalan raya dari gerbang barat kampus.
     // Kantor TIDAK ditampilkan sebagai tetangga kampus; kantor hanya dibuka lewat gedung HQ.
     var farMf = buildMfFar(THREE, scene, -LINK.OFFSET);
@@ -144,6 +150,7 @@ export function createCampusScene(THREE, container, gameState) {
     var cineLights = LAMP_SPOTS.map(function (l) { return { x: l[0], y: 1.58, z: l[1], size: 1.8, color: 0xffc872 }; });
     cineLights.push({ x: 0, y: 2.36, z: 14.39, size: 2.2, color: 0x35d6ff, k: 0.7 });        // papan nama gerbang selatan (addGate)
     cineLights.push({ x: -14.01, y: 2.36, z: 0, size: 2.2, color: 0x35d6ff, k: 0.7 });       // papan nama gerbang barat
+    expansion.lights.forEach(function (l) { cineLights.push(l); });
     var cine = createCinematic(THREE, scene, {
         renderer: renderer, canvas: canvas, container: container, tier: quality.tier, lights: cineLights,
         onHaze: function (hex, amt) { farMf.setHaze(hex, amt); }
@@ -187,6 +194,7 @@ export function createCampusScene(THREE, container, gameState) {
     function draw() {
         if (shadowDirty) { rig.requestShadowUpdate(); shadowDirty = false; }
         weather.update(performance.now() / 1000, ambient);
+        expansion.update(performance.now() / 1000, lastNight);       // berkas mercusuar + perahu bergoyang
         if (ambient) sea.update(performance.now() / 1000, weather.getKind(), weather.getSunset());
         var sunNow = weather.getSunset();
         if (Math.abs(sunNow - lastWinSun) > 0.01) { lastWinSun = sunNow; A.setSunset(sunNow); }     // jendela/lampu menyala bertahap saat senja
@@ -512,7 +520,7 @@ export function createCampusScene(THREE, container, gameState) {
         maxZoom: 3.2,                // detail halus untuk zoom dekat
         minZoom: 0.5,                // zoom-out cukup jauh untuk melihat seluruh pulau 30x30
         // batas geser: pulau kampus + jembatan + sisi dekat Pulau Manufaktur di barat (tak simetris)
-        bounds: { minX: -(LINK.OFFSET - 12), maxX: 16, minZ: -16, maxZ: 16 },
+        bounds: { minX: -(LINK.OFFSET - 12), maxX: 27, minZ: -23, maxZ: 24 },
         onChange: function () { applyCamera(); requestRender(); },
         reduceMotion: prefersReducedMotion,
         onTap: handleTap
@@ -655,6 +663,7 @@ export function createCampusScene(THREE, container, gameState) {
             forest.dispose();
             disposeObject(shrubs);
             farMf.dispose();
+            expansion.dispose();
             scene.remove(sea.mesh); sea.dispose();
             cine.dispose();
             beach.dispose();
