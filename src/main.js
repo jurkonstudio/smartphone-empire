@@ -8,7 +8,8 @@ import { TimeSystem } from './core/TimeSystem.js';
 import { SaveService } from './core/SaveService.js';
 import { DEV_BUILD } from './config/dev.config.js';
 import { ToastService } from './core/ToastService.js';
-import { setUserControlPolicy } from './systems/FutureEffects.js';
+import { setUserControlPolicy, setUserControlAlgo } from './systems/FutureEffects.js';
+import { UserControlSystem, setDataMonetization } from './systems/UserControlSystem.js';
 import { NotificationPrefs } from './core/NotificationPrefs.js';
 import { ThemeService } from './core/ThemeService.js';
 import { LanguageService } from './core/LanguageService.js';
@@ -153,6 +154,7 @@ var ecosystem = new EcosystemSystem(state);   // [ekosistem] aksesori & App Stor
 var appReview = new AppStoreReviewSystem(state);   // [Peninjauan App Store] developer mengirim aplikasi, pemain menyetujui/menolak
 var bank              = new BankSystem(state);
 var econBrakes        = new EconBrakeSystem(state);
+var userControlSystem = new UserControlSystem(state);   // Kontrol Pengguna: monetisasi data, regulasi, survei
 
 market.setCompetitorSystem(competitors);
 products.setPromotionSystem(promotion);
@@ -634,7 +636,18 @@ function initAdvisorChat() {
 
 // ============ CLICKS ============
 function bindGlobalClicks() {
+    // Kontrol Pengguna: slider algoritma. 'input' memperbarui angka langsung, 'change' (saat dilepas) menyimpan + render ulang.
+    document.body.addEventListener('change', function (e) {
+        var sl = e.target && e.target.matches && e.target.matches('[data-uc-algo]') ? e.target : null;
+        if (!sl) return;
+        if (setUserControlAlgo(sl.dataset.ucAlgo, sl.value, state.get())) renderAll();
+    });
     document.body.addEventListener('input', function (e) {
+        if (e.target.matches && e.target.matches('[data-uc-algo]')) {
+            var lbl = document.querySelector('[data-uc-algo-val="' + e.target.dataset.ucAlgo + '"]');
+            if (lbl) lbl.textContent = e.target.value;
+            return;
+        }
         if (e.target.matches('[data-qty-input]')) {
             var root = e.target.closest('[data-modal-id]');
             if (!root) return;
@@ -677,6 +690,15 @@ function bindGlobalClicks() {
         if (ucPol) {
             e.preventDefault(); vibrate(8);
             if (setUserControlPolicy(ucPol.dataset.ucPolicy, state.get())) {
+                try { AudioService.play('select'); } catch (err) {}
+                renderAll();
+            }
+            return;
+        }
+        var ucMon = e.target.closest('[data-uc-monetize]');
+        if (ucMon) {
+            e.preventDefault(); vibrate(8);
+            if (setDataMonetization(ucMon.dataset.ucMonetize === '1', state.get())) {
                 try { AudioService.play('select'); } catch (err) {}
                 renderAll();
             }
