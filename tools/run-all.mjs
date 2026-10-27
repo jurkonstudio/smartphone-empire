@@ -22,6 +22,7 @@ const TESTS = [
   { file: 'tools/world-map-test.mjs' },
   { file: 'tools/campus-expansion-smoke.mjs' },
   { file: 'tools/hype-cycle-test.mjs' },
+  { file: 'tools/user-control-test.mjs' },
   { file: 'tools/people-test.mjs' },
   { file: 'tools/weather-test.mjs' },
   { file: 'tools/eco-i18n-check.mjs' },
