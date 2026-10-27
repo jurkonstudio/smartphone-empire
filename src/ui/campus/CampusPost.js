@@ -121,7 +121,7 @@ export function createCampusPost(THREE, renderer, opts) {
     var quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
     function mat(frag, uniforms) {
-        return new THREE.ShaderMaterial({ uniforms: uniforms, vertexShader: VERT, fragmentShader: frag, depthTest: false, depthWrite: false });
+        return new THREE.ShaderMaterial({ uniforms: uniforms, vertexShader: VERT, fragmentShader: frag, depthTest: false, depthWrite: false, toneMapped: false });   // ACES dihitung sendiri di COMP_FRAG; tanpa ini three menyuntik RRTAndODTFit ganda saat render ke layar
     }
     var brightMat = mat(BRIGHT_FRAG, { tDiffuse: { value: null }, uThr: { value: 1.15 } });
     var blurMat = mat(BLUR_FRAG, { tDiffuse: { value: null }, uDir: { value: new THREE.Vector2() } });
