@@ -1,6 +1,7 @@
 // FILE: src/systems/AdvisorBrain.js
 // v2028.40 — "Otak" lokal Asisten Bisnis. Tanpa server / API key.
 
+import { canonicalize, normText } from './AdvisorLexicon.js';
 import { buildReport, formatReport, evaluateLoan, formatLoanVerdict, evaluateHire, formatHireVerdict, parseAction, actionAdvice } from './AdvisorReasoning.js';
 
 var DAY = 1440;
@@ -8,11 +9,7 @@ var DAY = 1440;
 // ------------------------------------------------------------
 // Util teks
 // ------------------------------------------------------------
-function norm(s) {
-    return String(s || '').toLowerCase()
-        .normalize('NFD').replace(/[̀-ͯ]/g, '')
-        .replace(/[^a-z0-9\s$%]/g, ' ').replace(/\s+/g, ' ').trim();
-}
+function norm(s) { return normText(s); }
 function tokens(s) { var n = norm(s); return n ? n.split(' ') : []; }
 
 function lev(a, b, max) {
@@ -65,9 +62,9 @@ var INTENTS = {
     greet:     { w: 1, kw: ['halo', 'hai', 'hi', 'hello', 'hey', 'pagi', 'siang', 'sore', 'malam', 'assalamualaikum', 'woi'] },
     thanks:    { w: 1, kw: ['makasih', 'terima', 'kasih', 'thanks', 'thx', 'thank', 'mantap', 'sip', 'keren', 'good'] },
     help:      { w: 1, kw: ['bantuan', 'help', 'bisa', 'fitur', 'menu', 'cara', 'bantu', 'kemampuan', 'can'] },
-    status:    { w: 1.2, kw: ['kondisi', 'keadaan', 'status', 'ringkasan', 'summary', 'overview', 'situasi', 'laporan', 'report', 'gimana', 'bagaimana', 'perusahaan', 'company', 'bisnis', 'business', 'briefing'] },
+    status:    { w: 1.2, kw: ['kondisi', 'keadaan', 'status', 'ringkasan', 'summary', 'overview', 'situasi', 'laporan', 'report', 'perusahaan', 'company', 'bisnis', 'business', 'briefing'] },
     health:    { w: 1.6, kw: ['sehat', 'health', 'skor', 'score', 'nilai', 'rapor', 'terlemah', 'weakest', 'kelemahan', 'weakness'] },
-    next:      { w: 1.3, kw: ['saran', 'next', 'prioritas', 'harus', 'lakukan', 'todo', 'langkah', 'rekomendasi', 'recommend', 'suggestion', 'priority', 'sekarang', 'now', 'selanjutnya', 'should', 'penting', 'urgent', 'mendesak'] },
+    next:      { w: 1.3, kw: ['saran', 'next', 'prioritas', 'harus', 'lakukan', 'todo', 'langkah', 'rekomendasi', 'recommend', 'suggestion', 'priority', 'selanjutnya', 'should', 'penting', 'urgent', 'mendesak'] },
     plan:      { w: 1.4, kw: ['rencana', 'strategi', 'plan', 'strategy', 'roadmap', 'panduan', 'guide', 'tahap', 'mulai', 'start', 'awal', 'pemula', 'beginner'] },
     cash:      { w: 1.4, kw: ['uang', 'kas', 'cash', 'duit', 'saldo', 'dana', 'bokek', 'runway', 'burn', 'biaya', 'pengeluaran', 'boros', 'hemat', 'cost', 'money', 'gaji', 'bangkrut', 'bankrupt', 'napas', 'pemasukan', 'income', 'revenue', 'pendapatan', 'profit', 'untung', 'rugi'] },
     loan:      { w: 1.7, kw: ['pinjaman', 'loan', 'utang', 'hutang', 'cicilan', 'kredit', 'bank', 'bunga', 'interest', 'debt', 'installment', 'lunasi', 'melunasi', 'tunggakan'] },
@@ -220,7 +217,8 @@ export class AdvisorBrain {
         var n = norm(text);
         if (/apa (itu|arti|maksud)|what is|what does|apa yang dimaksud/.test(n)) scores.glossary += 3;
         if (/(apa|what).*(harus|should|lakukan|do)|(prioritas|priority)/.test(n)) scores.next += 3;
-        if (/(bisa|can) .*(bertahan|survive)|kapan.*(habis|bangkrut)|berapa lama/.test(n)) scores.forecast += 3;
+        if (/(berapa|how much|how many).*(uang|kas|cash|duit|saldo|money)|(uang|kas|cash|duit|saldo|money).*(berapa|how much)/.test(n)) scores.cash += 3;
+        if (/(bisa|can) .*(bertahan|survive)|(kapan|when).*(habis|bangkrut|run out|out of)|berapa lama|\b(run|runs|running|ran) out\b/.test(n)) scores.forecast += 3;
         if (/kondisi|keadaan|ringkasan|how am i|how is (my )?(business|company)|gimana (bisnis|perusahaan)|status|briefing/.test(n)) scores.status += 2.5;
         if (/skor|score|nilai (bisnis|perusahaan)|kesehatan|health|terlemah|weakest|kelemahan/.test(n)) scores.health += 3;
         if (/rekrut|hire|cari (staf|karyawan)/.test(n)) scores.team += 2;
@@ -236,6 +234,12 @@ export class AdvisorBrain {
         if (/(uang|kas|cash|duit).*habis|habis.*(uang|kas|cash|duit)|running out of (cash|money)/.test(n)) { scores.forecast += 3; scores.stock -= 3; }
         if (/stok.*habis|habis.*stok|out of stock/.test(n)) { scores.stock += 3; scores.forecast -= 3; }
         if (/(harga).*(naik|turun)|(naik|turun).*(harga)/.test(n)) { scores.price += 2; scores.trend -= 1.5; }
+
+        // Kata umum seperti "kondisi/status" tidak boleh mengalahkan topik spesifik ("kondisi tim").
+        var DOMAIN = ['team', 'research', 'product', 'price', 'stock', 'marketing', 'os', 'chip', 'morale', 'reputation', 'competitor', 'cash', 'loan'];
+        var dMax = 0;
+        DOMAIN.forEach(function (k) { if (scores[k] > dMax) dMax = scores[k]; });
+        if (dMax >= 2.4 && scores.status > 0 && !/\b(bisnis|perusahaan|business|company|usaha)\b/.test(n)) scores.status *= 0.4;
 
         var top = null, topS = 0, second = 0, secondK = null;
         Object.keys(scores).forEach(function (k) {
@@ -322,6 +326,12 @@ export class AdvisorBrain {
     reply(text) {
         var m = this.mem;
         m.turns++;
+        // Pahami semua bahasa game: terjemahkan ke bentuk kanonis (id/en) untuk analisis.
+        // Teks asli tetap dipakai untuk mencocokkan nama produk.
+        var origText = text;
+        var cz = canonicalize(text, this.sys._gameLang ? this.sys._gameLang() : this.lang());
+        text = cz.canon;
+        m.typedLang = cz.lang;
 
         if (this._isClearCommand(text)) return this._clearChatReply();
 
@@ -345,7 +355,7 @@ export class AdvisorBrain {
         }
 
         if (!/\bos\b|sistem operasi|operating system/.test(nqb) &&
-            (/\b(patch|hotfix|changelog|release notes?)\b|catatan (rilis|patch|perubahan)|bug ?fix(es)?|perbaikan bug|bug (sudah )?(diperbaiki|difix|fixed)|(update|pembaruan|versi) (game|aplikasi|app|baru|terbaru)|(game|app|aplikasi) (update|versi)|new version|latest version|(ada|any|cek|check|is there|apakah).*(update|pembaruan)/.test(nqb))) {
+            (/\b(patch|hotfix|changelog|release notes?)\b|catatan (rilis|patch|perubahan)|bug ?fix(es)?|perbaikan bug|bug (sudah )?(diperbaiki|difix|fixed)|(update|pembaruan|versi) (game|aplikasi|app|baru|terbaru)|(game|app|aplikasi) (update|versi)|new version|latest version|(ada|any|cek|check|is there|apakah).*(update|pembaruan)|\b(update|patch|version)\b.*\b(new|latest|is there|any)\b|\b(new|latest|is there|any)\b.*\b(update|patch|version)\b/.test(nqb))) {
             return this._run('patch', { detail: false, text: text, product: null, toks: tokens(text) }, 0.9);
         }
 
@@ -378,7 +388,7 @@ export class AdvisorBrain {
         }
 
         var d = this._detect(text);
-        var prod = this._findProduct(text);
+        var prod = this._findProduct(origText);
         if (prod) m.lastProduct = prod.id;
 
         var intent = d.intent;

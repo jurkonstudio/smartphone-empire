@@ -628,6 +628,7 @@ export class AdvisorSystem {
     }
 
     _lang() { return curLang(); }
+    _gameLang() { try { return LanguageService.getLang() || 'en'; } catch (e) { return 'en'; } }
 
     start() {
         var self = this;
