@@ -6,6 +6,7 @@
 // v2027.44 — + dengarkan lang:changed supaya kartu info ganti bahasa.
 // Mount/unmount peta kampus 3D. Three.js dimuat lazy dari CDN (versi dipin).
 import { createCampusScene } from './CampusScene.js';
+import { AmbienceService } from '../../core/AmbienceService.js';
 import { renderCampusFallback } from './CampusFallback.js';
 import { bus } from '../../core/EventBus.js';
 import { unmountManufactureMap } from '../manufacture/ManufactureMap.js';
@@ -48,6 +49,8 @@ export async function mountCampusMap(containerEl, gameState) {
             // Pergantian tahun bisa mengganti era desain walau state:changed tidak terpicu.
             bus.on('time:year-changed', function () { scene.update(currentData()); })
         ];
+        AmbienceService.enter('campus');
+        unsubs.push(function () { AmbienceService.leave('campus'); });
         _active = { scene: scene, unsubs: unsubs };
     } catch (err) {
         console.warn('[CampusMap] gagal, pakai fallback:', err);
