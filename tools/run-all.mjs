@@ -20,6 +20,7 @@ const TESTS = [
   // Tanpa argumen
   { file: 'tools/civic-test.mjs' },
   { file: 'tools/world-map-test.mjs' },
+  { file: 'tools/campus-expansion-smoke.mjs' },
   { file: 'tools/hype-cycle-test.mjs' },
   { file: 'tools/people-test.mjs' },
   { file: 'tools/weather-test.mjs' },
