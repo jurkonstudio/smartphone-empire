@@ -1,4 +1,8 @@
-// FILE: src/ui/campus/CampusLife.js  (REPLACE — v2027.65: mobil jalan barat menyeberangi jembatan ke Manufaktur)
+// FILE: src/ui/campus/CampusLife.js  (REPLACE — v2027.84: kendaraan lebih detail + motor berpengendara)
+// v2027.84 — kendaraan: roda berputar sesuai jarak tempuh, kaca, lampu depan & lampu belakang (menyala di malam hari),
+// 3 model mobil (sedan, SUV, hatchback), bus berjendela + papan tujuan + garis, motor dengan pengendara berhelm,
+// bayangan kontak di jalan, kendaraan miring mengikuti tanjakan jembatan. Tier 'low' (tanpa shadow map) memakai
+// model lebih ringan (tanpa jari-jari roda & bayangan kontak).
 // Cuaca rev. 3: awan ikut kondisi langit (setSky): mendung/hujan = abu gelap & rendah, senja = awan jingga muda.
 // v2027.65 — jalan barat diperpanjang melewati jembatan sampai jalan raya Pulau Manufaktur. Mobil naik-turun
 // mengikuti dek (link.heightAt), kecepatan dunia tetap sama (diskalakan terhadap panjang jalan), + 4 mobil.
@@ -15,7 +19,7 @@
 
 import { POND, RAIL, SLOTS } from './CampusBuildings.js';
 import { cloudLook } from './CampusWeather.js';
-import { createPeople } from './CampusPeople.js';
+import { createPeople, personLook } from './CampusPeople.js';
 
 var CAR_COLORS = [0xef4444, 0xf59e0b, 0x10b981, 0x6366f1, 0xf8fafc, 0x1f2937, 0xec4899];
 var WALK_LEN = { x: 9.9, z: 10.1, h: 11 };       // panjang trotoar (satuan dunia): jarak tempuh = fraksi x panjang
@@ -56,31 +60,110 @@ export function createCampusLife(THREE, A, scene, trees, link) {
         return m;
     }
 
-    // ---------- mobil + bus ----------
+    // ---------- mobil + bus + motor ----------
+    var lite = !A.realShadows;                 // tier 'low': tanpa jari-jari roda & bayangan kontak
     var carDark = mk(0x111827);
+    var glassMat = mk(0x1e293b, { roughness: 0.12, metalness: 0.55 });
+    var tireMat = mk(0x0b0f14, { roughness: 0.9, metalness: 0 });
+    var hubMat = mk(0xcbd5e1, { roughness: 0.4, metalness: 0.6 });
+    var tailMat = mk(0xdc2626, { roughness: 0.4, emissive: 0xdc2626, emissiveIntensity: 0.7 });
+    var bodyCache = {};
+    function bodyMat(color) { return bodyCache[color] || (bodyCache[color] = mk(color, { roughness: 0.38, metalness: 0.35 })); }   // cat mengilap, dipakai bersama
     var cars = [];
-    function makeCar(color, kind) {
-        var g = new THREE.Group();
-        var body = mk(color, { roughness: 0.38, metalness: 0.35 });   // cat mobil mengilap
-        if (kind === 'bus') {
-            g.add(put(A.box(1.25, 0.3, 0.42), body, 0, 0.2, 0));
-            g.add(put(A.box(1.12, 0.1, 0.44), carDark, 0, 0.27, 0));
-            g.add(put(A.box(0.05, 0.06, 0.08), A.mat('glow'), 0.63, 0.14, 0.14));
-            g.add(put(A.box(0.05, 0.06, 0.08), A.mat('glow'), 0.63, 0.14, -0.14));
-        } else {
-            g.add(put(A.box(0.72, 0.2, 0.38), body, 0, 0.14, 0));
-            g.add(put(A.box(0.34, 0.16, 0.32), carDark, -0.04, 0.32, 0));
-            g.add(put(A.box(0.05, 0.06, 0.08), A.mat('glow'), 0.37, 0.15, 0.12));
-            g.add(put(A.box(0.05, 0.06, 0.08), A.mat('glow'), 0.37, 0.15, -0.12));
-        }
+
+    // Roda: pivot berputar di sumbu z (kendaraan menghadap +x); ban silinder + palang pelek supaya putarannya terlihat.
+    function addWheel(g, wheels, x, z, r, w) {
+        var pv = new THREE.Group();
+        pv.position.set(x, r, z);
+        var tire = put(A.cyl(r, r, w, 10), tireMat, 0, 0, 0);
+        tire.rotation.x = Math.PI / 2;
+        pv.add(tire);
+        if (!lite) pv.add(put(A.box(r * 1.15, r * 0.3, w + 0.008), hubMat, 0, 0, 0));
+        g.add(pv);
+        wheels.push(pv);
+    }
+    function addShadow(g, w, d) {
+        if (lite) return;
+        var sh = put(A.plane(w, d), A.mat('ao'), 0, 0.012, 0);
+        sh.renderOrder = 1;
+        sh.raycast = function () {};
+        g.add(sh);
+    }
+    function makeCar(color, variant) {
+        var g = new THREE.Group(), wheels = [];
+        var body = bodyMat(color);
+        // variant 0 = sedan, 1 = SUV (lebih tinggi & panjang), 2 = hatchback (lebih pendek)
+        var L = variant === 2 ? 0.66 : (variant === 1 ? 0.78 : 0.76);
+        var cabW = variant === 1 ? 0.46 : (variant === 2 ? 0.34 : 0.36), cabH = variant === 1 ? 0.15 : 0.12;
+        var cabX = variant === 2 ? -0.06 : -0.04;
+        g.add(put(A.box(L, 0.13, 0.38), body, 0, 0.115, 0));                                  // bodi
+        g.add(put(A.box(cabW, cabH, 0.34), glassMat, cabX, 0.18 + cabH / 2, 0));              // kabin berkaca
+        g.add(put(A.box(cabW - 0.04, 0.022, 0.32), body, cabX, 0.18 + cabH + 0.011, 0));      // atap
+        g.add(put(A.box(0.05, 0.05, 0.09), A.mat('glow'), L / 2 + 0.005, 0.125, 0.12));       // lampu depan
+        g.add(put(A.box(0.05, 0.05, 0.09), A.mat('glow'), L / 2 + 0.005, 0.125, -0.12));
+        g.add(put(A.box(0.03, 0.04, 0.3), tailMat, -L / 2 - 0.003, 0.13, 0));                 // lampu belakang
+        var wx = L / 2 - 0.13;
+        addWheel(g, wheels, wx, 0.185, 0.07, 0.05); addWheel(g, wheels, wx, -0.185, 0.07, 0.05);
+        addWheel(g, wheels, -wx, 0.185, 0.07, 0.05); addWheel(g, wheels, -wx, -0.185, 0.07, 0.05);
+        addShadow(g, L + 0.2, 0.52);
         root.add(g);
-        return g;
+        return { g: g, wheels: wheels, wr: 0.07 };
+    }
+    function makeBus(color) {
+        var g = new THREE.Group(), wheels = [];
+        var body = bodyMat(color);
+        g.add(put(A.box(1.25, 0.26, 0.42), body, 0, 0.2, 0));
+        g.add(put(A.box(1.26, 0.03, 0.424), bodyMat(0xf8fafc), 0, 0.14, 0));                  // garis putih
+        g.add(put(A.box(1.2, 0.025, 0.4), bodyMat(0xe2e8f0), 0, 0.345, 0));                   // atap
+        g.add(put(A.box(0.4, 0.03, 0.2), A.mat('metal'), -0.1, 0.372, 0));                     // AC atap
+        g.add(put(A.box(1.1, 0.09, 0.012), glassMat, 0, 0.26, 0.213));                        // jendela samping
+        g.add(put(A.box(1.1, 0.09, 0.012), glassMat, 0, 0.26, -0.213));
+        g.add(put(A.box(0.012, 0.11, 0.36), glassMat, 0.628, 0.25, 0));                       // kaca depan
+        g.add(put(A.box(0.012, 0.08, 0.3), glassMat, -0.628, 0.25, 0));                       // kaca belakang
+        g.add(put(A.box(0.014, 0.028, 0.22), A.mat('glow'), 0.629, 0.325, 0));                // papan tujuan
+        g.add(put(A.box(0.05, 0.06, 0.08), A.mat('glow'), 0.63, 0.13, 0.14));
+        g.add(put(A.box(0.05, 0.06, 0.08), A.mat('glow'), 0.63, 0.13, -0.14));
+        g.add(put(A.box(0.03, 0.05, 0.36), tailMat, -0.63, 0.13, 0));
+        addWheel(g, wheels, 0.42, 0.195, 0.075, 0.055); addWheel(g, wheels, 0.42, -0.195, 0.075, 0.055);
+        addWheel(g, wheels, -0.42, 0.195, 0.075, 0.055); addWheel(g, wheels, -0.42, -0.195, 0.075, 0.055);
+        addShadow(g, 1.45, 0.56);
+        root.add(g);
+        return { g: g, wheels: wheels, wr: 0.075 };
+    }
+    // Motor + pengendara duduk berhelm (warna baju/celana dari personLook(idx)); badan condong ke depan
+    function makeBike(color, idx) {
+        var g = new THREE.Group(), wheels = [];
+        var P = personLook(idx), body = bodyMat(color);
+        function tilt(m, rz) { m.rotation.z = rz; return m; }
+        g.add(put(A.box(0.3, 0.05, 0.06), body, 0, 0.11, 0));                                 // rangka
+        g.add(put(A.box(0.11, 0.06, 0.085), body, 0.05, 0.165, 0));                           // tangki
+        g.add(put(A.box(0.17, 0.03, 0.085), carDark, -0.08, 0.15, 0));                        // jok
+        g.add(tilt(put(A.box(0.025, 0.15, 0.03), A.mat('metal'), 0.17, 0.12, 0), -0.3));      // garpu depan
+        g.add(put(A.box(0.03, 0.02, 0.18), A.mat('metal'), 0.14, 0.22, 0));                   // stang
+        g.add(put(A.box(0.04, 0.04, 0.05), A.mat('glow'), 0.2, 0.19, 0));                     // lampu depan
+        g.add(put(A.box(0.025, 0.03, 0.06), tailMat, -0.185, 0.17, 0));                       // lampu belakang
+        addWheel(g, wheels, 0.2, 0, 0.06, 0.03); addWheel(g, wheels, -0.2, 0, 0.06, 0.03);
+        // pengendara
+        g.add(tilt(put(A.box(0.06, 0.12, 0.1), bodyMat(P.shirt), -0.045, 0.285, 0), -0.35));  // torso condong
+        g.add(put(A.sph(0.05, 10, 8), bodyMat(P.accent), 0.0, 0.385, 0));                     // helm
+        g.add(put(A.box(0.02, 0.025, 0.06), glassMat, 0.04, 0.38, 0));                        // kaca helm
+        [0.07, -0.07].forEach(function (z) {
+            g.add(tilt(put(A.box(0.03, 0.17, 0.03), bodyMat(P.shirt), 0.065, 0.28, z), 0.86));                    // lengan ke stang
+            g.add(put(A.box(0.1, 0.045, 0.045), bodyMat(P.pants), -0.01, 0.19, z * 1.05));                        // paha
+            g.add(put(A.box(0.04, 0.1, 0.04), bodyMat(P.pants), 0.035, 0.12, z * 1.05));                          // betis
+        });
+        addShadow(g, 0.62, 0.3);
+        root.add(g);
+        return { g: g, wheels: wheels, wr: 0.06 };
     }
     function addCar(axis, lane, inbound, speed, s0, ci) {
-        var bus = ci === 'bus';
+        var kind = ci === 'bus' ? 'bus' : (typeof ci === 'string' ? ci : 'car');
+        var v = kind === 'bus' ? makeBus(0x2563eb)
+            : (kind === 'bike' ? makeBike(CAR_COLORS[(s0 * 10 | 0) % CAR_COLORS.length], (s0 * 17 | 0) + 3)
+            : makeCar(CAR_COLORS[ci % CAR_COLORS.length], ci % 3));
         cars.push({
             axis: axis, lane: lane, inbound: inbound, speed: speed, s0: s0,
-            g: makeCar(bus ? 0x2563eb : CAR_COLORS[ci % CAR_COLORS.length], bus ? 'bus' : 'car')
+            g: v.g, wheels: v.wheels, wr: v.wr
         });
     }
     // Satu lajur = satu kecepatan, supaya tidak saling menembus.
@@ -110,6 +193,10 @@ export function createCampusLife(THREE, A, scene, trees, link) {
     addCar('x',  0.5, true,  0.18, 0.95, 'bus');
     addCar('x', -0.5, false, 0.15, 0.88, 1);
     addCar('x', -0.5, false, 0.15, 0.52, 2);
+    // motor (satu lajur = satu kecepatan, disisipkan di celah antar mobil)
+    addCar('z', -0.5, false, 0.2,  0.55, 'bike');
+    addCar('x',  0.5, true,  0.19, 0.45, 'bike');
+    addCar('x', -0.5, false, 0.16, 0.24, 'bike');
 
     // ---------- pejalan kaki (di trotoar) ----------
     var people = createPeople(THREE, A, root, mk, put);
@@ -286,6 +373,11 @@ export function createCampusLife(THREE, A, scene, trees, link) {
             else if (c.axis === 'h') { c.g.position.set(pos, 0.06, c.lane); tmpDir.x = dirv; tmpDir.z = 0; }
             else { c.g.position.set(pos, link ? link.heightAt(pos) : 0.06, c.lane); tmpDir.x = dirv; tmpDir.z = 0; }
             c.g.rotation.y = Math.atan2(-tmpDir.z, tmpDir.x);
+            // kemiringan mengikuti tanjakan jembatan (hanya jalan barat yang punya tinggi dek)
+            c.g.rotation.z = (c.axis === 'x' && link) ? Math.atan((link.heightAt(pos + dirv * 0.4) - link.heightAt(pos)) / 0.4) : 0;
+            // roda berputar sesuai jarak tempuh (+x lokal = maju)
+            var travel = (c.s0 + t * (c.axis === 'x' ? c.speed * SPD_X : (c.axis === 'h' ? c.speed * SPD_H : c.speed))) * Math.abs(b - a);
+            for (var wi = 0; wi < c.wheels.length; wi++) c.wheels[wi].rotation.z = -travel / c.wr;
             f = Math.min(1, s / 0.1, (1 - s) / 0.1);
             c.g.scale.setScalar(Math.max(0.001, f));
         }
@@ -427,6 +519,7 @@ export function createCampusLife(THREE, A, scene, trees, link) {
             wm.emissive.setHex(dark ? windowHex : 0x000000);
             applySky();
             birdMat.color.setHex(dark ? 0x94a3b8 : 0x475569);
+            tailMat.emissiveIntensity = dark ? 1.7 : 0.7;      // lampu belakang menyala terang di malam hari
             for (var k = 0; k < rings.length; k++) rings[k].mat.color.setHex(dark ? 0xa5d8f5 : 0xffffff);
         },
         setSky: function (kind, sunset) {
