@@ -536,6 +536,14 @@ export function openAdvisor(advisor) {
         var wait = Math.max(0, 380 - (Date.now() - started));
         await new Promise(function (r) { setTimeout(r, wait); });
         typing.remove();
+        if (res && res.clearChat) {
+            log.innerHTML = advisor.getChat().map(renderMsg).join('');
+            chipsEl.innerHTML = renderChips(res.chips);
+            scroll();
+            busy = false;
+            if (opts && opts.fromInput && input) input.focus();
+            return;
+        }
         if (res) {
             log.insertAdjacentHTML('beforeend', renderMsg(res));
             chipsEl.innerHTML = renderChips(res.chips);
