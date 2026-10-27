@@ -5484,6 +5484,12 @@ body.modal-open { overflow: hidden; }
 .gen-card.is-now .gen-card-st { color: var(--gen-accent); font-weight: 700; }
 .gen-note { font-size: 11px; color: var(--text-mute); line-height: 1.55; margin-top: 4px; }
 
+/* Galeri sampel layar lipat & ganda (0.2.14): kartu redup sampai tahun/riset terpenuhi. */
+.gen-fold-head { margin-top: 14px; }
+.gen-fold-card .gen-card-thumb { height: 104px; }
+.gen-fold-card.is-open { opacity: 1; border-color: color-mix(in srgb, var(--gen-accent) 45%, transparent); }
+.gen-fold-card.is-open .gen-card-st { color: var(--gen-accent); font-weight: 700; }
+
 @keyframes genFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
 @keyframes genGlow { 0%, 100% { opacity: 0.65; transform: translate(-50%, -50%) scale(1); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); } }
 @keyframes genSheen { 0%, 55% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
