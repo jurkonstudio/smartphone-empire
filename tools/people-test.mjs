@@ -1,5 +1,5 @@
-// Uji manusia realistis (CampusPeople.js + integrasi CampusLife): proporsi, ayunan, arah badan, payung saat hujan,
-// variasi, budget mesh, dispose. THREE tiruan kecil; jalankan: node tools/people-test.mjs
+// Uji manusia realistis (CampusPeople.js + integrasi CampusLife): proporsi, sendi (lutut/siku), ayunan, arah badan,
+// payung saat hujan, variasi (gaya kepala, anak, ponsel), kendaraan (roda berputar, motor), budget mesh, dispose. THREE tiruan kecil; jalankan: node tools/people-test.mjs
 import { stubBrowser, load } from './boot.mjs';
 stubBrowser();
 const P = await load('src', 'ui/campus/CampusPeople.js');
@@ -35,10 +35,11 @@ const people = P.createPeople(THREE, A, root, mk, put);
 const before = meshes;
 const p = people.add({ axis: 'x', side: 1.22, speed: 0.045, s0: 0.1, index: 0 });
 const perPerson = meshes - before;
-ok(perPerson >= 9 && perPerson <= 12, 'mesh per orang 9..12: ' + perPerson);
+ok(perPerson >= 15 && perPerson <= 24, 'mesh per orang 15..24: ' + perPerson);
 ok(root.children.length === 1 && root.children[0] === p.g, 'satu grup per orang di root');
-let top = 0; walk(p.g, o => { if (o instanceof Mesh && !(p.umb && p.umb.children.includes(o))) top = Math.max(top, o.position.y + (o.geometry.h && o.geometry.key.startsWith('sph') ? 0 : 0)); });
-ok(top > 0.3 && top < 0.5, 'tinggi manusia wajar (kepala ~0.37): ' + top.toFixed(2));
+// tinggi dunia lokal: akumulasi posisi grup bersarang (pivot lutut/siku/kepala)
+let top = 0; (function h(o, y) { const yy = y + (o.position ? o.position.y : 0); if (o instanceof Mesh && !(p.umb && p.umb.children.includes(o))) top = Math.max(top, yy); (o.children || []).forEach(c => h(c, yy)); })(p.inner, 0);
+ok(top > 0.38 && top < 0.5, 'tinggi manusia wajar (puncak kepala ~0.43): ' + top.toFixed(2));
 ok(p.umb && p.umb.visible === false, 'payung tersembunyi saat tidak hujan');
 
 // ayunan
@@ -50,6 +51,32 @@ ok(Math.sign(p.armL.rotation.z) === -Math.sign(p.legL.rotation.z), 'lengan berla
 let maxS = 0; for (let d = 0; d < 3; d += 0.01) { people.pose(p, d, true, 2 + d); maxS = Math.max(maxS, Math.abs(p.legL.rotation.z)); }
 ok(maxS <= 0.6 + 1e-9 && maxS > 0.55, 'ayunan kaki dibatasi <= 0.6 rad: ' + maxS.toFixed(3));
 
+// lutut & siku: lutut menekuk (negatif) hanya saat kaki sedang diayun ke depan; siku selalu sedikit menekuk
+let kneeOk = true, elbowOk = true, kneeBent = false;
+for (let d = 0; d < 3; d += 0.01) {
+  people.pose(p, d, true, 3 + d); people.endFrame(3 + d);
+  const ph = d * 28, fwdL = Math.cos(ph) > 0;
+  if (p.kneeL.rotation.z > 1e-9 || p.kneeR.rotation.z > 1e-9 || p.kneeL.rotation.z < -0.85 - 1e-9) kneeOk = false;
+  if (!fwdL && p.kneeL.rotation.z !== 0) kneeOk = false;
+  if (p.kneeL.rotation.z < -0.3) kneeBent = true;
+  if (p.elbowL.rotation.z < 0.2 - 1e-9 || p.elbowR.rotation.z < 0.2 - 1e-9) elbowOk = false;
+}
+ok(kneeOk && kneeBent, 'lutut menekuk saat kaki diayun ke depan, lurus saat menapak, maks 0.85 rad');
+ok(elbowOk, 'siku selalu menekuk >= 0.2 rad');
+ok(Math.abs(p.torso.rotation.z + 0.06) < 1e-9 && p.torso.rotation.y !== undefined, 'badan condong ke depan (-0.06 rad)');
+const L9 = Array.from({ length: 10 }, (_, i) => P.personLook(i));
+ok(new Set(L9.map(l => l.style)).size === 5, '5 gaya kepala (pendek, panjang, kerudung, topi, cepol) muncul di 10 orang');
+ok(L9.some(l => l.h < 0.85) && L9.some(l => l.h > 1.02), 'ada anak (tinggi < 0.85) dan dewasa tinggi');
+ok(L9.some(l => l.phone) && L9.some(l => l.longSleeve) && L9.some(l => !l.longSleeve), 'ada pengguna ponsel, lengan panjang & pendek');
+const ph = people.add({ axis: 'x', side: 1.22, speed: 0.04, s0: 0, index: 2 });     // index 2 = menatap ponsel
+ok(ph.phone && ph.headG.rotation.z < 0, 'pengguna ponsel menunduk');
+people.pose(ph, 0.1, true, 5);
+ok(ph.armR.rotation.z === 0.55 && ph.elbowR.rotation.z === 1.5, 'lengan kanan memegang ponsel di depan dada');
+people.setRain(true); people.pose(ph, 0.1, true, 5.1);
+ok(ph.phone.visible === false, 'hujan: ponsel disimpan saat memegang payung');
+people.setRain(false); people.pose(ph, 0.1, true, 5.2);
+ok(ph.phone.visible === true, 'cerah: ponsel tampil lagi');
+
 // belok halus
 p.yaw = 0; people.endFrame(10); people.pose(p, 0, false, 10.05);
 ok(p.yaw > 0 && p.yaw < Math.PI * 0.5, 'berbalik arah berputar halus (tidak melompat): ' + p.yaw.toFixed(2));
@@ -60,7 +87,7 @@ ok(Math.abs(Math.abs(p.yaw) - Math.PI) < 1e-6, 'akhirnya menghadap arah baru');
 people.setRain(true);
 ok(p.umb.visible === true, 'hujan: payung terbuka');
 people.pose(p, 0.2, true, 20);
-ok(p.armR.rotation.z === -0.5, 'hujan: lengan pemegang payung tidak berayun');
+ok(p.armR.rotation.z === 0.5 && p.elbowR.rotation.z === 1.5, 'hujan: lengan pemegang payung terangkat & tidak berayun');
 people.setRain(false);
 ok(p.umb.visible === false, 'cerah: payung ditutup');
 const noUmb = people.add({ axis: 'z', side: -1.22, speed: 0.04, s0: 1, index: 3 });
@@ -88,6 +115,35 @@ ok(shown2 === 0, 'life.setSky(sunny): payung tertutup');
 let threw = false;
 try { for (let t = 0; t < 120; t += 0.033) life.update(t); } catch (e) { threw = e; }
 ok(!threw, 'update 120 detik tanpa error' + (threw ? ': ' + threw.stack : ''));
+// kendaraan: roda berputar, motor berpengendara, bus, model mobil beragam
+{
+  const wheelPivots = []; walk(scene, o => { if (o instanceof Group && o.children.length >= 1 && o.children[0] instanceof Mesh && o.children[0].rotation.x === Math.PI / 2) wheelPivots.push(o); });
+  ok(wheelPivots.length >= 4 * 20, 'banyak roda (4 per mobil/bus, 2 per motor): ' + wheelPivots.length);
+  life.update(10); const z1 = wheelPivots.map(w => w.rotation.z);
+  life.update(11); const z2 = wheelPivots.map(w => w.rotation.z);
+  const moved = z1.filter((v, i) => v !== z2[i]).length;
+  ok(moved >= wheelPivots.length * 0.8, 'roda berputar saat kendaraan berjalan: ' + moved + '/' + wheelPivots.length);
+  ok(z2.filter((v, i) => v < z1[i] || Math.abs(v - z1[i]) > 1).length >= moved * 0.9, 'roda berputar ke arah maju (rotation.z menurun)');
+  const root0 = scene.children[0];
+  const vehs = root0.children.filter(c => c instanceof Group && c.children.length >= 9 && c.children.some(k => k instanceof Group));
+  const sizes = vehs.map(v => { let n = 0; walk(v, o => { if (o instanceof Mesh) n++; }); return n; });
+  ok(vehs.length === 22, 'kendaraan: mobil + bus + motor = 22: ' + vehs.length);
+  ok(Math.max(...sizes) <= 26 && Math.min(...sizes) >= 12, 'mesh per kendaraan 12..26: ' + Math.min(...sizes) + '..' + Math.max(...sizes));
+  // motor: pengendara berhelm -> ada bola helm; ada 3 motor
+  const bikes = vehs.filter(v => v.children.some(c => c instanceof Mesh && c.geometry.key.startsWith('sph0.05_')));
+  ok(bikes.length === 3, '3 motor berpengendara berhelm: ' + bikes.length);
+  // lampu belakang menyala lebih terang di malam hari
+  life.setTheme(false, 0x8fb4e8); const tail = allMats.find(m => m.emissive === 0xdc2626);
+  const dayI = tail.emissiveIntensity; life.setTheme(true, 0x8fb4e8);
+  ok(tail.emissiveIntensity > dayI, 'lampu belakang lebih terang saat malam: ' + dayI + ' -> ' + tail.emissiveIntensity);
+  life.setTheme(false, 0x8fb4e8);
+  // jembatan menanjak: kendaraan di jalan barat miring mengikuti dek
+  let tilted = 0;
+  const link2 = { heightAt: x => 0.06 + Math.max(0, (x + 20) * 0.05) };
+  const sc2 = new Group(); const life2 = LIFE.createCampusLife(THREE, A2, sc2, [], link2); life2.update(40);
+  sc2.children[0].children.forEach(c => { if (c instanceof Group && Math.abs(c.rotation.z) > 1e-6) tilted++; });
+  ok(tilted >= 1, 'kendaraan di jembatan miring mengikuti tanjakan: ' + tilted); life2.dispose();
+}
 // perumahan: mobil & penghuni Jalan Permukiman tampil sesuai level
 ok(typeof life.setHousing === 'function', 'life.setHousing tersedia');
 const meshCount = () => { let n = 0; walk(scene, o => { if (o instanceof Mesh) n++; }); return n; };
