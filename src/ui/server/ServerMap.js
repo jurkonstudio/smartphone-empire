@@ -1,4 +1,4 @@
-// FILE: src/ui/server/ServerMap.js  (BARU — v2027.73: Peta Server 3D bawah laut)
+// FILE: src/ui/server/ServerMap.js  (v2027.74: teruskan statusNames & hint ke scene baru)
 // Mount/unmount Peta Server di kotak #campus-map pada Home. Pola sama dengan ManufactureMap.js:
 // Three.js dimuat lazy dari CDN dengan URL yang SAMA (tidak diunduh dua kali), hanya satu scene WebGL aktif
 // (dijaga CampusOfficeBridge + CampusMap.unmountCampusMap + ManufactureMap/OfficeMap).
@@ -18,14 +18,16 @@ var TX = {
         pods: ['Pod A', 'Pod B'], aria: 'Peta 3D pusat data bawah laut',
         fbTitle: 'Peta server belum bisa ditampilkan',
         fbBody: 'Perangkat ini tidak bisa menampilkan 3D atau modul Three.js gagal dimuat. Data permainan tetap aman; coba lagi nanti.',
-        chipOpen: 'Server', chipBack: 'Kampus'
+        chipOpen: 'Server', chipBack: 'Kampus',
+        statusNames: ['Normal', 'Sibuk', 'Kritis'], hint: 'Ketuk pod untuk fokus · geser & cubit untuk menjelajah'
     },
     en: {
         loading: 'Loading server map…', title: 'Undersea Data Center', subtitle: 'Depth 180 m · 2 pressure pods',
         pods: ['Pod A', 'Pod B'], aria: '3D map of the undersea data center',
         fbTitle: 'Server map cannot be shown',
         fbBody: 'This device cannot render 3D or the Three.js module failed to load. Your game data is safe; try again later.',
-        chipOpen: 'Server', chipBack: 'Campus'
+        chipOpen: 'Server', chipBack: 'Campus',
+        statusNames: ['Normal', 'Busy', 'Critical'], hint: 'Tap a pod to focus · drag & pinch to explore'
     }
 };
 
@@ -72,7 +74,8 @@ export async function mountServerMap(containerEl, gameState) {
         if (token !== _token || !containerEl.isConnected) return;
         var d = dict();
         var scene = createServerScene(THREE, containerEl, {
-            title: d.title, subtitle: d.subtitle, podNames: d.pods, aria: d.aria
+            title: d.title, subtitle: d.subtitle, podNames: d.pods, aria: d.aria,
+            statusNames: d.statusNames, hint: d.hint
         });
         function currentData() {
             var g = window.__game;
