@@ -835,6 +835,26 @@ export function createOfficeProps(THREE, env) {
                 small(rot(rb(spine, tm, 0.006, 0.17, 0.004, 0.001, 0.025, 0.31, -0.102), 0, 0, 0.2));
             }
         }
+        // variasi pakaian (deterministik per staf): dasi, blazer, atau hoodie
+        if (DETAIL >= 1) {
+            var outfit = (h >>> 22) % 5;
+            if (outfit === 0 && role !== 'engineer') {                                           // dasi
+                small(rb(spine, shirtMat(0x1e3a8a), 0.036, 0.19, 0.008, 0.003, 0, 0.3, -0.104));
+                small(rb(spine, shirtMat(0x1e3a8a), 0.05, 0.034, 0.012, 0.004, 0, 0.395, -0.103));
+            } else if (outfit === 1) {                                                           // blazer: lapel + panel samping
+                var bz = shirtMat(0x2b3445);
+                small(rb(spine, bz, 0.07, 0.36, 0.012, 0.004, -0.1, 0.22, -0.101));
+                small(rb(spine, bz, 0.07, 0.36, 0.012, 0.004, 0.1, 0.22, -0.101));
+                small(rb(spine, bz, 0.36, 0.05, 0.215, 0.012, 0, 0.1, 0));
+            } else if (outfit === 2) {                                                           // hoodie: tudung + kantong
+                small(mk(spine, G.sph, shirt, 0, 0.44, 0.07, 0.085, 0.05, 0.06));
+                small(rb(spine, shirtMat(spec.color), 0.2, 0.07, 0.012, 0.004, 0, 0.1, -0.104));
+            }
+            if ((h >>> 25) % 4 === 0) {                                                          // tali tas selempang
+                var strap = small(rb(spine, 'dark', 0.03, 0.5, 0.215, 0.004, 0, 0.2, 0));
+                strap.rotation.z = 0.5;
+            }
+        }
         rig.dispose = null;
 
         var eyes0 = rig.eyes;
