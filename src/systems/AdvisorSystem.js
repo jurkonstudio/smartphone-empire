@@ -1373,7 +1373,13 @@ export class AdvisorSystem {
         var res;
         try { res = this.brain.reply(q); }
         catch (e) { console.warn('[Advisor] brain gagal:', e); res = { text: tx('ui.ask_fail'), actions: [], chips: [] }; }
-        
+
+        // Perintah "bersihkan chat": kosongkan riwayat + memori otak, kembali ke sapaan awal.
+        if (res && res.clearChat) {
+            this.resetChat();
+            return Object.assign({}, this.getChat()[0], { clearChat: true });
+        }
+
         if (this._provider && (res.intent === 'unknown' || (res.confidence !== undefined && res.confidence < 0.35 && res.intent !== 'clarify'))) {
             var ai = await this.ask(q);
             if (ai.ok && ai.text) res = { text: ai.text, actions: res.actions || [], chips: res.chips || [], intent: 'ai', source: 'ai', confidence: 1 };

@@ -285,9 +285,45 @@ export class AdvisorBrain {
         return bestS >= 1.5 ? best : null;
     }
 
+    // Perintah membersihkan chat lewat kalimat ("bersihkan chat", "clear", "hapus riwayat", "chat baru", ...).
+    // Sengaja ketat: kata kerja tanpa objek chat hanya dihitung bila pesannya sangat pendek,
+    // supaya "reset game" / "hapus staf" tidak ikut menghapus percakapan.
+    _isClearCommand(text) {
+        var n = norm(text);
+        if (!n) return false;
+        if (/^(tolong |please )?(mulai (baru|ulang|dari awal)|chat baru|obrolan baru|percakapan baru|new chat|new conversation|start over|fresh start|ulang dari awal)( dong| ya| aja| saja| please)*$/.test(n)) return true;
+        var toks = n.split(' ');
+        if (toks.length > 7) return false;
+        var VERB = ['bersihkan', 'bersihin', 'membersihkan', 'hapus', 'hapuskan', 'hapusin', 'menghapus', 'kosongkan', 'kosongin', 'reset', 'clear', 'clean', 'wipe', 'delete', 'erase', 'lupakan', 'lupain', 'forget', 'cls'];
+        var BARE = ['bersihkan', 'bersihin', 'membersihkan', 'kosongkan', 'kosongin', 'reset', 'clear', 'clean', 'wipe', 'cls'];
+        var NOUN = ['chat', 'chats', 'percakapan', 'obrolan', 'riwayat', 'history', 'pesan', 'message', 'messages', 'log', 'conversation', 'layar', 'screen', 'ingatan', 'memori', 'memory'];
+        var FILL = ['tolong', 'please', 'bisa', 'can', 'could', 'you', 'dong', 'ya', 'aja', 'saja', 'deh', 'sekarang', 'now', 'ini', 'itu', 'nya', 'the', 'this', 'my', 'isi', 'yang', 'kamu', 'kita', 'saya', 'dan', 'and', 'lama', 'old', 'sebelumnya', 'previous'];
+        var ALL = ['semua', 'all', 'everything', 'seluruh'];
+        var rest = [], sawAll = false;
+        toks.forEach(function (t) {
+            if (ALL.indexOf(t) >= 0) sawAll = true;
+            else if (FILL.indexOf(t) < 0) rest.push(t);
+        });
+        var verbs = rest.filter(function (t) { return VERB.indexOf(t) >= 0; });
+        var nouns = rest.filter(function (t) { return NOUN.indexOf(t) >= 0; });
+        if (verbs.length !== 1 || rest.length > 2) return false;
+        if (rest.length === 1) return BARE.indexOf(verbs[0]) >= 0 || sawAll;
+        return nouns.length === 1;
+    }
+
+    _clearChatReply() {
+        this.resetMemory();
+        return {
+            text: this.L('Chat dibersihkan. Kita mulai dari awal.', 'Chat cleared. Fresh start.'),
+            actions: [], chips: this.chips(), intent: 'clear', confidence: 1, clearChat: true
+        };
+    }
+
     reply(text) {
         var m = this.mem;
         m.turns++;
+
+        if (this._isClearCommand(text)) return this._clearChatReply();
 
         if (m.pending) {
             var pend = m.pending; m.pending = null;
