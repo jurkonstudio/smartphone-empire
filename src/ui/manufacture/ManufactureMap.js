@@ -3,6 +3,7 @@
 // Three.js dimuat lazy dari CDN dengan URL yang SAMA dengan Peta Kampus & Kantor, jadi tidak diunduh dua kali.
 // Hanya satu scene WebGL aktif pada satu waktu (dijaga CampusOfficeBridge + CampusMap.unmountCampusMap).
 import { createManufactureScene } from './ManufactureScene.js';
+import { bindAmbience } from '../ambience/AmbienceParams.js';
 import { FX_EVENTS, ms } from './ManufactureLogic.js';
 import { bus } from '../../core/EventBus.js';
 
@@ -105,6 +106,7 @@ export async function mountManufactureMap(containerEl, gameState) {
             bus.on('plant:idle', queue),
             function () { if (queued) { cancelAnimationFrame(queued); queued = 0; } }
         ].concat(fxUnsubs);
+        unsubs.push(bindAmbience('manufacture', bus, currentData));   // audio ambien adaptif
         _active = { scene: scene, unsubs: unsubs };
     } catch (err) {
         console.warn('[ManufactureMap] gagal, pakai fallback:', err);
