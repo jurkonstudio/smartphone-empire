@@ -123,6 +123,83 @@
   #toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--text); color: var(--bg);
            padding: 10px 16px; border-radius: 12px; font-size: .9rem; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: calc(100vw - 32px); z-index: 50; }
   #toast.show { opacity: 1; }
+  /* ===== Tampilan editorial ===== */
+  :root {
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 1px 2px rgba(0,0,0,.04), 0 12px 28px -14px rgba(0,0,0,.18);
+  }
+  body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  .top { box-shadow: var(--shadow-sm); }
+  .top-inner { padding: 14px 20px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: var(--serif); font-size: 1.2rem; font-weight: 700; letter-spacing: -.01em; }
+  .brand::before { content: ""; width: 26px; height: 26px; border-radius: 8px; flex: none;
+                   background: linear-gradient(135deg, var(--accent), #5e5ce6); }
+  .brand span { color: var(--sub); font-style: italic; font-weight: 400; }
+  .btn { padding: 8px 16px; font-weight: 500; transition: border-color .15s, background .15s, color .15s; }
+  .btn.primary { box-shadow: 0 1px 2px rgba(0,113,227,.25); }
+
+  .wrap { padding: 28px 20px 72px; }
+  .intro { margin: 0 0 28px; }
+  .intro .kicker { font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  .intro h1 { font-family: var(--serif); font-size: clamp(1.9rem, 4.2vw, 2.7rem); line-height: 1.08; letter-spacing: -.02em; margin: 8px 0 10px; }
+  .intro p { margin: 0; color: var(--sub); max-width: 580px; font-size: 1.02rem; }
+
+  .toolbar { margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+  .chip { padding: 7px 14px; font-weight: 500; transition: all .15s; }
+  .chip:hover { border-color: var(--text); }
+  .chip[aria-pressed="true"] { box-shadow: var(--shadow-sm); }
+  .search { min-width: 220px; padding: 9px 16px; box-shadow: var(--shadow-sm); }
+  .search:focus { outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); outline-offset: 1px; }
+
+  .layout { gap: 40px; }
+  aside { position: sticky; top: 88px; }
+  @media (max-width: 860px) { aside { position: static; } }
+  aside h2 { font-family: var(--serif); font-size: 1.2rem; margin-bottom: 12px; }
+  .rel { border-radius: 14px; box-shadow: var(--shadow-sm); overflow: hidden; }
+  .rel-item { padding: 14px 18px; }
+  .rel-item strong { font-size: .95rem; font-weight: 600; }
+  .status-line { line-height: 1.5; }
+
+  .featured { border-radius: 18px; box-shadow: var(--shadow-md); margin-bottom: 30px; transition: transform .2s, box-shadow .2s; }
+  .featured:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(0,0,0,.05), 0 20px 40px -18px rgba(0,0,0,.28); }
+  .featured .cover { aspect-ratio: 16 / 8.5; }
+  .featured .body { padding: 22px 26px 26px; }
+  .featured h2 { font-family: var(--serif); font-size: clamp(1.55rem, 3.6vw, 2.1rem); letter-spacing: -.015em; }
+  .featured p { font-size: 1.02rem; line-height: 1.6; }
+
+  .grid { gap: 22px; }
+  .card { border-radius: 16px; box-shadow: var(--shadow-sm); transition: transform .2s, box-shadow .2s, border-color .2s; }
+  .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: transparent; }
+  .card .cover { aspect-ratio: 16 / 10; }
+  .card .body { padding: 16px 18px 18px; }
+  .card h3 { font-family: var(--serif); font-size: 1.12rem; letter-spacing: -.01em; }
+  .card p { font-size: .93rem; line-height: 1.55; }
+
+  .meta { font-size: .78rem; gap: 10px; }
+  .tag { font-size: .7rem; letter-spacing: .03em; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; }
+
+  .empty { border-radius: 16px; }
+
+  .article { max-width: 680px; }
+  .article h1 { font-family: var(--serif); font-size: clamp(2rem, 5vw, 2.8rem); line-height: 1.1; letter-spacing: -.025em; margin: 14px 0 12px; }
+  .article .lead { font-family: var(--serif); font-size: 1.22rem; line-height: 1.55; color: var(--sub); }
+  .article .cover { border-radius: 16px; box-shadow: var(--shadow-md); margin: 24px 0 30px; }
+  .article .content p { font-family: var(--serif); font-size: 1.14rem; line-height: 1.78; margin: 0 0 1.25em; }
+  .article .source { border-top: 1px solid var(--border); padding-top: 14px; }
+  .back { border-radius: 999px; font-size: .88rem; }
+
+  dialog { border-radius: 18px; box-shadow: 0 30px 60px -20px rgba(0,0,0,.35); }
+  .dlg-head { padding: 18px 22px; }
+  .dlg-head h2 { font-family: var(--serif); font-size: 1.2rem; }
+  .dlg-body { padding: 20px 22px 22px; }
+  .field input, .field select, .field textarea { border-radius: 10px; padding: 10px 12px; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); outline-offset: 0; }
+
+  .site-footer { border-top: 1px solid var(--border); background: var(--card); }
+  .site-footer .inner { max-width: 1100px; margin: 0 auto; padding: 22px 20px 30px; display: flex; flex-wrap: wrap; gap: 8px 24px;
+                        justify-content: space-between; font-size: .84rem; color: var(--sub); }
+  .site-footer strong { color: var(--text); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -144,6 +221,11 @@
 
   <!-- ====== DAFTAR (portal) ====== -->
   <section id="viewList">
+    <div class="intro">
+      <div class="kicker">Berita ponsel &amp; gadget</div>
+      <h1>Spek, rumor, dan jadwal rilis</h1>
+      <p>Kabar terbaru dari dunia smartphone. Rumor selalu diberi label dan disertai sumber.</p>
+    </div>
     <div class="toolbar">
       <div class="chips" id="chips" role="group" aria-label="Kategori"></div>
       <input class="search" id="search" type="search" placeholder="Cari artikel…" aria-label="Cari artikel">
@@ -172,6 +254,13 @@
     <article class="article" id="postArticle"></article>
   </section>
 </main>
+
+<footer class="site-footer">
+  <div class="inner">
+    <span><strong>Smartphone Empire · Berita</strong> — Jurkon Studio</span>
+    <span>Situs ini tidak berafiliasi dengan produsen mana pun. Harga dan tanggal rilis dapat berubah.</span>
+  </div>
+</footer>
 
 <!-- ====== DIALOG LOGIN ====== -->
 <dialog id="dlgLogin">
