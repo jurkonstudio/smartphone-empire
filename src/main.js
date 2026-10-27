@@ -581,7 +581,8 @@ function initAdvisorChat() {
 
     // Handle "Enter" di keyboard
     document.body.addEventListener('keydown', function(e) {
-        if (e.target.matches('input[placeholder*="Tanya apa saja"], input[placeholder*="Tanya"]')) {
+        // Input panel Asisten (data-adv-input) punya handler sendiri; handler lama ini tidak boleh ikut campur.
+        if (e.target.matches('input[placeholder*="Tanya apa saja"], input[placeholder*="Tanya"]') && !e.target.hasAttribute('data-adv-input')) {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 var parent = e.target.parentElement;
@@ -600,7 +601,7 @@ function initAdvisorChat() {
             // Tombol bisa sudah terlepas dari DOM (dirender ulang oleh handler lain)
             if (!parent) return;
             var input = parent.querySelector('input[placeholder*="Tanya apa saja"], input[placeholder*="Tanya"]');
-            if (input) {
+            if (input && !input.hasAttribute('data-adv-input')) {
                 e.preventDefault();
                 e.stopPropagation();
                 var text = input.value.trim();
