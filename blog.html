@@ -1177,10 +1177,12 @@ document.addEventListener('submit', async (e) => {
 });
 $('btnLogout').addEventListener('click', async () => { await sb.auth.signOut(); toast('Sudah keluar.'); });
 
-sb.auth.onAuthStateChange(async (event) => {
+// Penting: jangan memanggil Supabase (getSession, rpc, from) langsung di dalam callback ini.
+// Callback berjalan di dalam kunci auth, jadi signInWithPassword bisa macet selamanya
+// ("Memeriksa…"). Tunda dengan setTimeout agar kunci sudah dilepas.
+sb.auth.onAuthStateChange((event) => {
   if (event !== 'SIGNED_IN' && event !== 'SIGNED_OUT') return;
-  await refreshAuth();
-  await loadAll();
+  setTimeout(async () => { await refreshAuth(); await loadAll(); }, 0);
 });
 
 // ---------- interaksi umum ----------
