@@ -20,6 +20,7 @@ import { AnnualReviewSystem } from './systems/AnnualReviewSystem.js';
 import { ChannelSystem } from './systems/ChannelSystem.js';
 import { AfterSalesSystem } from './systems/AfterSalesSystem.js';
 import { EcosystemSystem } from './systems/EcosystemSystem.js';
+import { AppStoreReviewSystem } from './systems/AppStoreReviewSystem.js';   // [Peninjauan App Store]
 import { TutorialSystem } from './systems/TutorialSystem.js';
 import { ResearchSystem } from './systems/ResearchSystem.js';
 import { OSSystem } from './systems/OSSystem.js';
@@ -149,6 +150,7 @@ var promotion         = new PromotionSystem(state);
 var channels          = new ChannelSystem(state);
 var afterSales        = new AfterSalesSystem(state);
 var ecosystem = new EcosystemSystem(state);   // [ekosistem] aksesori & App Store
+var appReview = new AppStoreReviewSystem(state);   // [Peninjauan App Store] developer mengirim aplikasi, pemain menyetujui/menolak
 var bank              = new BankSystem(state);
 var econBrakes        = new EconBrakeSystem(state);
 
@@ -171,6 +173,7 @@ products.setAfterSales(afterSales);
 products.setEcosystem(ecosystem);
 economy.setAfterSales(afterSales);
 economy.setEcosystem(ecosystem);
+ecosystem.setAppReview(appReview);
 teamSystem.setEconomy(economy); // [v2030] simulasi runway saat rekrut
 
 // ============ STATE UI ============
@@ -182,7 +185,7 @@ var activeHqSubtab = 'overview';
 var NAV_SUBTABS = {
     research: ['tech', 'os', 'manufaktur', 'chip'],
     products: ['design', 'catalog', 'sales', 'chip'],
-    market: ['share', 'competitors', 'trends', 'promo', 'channels', 'service', 'ecosystem', 'public'],
+    market: ['share', 'competitors', 'trends', 'promo', 'channels', 'service', 'ecosystem', 'appstore', 'public'],
     team: ['overview', 'team', 'exchange', 'bank']
 };
 var _burnWarn = null;
@@ -350,7 +353,7 @@ function renderView(opts) {
         else if (activeView === 'team') html = renderHqPanel({ subtab: activeHqSubtab, state: state.get(), timeSnapshot: getTime(), researchSystem: research, teamSystem: teamSystem, stockSystem: stockSystem });
         else if (activeView === 'research') html = renderResearchPanel({ subtab: activeSubtab, researchSystem: research, osSystem: os, chipResearchSystem: chipResearch, componentPlantSystem: componentPlants, assemblySystem: assemblySystem });
         else if (activeView === 'products') html = renderProductPanel({ subtab: activeProdSubtab, productSystem: products, researchSystem: research, osSystem: os, ecosystemSystem: ecosystem });
-        else if (activeView === 'market') html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion, channelSystem: channels, afterSalesSystem: afterSales, ecosystemSystem: ecosystem });
+        else if (activeView === 'market') html = renderMarketPanel({ subtab: activeMarketSubtab, marketSystem: market, competitorSystem: competitors, opinionSystem: opinion, channelSystem: channels, afterSalesSystem: afterSales, ecosystemSystem: ecosystem, appReviewSystem: appReview });
         else if (activeView === 'settings') html = renderSettingsPanel();
         else if (activeView === 'guide') html = renderGuidePanel();
         else html = renderEmptyState({ icon: '?', title: tr('main.not_found') });
@@ -1204,6 +1207,48 @@ function bindGlobalClicks() {
             renderAll();
             return;
         }
+        // [Peninjauan App Store] setujui/tolak pengiriman developer, tinjauan manual, insiden, blokir, kebijakan.
+        var asrBtn = e.target.closest('[data-asr-approve],[data-asr-reject],[data-asr-inspect],[data-asr-takedown],[data-asr-ban],[data-asr-unban],[data-asr-scan],[data-asr-fee],[data-asr-auto]');
+        if (asrBtn) {
+            e.preventDefault(); vibrate(6);
+            var asrDs = asrBtn.dataset, asrRes, asrOk = null;
+            if (asrDs.asrApprove) {
+                asrRes = appReview.approve(parseInt(asrDs.asrApprove, 10));
+                asrOk = asrRes.ok ? (asrRes.outcome === 'missed' ? tr('asr.toast.approvedRisk') : tr('asr.toast.approved')) : null;
+            } else if (asrDs.asrReject) {
+                asrRes = appReview.reject(parseInt(asrDs.asrReject, 10), asrDs.asrVal);
+                asrOk = asrRes.ok ? tr('asr.toast.rejected') : null;
+            } else if (asrDs.asrInspect) {
+                asrRes = appReview.inspect(parseInt(asrDs.asrInspect, 10));
+                asrOk = asrRes.ok ? (asrRes.found > 0 ? tr('asr.toast.inspectFound', { n: asrRes.found }) : tr('asr.toast.inspectClean')) : null;
+            } else if (asrDs.asrTakedown) {
+                asrRes = appReview.takedown(parseInt(asrDs.asrTakedown, 10));
+                asrOk = asrRes.ok ? tr('asr.toast.takedown') : null;
+            } else if (asrDs.asrBan) {
+                asrRes = appReview.banDeveloper(asrDs.asrBan);
+                asrOk = asrRes.ok ? (asrRes.justified ? tr('asr.toast.banned') : tr('asr.toast.bannedClean')) : null;
+            } else if (asrDs.asrUnban) {
+                asrRes = appReview.unbanDeveloper(asrDs.asrUnban);
+                asrOk = asrRes.ok ? tr('asr.toast.unbanned') : null;
+            } else if (asrDs.asrScan) {
+                asrRes = appReview.setScan(asrDs.asrScan);
+                asrOk = asrRes.ok ? tr('asr.toast.scan') : null;
+            } else if (asrDs.asrFee) {
+                asrRes = appReview.setFeeStep(parseInt(asrDs.asrVal, 10));
+                asrOk = asrRes.ok ? tr('asr.toast.policy') : null;
+            } else {
+                asrRes = appReview.toggleAutoTrusted();
+                asrOk = tr('asr.toast.policy');
+            }
+            if (asrOk) ToastService.success(asrOk);
+            else if (asrRes && asrRes.reason !== 'same') {
+                ToastService.error(asrRes.reason === 'funds' ? tr('asr.toast.funds')
+                    : asrRes.reason === 'unavailable' ? tr('asr.toast.unavailable')
+                    : tr('asr.toast.fail'));
+            }
+            renderAll();
+            return;
+        }
         var mktSub = e.target.closest('[data-market-subtab]');
         if (mktSub) { e.preventDefault(); activeMarketSubtab = mktSub.dataset.marketSubtab; renderView(); return; }
         var compCard = e.target.closest('[data-competitor-detail]');
@@ -1413,6 +1458,9 @@ function bindStateEvents() {
         if (activeView === 'market' && activeMarketSubtab === 'promo') renderView({ soft: true });
     });
 
+    bus.on('appreview:changed', function () {
+        if (activeView === 'market' && activeMarketSubtab === 'appstore') renderView({ soft: true });
+    });
     bus.on('lang:changed', function () { renderAll(); updateTitle(); });
     
     var _headerDebounce = null;
@@ -1643,6 +1691,7 @@ async function boot() {
         channels.start();
         afterSales.start();
 ecosystem.start();
+        appReview.start();
         bank.start();
         econBrakes.start();
         bindRegionalActions();
@@ -1683,6 +1732,7 @@ ecosystem.start();
 
         window.__game = {
             ecosystem: ecosystem,
+            appReview: appReview,
             report: function (opts) { return buildReport(state.get(), window.__game, opts || {}); },
             reportText: function (opts) { return formatReportText(buildReport(state.get(), window.__game, opts || {})); },
             reportShow: function () { openDiagnosticModal(); },
