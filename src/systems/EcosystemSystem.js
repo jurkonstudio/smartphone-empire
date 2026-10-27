@@ -177,6 +177,18 @@ export class EcosystemSystem {
     constructor(gameState) {
         this.state = gameState;
         this._unsubs = [];
+        this.review = null;   // [Peninjauan App Store] AppStoreReviewSystem (opsional)
+    }
+
+    // Dipasang dari main.js. Tanpa ini, App Store berjalan seperti sebelumnya (faktor 1, tanpa biaya pemindai).
+    setAppReview(sys) { this.review = sys || null; }
+
+    _reviewFactor() {
+        try { return this.review ? _clamp(_num(this.review.getStoreFactor(), 1), 0.5, 1.5) : 1; } catch (e) { return 1; }
+    }
+
+    _reviewCost() {
+        try { return this.review ? _num(this.review.getMonthlyCost(), 0) : 0; } catch (e) { return 0; }
     }
 
     start() {
@@ -441,9 +453,10 @@ export class EcosystemSystem {
         if (_storeAvailable(d)) {
             storeUsers = computeOsAdoption(d).activeUsers || 0;
             if (storeUsers > 0) {
-                var gross = storeUsers * _storeSpend(d) * _storeAppeal(e.store.commission) * _storeQuality(d);
+                // [Peninjauan App Store] katalog aplikasi yang disetujui dan goodwill developer memengaruhi belanja kotor.
+                var gross = storeUsers * _storeSpend(d) * _storeAppeal(e.store.commission) * _storeQuality(d) * this._reviewFactor();
                 storeRev = gross * e.store.commission;
-                cost += gross * ECO_CONST.storeIncentiveRate + _nice(ECO_CONST.storeFixedMonthly * _fixedScale(scale));
+                cost += gross * ECO_CONST.storeIncentiveRate + _nice(ECO_CONST.storeFixedMonthly * _fixedScale(scale)) + this._reviewCost();
             }
         }
         revenue += storeRev;
@@ -507,12 +520,13 @@ export class EcosystemSystem {
         var available = _storeAvailable(d);
         var users = available ? (computeOsAdoption(d).activeUsers || 0) : 0;
         var spend = _storeSpend(d), appeal = _storeAppeal(st.commission), quality = _storeQuality(d);
-        var gross = users * spend * appeal * quality;
+        var catalog = this._reviewFactor();   // [Peninjauan App Store]
+        var gross = users * spend * appeal * quality * catalog;
         return {
             available: available, commission: st.commission, users: users,
-            spend: spend, appeal: appeal, quality: quality, gross: gross,
+            spend: spend, appeal: appeal, quality: quality, gross: gross, catalogFactor: catalog,
             revenue: gross * st.commission,
-            cost: users > 0 ? gross * ECO_CONST.storeIncentiveRate + _nice(ECO_CONST.storeFixedMonthly * _fixedScale(this._scale())) : 0,
+            cost: users > 0 ? gross * ECO_CONST.storeIncentiveRate + _nice(ECO_CONST.storeFixedMonthly * _fixedScale(this._scale())) + this._reviewCost() : 0,
             locked: this._now() < st.lockUntilAbs, lockLeft: this._lockLeft(st.lockUntilAbs),
             minCommission: ECO_CONST.commissionMin, maxCommission: ECO_CONST.commissionMax
         };
