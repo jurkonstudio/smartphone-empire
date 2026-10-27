@@ -111,6 +111,7 @@ import { getActiveRendererIdPublic, toggleNotificationPanel, closeNotificationPa
 import { initSwipe, showSwipeAnimation } from './core/SwipeService.js';
 import { initNavSliderDrag } from './core/NavSliderDrag.js';
 import { AudioService } from './core/AudioService.js';
+import { AmbienceService } from './core/AmbienceService.js';
 import { registerServiceWorker } from './services/ServiceWorkerService.js';
 import advisorNLP from './systems/Advisor/AdvisorNLP.js'; // <-- IMPORT ADVISOR NLP
 
@@ -1471,6 +1472,7 @@ function bindStateEvents() {
     bus.on('settings:changed', function (settings) {
         if (settings && typeof settings.sound === 'boolean') {
             AudioService.setEnabled(settings.sound);
+            AmbienceService.setEnabled(settings.sound);
         }
     });
     bus.on('tutorial:restart', function () { tutorial.restart(); });
@@ -1652,6 +1654,8 @@ async function boot() {
         LanguageService.init();
         AudioService.init();
         AudioService.setEnabled(!!state.get().settings.sound);
+        AmbienceService.init();
+        AmbienceService.setEnabled(!!state.get().settings.sound);
         mountToastContainer(els.toast);
         initTutorialOverlay();
         initMonthlySummary();
