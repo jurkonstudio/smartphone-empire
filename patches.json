@@ -62,6 +62,48 @@
           }
         },
         {
+          "type": "feature",
+          "text": {
+            "id": "Kontrol Pengguna sekarang punya Wawasan Pengguna: bar dan daftar untuk apa pengguna OS-mu memakai ponselnya (media sosial, game, kamera, kerja, video, belanja, belajar, telepon/pesan). Angkanya dihitung dari segmen pasar dan jumlah pengguna aktif OS. Kedalamannya mengikuti kebijakan data: Terbuka menampilkan rincian per segmen, Seimbang semua kategori, Privasi Ketat hanya perkiraan 3 kategori teratas.",
+            "en": "User Control now has User Insights: a bar and list showing what your OS users use their phones for (social media, games, camera, work, video, shopping, learning, calls and messaging). Numbers come from the market segments and the OS active users. Depth follows the data policy: Open shows a per-segment breakdown, Balanced shows all categories, Strict Privacy shows only a rough estimate of the top 3."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Kemudi Algoritma: tiga slider (Rekomendasi Aplikasi, Notifikasi, Personalisasi AI) dengan nilai netral 50. Rekomendasi dan notifikasi menaikkan belanja kotor App Store; notifikasi tinggi mengganggu permintaan; personalisasi menaikkan permintaan tetapi juga peluang event isu privasi. Slider juga menggeser campuran pemakaian di Wawasan Pengguna.",
+            "en": "Algorithm Steering: three sliders (App recommendations, Notifications, AI personalisation) with a neutral value of 50. Recommendations and notifications raise gross App Store spending; high notifications hurt demand; personalisation raises demand but also the chance of privacy-scare events. The sliders also shift the usage mix in User Insights."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Monetisasi Data: jual data teragregasi ke pengiklan untuk pendapatan bulanan (butuh 1.000 pengguna aktif; tidak tersedia pada Privasi Ketat; kebijakan Seimbang hanya 40%). Tiap bulan ada peluang sanksi regulator berupa denda, reputasi turun, dan sentimen turun. Fitur OS Pusat Privasi memangkas peluang dan denda setengahnya.",
+            "en": "Data Monetisation: sell aggregated data to advertisers for monthly revenue (needs 1,000 active users; unavailable under Strict Privacy; the Balanced policy earns only 40%). Each month there is a chance of regulator action: a fine, lower reputation, and lower sentiment. The Privacy Center OS feature halves both the chance and the fine."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Regulasi per negara: setiap negara pasar punya tingkat aturan privasi (Bebas, Ringan, Sedang, Ketat) yang naik seiring tahun, misalnya Jerman dan Prancis menjadi Ketat pada 2018. Panel menampilkan enam negara pengguna terbesar dan paparan regulasi total, yang memotong pendapatan data dan membesarkan denda. Tingkat aturan adalah perkiraan untuk game, bukan data hukum resmi.",
+            "en": "Regulation by country: every market country has a privacy-rule level (Open, Light, Moderate, Strict) that rises over the years, for example Germany and France become Strict in 2018. The panel shows your six biggest user countries and the total regulatory exposure, which cuts data revenue and enlarges fines. The levels are game estimates, not official legal data."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Survei pengguna di Pesan (Inbox): tiap 3 bulan masuk satu survei tentang notifikasi, data dan personalisasi, rekomendasi aplikasi, waktu layar, atau kesadaran regulasi. Isinya mengikuti slider dan kebijakan datamu. Pesan survei bersifat lokal (tersimpan di save game, tanpa server), jadi tetap muncul saat offline, dan Pesan bisa dibuka tanpa login Cloud bila sudah ada survei.",
+            "en": "User surveys in Messages (Inbox): every 3 months one survey arrives about notifications, data and personalisation, app recommendations, screen time, or regulation awareness. The content follows your sliders and data policy. Survey messages are local (stored in the save, no server), so they appear offline, and Messages can be opened without a Cloud login once a survey exists."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Patch ini mengubah logika game: Kontrol Pengguna memengaruhi belanja kotor App Store (EcosystemSystem), permintaan produk, peluang event isu privasi, kas (pendapatan dan denda data), reputasi, dan sentimen. Efeknya hanya aktif setelah panel Kontrol Pengguna terbuka (tahun 2019 dan riset Face ID 3D). Data baru di save: data.userControl.algo, .monetize, .surveys, .surveySeq, dengan nilai bawaan, jadi save lama aman.",
+            "en": "This patch changes game logic: User Control affects gross App Store spending (EcosystemSystem), product demand, privacy-scare event chance, cash (data revenue and fines), reputation, and sentiment. The effects apply only after the User Control panel unlocks (year 2019 and the 3D Face ID research). New save data: data.userControl.algo, .monetize, .surveys, .surveySeq, all with defaults, so old saves are safe."
+          }
+        },
+        {
           "type": "change",
           "text": {
             "id": "Versi game dinaikkan ke 0.2.14 di src/config/app.config.js, package.json, patches.json (root dan src), dan web.html. Patch ini hanya mengubah tampilan peta 3D dan tidak mengubah logika permainan. Tes baru: tools/campus-expansion-smoke.mjs.",

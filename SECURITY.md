@@ -8,7 +8,7 @@ The project is deployed as a single live version, so security fixes are applied 
 
 | Version | Supported |
 | ------- | --------- |
-| 0.2.x (latest, currently 0.2.8) | ✅ |
+| 0.2.x (latest, currently 0.2.14) | ✅ |
 | < 0.2 | ❌ |
 
 ## How to report a vulnerability
@@ -34,6 +34,7 @@ Not allowed: accessing, changing, or deleting other players' data; disrupting th
 ## In scope
 
 - The code in this repo (`src/`, `index.html`, `web.html` (landing page), and the `031411/` admin panel). The `tools/` folder holds local test scripts that the game does not load, so it is not a production attack surface.
+- Local survey messages (added in 0.2.14, `InboxService.addLocal`): they live only in the save game under `data.userControl.surveys`, use negative IDs, never call the messaging server functions, and are included in the cloud save like any other save data. Anything that lets one player's save write messages into another player's inbox would be in scope.
 - The SQL schema and functions in `supabase/` (including `12` and `15` for levels and rewards, `11` for leaderboard validation, `17` for the leaderboard view, `18` for table grants, and `19` for the server-side top-up switch) and the Edge Function `supabase/function/advisor-chat`.
 - The Supabase services belonging to this project that the game uses.
 
