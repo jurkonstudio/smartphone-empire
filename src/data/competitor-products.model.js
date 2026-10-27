@@ -16,6 +16,7 @@
 import { BALANCE } from './balance.data.js';
 import { getCompetitorById } from './competitors/index.js';
 import { getComponentCostIndex } from './supply-shock.data.js';
+import { COMPONENTS, BODY_COLORS } from './components.data.js';
 
 export const PRODUCT_MODEL = {
     tierPriceMult:  { 1: 0.45, 2: 0.80, 3: 1.25, 4: 1.90, 5: 2.80 },
@@ -48,6 +49,52 @@ function _interp(map, year, fallback) {
 
 function _clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 function _tier(t) { return _clamp(Math.round(Number(t) || 2), 1, 5); }
+
+function _hexToRgb(hex) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join('');
+    if (h.length !== 6 || /[^0-9a-f]/i.test(h)) return null;
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
+// Warna badan terdekat dengan warna merek rival (jarak RGB).
+function _nearestBodyColorId(hex) {
+    var t = _hexToRgb(hex);
+    if (!t) return 'color_black';
+    var best = 'color_black', bestD = Infinity;
+    BODY_COLORS.forEach(function (c) {
+        var r = _hexToRgb(c.hex);
+        if (!r) return;
+        var d = (r[0] - t[0]) * (r[0] - t[0]) + (r[1] - t[1]) * (r[1] - t[1]) + (r[2] - t[2]) * (r[2] - t[2]);
+        if (d < bestD) { bestD = d; best = c.id; }
+    });
+    return best;
+}
+
+// Bentuk ponsel yang berlaku pada tahun rilis, dengan tier tertinggi <= tier produk.
+// Bila tak ada yang <= tier, pakai yang terendah. Bentuk terbaru didahulukan.
+function _formFactorFor(year, tier) {
+    var valid = COMPONENTS.filter(function (c) {
+        return c.category === 'form_factor' && c.minYear <= year && (c.maxYear == null || year <= c.maxYear);
+    });
+    if (!valid.length) return 'ff_candybar';
+    var fit = valid.filter(function (c) { return (c.tier || 0) <= tier; });
+    var pool = fit.length ? fit : valid;
+    var best = pool.slice().sort(function (a, b) {
+        return ((b.tier || 0) - (a.tier || 0)) || ((b.minYear || 0) - (a.minYear || 0));
+    })[0];
+    return best.id;
+}
+
+// Konfigurasi mockup visual untuk satu produk rival (fungsi murni, tanpa DOM).
+// Hanya bentuk dan warna yang diturunkan; komponen lain memakai default mockup.
+// Data rival tidak menyimpan desain asli, jadi ini tampilan perkiraan.
+export function buildProductMockupConfig(comp, product) {
+    return {
+        formFactorId: _formFactorFor(product.year, _tier(product.tier)),
+        bodyColorId: _nearestBodyColorId(comp && comp.color)
+    };
+}
 
 // Harga & biaya satu produk pada tahun tertentu (tanpa volume).
 export function estimateUnitEconomics(comp, tier, year, month) {
@@ -120,6 +167,7 @@ export function buildCompetitorProducts(competitorId, ctx) {
         }
         p.price = econ.price; p.unitCost = econ.unitCost;
         p.marginPerUnit = econ.marginPerUnit; p.marginPct = econ.marginPct; p.ramIndex = econ.ramIndex;
+        p.mockupConfig = buildProductMockupConfig(comp, p);
     });
 
     // Bagi volume bulanan merek ke produk yang hidup.
