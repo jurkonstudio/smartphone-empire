@@ -1397,6 +1397,19 @@ function bindProgressEvents() {
     bus.on('chip-research:completed', function () { if (activeView === 'research' && activeSubtab === 'chip') renderView({ soft: true }); });
     bus.on('chip-research:cancelled', function () { if (activeView === 'research' && activeSubtab === 'chip') renderView({ soft: true }); });
 
+    // Pesanan produksi ponsel dibuat / tiba: segarkan Katalog (badge "dalam produksi", stok)
+    // dan antrean Pabrik Perakitan. Tanpa ini tampilan tetap menampilkan produksi yang sudah selesai.
+    ['product:production-ordered', 'product:production-arrived'].forEach(function (ev) {
+        bus.on(ev, function () {
+            if (activeView === 'products' || (activeView === 'research' && activeSubtab === 'manufaktur')) renderView({ soft: true });
+        });
+    });
+    // Antrean perakitan: ETA & bar progres ikut berjalan tiap hari selama ada pesanan.
+    bus.on('time:day-changed', function () {
+        if (activeView !== 'research' || activeSubtab !== 'manufaktur') return;
+        try { if (assemblySystem.getPendingOrders().length) renderView({ soft: true }); } catch (e) {}
+    });
+
     bus.on('product:development-started',   function () { if (activeView === 'products') renderView({ soft: true }); });
     bus.on('product:released',              function () { if (activeView === 'products') renderView({ soft: true }); });
     bus.on('product:development-cancelled', function () { if (activeView === 'products') renderView({ soft: true }); });
