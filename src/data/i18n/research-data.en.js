@@ -88,6 +88,7 @@ export const RESEARCH_DATA_EN = {
         layar_amoled: { name: 'AMOLED', description: 'High-contrast, power-efficient OLED panel.' },
         layar_hfr: { name: '90/120 Hz Display', description: 'High refresh rate for smooth animations.' },
         layar_foldable: { name: 'Foldable Display', description: 'Flexible panel for foldable phones.' },
+        layar_crease_free: { name: 'Crease-free Display', description: 'Next-generation flexible panel with an almost invisible fold line.' },
 
         cam_vga: { name: 'VGA Camera', description: 'The first 0.3 MP camera for phones.' },
         cam_1mp: { name: '1 MP Camera', description: 'The first megapixel camera with better detail.' },
