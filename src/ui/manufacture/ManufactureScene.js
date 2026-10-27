@@ -1,4 +1,6 @@
-// FILE: src/ui/manufacture/ManufactureScene.js  (REPLACE — v2027.65: Pulau Kampus di seberang + jembatan)
+// FILE: src/ui/manufacture/ManufactureScene.js  (REPLACE — v2027.73: visual premium pabrik)
+// v2027.73 — pendar cahaya aksen di dasar tiap pabrik (lebih terang saat produksi & malam, redup bila terkunci)
+// dan cincin denyut dua gelombang saat pabrik berproduksi. Hanya transform + opacity per frame (murah).
 // v2027.65 — Pulau Kampus tampil sebagai siluet di timur (selat ~12 unit) dan tersambung jembatan jalan raya
 // dari ujung timur jalan raya Manufaktur ke gerbang barat Kampus. Truk menyeberangi jembatan sampai jalan Kampus
 // (naik-turun mengikuti dek, muncul/menghilang dengan skala halus). Batas geser kamera diperlebar ke timur.
@@ -236,6 +238,20 @@ export function createManufactureScene(THREE, container, gameState) {
         return sp;
     }
     var alertTex = {};
+    var auraTex = null;
+    function auraTexture() {                                        // pendar radial putih (diwarnai aksen lewat material)
+        if (auraTex) return auraTex;
+        var ac = document.createElement('canvas');
+        ac.width = 128; ac.height = 128;
+        var actx = ac.getContext('2d'), gr = actx.createRadialGradient(64, 64, 0, 64, 64, 64);
+        gr.addColorStop(0, 'rgba(255,255,255,1)');
+        gr.addColorStop(0.45, 'rgba(255,255,255,0.35)');
+        gr.addColorStop(1, 'rgba(255,255,255,0)');
+        actx.fillStyle = gr; actx.fillRect(0, 0, 128, 128);
+        auraTex = new THREE.CanvasTexture(ac);
+        auraTex.colorSpace = THREE.SRGBColorSpace;
+        return auraTex;
+    }
     function alertTexture(kind) {
         if (alertTex[kind]) return alertTex[kind];
         var c = document.createElement('canvas');
@@ -888,10 +904,22 @@ export function createManufactureScene(THREE, container, gameState) {
         var ovMat = new THREE.MeshBasicMaterial({ color: def.accent, transparent: true, opacity: 0.26, depthWrite: false });
         var ov = mesh(g, G.plane, ovMat, def.w - 0.2, def.d - 0.2, 1, 0, PAD_TOP + 0.01, 0);
         ov.rotation.x = -Math.PI / 2; ov.visible = false;
+        // pendar cahaya dasar: lantai bercahaya berwarna aksen (intensitas diatur di animateShell)
+        var aura = mesh(g, G.plane, new THREE.MeshBasicMaterial({ map: auraTexture(), color: def.accent, transparent: true, opacity: 0.1, depthWrite: false }), def.w * 1.25, def.d * 1.25, 1, 0, 0.168, 0);
+        aura.rotation.x = -Math.PI / 2;
+        aura.renderOrder = 1;
+        // cincin denyut dua gelombang berjeda, hanya tampak saat pabrik berproduksi
+        var pulses = [0, 0.5].map(function (ph) {
+            var pm = new THREE.MeshBasicMaterial({ color: def.accent, transparent: true, opacity: 0, depthWrite: false });
+            var pr = mesh(g, G.ring, pm, 1, 1, 1, 0, 0.19, 0);
+            pr.rotation.x = -Math.PI / 2; pr.visible = false; pr.renderOrder = 2;
+            return { mesh: pr, mat: pm, phase: ph };
+        });
         var furn = new THREE.Group();
         furn.position.y = PAD_TOP;
         g.add(furn);
         var r = { def: def, group: g, furn: furn, ov: ov, ovMat: ovMat, sig: null, st: null, label: null, alertSp: null, alertBase: 0, tick: null, w: def.w, d: def.d, fxPos: new THREE.Vector3(def.x, 0, def.z) };
+        r.aura = aura; r.pulses = pulses;
         plots[def.id] = r; plotList.push(r);
         scene.add(g);
     });
@@ -1736,6 +1764,20 @@ export function createManufactureScene(THREE, container, gameState) {
                 po.cubes[k].position.set(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f);
             }
         }
+        for (i = 0; i < plotList.length; i++) {                         // v2027.73 — pendar & cincin denyut
+            var pv = plotList[i], pvOn = !!(pv.st && pv.st.producing), pvLocked = !!(pv.st && pv.st.status === 'locked');
+            var nightK = 0.45 + 0.55 * curNight;
+            if (pv.aura) pv.aura.material.opacity = (pvOn ? 0.3 : (pvLocked ? 0.03 : 0.1)) * nightK;
+            if (!pv.pulses) continue;
+            for (k = 0; k < pv.pulses.length; k++) {
+                var pu = pv.pulses[k];
+                pu.mesh.visible = pvOn;
+                if (!pvOn) continue;
+                var pt = (sec * 0.38 + pu.phase) % 1, prs = pv.w * 0.5 * (0.9 + pt * 1.1);
+                pu.mesh.scale.set(prs, prs, 1);
+                pu.mat.opacity = (1 - pt) * 0.5 * nightK;
+            }
+        }
         for (i = 0; i < plotList.length; i++) {
             var sp = plotList[i].alertSp;
             if (!sp) continue;
@@ -2159,11 +2201,14 @@ export function createManufactureScene(THREE, container, gameState) {
                 if (r.alertSp && r.alertSp.material) r.alertSp.material.dispose();
                 clearStations(r);
                 r.ovMat.dispose();
+                if (r.aura && r.aura.material) r.aura.material.dispose();
+                if (r.pulses) r.pulses.forEach(function (pu) { pu.mat.dispose(); });
             });
             while (fxList.length) endFx(0);
             Object.keys(fxMatMap).forEach(function (k) { fxMatMap[k].dispose(); });
             labelTex.forEach(function (tx) { tx.dispose(); });
             Object.keys(alertTex).forEach(function (k) { alertTex[k].dispose(); });
+            if (auraTex) auraTex.dispose();
             Object.keys(G).forEach(function (k) { G[k].dispose(); });
             Object.keys(M).forEach(function (k) { M[k].dispose(); });
             [ACC, GLOW, GHOST, EDGE].forEach(function (grp) { Object.keys(grp).forEach(function (k) { grp[k].dispose(); }); });
