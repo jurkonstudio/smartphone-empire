@@ -1,4 +1,6 @@
-// FILE: src/ui/manufacture/ManufactureScene.js  (REPLACE — v2027.73: visual premium pabrik)
+// FILE: src/ui/manufacture/ManufactureScene.js  (REPLACE — v2027.80: detail industri realistis)
+// v2027.80 — detail industri realistis (ManufactureDetail.js): pilaster + plinth, parapet atap, unit HVAC + kipas berputar, ventilasi,
+// skylight, kanopi pintu berlampu, pipa utilitas + talang di dinding, bollard, hidran, garis tepi pad, trafo listrik (level >= 2).
 // v2027.73 — pendar cahaya aksen di dasar tiap pabrik (lebih terang saat produksi & malam, redup bila terkunci)
 // dan cincin denyut dua gelombang saat pabrik berproduksi. Hanya transform + opacity per frame (murah).
 // v2027.65 — Pulau Kampus tampil sebagai siluet di timur (selat ~12 unit) dan tersambung jembatan jalan raya
@@ -40,6 +42,7 @@ import { createBeach } from '../campus/Beach.js';
 import { createDayClock, lerpHex } from '../campus/DayCycle.js';
 import { islandRadius as campusIslandRadius } from '../campus/CampusBuildings.js';
 import { ASSEMBLY_ROLES } from '../../data/assembly.data.js';
+import { buildHallDetail, buildYardDetail } from './ManufactureDetail.js';
 
 // [terang, gelap]
 var COLORS = {
@@ -931,7 +934,14 @@ export function createManufactureScene(THREE, container, gameState) {
         if (def.kind === 'assembly') return { bw: 7 + 1.9 * L, bd: 3.6 + 0.4 * L, bh: 1.3 + 0.2 * L };
         return { bw: 3.4 + 0.38 * L, bd: 2.3 + 0.2 * L, bh: 1.0 + 0.34 * L };
     }
-    function hall(f, id, dm, zc, noWin) {
+    var detailKit = { box: box, cyl: cyl, sph: sph, mergedBoxes: mergedBoxes, ACC: ACC, ambient: function () { return ambient; } };
+    function hallDetail(f, id, dm, zc, opt) {
+        try { buildHallDetail(detailKit, f, id, dm, zc, opt || {}); } catch (e) { console.warn('[ManufactureScene] detail hall ' + id, e); }
+    }
+    function yardDetail(f, def, level) {
+        try { buildYardDetail(detailKit, f, def, level); } catch (e) { console.warn('[ManufactureScene] detail yard ' + def.id, e); }
+    }
+    function hall(f, id, dm, zc, noWin, tk, on) {
         var bw = dm.bw, bd = dm.bd, bh = dm.bh;
         box(f, 'wall', bw, bh, bd, 0, bh / 2, zc);
         box(f, 'roof', bw + 0.18, 0.12, bd + 0.18, 0, bh + 0.06, zc);
@@ -941,6 +951,7 @@ export function createManufactureScene(THREE, container, gameState) {
             box(f, 'win', 0.05, 0.26, bd * 0.7, bw / 2 + 0.02, bh * 0.48, zc);
         }
         box(f, 'dark', 0.72, Math.min(0.85, bh * 0.55), 0.06, -bw * 0.3, Math.min(0.85, bh * 0.55) / 2, zc + bd / 2 + 0.03);
+        hallDetail(f, id, dm, zc, { door: !noWin, skylight: !noWin, tk: tk, on: on });
     }
     function levelPips(f, id, L, maxL) {
         for (var i = 0; i < maxL; i++) box(f, i < L ? GLOW[id] : 'metal', 0.22, 0.1, 0.22, -0.4 * (maxL - 1) / 2 + i * 0.4 + 2.2, 0.05, 2.65);
@@ -990,7 +1001,7 @@ export function createManufactureScene(THREE, container, gameState) {
     var TYPE = {};
     TYPE.battery = function (f, def, L, st, tk, on) {
         var dm = dimsFor(def, L);
-        hall(f, 'battery', dm, ZC);
+        hall(f, 'battery', dm, ZC, false, tk, on);
         var n = clamp(1 + L, 2, 5), i;
         for (i = 0; i < n; i++) {                                    // tangki sel
             var tx = -(n - 1) * 0.5 * 0.82 + i * 0.82, th = 1.1 + 0.16 * L;
@@ -1015,6 +1026,7 @@ export function createManufactureScene(THREE, container, gameState) {
         box(f, 'glass', 0.06, dm.bh - 0.25, dm.bd - 0.2, dm.bw / 2 + 0.03, dm.bh / 2 - 0.02, ZC);
         box(f, 'roof', dm.bw + 0.18, 0.12, dm.bd + 0.18, 0, dm.bh + 0.06, ZC);
         box(f, ACC.display, dm.bw + 0.03, 0.17, dm.bd + 0.03, 0, dm.bh - 0.16, ZC);
+        hallDetail(f, 'display', dm, ZC, { door: false, skylight: false, tk: tk, on: on });
         var panel = box(f, on ? GLOW.display : 'dark', dm.bw * 0.58, 0.95, 0.09, 0, dm.bh + 0.7, ZC);        // layar raksasa di atap
         box(f, 'metal', 0.1, 0.4, 0.1, -dm.bw * 0.2, dm.bh + 0.3, ZC); box(f, 'metal', 0.1, 0.4, 0.1, dm.bw * 0.2, dm.bh + 0.3, ZC);
         panel.rotation.y = 0;
@@ -1033,6 +1045,7 @@ export function createManufactureScene(THREE, container, gameState) {
         var dm = dimsFor(def, L);
         box(f, 'wall', dm.bw, dm.bh, dm.bd, 0, dm.bh / 2, ZC);
         box(f, ACC.soc, dm.bw + 0.03, 0.17, dm.bd + 0.03, 0, dm.bh - 0.16, ZC);
+        hallDetail(f, 'soc', dm, ZC, { roof: false, door: false, skylight: false });
         box(f, 'win', dm.bw * 0.78, 0.26, 0.05, 0, dm.bh * 0.48, ZC + dm.bd / 2 + 0.02);
         box(f, 'win', 0.05, 0.26, dm.bd * 0.7, dm.bw / 2 + 0.02, dm.bh * 0.48, ZC);
         var ns = 2 + L, i;
@@ -1063,7 +1076,7 @@ export function createManufactureScene(THREE, container, gameState) {
     };
     TYPE.camera = function (f, def, L, st, tk, on) {
         var dm = dimsFor(def, L);
-        hall(f, 'camera', dm, ZC);
+        hall(f, 'camera', dm, ZC, false, tk, on);
         var lens = new THREE.Group();
         lens.position.set(-0.7, 0.75 + 0.05 * L, 1.45);
         f.add(lens);
@@ -1085,7 +1098,7 @@ export function createManufactureScene(THREE, container, gameState) {
     };
     TYPE.ram = function (f, def, L, st, tk, on) {
         var dm = dimsFor(def, L);
-        hall(f, 'ram', dm, ZC);
+        hall(f, 'ram', dm, ZC, false, tk, on);
         var n = 2 + L, i;
         for (i = 0; i < n; i++) {                                    // modul memori besar di atap
             var mx = -dm.bw / 2 + 0.45 + i * ((dm.bw - 0.9) / Math.max(1, n - 1));
@@ -1104,7 +1117,7 @@ export function createManufactureScene(THREE, container, gameState) {
     };
     TYPE.fab = function (f, def, L, st, tk, on) {
         var dm = dimsFor(def, L), zc = ZC - 0.1, i;
-        hall(f, 'fab', dm, zc);
+        hall(f, 'fab', dm, zc, false, tk, on);
         box(f, 'white', dm.bw * 0.7, 0.35, dm.bd * 0.55, -dm.bw * 0.1, dm.bh + 0.3, zc);               // clean room di atap
         for (i = 0; i < 3 + L; i++) box(f, 'metal', 0.5, 0.18, 0.5, -dm.bw * 0.1 - dm.bw * 0.28 + i * (dm.bw * 0.56 / (2 + L)), dm.bh + 0.57, zc);
         var nChim = clamp(L, 1, 3);
@@ -1150,7 +1163,7 @@ export function createManufactureScene(THREE, container, gameState) {
     };
     TYPE.hub = function (f, def, L, st, tk, on) {
         var dm = dimsFor(def, L), i;
-        hall(f, 'hub', { bw: dm.bw, bd: dm.bd, bh: dm.bh }, ZC - 0.1, true);
+        hall(f, 'hub', { bw: dm.bw, bd: dm.bd, bh: dm.bh }, ZC - 0.1, true, tk, on);
         for (i = 0; i < 3; i++) {                                    // pintu rolling
             box(f, 'steel', 1.0, 0.95, 0.05, -1.45 + i * 1.45, 0.48, ZC - 0.1 + dm.bd / 2 + 0.03);
             for (var s = 0; s < 4; s++) box(f, 'metal', 0.98, 0.02, 0.06, -1.45 + i * 1.45, 0.2 + s * 0.22, ZC - 0.1 + dm.bd / 2 + 0.05);
@@ -1526,6 +1539,7 @@ export function createManufactureScene(THREE, container, gameState) {
                 top = dm.bh + (key === 'display' ? 1.9 : key === 'fab' ? 2.8 : key === 'soc' ? 1.9 : key === 'ram' ? 1.6 : key === 'hub' ? 1.4 : key === 'assembly' ? 1.7 : 1.2);
                 if (def.kind === 'plant') levelPips(f, def.id, st.level, 4);
                 if (def.kind !== 'hub' && def.kind !== 'assembly') crateStacks(f, st.stock, -2.6, 2.1, def.id);
+                if (def.kind === 'plant' || def.kind === 'fab') yardDetail(f, def, st.level);
             } else {
                 top = ghostBuilding(f, def, st.status === 'locked').top;
             }
