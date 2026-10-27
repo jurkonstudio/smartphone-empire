@@ -1,4 +1,4 @@
-// FILE: src/ui/phone/PhoneGenerations.js  (BARU 0.2.12)
+// FILE: src/ui/phone/PhoneGenerations.js  (BARU 0.2.12; 0.2.14: galeri sampel layar lipat & dual)
 // Galeri Generasi di Produk → Desain → Ponsel.
 // - Hero: mockup ponsel terakhir Anda (atau contoh standar) dengan era dari tahun dan riset yang sudah selesai.
 // - Timeline: seluruh milestone dari PHONE_SPECS (generasi 1 sampai terbaru), tiap kartu dirender dari spec-nya sendiri.
@@ -109,6 +109,66 @@ function _cardHtml(spec, idx, nowSpec, year, completed, cfg) {
         '</div>';
 }
 
+// ---- Galeri sampel layar lipat & dual (0.2.14) ----
+// Sampel bentuk lipat/dual dirender dari spec tahun bukanya. Selama tahun atau riset belum terpenuhi
+// kartunya redup (sama seperti generasi yang belum terbuka), lalu menyala otomatis saat sudah terbuka.
+const FOLD_SAMPLES = [
+    { id: 'ff_dual',             year: 2020, research: null,                key: 'duo' },
+    { id: 'ff_fold',             year: 2019, research: 'layar_foldable',    key: 'fold' },
+    { id: 'ff_flip_fold',        year: 2020, research: 'layar_foldable',    key: 'flip' },
+    { id: 'ff_tri_fold',         year: 2024, research: 'layar_foldable',    key: 'tri' },
+    { id: 'ff_tri_fold_c',       year: 2025, research: 'layar_foldable',    key: 'tric' },
+    { id: 'ff_fold_wide',        year: 2026, research: 'layar_foldable',    key: 'wide' },
+    { id: 'ff_book_crease_free', year: 2026, research: 'layar_crease_free', key: 'crease' }
+];
+
+function _specForYear(y) {
+    let hit = null;
+    PHONE_SPECS.forEach(function (s) { if (y >= s.fromYear && y <= s.toYear) hit = s; });
+    return hit || PHONE_SPECS[PHONE_SPECS.length - 1];
+}
+
+function _foldStatus(sample, year, completed) {
+    if (year < sample.year) return 'future';
+    if (sample.research && completed.indexOf(sample.research) === -1) return 'research';
+    return 'open';
+}
+
+function _foldCardHtml(sample, year, completed, cfg) {
+    const status = _foldStatus(sample, year, completed);
+    const spec = _specForYear(sample.year);
+    const fcfg = Object.assign({}, cfg, { formFactorId: sample.id });
+    const thumb = _cached('fold|' + sample.id + '|' + (cfg.bodyColorId || '') + '|' + (cfg.cameraId || ''), function () {
+        return renderPhoneMockup(fcfg, { size: 96, year: sample.year, spec: spec, showBrand: false, isStatic: true, inHouse: false, ignoreResearch: true, fit: { w: 104, h: 98 } });
+    });
+    let stText;
+    if (status === 'future') stText = t('gen.st.future', { year: sample.year });
+    else if (status === 'research') stText = t('gen.st.research');
+    else stText = t('gen.fold.open');
+    const cls = status === 'open' ? 'is-open' : 'is-' + status;
+    return '<div class="gen-card gen-fold-card ' + cls + '" data-gen-fold="' + escapeHtml(sample.id) + '">' +
+        '<div class="gen-card-thumb">' + thumb + '</div>' +
+        '<div class="gen-card-no">' + escapeHtml(t('gen.fold.tag.' + sample.key)) + '</div>' +
+        '<div class="gen-card-name">' + escapeHtml(t('gen.fold.name.' + sample.key)) + '</div>' +
+        '<div class="gen-card-yr">' + escapeHtml(String(sample.year)) + '</div>' +
+        '<div class="gen-card-st">' + escapeHtml(stText) + '</div>' +
+        '</div>';
+}
+
+function _foldGalleryHtml(year, completed, cfg) {
+    const openCount = FOLD_SAMPLES.filter(function (s) { return _foldStatus(s, year, completed) === 'open'; }).length;
+    return '<div class="gen-rail-head gen-fold-head">' +
+            '<span>' + escapeHtml(t('gen.fold.title')) + '</span>' +
+            '<span>' + escapeHtml(t('gen.fold.count', { n: openCount, total: FOLD_SAMPLES.length })) + '</span>' +
+        '</div>' +
+        '<div class="gen-rail" role="list">' + FOLD_SAMPLES.map(function (s) { return _foldCardHtml(s, year, completed, cfg); }).join('') + '</div>' +
+        '<div class="gen-note">' + escapeHtml(t('gen.fold.note')) + '</div>';
+}
+
+function _safeFold(year, completed, cfg) {
+    try { return _foldGalleryHtml(year, completed, cfg); } catch (e) { return ''; }
+}
+
 // Dipanggil dari ProductPanel (tab Desain, kategori Ponsel) sebelum kartu "Mulai desain".
 export function renderPhoneGenerations() {
     const st = _safeState();
@@ -147,5 +207,6 @@ export function renderPhoneGenerations() {
         '</div>' +
         '<div class="gen-rail" role="list">' + cards + '</div>' +
         '<div class="gen-note">' + escapeHtml(t('gen.note')) + '</div>' +
+        _safeFold(year, completed, cfg) +
         '</div>';
 }

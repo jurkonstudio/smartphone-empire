@@ -1737,7 +1737,8 @@ export function renderPhoneMockup(config, opts) {
     const brand = escapeHtml(companyName ? companyName.toUpperCase().slice(0, 10) : 'SMARTEL');
 
     // Komponen yang belum diriset turun ke alternatif yang sudah terbuka.
-    config = resolveConfigForResearch(config, completed);
+    // opts.ignoreResearch (0.2.14): sampel galeri lipat/dual dirender apa adanya walau riset belum selesai.
+    if (!opts.ignoreResearch) config = resolveConfigForResearch(config, completed);
     const sensors = resolveSensorVisuals(completed);
     const netLabel = resolveNetworkLabel(completed);
 
