@@ -44,6 +44,7 @@ export const RESEARCH_VISUALS = {
     layar_amoled:      { category: 'display', effects: { screenTag: 'amoled_rounded' } },
     layar_hfr:         { category: 'display', effects: { screenTag: 'hfr_badge' } },
     layar_foldable:    { category: 'display', effects: { screenTag: 'foldable_hinge' } },
+    layar_crease_free: { category: 'display', effects: { screenTag: 'foldable_hinge' } },
 
     // ==================== KAMERA ====================
     cam_vga:           { category: 'camera', effects: { lensCount: 1, moduleStyle: 'single' } },

@@ -185,19 +185,24 @@ function getGeom(formFactor, spec) {
         g.th = 132;
         return g;
     }
-    if (formFactor === 'ff_fold' || formFactor === 'ff_foldable') {
-        // Gaya buku (mis. iPhone Duo 2026): saat tertutup tampak seperti ponsel tinggi
-        // dengan layar sampul; engsel vertikal di sisi tengah.
-        const fh = Math.min(h + 12, 156), fw = Math.round(fh * 0.45);
+    if (formFactor === 'ff_fold' || formFactor === 'ff_foldable' || formFactor === 'ff_fold_wide' || formFactor === 'ff_book_crease_free') {
+        // Gaya buku: saat tertutup tampak seperti ponsel dengan layar sampul; engsel vertikal di sisi tengah.
+        // Varian lebar: sampul lebih pendek & lebar. Varian tanpa lipatan: bentuk sama, lipatan dihilangkan saat terbuka.
+        const wide = formFactor === 'ff_fold_wide';
+        const fh = wide ? Math.min(h + 4, 132) : Math.min(h + 12, 156);
+        const fw = Math.round(fh * (wide ? 0.66 : 0.45));
         const g = mk('bar', (100 - fw) / 2, GROUND - fh, fw, fh, rx, yr, mat);
         g.crease = true;
         g.hinge = true;
         g.book = true; // buku: engsel vertikal di sisi kiri, layar sampul solid
-
+        if (formFactor === 'ff_book_crease_free') g.noCrease = true;
         return g;
     }
-    if (formFactor === 'ff_tri_fold') {
-        return mk('trifold', 3, GROUND - 96, 94, 96, 6, yr, mat);
+    if (formFactor === 'ff_tri_fold' || formFactor === 'ff_tri_fold_c') {
+        const g = mk('trifold', 3, GROUND - 96, 94, 96, 6, yr, mat);
+        // C: kedua engsel melipat ke arah sama; layar tertutup di dalam (tanpa layar luar).
+        if (formFactor === 'ff_tri_fold_c') g.cfold = true;
+        return g;
     }
     return mk('bar', (100 - w) / 2, GROUND - h, w, h, rx, yr, mat);
 }
@@ -212,9 +217,22 @@ function getOpenGeom(formFactor, spec) {
         g.splits = 1;
         return g;
     }
-    if (formFactor === 'ff_tri_fold') {
+    if (formFactor === 'ff_fold_wide') {
+        // terbuka: layar hampir persegi-lebar (mendekati rasio tablet kecil)
+        const g = mk('open', 4, GROUND - 84, 92, 84, rx, yr, mat);
+        g.splits = 1;
+        return g;
+    }
+    if (formFactor === 'ff_book_crease_free') {
+        const g = mk('open', 6, GROUND - 112, 88, 112, rx, yr, mat);
+        g.splits = 1;
+        g.noCrease = true;
+        return g;
+    }
+    if (formFactor === 'ff_tri_fold' || formFactor === 'ff_tri_fold_c') {
         const g = mk('open', 3, GROUND - 66, 94, 66, 6, yr, mat);
         g.splits = 2;
+        if (formFactor === 'ff_tri_fold_c') g.cfold = true;
         return g;
     }
     return null;
@@ -1399,7 +1417,7 @@ function dualSpine(scr, uid) {
 function renderOpenScreen(g, scr, era, uid, brand, displayId, netLabel) {
     const n = g.splits + 1;
     let creases = '';
-    for (let i = 1; i < n; i++) {
+    for (let i = 1; i < (g.noCrease ? 1 : n); i++) {
         const x = scr.x + scr.w * i / n;
         creases += `<rect x="${x - 3.2}" y="${scr.y}" width="6.4" height="${scr.h}" fill="url(#cr_${uid})"/>` +
             `<rect x="${x - 0.35}" y="${scr.y}" width="0.7" height="${scr.h}" fill="#000" opacity="0.3"/><rect x="${x + 0.35}" y="${scr.y}" width="0.3" height="${scr.h}" fill="#fff" opacity="0.12"/>`;
@@ -1442,6 +1460,7 @@ function renderScreens(g, scr, era, uid, brand, displayId, netLabel) {
         <g clip-path="url(#screenclip_${uid})">
             ${content}
             ${renderCrease(g, scr)}
+            ${g.cfold ? `<rect x="${scr.x}" y="${scr.y}" width="${scr.w}" height="${scr.h}" fill="#0a0c12" opacity="0.72"/>` : ''}
         </g>
         ${renderNetworkLabel(scr, netLabel)}
         ${renderReflectionLayer(scr, uid, g.yr)}`;
