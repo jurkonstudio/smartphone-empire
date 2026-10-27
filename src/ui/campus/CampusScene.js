@@ -1,4 +1,6 @@
-// FILE: src/ui/campus/CampusScene.js  (REPLACE — v2027.65: Pulau Manufaktur di seberang + jembatan)
+// FILE: src/ui/campus/CampusScene.js  (REPLACE — v2027.72: pasca-proses premium di tier high (CampusPost.js))
+// v2027.72 — bloom HDR + tone mapping ACES + grading (saturasi/kontras/tint malam) lewat CampusPost.js; tier lain tidak berubah.
+// v2027.65 — Pulau Manufaktur di seberang + jembatan
 // v2027.65 — Pulau Manufaktur tampil sebagai siluet di barat (selat ~12 unit) dan tersambung jembatan jalan raya
 // dari gerbang barat kampus ke jalan raya Manufaktur. Mobil jalan barat menyeberangi jembatan (CampusLife).
 // Batas geser kamera diperlebar ke barat (cfg.bounds) agar pemain bisa menggeser ke jembatan/pulau seberang.
@@ -38,6 +40,7 @@ import { createCinematic } from './CinematicFx.js';
 import { createBeach } from './Beach.js';
 import { createDayClock, blendObj, lerpHex } from './DayCycle.js';
 import { createWeather } from './CampusWeather.js';
+import { createCampusPost } from './CampusPost.js';
 
 var BASE_VIEW = 22;
 // DPR maksimum sekarang adaptif per tier kualitas (lihat detectQuality di CampusLook.js).
@@ -80,6 +83,13 @@ export function createCampusScene(THREE, container, gameState) {
     canvas.style.cssText = 'width:100%;height:100%;display:block;';
     container.innerHTML = '';
     container.appendChild(canvas);
+
+    // Pasca-proses premium (bloom + tone mapping + grading) hanya di tier 'high'. ?campuspost=0 mematikannya untuk QA.
+    var post = null;
+    if (quality.tier === 'high' && !/[?&]campuspost=0/.test(location.search)) {
+        try { post = createCampusPost(THREE, renderer, { samples: 4 }); }
+        catch (e) { console.warn('[CampusScene] pasca-proses dilewati:', e); post = null; }
+    }
 
     // Label gedung dibuat sebelum overlay agar urutan DOM: canvas < label < tombol/kartu.
     var labels = createCampusLabels(THREE, container);
@@ -181,7 +191,8 @@ export function createCampusScene(THREE, container, gameState) {
         var sunNow = weather.getSunset();
         if (Math.abs(sunNow - lastWinSun) > 0.01) { lastWinSun = sunNow; A.setSunset(sunNow); }     // jendela/lampu menyala bertahap saat senja
         cine.update(canvas.height / Math.max(0.001, camera.top - camera.bottom), weather.getKind(), weather.getSunset());
-        renderer.render(scene, camera);
+        if (post) post.render(scene, camera);
+        else renderer.render(scene, camera);
     }
 
     function startLoop() {
@@ -521,6 +532,7 @@ export function createCampusScene(THREE, container, gameState) {
             lastH = h;
             overlay.setCompact(h < COMPACT_H);
             renderer.setSize(w, h, false);
+            if (post) post.setSize(canvas.width, canvas.height);     // ukuran buffer dalam piksel perangkat
             aspect = w / h;
             applyCamera();
             requestRender();
@@ -542,6 +554,7 @@ export function createCampusScene(THREE, container, gameState) {
         if (w) p.window = lerpHex(w.light, w.dark, night);     // warna jendela ikut era
         A.applyPalette(p, readAccent());
         A.setEnvIntensity(look.envI);
+        if (post) post.setNight(night);
         farMf.setDark(night);
         sea.setTheme(night);
         sea.setWeather(weather.getKind(), weather.getSunset());
@@ -649,6 +662,7 @@ export function createCampusScene(THREE, container, gameState) {
             weather.dispose();
             rig.dispose();
             A.dispose();
+            if (post) post.dispose();
             renderer.dispose();
             try { renderer.forceContextLoss(); } catch (e) {}
             if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
