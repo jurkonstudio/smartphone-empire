@@ -3,6 +3,7 @@
 // Three.js dimuat lazy dari CDN dengan URL yang SAMA (tidak diunduh dua kali), hanya satu scene WebGL aktif
 // (dijaga CampusOfficeBridge + CampusMap.unmountCampusMap + ManufactureMap/OfficeMap).
 import { createServerScene } from './ServerScene.js';
+import { bindAmbience } from '../ambience/AmbienceParams.js';
 import { bus } from '../../core/EventBus.js';
 import { LanguageService } from '../../core/LanguageService.js';
 
@@ -102,6 +103,7 @@ export async function mountServerMap(containerEl, gameState) {
             function () { if (queued) { cancelAnimationFrame(queued); queued = 0; } }
         ];
         scene.update(currentData());
+        unsubs.push(bindAmbience('server', bus, currentData));   // audio ambien adaptif
         _active = { scene: scene, unsubs: unsubs };
     } catch (err) {
         console.warn('[ServerMap] gagal, pakai fallback:', err);
