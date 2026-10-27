@@ -26,6 +26,7 @@ const TESTS = [
   { file: 'tools/weather-test.mjs' },
   { file: 'tools/eco-i18n-check.mjs' },
   { file: 'tools/eco-wiring-check.mjs' },
+  { file: 'tools/appstore-review-test.mjs', src: true },
   // Butuh argumen src
   { file: 'tools/annual-review-test.mjs', src: true },
   { file: 'tools/assembly-test.mjs', src: true },
