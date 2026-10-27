@@ -4,7 +4,10 @@
 // Datanya ada di src/data/future-panels.data.js.
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { t, LanguageService } from '../../core/LanguageService.js';
-import { describeUserControl, USER_CONTROL_CONFIG, USER_CONTROL_POLICY_ORDER } from '../../systems/FutureEffects.js';
+import { describeUserControl, USER_CONTROL_CONFIG, USER_CONTROL_POLICY_ORDER, ALGO_CONFIG, USAGE_CATEGORIES, getAlgoValue, getAlgoStoreMult, getAlgoDemandBonus, getAlgoScareMult, computeUsageMix } from '../../systems/FutureEffects.js';
+import { computeOsAdoption, formatUsers } from '../../systems/OsAdoptionModel.js';
+import { SEGMENTS } from '../../data/market-nav.data.js';
+import { describeMonetization, REGULATION_LEVELS, MONETIZE_CONFIG } from '../../systems/UserControlSystem.js';
 import { futureName, futureDesc, futureSystemLabel, nodeNameById } from '../../data/i18n/research-localize.js';
 import {
     FUTURE_PANELS, FUTURE_SYSTEM_LABELS,
@@ -107,7 +110,132 @@ function _renderUserControl(data) {
         '<div class="uc-seg" role="group">' + btns + '</div>' +
         '<div class="uc-desc">' + esc(en ? d.policy.descEn : d.policy.desc) + '</div>' +
         '<div class="uc-rows">' + rows + '</div>' + req +
-        '</div>';
+        '</div>' + _renderUsageInsights(data, d) + _renderAlgo(data) + _renderMonetize(data) + _renderRegulation(data);
+}
+
+// ---- Wawasan Pengguna: untuk apa pengguna OS memakai ponselnya ----
+function _segName(id) {
+    var sg = SEGMENTS.find(function (x) { return x.id === id; });
+    return sg ? (_en() ? sg.name.en : sg.name.id) : id;
+}
+
+function _renderUsageInsights(data, d) {
+    var en = _en();
+    var title = _tf('uc.insight.title', 'Wawasan Pengguna', 'User insights');
+    var a = null;
+    try { a = computeOsAdoption(data); } catch (e) {}
+    if (!a || !a.hasOs || !(a.activeUsers > 0)) {
+        return '<div class="uc-box"><div class="uc-title">' + esc(title) + '</div><div class="uc-desc">' +
+            esc(_tf('uc.insight.empty', 'Belum ada pengguna OS. Jual ponsel ber-OS milikmu untuk melihat pola pemakaian.', 'No OS users yet. Sell phones running your own OS to see usage patterns.')) + '</div></div>';
+    }
+    var mix = computeUsageMix(data, a.activeUsers);
+    var level = mix.level;
+    var cats = mix.cats;
+    var shown = level === 0 ? cats.slice(0, 3) : cats;
+    var rnd = level === 0 ? 5 : 1;
+    function pct(x) { return (Math.round(x * 100 / rnd) * rnd) + '%'; }
+
+    var bar = '<div class="uc-stack">' + shown.map(function (c) {
+        return '<span style="flex:' + Math.max(0.5, c.share * 100) + ';background:' + c.color + '" title="' + esc(en ? c.nameEn : c.name) + '"></span>';
+    }).join('') + '</div>';
+
+    var list = shown.map(function (c) {
+        var seg = '';
+        if (level >= 2 && c.topSegments && c.topSegments.length) {
+            seg = '<div class="uc-seginfo">' + c.topSegments.map(function (x) { return esc(_segName(x.id)) + ' ' + Math.round(x.share * 100) + '%'; }).join(' · ') + '</div>';
+        }
+        return '<div class="uc-cat"><span class="uc-dot" style="background:' + c.color + '"></span>' +
+            '<div class="uc-catmain"><div class="uc-catrow"><span>' + esc(en ? c.nameEn : c.name) + '</span><b>' + pct(c.share) + '</b></div>' +
+            (level >= 1 ? '<div class="uc-seginfo">≈ ' + esc(formatUsers(c.users)) + ' ' + esc(_tf('uc.insight.users', 'pengguna', 'users')) + '</div>' : '') + seg + '</div></div>';
+    }).join('');
+
+    var note = level === 0
+        ? _tf('uc.insight.note0', 'Privasi Ketat: data tetap di perangkat, jadi kamu hanya melihat perkiraan kasar 3 kategori teratas.', 'Strict Privacy: data stays on device, so you only see a rough estimate of the top 3 categories.')
+        : level === 1
+            ? _tf('uc.insight.note1', 'Kebijakan Seimbang: semua kategori terlihat. Pilih "Terbuka" untuk rincian per segmen.', 'Balanced policy: all categories visible. Choose "Open" for a per-segment breakdown.')
+            : _tf('uc.insight.note2', 'Kebijakan Terbuka: rincian per segmen tersedia. Harganya: risiko isu privasi lebih tinggi.', 'Open policy: per-segment breakdown available. The price: higher privacy-scare risk.');
+
+    return '<div class="uc-box"><div class="uc-title">' + esc(title) + '</div>' + bar + '<div class="uc-cats">' + list + '</div>' +
+        '<div class="uc-note ' + (level === 0 ? 'warn' : 'ok') + '">' + esc(note) + '</div></div>';
+}
+
+// ---- Kemudi Algoritma: tiga slider + dampaknya ----
+function _renderAlgo(data) {
+    var en = _en();
+    var sliders = ALGO_CONFIG.sliders.map(function (sl) {
+        var v = getAlgoValue(sl.id, data);
+        return '<div class="uc-slider"><div class="uc-slrow"><span>' + esc(en ? sl.nameEn : sl.name) + '</span><b data-uc-algo-val="' + sl.id + '">' + v + '</b></div>' +
+            '<input type="range" min="0" max="100" step="5" value="' + v + '" data-uc-algo="' + sl.id + '" aria-label="' + esc(en ? sl.nameEn : sl.name) + '">' +
+            '<div class="uc-seginfo">' + esc(en ? sl.descEn : sl.desc) + '</div></div>';
+    }).join('');
+    var storePct = (getAlgoStoreMult(data) - 1) * 100;
+    var demPct = getAlgoDemandBonus(data) * 100;
+    var scarePct = (getAlgoScareMult(data) - 1) * 100;
+    function row(label, val, goodWhenPositive) {
+        var cls = Math.abs(val) < 0.5 ? '' : ((val > 0) === goodWhenPositive ? 'good' : 'bad');
+        return '<div class="uc-row"><span>' + esc(label) + '</span><b class="' + cls + '">' + (Math.abs(val) < 0.5 ? esc(_tf('uc.normal', 'Normal', 'Normal')) : _pct(val)) + '</b></div>';
+    }
+    return '<div class="uc-box"><div class="uc-title">' + esc(_tf('uc.algo.title', 'Kemudi Algoritma', 'Algorithm steering')) + '</div>' + sliders +
+        '<div class="uc-rows">' +
+        row(_tf('uc.algo.store', 'Belanja App Store', 'App Store spending'), storePct, true) +
+        row(_tf('uc.algo.demand', 'Permintaan produk', 'Product demand'), demPct, true) +
+        row(_tf('uc.algo.scare', 'Peluang event isu privasi', 'Privacy-scare event chance'), scarePct, false) +
+        '</div></div>';
+}
+
+// ---- Monetisasi Data ----
+function _money(n) {
+    n = Math.round(n || 0);
+    var a = Math.abs(n);
+    if (a >= 1e6) return '$' + (n / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'M';
+    if (a >= 1e3) return '$' + (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+    return '$' + n;
+}
+
+function _renderMonetize(data) {
+    var m = describeMonetization(data);
+    function row(label, val, cls) { return '<div class="uc-row"><span>' + esc(label) + '</span><b class="' + (cls || '') + '">' + esc(val) + '</b></div>'; }
+    var label = m.on ? _tf('uc.mon.stop', 'Hentikan penjualan data', 'Stop selling data') : _tf('uc.mon.start', 'Jual data teragregasi ke pengiklan', 'Sell aggregated data to advertisers');
+    var block = '';
+    if (m.blocked === 'strict') block = _tf('uc.mon.blocked_strict', 'Tidak tersedia pada kebijakan Privasi Ketat.', 'Not available under the Strict Privacy policy.');
+    else if (m.blocked === 'users') block = _tf('uc.mon.blocked_users', 'Butuh minimal ' + MONETIZE_CONFIG.minUsers + ' pengguna aktif.', 'Needs at least ' + MONETIZE_CONFIG.minUsers + ' active users.');
+    var disabled = (!m.on && m.blocked) ? ' disabled' : '';
+    var riskPct = Math.round(m.risk * 1000) / 10;
+    var riskCls = riskPct >= 10 ? 'bad' : (riskPct >= 5 ? '' : 'good');
+    var rows = row(_tf('uc.mon.revenue', 'Perkiraan pendapatan / bulan', 'Estimated revenue / month'), m.blocked ? '-' : _money(m.revenue), m.revenue > 0 ? 'good' : '') +
+        row(_tf('uc.mon.risk', 'Peluang sanksi regulator / bulan', 'Regulator action chance / month'), (m.blocked ? '-' : riskPct + '%'), m.blocked ? '' : riskCls) +
+        row(_tf('uc.mon.earned', 'Total pendapatan data', 'Total data revenue'), _money(m.earned), '') +
+        row(_tf('uc.mon.fines', 'Total denda (' + m.incidents + ' insiden)', 'Total fines (' + m.incidents + ' incidents)'), _money(m.fines), m.fines > 0 ? 'bad' : '');
+    var note = m.on
+        ? '<div class="uc-note warn">' + esc(_tf('uc.mon.on_note', 'Aktif: pendapatan masuk tiap bulan, tapi kepercayaan pengguna dan regulator ikut dipertaruhkan.', 'Active: revenue arrives monthly, but user and regulator trust is at stake.')) + '</div>'
+        : '<div class="uc-note ok">' + esc(_tf('uc.mon.off_note', 'Nonaktif. Pendapatan lebih tinggi pada kebijakan Terbuka dan Personalisasi AI tinggi; negara beraturan ketat memotongnya.', 'Off. Revenue is higher with the Open policy and high AI personalisation; strict countries cut it.')) + '</div>';
+    return '<div class="uc-box"><div class="uc-title">' + esc(_tf('uc.mon.title', 'Monetisasi Data', 'Data monetisation')) + '</div>' +
+        '<button class="uc-btn uc-wide ' + (m.on ? 'active' : '') + '" data-uc-monetize="' + (m.on ? '0' : '1') + '"' + disabled + '>' + esc(label) + '</button>' +
+        (block ? '<div class="uc-seginfo" style="margin-top:6px">' + esc(block) + '</div>' : '') +
+        '<div class="uc-rows" style="margin-top:8px">' + rows + '</div>' + note + '</div>';
+}
+
+// ---- Regulasi per negara ----
+function _renderRegulation(data) {
+    var en = _en();
+    var m = describeMonetization(data);
+    var reg = m.reg;
+    var title = _tf('uc.reg.title', 'Regulasi per negara', 'Regulation by country');
+    if (!reg.rows.length) {
+        return '<div class="uc-box"><div class="uc-title">' + esc(title) + '</div><div class="uc-desc">' +
+            esc(_tf('uc.reg.empty', 'Belum ada pengguna OS di negara mana pun.', 'No OS users in any country yet.')) + '</div></div>';
+    }
+    var rows = reg.rows.slice().sort(function (a, b) { return b.share - a.share; }).slice(0, 6).map(function (r) {
+        var lv = REGULATION_LEVELS[r.level] || REGULATION_LEVELS[0];
+        return '<div class="uc-row"><span>' + esc(r.flag + ' ' + r.name) + ' <span class="uc-seginfo">' + Math.round(r.share * 100) + '%</span></span>' +
+            '<b style="color:' + lv.color + '">' + esc(en ? lv.nameEn : lv.name) + '</b></div>';
+    }).join('');
+    var exp = Math.round(reg.exposure * 100);
+    return '<div class="uc-box"><div class="uc-title">' + esc(title) + '</div>' +
+        '<div class="uc-desc">' + esc(_tf('uc.reg.desc', 'Aturan privasi makin ketat seiring tahun. Pendapatan data dipotong dan denda membesar di negara beraturan ketat.', 'Privacy rules tighten over the years. Data revenue is cut and fines grow in strict countries.')) + '</div>' +
+        '<div class="uc-rows">' + rows +
+        '<div class="uc-row"><span>' + esc(_tf('uc.reg.exposure', 'Paparan regulasi penggunamu', 'Regulatory exposure of your users')) + '</span><b class="' + (exp >= 50 ? 'bad' : (exp <= 20 ? 'good' : '')) + '">' + exp + '%</b></div>' +
+        '</div></div>';
 }
 
 function _ensureStyles() {
@@ -140,6 +268,20 @@ function _ensureStyles() {
         '.uc-row { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-top: 1px solid var(--border, rgba(255,255,255,.07)); font-size: 12px; color: var(--text-secondary, inherit); }',
         '.uc-row b { font-variant-numeric: tabular-nums; white-space: nowrap; }',
         '.uc-row b.good { color: var(--success, #10b981); } .uc-row b.bad { color: var(--danger, #ef4444); }',
+        '.uc-wide { width: 100%; background: rgba(0,0,0,.25); }',
+        '.uc-btn[disabled] { opacity: .4; cursor: not-allowed; }',
+        '.uc-stack { display: flex; height: 10px; border-radius: 6px; overflow: hidden; gap: 1px; margin: 4px 0 8px; }',
+        '.uc-stack span { display: block; min-width: 3px; }',
+        '.uc-cats { display: flex; flex-direction: column; gap: 6px; }',
+        '.uc-cat { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; }',
+        '.uc-dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 4px; flex: none; }',
+        '.uc-catmain { flex: 1; min-width: 0; }',
+        '.uc-catrow { display: flex; justify-content: space-between; gap: 8px; }',
+        '.uc-catrow b { font-variant-numeric: tabular-nums; }',
+        '.uc-seginfo { font-size: 11px; color: var(--text-mute); line-height: 1.35; }',
+        '.uc-slider { padding: 6px 0; }',
+        '.uc-slrow { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; }',
+        '.uc-slider input[type=range] { width: 100%; accent-color: var(--accent, #4f8cff); margin: 4px 0 2px; }',
         '.uc-note { margin-top: 8px; font-size: 11.5px; line-height: 1.4; padding: 6px 8px; border-radius: 8px; }',
         '.uc-note.ok { background: var(--success-soft, rgba(16,185,129,.14)); color: var(--success, #10b981); }',
         '.uc-note.warn { background: var(--warn-soft, rgba(245,158,11,.14)); color: var(--warn, #f59e0b); }'

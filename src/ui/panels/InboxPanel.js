@@ -36,6 +36,7 @@ var KIND = {
     admin:  { rgb: '10,132,255', label: 'Admin',  ico: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>' },
     system: { rgb: '255,159,10', label: 'Sistem', ico: '<path d="M12 4l9 16H3z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/>' },
     player: { rgb: '168,85,247', label: 'Pemain', ico: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>' },
+    survey: { rgb: '94,92,230', label: 'Survei', ico: '<path d="M5 20V10M12 20V4M19 20v-7"/>' },
     reward: { rgb: '255,204,0', label: 'Hadiah', ico: '<path d="M12 3l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.5 6.8 19l1-5.8-4.2-4.1 5.8-.8z"/>' }
 };
 
@@ -221,7 +222,7 @@ async function doSend() {
 // ---------------------------------------------------------------- buka panel
 function ensureOpen() {
     if (Modal.isOpen(MODAL_ID) && root()) return root();
-    if (CloudService.getStatus() !== 'connected') {
+    if (CloudService.getStatus() !== 'connected' && !InboxService.getItems().length) {
         ToastService.error('Masuk ke akun Cloud dulu untuk memakai Pesan.');
         return null;
     }
