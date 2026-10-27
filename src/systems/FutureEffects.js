@@ -63,15 +63,15 @@ export const USER_CONTROL_CONFIG = {
         open:     { id: 'open',     name: 'Terbuka',       nameEn: 'Open',
                     desc: 'Kumpulkan data untuk personalisasi. Fitur AI lebih murah, tapi pembeli peduli privasi menjauh.',
                     descEn: 'Collect data for personalisation. AI features cost less, but privacy-minded buyers drift away.',
-                    scareMult: 1.8, audience: -0.20, general: 0.02, aiFactor: 1.10, wellbeing: 0 },
+                    scareMult: 1.8, audience: -0.20, general: 0.02, aiFactor: 1.10, wellbeing: 0, insight: 2 },
         balanced: { id: 'balanced', name: 'Seimbang',      nameEn: 'Balanced',
                     desc: 'Pengaturan standar. Perlindungan ringan bila OS punya Pusat Privasi.',
                     descEn: 'Standard settings. Light protection if the OS has the Privacy Center.',
-                    scareMult: 0.85, audience: 0.05, general: 0, aiFactor: 1.0, wellbeing: 0.5 },
+                    scareMult: 0.85, audience: 0.05, general: 0, aiFactor: 1.0, wellbeing: 0.5, insight: 1 },
         strict:   { id: 'strict',   name: 'Privasi Ketat', nameEn: 'Strict Privacy',
                     desc: 'Data tetap di perangkat. Kepercayaan dan permintaan segmen pro naik, tapi personalisasi dan diskon AI berkurang.',
                     descEn: 'Data stays on the device. Trust and pro-segment demand rise, but personalisation and AI discounts shrink.',
-                    scareMult: 0.4, audience: 0.20, general: -0.01, aiFactor: 0.7, wellbeing: 1 }
+                    scareMult: 0.4, audience: 0.20, general: -0.01, aiFactor: 0.7, wellbeing: 1, insight: 0 }
     }
 };
 
@@ -239,4 +239,128 @@ export function getFaiDesignAdvice(stats, unitCost, limits, skipStats) {
         if (stats[k] < weakVal) { weakKey = k; weakVal = stats[k]; }
     });
     return { price: price, weakKey: weakKey, weakVal: weakKey ? weakVal : 0 };
+}
+
+// ---- Wawasan Pengguna: 8 kategori pemakaian dari segmen pasar × pengguna OS ----
+// affinity = seberapa kuat tiap segmen memakai kategori itu (0–1). Porsi dihitung dari bobot segmen tahun ini.
+// insight di kebijakan: 2 = rincian per segmen, 1 = semua kategori, 0 = perkiraan 3 teratas.
+export const USAGE_CATEGORIES = [
+    { id: 'social',   name: 'Sosial',          nameEn: 'Social',           color: '#ec4899',
+      affinity: { youth: 1.0, mainstream: 0.8, creator: 0.5, value: 0.6, premium: 0.3, gamer: 0.4, pro: 0.3, senior: 0.4 } },
+    { id: 'games',    name: 'Game',            nameEn: 'Games',            color: '#ef4444',
+      affinity: { gamer: 1.0, youth: 0.8, mainstream: 0.5, value: 0.5, creator: 0.1, premium: 0.2, pro: 0.1, senior: 0.05 } },
+    { id: 'camera',   name: 'Kamera',          nameEn: 'Camera',           color: '#f59e0b',
+      affinity: { creator: 1.0, premium: 0.9, youth: 0.7, mainstream: 0.5, value: 0.2, gamer: 0.2, pro: 0.3, senior: 0.2 } },
+    { id: 'work',     name: 'Kerja',           nameEn: 'Work',             color: '#0ea5e9',
+      affinity: { pro: 1.0, premium: 0.6, mainstream: 0.5, senior: 0.2, value: 0.2, youth: 0.1, creator: 0.2, gamer: 0.05 } },
+    { id: 'video',    name: 'Video',           nameEn: 'Video',            color: '#8b5cf6',
+      affinity: { creator: 0.8, mainstream: 0.6, youth: 0.7, gamer: 0.5, premium: 0.5, value: 0.4, pro: 0.2, senior: 0.3 } },
+    { id: 'shopping', name: 'Belanja',         nameEn: 'Shopping',         color: '#22c55e',
+      affinity: { value: 1.0, mainstream: 0.7, senior: 0.4, youth: 0.6, premium: 0.5, pro: 0.3, creator: 0.3, gamer: 0.2 } },
+    { id: 'learning', name: 'Belajar',         nameEn: 'Learning',         color: '#14b8a6',
+      affinity: { youth: 1.0, pro: 0.6, creator: 0.4, value: 0.5, mainstream: 0.4, premium: 0.2, senior: 0.3, gamer: 0.1 } },
+    { id: 'calls',    name: 'Telepon & Pesan', nameEn: 'Calls & Messages', color: '#64748b',
+      affinity: { senior: 1.0, mainstream: 0.7, value: 0.6, pro: 0.7, youth: 0.4, premium: 0.4, creator: 0.3, gamer: 0.3 } }
+];
+
+// Pemakaian per kategori untuk OS pemain. users = jumlah pengguna OS aktif. Tidak mengubah state.
+// Mengembalikan { level, cats } dengan cats terurut dari porsi terbesar; porsi berjumlah 1.
+export function computeUsageMix(data, users) {
+    var pol = getUserControlPolicy(data);
+    var level = pol.insight;
+    var year = (data && data.time && data.time.currentYear) || 2019;
+    var w = getSegmentWeights(year);
+    var raw = USAGE_CATEGORIES.map(function (cat) {
+        var parts = [], total = 0;
+        Object.keys(cat.affinity).forEach(function (segId) {
+            var c = (w[segId] || 0) * cat.affinity[segId];
+            parts.push({ id: segId, value: c });
+            total += c;
+        });
+        parts.sort(function (a, b) { return b.value - a.value; });
+        return { cat: cat, parts: parts, total: total };
+    });
+    var sum = raw.reduce(function (a, r) { return a + r.total; }, 0) || 1;
+    var cats = raw.map(function (r) {
+        var share = r.total / sum;
+        var topSegments = r.parts.slice(0, 2).map(function (p) {
+            return { id: p.id, share: r.total > 0 ? p.value / r.total : 0 };
+        });
+        return {
+            id: r.cat.id, name: r.cat.name, nameEn: r.cat.nameEn, color: r.cat.color,
+            share: share, users: share * (users || 0), topSegments: topSegments
+        };
+    });
+    cats.sort(function (a, b) { return b.share - a.share; });
+    return { level: level, cats: cats };
+}
+
+// ---- Kemudi Algoritma: tiga slider 0–100 (netral 50) ----
+// r = (nilai - 50) / 50, dari -1 sampai +1.
+//  recommend  -> belanja App Store (storeSwing) dan peluang isu privasi (kecil).
+//  personal   -> permintaan produk (demandSwing) dan peluang isu privasi (scareSwing).
+//  notify     -> permintaan produk: notifikasi berlebihan mendorong pengguna menjauh (notifySwing).
+export const ALGO_CONFIG = {
+    step: 5,
+    storeSwing: 0.20,
+    demandSwing: 0.03,
+    notifySwing: 0.02,
+    scareSwing: 0.5,
+    scareRecommendSwing: 0.1,
+    sliders: [
+        { id: 'recommend', name: 'Rekomendasi Aplikasi', nameEn: 'App recommendations',
+          desc: 'Makin tinggi, makin besar belanja App Store, tapi pengguna juga makin merasa diganggu.',
+          descEn: 'Higher means more App Store spending, but users also feel more pushed.' },
+        { id: 'notify', name: 'Notifikasi', nameEn: 'Notifications',
+          desc: 'Seberapa sering aplikasi mengirim notifikasi. Terlalu banyak membuat pengguna menjauh.',
+          descEn: 'How often apps send notifications. Too many drives users away.' },
+        { id: 'personal', name: 'Personalisasi AI', nameEn: 'AI personalisation',
+          desc: 'Makin personal, makin relevan bagi pengguna, tapi peluang isu privasi ikut naik.',
+          descEn: 'More personal means more relevant for users, but privacy-scare chance rises too.' }
+    ]
+};
+
+function _algoSliderIds() { return ALGO_CONFIG.sliders.map(function (s) { return s.id; }); }
+
+// Nilai slider (0–100) dari save. Bawaan 50 bila belum pernah diatur.
+export function getAlgoValue(id, data) {
+    var algo = data && data.userControl && data.userControl.algo;
+    var v = algo ? Number(algo[id]) : NaN;
+    if (!isFinite(v)) return 50;
+    return Math.max(0, Math.min(100, v));
+}
+
+function _algoR(id, data) { return (getAlgoValue(id, data) - 50) / 50; }
+
+// Pengali belanja App Store dari slider Rekomendasi. 1 bila Kontrol Pengguna belum terbuka.
+export function getAlgoStoreMult(data) {
+    if (!isUserControlActive(data)) return 1;
+    return 1 + ALGO_CONFIG.storeSwing * _algoR('recommend', data);
+}
+
+// Tambahan permintaan produk (pecahan, mis. 0.03 = +3%) dari slider Personalisasi dan Notifikasi.
+export function getAlgoDemandBonus(data) {
+    if (!isUserControlActive(data)) return 0;
+    return ALGO_CONFIG.demandSwing * _algoR('personal', data) - ALGO_CONFIG.notifySwing * _algoR('notify', data);
+}
+
+// Pengali peluang event isu privasi dari slider Personalisasi dan Rekomendasi.
+export function getAlgoScareMult(data) {
+    if (!isUserControlActive(data)) return 1;
+    var m = 1 + ALGO_CONFIG.scareSwing * _algoR('personal', data) + ALGO_CONFIG.scareRecommendSwing * _algoR('recommend', data);
+    return Math.max(0.5, Math.min(2, m));
+}
+
+// Mengatur slider. Mengembalikan true bila berhasil (panel harus terbuka dan id dikenal).
+// Nilai dibulatkan ke kelipatan 5 dan dibatasi 0–100.
+export function setUserControlAlgo(id, value, data) {
+    data = data || currentGameData();
+    if (_algoSliderIds().indexOf(id) === -1 || !isUserControlActive(data)) return false;
+    var v = Number(value);
+    if (!isFinite(v)) return false;
+    v = Math.max(0, Math.min(100, Math.round(v / ALGO_CONFIG.step) * ALGO_CONFIG.step));
+    if (!data.userControl || typeof data.userControl !== 'object') data.userControl = {};
+    if (!data.userControl.algo || typeof data.userControl.algo !== 'object') data.userControl.algo = {};
+    data.userControl.algo[id] = v;
+    return true;
 }
