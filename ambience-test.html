@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Uji Audio Ambien — Smartphone Empire</title>
+<style>
+:root{color-scheme:dark light;--bg:#0f1420;--fg:#e8edf7;--mut:#8b97b3;--ac:#4cc3ff;--card:#182033}
+@media (prefers-color-scheme:light){:root{--bg:#f4f6fb;--fg:#162036;--mut:#5a6682;--ac:#0a7cc4;--card:#fff}}
+body{margin:0;padding:20px;font:15px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--fg);max-width:520px;margin-inline:auto}
+h1{font-size:20px;margin:0 0 4px}p{color:var(--mut);margin:0 0 16px}
+.scenes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+button{padding:14px;border-radius:12px;border:2px solid transparent;background:var(--card);color:var(--fg);font:600 15px system-ui;cursor:pointer}
+button.on{border-color:var(--ac);color:var(--ac)}
+.card{background:var(--card);padding:14px 16px;border-radius:14px}
+label{display:flex;justify-content:space-between;margin-top:10px;font-size:13px;color:var(--mut)}
+input[type=range]{width:100%}select{width:100%;padding:8px;border-radius:8px}
+#st{margin-top:12px;font:12px ui-monospace,monospace;color:var(--mut)}
+</style></head><body>
+<h1>🎧 Uji Audio Ambien</h1>
+<p>Pilih peta lalu geser parameter untuk mendengar bagaimana suara beradaptasi. Buka lewat server lokal (mis. <code>npx serve</code>), bukan file://.</p>
+<div class="scenes" id="sc"></div>
+<div class="card">
+  <label>Volume <span id="vv"></span></label><input id="vol" type="range" min="0" max="1" step="0.01" value="1">
+  <label>Malam <span id="nv"></span></label><input id="night" type="range" min="0" max="1" step="0.01" value="0">
+  <label>Cuaca</label><select id="wx"><option>clear</option><option>sunny</option><option>overcast</option><option>rain</option><option>snow</option></select>
+  <label>Aktivitas pabrik <span id="av"></span></label><input id="act" type="range" min="0" max="1" step="0.01" value="0.6">
+  <label>Konstruksi <span id="cv"></span></label><input id="con" type="range" min="0" max="1" step="0.01" value="0">
+  <label>Keramaian kantor <span id="kv"></span></label><input id="crowd" type="range" min="0" max="1" step="0.01" value="0.5">
+  <label>Beban server <span id="lv"></span></label><input id="load" type="range" min="0" max="1.4" step="0.01" value="0.5">
+</div>
+<div id="st"></div>
+<script type="module">
+import { AmbienceService as A } from './src/core/AmbienceService.js';
+A.init(); A.setEnabled(true); A.lockEnv(true);
+var names={campus:'🏫 Kampus',manufacture:'🏭 Manufaktur',office:'🏢 Kantor',server:'🌊 Server'}, cur=null, box=document.getElementById('sc');
+Object.keys(names).forEach(function(k){var b=document.createElement('button');b.textContent=names[k];b.onclick=function(){cur=k;A.enter(k);push();mark();};box.appendChild(b);});
+function mark(){[].forEach.call(box.children,function(b,i){b.className=Object.keys(names)[i]===cur?'on':'';});}
+var $=function(i){return document.getElementById(i)};
+function push(){
+  var p={night:+$('night').value,weather:$('wx').value,activity:+$('act').value,construction:+$('con').value,crowd:+$('crowd').value,load:+$('load').value,peak:+$('load').value};
+  A.setParams(p);
+  $('nv').textContent=p.night.toFixed(2);$('av').textContent=p.activity.toFixed(2);$('cv').textContent=p.construction.toFixed(2);$('kv').textContent=p.crowd.toFixed(2);$('lv').textContent=p.load.toFixed(2);$('vv').textContent=Math.round(A.getVolume()*100)+'%';
+}
+['night','wx','act','con','crowd','load'].forEach(function(i){$(i).oninput=push;});
+$('vol').value=A.getVolume();$('vol').oninput=function(){A.setVolume(+$('vol').value);push();};
+setInterval(function(){$('st').textContent=JSON.stringify(A.debug());},500);push();
+</script></body></html>
