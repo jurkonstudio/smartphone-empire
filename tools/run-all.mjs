@@ -41,6 +41,7 @@ const TESTS = [
   { file: 'tools/wholesale-modal-check.mjs', src: true },
   { file: 'tools/eco-services-sim.mjs', src: true },
   { file: 'tools/econ-brakes.mjs', src: true },
+  { file: 'tools/acq-showcase-check.mjs', src: true },
   { file: 'tools/era-events-test.mjs', src: true },
   { file: 'tools/features-test.mjs', src: true },
   { file: 'tools/navui.mjs', src: true },
