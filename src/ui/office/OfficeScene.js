@@ -1,4 +1,6 @@
 // FILE: src/ui/office/OfficeScene.js  (REPLACE)
+// v2027.83 — Office Exterior + Cinematic: halaman, gedung sekitar & tembok luar dipindah ke OfficeExterior.js (tekstur, fasad,
+//   pohon instanced, lampu malam, air mancur); pasca-proses & vignette lewat OfficeLook.js. Logika game/denah/rute staf TIDAK berubah.
 // v2027.81 — "Realistic Office" TERSAMBUNG: builder OfficeProps kini benar-benar dipakai (sebelumnya hanya lantai & bayangan).
 //   * Staf: person() memakai props.figure (anatomi, wajah, rambut 6 gaya, aksesori peran, ID card tier) + pose IK:
 //     tangan di keyboard/mouse, minum kopi (cangkir di tangan), ayunan lengan & kaki + lutut saat berjalan. Logika jalan,
@@ -102,6 +104,8 @@ import { BASE_VIEW, COLORS, COLS, ROWS, CORRIDORS, DEST_BY_ROLE, DEST_DEFAULT, D
 import { describeRoom, describeStaff, fabProgress, roomAlert, totalStock, trophyCount, ROOM_LOGIC } from './OfficeLogic.js';
 import { activeResearchPct, devPhaseFrac } from './OfficeFx.js';
 import { createOfficeProps } from './OfficeProps.js';
+import { buildOfficeExterior } from './OfficeExterior.js';
+import { createOfficeLook } from './OfficeLook.js';
 
 // ============================================================
 // SCENE
@@ -127,6 +131,7 @@ export function createOfficeScene(THREE, container, gameState) {
     var camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
     // Cahaya, tone mapping, environment map & bayangan nyata: rig yang sama dengan Peta Kampus.
     var rig = createLookRig(THREE, renderer, scene, look);
+    var officeLook = createOfficeLook(THREE, renderer, container, look);   // bloom + grading (tier high) & vignette
     // Ruangan dan staf bergerak, jadi shadow map ikut diperbarui (kantor kecil, biayanya kecil).
     renderer.shadowMap.autoUpdate = !!rig.shadowsOn;
 
@@ -298,151 +303,14 @@ export function createOfficeScene(THREE, container, gameState) {
     // ---------- shell statis (lantai dasar, dinding, partisi) ----------
     var shell = new THREE.Group();
     scene.add(shell);
-    // ---------- lingkungan: AREA KAMPUS (halaman, plaza, jalan, taman, gedung tetangga) ----------
-    // Lantai kantor tetap di y = 0. Rumput kampus di y = GY, plaza paving sedikit di atasnya.
-    // Kamera melihat dari +x,+z, jadi benda TINGGI hanya ditaruh di sisi belakang (z<0) & kiri (x<0);
-    // sisi depan/kanan hanya benda rendah (rumput, jalan, semak, bangku, kolam) supaya denah tidak tertutup.
-    var GY = -0.22;
-    var PZ = GY + 0.02;                // permukaan plaza (sedikit di atas rumput, hindari z-fighting)
-    var envRnd = (function () { var sd = 2468; return function () { sd = (sd * 16807) % 2147483647; return (sd - 1) / 2147483646; }; })();
-    function env(geo, mat, sx, sy, sz, x, y, z) {       // objek lingkungan: menerima bayangan, tidak melempar (hemat)
-        var m = mesh(shell, geo, mat, sx, sy, sz, x, y, z);
-        m.castShadow = false;
-        return m;
-    }
-    function envBox(mat, w, h, d, x, y, z) { return env(G.box, mat, w, h, d, x, y, z); }
-    function tree(x, z, s) { props.tree(env, envRnd, GY, x, z, s); }     // pohon bergumpal (OfficeProps)
-    function lamp(x, z) {
-        env(G.cyl, 'metal', 0.04, 1.5, x, GY + 0.75, z);
-        env(G.sph, 'ledA', 0.1, x, GY + 1.55, z);
-    }
-    function bench(x, z, rotY) {
-        var g = new THREE.Group();
-        g.position.set(x, GY, z);
-        g.rotation.y = rotY || 0;
-        shell.add(g);
-        function part(mat, w, h, d, r, bx, by, bz) { props.rb(g, mat, w, h, d, r, bx, by, bz).castShadow = false; }
-        var i;
-        for (i = 0; i < 3; i++) part('wood', 1.4, 0.035, 0.11, 0.012, 0, 0.37, -0.12 + i * 0.12);     // papan dudukan
-        for (i = 0; i < 3; i++) part('wood', 1.4, 0.07, 0.03, 0.01, 0, 0.47 + i * 0.09, -0.19);       // papan sandaran
-        part('dark', 0.05, 0.38, 0.34, 0.012, -0.6, 0.19, 0);
-        part('dark', 0.05, 0.38, 0.34, 0.012, 0.6, 0.19, 0);
-        part('dark', 0.05, 0.05, 0.3, 0.012, -0.6, 0.45, -0.02);                                      // sandaran tangan
-        part('dark', 0.05, 0.05, 0.3, 0.012, 0.6, 0.45, -0.02);
-    }
-    // gedung kampus tetangga: badan + atap + pita jendela di sisi yang menghadap kamera (+z dan +x)
-    function campusBlock(x0, x1, z0, z1, h, bodyMat) {
-        var w = x1 - x0, d = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, k;
-        envBox(bodyMat || 'bldg', w, h, d, cx, GY + h / 2, cz);
-        envBox('bldgRoof', w + 0.3, 0.16, d + 0.3, cx, GY + h + 0.08, cz);
-        envBox('bldgBand', w + 0.1, 0.12, d + 0.1, cx, GY + 0.06, cz);          // sokel bawah
-        var floors = h > 3 ? 2 : 1;
-        for (k = 0; k < floors; k++) {
-            var wy = GY + (h * (floors === 2 ? (k === 0 ? 0.3 : 0.7) : 0.55));
-            envBox('win', Math.max(1, w - 1.2), 0.55, 0.05, cx, wy, z1 + 0.02);        // sisi depan (+z)
-            envBox('win', 0.05, 0.55, Math.max(1, d - 1.0), x1 + 0.02, wy, cz);        // sisi kanan (+x)
-        }
-        envBox('dark', 0.9, 0.9, 0.06, cx + w * 0.18, GY + 0.45, z1 + 0.03);           // pintu
-    }
-
-    // halaman kampus (diorama): rumput + bibir tanah. Pinggir kiri/kanan sengaja keluar layar di HP.
-    envBox('soil', 36.5, 1.0, 28.5, 0, GY - 0.35 - 0.5, 0);
-    envBox('ground', 36, 0.6, 28, 0, GY - 0.3, 0);
-    // plaza paving di sekeliling gedung kantor + bingkai trotoar
-    envBox('paving', 26, 0.1, 19.6, 0, PZ - 0.05, 0);
-    envBox('curb', 26.4, 0.1, 0.22, 0, PZ + 0.0, -9.9);
-    envBox('curb', 26.4, 0.1, 0.22, 0, PZ + 0.0, 9.9);
-    envBox('curb', 0.22, 0.1, 19.6, -13.1, PZ + 0.0, 0);
-    envBox('curb', 0.22, 0.1, 19.6, 13.1, PZ + 0.0, 0);
-    // jalan: dari pintu utama (x = -3) ke gerbang depan, jalan lintang depan, jalan kiri & belakang
-    envBox('path', 2.4, 0.1, 6.9, -3, GY + 0.04, 10.65);
-    envBox('path', 36, 0.1, 1.6, 0, GY + 0.04, 11.9);
-    envBox('path', 1.2, 0.1, 22.3, -14.1, GY + 0.04, 0.75);
-    envBox('path', 36, 0.1, 1.0, 0, GY + 0.04, -10.4);
-    // marka tengah jalan masuk (garis putus-putus)
-    for (var pm = 0; pm < 5; pm++) envBox('white', 0.08, 0.01, 0.6, -3, GY + 0.095, 7.6 + pm * 1.2);
-    // gerbang depan: dua tiang + papan lintel rendah di pinggir halaman
-    envBox('curb', 0.5, 1.1, 0.5, -4.7, GY + 0.55, 13.2);
-    envBox('curb', 0.5, 1.1, 0.5, -1.3, GY + 0.55, 13.2);
-    envBox('gold', 0.4, 0.08, 0.4, -4.7, GY + 1.14, 13.2);
-    envBox('gold', 0.4, 0.08, 0.4, -1.3, GY + 1.14, 13.2);
-    // gedung kampus tetangga (belakang & kiri)
-    campusBlock(-17, -8, -13.8, -11.0, 3.6, 'bldg');        // perpustakaan
-    campusBlock(-6.5, 2, -13.8, -11.0, 2.8, 'bldg');        // aula kuliah
-    campusBlock(4, 12.5, -13.8, -11.0, 2.4, 'bldg');        // student center
-    campusBlock(-17.7, -15.0, -8.6, -1.2, 2.8, 'bldg');     // asrama (sisi kiri)
-    campusBlock(-17.7, -15.0, 2.2, 8.6, 2.2, 'bldg');       // lab annex (sisi kiri depan)
-    // tiang bendera di belakang-kiri plaza (tinggi, tapi di belakang denah)
-    envBox('metal', 0.08, 3.6, 0.08, -10.3, GY + 1.8, -8.7);
-    envBox('red', 0.9, 0.5, 0.04, -9.85, GY + 3.25, -8.7);
-    // taman depan: semak rapi di kiri & kanan jalan masuk, bangku & tiang lampu
-    envBox('hedge', 4.6, 0.34, 0.7, -7.7, GY + 0.17, 8.25);
-    envBox('hedge', 4.6, 0.34, 0.7, 1.7, GY + 0.17, 8.25);
-    envBox('hedge', 4.6, 0.34, 0.7, 6.7, GY + 0.17, 8.25);
-    envBox('hedge', 0.7, 0.34, 2.2, -12.2, GY + 0.17, 4.8);
-    lamp(-4.9, 7.9); lamp(-1.1, 7.9); lamp(-4.9, 12.7); lamp(-1.1, 12.7);
-    bench(-7.7, 9.2, 0); bench(1.7, 9.2, 0); bench(5.6, 9.2, 0); bench(7.8, 9.2, 0);
-    // kolam air mancur di depan-kanan (rendah)
-    env(G.cyl, 'curb', 1.25, 0.34, 1.25, 11.0, GY + 0.17, 8.0);
-    env(G.cyl, 'shallow', 1.05, 0.36, 1.05, 11.0, GY + 0.17, 8.0);
-    env(G.cyl, 'curb', 0.14, 0.7, 0.14, 11.0, GY + 0.35, 8.0);
-    env(G.sph, 'foam', 0.2, 0.2, 0.2, 11.0, GY + 0.78, 8.0);
-    // pohon: di planter plaza (pojok belakang & depan-kiri) dan baris di tepi halaman
-    [[-11.8, -8.2], [11.8, -8.2], [-11.8, 8.2]].forEach(function (c) {
-        env(G.cyl, 'curb', 0.62, 0.3, 0.62, c[0], PZ + 0.15, c[1]);
-        env(G.cyl, 'trunk', 0.12, 0.9, 0.12, c[0], PZ + 0.7, c[1]);
-        env(G.sph, 'leaf', 0.7, 0.7, 0.7, c[0], PZ + 1.35, c[1]);
-    });
-    var ti;
-    for (ti = 0; ti < 9; ti++) {                        // baris pohon di tepi depan (z = 13.4), lewati gerbang
-        var tx0 = -16 + ti * 3.6;
-        if (Math.abs(tx0 + 3) < 2.4) continue;
-        tree(tx0, 13.4, 0.9 + envRnd() * 0.3);
-    }
-    for (ti = 0; ti < 6; ti++) tree(16.4, -9 + ti * 3.4, 0.85 + envRnd() * 0.3);   // tepi kanan
-    for (ti = 0; ti < 5; ti++) tree(-12 + ti * 3.3, -9.6 + (ti % 2) * 0.2, 0.9 + envRnd() * 0.25);   // di depan gedung belakang
-    // petak rumput terang (hamparan lawn) di antara jalan, supaya halaman tidak datar
-    [[-9.5, 13.0, 6, 1.4], [7.5, 13.0, 8, 1.4], [15.0, 6.2, 3, 9]].forEach(function (g) {
-        envBox('grass2', g[2], 0.03, g[3], g[0], GY + 0.012, g[1]);
-    });
-    // podium bertingkat gedung kantor: plaza -> undakan -> lantai kantor
-    envBox('curb', 19.4, 0.14, 13.4, 0, -0.15, 0);
-    envBox('base', 18.5, 0.22, 12.5, 0, -0.11, 0);
-    // tangga & keset di pintu utama (dinding depan, x = -3)
-    envBox('curb', 2.4, 0.1, 0.5, -3, -0.19, 6.95);
-    envBox('mat', 1.1, 0.012, 0.6, -3, 0.032, 5.62);
-
-    function wallSeg(mat, x0, x1, z0, z1, h, th) {
+    // ---------- lingkungan + tembok luar: lihat OfficeExterior.js ----------
+    var GY = -0.22;                    // permukaan rumput kampus (lantai kantor tetap di y = 0)
+    var PZ = GY + 0.02;                // permukaan plaza paving
+    var exterior = buildOfficeExterior(THREE, { shell: shell, G: G, M: M, props: props, look: look, FLOOR: FLOOR, GY: GY, PZ: PZ, renderer: renderer });
+    function wallSeg(mat, x0, x1, z0, z1, h, th) {      // dipakai partisi ruangan
         var w = Math.abs(x1 - x0) || th, d = Math.abs(z1 - z0) || th;
         return box(shell, mat, w, h, d, (x0 + x1) / 2, h / 2, (z0 + z1) / 2);
     }
-    // dinding luar: belakang (z=-6) & kiri (x=-9) tinggi; depan & kanan rendah
-    wallSeg('wall', FLOOR.x0 - 0.12, FLOOR.x1 + 0.12, FLOOR.z0 - 0.12, FLOOR.z0 + 0.12, 2.4, 0.24);
-    wallSeg('wall', FLOOR.x0 - 0.12, FLOOR.x0 + 0.12, FLOOR.z0, FLOOR.z1, 2.4, 0.24);
-    // dinding depan rendah dengan celah pintu utama (x -3.5 .. -2.5)
-    wallSeg('wallTop', FLOOR.x0 - 0.12, -3.5, FLOOR.z1 - 0.1, FLOOR.z1 + 0.12, 0.35, 0.22);
-    wallSeg('wallTop', -2.5, FLOOR.x1 + 0.12, FLOOR.z1 - 0.1, FLOOR.z1 + 0.12, 0.35, 0.22);
-    box(shell, 'metal', 0.1, 0.9, 0.1, -3.55, 0.45, FLOOR.z1 + 0.02);
-    box(shell, 'metal', 0.1, 0.9, 0.1, -2.45, 0.45, FLOOR.z1 + 0.02);
-    wallSeg('wallTop', FLOOR.x1 - 0.1, FLOOR.x1 + 0.12, FLOOR.z0, FLOOR.z1, 0.35, 0.22);
-    // jendela di dinding belakang & kiri
-    var i0;
-    for (i0 = 0; i0 < 11; i0++) {
-        var wxx = -8.2 + i0 * 1.64;
-        box(shell, 'wallTop', 1.32, 0.96, 0.04, wxx, 1.55, FLOOR.z0 + 0.11);          // kusen
-        box(shell, 'win', 1.15, 0.8, 0.06, wxx, 1.55, FLOOR.z0 + 0.13);
-        box(shell, 'wallTop', 1.36, 0.06, 0.14, wxx, 1.05, FLOOR.z0 + 0.17);          // ambang
-    }
-    for (i0 = 0; i0 < 7; i0++) {
-        if (i0 === 4 || i0 === 5) continue;     // ruang untuk papan nama perusahaan (BUILD.work)
-        var wzz = -5.1 + i0 * 1.7;
-        box(shell, 'wallTop', 0.04, 0.96, 1.32, FLOOR.x0 + 0.11, 1.55, wzz);
-        box(shell, 'win', 0.06, 0.8, 1.15, FLOOR.x0 + 0.13, 1.55, wzz);
-        box(shell, 'wallTop', 0.14, 0.06, 1.36, FLOOR.x0 + 0.17, 1.05, wzz);
-    }
-    // lis atas (cornice) di dinding tinggi
-    box(shell, 'wallTop', FLOOR.x1 - FLOOR.x0 + 0.5, 0.12, 0.4, 0, 2.46, FLOOR.z0);
-    box(shell, 'wallTop', 0.4, 0.12, FLOOR.z1 - FLOOR.z0 + 0.1, FLOOR.x0, 2.46, 0);
     // jam dinding (jarum mengikuti jam game)
     var clockG = new THREE.Group();
     clockG.position.set(0.82, 1.55, FLOOR.z0 + 0.15);
@@ -1362,6 +1230,8 @@ export function createOfficeScene(THREE, container, gameState) {
         M.pool.opacity = dark ? 0.2 : 0;
         M.shade.opacity = dark ? SHADOW_OPACITY + 0.08 : SHADOW_OPACITY;
         rig.applyTheme(dark);          // warna & intensitas cahaya sama dengan Peta Kampus
+        exterior.applyTheme(dark, winHex);
+        officeLook.setNight(dark ? 1 : 0);
         roomList.forEach(function (r) {
             r.ovMat.color.setHex(accentHex);
             r.patMat.color.setHex(dark ? 0xffffff : 0x000000);
@@ -1544,8 +1414,9 @@ export function createOfficeScene(THREE, container, gameState) {
         var sec = now / 1000;
         for (var i = 0; i < animRooms.length; i++) animRooms[i].tick(sec);
         animateOverlays(sec);
+        exterior.tick(sec);
         if (fxList.length) updateFx(sec);
-        renderer.render(scene, camera);
+        officeLook.render(scene, camera);
         watchQuality(now);
     }
     function startLoop() {
@@ -1560,7 +1431,7 @@ export function createOfficeScene(THREE, container, gameState) {
             raf = 0;
             if (disposed || document.hidden || ctxLost) return;
             updateRing(0);
-            renderer.render(scene, camera);
+            officeLook.render(scene, camera);
         });
     }
 
@@ -2036,6 +1907,8 @@ export function createOfficeScene(THREE, container, gameState) {
             Object.keys(alertTex).forEach(function (k) { alertTex[k].dispose(); });
             Object.keys(bubbleTex).forEach(function (k) { bubbleTex[k].dispose(); });
             hairMat.forEach(function (m) { m.dispose(); });
+            officeLook.dispose();
+            exterior.dispose();
             props.dispose();
             Object.keys(tierMat).forEach(function (k) { tierMat[k].dispose(); });
             Object.keys(G).forEach(function (k) { G[k].dispose(); });
