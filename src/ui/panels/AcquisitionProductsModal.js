@@ -7,6 +7,7 @@ import { LanguageService } from '../../core/LanguageService.js';
 import { formatCurrency, formatCompactMoney } from '../../utils/format.js';
 import { buildCompetitorProducts } from '../../data/competitor-products.model.js';
 import { ensureRegionalStyle } from './RegionalStyle.js';
+import { acqModalThumbHtml } from './AcquisitionShowcase.js';
 
 function _en() { try { return LanguageService.getLang() === 'en'; } catch (e) { return false; } }
 function L(id, en) { return _en() ? en : id; }
@@ -79,8 +80,8 @@ function _itemHtml(p) {
     var live = p.unitsPerMonth > 0;
     var row = function (k, v) { return '<div class="ap-row"><span>' + esc(k) + '</span><b>' + v + '</b></div>'; };
     return '<details class="ap-item">' +
-        '<summary><div class="ap-head">' +
-            '<div style="min-width:0"><div class="ap-name">' + esc(p.name) + '</div>' +
+        '<summary><div class="ap-head">' + acqModalThumbHtml(p) +
+            '<div style="min-width:0;flex:1"><div class="ap-name">' + esc(p.name) + '</div>' +
             '<div class="ap-sub">' + esc(when) + ' · Tier ' + p.tier + ' · ' + formatCurrency(p.price) + '</div></div>' +
             '<div><div class="ap-margin" style="color:' + mc + '">' + pct(p.marginPct) + '</div>' +
             '<div class="ap-badge" style="color:' + s.color + ';border-color:' + s.color + '">' + esc(L(s.id, s.en)) + '</div></div>' +
