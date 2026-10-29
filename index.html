@@ -15,7 +15,7 @@
     } catch (e) {}
   })();
 </script>
-<link rel="stylesheet" href="blog/css/blog.css?v=9">
+<link rel="stylesheet" href="blog/css/blog.css?v=10">
 <link rel="stylesheet" href="blog/css/adminbar.css?v=1">
 </head>
 <body>
@@ -60,6 +60,7 @@
     <button class="abtn primary" id="btnPaste" type="button">+ Tempel artikel AI</button>
     <button class="abtn" id="btnNewPost" type="button">+ Tulis manual</button>
     <button class="abtn" id="btnNewRelease" type="button">+ Jadwal rilis</button>
+    <button class="abtn" id="btnAudit" type="button">🔍 Audit kualitas</button>
     <button class="abtn" id="btnTranslateAll" type="button">🌐 Terjemahkan semua</button>
     <a class="abtn" href="/admin/" target="_blank" rel="noopener">📊 Dasbor ↗</a>
     <button class="abtn" id="btnLogout" type="button">Keluar</button>
@@ -204,6 +205,7 @@
           <select id="pStatus"><option value="published">Terbitkan</option><option value="draft">Simpan sebagai draf</option></select>
         </div>
       </div>
+      <div class="qbox" id="pQuality" hidden></div>
       <p class="status-line" id="postStatus"></p>
       <div class="dlg-foot">
         <button class="btn danger" type="button" id="btnDeletePost" hidden>Hapus</button>
@@ -225,6 +227,7 @@
       </div>
       <div class="field"><label for="aiAuthor">Nama penulis</label><input id="aiAuthor" maxlength="60" autocomplete="off" placeholder="mis. Rina Putri"><div class="chips" id="aiAuthorChips"></div></div>
       <div class="parsed" id="aiPreview">Belum ada teks.</div>
+      <div class="qbox" id="aiQuality" hidden></div>
       <div class="field"><label for="aiTitle">Judul (otomatis, bisa diubah)</label><input id="aiTitle" required maxlength="200"><span class="count" id="aiTitleCount"></span></div>
       <div class="field"><label for="aiExcerpt">Ringkasan (otomatis, bisa diubah)</label><textarea id="aiExcerpt" rows="2" maxlength="300" class="short"></textarea><span class="count" id="aiExcerptCount"></span></div>
       <div class="two">
@@ -241,9 +244,19 @@
       </div>
       <label class="check"><input type="checkbox" id="aiFeatured"> Jadikan artikel utama</label>
       <p class="status-line" id="aiStatusLine"></p>
-      <div class="dlg-foot"><button class="btn" type="button" id="aiClear">Kosongkan</button><button class="btn primary" type="submit" id="btnSavePaste">Terbitkan artikel</button></div>
+      <div class="dlg-foot"><button class="btn" type="button" id="aiClear">Kosongkan</button><button class="btn" type="button" id="btnAiClean">✨ Rapikan otomatis</button><button class="btn primary" type="submit" id="btnSavePaste">Terbitkan artikel</button></div>
     </div>
   </form>
+</dialog>
+
+<!-- ====== DIALOG AUDIT KUALITAS ====== -->
+<dialog id="dlgAudit">
+  <div class="dlg-head"><h2>Audit kualitas artikel</h2><button class="btn" type="button" data-close>Tutup</button></div>
+  <div class="dlg-body">
+    <p class="hint" id="auditSummary"></p>
+    <label class="check"><input type="checkbox" id="auditOnlyLow" checked> Tampilkan hanya yang perlu diperbaiki (skor di bawah 80)</label>
+    <div id="auditList" class="audit-list"></div>
+  </div>
 </dialog>
 
 <!-- ====== DIALOG JADWAL RILIS ====== -->
@@ -276,6 +289,6 @@
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="blog/js/admin-tap.js?v=1"></script>
-<script type="module" src="blog/js/main.js?v=8"></script>
+<script type="module" src="blog/js/main.js?v=9"></script>
 </body>
 </html>
