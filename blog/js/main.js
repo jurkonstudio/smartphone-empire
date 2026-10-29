@@ -96,6 +96,7 @@ async function refreshAuth() {
     state.name = pr.data?.display_name || (state.user.email || 'pembaca').split('@')[0];
   }
   $('adminbar').hidden = !state.isAdmin;
+  if (state.isAdmin) sb.rpc('blog_stats', { p_days: 1 }).then(({ data }) => { if (data && $('abToday')) $('abToday').textContent = `Hari ini: ${data.today.views} dilihat · ${data.today.visitors} pengunjung`; }, () => {});
   $('userChip').hidden = !state.user;
   $('userName').textContent = state.name;
 }
@@ -325,17 +326,31 @@ function showList() {
   document.title = `${label} — Smartphone Empire Berita`;
 }
 
+// ---------- statistik pengunjung (tanpa IP; admin tidak dihitung) ----------
+function track(slug, path) {
+  if (state.isAdmin) return;
+  try {
+    const k = 'v:' + path; if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1');
+    let sid = localStorage.getItem('blog-sid');
+    if (!sid) { sid = (crypto.randomUUID ? crypto.randomUUID() : (Math.random().toString(36).slice(2) + Date.now().toString(36))); localStorage.setItem('blog-sid', sid); }
+    let ref = ''; try { const h = new URL(document.referrer).hostname; if (h && h !== location.hostname) ref = h.replace(/^www\./, ''); } catch (e) {}
+    const w = innerWidth, device = w < 700 ? 'mobile' : w < 1024 ? 'tablet' : 'desktop';
+    sb.rpc('blog_track', { p_slug: slug, p_path: path, p_sid: sid, p_ref: ref || null, p_device: device }).then(() => {}, () => {});
+  } catch (e) {}
+}
+
 // Rute: #/ (beranda), #/k/<kategori>, #/a/<slug>
 function route() {
   const inf = /^#\/i\/(\w+)$/.exec(location.hash);
   if (inf) { showInfo(inf[1]); return; }
   const art = /^#\/a\/(.+)$/.exec(location.hash);
-  if (art) { showPost(decodeURIComponent(art[1])); return; }
+  if (art) { showPost(decodeURIComponent(art[1])); track(decodeURIComponent(art[1]), '/a/' + decodeURIComponent(art[1])); return; }
   const cat = /^#\/k\/(\w+)$/.exec(location.hash);
   const next = cat && CATS[cat[1]] ? cat[1] : 'semua';
   if (next !== state.cat) { state.cat = next; renderList(); }
   showList();
   setNav();
+  track(null, '/');
 }
 
 // ---------- pencarian ----------
