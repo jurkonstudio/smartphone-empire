@@ -1,6 +1,7 @@
 window.__blogReady = true;  // modul termuat (CDN Supabase berhasil)
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/+esm';
 import { SUPABASE_URL, SUPABASE_KEY, BUCKET, MAX_IMAGE_BYTES, TZ, AUTH_KEY, CONTACT_EMAIL, SOCIAL, SHOW_ADS, LS_LANG, TRANSLATE_URL } from './config.js';
+import { assessPost, autoClean } from './quality.js';
 import { I18N, CATS_L, DESC_L } from './i18n.js';
 import { PAGES } from './pages.js';
 
@@ -50,6 +51,31 @@ const state = {
   poll: null, pollRes: [], myVote: null, comments: [], postId: null,
   editingPostId: null, editingReleaseId: null
 };
+
+
+// ---------- penilaian kualitas ----------
+function renderQuality(el, res) {
+  if (!res) { el.hidden = true; el.innerHTML = ''; return; }
+  const label = { baik: 'Baik', cukup: 'Cukup', rendah: 'Perlu diperbaiki' }[res.level];
+  const icon = { bad: '⛔', warn: '⚠️', info: '💡' };
+  el.hidden = false;
+  el.className = 'qbox q-' + res.level;
+  el.innerHTML = `<div class="q-head"><b>Kualitas: ${res.score}/100</b><span>${label}</span></div>` +
+    (res.issues.length ? '<ul>' + res.issues.map((x) => `<li>${icon[x.sev]} ${esc(x.text)}</li>`).join('') + '</ul>' : '<p>Tidak ada catatan. Siap terbit.</p>');
+}
+function refreshPostQuality() {
+  const body = $('pBody').value.trim();
+  if (!body && !$('pTitle').value.trim()) { renderQuality($('pQuality'), null); return; }
+  const cur = state.posts.find((x) => x.id === state.editingPostId);
+  renderQuality($('pQuality'), assessPost({
+    id: state.editingPostId, title: $('pTitle').value, excerpt: $('pExcerpt').value, body, category: $('pCat').value,
+    source_url: $('pSource').value.trim(), cover_url: cur?.cover_url, hasCover: !!$('pCover').files[0],
+    author: $('pAuthor').value, status: 'published'
+  }, state.posts));
+}
+['pTitle', 'pExcerpt', 'pBody', 'pCat', 'pSource', 'pAuthor'].forEach((id) => { const e = $(id); if (e) e.addEventListener('input', refreshPostQuality); });
+$('pCat').addEventListener('change', refreshPostQuality);
+$('pCover').addEventListener('change', refreshPostQuality);
 
 // ---------- util ----------
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -423,6 +449,7 @@ function openPostDialog(post = null) {
   $('pAuthor').value = post?.author || loadAuthors()[0] || 'admin';
   renderAuthorChips('pAuthorChips', 'pAuthor');
   $('pFeatured').checked = !!post?.is_featured;
+  setTimeout(refreshPostQuality, 0);
   $('pStatus').value = post?.status || 'published';
   $('btnDeletePost').hidden = !post;
   $('postStatus').textContent = '';
@@ -570,6 +597,8 @@ $('pAuthor').addEventListener('input', () => renderAuthorChips('pAuthorChips', '
 let aiParsed = { title: '', excerpt: '', body: '' };
 const aiTouched = { title: false, excerpt: false };
 let aiRumorAck = false;
+let aiQualAck = false;
+let aiQualRes = null;
 function refreshAiPreview() {
   aiParsed = parseAiArticle($('aiRaw').value);
   if (!aiTouched.title) $('aiTitle').value = aiParsed.title;
@@ -581,26 +610,42 @@ function refreshAiPreview() {
   $('aiPreview').textContent = words
     ? `Terdeteksi: ${paras} paragraf, ${words} kata (±${Math.max(1, Math.round(words / 200))} menit baca), penulis ${cleanAuthor($('aiAuthor').value)}.`
     : 'Belum ada teks.';
+  aiQualRes = words ? assessPost({
+    title: $('aiTitle').value, excerpt: $('aiExcerpt').value, body: aiParsed.body, category: $('aiCat').value,
+    source_url: $('aiSource').value.trim(), hasCover: !!$('aiCover').files[0], author: $('aiAuthor').value, status: 'published'
+  }, state.posts) : null;
+  renderQuality($('aiQuality'), aiQualRes);
 }
 function syncAiStatus() { $('btnSavePaste').textContent = $('aiStatus').value === 'published' ? 'Terbitkan artikel' : 'Simpan draf'; }
-$('aiRaw').addEventListener('input', () => { refreshAiPreview(); try { localStorage.setItem(DRAFT_KEY, $('aiRaw').value); } catch (e) {} });
+$('aiRaw').addEventListener('input', () => { aiQualAck = false; refreshAiPreview(); try { localStorage.setItem(DRAFT_KEY, $('aiRaw').value); } catch (e) {} });
 $('aiTitle').addEventListener('input', () => { aiTouched.title = true; refreshAiPreview(); });
 $('aiExcerpt').addEventListener('input', () => { aiTouched.excerpt = true; refreshAiPreview(); });
 $('aiAuthor').addEventListener('input', refreshAiPreview);
 $('aiStatus').addEventListener('change', syncAiStatus);
-$('aiCat').addEventListener('change', () => { aiRumorAck = false; });
-$('aiSource').addEventListener('input', () => { aiRumorAck = false; });
+$('aiCat').addEventListener('change', () => { aiRumorAck = false; aiQualAck = false; refreshAiPreview(); });
+$('aiSource').addEventListener('input', () => { aiRumorAck = false; refreshAiPreview(); });
+$('aiCover').addEventListener('change', refreshAiPreview);
 $('aiClear').addEventListener('click', () => {
   $('aiRaw').value = ''; aiTouched.title = aiTouched.excerpt = false; refreshAiPreview();
   try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
   $('aiStatusLine').textContent = '';
 });
 
+$('btnAiClean').addEventListener('click', () => {
+  const r = autoClean($('aiRaw').value);
+  if (!r.changes.length) { $('aiStatusLine').textContent = 'Tidak ada yang perlu dirapikan.'; return; }
+  $('aiRaw').value = r.text;
+  aiTouched.title = aiTouched.excerpt = false; aiQualAck = false;
+  try { localStorage.setItem(DRAFT_KEY, r.text); } catch (e) {}
+  refreshAiPreview();
+  $('aiStatusLine').textContent = 'Dirapikan: ' + r.changes.join(', ') + '.';
+});
+
 function openPasteDialog() {
   let draft = '';
   try { draft = localStorage.getItem(DRAFT_KEY) || ''; } catch (e) {}
   $('aiRaw').value = draft;
-  aiTouched.title = aiTouched.excerpt = false; aiRumorAck = false;
+  aiTouched.title = aiTouched.excerpt = false; aiRumorAck = false; aiQualAck = false;
   $('aiAuthor').value = loadAuthors()[0] || 'admin';
   renderAuthorChips('aiAuthorChips', 'aiAuthor');
   $('aiCover').value = ''; $('aiSource').value = '';
@@ -625,6 +670,11 @@ $('formPaste').addEventListener('submit', async (e) => {
   if ($('aiCat').value === 'rumor' && !source && !aiRumorAck) {
     aiRumorAck = true;
     line.textContent = 'Rumor sebaiknya mencantumkan link sumber. Tekan tombol sekali lagi untuk tetap menyimpan.';
+    return;
+  }
+  if ($('aiStatus').value === 'published' && aiQualRes && aiQualRes.score < 60 && !aiQualAck) {
+    aiQualAck = true;
+    line.textContent = `Kualitas rendah (skor ${aiQualRes.score}/100). Perbaiki dulu, atau tekan sekali lagi untuk tetap menerbitkan.`;
     return;
   }
   const btn = $('btnSavePaste');
@@ -877,4 +927,28 @@ $('btnTranslateAll').addEventListener('click', async () => {
   await loadPosts(); renderAll();
   toast(`Selesai: ${ok}/${todo.length} artikel diterjemahkan.`);
   if (ok < todo.length) alert(`Berhasil ${ok} dari ${todo.length} artikel.\n\nPenyebab gagal terakhir:\n${state.lastTrErr}`);
+});
+
+
+// ---------- audit kualitas semua artikel ----------
+function renderAudit() {
+  const only = $('auditOnlyLow').checked;
+  const rows = state.posts.map((p) => ({ p, r: assessPost(p, state.posts) })).sort((a, b) => a.r.score - b.r.score);
+  const low = rows.filter((x) => x.r.score < 80).length;
+  $('auditSummary').textContent = `${rows.length} artikel diperiksa: ${rows.length - low} baik, ${low} perlu perhatian.`;
+  const shown = only ? rows.filter((x) => x.r.score < 80) : rows;
+  $('auditList').innerHTML = shown.length ? shown.map(({ p, r }) => `
+    <div class="audit-row q-${r.level}">
+      <div class="audit-top"><span class="audit-score">${r.score}</span><b>${esc(p.title)}</b></div>
+      <small>${esc(CATS[p.category] || p.category)}${p.status === 'draft' ? ' · draf' : ''}</small>
+      <ul>${r.issues.slice(0, 4).map((x) => `<li>${esc(x.text)}</li>`).join('')}</ul>
+      <button class="btn" type="button" data-edit="${esc(p.id)}">Ubah artikel</button>
+    </div>`).join('') : '<p class="hint">Semua artikel sudah baik. 🎉</p>';
+}
+$('btnAudit').addEventListener('click', () => { renderAudit(); $('dlgAudit').showModal(); });
+$('auditOnlyLow').addEventListener('change', renderAudit);
+$('auditList').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-edit]'); if (!b) return;
+  const post = state.posts.find((x) => String(x.id) === b.dataset.edit); if (!post) return;
+  $('dlgAudit').close(); openPostDialog(post);
 });
