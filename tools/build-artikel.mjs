@@ -14,6 +14,7 @@ const SUPABASE_URL = pick('SUPABASE_URL'), SUPABASE_KEY = pick('SUPABASE_KEY'), 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const safeHttps = (u) => (/^https:\/\//.test(u || '') ? u : '');
 const CATS = { rilis: 'Rilis', spek: 'Spek', rumor: 'Rumor', jadwal: 'Jadwal' };
+const readMin = (t) => Math.max(1, Math.round(String(t || '').split(/\s+/).filter(Boolean).length / 200));
 const fmtDate = (d) => new Date(d).toLocaleDateString('id-ID', { timeZone: TZ, day: 'numeric', month: 'long', year: 'numeric' });
 
 async function loadPosts() {
@@ -25,7 +26,7 @@ async function loadPosts() {
   return r.json();
 }
 
-function page(p) {
+function page(p, all = []) {
   const canonical = `${SITE}/${OUT}/${p.slug}/`;
   const published = p.published_at || p.created_at;
   const paras = (p.body || '').split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean);
@@ -38,6 +39,13 @@ function page(p) {
     publisher: { '@type': 'Organization', name: 'Smartphone Empire Berita', logo: { '@type': 'ImageObject', url: `${SITE}/blog/img/logo.svg` } }
   };
   const cat = CATS[p.category] || p.category;
+  const crumbLd = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Beranda', item: `${SITE}/` },
+    { '@type': 'ListItem', position: 2, name: cat, item: `${SITE}/#/k/${p.category}` },
+    { '@type': 'ListItem', position: 3, name: p.title.slice(0, 110), item: canonical }] };
+  const others = all.filter((x) => x.slug !== p.slug);
+  const related = [...others.filter((x) => x.category === p.category), ...others.filter((x) => x.category !== p.category)].slice(0, 3);
+  const shareUrl = encodeURIComponent(canonical), shareTxt = encodeURIComponent(p.title);
   return `<!doctype html>
 <html lang="id">
 <head>
@@ -56,29 +64,39 @@ function page(p) {
 <meta property="article:published_time" content="${esc(published)}">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>
+<script type="application/ld+json">${JSON.stringify(crumbLd).replace(/</g, '\\u003c')}</script>
+<meta name="theme-color" content="#0a84ff">
 <script>(function(){try{var t=localStorage.getItem('blog-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<link rel="stylesheet" href="/blog/css/blog.css?v=9">
+<link rel="stylesheet" href="/blog/css/blog.css?v=10">
+<link rel="stylesheet" href="/blog/css/blog-polish.css?v=1">
 </head>
 <body>
+<a class="skip" href="#main">Lewati ke konten</a>
 <header class="site-header"><div class="bar">
   <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span><span>Smartphone Empire</span></a>
   <nav class="menu" aria-label="Kategori"><a href="/">Beranda</a><a href="/#/k/rilis">Rilis</a><a href="/#/k/spek">Spek</a><a href="/#/k/rumor">Rumor</a><a href="/#/k/jadwal">Jadwal</a></nav>
-  <div class="tools"><a class="cta-game" href="/game/"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span>Main game</span></a></div>
+  <div class="tools"><button class="icon-btn" id="themeToggle" type="button" aria-label="Ganti tema terang/gelap" title="Ganti tema"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button><a class="cta-game" href="/game/"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span>Main game</span></a></div>
 </div></header>
-<main>
-  <a class="back" href="/">← Kembali</a>
+<main id="main">
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Beranda</a><span aria-hidden="true">/</span><a href="/#/k/${esc(p.category)}">${esc(cat)}</a></nav>
   <article class="article">
     <div class="meta"><span class="tag t-${esc(p.category)}">${esc(cat)}</span></div>
     <h1>${esc(p.title)}</h1>
     ${p.excerpt ? `<p class="lead">${esc(p.excerpt)}</p>` : ''}
-    <div class="meta byline"><span>Ditulis oleh ${esc(p.author || 'admin')}</span><span>·</span><time datetime="${esc(published)}">${esc(fmtDate(published))}</time></div>
+    <div class="meta byline"><span>Ditulis oleh ${esc(p.author || 'admin')}</span><time datetime="${esc(published)}">${esc(fmtDate(published))}</time><span>${readMin(p.body)} menit baca</span></div>
     ${safeHttps(p.cover_url) ? `<img class="cover" src="${esc(p.cover_url)}" alt="${esc(p.title)}" style="margin-top:20px">` : ''}
     <div class="content">${paras.map((s) => `<p>${esc(s).replace(/\n/g, '<br>')}</p>`).join('\n')}</div>
     ${safeHttps(p.source_url) ? `<p class="source">Sumber: <a href="${esc(p.source_url)}" rel="noopener nofollow" target="_blank">${esc(p.source_url)}</a></p>` : ''}
+    <div class="share"><span>Bagikan</span>
+      <a class="btn" href="https://wa.me/?text=${shareTxt}%20${shareUrl}" target="_blank" rel="noopener">WhatsApp</a>
+      <a class="btn" href="https://www.facebook.com/sharer/sharer.php?u=${shareUrl}" target="_blank" rel="noopener">Facebook</a>
+      <button class="btn" type="button" id="copyLink" data-url="${esc(canonical)}">Salin tautan</button></div>
     <p class="source"><a href="/#/a/${esc(p.slug)}">Buka versi interaktif (komentar dan jajak pendapat)</a></p>
   </article>
+  ${related.length ? `<aside class="related" aria-labelledby="relT"><h2 id="relT">Baca juga</h2>${related.map((x) => `<a href="/${OUT}/${esc(x.slug)}/">${esc(x.title)}<small>${esc(CATS[x.category] || x.category)} · ${esc(fmtDate(x.published_at || x.created_at))}</small></a>`).join('')}</aside>` : ''}
 </main>
-<footer class="site-footer"><div class="copy"><span>© ${new Date().getFullYear()} Jurkon Studio</span><a href="/#/i/tentang">Tentang Kami</a></div></footer>
+<footer class="site-footer"><div class="copy"><span>© ${new Date().getFullYear()} Jurkon Studio</span><span class="flinks"><a href="/#/i/tentang">Tentang Kami</a><a href="/#/i/redaksi">Redaksi</a><a href="/#/i/etik">Kode Etik</a><a href="/#/i/privasi">Privasi</a><a href="/#/i/kontak">Kontak</a></span></div></footer>
+<script>(function(){var b=document.getElementById('themeToggle');if(b)b.addEventListener('click',function(){var r=document.documentElement,d=r.getAttribute('data-theme')?r.getAttribute('data-theme')==='dark':matchMedia('(prefers-color-scheme: dark)').matches,n=d?'light':'dark';r.setAttribute('data-theme',n);try{localStorage.setItem('blog-theme',n)}catch(e){}});var c=document.getElementById('copyLink');if(c)c.addEventListener('click',function(){var u=c.dataset.url,t=c.textContent;function ok(){c.textContent='Tautan disalin';setTimeout(function(){c.textContent=t},1800)}if(navigator.clipboard)navigator.clipboard.writeText(u).then(ok,function(){prompt('Salin tautan:',u)});else prompt('Salin tautan:',u)})})();</script>
 </body>
 </html>
 `;
@@ -88,7 +106,17 @@ const posts = (await loadPosts()).filter((p) => p && /^[a-z0-9][a-z0-9-]{2,79}$/
 await mkdir(OUT, { recursive: true });
 const keep = new Set(posts.map((p) => p.slug));
 for (const d of await readdir(OUT)) if (!keep.has(d)) await rm(path.join(OUT, d), { recursive: true, force: true });
-for (const p of posts) { await mkdir(path.join(OUT, p.slug), { recursive: true }); await writeFile(path.join(OUT, p.slug, 'index.html'), page(p)); }
+for (const p of posts) { await mkdir(path.join(OUT, p.slug), { recursive: true }); await writeFile(path.join(OUT, p.slug, 'index.html'), page(p, posts)); }
+
+// Daftar tautan asli (bisa dirayapi) di beranda: isi di antara penanda <!--ARSIP:MULAI--> dan <!--ARSIP:SELESAI-->
+try {
+  const idx = await readFile('index.html', 'utf8');
+  const re = /<!--ARSIP:MULAI-->[\s\S]*?<!--ARSIP:SELESAI-->/;
+  if (re.test(idx)) {
+    const items = posts.slice(0, 12).map((p) => `<li><a href="/${OUT}/${esc(p.slug)}/">${esc(p.title)}</a></li>`).join('');
+    await writeFile('index.html', idx.replace(re, () => `<!--ARSIP:MULAI--><ul>${items}</ul><!--ARSIP:SELESAI-->`));
+  }
+} catch (e) { console.warn('Lewati arsip beranda:', e.message); }
 
 const day = (d) => new Date(d).toISOString().slice(0, 10);
 const urls = [`  <url><loc>${SITE}/</loc></url>`, `  <url><loc>${SITE}/game/</loc></url>`,
