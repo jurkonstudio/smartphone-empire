@@ -15,7 +15,7 @@
     } catch (e) {}
   })();
 </script>
-<link rel="stylesheet" href="blog/css/blog.css?v=6">
+<link rel="stylesheet" href="blog/css/blog.css?v=7">
 <link rel="stylesheet" href="blog/css/adminbar.css?v=1">
 </head>
 <body>
@@ -185,6 +185,13 @@
       <div class="field"><label for="pAuthor">Nama penulis</label><input id="pAuthor" maxlength="60" autocomplete="off" placeholder="mis. Rina Putri"><div class="chips" id="pAuthorChips"></div></div>
       <div class="field"><label for="pExcerpt">Ringkasan</label><textarea id="pExcerpt" rows="2" maxlength="300" class="short"></textarea></div>
       <div class="field"><label for="pBody">Isi artikel</label><textarea id="pBody" maxlength="30000"></textarea><span class="hint">Pisahkan paragraf dengan satu baris kosong.</span></div>
+      <details id="pEnBox" class="en-box">
+        <summary>Versi English (opsional)</summary>
+        <p class="hint">Kosongkan jika belum ada terjemahan; pembaca berbahasa Inggris akan melihat versi Indonesia dengan catatan.</p>
+        <div class="field"><label for="pTitleEn">Title</label><input id="pTitleEn" maxlength="200"></div>
+        <div class="field"><label for="pExcerptEn">Summary</label><textarea id="pExcerptEn" rows="2" maxlength="300" class="short"></textarea></div>
+        <div class="field"><label for="pBodyEn">Article body</label><textarea id="pBodyEn" maxlength="30000"></textarea></div>
+      </details>
       <div class="two">
         <div class="field"><label for="pCover">Gambar sampul (opsional, maks. 5 MB)</label><input id="pCover" type="file" accept="image/*"></div>
         <div class="field"><label for="pSource">Link sumber (opsional)</label><input id="pSource" type="url" placeholder="https://…"></div>
@@ -267,6 +274,6 @@
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="blog/js/admin-tap.js?v=1"></script>
-<script type="module" src="blog/js/main.js?v=3"></script>
+<script type="module" src="blog/js/main.js?v=4"></script>
 </body>
 </html>
