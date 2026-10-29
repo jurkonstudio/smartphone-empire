@@ -514,3 +514,24 @@
   .cta-game:active { transform: scale(.96); }
   .icon-btn { transition: background .15s, transform .12s; }
   .icon-btn:active { transform: scale(.92); }
+
+  /* ================= Kualitas artikel (admin) ================= */
+  .qbox { margin: 4px 0 14px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); font-size: .86rem; }
+  .qbox .q-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; margin-bottom: 4px; }
+  .qbox .q-head span { font-weight: 700; font-size: .78rem; }
+  .qbox ul { margin: 6px 0 0; padding-left: 0; list-style: none; display: grid; gap: 4px; }
+  .qbox p { margin: 4px 0 0; color: var(--sub); }
+  .qbox.q-baik { border-color: #30a46c; background: color-mix(in srgb, #30a46c 8%, var(--bg)); }
+  .qbox.q-baik .q-head span { color: #30a46c; }
+  .qbox.q-cukup { border-color: #e5a50a; background: color-mix(in srgb, #e5a50a 8%, var(--bg)); }
+  .qbox.q-cukup .q-head span { color: #b8860b; }
+  .qbox.q-rendah { border-color: var(--danger, #e5484d); background: color-mix(in srgb, #e5484d 8%, var(--bg)); }
+  .qbox.q-rendah .q-head span { color: var(--danger, #e5484d); }
+  .audit-list { display: grid; gap: 10px; margin-top: 10px; }
+  .audit-row { border: 1px solid var(--border); border-left-width: 4px; border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; }
+  .audit-row.q-baik { border-left-color: #30a46c; } .audit-row.q-cukup { border-left-color: #e5a50a; } .audit-row.q-rendah { border-left-color: #e5484d; }
+  .audit-top { display: flex; gap: 10px; align-items: flex-start; }
+  .audit-top b { font-size: .95rem; line-height: 1.3; }
+  .audit-score { flex: none; min-width: 34px; text-align: center; padding: 2px 6px; border-radius: 8px; background: var(--surface); font-weight: 800; font-size: .85rem; }
+  .audit-row ul { margin: 0; padding-left: 18px; color: var(--sub); font-size: .84rem; }
+  .audit-row .btn { justify-self: start; }
