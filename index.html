@@ -320,6 +320,10 @@
   }
   /* Ikon sosial disembunyikan di header agar menu + tombol game muat; URL-nya masih placeholder. */
   @media (min-width: 961px) { .social { display: none; } .search input { width: 170px; } }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chip { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 999px; padding: 4px 12px; font-size: .82rem; cursor: pointer; }
+  .chip:hover, .chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+  .field .count { font-size: .78rem; color: var(--sub); text-align: right; }
 </style>
 </head>
 <body>
@@ -488,6 +492,7 @@
           </select>
         </div>
       </div>
+      <div class="field"><label for="pAuthor">Nama penulis</label><input id="pAuthor" maxlength="60" autocomplete="off" placeholder="mis. Rina Putri"><div class="chips" id="pAuthorChips"></div></div>
       <div class="field"><label for="pExcerpt">Ringkasan</label><textarea id="pExcerpt" rows="2" maxlength="300" class="short"></textarea></div>
       <div class="field"><label for="pBody">Isi artikel</label><textarea id="pBody" maxlength="30000"></textarea><span class="hint">Pisahkan paragraf dengan satu baris kosong.</span></div>
       <div class="two">
@@ -517,11 +522,12 @@
       <div class="field">
         <label for="aiRaw">Tempel seluruh artikel di sini</label>
         <textarea id="aiRaw" class="paste" placeholder="Baris pertama otomatis jadi judul. Baris 'Ringkasan: ...' jadi ringkasan (opsional)."></textarea>
-        <span class="hint">Tanda markdown (#, **, -) dibersihkan otomatis. Penulis: admin.</span>
+        <span class="hint">Tanda markdown (#, **, -) dibersihkan otomatis. Teks tersimpan sebagai draf di perangkat ini sampai artikel disimpan.</span>
       </div>
+      <div class="field"><label for="aiAuthor">Nama penulis</label><input id="aiAuthor" maxlength="60" autocomplete="off" placeholder="mis. Rina Putri"><div class="chips" id="aiAuthorChips"></div></div>
       <div class="parsed" id="aiPreview">Belum ada teks.</div>
-      <div class="field"><label for="aiTitle">Judul (otomatis, bisa diubah)</label><input id="aiTitle" required maxlength="200"></div>
-      <div class="field"><label for="aiExcerpt">Ringkasan (otomatis, bisa diubah)</label><textarea id="aiExcerpt" rows="2" maxlength="300" class="short"></textarea></div>
+      <div class="field"><label for="aiTitle">Judul (otomatis, bisa diubah)</label><input id="aiTitle" required maxlength="200"><span class="count" id="aiTitleCount"></span></div>
+      <div class="field"><label for="aiExcerpt">Ringkasan (otomatis, bisa diubah)</label><textarea id="aiExcerpt" rows="2" maxlength="300" class="short"></textarea><span class="count" id="aiExcerptCount"></span></div>
       <div class="two">
         <div class="field"><label for="aiCat">Kategori</label>
           <select id="aiCat"><option value="rilis">Rilis</option><option value="spek">Spek</option><option value="rumor">Rumor</option><option value="jadwal">Jadwal</option></select>
@@ -530,9 +536,13 @@
           <select id="aiStatus"><option value="published">Terbitkan</option><option value="draft">Simpan sebagai draf</option></select>
         </div>
       </div>
+      <div class="two">
+        <div class="field"><label for="aiCover">Gambar sampul (opsional, maks. 5 MB)</label><input id="aiCover" type="file" accept="image/*"></div>
+        <div class="field"><label for="aiSource">Link sumber (opsional)</label><input id="aiSource" type="url" placeholder="https://…"></div>
+      </div>
       <label class="check"><input type="checkbox" id="aiFeatured"> Jadikan artikel utama</label>
       <p class="status-line" id="aiStatusLine"></p>
-      <div class="dlg-foot"><button class="btn primary" type="submit" id="btnSavePaste">Simpan artikel</button></div>
+      <div class="dlg-foot"><button class="btn" type="button" id="aiClear">Kosongkan</button><button class="btn primary" type="submit" id="btnSavePaste">Terbitkan artikel</button></div>
     </div>
   </form>
 </dialog>
@@ -1090,6 +1100,8 @@ function openPostDialog(post = null) {
   $('pBody').value = post?.body || '';
   $('pCover').value = '';
   $('pSource').value = post?.source_url || '';
+  $('pAuthor').value = post?.author || loadAuthors()[0] || 'admin';
+  renderAuthorChips('pAuthorChips', 'pAuthor');
   $('pFeatured').checked = !!post?.is_featured;
   $('pStatus').value = post?.status || 'published';
   $('btnDeletePost').hidden = !post;
@@ -1115,7 +1127,9 @@ $('formPost').addEventListener('submit', async (e) => {
   const btn = $('btnSavePost');
   btn.disabled = true; $('postStatus').textContent = 'Menyimpan…';
   try {
+    const author = cleanAuthor($('pAuthor').value); rememberAuthor(author);
     const payload = {
+      author,
       title: $('pTitle').value.trim(),
       slug: ($('pSlug').value.trim() || slugify($('pTitle').value)).toLowerCase(),
       category: $('pCat').value,
@@ -1212,25 +1226,65 @@ function parseAiArticle(raw) {
   return { title, excerpt, body };
 }
 
+const AUTHOR_KEY = 'blog-authors', DRAFT_KEY = 'blog-ai-draft';
+function loadAuthors() { try { const a = JSON.parse(localStorage.getItem(AUTHOR_KEY) || '[]'); return Array.isArray(a) ? a.filter((x) => typeof x === 'string' && x) : []; } catch (e) { return []; } }
+function rememberAuthor(n) { if (!n || n === 'admin') return; try { localStorage.setItem(AUTHOR_KEY, JSON.stringify([n, ...loadAuthors().filter((x) => x !== n)].slice(0, 8))); } catch (e) {} }
+function cleanAuthor(v) { return String(v || '').replace(/\s+/g, ' ').trim().slice(0, 60) || 'admin'; }
+function renderAuthorChips(boxId, inputId) {
+  const box = $(boxId), input = $(inputId); box.textContent = '';
+  ['admin', ...loadAuthors()].forEach((n) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = n;
+    b.setAttribute('aria-pressed', String(cleanAuthor(input.value) === n));
+    b.addEventListener('click', () => { input.value = n; input.dispatchEvent(new Event('input')); });
+    box.appendChild(b);
+  });
+}
+$('aiAuthor').addEventListener('input', () => renderAuthorChips('aiAuthorChips', 'aiAuthor'));
+$('pAuthor').addEventListener('input', () => renderAuthorChips('pAuthorChips', 'pAuthor'));
+
 let aiParsed = { title: '', excerpt: '', body: '' };
+const aiTouched = { title: false, excerpt: false };
+let aiRumorAck = false;
 function refreshAiPreview() {
   aiParsed = parseAiArticle($('aiRaw').value);
-  $('aiTitle').value = aiParsed.title;
-  $('aiExcerpt').value = aiParsed.excerpt;
+  if (!aiTouched.title) $('aiTitle').value = aiParsed.title;
+  if (!aiTouched.excerpt) $('aiExcerpt').value = aiParsed.excerpt;
+  $('aiTitleCount').textContent = $('aiTitle').value.length + '/200';
+  $('aiExcerptCount').textContent = $('aiExcerpt').value.length + '/300';
+  const words = aiParsed.body ? aiParsed.body.split(/\s+/).length : 0;
   const paras = aiParsed.body ? aiParsed.body.split(/\n\s*\n/).length : 0;
-  $('aiPreview').textContent = aiParsed.body
-    ? `Terdeteksi: judul ${aiParsed.title.length} karakter, ${paras} paragraf, penulis admin.`
+  $('aiPreview').textContent = words
+    ? `Terdeteksi: ${paras} paragraf, ${words} kata (±${Math.max(1, Math.round(words / 200))} menit baca), penulis ${cleanAuthor($('aiAuthor').value)}.`
     : 'Belum ada teks.';
 }
-$('aiRaw').addEventListener('input', refreshAiPreview);
+function syncAiStatus() { $('btnSavePaste').textContent = $('aiStatus').value === 'published' ? 'Terbitkan artikel' : 'Simpan draf'; }
+$('aiRaw').addEventListener('input', () => { refreshAiPreview(); try { localStorage.setItem(DRAFT_KEY, $('aiRaw').value); } catch (e) {} });
+$('aiTitle').addEventListener('input', () => { aiTouched.title = true; refreshAiPreview(); });
+$('aiExcerpt').addEventListener('input', () => { aiTouched.excerpt = true; refreshAiPreview(); });
+$('aiAuthor').addEventListener('input', refreshAiPreview);
+$('aiStatus').addEventListener('change', syncAiStatus);
+$('aiCat').addEventListener('change', () => { aiRumorAck = false; });
+$('aiSource').addEventListener('input', () => { aiRumorAck = false; });
+$('aiClear').addEventListener('click', () => {
+  $('aiRaw').value = ''; aiTouched.title = aiTouched.excerpt = false; refreshAiPreview();
+  try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+  $('aiStatusLine').textContent = '';
+});
 
 function openPasteDialog() {
-  $('aiRaw').value = '';
-  refreshAiPreview();
+  let draft = '';
+  try { draft = localStorage.getItem(DRAFT_KEY) || ''; } catch (e) {}
+  $('aiRaw').value = draft;
+  aiTouched.title = aiTouched.excerpt = false; aiRumorAck = false;
+  $('aiAuthor').value = loadAuthors()[0] || 'admin';
+  renderAuthorChips('aiAuthorChips', 'aiAuthor');
+  $('aiCover').value = ''; $('aiSource').value = '';
   $('aiCat').value = 'rilis';
   $('aiStatus').value = 'published';
   $('aiFeatured').checked = false;
-  $('aiStatusLine').textContent = '';
+  syncAiStatus(); refreshAiPreview();
+  $('aiStatusLine').textContent = draft ? 'Draf terakhir dipulihkan. Tekan Kosongkan untuk mulai baru.' : '';
   $('dlgPaste').showModal();
 }
 
@@ -1238,21 +1292,33 @@ $('formPaste').addEventListener('submit', async (e) => {
   e.preventDefault();
   const title = $('aiTitle').value.trim();
   const body = aiParsed.body;
-  if (!title) { $('aiStatusLine').textContent = 'Judul kosong.'; return; }
-  if (!body) { $('aiStatusLine').textContent = 'Isi artikel kosong.'; return; }
+  const source = $('aiSource').value.trim();
+  const file = $('aiCover').files[0];
+  const line = $('aiStatusLine');
+  if (!title) { line.textContent = 'Judul kosong.'; return; }
+  if (!body) { line.textContent = 'Isi artikel kosong.'; return; }
+  if (source && !/^https?:\/\//i.test(source)) { line.textContent = 'Link sumber harus diawali http:// atau https://.'; return; }
+  if ($('aiCat').value === 'rumor' && !source && !aiRumorAck) {
+    aiRumorAck = true;
+    line.textContent = 'Rumor sebaiknya mencantumkan link sumber. Tekan tombol sekali lagi untuk tetap menyimpan.';
+    return;
+  }
   const btn = $('btnSavePaste');
-  btn.disabled = true; $('aiStatusLine').textContent = 'Menyimpan…';
-  const payload = {
-    title,
-    slug: slugify(title) || 'artikel-' + Date.now().toString(36),
-    category: $('aiCat').value,
-    excerpt: $('aiExcerpt').value.trim() || null,
-    body,
-    author: 'admin',
-    is_featured: $('aiFeatured').checked,
-    status: $('aiStatus').value
-  };
+  btn.disabled = true; line.textContent = 'Menyimpan…';
+  const author = cleanAuthor($('aiAuthor').value);
   try {
+    const payload = {
+      title,
+      slug: slugify(title) || 'artikel-' + Date.now().toString(36),
+      category: $('aiCat').value,
+      excerpt: $('aiExcerpt').value.trim() || null,
+      body,
+      author,
+      source_url: source || null,
+      cover_url: file ? await uploadCover(file) : null,
+      is_featured: $('aiFeatured').checked,
+      status: $('aiStatus').value
+    };
     if (payload.is_featured) await sb.from('blog_posts').update({ is_featured: false }).eq('is_featured', true);
     let res = await sb.from('blog_posts').insert(payload).select('slug').single();
     // Slug bentrok: tambahkan akhiran dan coba sekali lagi.
@@ -1261,12 +1327,14 @@ $('formPaste').addEventListener('submit', async (e) => {
       res = await sb.from('blog_posts').insert(payload).select('slug').single();
     }
     if (res.error) throw res.error;
+    rememberAuthor(author);
+    try { localStorage.removeItem(DRAFT_KEY); } catch (e2) {}
     $('dlgPaste').close();
-    toast('Artikel tersimpan.');
+    toast(payload.status === 'published' ? 'Artikel terbit.' : 'Draf tersimpan.');
     await loadPosts(); renderAll();
     if (payload.status === 'published') location.hash = '#/a/' + res.data.slug;
   } catch (err) {
-    $('aiStatusLine').textContent = 'Gagal menyimpan: ' + (err.message || err);
+    line.textContent = 'Gagal menyimpan: ' + (err.message || err);
   } finally {
     btn.disabled = false;
   }
