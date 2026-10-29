@@ -4,6 +4,7 @@ import { SUPABASE_URL, SUPABASE_KEY, BUCKET, MAX_IMAGE_BYTES, TZ, AUTH_KEY, CONT
 import { assessPost, autoClean } from './quality.js';
 import { I18N, CATS_L, DESC_L } from './i18n.js';
 import { PAGES } from './pages.js?v=2';
+import { renderSchedule, SPEC_KEYS } from './jadwal.js?v=1';
 
 
 const CATS = { rilis: 'Rilis', spek: 'Spek', rumor: 'Rumor', jadwal: 'Jadwal' };
@@ -169,12 +170,11 @@ async function loadPosts() {
 }
 
 async function loadReleases() {
-  if (!state.isAdmin) { state.releases = []; return; }
   const { data, error } = await sb.from('blog_releases')
     .select('*')
     .order('expected_date', { ascending: true, nullsFirst: false })
     .limit(100);
-  if (error) { toast('Gagal memuat jadwal: ' + error.message); return; }
+  if (error) { if (state.isAdmin) toast('Gagal memuat jadwal: ' + error.message); state.releases = []; return; }
   state.releases = data || [];
 }
 
@@ -209,6 +209,14 @@ function cardHtml(p) {
     </div></a>`;
 }
 
+function renderScheduleView() {
+  const box = $('scheduleView');
+  const on = state.cat === 'jadwal' && !state.query.trim();
+  box.hidden = !on;
+  if (on) renderSchedule(box, state.releases, { lang: LANG, tz: TZ, esc, safeUrl, isAdmin: state.isAdmin });
+  return on;
+}
+
 function renderList() {
   const q = state.query.trim().toLowerCase();
   const list = state.posts.filter((p) =>
@@ -234,7 +242,8 @@ function renderList() {
       </div></a>` : '';
 
   $('grid').innerHTML = rest.map(cardHtml).join('');
-  $('emptyList').hidden = list.length > 0;
+  const sch = renderScheduleView();
+  $('emptyList').hidden = list.length > 0 || (sch && state.releases.length > 0);
   setNav();
   renderSide();
 }
@@ -849,6 +858,8 @@ function openReleaseDialog(rel = null) {
   $('rLabel').value = rel?.expected_label || '';
   $('rSource').value = rel?.source_url || '';
   $('rNotes').value = rel?.notes || '';
+  SPEC_KEYS.forEach((k) => { $('rs_' + k).value = (rel?.specs && rel.specs[k]) || ''; });
+  $('rSpecBox').open = !!(rel?.specs && SPEC_KEYS.some((k) => rel.specs[k]));
   $('btnDeleteRelease').hidden = !rel;
   $('relStatus').textContent = '';
   $('dlgRelease').showModal();
@@ -867,14 +878,24 @@ $('formRelease').addEventListener('submit', async (e) => {
     source_url: $('rSource').value.trim() || null,
     notes: $('rNotes').value.trim() || null
   };
-  const res = state.editingReleaseId
-    ? await sb.from('blog_releases').update(payload).eq('id', state.editingReleaseId)
-    : await sb.from('blog_releases').insert(payload);
+  const specs = {};
+  SPEC_KEYS.forEach((k) => { const v = $('rs_' + k).value.trim(); if (v) specs[k] = v; });
+  payload.specs = Object.keys(specs).length ? specs : null;
+  const save = (pl) => (state.editingReleaseId
+    ? sb.from('blog_releases').update(pl).eq('id', state.editingReleaseId)
+    : sb.from('blog_releases').insert(pl));
+  let res = await save(payload);
+  let noSpecCol = false;
+  // Kolom specs belum ada (23-blog-spek-jadwal.sql belum dijalankan): simpan tanpa spek.
+  if (res.error && /specs/.test(res.error.message || '')) {
+    const { specs: _drop, ...plain } = payload;
+    res = await save(plain); noSpecCol = !res.error && !!payload.specs;
+  }
   btn.disabled = false;
   if (res.error) { $('relStatus').textContent = 'Gagal menyimpan: ' + res.error.message; return; }
   $('dlgRelease').close();
-  toast('Jadwal tersimpan.');
-  await loadReleases(); renderReleases();
+  toast(noSpecCol ? 'Jadwal tersimpan, tapi spek belum: jalankan 23-blog-spek-jadwal.sql di Supabase.' : 'Jadwal tersimpan.');
+  await loadReleases(); renderReleases(); renderScheduleView();
 });
 
 $('btnDeleteRelease').addEventListener('click', async () => {
@@ -883,7 +904,7 @@ $('btnDeleteRelease').addEventListener('click', async () => {
   if (error) { $('relStatus').textContent = 'Gagal menghapus: ' + error.message; return; }
   $('dlgRelease').close();
   toast('Jadwal dihapus.');
-  await loadReleases(); renderReleases();
+  await loadReleases(); renderReleases(); renderScheduleView();
 });
 
 // ---------- login / logout ----------
@@ -1001,7 +1022,7 @@ document.addEventListener('click', (e) => {
   const delR = e.target.closest('[data-del-release]');
   if (delR && confirm('Hapus jadwal ini?')) {
     sb.from('blog_releases').delete().eq('id', delR.dataset.delRelease)
-      .then(({ error }) => { if (error) toast('Gagal menghapus: ' + error.message); else { toast('Jadwal dihapus.'); loadReleases().then(renderReleases); } });
+      .then(({ error }) => { if (error) toast('Gagal menghapus: ' + error.message); else { toast('Jadwal dihapus.'); loadReleases().then(() => { renderReleases(); renderScheduleView(); }); } });
   }
 });
 
