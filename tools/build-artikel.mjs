@@ -94,5 +94,5 @@ const day = (d) => new Date(d).toISOString().slice(0, 10);
 const urls = [`  <url><loc>${SITE}/</loc></url>`, `  <url><loc>${SITE}/game/</loc></url>`,
   ...posts.map((p) => `  <url><loc>${SITE}/${OUT}/${p.slug}/</loc><lastmod>${day(p.updated_at || p.published_at || p.created_at)}</lastmod></url>`)];
 await writeFile('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`);
-await writeFile('robots.txt', `User-agent: *\nAllow: /\nDisallow: /031411/\n\nSitemap: ${SITE}/sitemap.xml\n`);
+await writeFile('robots.txt', `User-agent: *\nAllow: /\nDisallow: /031411/\nDisallow: /admin/\n\nSitemap: ${SITE}/sitemap.xml\n`);
 console.log(`Selesai: ${posts.length} artikel, sitemap.xml, robots.txt`);
