@@ -1,6 +1,6 @@
 window.__blogReady = true;  // modul termuat (CDN Supabase berhasil)
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/+esm';
-import { SUPABASE_URL, SUPABASE_KEY, BUCKET, MAX_IMAGE_BYTES, TZ, AUTH_KEY, CONTACT_EMAIL, LS_LANG } from './config.js';
+import { SUPABASE_URL, SUPABASE_KEY, BUCKET, MAX_IMAGE_BYTES, TZ, AUTH_KEY, CONTACT_EMAIL, SOCIAL, SHOW_ADS, LS_LANG } from './config.js';
 import { I18N, CATS_L, DESC_L } from './i18n.js';
 import { PAGES } from './pages.js';
 
@@ -246,7 +246,7 @@ function showInfo(key) {
   if (pg) {
     html += `<p class="lead">${esc(pg.lead)}</p>`;
     if (pg.stats) html += '<div class="stats">' + pg.stats.map(([n, l]) => `<div><b>${n}</b><span>${esc(l)}</span></div>`).join('') + '</div>';
-    if (pg.mail) html += `<a class="mail-card" href="mailto:${esc(CONTACT_EMAIL)}"><small>${esc(pg.mail)}</small><strong>${esc(CONTACT_EMAIL)}</strong></a>`;
+    if (pg.mail && CONTACT_EMAIL && !/example\.com$/i.test(CONTACT_EMAIL)) html += `<a class="mail-card" href="mailto:${esc(CONTACT_EMAIL)}"><small>${esc(pg.mail)}</small><strong>${esc(CONTACT_EMAIL)}</strong></a>`;
     html += pg.s.map(([h, ps, us]) => `<h2>${h}</h2>` + (ps || []).map((x) => `<p>${x}</p>`).join('')
       + (us && us.length ? '<ul>' + us.map((x) => `<li>${x}</li>`).join('') + '</ul>' : '')).join('');
   }
@@ -764,7 +764,17 @@ document.addEventListener('click', (e) => {
 });
 
 // ---------- mulai ----------
+// Elemen yang bergantung pada config.js: iklan dan tautan sosial hanya tampil bila diisi.
+function initConfigured() {
+  const ad = $('adBox'); if (ad) ad.hidden = !SHOW_ADS;
+  const box = $('footSocial'); if (!box) return;
+  const items = [['x', 'X'], ['instagram', 'Instagram'], ['youtube', 'YouTube']]
+    .filter(([k]) => /^https:\/\//.test(SOCIAL[k] || ''));
+  box.innerHTML = items.map(([k, n]) => `<a href="${esc(SOCIAL[k])}" target="_blank" rel="noopener">${n}</a>`).join('');
+}
+
 (async function init() {
+  initConfigured();
   applyLang(true);
   await refreshAuth();
   await loadAll();

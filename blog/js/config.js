@@ -6,5 +6,8 @@ export const BUCKET = 'blog-media';
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 export const TZ = 'Asia/Jakarta';
 export const AUTH_KEY = 'smartphone-empire:supabase-auth:iyuleatpewampdjeuzrb';
-export const CONTACT_EMAIL = 'redaksi@example.com'; // GANTI dengan email redaksi Anda
+// ---- Isi bagian ini sebelum publikasi. Yang dikosongkan otomatis tidak ditampilkan. ----
+export const CONTACT_EMAIL = ''; // email redaksi, mis. 'redaksi@smartphone-empire.my.id'. Kosong = kartu email di halaman Kontak disembunyikan
+export const SOCIAL = { x: '', instagram: '', youtube: '' }; // URL akun asli, mis. 'https://x.com/namaakun'. Kosong = tautan tidak muncul di footer
+export const SHOW_ADS = false; // true bila kotak iklan 300x250 sudah dipakai sungguhan
 export const LS_LANG = 'blog-lang';
