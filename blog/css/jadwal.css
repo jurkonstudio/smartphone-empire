@@ -1,0 +1,33 @@
+/* Halaman Jadwal rilis: linimasa + tabel perbandingan spek */
+.sched { margin: 8px 0 40px; }
+.sch-chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 22px; }
+.sch-chip { border: 1px solid var(--border); background: var(--card); border-radius: 999px; padding: 6px 14px; font-size: .86rem; cursor: pointer; }
+.sch-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.sch-month { margin: 0 0 28px; }
+.sch-month > h3, .sch-past > summary { font-family: var(--serif); font-size: 1.2rem; margin: 0 0 12px; letter-spacing: -.01em; }
+.sch-past { margin-top: 8px; } .sch-past > summary { cursor: pointer; color: var(--sub); }
+.sch-list { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+.sch-card { display: flex; gap: 14px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; border-left: 4px solid var(--rumor); }
+.sch-card.st-dikonfirmasi, .sch-card.st-resmi { border-left-color: var(--ok); }
+.sch-date { flex: none; width: 56px; text-align: center; background: var(--surface); border-radius: 10px; padding: 6px 0; display: grid; align-content: center; line-height: 1.1; }
+.sch-date b { font-size: 1.45rem; font-family: var(--serif); }
+.sch-date span { font-size: .72rem; text-transform: uppercase; color: var(--sub); letter-spacing: .04em; overflow-wrap: anywhere; padding: 0 2px; }
+.sch-main { min-width: 0; display: grid; gap: 4px; flex: 1; }
+.sch-top { display: flex; gap: 8px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
+.sch-top strong { font-size: 1rem; }
+.sch-main small { color: var(--sub); }
+.sch-main p { margin: 2px 0 0; font-size: .88rem; color: var(--text); }
+.sch-foot { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; font-size: .82rem; margin-top: 4px; }
+.sch-pick { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; color: var(--sub); }
+.sched .act { font-size: .8rem; color: var(--accent); background: none; border: 0; cursor: pointer; padding: 2px 4px; }
+.sch-cmp { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin: 0 0 28px; }
+.sch-cmp-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.sch-cmp h2 { font-family: var(--serif); font-size: 1.25rem; margin: 0; }
+.sch-hint, .sch-disc, .sch-empty { color: var(--sub); font-size: .86rem; margin: 8px 0 0; }
+.sch-scroll { overflow-x: auto; margin-top: 12px; -webkit-overflow-scrolling: touch; }
+.sch-table { border-collapse: collapse; width: 100%; min-width: 420px; background: var(--card); border-radius: 12px; overflow: hidden; }
+.sch-table th, .sch-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: .88rem; vertical-align: top; }
+.sch-table thead th { font-size: .95rem; } .sch-table thead small { display: block; color: var(--sub); font-weight: 400; }
+.sch-table tbody th { color: var(--sub); font-weight: 600; width: 96px; white-space: nowrap; }
+.sch-table tr.diff td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+@media (max-width: 560px) { .sch-list { grid-template-columns: 1fr; } .sch-table tbody th { width: 76px; } }
