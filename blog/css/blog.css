@@ -306,3 +306,140 @@
   .chip { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 999px; padding: 4px 12px; font-size: .82rem; cursor: pointer; }
   .chip:hover, .chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
   .field .count { font-size: .78rem; color: var(--sub); text-align: right; }
+
+  /* ================= Perbaikan tampilan v2 (HP + desktop) ================= */
+  /* Akar masalah: ".bar{height:66px}" menimpa tinggi otomatis di HP sehingga isi header meluber. */
+  .site-header .bar { height: auto; min-height: 64px; position: relative; padding-top: 10px; padding-bottom: 10px; }
+  .site-header .menu { scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+  .menu a { scroll-snap-align: start; }
+  .tools { flex: none; }
+
+  /* Tablet & layar sempit: baris 1 = logo + alat, baris 2 = menu kategori */
+  @media (max-width: 1000px) {
+    .site-header .bar { flex-wrap: wrap; gap: 8px 14px; padding: 10px 16px 8px; }
+    .site-header .brand { order: 1; }
+    .site-header .tools { order: 2; margin-left: auto; }
+    .site-header .menu { order: 3; flex: 1 1 100%; width: 100%; margin: 0 -4px; padding: 0 4px 2px; }
+    .search input { width: 190px; }
+  }
+
+  /* HP: pencarian jadi ikon yang membuka kolom penuh saat disentuh (tanpa JS) */
+  @media (max-width: 640px) {
+    .site-header .bar { padding: 10px 14px 6px; gap: 6px 10px; }
+    .brand { font-size: 1.05rem; gap: 8px; }
+    .brand small { font-size: .78rem; }
+    .brand-mark { width: 28px; height: 28px; }
+    .tools { gap: 7px; }
+    .search { width: 36px; height: 36px; }
+    .search input { width: 36px; height: 36px; padding: 0; border-radius: 999px; cursor: pointer; color: transparent; caret-color: transparent; }
+    .search input::placeholder { color: transparent; }
+    .search svg { left: 10px; z-index: 1; }
+    .search:focus-within { position: absolute; z-index: 5; left: 14px; right: 14px; top: 10px; width: auto; height: 40px; }
+    .search:focus-within input { width: 100%; height: 40px; padding: 0 14px 0 36px; cursor: text; color: var(--text); caret-color: auto; background: var(--card); border-color: var(--accent); box-shadow: 0 8px 24px -8px rgba(0,0,0,.35); font-size: 16px; }
+    .search:focus-within input::placeholder { color: var(--sub); }
+    .lang button { padding: 4px 8px; }
+    .user-chip b { display: none; }
+    .menu a { padding: 7px 12px; font-size: .9rem; }
+    main { padding: 20px 14px 56px; }
+    .page-head { margin-bottom: 18px; padding-bottom: 14px; }
+    .page-head h1 { font-size: 1.9rem; }
+  }
+  @media (max-width: 360px) {
+    .brand small { display: none; }
+  }
+
+  /* Ticker: label tetap terlihat, daftar bisa digeser */
+  .ticker-in { padding: 7px 16px; }
+  .ticker .lbl { position: relative; z-index: 1; }
+  #tickerList { flex: 1; min-width: 0; scroll-snap-type: x proximity;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+            mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); padding-right: 28px; }
+  #tickerList a { scroll-snap-align: start; }
+
+  /* Panel admin: satu baris yang bisa digeser, tidak menumpuk */
+  .adminbar-inner { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 8px 16px; }
+  .adminbar-inner::-webkit-scrollbar { display: none; }
+  .adminbar-inner strong { flex: none; margin-right: 6px; }
+  .abtn { flex: none; white-space: nowrap; padding: 6px 13px; }
+  @media (min-width: 761px) { .adminbar-inner strong { margin-right: auto; } }
+
+  /* Halaman artikel */
+  .article h1 { font-size: clamp(1.7rem, 6.2vw, 2.7rem); line-height: 1.14; text-wrap: balance; overflow-wrap: anywhere; }
+  .article .lead { font-size: clamp(1.05rem, 3.6vw, 1.22rem); line-height: 1.6; }
+  .article .byline { font-size: .86rem; }
+  .article .content p { font-size: clamp(1.04rem, 3.4vw, 1.14rem); line-height: 1.78; overflow-wrap: break-word; }
+  .article .cover { border-radius: 14px; }
+  .back { padding: 6px 0; margin-bottom: 8px; }
+  @media (min-width: 1001px) {
+    .article { max-width: 740px; }
+    .article h1 { margin-top: 18px; }
+    .comments { max-width: 740px; }
+  }
+
+  /* Beranda: kartu lebih rapi */
+  .card .body { padding: 16px 18px 18px; }
+  .card h3 { text-wrap: balance; }
+  .featured h2 { text-wrap: balance; }
+  @media (min-width: 1001px) {
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px; }
+  }
+  @media (min-width: 1280px) { main { max-width: 1240px; } .layout { grid-template-columns: minmax(0, 1fr) 320px; } }
+  @media (hover: none) {
+    .card:hover, .featured:hover { transform: none; box-shadow: var(--shadow-sm); }
+    .card:hover .cover { transform: none; }
+  }
+  /* HP: kartu jadi daftar ringkas dengan gambar kecil di kanan */
+  @media (max-width: 560px) {
+    .grid { grid-template-columns: 1fr; gap: 12px; }
+    .card { flex-direction: row-reverse; align-items: stretch; border-radius: 14px; }
+    .card .cover { width: 108px; height: auto; min-height: 108px; aspect-ratio: auto; flex: none; }
+    .card .body { padding: 12px 14px; gap: 4px; min-width: 0; justify-content: center; }
+    .card h3 { font-size: 1.02rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .card p { -webkit-line-clamp: 2; font-size: .86rem; }
+    .featured { border-radius: 16px; margin-bottom: 22px; }
+    .featured .body { padding: 18px 16px 20px; gap: 8px; }
+    .featured h2 { font-size: 1.45rem; }
+    .section-h { margin-top: 28px; font-size: 1.15rem; }
+    aside { gap: 14px; }
+    .widget { padding: 14px 16px; }
+  }
+
+  /* Dialog: hampir layar penuh di HP, input 16px agar tidak memicu zoom iOS */
+  @media (max-width: 640px) {
+    dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); border-radius: 16px; }
+    .dlg-head { padding: 14px 16px; position: sticky; top: 0; background: var(--card); z-index: 1; border-radius: 16px 16px 0 0; }
+    .dlg-body { padding: 16px; max-height: calc(100dvh - 82px); }
+    .field input, .field select, .field textarea, .cform textarea { font-size: 16px; }
+    .field textarea.paste { min-height: 220px; font-size: 14px; }
+    .field textarea { min-height: 140px; }
+    .dlg-foot .btn { flex: 1; }
+    #toast { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+  }
+
+  /* Footer */
+  @media (max-width: 760px) { .foot { padding: 32px 16px 24px; gap: 22px; } .copy { padding: 14px 16px 24px; } }
+  @media (min-width: 761px) and (max-width: 1000px) { .foot { grid-template-columns: 1fr 1fr; } .foot > div:first-child { grid-column: 1 / -1; } }
+
+  /* Logo boleh menyusut (dipotong …) agar logo + alat selalu satu baris di HP */
+  @media (max-width: 640px) {
+    .site-header .brand { flex: 1 1 0; min-width: 0; }
+    .site-header .brand > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .site-header .brand small { display: none; }
+    .site-header .tools { flex: none; }
+  }
+  @media (max-width: 400px) {
+    .brand { font-size: .98rem; }
+    .tools { gap: 5px; }
+    .icon-btn, .cta-game { width: 34px; height: 34px; }
+    .search, .search input { width: 34px; height: 34px; }
+  }
+  @media (max-width: 640px) {
+    .site-header .brand { font-size: .96rem; gap: 7px; letter-spacing: -.015em; }
+    .site-header .brand-mark { width: 24px; height: 24px; border-radius: 7px; }
+  }
+  @media (max-width: 370px) { .site-header .brand { font-size: .88rem; } }
+
+  /* Samakan lebar header, ticker, panel admin, isi, dan footer di layar lebar */
+  @media (min-width: 1280px) {
+    .bar, .ticker-in, .adminbar-inner, .foot, .copy { max-width: 1240px; }
+  }
