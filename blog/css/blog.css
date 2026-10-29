@@ -446,3 +446,50 @@
 
   /* Logo blog (blog/img/logo.svg) menggantikan kotak gradien */
   .brand-mark { background: #0a84ff url("../img/logo.svg") center / cover no-repeat; box-shadow: 0 0 0 1px var(--border); }
+
+  /* ================= Header v3: rapi di HP =================
+     Baris 1: logo penuh + bahasa, tema, main game, keluar (ikon).
+     Baris 2: menu kategori yang bisa digeser + ikon cari.
+     .tools dibuat "display: contents" supaya tiap tombolnya bisa ditata langsung. */
+  .user-chip .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  .user-chip .btn svg { display: none; width: 16px; height: 16px; flex: none; }
+  .user-chip .btn:hover { border-color: var(--danger); color: var(--danger); }
+
+  @media (max-width: 640px) {
+    .site-header .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; padding: 8px 14px 6px; min-height: 0; }
+    .site-header .tools { display: contents; }
+
+    /* Baris 1 */
+    .site-header .brand { order: 1; flex: 1 1 0; min-width: 0; margin-right: 4px; font-size: .98rem; }
+    .site-header .brand-mark { width: 28px; height: 28px; border-radius: 8px; }
+    .site-header .lang { order: 2; padding: 2px; }
+    .site-header .lang button { padding: 4px 8px; font-size: .7rem; min-width: 28px; }
+    .site-header #themeToggle { order: 3; }
+    .site-header .cta-game { order: 4; }
+    .site-header .user-chip { order: 5; }
+    .site-header .icon-btn, .site-header .cta-game, .site-header .user-chip .btn { width: 34px; height: 34px; padding: 0; }
+    .user-chip .btn { border-radius: 999px; background: var(--surface); }
+    .user-chip .btn svg { display: block; }
+    .user-chip .btn span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+    /* Pemisah baris (item kosong selebar penuh) */
+    .site-header .bar::before { content: ""; order: 6; flex: 0 0 100%; height: 0; }
+
+    /* Baris 2 */
+    .site-header .menu { order: 7; flex: 1 1 0; min-width: 0; width: auto; margin: 6px 0 0; padding: 0 20px 0 0; gap: 2px;
+      -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+              mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent); }
+    .site-header .menu a { padding: 7px 13px; font-size: .9rem; }
+    .site-header .search { order: 8; margin: 6px 0 0 4px; width: 34px; height: 34px; }
+    .site-header .search input { width: 34px; height: 34px; }
+    .site-header .search:focus-within { margin: 0; width: auto; height: 42px; left: 14px; right: 14px; top: 8px; }
+    .site-header .search:focus-within input { height: 42px; }
+  }
+  @media (max-width: 380px) {
+    .site-header .bar { gap: 0 5px; padding-left: 12px; padding-right: 12px; }
+    .site-header .brand { font-size: .86rem; gap: 6px; letter-spacing: -.025em; margin-right: 0; }
+    .site-header .brand-mark { width: 24px; height: 24px; }
+    .site-header .lang button { padding: 4px 5px; min-width: 22px; font-size: .66rem; }
+    .site-header .icon-btn, .site-header .cta-game, .site-header .user-chip .btn { width: 30px; height: 30px; }
+    .site-header .search, .site-header .search input { width: 32px; height: 32px; }
+  }
