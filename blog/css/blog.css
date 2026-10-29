@@ -499,3 +499,4 @@
   .en-box { border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin: 4px 0 14px; }
   .en-box summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
   .en-box[open] summary { margin-bottom: 8px; }
+  .en-box .btn { margin: 0 0 12px; }
