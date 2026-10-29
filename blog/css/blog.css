@@ -443,3 +443,6 @@
   @media (min-width: 1280px) {
     .bar, .ticker-in, .adminbar-inner, .foot, .copy { max-width: 1240px; }
   }
+
+  /* Logo blog (blog/img/logo.svg) menggantikan kotak gradien */
+  .brand-mark { background: #0a84ff url("../img/logo.svg") center / cover no-repeat; box-shadow: 0 0 0 1px var(--border); }
