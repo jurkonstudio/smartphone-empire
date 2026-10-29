@@ -178,7 +178,7 @@ function setNav() {
 function imgOrPlaceholder(p, cls) {
   const src = safeUrl(p.cover_url);
   return src
-    ? `<img class="${cls}" src="${esc(src)}" alt="" loading="lazy">`
+    ? `<img class="${cls}" src="${esc(src)}" alt="" width="640" height="400" loading="lazy" decoding="async">`
     : `<div class="${cls} cover-ph" aria-hidden="true"></div>`;
 }
 
@@ -377,7 +377,7 @@ function showPost(slug) {
       <h1>${esc(tx(p, 'title'))}</h1>
       ${tx(p, 'excerpt') ? `<p class="lead">${esc(tx(p, 'excerpt'))}</p>` : ''}
       <div class="meta byline"><span>${t('by')} ${esc(p.author || 'admin')}</span><span>·</span><span>${esc(fmtDate(postDate(p)))}</span></div>
-      ${safeUrl(p.cover_url) ? `<img class="cover" src="${esc(safeUrl(p.cover_url))}" alt="" style="margin-top:24px">` : ''}
+      ${safeUrl(p.cover_url) ? `<img class="cover" src="${esc(safeUrl(p.cover_url))}" alt="" width="1200" height="675" decoding="async" style="margin-top:24px">` : ''}
       <div class="content">${paragraphs}</div>
       ${src ? `<p class="source">${t('source')} <a href="${esc(src)}" target="_blank" rel="noopener nofollow">${esc(src)}</a></p>` : ''}
       ${state.isAdmin ? `<div class="actions"><button class="btn" type="button" data-edit-post="${esc(p.id)}">Ubah artikel</button></div>` : ''}`;
