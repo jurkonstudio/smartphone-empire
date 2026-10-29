@@ -1,0 +1,76 @@
+/* blog-polish.css — dimuat SETELAH blog.css. Menyempurnakan tampilan tanpa mengubah struktur. */
+:root { --radius: 12px; --c-rilis: #0b63e5; --c-spek: #6b4fd8; --c-rumor: var(--rumor); --c-jadwal: var(--ok); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --c-rilis: #4aa3ff; --c-spek: #a99bff; } }
+:root[data-theme="dark"] { --c-rilis: #4aa3ff; --c-spek: #a99bff; }
+
+/* Lewati ke konten */
+.skip { position: absolute; left: 12px; top: -60px; z-index: 60; background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; }
+.skip:focus { top: 10px; }
+
+/* Label kategori: titik warna + teks biasa (warna = informasi kategori) */
+.tag.t-rilis, .tag.t-spek, .tag.t-rumor, .tag.t-jadwal { background: none; padding: 0; border-radius: 0; text-transform: none; letter-spacing: 0; font-size: .8rem; font-weight: 700; color: var(--cat); display: inline-flex; align-items: center; gap: 6px; }
+.tag.t-rilis::before, .tag.t-spek::before, .tag.t-rumor::before, .tag.t-jadwal::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--cat); }
+.tag.t-rilis { --cat: var(--c-rilis); } .tag.t-spek { --cat: var(--c-spek); }
+.tag.t-rumor { --cat: var(--c-rumor); } .tag.t-jadwal { --cat: var(--c-jadwal); }
+
+/* Kartu: tanpa angkat/zoom saat hover; judul yang bereaksi */
+.card, .featured { box-shadow: none; }
+.card:hover, .featured:hover { transform: none; box-shadow: none; border-color: color-mix(in srgb, var(--text) 35%, var(--border)); }
+.card:hover .cover { transform: none; }
+.card h3, .featured h2 { text-wrap: balance; }
+.card h3 { font-size: 1.1rem; font-weight: 700; }
+.card:hover h3, .featured:hover h2 { text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+.card p { -webkit-line-clamp: 2; }
+.featured { border-radius: 16px; }
+.featured .body { gap: 12px; }
+.featured h2 { font-weight: 800; }
+
+/* Judul kolom: huruf biasa, bukan kapital berjarak */
+.widget h3, .foot h4 { text-transform: none; letter-spacing: 0; font-family: var(--serif); font-size: 1rem; color: var(--text); }
+.toplist b { min-width: 1.1em; }
+
+/* Menu: area sentuh nyaman */
+.menu a { display: inline-flex; align-items: center; min-height: 40px; }
+
+/* Skeleton saat daftar dimuat (diganti otomatis oleh main.js) */
+.sk .cover { background: var(--surface); aspect-ratio: 16 / 10; width: 100%; }
+.sk .ln { height: 12px; border-radius: 6px; background: var(--surface); margin-top: 10px; }
+.sk .ln.s { width: 60%; }
+.sk { animation: skp 1.3s ease-in-out infinite; pointer-events: none; }
+@keyframes skp { 50% { opacity: .55; } }
+
+/* Daftar tautan arsip (tautan asli untuk pembaca dan mesin pencari) */
+.archive { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); }
+.archive ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px 28px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.archive li a { display: block; padding: 8px 0; color: var(--sub); font-size: .92rem; line-height: 1.4; border-bottom: 1px solid var(--border); }
+.archive li a:hover { color: var(--text); }
+.archive:not(:has(li)) { display: none; }
+
+/* Halaman artikel */
+.article h1, .article .lead { text-wrap: balance; }
+.article .content p { text-wrap: pretty; font-size: 1.12rem; line-height: 1.78; }
+.article .byline { gap: 6px 14px; }
+.crumbs { display: flex; flex-wrap: wrap; gap: 6px; font-size: .84rem; color: var(--sub); max-width: 720px; margin: 0 auto 18px; }
+.crumbs a { color: var(--sub); } .crumbs a:hover { color: var(--text); }
+.share { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--border); font-size: .9rem; color: var(--sub); }
+.share .btn { text-decoration: none; color: var(--text); }
+.related { max-width: 720px; margin: 44px auto 0; padding-top: 20px; border-top: 1px solid var(--border); display: block; position: static; }
+.related h2 { font-family: var(--serif); font-size: 1.25rem; margin: 0 0 6px; }
+.related a { display: block; padding: 12px 0; border-bottom: 1px solid var(--border); color: var(--text); font-family: var(--serif); font-size: 1.05rem; line-height: 1.35; }
+.related a:hover { color: var(--accent); }
+.related a small { display: block; margin-top: 3px; color: var(--sub); font-family: var(--sans); font-size: .8rem; }
+.flinks { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.flinks a { color: var(--sub); }
+
+/* HP: daftar berita ringkas (thumbnail kiri, judul kanan) agar lebih banyak berita terlihat */
+@media (max-width: 560px) {
+  #grid, #specList { grid-template-columns: 1fr; gap: 0; }
+  #grid .card, #specList .card { flex-direction: row; align-items: flex-start; gap: 14px; padding: 14px 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: none; }
+  #grid .card .cover, #specList .card .cover { width: 108px; flex: none; aspect-ratio: 1; border-radius: 10px; object-fit: cover; }
+  #grid .card .body, #specList .card .body { padding: 0; gap: 4px; }
+  #grid .card h3, #specList .card h3 { font-size: 1rem; margin: 0; }
+  #grid .card p, #specList .card p { font-size: .85rem; -webkit-line-clamp: 2; }
+  #grid .sk .cover { width: 108px; }
+  .sk { display: flex; flex-direction: row; gap: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
