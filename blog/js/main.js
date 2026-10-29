@@ -199,7 +199,7 @@ function imgOrPlaceholder(p, cls) {
 }
 
 function cardHtml(p) {
-  return `<a class="card" href="#/a/${esc(p.slug)}">${imgOrPlaceholder(p, 'cover')}
+  return `<a class="card" href="/baca/${esc(p.slug)}/">${imgOrPlaceholder(p, 'cover')}
     <div class="body">
       <div class="meta"><span class="tag t-${esc(p.category)}">${esc(CATS[p.category])}</span>
         ${p.status === 'draft' ? '<span class="tag draft">Draf</span>' : ''}
@@ -231,7 +231,7 @@ function renderList() {
     : null;
   const rest = list.filter((p) => p !== featured);
 
-  $('featuredWrap').innerHTML = featured ? `<a class="featured" href="#/a/${esc(featured.slug)}">
+  $('featuredWrap').innerHTML = featured ? `<a class="featured" href="/baca/${esc(featured.slug)}/">
       ${imgOrPlaceholder(featured, 'cover')}
       <div class="body">
         <div class="meta"><span class="tag t-${esc(featured.category)}">${esc(CATS[featured.category])}</span>
@@ -251,9 +251,9 @@ function renderList() {
 function renderSide() {
   const pub = state.posts.filter((p) => p.status === 'published');
   $('ticker').hidden = !pub.length;
-  $('tickerList').innerHTML = pub.slice(0, 6).map((p) => `<a href="#/a/${esc(p.slug)}">${esc(tx(p, 'title'))}</a>`).join('');
+  $('tickerList').innerHTML = pub.slice(0, 6).map((p) => `<a href="/baca/${esc(p.slug)}/">${esc(tx(p, 'title'))}</a>`).join('');
   $('sideLatest').innerHTML = pub.slice(0, 5).map((p, i) =>
-    `<li><a href="#/a/${esc(p.slug)}"><b>${i + 1}</b><span>${esc(tx(p, 'title'))}</span></a></li>`).join('') || '<li class="muted">Belum ada artikel.</li>';
+    `<li><a href="/baca/${esc(p.slug)}/"><b>${i + 1}</b><span>${esc(tx(p, 'title'))}</span></a></li>`).join('') || '<li class="muted">Belum ada artikel.</li>';
   const spek = pub.filter((p) => p.category === 'spek').slice(0, 3);
   const show = spek.length && state.cat === 'semua' && !state.query.trim();
   $('specPanel').hidden = !show;
@@ -306,7 +306,7 @@ function renderComments() {
 function showInfo(key) {
   const pg = PAGES[LANG][key];
   const nav = '<nav class="subnav">' + Object.keys(PAGES[LANG]).map((k) =>
-    `<a href="#/i/${k}"${k === key ? ' class="on"' : ''}>${esc(PAGES[LANG][k].t)}</a>`).join('') + '</nav>';
+    `<a href="/i/${k}/"${k === key ? ' class="on"' : ''}>${esc(PAGES[LANG][k].t)}</a>`).join('') + '</nav>';
   const title = pg ? pg.t : t('nopage');
   let html = nav + `<h1>${esc(title)}</h1>`;
   if (pg) {
@@ -447,8 +447,8 @@ function ensureTipDialogs() {
 }
 function openTip() {
   ensureTipDialogs();
-  const m = /^#\/a\/(.+)$/.exec(location.hash);
-  const slug = m ? decodeURIComponent(m[1]) : '';
+  const cur = currentRoute();
+  const slug = cur.t === 'a' ? cur.v : '';
   const post = slug ? state.posts.find((x) => x.slug === slug) : null;
   $('formTip').dataset.slug = post ? post.slug : '';
   $('formTip').innerHTML = `
@@ -513,7 +513,7 @@ async function openInbox() {
     <div class="audit-row${r.status === 'baru' ? ' q-low' : ''}">
       <div class="audit-top"><b>${r.kind === 'koreksi' ? 'Koreksi' : 'Tips'}</b><small>${esc(fmtDate(r.created_at))}${r.status === 'baru' ? ' · baru' : ' · selesai'}</small></div>
       <p style="white-space:pre-wrap;margin:6px 0">${esc(r.message)}</p>
-      ${r.article_slug ? `<small>Artikel: <a href="#/a/${esc(r.article_slug)}">${esc(r.article_slug)}</a></small><br>` : ''}
+      ${r.article_slug ? `<small>Artikel: <a href="/baca/${esc(r.article_slug)}/">${esc(r.article_slug)}</a></small><br>` : ''}
       ${r.contact ? `<small>Kontak: ${esc(r.contact)}</small><br>` : ''}
       <button class="btn" type="button" data-fb-done="${esc(r.id)}" data-st="${r.status === 'baru' ? 'selesai' : 'baru'}">${r.status === 'baru' ? 'Tandai selesai' : 'Tandai baru'}</button>
       <button class="btn danger" type="button" data-fb-del="${esc(r.id)}">Hapus</button>
@@ -542,14 +542,24 @@ function track(slug, path) {
   } catch (e) {}
 }
 
-// Rute: #/ (beranda), #/k/<kategori>, #/a/<slug>
+// Rute (tanpa tanda #): / (beranda), /k/<kategori>/, /i/<halaman>/, /baca/<slug>/
+function currentRoute() {
+  const p = location.pathname;
+  let m;
+  if ((m = /^\/i\/(\w+)\/?$/.exec(p))) return { t: 'i', v: m[1] };
+  if ((m = /^\/baca\/([^/]+)\/?$/.exec(p))) return { t: 'a', v: decodeURIComponent(m[1]) };
+  if ((m = /^\/k\/(\w+)\/?$/.exec(p))) return { t: 'k', v: m[1] };
+  return { t: 'home', v: '' };
+}
+function go(path) {
+  if (location.pathname + location.search !== path) history.pushState(null, '', path);
+  route();
+}
 function route(noTrack) {
-  const inf = /^#\/i\/(\w+)$/.exec(location.hash);
-  if (inf) { showInfo(inf[1]); return; }
-  const art = /^#\/a\/(.+)$/.exec(location.hash);
-  if (art) { showPost(decodeURIComponent(art[1])); if (noTrack !== true) track(decodeURIComponent(art[1]), '/a/' + decodeURIComponent(art[1])); return; }
-  const cat = /^#\/k\/(\w+)$/.exec(location.hash);
-  const next = cat && CATS[cat[1]] ? cat[1] : 'semua';
+  const r = currentRoute();
+  if (r.t === 'i') { showInfo(r.v); return; }
+  if (r.t === 'a') { showPost(r.v); if (noTrack !== true) track(r.v, '/a/' + r.v); return; }
+  const next = r.t === 'k' && CATS[r.v] ? r.v : 'semua';
   if (next !== state.cat) { state.cat = next; renderList(); }
   showList();
   setNav();
@@ -559,7 +569,7 @@ function route(noTrack) {
 // ---------- pencarian ----------
 $('search').addEventListener('input', (e) => {
   state.query = e.target.value;
-  if ($('viewList').hidden) location.hash = '#/';  // mengetik di halaman artikel kembali ke daftar
+  if ($('viewList').hidden) go('/');  // mengetik di halaman artikel kembali ke daftar
   renderList();
 });
 
@@ -644,7 +654,7 @@ $('formPost').addEventListener('submit', async (e) => {
     toast('Artikel tersimpan.');
     if (!payload.title_en && payload.body) { toast('Menerjemahkan ke English…'); await autoTranslatePost(res.data.id, payload); }
     await loadPosts(); renderAll();
-    if (payload.status === 'published') location.hash = '#/a/' + res.data.slug;
+    if (payload.status === 'published') go('/baca/' + res.data.slug + '/');
   } catch (err) {
     const dup = /duplicate key|unique/i.test(err.message || '');
     $('postStatus').textContent = dup ? 'Slug sudah dipakai artikel lain. Ganti slug-nya.' : 'Gagal menyimpan: ' + (err.message || err);
@@ -660,7 +670,7 @@ $('btnDeletePost').addEventListener('click', async () => {
   $('dlgPost').close();
   toast('Artikel dihapus.');
   await loadPosts(); renderAll();
-  location.hash = '#/';
+  go('/');
 });
 
 // ---------- tempel artikel dari AI ----------
@@ -839,7 +849,7 @@ $('formPaste').addEventListener('submit', async (e) => {
     toast(payload.status === 'published' ? 'Artikel terbit.' : 'Draf tersimpan.');
     toast('Menerjemahkan ke English…'); await autoTranslatePost(res.data.id, payload);
     await loadPosts(); renderAll();
-    if (payload.status === 'published') location.hash = '#/a/' + res.data.slug;
+    if (payload.status === 'published') go('/baca/' + res.data.slug + '/');
   } catch (err) {
     line.textContent = 'Gagal menyimpan: ' + (err.message || err);
   } finally {
@@ -942,7 +952,7 @@ document.querySelectorAll('#formLogin [data-mode]').forEach((b) => b.addEventLis
 $('formLogin').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = $('loginEmail').value.trim(), pass = $('loginPass').value, st = $('loginStatus'), btn = $('btnDoLogin');
-  const back = location.href.split('#')[0];
+  const back = location.origin + '/';
   btn.disabled = true; st.textContent = 'Memeriksa…';
   try {
     if (authMode === 'reset') {
@@ -1012,7 +1022,16 @@ $('btnNewPost').addEventListener('click', () => openPostDialog());
 $('btnPaste').addEventListener('click', () => openPasteDialog());
 $('btnNewRelease').addEventListener('click', () => openReleaseDialog());
 document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', (e) => e.target.closest('dialog').close()));
-window.addEventListener('hashchange', () => route());
+window.addEventListener('popstate', () => route());
+// Tautan internal (/, /k/, /i/, /baca/) berpindah tanpa muat ulang halaman
+document.addEventListener('click', (e) => {
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  const a = e.target.closest('a[href]');
+  if (!a || a.target === '_blank' || a.origin !== location.origin) return;
+  if (!/^\/(?:$|k\/|i\/|baca\/)/.test(a.pathname)) return;
+  e.preventDefault();
+  go(a.pathname + a.search);
+});
 
 document.addEventListener('click', (e) => {
   const edP = e.target.closest('[data-edit-post]');

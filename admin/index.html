@@ -124,7 +124,7 @@ function render(d) {
   $('chart').innerHTML = chart(d.daily);
   $('dev').innerHTML = list(d.devices.map((x) => ({ name: ({ mobile: 'Ponsel', tablet: 'Tablet', desktop: 'Desktop' })[x.name] || x.name, n: x.n })), 'n');
   $('refs').innerHTML = list(d.refs, 'n');
-  $('posts').innerHTML = d.posts.length ? d.posts.map((r) => `<div class="row"><a class="nm" href="/#/a/${encodeURIComponent(r.slug)}" target="_blank" rel="noopener">${esc(r.title)}</a><span class="bar"><i style="width:${(r.views / Math.max(d.posts[0].views, 1)) * 100}%"></i></span><b title="pengunjung unik: ${r.visitors}">${nf(r.views)}</b></div>`).join('') : '<div class="empty">Belum ada artikel terbit.</div>';
+  $('posts').innerHTML = d.posts.length ? d.posts.map((r) => `<div class="row"><a class="nm" href="/baca/${encodeURIComponent(r.slug)}/" target="_blank" rel="noopener">${esc(r.title)}</a><span class="bar"><i style="width:${(r.views / Math.max(d.posts[0].views, 1)) * 100}%"></i></span><b title="pengunjung unik: ${r.visitors}">${nf(r.views)}</b></div>`).join('') : '<div class="empty">Belum ada artikel terbit.</div>';
 }
 $('f').addEventListener('submit', async (e) => {
   e.preventDefault(); $('lm').textContent = 'Memeriksa…';

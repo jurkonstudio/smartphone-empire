@@ -16,7 +16,16 @@
 <meta property="og:image" content="https://smartphone-empire.my.id/game/assets/img/landing/pasar.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Smartphone Empire Berita","url":"https://smartphone-empire.my.id/","inLanguage":["id","en"],"publisher":{"@type":"Organization","name":"Jurkon Studio","logo":{"@type":"ImageObject","url":"https://smartphone-empire.my.id/blog/img/logo.svg"}}}</script>
-<link rel="icon" href="game/assets/icon/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/game/assets/icon/favicon.svg" type="image/svg+xml">
+<script>
+  // Tautan lama (#/a/..., #/k/..., #/i/...) dan arahan dari 404.html diubah menjadi alamat bersih.
+  (function () {
+    var l = location, m, r = new URLSearchParams(l.search).get('r');
+    if (r && r.charAt(0) === '/' && r.charAt(1) !== '/') { history.replaceState(null, '', r); return; }
+    if ((m = /^#\/(a|k|i)\/(.+)$/.exec(l.hash))) history.replaceState(null, '', (m[1] === 'a' ? '/baca/' : '/' + m[1] + '/') + m[2].replace(/\/$/, '') + '/');
+    else if (l.hash === '#/') history.replaceState(null, '', '/');
+  })();
+</script>
 <script>
   // Terapkan tema sebelum halaman tampil agar tidak berkedip.
   (function () {
@@ -26,26 +35,26 @@
     } catch (e) {}
   })();
 </script>
-<link rel="stylesheet" href="blog/css/blog.css?v=10">
-<link rel="stylesheet" href="blog/css/adminbar.css?v=1">
-<link rel="stylesheet" href="blog/css/blog-polish.css?v=2">
-<link rel="stylesheet" href="blog/css/jadwal.css?v=1">
+<link rel="stylesheet" href="/blog/css/blog.css?v=10">
+<link rel="stylesheet" href="/blog/css/adminbar.css?v=1">
+<link rel="stylesheet" href="/blog/css/blog-polish.css?v=2">
+<link rel="stylesheet" href="/blog/css/jadwal.css?v=1">
 </head>
 <body>
 <a class="skip" href="#main">Lewati ke konten</a>
 
 <header class="site-header">
   <div class="bar">
-    <a class="brand" id="brand" href="#/" aria-label="Smartphone Empire Berita">
+    <a class="brand" id="brand" href="/" aria-label="Smartphone Empire Berita">
       <span class="brand-mark" aria-hidden="true"></span>
       <span>Smartphone Empire</span>
     </a>
     <nav class="menu" id="menu" aria-label="Kategori">
-      <a href="#/" data-nav="semua" data-i18n="nav_home">Beranda</a>
-      <a href="#/k/rilis" data-nav="rilis" data-i18n="nav_rilis">Rilis</a>
-      <a href="#/k/spek" data-nav="spek" data-i18n="nav_spek">Spek</a>
-      <a href="#/k/rumor" data-nav="rumor" data-i18n="nav_rumor">Rumor</a>
-      <a href="#/k/jadwal" data-nav="jadwal" data-i18n="nav_jadwal">Jadwal</a>
+      <a href="/" data-nav="semua" data-i18n="nav_home">Beranda</a>
+      <a href="/k/rilis/" data-nav="rilis" data-i18n="nav_rilis">Rilis</a>
+      <a href="/k/spek/" data-nav="spek" data-i18n="nav_spek">Spek</a>
+      <a href="/k/rumor/" data-nav="rumor" data-i18n="nav_rumor">Rumor</a>
+      <a href="/k/jadwal/" data-nav="jadwal" data-i18n="nav_jadwal">Jadwal</a>
     </nav>
     <div class="tools">
       <label class="search">
@@ -57,7 +66,7 @@
         <svg id="iconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
         <svg id="iconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
       </button>
-      <a class="cta-game" href="game/"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span data-i18n="nav_game">Main game</span></a>
+      <a class="cta-game" href="/game/"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span data-i18n="nav_game">Main game</span></a>
       <div class="user-chip" id="userChip" hidden><b id="userName"></b><button class="btn" id="btnLogout2" type="button" aria-label="Keluar" title="Keluar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg><span>Keluar</span></button></div>
     </div>
   </div>
@@ -103,11 +112,11 @@
         <section class="widget"><h3 data-i18n="latest">Berita terbaru</h3><ol class="toplist" id="sideLatest"></ol></section>
         <section class="widget" id="pollBox" hidden><h3 data-i18n="poll">Jajak pendapat</h3><div id="pollBody"></div></section>
         <section class="game-card" aria-labelledby="gcTitle">
-          <a class="shot" href="game/" tabindex="-1" aria-hidden="true"><img src="game/assets/img/landing/pasar.jpg" alt="" width="540" height="176" loading="lazy"></a>
+          <a class="shot" href="/game/" tabindex="-1" aria-hidden="true"><img src="/game/assets/img/landing/pasar.jpg" alt="" width="540" height="176" loading="lazy"></a>
           <div class="body">
             <h3 id="gcTitle" data-i18n="gc_title">Pimpin perusahaan ponselmu sendiri</h3>
             <p data-i18n="gc_body">Mulai 1 Januari 2000, rancang ponsel pertamamu, lalu bersaing dengan Nokia, Apple, dan Samsung sampai era lipat dan AI.</p>
-            <a class="go" href="game/" data-i18n="gc_cta">Mainkan gratis</a>
+            <a class="go" href="/game/" data-i18n="gc_cta">Mainkan gratis</a>
             <p class="fine" data-i18n="gc_fine">Gratis, langsung di browser, tanpa instal. Dibuat oleh Jurkon Studio, penerbit blog ini.</p>
           </div>
         </section>
@@ -131,7 +140,7 @@
 
   <!-- ====== ARTIKEL ====== -->
   <section id="viewPost" hidden>
-    <a class="back" href="#/" data-i18n="back">← Kembali</a>
+    <a class="back" href="/" data-i18n="back">← Kembali</a>
     <article class="article" id="postArticle"></article>
     <section class="comments" id="comments"></section>
   </section>
@@ -145,24 +154,24 @@
     </div>
     <div>
       <h4 data-i18n="foot_cat">Kategori</h4>
-      <a href="#/k/rilis" data-i18n="nav_rilis">Rilis</a>
-      <a href="#/k/spek" data-i18n="nav_spek">Spek</a>
-      <a href="#/k/rumor" data-i18n="nav_rumor">Rumor</a>
-      <a href="#/k/jadwal" data-i18n="nav_jadwal">Jadwal</a>
+      <a href="/k/rilis/" data-i18n="nav_rilis">Rilis</a>
+      <a href="/k/spek/" data-i18n="nav_spek">Spek</a>
+      <a href="/k/rumor/" data-i18n="nav_rumor">Rumor</a>
+      <a href="/k/jadwal/" data-i18n="nav_jadwal">Jadwal</a>
     </div>
     <div>
       <h4 data-i18n="foot_info">Informasi</h4>
-      <a href="#/i/tentang" data-i18n="f_tentang">Tentang Kami</a>
-      <a href="#/i/redaksi" data-i18n="f_redaksi">Redaksi</a>
-      <a href="#/i/etik" data-i18n="f_etik">Kode Etik Jurnalistik</a>
-      <a href="#/i/siber" data-i18n="f_siber">Pedoman Media Siber</a>
-      <a href="#/i/privasi" data-i18n="f_privasi">Kebijakan Privasi</a>
-      <a href="#/i/kontak" data-i18n="f_kontak">Kontak</a>
+      <a href="/i/tentang/" data-i18n="f_tentang">Tentang Kami</a>
+      <a href="/i/redaksi/" data-i18n="f_redaksi">Redaksi</a>
+      <a href="/i/etik/" data-i18n="f_etik">Kode Etik Jurnalistik</a>
+      <a href="/i/siber/" data-i18n="f_siber">Pedoman Media Siber</a>
+      <a href="/i/privasi/" data-i18n="f_privasi">Kebijakan Privasi</a>
+      <a href="/i/kontak/" data-i18n="f_kontak">Kontak</a>
     </div>
     <div>
       <h4 data-i18n="foot_more">Lainnya</h4>
-      <a href="game/" data-i18n="f_game">Main game</a>
-      <a href="#/i/kontak" data-i18n="f_tip">Kirim koreksi atau tips</a>
+      <a href="/game/" data-i18n="f_game">Main game</a>
+      <a href="/i/kontak/" data-i18n="f_tip">Kirim koreksi atau tips</a>
       <span id="footSocial"></span>
     </div>
   </div>
@@ -316,7 +325,7 @@
 
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="blog/js/admin-tap.js?v=1"></script>
-<script type="module" src="blog/js/main.js?v=13"></script>
+<script src="/blog/js/admin-tap.js?v=1"></script>
+<script type="module" src="/blog/js/main.js?v=14"></script>
 </body>
 </html>

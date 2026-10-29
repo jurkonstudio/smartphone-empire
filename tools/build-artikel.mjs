@@ -9,7 +9,7 @@ const SITE = 'https://smartphone-empire.my.id';
 const OUT = 'a';
 const KOUT = 'k';
 let KATEGORI_ADA = new Set(); // kategori yang punya halaman statis /k/<kat>/ (diisi setelah artikel dimuat)
-const catHref = (c) => (KATEGORI_ADA.has(c) ? `/${KOUT}/${c}/` : `/#/k/${c}`);
+const catHref = (c) => (KATEGORI_ADA.has(c) ? `/${KOUT}/${c}/` : `/${KOUT}/${c}/`);
 const menuHtml = () => `<a href="/">Beranda</a>${Object.entries(CATS).map(([k, v]) => `<a href="${catHref(k)}">${v}</a>`).join('')}`;
 const cfg = await readFile('blog/js/config.js', 'utf8');
 const pick = (k) => (cfg.match(new RegExp(`export const ${k}\\s*=\\s*'([^']*)'`)) || [])[1] || '';
@@ -35,7 +35,7 @@ const siteHeader = () => `<header class="site-header"><div class="bar">
   <nav class="menu" aria-label="Kategori">${menuHtml()}</nav>
   <div class="tools"><button class="icon-btn" id="themeToggle" type="button" aria-label="Ganti tema terang/gelap" title="Ganti tema"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button><a class="cta-game" href="/game/"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span>Main game</span></a></div>
 </div></header>`;
-const siteFooter = () => `<footer class="site-footer"><div class="copy"><span>© ${new Date().getFullYear()} Jurkon Studio</span><span class="flinks"><a href="/#/i/tentang">Tentang Kami</a><a href="/#/i/redaksi">Redaksi</a><a href="/#/i/etik">Kode Etik</a><a href="/#/i/privasi">Privasi</a><a href="/#/i/kontak">Kontak</a></span></div></footer>`;
+const siteFooter = () => `<footer class="site-footer"><div class="copy"><span>© ${new Date().getFullYear()} Jurkon Studio</span><span class="flinks"><a href="/i/tentang/">Tentang Kami</a><a href="/i/redaksi/">Redaksi</a><a href="/i/etik/">Kode Etik</a><a href="/i/privasi/">Privasi</a><a href="/i/kontak/">Kontak</a></span></div></footer>`;
 const PAGE_JS = `<script>(function(){var b=document.getElementById('themeToggle');if(b)b.addEventListener('click',function(){var r=document.documentElement,d=r.getAttribute('data-theme')?r.getAttribute('data-theme')==='dark':matchMedia('(prefers-color-scheme: dark)').matches,n=d?'light':'dark';r.setAttribute('data-theme',n);try{localStorage.setItem('blog-theme',n)}catch(e){}});var c=document.getElementById('copyLink');if(c)c.addEventListener('click',function(){var u=c.dataset.url,t=c.textContent;function ok(){c.textContent='Tautan disalin';setTimeout(function(){c.textContent=t},1800)}if(navigator.clipboard)navigator.clipboard.writeText(u).then(ok,function(){prompt('Salin tautan:',u)});else prompt('Salin tautan:',u)})})();</script>`;
 
 function page(p, all = []) {
@@ -53,7 +53,7 @@ function page(p, all = []) {
   const cat = CATS[p.category] || p.category;
   const crumbLd = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
     { '@type': 'ListItem', position: 1, name: 'Beranda', item: `${SITE}/` },
-    { '@type': 'ListItem', position: 2, name: cat, item: KATEGORI_ADA.has(p.category) ? `${SITE}/${KOUT}/${p.category}/` : `${SITE}/#/k/${p.category}` },
+    { '@type': 'ListItem', position: 2, name: cat, item: KATEGORI_ADA.has(p.category) ? `${SITE}/${KOUT}/${p.category}/` : `${SITE}/${KOUT}/${p.category}/` },
     { '@type': 'ListItem', position: 3, name: p.title.slice(0, 110), item: canonical }] };
   const others = all.filter((x) => x.slug !== p.slug);
   const related = [...others.filter((x) => x.category === p.category), ...others.filter((x) => x.category !== p.category)].slice(0, 3);
@@ -99,7 +99,7 @@ ${siteHeader()}
       <a class="btn" href="https://wa.me/?text=${shareTxt}%20${shareUrl}" target="_blank" rel="noopener">WhatsApp</a>
       <a class="btn" href="https://www.facebook.com/sharer/sharer.php?u=${shareUrl}" target="_blank" rel="noopener">Facebook</a>
       <button class="btn" type="button" id="copyLink" data-url="${esc(canonical)}">Salin tautan</button></div>
-    <p class="source"><a href="/#/a/${esc(p.slug)}">Buka versi interaktif (komentar dan jajak pendapat)</a></p>
+    <p class="source"><a href="/baca/${esc(p.slug)}/">Buka versi interaktif (komentar dan jajak pendapat)</a></p>
   </article>
   ${related.length ? `<aside class="related" aria-labelledby="relT"><h2 id="relT">Baca juga</h2>${related.map((x) => `<a href="/${OUT}/${esc(x.slug)}/">${esc(x.title)}<small>${esc(CATS[x.category] || x.category)} · ${esc(fmtDate(x.published_at || x.created_at))}</small></a>`).join('')}</aside>` : ''}
 </main>
@@ -154,7 +154,7 @@ ${siteHeader()}
   <ul class="cat-list" style="list-style:none;padding:0;margin:20px 0;display:grid;gap:14px">
 ${list.map((p) => `    <li><a href="/${OUT}/${esc(p.slug)}/" style="display:block;text-decoration:none;color:inherit"><strong>${esc(p.title)}</strong>${p.excerpt ? `<span style="display:block;margin-top:4px;opacity:.8">${esc(String(p.excerpt).slice(0, 160))}</span>` : ''}<small style="display:block;margin-top:4px;opacity:.65">${esc(fmtDate(p.published_at || p.created_at))} · ${readMin(p.body)} menit baca</small></a></li>`).join('\n')}
   </ul>
-  <p class="source"><a href="/#/k/${cat}">Buka tampilan interaktif ${esc(name)}</a></p>
+  <p class="source"><a href="/k/${cat}/">Buka tampilan interaktif ${esc(name)}</a></p>
 </main>
 ${siteFooter()}
 ${PAGE_JS}
