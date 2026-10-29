@@ -1,3 +1,7 @@
+> **Struktur repo:** halaman awal (`/`) adalah blog (`index.html`). Game ada di folder `game/` (`/game/`).
+> Perintah dev (`npm test`, `npm run lint`, `npm run check`) dijalankan dari dalam folder `game/`.
+> Panel admin tetap di `031411/`. `sw.js` di root hanya pembersih service worker lama dan boleh dihapus nanti.
+
 <div align="center">
 
 # JURKON STUDIO

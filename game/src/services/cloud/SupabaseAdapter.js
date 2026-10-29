@@ -177,7 +177,7 @@ export const SupabaseAdapter = {
 
     signUp: async function (email, password) {
         var c = await getClient();
-        var res = await c.auth.signUp({ email: email, password: password, options: { emailRedirectTo: location.origin } });
+        var res = await c.auth.signUp({ email: email, password: password, options: { emailRedirectTo: location.origin + '/game/' } });
         if (res.error) throw mk(res.error);
         var u = res.data.user;
         if (u && Array.isArray(u.identities) && u.identities.length === 0) throw mk(null, 'email_exists');
@@ -194,7 +194,7 @@ export const SupabaseAdapter = {
 
     resetPassword: async function (email) {
         var c = await getClient();
-        var res = await c.auth.resetPasswordForEmail(email, { redirectTo: location.origin });
+        var res = await c.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/game/' });
         if (res.error) throw mk(res.error);
     },
 

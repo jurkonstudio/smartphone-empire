@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f0f0f">
+
+<!-- ============================================================
+     SEO UTAMA (Untuk Hasil Pencarian Google)
+     ============================================================ -->
+<title>Smartphone Empire - Game Simulasi Bisnis & Strategi Teknologi</title>
+<meta name="description" content="Bangun kerajaan teknologi smartphone-mu dari nol! Lakukan riset, desain ponsel, kelola karyawan, dan kuasai pasar global. Mainkan Smartphone Empire secara gratis di browser.">
+<meta name="keywords" content="game simulasi, game bisnis, game strategi, smartphone empire, game web, game ringan, game tanpa download, jurkon studio">
+<meta name="author" content="Jurkon Studio">
+<link rel="canonical" href="https://smartphone-empire.my.id/game/">
+
+<!-- ============================================================
+     OPEN GRAPH (Tampilan saat link dibagikan di WhatsApp/Discord/FB)
+     ============================================================ -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://smartphone-empire.my.id/game/">
+<meta property="og:title" content="Smartphone Empire - Bangun Kerajaan Teknologimu">
+<meta property="og:description" content="Dari perusahaan rintisan menjadi raksasa teknologi dunia. Kelola bisnis smartphone-mu sekarang secara gratis!">
+<meta property="og:image" content="https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/assets/img/loading-screen.jpg">
+
+<!-- ============================================================
+     TWITTER CARDS
+     ============================================================ -->
+<meta property="twitter:card" content="summary_large_image">
+<meta property="twitter:url" content="https://smartphone-empire.my.id/game/">
+<meta property="twitter:title" content="Smartphone Empire - Game Simulasi Bisnis">
+<meta property="twitter:description" content="Bangun kerajaan smartphone-mu dari nol. Mainkan sekarang secara gratis!">
+<meta property="twitter:image" content="https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/assets/img/loading-screen.jpg">
+
+<!-- ============================================================
+     SCHEMA MARKUP (Memberitahu Google bahwa ini adalah VideoGame)
+     ============================================================ -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Smartphone Empire",
+  "url": "https://smartphone-empire.my.id/game/",
+  "image": "https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/assets/img/loading-screen.jpg",
+  "description": "Game simulasi bisnis di mana pemain membangun perusahaan teknologi, melakukan riset inovasi, dan bersaing di pasar global.",
+  "genre": ["Simulation", "Strategy", "Business"],
+  "gamePlatform": ["Web Browser", "Mobile Web", "Android"],
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "IDR"
+  },
+  "author": {
+    "@type": "Organization",
+    "name": "Jurkon Studio"
+  }
+}
+</script>
+
+<!-- ============================================================
+     ASSETS & PWA
+     ============================================================ -->
+<link rel="icon" type="image/png" sizes="32x32" href="./assets/icon/favicon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="./assets/icon/favicon-48.png">
+<link rel="shortcut icon" href="./favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="./assets/icon/apple-touch-icon.png">
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Smartphone Empire">
+
+<!-- ============================================================
+     PERF TIER — deteksi HP lemah / hemat baterai SEBELUM render pertama.
+     ============================================================ -->
+<script>
+(function () {
+    var KEY = 'smartphone-empire:perf';
+    var root = document.documentElement;
+    var P = window.__PERF = { lite: false, reason: 'full', frameMs: 33, antialias: true };
+    function pref() {
+        try {
+            var q = /[?&]perf=(lite|full|auto)/.exec(location.search);
+            if (q) { localStorage.setItem(KEY, q[1]); return q[1]; }
+            return localStorage.getItem(KEY) || 'auto';
+        } catch (e) { return 'auto'; }
+    }
+    var forced = pref();
+    var base = null;        
+    var lowBattery = false; 
+    try {
+        var nav = navigator, c = nav.connection || {};
+        if (nav.deviceMemory && nav.deviceMemory <= 3) base = 'ram<=3GB';
+        else if (nav.hardwareConcurrency && nav.hardwareConcurrency <= 4) base = 'cpu<=4core';
+        else if (c.saveData) base = 'save-data';
+    } catch (e) {}
+    function apply() {
+        var lite = forced === 'lite' || (forced === 'auto' && (!!base || lowBattery));
+        if (forced === 'full') lite = false;
+        P.lite = lite;
+        P.reason = lite ? (forced === 'lite' ? 'manual' : (base || 'battery<=20%')) : 'full';
+        P.frameMs = lite ? 42 : 33;           
+        P.antialias = !(lite && base);        
+        if (lite) root.setAttribute('data-perf', 'lite'); else root.removeAttribute('data-perf');
+    }
+    apply();
+    try {
+        if (navigator.getBattery) navigator.getBattery().then(function (b) {
+            function upd() { lowBattery = !b.charging && b.level <= 0.2; apply(); }
+            upd();
+            b.addEventListener('levelchange', upd);
+            b.addEventListener('chargingchange', upd);
+        }).catch(function () {});
+    } catch (e) {}
+})();
+</script>
+
+<!-- ============================================================
+     LOADING SCREEN BERDASARKAN BAHASA — dipilih & di-preload sebelum render pertama.
+     Prioritas: bahasa pilihan pemain di game (Setelan) > bahasa HP/browser. Indonesia -> versi Indonesia, selain itu -> English. Logika sama dengan src/core/LanguageService.js.
+     ============================================================ -->
+<script>
+(function () {
+    var lang = 'en';
+    try {
+        var saved = localStorage.getItem('smartphone-empire:lang:v1');
+        if (saved === 'id' || saved === 'en') lang = saved;
+        else {
+            var list = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language];
+            for (var i = 0; i < list.length; i++) {
+                var b = String(list[i] || '').toLowerCase().split(/[-_]/)[0];
+                if (b === 'in') b = 'id';
+                if (b === 'id' || b === 'en') { lang = b; break; }
+            }
+        }
+    } catch (e) {}
+    var pick = lang === 'id'
+        ? { lang: 'id', src: './assets/img/loading-id.webp', bg: '#ffffff', ink: '#1b2a4a' }
+        : { lang: 'en', src: './assets/img/loading-en.webp', bg: '#f2ece0', ink: '#1b2a4a' };
+    window.__splashPick = pick;
+    try {
+        var ln = document.createElement('link');
+        ln.rel = 'preload'; ln.as = 'image'; ln.href = pick.src; ln.setAttribute('fetchpriority', 'high');
+        document.head.appendChild(ln);
+    } catch (e) {}
+})();
+</script>
+
+<!-- ============================================================
+     VERSION CHECK
+     ============================================================ -->
+<script>
+(function () {
+    try {
+        var KEY = 'se_deploy_v';
+        var url = new URL(window.location.href);
+        var incoming = url.searchParams.get('_v');
+        var stored = localStorage.getItem(KEY);
+
+        if (incoming) {
+            try { localStorage.setItem(KEY, incoming); } catch (e) {}
+            url.searchParams.delete('_v');
+            try { history.replaceState(null, '', url.toString()); } catch (e) {}
+            return;
+        }
+
+        fetch('./version.json?t=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var v = data && data.v;
+                if (!v) return;
+                if (stored && stored !== v) {
+                    url.searchParams.set('_v', v);
+                    window.location.replace(url.toString());
+                } else if (!stored) {
+                    try { localStorage.setItem(KEY, v); } catch (e) {}
+                }
+            })
+            .catch(function () { });
+    } catch (e) { }
+})();
+</script>
+
+<!-- ============================================================
+     GLOBAL ERROR OVERLAY
+     ============================================================ -->
+<script>
+window.addEventListener('error', function (e) {
+    var msg = 'GLOBAL ERROR\n\n';
+    msg += 'Message: ' + (e.message || (e.error && e.error.message) || 'unknown') + '\n';
+    msg += 'File: ' + (e.filename || '-') + '\n';
+    msg += 'Line: ' + (e.lineno || '-') + ':' + (e.colno || '-') + '\n\n';
+    msg += 'Stack:\n' + ((e.error && e.error.stack) ? e.error.stack : '-');
+    var box = document.createElement('pre');
+    box.style.cssText = 'position:fixed;inset:0;background:#000;color:#f44;font:12px monospace;padding:20px;padding-top:80px;overflow:auto;z-index:999999;white-space:pre-wrap;word-break:break-word;margin:0;';
+    box.textContent = msg;
+    if (document.body) document.body.appendChild(box);
+    else document.addEventListener('DOMContentLoaded', function () { document.body.appendChild(box); });
+});
+window.addEventListener('unhandledrejection', function (e) {
+    var msg = 'PROMISE REJECTED\n\nReason: ' +
+        ((e.reason && e.reason.message) ? e.reason.message : e.reason) + '\n\nStack:\n' +
+        ((e.reason && e.reason.stack) ? e.reason.stack : '-');
+    var box = document.createElement('pre');
+    box.style.cssText = 'position:fixed;inset:0;background:#000;color:#fa0;font:12px monospace;padding:20px;padding-top:80px;overflow:auto;z-index:999999;white-space:pre-wrap;word-break:break-word;margin:0;';
+    box.textContent = msg;
+    if (document.body) document.body.appendChild(box);
+});
+</script>
+
+<!-- ============================================================
+     MODULEPRELOAD
+     ============================================================ -->
+<link rel="modulepreload" href="./src/core/GameState.js">
+<link rel="modulepreload" href="./src/core/EventBus.js">
+<link rel="modulepreload" href="./src/core/TimeSystem.js">
+<link rel="modulepreload" href="./src/core/SaveService.js">
+<link rel="modulepreload" href="./src/config/time.config.js">
+<link rel="modulepreload" href="./src/config/app.config.js">
+<link rel="modulepreload" href="./src/config/constants.js">
+<link rel="modulepreload" href="./src/data/components.data.js">
+<link rel="modulepreload" href="./src/data/os.data.js">
+<link rel="modulepreload" href="./src/data/research.data.js">
+<link rel="modulepreload" href="./src/data/balance.data.js">
+<link rel="modulepreload" href="./src/data/era-design.data.js">
+<link rel="modulepreload" href="./src/data/historical-timeline.data.js">
+<link rel="modulepreload" href="./src/data/phone-specs.data.js">
+<link rel="modulepreload" href="./src/systems/ResearchSystem.js">
+<link rel="modulepreload" href="./src/systems/OSSystem.js">
+<link rel="modulepreload" href="./src/systems/ProductSystem.js">
+<link rel="modulepreload" href="./src/systems/MarketSystem.js">
+<link rel="modulepreload" href="./src/ui/panels/ProductPanel.js">
+<link rel="modulepreload" href="./src/ui/panels/OSPanel.js">
+<link rel="modulepreload" href="./src/ui/panels/ResearchPanel.js">
+<link rel="modulepreload" href="./src/ui/panels/TimelinePanel.js">
+<link rel="modulepreload" href="./src/ui/phone/PhoneMockup.js">
+<link rel="modulepreload" href="./src/ui/phone/OsScreenMockup.js">
+
+<link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="./profile-ui.css">
+<link rel="stylesheet" href="./desktop.css">
+<link rel="stylesheet" href="./ux-polish.css">
+<link rel="stylesheet" href="./mfx-overview.css">
+</head>
+<body>
+
+    <!-- ============================================================
+         TEKS SEO UNTUK GOOGLE (Tersembunyi dari mata pemain, 
+         tapi sangat disukai Robot Google agar game Anda muncul di pencarian)
+         ============================================================ -->
+    <div style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0;">
+        <h1>Smartphone Empire - Game Simulasi Bisnis dan Strategi Teknologi</h1>
+        <p>Smartphone Empire adalah game simulasi bisnis berbasis web yang seru. Bangun perusahaan Anda dari awal, lakukan riset teknologi canggih, desain ponsel impian, kelola staf, dan kuasai pangsa pasar global. Mainkan secara gratis langsung di browser HP atau PC Anda tanpa perlu download.</p>
+        <h2>Fitur Game:</h2>
+        <ul>
+            <li>Riset dan inovasi teknologi smartphone</li>
+            <li>Simulasi ekonomi pasar yang dinamis</li>
+            <li>Manajemen tim dan karyawan</li>
+            <li>Sistem top-up dan mata uang Silicon (SIL)</li>
+        </ul>
+    </div>
+    <!-- AKHIR TEKS SEO -->
+
+    <div id="app">
+        <header id="app-header" class="app-header"></header>
+        <main id="app-view" class="app-view" role="main"></main>
+        <nav id="mobile-nav" class="mobile-nav" aria-label="Navigasi utama"></nav>
+        <aside id="sidebar" aria-label="Navigasi utama"></aside>
+    </div>
+
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+    <div id="loading-screen" class="loading-screen" role="progressbar" aria-label="Memuat Smartphone Empire" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="ls-art-wrap">
+            <img class="ls-art" id="ls-art" alt="Smartphone Empire by Jurkon Studio" decoding="async" fetchpriority="high" draggable="false">
+        </div>
+        <div class="ls-meter">
+            <div class="ls-track"><div class="ls-fill" id="ls-fill"></div></div>
+            <span class="ls-pct" id="ls-pct">0%</span>
+        </div>
+    </div>
+
+    <script>
+    /* Pasang gambar loading sesuai bahasa (dipilih di <head>). Cadangan: loading-screen.jpg. */
+    (function () {
+        var s = window.__splashPick || { src: './assets/img/loading-en.webp', bg: '#f2ece0', ink: '#1b2a4a' };
+        var el = document.getElementById('loading-screen'), img = document.getElementById('ls-art');
+        el.style.setProperty('--ls-bg', s.bg);
+        el.style.setProperty('--ls-ink', s.ink);
+        window.__splashBg = s.bg;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) { window.__origTheme = meta.getAttribute('content'); meta.setAttribute('content', s.bg); }
+        if (s.lang === 'id') img.alt = 'Smartphone Empire oleh Jurkon Studio';
+        img.addEventListener('load', function () { img.classList.add('ls-in'); });
+        img.addEventListener('error', function () {
+            if (img.getAttribute('data-fb')) return;
+            img.setAttribute('data-fb', '1');
+            img.src = './assets/img/loading-screen.jpg';
+        });
+        img.src = s.src;
+        if (img.complete && img.naturalWidth) img.classList.add('ls-in');
+    })();
+    </script>
+
+    <script>
+    /* Loading screen halus.
+       - Persen = progres NYATA (modul JS terunduh + tahap boot di main.js) sebagai batas bawah kecepatan,
+         tetapi animasinya berbasis waktu (easing), tidak lompat-lompat.
+       - Ada durasi tampil minimum (MIN_MS) supaya gambar sempat dinikmati walau HP/koneksi cepat.
+       - Penutupan: tahan sejenak di 100%, lalu fade + zoom lembut.
+       Atur kecepatan lewat 3 angka di bawah (milidetik). */
+    window.__splash = (function () {
+        var MIN_MS  = 3000;   // total waktu tampil minimum sebelum boleh menutup
+        var HOLD_MS = 400;    // tahan di 100% sebelum fade-out
+        var FADE_MS = 800;    // lama fade-out (harus sama dengan transisi CSS .ls-done)
+        var reduce = false;
+        try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+        if (reduce) { MIN_MS = 1200; HOLD_MS = 150; FADE_MS = 300; }
+
+        var el = document.getElementById('loading-screen');
+        var fill = document.getElementById('ls-fill');
+        var pct = document.getElementById('ls-pct');
+        var meta = document.querySelector('meta[name="theme-color"]');
+        var origTheme = window.__origTheme || (meta ? meta.getAttribute('content') : null);
+        var TOTAL_MODULES = 190, MODULE_CAP = 70;
+        var t0 = performance.now(), last = t0;
+        var real = 2;          // progres nyata (0-99, 100 saat finish)
+        var shown = 0;         // nilai yang digambar
+        var creep = 0, finished = false, closed = false, raf = 0, doneAt = 0, seen = {};
+        if (meta) meta.setAttribute('content', window.__splashBg || '#fafafa');
+
+        function paint(v) {
+            var n = Math.min(100, Math.floor(v));
+            fill.style.transform = 'scaleX(' + (Math.min(100, v) / 100).toFixed(4) + ')';
+            if (pct._n !== n) { pct._n = n; pct.textContent = n + '%'; el.setAttribute('aria-valuenow', String(n)); }
+        }
+        function close() {
+            if (closed) return; closed = true;
+            el.classList.add('ls-done');
+            if (meta && origTheme) meta.setAttribute('content', origTheme);
+            setTimeout(function () { el.style.display = 'none'; }, FADE_MS + 80);
+        }
+        function frame(now) {
+            raf = 0;
+            var dt = Math.min(64, now - last); last = now;
+            var elapsed = now - t0;
+
+            // Tujuan: progres nyata, tapi tidak boleh melampaui "jadwal minimum" (garis lurus 0 -> 100 dalam MIN_MS)
+            // supaya bar naik pelan dan merata. Sedikit merayap ke depan agar tidak terlihat macet.
+            var schedule = Math.min(100, (elapsed / MIN_MS) * 100);
+            // Bila macet menunggu modul/jaringan, bar tetap merayap pelan (maks 94%) supaya tidak terlihat hang.
+            if (!finished && shown >= real + 3.5) creep += dt * 0.004;
+            var goal = finished ? 100 : Math.min(real + 4 + creep, 94);
+            goal = Math.min(goal, schedule + 3);
+            if (finished && elapsed < MIN_MS) goal = Math.min(100, schedule + 3);
+
+            // Easing eksponensial berbasis waktu + batas kecepatan maksimum (maks ~100% per MIN_MS*0.6)
+            var k = 1 - Math.exp(-dt / 260);
+            var step = (goal - shown) * k;
+            var maxStep = dt * (100 / (MIN_MS * 0.6));
+            if (step > maxStep) step = maxStep;
+            if (step > 0) shown += step;
+            if (finished && goal >= 100 && shown > 99.6) shown = 100;
+            paint(shown);
+
+            if (finished && shown >= 100 && elapsed >= MIN_MS) {
+                if (!doneAt) doneAt = now;
+                if (now - doneAt >= HOLD_MS) { close(); return; }
+            }
+            raf = requestAnimationFrame(frame);
+        }
+        function kick() { if (!raf && !closed) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+        function set(p) { if (!finished && p > real) { real = Math.min(99, p); } }
+
+        function countModules() {
+            try {
+                var list = performance.getEntriesByType('resource'), n = 0;
+                for (var i = 0; i < list.length; i++) {
+                    var u = list[i].name;
+                    if (u.indexOf('/src/') > -1 && /\.js(\?|$)/.test(u) && !seen[u]) { seen[u] = 1; }
+                }
+                for (var k in seen) n++;
+                set(4 + (MODULE_CAP - 4) * Math.min(1, n / TOTAL_MODULES));
+            } catch (e) {}
+        }
+        try {
+            countModules();
+            new PerformanceObserver(countModules).observe({ type: 'resource', buffered: true });
+        } catch (e) { /* tanpa PerformanceObserver: persen naik lewat tahap boot */ }
+
+        paint(0);
+        kick();
+        return {
+            set: set,
+            finish: function () { if (finished) return; finished = true; real = 100; kick(); },
+        };
+    })();
+    </script>
+
+    <div id="error-message" class="error-message" role="alert"></div>
+
+    <!-- ============================================================
+         BOOT LOADER AMAN
+         Memuat ./src/main.js lewat import(). Jika ada modul di rantai import yang gagal diunduh
+         (jaringan putus, cache basah, file hilang / tipe file salah), loader memeriksa semua modul,
+         menyegarkan cache browser, mencoba ulang otomatis (maks. 2x), lalu menampilkan NAMA FILE
+         yang bermasalah beserta statusnya, bukan hanya "Gagal memuat main.js".
+         ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+        var ENTRY = './src/main.js';
+        var RETRY_KEY = 'se_boot_retry', MAX_RETRY = 2, MAX_FILES = 600, PARALLEL = 6;
+        var ld = document.getElementById('loading-screen');
+        var er = document.getElementById('error-message');
+
+        function getRetry() { try { return Number(sessionStorage.getItem(RETRY_KEY)) || 0; } catch (e) { return 0; } }
+        function setRetry(n) { try { if (n) sessionStorage.setItem(RETRY_KEY, String(n)); else sessionStorage.removeItem(RETRY_KEY); } catch (e) {} }
+
+        function showError(lines, withButton) {
+            if (ld) ld.style.display = 'none';
+            if (!er) return;
+            er.style.display = 'block';
+            er.textContent = '';
+            lines.forEach(function (t, i) {
+                var d = document.createElement('div');
+                d.textContent = t;
+                d.style.cssText = 'margin-bottom:6px;word-break:break-word;' + (i === 0 ? 'font-weight:700;' : 'font-size:13px;opacity:.95;');
+                er.appendChild(d);
+            });
+            if (withButton) {
+                var b = document.createElement('button');
+                b.type = 'button';
+                b.textContent = 'Coba lagi';
+                b.style.cssText = 'margin-top:8px;padding:8px 16px;border:0;border-radius:8px;font:inherit;font-weight:700;color:#111;background:#fff;cursor:pointer;';
+                b.onclick = function () { setRetry(0); location.reload(); };
+                er.appendChild(b);
+            }
+        }
+        function showProgress(done, total) {
+            if (!er) return;
+            er.style.display = 'block';
+            er.textContent = 'Memeriksa file game… ' + done + '/' + total;
+        }
+
+        // ---- cari import statis relatif dalam satu modul (komentar dibuang dulu) ----
+        function staticImports(src) {
+            var s = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/mg, '');
+            var out = [], m;
+            var re = /\b(?:import|export)\b[^'"`;()]*?\bfrom\s*(['"])([^'"]+)\1|(?:^|[;\s}])import\s*(['"])([^'"]+)\3/g;
+            while ((m = re.exec(s))) out.push(m[2] || m[4]);
+            return out.filter(function (p) { return p && (p.charAt(0) === '.' || p.charAt(0) === '/'); });
+        }
+
+        // ---- unduh ulang semua modul (menyegarkan cache) & kumpulkan yang bermasalah ----
+        function diagnose() {
+            return new Promise(function (resolveAll) {
+                var seen = {}, queue = [], bad = [], active = 0, done = 0, total = 0;
+                function add(u) { if (seen[u] || total >= MAX_FILES) return; seen[u] = 1; total++; queue.push(u); }
+                function pump() {
+                    while (active < PARALLEL && queue.length) one(queue.shift());
+                    if (!active && !queue.length) resolveAll(bad);
+                }
+                function one(u) {
+                    active++;
+                    fetch(u, { cache: 'reload', credentials: 'same-origin' }).then(function (r) {
+                        if (!r.ok) { bad.push({ url: u, why: 'HTTP ' + r.status }); return null; }
+                        var ct = r.headers.get('content-type') || '';
+                        if (!/javascript|ecmascript/i.test(ct)) { bad.push({ url: u, why: 'tipe file salah (' + (ct || 'kosong') + ')' }); return null; }
+                        return r.text();
+                    }).then(function (src) {
+                        if (!src) return;
+                        staticImports(src).forEach(function (p) { try { add(new URL(p, u).href); } catch (e) {} });
+                    }).catch(function () {
+                        bad.push({ url: u, why: 'koneksi gagal' });
+                    }).then(function () { active--; done++; showProgress(done, total); pump(); });
+                }
+                add(new URL(ENTRY, location.href).href);
+                pump();
+            });
+        }
+
+        function short(u) { try { var x = new URL(u); return x.pathname + x.search; } catch (e) { return u; } }
+        var NET_RE = /dynamically imported module|importing a module script|error loading|failed to fetch|networkerror|load failed/i;
+
+        function onFail(err) {
+            var msg = (err && err.message) ? err.message : String(err);
+            try { console.error('[boot]', err); } catch (e) {}
+            if (!NET_RE.test(msg)) {                       // bukan masalah unduh (mis. error saat eksekusi / syntax)
+                showError(['Game gagal dimulai.', msg], true);
+                return;
+            }
+            diagnose().then(function (bad) {
+                if (bad.length) {
+                    var lines = ['Ada file game yang gagal dimuat.'];
+                    bad.slice(0, 6).forEach(function (b) { lines.push(short(b.url) + ' — ' + b.why); });
+                    if (bad.length > 6) lines.push('…dan ' + (bad.length - 6) + ' file lain.');
+                    lines.push('Pastikan semua file di folder src/ ter-upload lengkap ke server, lalu coba lagi.');
+                    showError(lines, true);
+                    return;
+                }
+                var tries = getRetry();                     // semua file bisa diunduh: cache sudah disegarkan -> muat ulang
+                if (tries < MAX_RETRY) { setRetry(tries + 1); location.reload(); return; }
+                showError(['Game gagal dimulai.', msg], true);
+            });
+        }
+
+        import(ENTRY).then(function () { setRetry(0); }).catch(onFail);
+    })();
+    </script>
+
+    <script>
+    window.addEventListener('error', function (e) {
+        if (e.target && e.target.tagName === 'SCRIPT') {
+            var ld = document.getElementById('loading-screen');
+            var er = document.getElementById('error-message');
+            if (ld) ld.style.display = 'none';
+            if (er) {
+                er.style.display = 'block';
+                er.textContent = 'Gagal memuat: ' + (e.target.src || 'unknown');
+            }
+        }
+    }, true);
+    </script>
+<script type="module" src="./src/ui/layout/UxPolish.js"></script>
+</body>
+</html>

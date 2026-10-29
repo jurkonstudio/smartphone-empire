@@ -173,7 +173,7 @@
         <h1>Welcome Aboard.</h1>
         <p>Akun kamu berhasil dibuat. Bersiaplah untuk membangun kerajaan teknologi duniamu.</p>
         
-        <a href="/" class="btn">Mulai Bermain</a>
+        <a href="/game/" class="btn">Mulai Bermain</a>
         
         <div class="footer-text">
             Redirect dalam <span id="countdown">4</span> detik
@@ -189,7 +189,7 @@
             countdownEl.textContent = timeLeft;
             if (timeLeft <= 0) {
                 clearInterval(timer);
-                window.location.href = '/';
+                window.location.href = '/game/';
             }
         }, 1000);
     </script>
