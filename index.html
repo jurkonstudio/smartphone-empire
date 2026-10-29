@@ -16,6 +16,7 @@
   })();
 </script>
 <link rel="stylesheet" href="blog/css/blog.css?v=5">
+<link rel="stylesheet" href="blog/css/adminbar.css?v=1">
 </head>
 <body>
 
@@ -54,10 +55,12 @@
 
 <div class="adminbar" id="adminbar" hidden>
   <div class="adminbar-inner">
-    <strong>Panel admin</strong>
+    <strong><span class="ab-dot"></span>Panel admin</strong>
+    <a class="ab-stat" id="abToday" href="/admin/" target="_blank" rel="noopener">Statistik hari ini…</a>
     <button class="abtn primary" id="btnPaste" type="button">+ Tempel artikel AI</button>
     <button class="abtn" id="btnNewPost" type="button">+ Tulis manual</button>
     <button class="abtn" id="btnNewRelease" type="button">+ Jadwal rilis</button>
+    <a class="abtn" href="/admin/" target="_blank" rel="noopener">📊 Dasbor ↗</a>
     <button class="abtn" id="btnLogout" type="button">Keluar</button>
   </div>
 </div>
@@ -264,6 +267,6 @@
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="blog/js/admin-tap.js?v=1"></script>
-<script type="module" src="blog/js/main.js?v=2"></script>
+<script type="module" src="blog/js/main.js?v=3"></script>
 </body>
 </html>
