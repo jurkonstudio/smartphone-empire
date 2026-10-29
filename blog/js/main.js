@@ -15,8 +15,18 @@ const CAT_DESC = {
 };
 const STATUS_LABEL = { rumor: 'Rumor', dikonfirmasi: 'Dikonfirmasi', resmi: 'Resmi' };
 
-let LANG = 'id';
-try { const l = localStorage.getItem(LS_LANG); if (l === 'en' || l === 'id') LANG = l; } catch (e) {}
+// Bahasa: pilihan manual pembaca dulu; kalau belum pernah memilih, ikuti bahasa ponsel/browser
+// (bahasa Indonesia -> ID, selain itu -> EN).
+function detectLang() {
+  try { const l = localStorage.getItem(LS_LANG); if (l === 'en' || l === 'id') return l; } catch (e) {}
+  const prefs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'id']);
+  const first = String(prefs[0] || 'id').toLowerCase();
+  return first === 'in' || first.startsWith('id') ? 'id' : 'en';
+}
+let LANG = detectLang();
+// Teks artikel sesuai bahasa; kalau terjemahan belum ada, pakai versi Indonesia.
+const hasEn = (p) => !!(p && (p.title_en || p.body_en));
+const tx = (p, f) => (LANG === 'en' && p[f + '_en']) ? p[f + '_en'] : p[f];
 
 Object.assign(CATS, CATS_L[LANG]); Object.assign(CAT_DESC, DESC_L[LANG]);
 const t = (k) => (I18N[LANG] && I18N[LANG][k]) || I18N.id[k] || k;
@@ -27,7 +37,7 @@ function applyLang(initial) {
   document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-ph]').forEach((el) => { el.placeholder = t(el.dataset.i18nPh); el.setAttribute('aria-label', t(el.dataset.i18nPh)); });
   document.querySelectorAll('#langToggle button').forEach((b) => b.classList.toggle('on', b.dataset.lang === LANG));
-  if (!initial) renderAll();
+  if (!initial) renderAll(true);
 }
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -54,14 +64,14 @@ const slugify = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 const postDate = (p) => p.published_at || p.created_at;
 const isDarkNow = () => {
   const t = document.documentElement.getAttribute('data-theme');
-  return t ? t === 'dark' : document.querySelectorAll('#langToggle button').forEach((b) => b.addEventListener('click', () => {
+  return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+};
+document.querySelectorAll('#langToggle button').forEach((b) => b.addEventListener('click', () => {
   if (LANG === b.dataset.lang) return;
   LANG = b.dataset.lang;
   try { localStorage.setItem(LS_LANG, LANG); } catch (e) {}
   applyLang(false);
 }));
-matchMedia('(prefers-color-scheme: dark)').matches;
-};
 let toastTimer;
 function toast(msg) {
   const t = $('toast'); t.textContent = msg; t.classList.add('show');
@@ -103,11 +113,15 @@ async function refreshAuth() {
 
 // ---------- muat data ----------
 async function loadPosts() {
-  let q = sb.from('blog_posts')
-    .select('id,slug,title,category,excerpt,body,cover_url,source_url,is_featured,status,author,published_at,created_at')
-    .limit(200);
-  if (!state.isAdmin) q = q.eq('status', 'published');
-  const { data, error } = await q;
+  const BASE = 'id,slug,title,category,excerpt,body,cover_url,source_url,is_featured,status,author,published_at,created_at';
+  const build = (cols) => {
+    let q = sb.from('blog_posts').select(cols).limit(200);
+    if (!state.isAdmin) q = q.eq('status', 'published');
+    return q;
+  };
+  let { data, error } = await build(BASE + ',title_en,excerpt_en,body_en');
+  // Kolom bahasa Inggris belum ada (22-blog-bahasa-inggris.sql belum dijalankan): muat tanpa kolom itu.
+  if (error && /title_en|excerpt_en|body_en/.test(error.message || '')) ({ data, error } = await build(BASE));
   if (error) { toast('Gagal memuat artikel: ' + error.message); return; }
   state.posts = (data || []).sort((a, b) => new Date(postDate(b)) - new Date(postDate(a)));
 }
@@ -148,8 +162,8 @@ function cardHtml(p) {
       <div class="meta"><span class="tag t-${esc(p.category)}">${esc(CATS[p.category])}</span>
         ${p.status === 'draft' ? '<span class="tag draft">Draf</span>' : ''}
         <span>${esc(fmtDate(postDate(p)))}</span></div>
-      <h3>${esc(p.title)}</h3>
-      <p>${esc(p.excerpt || '')}</p>
+      <h3>${esc(tx(p, 'title'))}</h3>
+      <p>${esc(tx(p, 'excerpt') || '')}</p>
     </div></a>`;
 }
 
@@ -157,7 +171,7 @@ function renderList() {
   const q = state.query.trim().toLowerCase();
   const list = state.posts.filter((p) =>
     (state.cat === 'semua' || p.category === state.cat) &&
-    (!q || (p.title + ' ' + (p.excerpt || '')).toLowerCase().includes(q)));
+    (!q || (tx(p, 'title') + ' ' + (tx(p, 'excerpt') || '') + ' ' + p.title).toLowerCase().includes(q)));
 
   $('pageTitle').textContent = state.cat === 'semua' ? t('nav_home') : CATS[state.cat];
   $('pageDesc').textContent = q ? `Hasil pencarian: "${state.query.trim()}"` : CAT_DESC[state.cat];
@@ -173,8 +187,8 @@ function renderList() {
         <div class="meta"><span class="tag t-${esc(featured.category)}">${esc(CATS[featured.category])}</span>
           ${featured.status === 'draft' ? '<span class="tag draft">Draf</span>' : ''}
           <span>${esc(fmtDate(postDate(featured)))}</span></div>
-        <h2>${esc(featured.title)}</h2>
-        <p>${esc(featured.excerpt || '')}</p>
+        <h2>${esc(tx(featured, 'title'))}</h2>
+        <p>${esc(tx(featured, 'excerpt') || '')}</p>
       </div></a>` : '';
 
   $('grid').innerHTML = rest.map(cardHtml).join('');
@@ -186,9 +200,9 @@ function renderList() {
 function renderSide() {
   const pub = state.posts.filter((p) => p.status === 'published');
   $('ticker').hidden = !pub.length;
-  $('tickerList').innerHTML = pub.slice(0, 6).map((p) => `<a href="#/a/${esc(p.slug)}">${esc(p.title)}</a>`).join('');
+  $('tickerList').innerHTML = pub.slice(0, 6).map((p) => `<a href="#/a/${esc(p.slug)}">${esc(tx(p, 'title'))}</a>`).join('');
   $('sideLatest').innerHTML = pub.slice(0, 5).map((p, i) =>
-    `<li><a href="#/a/${esc(p.slug)}"><b>${i + 1}</b><span>${esc(p.title)}</span></a></li>`).join('') || '<li class="muted">Belum ada artikel.</li>';
+    `<li><a href="#/a/${esc(p.slug)}"><b>${i + 1}</b><span>${esc(tx(p, 'title'))}</span></a></li>`).join('') || '<li class="muted">Belum ada artikel.</li>';
   const spek = pub.filter((p) => p.category === 'spek').slice(0, 3);
   const show = spek.length && state.cat === 'semua' && !state.query.trim();
   $('specPanel').hidden = !show;
@@ -282,10 +296,10 @@ function renderReleases() {
   }).join('');
 }
 
-function renderAll() {
+function renderAll(noTrack) {
   renderList();
   renderReleases();
-  route();
+  route(noTrack);
 }
 
 // ---------- artikel ----------
@@ -297,20 +311,21 @@ function showPost(slug) {
     article.innerHTML = `<p class="empty">${t('notfound')}</p>`;
     document.title = 'Artikel tidak ditemukan — Smartphone Empire Berita';
   } else {
-    const paragraphs = (p.body || '').split(/\n\s*\n/).filter((s) => s.trim())
+    const paragraphs = (tx(p, 'body') || '').split(/\n\s*\n/).filter((s) => s.trim())
       .map((s) => `<p>${esc(s.trim()).replace(/\n/g, '<br>')}</p>`).join('');
     const src = safeUrl(p.source_url);
     article.innerHTML = `
       <div class="meta"><span class="tag t-${esc(p.category)}">${esc(CATS[p.category])}</span>
         ${p.status === 'draft' ? '<span class="tag draft">Draf</span>' : ''}</div>
-      <h1>${esc(p.title)}</h1>
-      ${p.excerpt ? `<p class="lead">${esc(p.excerpt)}</p>` : ''}
+      ${LANG === 'en' && !hasEn(p) ? `<p class="lang-note">${t('only_id')}</p>` : ''}
+      <h1>${esc(tx(p, 'title'))}</h1>
+      ${tx(p, 'excerpt') ? `<p class="lead">${esc(tx(p, 'excerpt'))}</p>` : ''}
       <div class="meta byline"><span>${t('by')} ${esc(p.author || 'admin')}</span><span>·</span><span>${esc(fmtDate(postDate(p)))}</span></div>
       ${safeUrl(p.cover_url) ? `<img class="cover" src="${esc(safeUrl(p.cover_url))}" alt="" style="margin-top:24px">` : ''}
       <div class="content">${paragraphs}</div>
       ${src ? `<p class="source">${t('source')} <a href="${esc(src)}" target="_blank" rel="noopener nofollow">${esc(src)}</a></p>` : ''}
       ${state.isAdmin ? `<div class="actions"><button class="btn" type="button" data-edit-post="${esc(p.id)}">Ubah artikel</button></div>` : ''}`;
-    document.title = `${p.title} — Smartphone Empire Berita`;
+    document.title = `${tx(p, 'title')} — Smartphone Empire Berita`;
   }
   state.postId = p ? p.id : null;
   if (p) loadComments(p.id); else $('comments').innerHTML = '';
@@ -340,17 +355,17 @@ function track(slug, path) {
 }
 
 // Rute: #/ (beranda), #/k/<kategori>, #/a/<slug>
-function route() {
+function route(noTrack) {
   const inf = /^#\/i\/(\w+)$/.exec(location.hash);
   if (inf) { showInfo(inf[1]); return; }
   const art = /^#\/a\/(.+)$/.exec(location.hash);
-  if (art) { showPost(decodeURIComponent(art[1])); track(decodeURIComponent(art[1]), '/a/' + decodeURIComponent(art[1])); return; }
+  if (art) { showPost(decodeURIComponent(art[1])); if (noTrack !== true) track(decodeURIComponent(art[1]), '/a/' + decodeURIComponent(art[1])); return; }
   const cat = /^#\/k\/(\w+)$/.exec(location.hash);
   const next = cat && CATS[cat[1]] ? cat[1] : 'semua';
   if (next !== state.cat) { state.cat = next; renderList(); }
   showList();
   setNav();
-  track(null, '/');
+  if (noTrack !== true) track(null, '/');
 }
 
 // ---------- pencarian ----------
@@ -369,6 +384,10 @@ function openPostDialog(post = null) {
   $('pCat').value = post?.category || 'rilis';
   $('pExcerpt').value = post?.excerpt || '';
   $('pBody').value = post?.body || '';
+  $('pTitleEn').value = post?.title_en || '';
+  $('pExcerptEn').value = post?.excerpt_en || '';
+  $('pBodyEn').value = post?.body_en || '';
+  $('pEnBox').open = !!(post?.title_en || post?.body_en);
   $('pCover').value = '';
   $('pSource').value = post?.source_url || '';
   $('pAuthor').value = post?.author || loadAuthors()[0] || 'admin';
@@ -406,6 +425,9 @@ $('formPost').addEventListener('submit', async (e) => {
       category: $('pCat').value,
       excerpt: $('pExcerpt').value.trim() || null,
       body: $('pBody').value.trim(),
+      title_en: $('pTitleEn').value.trim() || null,
+      excerpt_en: $('pExcerptEn').value.trim() || null,
+      body_en: $('pBodyEn').value.trim() || null,
       source_url: $('pSource').value.trim() || null,
       is_featured: $('pFeatured').checked,
       status: $('pStatus').value
@@ -764,7 +786,7 @@ $('btnNewPost').addEventListener('click', () => openPostDialog());
 $('btnPaste').addEventListener('click', () => openPasteDialog());
 $('btnNewRelease').addEventListener('click', () => openReleaseDialog());
 document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', (e) => e.target.closest('dialog').close()));
-window.addEventListener('hashchange', route);
+window.addEventListener('hashchange', () => route());
 
 document.addEventListener('click', (e) => {
   const edP = e.target.closest('[data-edit-post]');

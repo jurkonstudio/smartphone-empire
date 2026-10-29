@@ -5,14 +5,14 @@ export const I18N = {
     foot_cat: 'Kategori', foot_info: 'Informasi', foot_more: 'Lainnya', f_tentang: 'Tentang Kami', f_redaksi: 'Redaksi', f_etik: 'Kode Etik Jurnalistik',
     f_siber: 'Pedoman Media Siber', f_privasi: 'Kebijakan Privasi', f_kontak: 'Kontak', f_game: 'Main game', nav_game: 'Main game', gc_title: 'Pimpin perusahaan ponselmu sendiri', gc_body: 'Mulai 1 Januari 2000, rancang ponsel pertamamu, lalu bersaing dengan Nokia, Apple, dan Samsung sampai era lipat dan AI.', gc_cta: 'Mainkan gratis', gc_fine: 'Gratis, langsung di browser, tanpa instal. Dibuat oleh Jurkon Studio, penerbit blog ini.', f_tip: 'Kirim koreksi atau tips',
     disclaimer: 'Tidak berafiliasi dengan produsen mana pun. Harga dan tanggal rilis dapat berubah.',
-    by: 'Ditulis oleh', source: 'Sumber:', notfound: 'Artikel tidak ditemukan atau belum diterbitkan.', comments: 'Komentar', nopage: 'Halaman tidak ditemukan' },
+    by: 'Ditulis oleh', source: 'Sumber:', notfound: 'Artikel tidak ditemukan atau belum diterbitkan.', comments: 'Komentar', nopage: 'Halaman tidak ditemukan', only_id: 'Artikel ini baru tersedia dalam bahasa Indonesia.' },
   en: { nav_home: 'Home', nav_rilis: 'Releases', nav_spek: 'Specs', nav_rumor: 'Rumors', nav_jadwal: 'Schedule', search: 'Search articles',
     ticker: 'LATEST', latest: 'Latest news', poll: 'Reader poll', ad: 'Ad space 300×250', back: '← Back', empty: 'No articles here yet.',
     specs: 'Specs & Reviews', foot_desc: 'An independent online outlet for news, specs, rumors, and release dates of smartphones and gadgets. Rumors are always labeled and sourced.',
     foot_cat: 'Categories', foot_info: 'Information', foot_more: 'More', f_tentang: 'About Us', f_redaksi: 'Editorial Team', f_etik: 'Journalistic Code of Ethics',
     f_siber: 'Cyber Media Guidelines', f_privasi: 'Privacy Policy', f_kontak: 'Contact', f_game: 'Play the game', nav_game: 'Play', gc_title: 'Run your own phone company', gc_body: 'Start on January 1, 2000, design your first phone, then take on Nokia, Apple, and Samsung all the way to the foldable and AI era.', gc_cta: 'Play for free', gc_fine: 'Free, in your browser, no install. Made by Jurkon Studio, the publisher of this blog.', f_tip: 'Send a correction or tip',
     disclaimer: 'Not affiliated with any manufacturer. Prices and release dates are subject to change.',
-    by: 'Written by', source: 'Source:', notfound: 'Article not found or not yet published.', comments: 'Comments', nopage: 'Page not found' }
+    by: 'Written by', source: 'Source:', notfound: 'Article not found or not yet published.', comments: 'Comments', nopage: 'Page not found', only_id: 'This article is currently available in Indonesian only.' }
 };
 export const CATS_L = {
   id: { rilis: 'Rilis', spek: 'Spek', rumor: 'Rumor', jadwal: 'Jadwal' },
