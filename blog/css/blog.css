@@ -493,3 +493,9 @@
     .site-header .icon-btn, .site-header .cta-game, .site-header .user-chip .btn { width: 30px; height: 30px; }
     .site-header .search, .site-header .search input { width: 32px; height: 32px; }
   }
+
+  /* Catatan bahasa & kolom English di editor */
+  .lang-note { margin: 0 0 14px; padding: 8px 12px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); color: var(--sub); font-size: .85rem; }
+  .en-box { border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin: 4px 0 14px; }
+  .en-box summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
+  .en-box[open] summary { margin-bottom: 8px; }
