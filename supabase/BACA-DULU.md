@@ -28,6 +28,7 @@ Hasil "Success" → lanjut ke file berikutnya. Jika error: berhenti, jangan lanj
 | 19 | `19-kunci-topup-server.sql` | Kunci Top Up di server (flag `topup_open`, bawaan terbuka) | Disarankan (setelah 04 dan 05) |
 | 15b | `15b-uji-paritas-level-perusahaan.sql` | Uji paritas rumus level perusahaan (hanya baca) | Opsional (setelah 15) |
 | 20 | `20-blog.sql` | Blog berita: artikel, jadwal rilis, komentar, jajak pendapat, bucket `blog-media` | Opsional (blog di `/`; butuh 08 dulu) |
+| 22 | `22-blog-bahasa-inggris.sql` | Kolom terjemahan English artikel blog (`title_en`, `excerpt_en`, `body_en`) | Opsional (setelah 20). Terjemahan otomatis butuh Edge Function `function/blog-translate` |
 
 Minimum agar game tidak crash + pembayaran jalan: **01 → 05, lalu 08**. File 06–07 melengkapi panel admin.
 
