@@ -3,7 +3,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { SUPABASE_URL, SUPABASE_KEY, BUCKET, MAX_IMAGE_BYTES, TZ, AUTH_KEY, CONTACT_EMAIL, SOCIAL, SHOW_ADS, LS_LANG, TRANSLATE_URL } from './config.js';
 import { assessPost, autoClean } from './quality.js';
 import { I18N, CATS_L, DESC_L } from './i18n.js';
-import { PAGES } from './pages.js';
+import { PAGES } from './pages.js?v=2';
 
 
 const CATS = { rilis: 'Rilis', spek: 'Spek', rumor: 'Rumor', jadwal: 'Jadwal' };
