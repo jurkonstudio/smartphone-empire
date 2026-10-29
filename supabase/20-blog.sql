@@ -12,6 +12,7 @@ create table if not exists public.blog_posts (
     slug         text not null unique check (slug ~ '^[a-z0-9][a-z0-9-]{2,79}$'),
     title        text not null check (char_length(title) between 3 and 200),
     category     text not null check (category in ('rilis', 'spek', 'rumor', 'jadwal')),
+    author       text check (author is null or char_length(author) <= 60),
     excerpt      text check (char_length(excerpt) <= 300),
     body         text not null default '' check (char_length(body) <= 30000),
     cover_url    text check (cover_url is null or cover_url ~ '^https://'),
@@ -22,6 +23,9 @@ create table if not exists public.blog_posts (
     created_at   timestamptz not null default now(),
     updated_at   timestamptz not null default now()
 );
+
+-- Untuk tabel yang sudah dibuat sebelum kolom author ada (aman diulang):
+alter table public.blog_posts add column if not exists author text;
 
 create index if not exists blog_posts_status_idx on public.blog_posts (status, published_at desc);
 
