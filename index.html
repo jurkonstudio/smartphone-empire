@@ -298,6 +298,28 @@
   .mail-card small { display: block; color: var(--sub); font-size: .8rem; }
   .mail-card strong { font-size: 1.1rem; color: var(--accent); }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+
+  /* ---- Tautan ke game ---- */
+  .cta-game { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px; background: var(--accent); color: #fff; font-size: .86rem; font-weight: 600; white-space: nowrap; transition: background .15s; }
+  .cta-game:hover { background: var(--accent-h); }
+  .cta-game svg { width: 12px; height: 12px; }
+  .game-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm); }
+  .game-card .shot { display: block; height: 176px; overflow: hidden; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .game-card .shot img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+  .game-card .body { display: grid; gap: 10px; padding: 16px 18px 18px; }
+  .game-card h3 { margin: 0; font-family: var(--serif); font-size: 1.2rem; line-height: 1.25; font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--text); }
+  .game-card p { margin: 0; color: var(--sub); font-size: .9rem; line-height: 1.55; }
+  .game-card .go { display: block; margin-top: 4px; padding: 11px 16px; border-radius: 999px; background: var(--accent); color: #fff; text-align: center; font-weight: 600; font-size: .95rem; transition: background .15s; }
+  .game-card .go:hover { background: var(--accent-h); }
+  .game-card .fine { font-size: .78rem; }
+  .cta-game:focus-visible, .game-card .go:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+  @media (max-width: 640px) {
+    .cta-game { width: 34px; height: 34px; padding: 0; justify-content: center; }
+    .cta-game svg { width: 14px; height: 14px; }
+    .cta-game span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  }
+  /* Ikon sosial disembunyikan di header agar menu + tombol game muat; URL-nya masih placeholder. */
+  @media (min-width: 961px) { .social { display: none; } .search input { width: 170px; } }
 </style>
 </head>
 <body>
@@ -330,6 +352,7 @@
         <svg id="iconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
         <svg id="iconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
       </button>
+      <a class="cta-game" href="game/"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span data-i18n="nav_game">Main game</span></a>
       <div class="user-chip" id="userChip" hidden><b id="userName"></b><button class="btn" id="btnLogout2" type="button">Keluar</button></div>
     </div>
   </div>
@@ -369,6 +392,15 @@
       <aside>
         <section class="widget"><h3 data-i18n="latest">Berita terbaru</h3><ol class="toplist" id="sideLatest"></ol></section>
         <section class="widget" id="pollBox" hidden><h3 data-i18n="poll">Jajak pendapat</h3><div id="pollBody"></div></section>
+        <section class="game-card" aria-labelledby="gcTitle">
+          <a class="shot" href="game/" tabindex="-1" aria-hidden="true"><img src="game/assets/img/landing/pasar.jpg" alt="" width="540" height="176" loading="lazy"></a>
+          <div class="body">
+            <h3 id="gcTitle" data-i18n="gc_title">Pimpin perusahaan ponselmu sendiri</h3>
+            <p data-i18n="gc_body">Mulai 1 Januari 2000, rancang ponsel pertamamu, lalu bersaing dengan Nokia, Apple, dan Samsung sampai era lipat dan AI.</p>
+            <a class="go" href="game/" data-i18n="gc_cta">Mainkan gratis</a>
+            <p class="fine" data-i18n="gc_fine">Gratis, langsung di browser, tanpa instal. Dibuat oleh Jurkon Studio, penerbit blog ini.</p>
+          </div>
+        </section>
         <div class="ad" aria-label="Ruang iklan" data-i18n="ad">Ruang iklan 300×250</div>
       </aside>
     </div>
@@ -609,14 +641,14 @@ const I18N = {
     ticker: 'TERBARU', latest: 'Berita terbaru', poll: 'Jajak pendapat', ad: 'Ruang iklan 300×250', back: '← Kembali', empty: 'Belum ada artikel di sini.',
     specs: 'Spek & Review', foot_desc: 'Media daring independen untuk kabar, spek, rumor, dan jadwal rilis smartphone dan gadget. Rumor selalu diberi label dan disertai sumber.',
     foot_cat: 'Kategori', foot_info: 'Informasi', foot_more: 'Lainnya', f_tentang: 'Tentang Kami', f_redaksi: 'Redaksi', f_etik: 'Kode Etik Jurnalistik',
-    f_siber: 'Pedoman Media Siber', f_privasi: 'Kebijakan Privasi', f_kontak: 'Kontak', f_game: 'Main game', f_tip: 'Kirim koreksi atau tips',
+    f_siber: 'Pedoman Media Siber', f_privasi: 'Kebijakan Privasi', f_kontak: 'Kontak', f_game: 'Main game', nav_game: 'Main game', gc_title: 'Pimpin perusahaan ponselmu sendiri', gc_body: 'Mulai 1 Januari 2000, rancang ponsel pertamamu, lalu bersaing dengan Nokia, Apple, dan Samsung sampai era lipat dan AI.', gc_cta: 'Mainkan gratis', gc_fine: 'Gratis, langsung di browser, tanpa instal. Dibuat oleh Jurkon Studio, penerbit blog ini.', f_tip: 'Kirim koreksi atau tips',
     disclaimer: 'Tidak berafiliasi dengan produsen mana pun. Harga dan tanggal rilis dapat berubah.',
     by: 'Ditulis oleh', source: 'Sumber:', notfound: 'Artikel tidak ditemukan atau belum diterbitkan.', comments: 'Komentar', nopage: 'Halaman tidak ditemukan' },
   en: { nav_home: 'Home', nav_rilis: 'Releases', nav_spek: 'Specs', nav_rumor: 'Rumors', nav_jadwal: 'Schedule', search: 'Search articles',
     ticker: 'LATEST', latest: 'Latest news', poll: 'Reader poll', ad: 'Ad space 300×250', back: '← Back', empty: 'No articles here yet.',
     specs: 'Specs & Reviews', foot_desc: 'An independent online outlet for news, specs, rumors, and release dates of smartphones and gadgets. Rumors are always labeled and sourced.',
     foot_cat: 'Categories', foot_info: 'Information', foot_more: 'More', f_tentang: 'About Us', f_redaksi: 'Editorial Team', f_etik: 'Journalistic Code of Ethics',
-    f_siber: 'Cyber Media Guidelines', f_privasi: 'Privacy Policy', f_kontak: 'Contact', f_game: 'Play the game', f_tip: 'Send a correction or tip',
+    f_siber: 'Cyber Media Guidelines', f_privasi: 'Privacy Policy', f_kontak: 'Contact', f_game: 'Play the game', nav_game: 'Play', gc_title: 'Run your own phone company', gc_body: 'Start on January 1, 2000, design your first phone, then take on Nokia, Apple, and Samsung all the way to the foldable and AI era.', gc_cta: 'Play for free', gc_fine: 'Free, in your browser, no install. Made by Jurkon Studio, the publisher of this blog.', f_tip: 'Send a correction or tip',
     disclaimer: 'Not affiliated with any manufacturer. Prices and release dates are subject to change.',
     by: 'Written by', source: 'Source:', notfound: 'Article not found or not yet published.', comments: 'Comments', nopage: 'Page not found' }
 };
