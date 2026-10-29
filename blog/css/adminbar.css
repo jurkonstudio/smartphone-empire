@@ -1,0 +1,12 @@
+/* Admin bar yang lebih rapi (dimuat setelah blog.css) */
+.adminbar{background:linear-gradient(90deg,#1e1b4b,#312e81 55%,#4c1d95);color:#fff;border-bottom:1px solid rgba(255,255,255,.12);box-shadow:0 2px 12px rgba(30,27,75,.25)}
+.adminbar-inner{padding:9px 20px;gap:8px}
+.adminbar-inner strong{display:flex;align-items:center;gap:8px;font-size:.82rem;letter-spacing:.04em;text-transform:uppercase;flex:none}
+.ab-dot{width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 0 3px rgba(74,222,128,.25)}
+.ab-stat{flex:none;white-space:nowrap;font-size:.78rem;color:#e0e7ff;background:rgba(255,255,255,.1);border-radius:999px;padding:5px 11px;text-decoration:none;margin-right:auto}
+.ab-stat:hover{background:rgba(255,255,255,.18)}
+.abtn{border-color:rgba(255,255,255,.3);color:#fff;text-decoration:none;white-space:nowrap;flex:none;transition:background .15s}
+.abtn:hover{background:rgba(255,255,255,.14)}
+.abtn.primary{background:#fff;color:#312e81;border-color:#fff;font-weight:600}
+.abtn.primary:hover{background:#e0e7ff}
+@media(max-width:760px){.ab-stat{margin-right:6px}}
