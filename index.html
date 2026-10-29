@@ -15,7 +15,7 @@
     } catch (e) {}
   })();
 </script>
-<link rel="stylesheet" href="blog/css/blog.css?v=7">
+<link rel="stylesheet" href="blog/css/blog.css?v=8">
 <link rel="stylesheet" href="blog/css/adminbar.css?v=1">
 </head>
 <body>
@@ -60,6 +60,7 @@
     <button class="abtn primary" id="btnPaste" type="button">+ Tempel artikel AI</button>
     <button class="abtn" id="btnNewPost" type="button">+ Tulis manual</button>
     <button class="abtn" id="btnNewRelease" type="button">+ Jadwal rilis</button>
+    <button class="abtn" id="btnTranslateAll" type="button">🌐 Terjemahkan semua</button>
     <a class="abtn" href="/admin/" target="_blank" rel="noopener">📊 Dasbor ↗</a>
     <button class="abtn" id="btnLogout" type="button">Keluar</button>
   </div>
@@ -187,7 +188,8 @@
       <div class="field"><label for="pBody">Isi artikel</label><textarea id="pBody" maxlength="30000"></textarea><span class="hint">Pisahkan paragraf dengan satu baris kosong.</span></div>
       <details id="pEnBox" class="en-box">
         <summary>Versi English (opsional)</summary>
-        <p class="hint">Kosongkan jika belum ada terjemahan; pembaca berbahasa Inggris akan melihat versi Indonesia dengan catatan.</p>
+        <p class="hint">Dibuat otomatis dengan AI saat artikel disimpan (jika kosong). Bisa disunting manual.</p>
+        <button class="btn" type="button" id="btnTranslateFill">🌐 Terjemahkan dari Indonesia (AI)</button>
         <div class="field"><label for="pTitleEn">Title</label><input id="pTitleEn" maxlength="200"></div>
         <div class="field"><label for="pExcerptEn">Summary</label><textarea id="pExcerptEn" rows="2" maxlength="300" class="short"></textarea></div>
         <div class="field"><label for="pBodyEn">Article body</label><textarea id="pBodyEn" maxlength="30000"></textarea></div>
@@ -274,6 +276,6 @@
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="blog/js/admin-tap.js?v=1"></script>
-<script type="module" src="blog/js/main.js?v=4"></script>
+<script type="module" src="blog/js/main.js?v=5"></script>
 </body>
 </html>
