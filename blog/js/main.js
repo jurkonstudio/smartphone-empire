@@ -269,7 +269,7 @@ function showInfo(key) {
   $('postArticle').innerHTML = html;
   $('comments').innerHTML = ''; state.postId = null;
   $('viewList').hidden = true; $('viewPost').hidden = false;
-  document.title = `${title} — Smartphone Empire Berita`;
+  document.title = `${title} — Smartphone Empire`;
   window.scrollTo({ top: 0 });
 }
 
@@ -339,7 +339,7 @@ function showPost(slug) {
   article.className = 'article';
   if (!p) {
     article.innerHTML = `<p class="empty">${t('notfound')}</p>`;
-    document.title = 'Artikel tidak ditemukan — Smartphone Empire Berita';
+    document.title = 'Artikel tidak ditemukan — Smartphone Empire';
   } else {
     const paragraphs = (tx(p, 'body') || '').split(/\n\s*\n/).filter((s) => s.trim())
       .map((s) => `<p>${esc(s.trim()).replace(/\n/g, '<br>')}</p>`).join('');
@@ -355,7 +355,7 @@ function showPost(slug) {
       <div class="content">${paragraphs}</div>
       ${src ? `<p class="source">${t('source')} <a href="${esc(src)}" target="_blank" rel="noopener nofollow">${esc(src)}</a></p>` : ''}
       ${state.isAdmin ? `<div class="actions"><button class="btn" type="button" data-edit-post="${esc(p.id)}">Ubah artikel</button></div>` : ''}`;
-    document.title = `${tx(p, 'title')} — Smartphone Empire Berita`;
+    document.title = `${tx(p, 'title')} — Smartphone Empire`;
   }
   state.postId = p ? p.id : null;
   if (p) loadComments(p.id); else $('comments').innerHTML = '';
@@ -368,7 +368,7 @@ function showList() {
   $('viewPost').hidden = true;
   $('viewList').hidden = false;
   const label = state.cat === 'semua' ? t('nav_home') : CATS[state.cat];
-  document.title = `${label} — Smartphone Empire Berita`;
+  document.title = `${label} — Smartphone Empire`;
 }
 
 // ---------- statistik pengunjung (tanpa IP; admin tidak dihitung) ----------
