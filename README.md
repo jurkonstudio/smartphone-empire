@@ -1,6 +1,5 @@
-> **Struktur repo:** halaman awal (`/`) adalah blog (`index.html`). Game ada di folder `game/` (`/game/`).
-> Perintah dev (`npm test`, `npm run lint`, `npm run check`) dijalankan dari dalam folder `game/`.
-> Panel admin tetap di `031411/`. `sw.js` di root hanya pembersih service worker lama dan boleh dihapus nanti.
+> **Repo layout:** the home page (`/`) is the news blog (`index.html`). The game lives in `game/` (`/game/`), the game landing page is `/game/web.html`, and the game admin dashboard is `/031411/`.
+> Dev commands (`npm test`, `npm run lint`, `npm run check`) run from inside `game/`. The root `sw.js` only cleans up old service workers and can be deleted after a few weeks.
 
 <div align="center">
 
@@ -12,7 +11,7 @@
 
 Created by **Kalfin Agus Setiawan** under the **Jurkon Studio** banner.
 
-[🎮 Play the game](https://www.smartphone-empire.my.id/) · [🐛 Report a bug](https://github.com/jurkonstudio/smartphone-empire/issues) · [🔒 Security policy](SECURITY.md)
+[🎮 Play the game](https://smartphone-empire.my.id/game/) · [📰 News blog](https://smartphone-empire.my.id/) · [🐛 Report a bug](https://github.com/jurkonstudio/smartphone-empire/issues) · [🔒 Security policy](SECURITY.md)
 
 </div>
 
@@ -177,7 +176,7 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 - **Universal Wallet**: money ($) and Silicon (SIL) can be used for almost everything. Cash costs can be covered with SIL and vice versa. The rate follows inflation (year 2000: 1 SIL = $2,500, rising 15% per year). SIL is never minted from money. Pay modes (Auto, Cash first, SIL first, Strict) and the SIL Emergency Fund are in Settings → Finance.
 - **Silicon (SIL)**: a premium currency for speeding up time and research, with a daily login bonus and quest rewards. It can also be exchanged into in-game cash (requires `supabase/10-tukar-sil.sql`).
   - **Top-up is open through GoPay only.** QRIS is locked (`locked: true` on the `qris` method in `src/data/silicon.data.js`). The Buy-tab switch is the `TOPUP_LOCKED` flag in `src/ui/panels/SiliconStorePanel.js` (currently `false`), mirrored by `STUDIO_TOPUP_LOCKED` in `src/ui/panels/SettingsPanel.js` and `TOPUP_LOCKED` in `web.html`. Balance, daily bonus, rewards, and SIL spending work either way.
-  - Top-up is still manual and approved by an admin through the `/fsociety` panel. No automatic payment provider is connected yet.
+  - Top-up is still manual and approved by an admin through the `/031411/` panel. No automatic payment provider is connected yet.
   - A server-side switch exists in `supabase/19-kunci-topup-server.sql` (flag `topup_open`, open by default). The game and the landing page do not read it yet. Details are in Known issues and [`SECURITY.md`](SECURITY.md).
 - **Security**: saves carry an integrity signature (a barrier against manual editing, not encryption). SIL balances and the ledger are protected on the server through Row Level Security and server-only functions. The full security policy and how to report issues are in [`SECURITY.md`](SECURITY.md).
 
@@ -189,7 +188,6 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 - **Subscription services were checked in 0.2.7, in one scenario.** Subscribers matched `getServicePreview` (for example 583 Cloud and 438 AI subscribers in 2023), and the click flow and Indonesian labels work in the browser at 390×844. In 0.2.8 the AI assistant moved to 2023 and the `fw_ai_on_device` OS feature. The Cloud choices (`fw_cloud_sync`, 2012) are still a first-pass choice to confirm. Not tested on a real mobile device.
 - **Accessory visuals are fixed designs.** The mockups follow the tier and the open/closed state only. The player cannot yet choose color, material, or shape for accessories, and they are not shown in Market → Ecosystem (only linked).
 - **Raw text in some places.** Four translation keys are used without fallback text and aren't in the dictionaries yet: `main.toast.fab_unlocked`, `wiz.warn.volume_cost`, `wiz.preview.unit_design`, `wiz.preview.unit_parts`. Many other keys (for example `team.recruit.*`, `team.nego.*`, `silstore.locked.*`) still rely on fallback text and haven't been merged into `src/data/i18n/en.js` and `id.js`.
-- **`supabase/BACA-DULU.md` is incomplete.** It now lists 01–09, 14, 15, 15b, 18, and 19, but is still missing both file-10 variants, 11, 12, 13, 16, and 17.
 - **SIL → money exchange** needs `supabase/10-tukar-sil.sql`. Without it the call fails and no SIL is deducted.
 - **Chip designs don't reach products or SoC plants.** The Chip Designer feeds `data.chips.catalog`, and the Fab builds those chips into `data.fab.inventory`, but nothing consumes that inventory. The product wizard picks from the static chip list in `components.data.js`, and SoC plants use static component IDs.
 - **Wholesale text is partly untranslated.** The `wh.*` keys used by the Wholesale panel and its notifications aren't in `src/data/i18n/en.js` or `id.js` yet, so the fallback text is shown. The panel's CSS classes (`wh-card`, `wh-compare`, `wh-under`, and others) have no styles, so the panel looks plain.
@@ -197,6 +195,7 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 - **Business Advisor Edge Function (AI)** has no per-user rate limit and its CORS is open (`*`). Don't enable it for a wide public before that is added. Details in `SECURITY.md`.
 - **Release notes are incomplete.** `src/patches.json` covers 0.2.1 to 0.2.14, but several earlier changes are still missing from it (listed under 0.2.4 in Versions). The version must match in four places: `src/config/app.config.js`, `package.json`, `patches.json`, and `src/patches.json`. If the game version is lower than `latest`, the Business Advisor tells every player there is a new patch.
 - **Landing-page screenshots** (`assets/img/landing/`) need to be retaken. The HQ image still shows the old Office tab and the old Overview layout.
+- **Blog:** saving an article to the real database has only been tested against a mock Supabase. Article text and titles are still partly mixed ID/EN, and per-article SEO tags (`og:image`, JSON-LD `NewsArticle`), a sitemap, and `robots.txt` do not exist yet. `blog/js/config.js` still needs the real `CONTACT_EMAIL` and social URLs.
 - **The client-side admin gate is cosmetic only.** Real admin status is verified on the server through `is_admin()`.
 - **2027–2030 content is speculative.** Prices, the RAM index, brand shares, and withdrawal thresholds are game scenarios that still need calibration through play. The details of EU battery rules are not modeled (only the trend effect and news). Real brand names can "withdraw" in the simulation through the share threshold, and that is not a claim about real companies.
 - **Component names and descriptions** (including the newer LPDDR6 entries) are still in Indonesian, like the other components.
@@ -207,11 +206,11 @@ Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
 
 ## How to play
 
-Open https://www.smartphone-empire.my.id/ (or https://jurkonstudio.github.io/smartphone-empire/) on a phone or desktop. You need an internet connection for the first load, because the 3D and cloud libraries come from a CDN. The game's intro page is `web.html`.
+Open https://smartphone-empire.my.id/game/ (or https://jurkonstudio.github.io/smartphone-empire/game/) on a phone or desktop. You need an internet connection for the first load, because the 3D and cloud libraries come from a CDN. The game's intro (landing) page is `game/web.html`. The old address `/web.html` no longer exists.
 
 ### Run locally
 
-Because the project uses ES Modules, you need a local server (browsers block `file://`):
+Because the project uses ES Modules, you need a local server (browsers block `file://`). Serve the **repo root** so the blog and the game both work:
 
 ```bash
 python3 -m http.server 8000
@@ -219,9 +218,10 @@ python3 -m http.server 8000
 npx serve .
 ```
 
-Then open `http://localhost:8000`. There is no build step and no `npm install`.
+Then open `http://localhost:8000/` (blog) or `http://localhost:8000/game/` (game). There is no build step and no `npm install` for running either one.
 
 ---
+
 
 ## Tech
 
@@ -234,7 +234,7 @@ Then open `http://localhost:8000`. There is no build step and no `npm install`.
 
 ### Development
 
-Requires Node 20 or newer. Running the game itself does not need Node or `npm install` (see "Run locally").
+Run these from inside `game/` (`cd game`). Requires Node 20 or newer. Running the game itself does not need Node or `npm install` (see "Run locally").
 
 ```
 npm install       # dev tools only (ESLint)
@@ -243,34 +243,44 @@ npm run check     # node --check on src/**/*.js and sw.js
 npm run lint      # ESLint (loose: only real bugs are errors)
 ```
 
-Scripts that need a probe or `../proj-orig` are not part of `npm test`; the reasons are listed as comments in `tools/run-all.mjs`.
+Scripts that need a probe or `../proj-orig` (for example `tools/boot.mjs`) are not part of `npm test`; the reasons are listed as comments in `tools/run-all.mjs`.
 
 ### Folder structure
 
 ```
 smartphone-empire/
-├─ index.html           main game (+ style.css · density.css · profile-ui.css · desktop.css)
-├─ web.html             landing page (ID/EN, login, account status, and Silicon page)
-├─ Welcome.html · campus-verify.html   supporting pages
-├─ 031411/              admin panel (player data dashboard, SIL approvals), noindex
-├─ supabase/            SQL schema 01–19, Advisor Edge Function (function/), guide (BACA-DULU.md)
-├─ tools/               manual test scripts (not part of the game)
-├─ _diff/               old change diffs for reference
-├─ assets/              icons, audio, images (per-language loading screens, img/landing = landing screenshots)
-├─ patches.json         release notes read by the Business Advisor (see Known issues)
-├─ manifest.webmanifest · CNAME · .nojekyll   PWA and GitHub Pages hosting
-├─ docs/                CHANGES*.md and PERF-CHANGES.md (change notes per update package)
-├─ verifikasi/          check scripts for the dev flag and the game engine (node)
-├─ econ-brakes.patch    economy-brakes patch kept for reference
-└─ src/
-   ├─ main.js           boot, tab routing, event binding
-   ├─ config/           constants, time, endgame, dev flag, event documentation
-   ├─ core/             state, time, save, event bus, theme, language, audio, integrity, macro model
-   ├─ data/             pure data: research, OS, components, competitors, stocks, bank, news, assembly, i18n/
-   ├─ systems/          game logic: research, OS, products, market, team, bank, stocks, fab, chip, plants, assembly, news, advisor, economy brakes
-   ├─ services/         cloud (Supabase), cloud i18n, patch checker
-   ├─ diagnostics/      diagnostic report for debugging
-   └─ ui/               panels, layout, modals, charts, icons, avatars, social, campus map (campus/), office (office/), manufacturing (manufacture/), phone mockups (phone/)
+├─ index.html           news blog (home page, HTML shell only)
+├─ blog/
+│  ├─ css/blog.css      all blog styling (light/dark, mobile and desktop)
+│  └─ js/               main.js (articles, login, admin panel, paste-AI-article), config.js (Supabase, contact e-mail, social links, ads switch),
+│                       i18n.js (ID/EN text), pages.js (About, Editorial, Ethics, Cyber media, Privacy, Contact), admin-tap.js (tap the logo 7x to log in as admin)
+├─ game/                the whole game, served at /game/
+│  ├─ index.html        game (+ style.css · density.css · profile-ui.css · desktop.css · ux-polish.css · mfx-overview.css)
+│  ├─ web.html          game landing page (ID/EN, login, account status, and Silicon page)
+│  ├─ src/              game code (see below)
+│  ├─ assets/ · tools/ · verifikasi/ · sw.js · manifest.webmanifest · patches.json · package.json · eslint.config.js
+│  └─ campus-verify.html · ambience-test.html   supporting pages
+├─ 031411/              game admin dashboard (player data, SIL approvals), noindex, absolute paths (/031411/...)
+├─ supabase/            SQL schema 01–20 (20-blog.sql is the blog), Advisor Edge Function (function/), guide (BACA-DULU.md)
+├─ Welcome.html         page shown after sign-up, links to /game/
+├─ sw.js                CLEANUP service worker for old players (scope /); delete after a few weeks
+├─ docs/ · _diff/ · *.patch   change notes and old diffs for reference
+├─ .well-known/assetlinks.json   Android (TWA) digital asset links, must stay at the root
+└─ CNAME · .nojekyll · README.md · SECURITY.md   hosting (GitHub Pages, custom domain) and policies
+```
+
+Inside `game/src/`:
+
+```
+src/
+├─ main.js           boot, tab routing, event binding
+├─ config/           constants, time, endgame, dev flag, event documentation
+├─ core/             state, time, save, event bus, theme, language, audio, integrity, macro model
+├─ data/             pure data: research, OS, components, competitors, stocks, bank, news, assembly, i18n/
+├─ systems/          game logic: research, OS, products, market, team, bank, stocks, fab, chip, plants, assembly, news, advisor, economy brakes
+├─ services/         cloud (Supabase), cloud i18n, patch checker
+├─ diagnostics/      diagnostic report for debugging
+└─ ui/               panels, layout, modals, charts, icons, avatars, social, campus map (campus/), office (office/), manufacturing (manufacture/), phone mockups (phone/)
 ```
 
 Data is separate from logic. To add a component, stock, competitor, or headline, just edit the files in `src/data/`.
@@ -283,14 +293,46 @@ The game runs without Supabase, but cloud save, SIL, and the admin panel need it
 
 - **Required:** `01` → `05`, then `08` (change the e-mail in `08-jadikan-admin.sql` first), `14` after `03` (unique company name on the save path), `15` after `12` (company level on the server), and `18` (table grants; required on a new Supabase project, otherwise cloud save fails with "permission denied").
 - **Recommended:** `19` after `04` and `05` (server-side top-up switch, open by default, so it changes nothing until you close it).
+- **Blog:** `20-blog.sql` (articles, release schedule, comments, polls, and the `blog-media` storage bucket). It needs `08` first so there is an admin account. Run it again on an older project: it adds the `author` column if it is missing.
 - **Optional:** `06`–`07` (full admin panel), `09` (player messages), `10-pesan-antar-pemain` and `10-tukar-sil` (player-to-player messages and SIL exchange), `11` (leaderboard validation), `12` (credibility levels and rewards), `13` (leaderboard diagnostics, check-only), `15b` (company-level formula parity test, read-only), `16` (schema diagnostics, read-only), and `17` (rebuilds the `public_profiles` view; run it after 11, 12, and 15 if `16` reports missing view columns).
 - **Order notes:** `12` needs `09`, `10`, and `11`, and `15` needs `12`. If you want levels and rewards, run that chain in full. Don't re-run `03` or `11` after `17` without running `17` again.
 - **Optional, AI:** `function/advisor-chat/` (Business Advisor Edge Function). It needs the `ANTHROPIC_API_KEY` secret in Supabase, never in client code.
-- The Supabase URL and *publishable key* in `src/services/cloud/supabase.config.js` are meant to be public. If you run your own project, replace both with yours. Never put a `service_role` key in the repo.
+- The Supabase URL and *publishable key* in `game/src/services/cloud/supabase.config.js` and `blog/js/config.js` are meant to be public. If you run your own project, replace both in both files. In the Supabase dashboard (Authentication → URL Configuration) add `https://smartphone-empire.my.id/game/` and `https://smartphone-empire.my.id/` to the Redirect URLs, then test sign-up, password reset, and login. Never put a `service_role` key in the repo.
 
 All files are safe to re-run. For an existing project, just run the files you haven't run yet, in the same order.
 
-> Note: `BACA-DULU.md` doesn't list files 10–13, 16, and 17 yet. Run those manually according to the features you need, after 01–09.
+
+---
+
+## News blog (`/`)
+
+A one-page news site for gadget news, specs, rumors, and a release schedule, published by Jurkon Studio. It is plain HTML, CSS, and JavaScript (ES Modules, no build step) and uses Supabase for articles, comments, reader polls, and the admin panel.
+
+- **Languages:** Indonesian and English (`blog/js/i18n.js`, `blog/js/pages.js`). Light and dark theme, mobile and desktop layouts.
+- **Login:** the blog and the game share one session (`AUTH_KEY` in `blog/js/config.js`), so you sign in once for both. To open the admin panel, tap the logo 7 times (`blog/js/admin-tap.js`), then log in with the admin account (see `supabase/08-jadikan-admin.sql`).
+- **Admin panel:** paste an article from an AI (the first line becomes the title, a `Ringkasan:` line becomes the summary), write one manually, add release-schedule entries, set the author name, cover image, and source link, and save as draft or publish. The paste dialog keeps an automatic local draft.
+- **Before going public**, fill in `blog/js/config.js`. Anything left empty is hidden, so no placeholder text reaches readers:
+  - `CONTACT_EMAIL`: the editorial e-mail shown on the Contact page.
+  - `SOCIAL`: real account URLs (`x`, `instagram`, `youtube`). They appear in the footer only when set.
+  - `SHOW_ADS`: set to `true` once the 300×250 ad slot is really used.
+- **Cache busting:** `index.html` loads CSS and JS with `?v=N`. Raise the number whenever you change `blog/css/blog.css`, `blog/js/main.js`, or `blog/js/admin-tap.js`.
+
+---
+
+## Deploy (GitHub Pages)
+
+The repo is `jurkonstudio/smartphone-empire`, branch `main`, served by GitHub Pages with the custom domain in `CNAME`. Pushing to `main` deploys. Do not delete `.git`, `CNAME`, or `.nojekyll`.
+
+```bash
+unzip -o update.zip && rm update.zip
+git add -A
+git commit -m "message"
+git push
+```
+
+If the push is rejected (`fetch first`), run `git pull --rebase`, resolve any conflict, then `git rebase --continue` and push again. After a deploy, open `/`, `/game/`, `/game/web.html`, `/031411/`, and `/blog/css/blog.css` in a private tab (each should return 200).
+
+**Android app (TWA):** `.well-known/assetlinks.json` stays at the root. The app's start URL must be `/game/`; if it is still `/`, the app opens the blog.
 
 ---
 
@@ -331,6 +373,12 @@ The project is still in progress. Roadmap notes:
 ## Versions
 
 Latest recorded version: **0.2.14** (October 27, 2026). Official change lists are in `src/patches.json` and `docs/PERF-CHANGES.md`. The root `patches.json` is kept identical to `src/patches.json`, and `APP_CONFIG.version` in `src/config/app.config.js` must equal `latest`.
+
+### Repo restructure (October 29, 2026, no game version change)
+- The blog became the home page (`index.html`, with `blog/css` and `blog/js`). The whole game moved to `game/` and is served at `/game/`. Paths inside the game use `./`, so the game moved intact.
+- Updated for the move: the admin dashboard config (`031411/dashboard/config.js`), `Welcome.html`, Supabase redirect URLs (`location.origin + '/game/'`), and the canonical, `og:url`, and JSON-LD URLs of the game.
+- The root `sw.js` is now a cleanup worker (clears old `se-v*` caches, unregisters itself, reloads the tab) because returning players had a service worker at scope `/`. The game's own worker is `game/sw.js` (scope `./`).
+- The blog got a "Play" button and a game card, a responsive header fix for phones, a compact article list on mobile, and config-driven placeholders (`CONTACT_EMAIL`, `SOCIAL`, `SHOW_ADS` in `blog/js/config.js`).
 
 ### 0.2.14 — Expanded 3D Campus, a visual refresh of the 3D maps, and User Control v2
 - Feature: **User Insights** in the User Control card (`computeUsageMix` in `src/systems/FutureEffects.js`): 8 usage categories weighted by market segment and OS active users. Depth follows the data policy (`insight` 2 / 1 / 0 for Open / Balanced / Strict).

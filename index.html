@@ -15,7 +15,7 @@
     } catch (e) {}
   })();
 </script>
-<link rel="stylesheet" href="blog/css/blog.css?v=2">
+<link rel="stylesheet" href="blog/css/blog.css?v=3">
 </head>
 <body>
 
@@ -33,11 +33,6 @@
       <a href="#/k/jadwal" data-nav="jadwal" data-i18n="nav_jadwal">Jadwal</a>
     </nav>
     <div class="tools">
-      <div class="social" aria-label="Media sosial"><!-- ganti URL dengan akun Anda -->
-        <a href="https://x.com/" target="_blank" rel="noopener" aria-label="X">X</a>
-        <a href="https://instagram.com/" target="_blank" rel="noopener" aria-label="Instagram">IG</a>
-        <a href="https://youtube.com/" target="_blank" rel="noopener" aria-label="YouTube">YT</a>
-      </div>
       <label class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input id="search" type="search" placeholder="Cari artikel" aria-label="Cari artikel" data-i18n-ph="search">
@@ -96,7 +91,7 @@
             <p class="fine" data-i18n="gc_fine">Gratis, langsung di browser, tanpa instal. Dibuat oleh Jurkon Studio, penerbit blog ini.</p>
           </div>
         </section>
-        <div class="ad" aria-label="Ruang iklan" data-i18n="ad">Ruang iklan 300×250</div>
+        <div class="ad" id="adBox" hidden aria-label="Ruang iklan" data-i18n="ad">Ruang iklan 300×250</div>
       </aside>
     </div>
 
@@ -143,6 +138,7 @@
       <h4 data-i18n="foot_more">Lainnya</h4>
       <a href="game/" data-i18n="f_game">Main game</a>
       <a href="#/i/kontak" data-i18n="f_tip">Kirim koreksi atau tips</a>
+      <span id="footSocial"></span>
     </div>
   </div>
   <div class="copy">
@@ -268,6 +264,6 @@
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="blog/js/admin-tap.js?v=1"></script>
-<script type="module" src="blog/js/main.js?v=1"></script>
+<script type="module" src="blog/js/main.js?v=2"></script>
 </body>
 </html>
