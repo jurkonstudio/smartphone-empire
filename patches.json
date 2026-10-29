@@ -1,0 +1,572 @@
+{
+  "latest": "0.2.14",
+  "releases": [
+    {
+      "version": "0.2.14",
+      "date": "2026-10-27",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Peta Kampus 3D diperluas: garis pantai pulau melebar ke timur (jari-jari 22 menjadi 30,4), utara (26,2), dan selatan (24,8). Sisi barat sengaja tetap supaya jembatan ke Pulau Manufaktur tidak bergeser. Ada delapan distrik dekoratif baru; pohon, bukit, semak, dan lampu otomatis menghindari lahan baru.",
+            "en": "The 3D Campus map is expanded: the island coastline now reaches further east (radius 22 to 30.4), north (26.2), and south (24.8). The west side stays unchanged so the bridge to the Manufacturing Island does not move. Eight new decorative districts were added, and trees, hills, shrubs, and lamps automatically avoid the new land."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Distrik baru di Kampus: Kompleks Olahraga (lintasan lari, lapangan, tribun, lampu sorot), Kedai Pantai dengan dermaga kayu dan tiga perahu layar yang bergoyang pelan, Mercusuar (berkas cahaya berputar saat malam), Taman Botani dengan rumah kaca, Ladang Surya, serta Bundaran Selatan dengan Area Parkir dan Amfiteater. Distrik ini hanya hiasan: tidak bisa diketuk dan tidak punya level.",
+            "en": "New Campus districts: a Sports Complex (running track, pitch, stands, floodlights), a Beach Café with a wooden pier and three gently swaying sailboats, a Lighthouse (a rotating beam at night), a Botanical Garden with a glasshouse, a Solar Field, and a South Roundabout with a Parking Lot and an Amphitheater. These districts are decoration only: they cannot be tapped and have no levels."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Kamera Peta Kampus boleh digeser lebih jauh ke timur, utara, dan selatan, dan jangkauan bayangan diperlebar agar distrik baru ikut bernaungan. Lampu distrik baru ikut bersinar (bloom) pada malam hari.",
+            "en": "The Campus camera can pan further east, north, and south, and the shadow range is widened so the new districts cast shadows too. The new districts' lamps also glow (bloom) at night."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Peta Server 3D diperbarui: kaustik di dasar laut, riak pasir, bayangan, pantulan lingkungan, kelp, karang, kawanan ikan, ubur-ubur, dan drone ROV. Pod punya pelana, palka, jendela, dan rak bertekstur; hub punya sirip, kipas, dan pipa. Ketuk pod untuk memfokuskan kamera dan melihat kartu status. Ada tiga tier kualitas (low, medium, high) agar HP tetap ringan.",
+            "en": "The 3D Server map is updated: seabed caustics, sand ripples, shadows, environment reflections, kelp, coral, fish schools, jellyfish, and an ROV drone. Pods get saddles, hatches, windows, and textured racks; the hub gets fins, fans, and pipes. Tap a pod to focus the camera and see a status card. Three quality tiers (low, medium, high) keep phones light."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Peta Server 3D: kabut Exp2 pada kamera ortografik menutup hampir seluruh pusat peta, dan gelembung partikel berukuran kurang dari satu piksel sehingga tidak terlihat. Kabut diganti kabut linear dan partikel kini berukuran piksel yang mengikuti zoom.",
+            "en": "3D Server map: Exp2 fog on the orthographic camera hid almost the whole map center, and bubble particles were under one pixel and invisible. The fog is now linear and particles use a pixel size that follows zoom."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Peta Manufaktur 3D lebih detail: pilaster sudut dan plinth beton, parapet atap, unit HVAC berkipas (berputar lebih cepat saat produksi), skylight kaca, kanopi pintu berlampu, pipa utilitas, serta di halaman ada garis tepi pad, bollard, hidran, dan trafo listrik (mulai level 2).",
+            "en": "The 3D Manufacturing map is more detailed: corner pilasters and concrete plinths, roof parapets, HVAC units with fans (faster while producing), glass skylights, lit door canopies, utility pipes, and in the yards pad edge lines, bollards, hydrants, and power transformers (from level 2)."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Kantor 3D jauh lebih nyata: staf berbadan dan berwajah lengkap dengan pose mengetik dan minum kopi, monitor berlayar bertekstur sesuai peran, lantai prosedural per ruangan, serta halaman dan gedung sekitar yang sedetail Kampus. Tier high mendapat bloom, tone mapping, dan vignette. Denah, rute staf, kartu, dan antarmuka tidak berubah.",
+            "en": "The 3D Office looks much more real: staff with full bodies and faces posing while typing or drinking coffee, role-based textured monitors, procedural floors per room, and a yard and surrounding buildings as detailed as the Campus. The high tier gets bloom, tone mapping, and a vignette. Layout, staff routes, cards, and the interface are unchanged."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Kantor 3D: status tema (era, mode gelap, warna aksen) tidak pernah terisi sehingga layar monitor era lama tidak muncul. Status itu kini disinkronkan saat tema diterapkan, dan builder perabot dibersihkan saat scene dibuang.",
+            "en": "3D Office: the theme state (era, dark mode, accent color) was never filled in, so old-era monitor screens never appeared. It is now synced when the theme is applied, and the props builder is cleaned up when the scene is disposed."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Kontrol Pengguna sekarang punya Wawasan Pengguna: bar dan daftar untuk apa pengguna OS-mu memakai ponselnya (media sosial, game, kamera, kerja, video, belanja, belajar, telepon/pesan). Angkanya dihitung dari segmen pasar dan jumlah pengguna aktif OS. Kedalamannya mengikuti kebijakan data: Terbuka menampilkan rincian per segmen, Seimbang semua kategori, Privasi Ketat hanya perkiraan 3 kategori teratas.",
+            "en": "User Control now has User Insights: a bar and list showing what your OS users use their phones for (social media, games, camera, work, video, shopping, learning, calls and messaging). Numbers come from the market segments and the OS active users. Depth follows the data policy: Open shows a per-segment breakdown, Balanced shows all categories, Strict Privacy shows only a rough estimate of the top 3."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Kemudi Algoritma: tiga slider (Rekomendasi Aplikasi, Notifikasi, Personalisasi AI) dengan nilai netral 50. Rekomendasi dan notifikasi menaikkan belanja kotor App Store; notifikasi tinggi mengganggu permintaan; personalisasi menaikkan permintaan tetapi juga peluang event isu privasi. Slider juga menggeser campuran pemakaian di Wawasan Pengguna.",
+            "en": "Algorithm Steering: three sliders (App recommendations, Notifications, AI personalisation) with a neutral value of 50. Recommendations and notifications raise gross App Store spending; high notifications hurt demand; personalisation raises demand but also the chance of privacy-scare events. The sliders also shift the usage mix in User Insights."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Monetisasi Data: jual data teragregasi ke pengiklan untuk pendapatan bulanan (butuh 1.000 pengguna aktif; tidak tersedia pada Privasi Ketat; kebijakan Seimbang hanya 40%). Tiap bulan ada peluang sanksi regulator berupa denda, reputasi turun, dan sentimen turun. Fitur OS Pusat Privasi memangkas peluang dan denda setengahnya.",
+            "en": "Data Monetisation: sell aggregated data to advertisers for monthly revenue (needs 1,000 active users; unavailable under Strict Privacy; the Balanced policy earns only 40%). Each month there is a chance of regulator action: a fine, lower reputation, and lower sentiment. The Privacy Center OS feature halves both the chance and the fine."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Regulasi per negara: setiap negara pasar punya tingkat aturan privasi (Bebas, Ringan, Sedang, Ketat) yang naik seiring tahun, misalnya Jerman dan Prancis menjadi Ketat pada 2018. Panel menampilkan enam negara pengguna terbesar dan paparan regulasi total, yang memotong pendapatan data dan membesarkan denda. Tingkat aturan adalah perkiraan untuk game, bukan data hukum resmi.",
+            "en": "Regulation by country: every market country has a privacy-rule level (Open, Light, Moderate, Strict) that rises over the years, for example Germany and France become Strict in 2018. The panel shows your six biggest user countries and the total regulatory exposure, which cuts data revenue and enlarges fines. The levels are game estimates, not official legal data."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Survei pengguna di Pesan (Inbox): tiap 3 bulan masuk satu survei tentang notifikasi, data dan personalisasi, rekomendasi aplikasi, waktu layar, atau kesadaran regulasi. Isinya mengikuti slider dan kebijakan datamu. Pesan survei bersifat lokal (tersimpan di save game, tanpa server), jadi tetap muncul saat offline, dan Pesan bisa dibuka tanpa login Cloud bila sudah ada survei.",
+            "en": "User surveys in Messages (Inbox): every 3 months one survey arrives about notifications, data and personalisation, app recommendations, screen time, or regulation awareness. The content follows your sliders and data policy. Survey messages are local (stored in the save, no server), so they appear offline, and Messages can be opened without a Cloud login once a survey exists."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Patch ini mengubah logika game: Kontrol Pengguna memengaruhi belanja kotor App Store (EcosystemSystem), permintaan produk, peluang event isu privasi, kas (pendapatan dan denda data), reputasi, dan sentimen. Efeknya hanya aktif setelah panel Kontrol Pengguna terbuka (tahun 2019 dan riset Face ID 3D). Data baru di save: data.userControl.algo, .monetize, .surveys, .surveySeq, dengan nilai bawaan, jadi save lama aman.",
+            "en": "This patch changes game logic: User Control affects gross App Store spending (EcosystemSystem), product demand, privacy-scare event chance, cash (data revenue and fines), reputation, and sentiment. The effects apply only after the User Control panel unlocks (year 2019 and the 3D Face ID research). New save data: data.userControl.algo, .monetize, .surveys, .surveySeq, all with defaults, so old saves are safe."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Versi game dinaikkan ke 0.2.14 di src/config/app.config.js, package.json, patches.json (root dan src), dan web.html. Patch ini hanya mengubah tampilan peta 3D dan tidak mengubah logika permainan. Tes baru: tools/campus-expansion-smoke.mjs.",
+            "en": "Game version raised to 0.2.14 in src/config/app.config.js, package.json, patches.json (root and src), and web.html. This patch only changes the look of the 3D maps and does not change game logic. New test: tools/campus-expansion-smoke.mjs."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.13",
+      "date": "2026-10-27",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Siklus hype untuk flagship: satu flagship per tahun kalender. Seri baru ditolak bila flagship tahun itu sudah dirilis. Varian Basic, Pro, dan Pro Max tetap dalam satu seri.",
+            "en": "Hype cycle for flagships: one flagship per calendar year. A new series is refused if this year's flagship has already shipped. Basic, Pro, and Pro Max variants stay inside one series."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Antisipasi publik naik saat flagship dirilis (lonjakan 0.4x sampai 1.5x, tergantung kualitas OS dan chip), teaser muncul di bulan ke-6, kebocoran acak di bulan ke-9, lalu meluruh 7% per bulan. Antisipasi menambah permintaan hingga +25%.",
+            "en": "Public anticipation rises when a flagship ships (0.4x to 1.5x, depending on the quality of your OS and chip). A teaser appears in month 6, a random leak in month 9, and anticipation decays 7% per month. It adds up to +25% demand."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Kualitas produk ikut menentukan hype: OS sendiri yang stabil dan bebas bug menambah lonjakan, chip sendiri yang unggul menambah lonjakan, dan OS plus chip sendiri bersama-sama mendapat bonus sinergi. Produk pihak ketiga tetap bisa dipakai, dengan lonjakan lebih kecil.",
+            "en": "Product quality also shapes hype: a stable, bug-free OS of your own adds to the spike, a stronger chip of your own adds to it, and an OS plus chip of your own together get a synergy bonus. Third-party products still work, with a smaller spike."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Peta dunia kini tampil di tab OS → Pengguna (di atas daftar 5 negara teratas) dan di daftar Negara yang akan dipasok. Penanda berukuran sesuai jumlah pengguna atau porsi, dengan zoom Dunia, Amerika, Eropa & Afrika, dan Asia-Pasifik. Ketuk penanda untuk melihat detail negara.",
+            "en": "A world map now appears on the OS → Users tab (above the top 5 countries) and in the Countries to be supplied list. Markers are sized by users or share, with World, Americas, Europe & Africa, and Asia-Pacific zooms. Tap a marker for country details."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Rantai produksi di Manufaktur → Ringkasan memakai aksen warna per tahap (Chip, Komponen, Assembly, Produk), bar progres, dan ikon SVG inline (MfIcons.js). Emoji dan font ikon eksternal tidak lagi dipakai.",
+            "en": "The production chain in Manufacturing → Overview now uses a per-stage accent color (Chip, Components, Assembly, Products), progress bars, and inline SVG icons (MfIcons.js). Emoji and external icon fonts are no longer used."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Versi game dinaikkan ke 0.2.13 di src/config/app.config.js, package.json, patches.json (root dan src), dan web.html. Patch ini mengubah logika permainan: aturan flagship dan siklus hype memengaruhi permintaan dan rilis.",
+            "en": "Game version raised to 0.2.13 in src/config/app.config.js, package.json, patches.json (root and src), and web.html. This patch changes game logic: the flagship rule and the hype cycle affect demand and releases."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.12",
+      "date": "2026-10-27",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Produk → Desain → Ponsel kini punya Galeri Generasi: hero ponsel terakhir Anda (atau contoh standar) mengambang di panggung bernuansa era, plus timeline 17 generasi dari 2000 sampai terbaru. Tiap generasi dirender dengan spesifikasinya sendiri. Status (Aktif, Sudah lewat, Terbuka tahun, Perlu riset) mengikuti tahun dan riset yang sudah selesai, jadi galeri ikut berubah saat waktu berjalan atau saat ponsel baru dirilis.",
+            "en": "Product → Design → Phone now has a Generation Gallery: your latest phone (or a sample design) floats on a stage tinted by its era, plus a timeline of 17 generations from 2000 to the newest. Each generation is rendered with its own spec. Status (Live, Passed, Opens in year, Needs research) follows the game year and completed research, so the gallery updates as time passes or when a new phone is released."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "renderPhoneMockup menerima opsi spec untuk memaksa tampilan generasi tertentu. Opsi ini opsional; pemanggil lama tidak terpengaruh.",
+            "en": "renderPhoneMockup accepts an optional spec option to force a particular generation. Existing callers are unaffected."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Label merek di hero galeri dimatikan karena hero sudah punya caption sendiri. Mockup di wizard desain dan katalog tidak berubah.",
+            "en": "The brand label is off on the gallery hero because the hero has its own caption. The wizard and catalog mockups are unchanged."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Versi game dinaikkan ke 0.2.12 di src/config/app.config.js, package.json, dan web.html. Patch 0.2.12 tidak mengubah logika permainan.",
+            "en": "The game version is now 0.2.12 in src/config/app.config.js, package.json, and web.html. Patch 0.2.12 does not change game logic."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.11",
+      "date": "2026-10-27",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Produk → Desain kini punya kategori: Ponsel, Tablet, Earbuds nirkabel, Jam pintar, dan Charger. Tiap kategori menampilkan mockup, tahun dibuka, dan popularitas yang berubah mengikuti tahun dalam game. Tablet masih segera hadir.",
+            "en": "Product → Design now has categories: Phone, Tablet, Wireless earbuds, Smartwatch, and Charger. Each shows a mockup, the year it opens, and popularity that follows the game year. Tablet design is still coming soon."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Pengaturan lini aksesori (tier, harga, buka/tutup) pindah dari Pasar → Ekosistem ke Produk → Desain. Sub-tab Aksesori dihapus; Pasar → Ekosistem kini berisi ringkasan, App Store, dan layanan berlangganan.",
+            "en": "Accessory line settings (tier, price, open/close) moved from Market → Ecosystem to Product → Design. The Accessories sub-tab is removed; Market → Ecosystem now holds the summary, App Store, and subscription services."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Katalog punya filter kategori Semua / Ponsel / Aksesori. Lini aksesori tampil sebagai kartu dengan status, harga, tier, unit terjual, pendapatan, dan popularitas, serta tombol ke Desain.",
+            "en": "The catalog has a category filter: All / Phones / Accessories. Accessory lines appear as cards with status, price, tier, units sold, revenue, and popularity, plus a button to Design."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Landing page (web.html) punya bagian Apa yang baru yang diambil dari item rilis terbaru di patches.json. Bagian ini disembunyikan secara default; tampilkan dengan mengubah SHOW_WHATS_NEW menjadi true.",
+            "en": "The landing page (web.html) has a What's new section built from the latest release in patches.json. It is hidden by default; show it by setting SHOW_WHATS_NEW to true."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Versi game dinaikkan ke 0.2.11 di src/config/app.config.js dan package.json. Patch 0.2.11 tidak mengubah logika permainan.",
+            "en": "The game version is now 0.2.11 in src/config/app.config.js and package.json. Patch 0.2.11 does not change game logic."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "src/patches.json sebelumnya belum memuat 0.2.10 dan tidak identik dengan patches.json di root. Keduanya kini identik dan memuat riwayat sampai 0.2.11.",
+            "en": "src/patches.json previously lacked 0.2.10 and differed from the root patches.json. Both are now identical and include history up to 0.2.11."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.10",
+      "date": "2026-10-26",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Tampilan aksesori (earbuds, jam pintar, charger) kini animasi: LED, gelombang suara, jarum jam, dan aliran daya. Tier Premium memakai aksen emas.",
+            "en": "Accessory visuals (earbuds, smartwatch, charger) are now animated: LEDs, sound waves, watch hands, and power flow. Premium tier uses gold accents."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Overview (HQ) lebih hidup: sparkline kas di kartu utama, bar runway, dan strip perhatian yang muncul saat ada masalah (runway kritis, tim kosong, reputasi rendah, tidak ada produk dijual).",
+            "en": "The Overview (HQ) is livelier: a cash sparkline on the main card, a runway bar, and an attention strip that appears when something needs action (critical runway, empty team, low reputation, no product selling)."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Aksi cepat Rekrut dan Rilis disorot otomatis saat relevan, dan angka runway di Overview ikut diperbarui langsung saat kas berubah.",
+            "en": "Quick actions Hire and Release are highlighted automatically when relevant, and the runway figures on the Overview update live as cash changes."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.9",
+      "date": "2026-10-26",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Kontrak grosir produk jadi: merek kompetitor menawar sebagian stok ponselmu tiap bulan. Buka dari Pabrik > Kontrak grosir, lalu terima atau tolak. Pembayaran masuk 3–10 hari setelah pengiriman.",
+            "en": "Finished-product wholesale contracts: rival brands bid each month for part of your phone stock. Open them from Manufacturing > Kontrak grosir, then accept or decline. Payment arrives 3–10 days after shipping."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Panel grosir menampilkan nilai ritel untuk unit yang sama dan selisih di atas biaya produksi, sebagai pembanding saat memutuskan.",
+            "en": "The wholesale panel shows the retail value of the same units and the margin over production cost to help you decide."
+          }
+        },
+        {
+          "type": "balance",
+          "text": {
+            "id": "Harga grosir tidak pernah di bawah biaya produksi per unit. Merek yang membeli kontrakmu mendapat dorongan pangsa sementara (sekitar 3 bulan, dibatasi batas atas).",
+            "en": "Wholesale prices never fall below unit production cost. A brand that buys your contract gets a temporary share boost (about 3 months, capped)."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Pembeli grosir hanya merek yang aktif di tahun berjalan dan belum keluar dari pasar.",
+            "en": "Wholesale buyers are now only brands active in the current year that have not left the market."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Kontrak grosir dibatalkan saat produknya dihentikan (stok dikembalikan). Tawaran baru, tawaran kedaluwarsa, dan pembatalan tercatat di log permainan.",
+            "en": "Wholesale contracts are cancelled when their product is discontinued (stock is returned). New offers, expired offers, and cancellations are written to the game log."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.8",
+      "date": "2026-10-25",
+      "items": [
+        {
+          "type": "balance",
+          "text": {
+            "id": "Ekonomi ekosistem dikalibrasi ulang pada ponsel terjual sungguhan: pendapatan ekosistem kini ±10–17% pendapatan ponsel (sebelumnya ±2%), dengan margin kotor ±50%. Biaya tetap bulanan memakai skala^0,3 (sebelumnya akar kuadrat); tingkat pasang lini, layanan, dan belanja App Store dinaikkan.",
+            "en": "Ecosystem economy recalibrated on real phone sales: ecosystem revenue is now about 10-17% of phone revenue (before: about 2%), with roughly 50% gross margin. Monthly fixed costs scale by scale^0.3 (before: square root); accessory, service and App Store rates were raised."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Asisten AI baru terbuka mulai 2023 dan butuh fitur OS AI On-Device (sebelumnya 2011, Asisten Virtual).",
+            "en": "The AI assistant now opens from 2023 and needs the AI On-Device OS feature (before: 2011, Virtual Assistant)."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.7",
+      "date": "2026-10-25",
+      "items": [
+        {
+          "type": "fix",
+          "text": {
+            "id": "Tombol layanan berlangganan (buka, tutup, tier, harga) di Pasar > Ekosistem kini berfungsi. Sebelumnya klik pada kartu Cloud dan Asisten AI tidak melakukan apa-apa.",
+            "en": "Subscription service buttons (open, close, tier, price) in Market > Ecosystem now work. Before, clicking the Cloud and AI assistant cards did nothing."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Catatan rilis di src/patches.json kini sama dengan patches.json di akar (sebelumnya masih berhenti di 0.2.5).",
+            "en": "Release notes in src/patches.json now match the root patches.json (it previously stopped at 0.2.5)."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.6",
+      "date": "2026-10-25",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Layanan berlangganan di Pasar > Ekosistem: Cloud dan Asisten AI, masing-masing dengan tier Gratis, Standar, dan Premium. Harga tier berbayar bisa diatur.",
+            "en": "Subscription services in Market > Ecosystem: Cloud and an AI assistant, each with Free, Standard, and Premium tiers. Paid tier prices are adjustable."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Skor lock-in kini dihitung dari lini aksesori (40%), App Store (40%), dan layanan berlangganan (20%).",
+            "en": "Lock-in score now uses accessory lines (40%), the App Store (40%), and subscription services (20%)."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Keseimbangan ekosistem dikalibrasi ulang terhadap ekonomi permainan di uji headless (belum diverifikasi lewat permainan sungguhan).",
+            "en": "Ecosystem balance recalibrated against the game economy in the headless test (not yet verified in real play)."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.5",
+      "date": "2026-10-25",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Tab baru Produk > Aksesori: tampilan visual earbuds, jam pintar, dan charger. Bentuk dan warna mengikuti tier (Dasar, Menengah, Premium).",
+            "en": "New Products > Accessories tab: visuals for earbuds, smartwatches, and chargers. Shape and color follow the tier (Basic, Mid, Premium)."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Lini aksesori yang belum dibuka tampil abu-abu dengan label. Tab Pasar > Ekosistem kini punya tombol tautan ke tab ini.",
+            "en": "Accessory lines that are not open yet appear gray with a label. Market > Ecosystem now has a shortcut button to this tab."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.4",
+      "date": "2026-10-25",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Aksesori: earbuds, jam pintar, dan charger. Penjualan mengikuti basis ponsel aktif milikmu. Tiap lini bisa diatur tier dan harganya.",
+            "en": "Accessories: earbuds, smartwatches, and chargers. Sales follow your active phone base. Each line has its own tier and price."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "App Store: komisi bulanan dari belanja pengguna OS aktif (butuh fitur App Store). Komisi tinggi menurunkan daya tarik bagi pengembang.",
+            "en": "App Store: monthly commission from active OS users' purchases (needs the App Store feature). A high commission lowers developer appeal."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Ekosistem (aksesori dan App Store) menaikkan permintaan ponsel sedikit dan menekan tekanan kompetitor.",
+            "en": "The ecosystem (accessories and App Store) slightly raises phone demand and eases competitor pressure."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.3",
+      "date": "2026-10-25",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Layanan pasca-jual: atur garansi (6, 12, 24 bulan) per produk. Garansi panjang menaikkan penjualan, tetapi setiap klaim ada biayanya.",
+            "en": "After-sales service: set warranty (6, 12, 24 months) per product. Longer warranty lifts sales, but every claim costs money."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Pusat servis 3 tingkat (mitra, milik sendiri, jaringan global). Antrean klaim memengaruhi kepuasan, reputasi, dan penjualan.",
+            "en": "Three service network tiers (partner, own, global). Claim queues affect satisfaction, reputation, and sales."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Insiden cacat massal: putuskan recall, kampanye servis gratis, atau abaikan. Tab baru Pasar > Servis.",
+            "en": "Mass-defect incidents: choose a recall, a free service campaign, or ignore it. New tab Market > Service."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Dukungan update OS 1–5 tahun per produk (janji publik, hanya bisa dinaikkan) dengan biaya bulanan.",
+            "en": "OS update support of 1–5 years per product (a public promise that can only go up) with a monthly cost."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Ringkasan bulanan kini menampilkan biaya pasca-jual. Ponsel lipat lebih rawan rusak.",
+            "en": "The monthly summary now shows after-sales costs. Foldable phones are more failure-prone."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.2",
+      "date": "2026-10-23",
+      "items": [
+        {
+          "type": "fix",
+          "text": {
+            "id": "Penjualan viral kini benar-benar memengaruhi permintaan harian; tombol Abaikan di event viral hanya bisa dipakai sekali.",
+            "en": "Viral events now actually affect daily demand; the Ignore button on a viral event can only be used once."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Game lebih ringan dan hemat baterai di HP kelas bawah; mode hemat aktif otomatis.",
+            "en": "The game runs lighter and saves battery on low-end phones; lite mode turns on automatically."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Teks mentah dan terjemahan yang hilang diperbaiki; game kini tersedia dalam 12 bahasa.",
+            "en": "Raw text and missing translations fixed; the game is now available in 12 languages."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Navigasi Pasar: 8 segmen konsumen, 8 sub-wilayah, gelombang tren, 11 aspek opini, dan 26 event viral.",
+            "en": "Market Navigation: 8 consumer segments, 8 sub-regions, trend waves, 11 opinion aspects, and 26 viral events."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Promosi baru untuk Amerika & Lainnya dan promosi per segmen (value, youth, gamer, creator, pro, premium).",
+            "en": "New promotions for Americas & Rest and per-segment promotions (value, youth, gamer, creator, pro, premium)."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Manufaktur: pabrik SoC, Kamera, dan RAM dengan 4 level; tab Manufaktur terbuka sejak 2003.",
+            "en": "Manufacturing: SoC, Camera, and RAM plants with 4 levels; the Manufacturing tab opens from 2003."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Tab Investasi baru: Investasi Pabrik dan Akuisisi merek rival (mulai 2003).",
+            "en": "New Investment tab: Plant Investment and rival brand Acquisition (from 2003)."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Bursa saham v2: transaksi memengaruhi harga, plus emiten dan indeks baru.",
+            "en": "Stock market v2: trades now move prices, plus new listed companies and indices."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Tim: kandidat rekrut lebih banyak dan butuh 24 jam game sebelum bergabung; peta kantor terhubung ke panel Tim.",
+            "en": "Team: more recruit candidates who need 24 game hours to join; the office map now links to the Team panel."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Akhir musim di tahun 2050 dengan layar skor akhir.",
+            "en": "Season ends in 2050 with a final score screen."
+          }
+        },
+        {
+          "type": "balance",
+          "text": {
+            "id": "Penahan ekonomi: biaya naik seiring volume produksi dan penjualan dibatasi plafon pasar.",
+            "en": "Economy brakes: costs rise with production volume and total sales are capped by the market."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.1",
+      "date": "2026-10-18",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Asisten Bisnis kini memberi tahu saat ada patch baru atau perbaikan bug.",
+            "en": "The Business Advisor now tells you when a new patch or bug fix is out."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Tanya asisten \"ada patch baru?\" untuk melihat catatan perubahan terbaru.",
+            "en": "Ask the advisor \"any new patch?\" to see the latest release notes."
+          }
+        }
+      ]
+    }
+  ]
+}
