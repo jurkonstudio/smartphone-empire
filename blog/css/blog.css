@@ -500,3 +500,17 @@
   .en-box summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
   .en-box[open] summary { margin-bottom: 8px; }
   .en-box .btn { margin: 0 0 12px; }
+
+  /* ================= Header v4: lebih bersih ================= */
+  .site-header { background: color-mix(in srgb, var(--bg) 82%, transparent);
+    -webkit-backdrop-filter: saturate(180%) blur(14px); backdrop-filter: saturate(180%) blur(14px);
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent); box-shadow: 0 1px 0 rgba(0,0,0,.02), 0 8px 24px -18px rgba(0,0,0,.35); }
+  .brand { font-weight: 800; letter-spacing: -.02em; }
+  .brand-mark { box-shadow: 0 0 0 1px var(--border), 0 6px 14px -6px color-mix(in srgb, var(--accent) 70%, transparent); }
+  .menu a { position: relative; border-radius: 999px; transition: background .15s, color .15s; }
+  .menu a:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+  .menu a[aria-current="page"] { font-weight: 700; }
+  .cta-game { border-radius: 999px; font-weight: 700; box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--accent) 80%, transparent); transition: transform .12s; }
+  .cta-game:active { transform: scale(.96); }
+  .icon-btn { transition: background .15s, transform .12s; }
+  .icon-btn:active { transform: scale(.92); }
