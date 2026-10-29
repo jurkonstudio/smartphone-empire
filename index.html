@@ -29,6 +29,7 @@
 <link rel="stylesheet" href="blog/css/blog.css?v=10">
 <link rel="stylesheet" href="blog/css/adminbar.css?v=1">
 <link rel="stylesheet" href="blog/css/blog-polish.css?v=2">
+<link rel="stylesheet" href="blog/css/jadwal.css?v=1">
 </head>
 <body>
 <a class="skip" href="#main">Lewati ke konten</a>
@@ -88,6 +89,7 @@
       <p id="pageDesc">Kabar terbaru seputar smartphone dan gadget.</p>
     </div>
     <div id="featuredWrap"></div>
+    <section class="sched" id="scheduleView" aria-label="Jadwal rilis" hidden></section>
     <div class="layout">
       <div>
         <div class="grid" id="grid"><div class="card sk" aria-hidden="true"><div class="cover"></div><div class="body"><div class="ln s"></div><div class="ln"></div><div class="ln"></div></div></div><div class="card sk" aria-hidden="true"><div class="cover"></div><div class="body"><div class="ln s"></div><div class="ln"></div><div class="ln"></div></div></div><div class="card sk" aria-hidden="true"><div class="cover"></div><div class="body"><div class="ln s"></div><div class="ln"></div><div class="ln"></div></div></div><div class="card sk" aria-hidden="true"><div class="cover"></div><div class="body"><div class="ln s"></div><div class="ln"></div><div class="ln"></div></div></div><div class="card sk" aria-hidden="true"><div class="cover"></div><div class="body"><div class="ln s"></div><div class="ln"></div><div class="ln"></div></div></div><div class="card sk" aria-hidden="true"><div class="cover"></div><div class="body"><div class="ln s"></div><div class="ln"></div><div class="ln"></div></div></div></div>
@@ -294,6 +296,14 @@
         <div class="field"><label for="rLabel">Perkiraan (jika belum pasti)</label><input id="rLabel" maxlength="60" placeholder="mis. Q3 2027"></div>
       </div>
       <div class="field"><label for="rSource">Link sumber</label><input id="rSource" type="url" placeholder="https://…"></div>
+      <details id="rSpecBox" class="field"><summary>Spek untuk tabel perbandingan (opsional)</summary>
+        <div class="two"><div class="field"><label for="rs_chipset">Chipset</label><input id="rs_chipset" maxlength="80"></div>
+          <div class="field"><label for="rs_layar">Layar</label><input id="rs_layar" maxlength="80" placeholder="mis. 6,9&quot; LTPO OLED 120 Hz"></div></div>
+        <div class="two"><div class="field"><label for="rs_ram">RAM</label><input id="rs_ram" maxlength="80"></div>
+          <div class="field"><label for="rs_kamera">Kamera</label><input id="rs_kamera" maxlength="120"></div></div>
+        <div class="two"><div class="field"><label for="rs_baterai">Baterai</label><input id="rs_baterai" maxlength="80"></div>
+          <div class="field"><label for="rs_harga">Harga</label><input id="rs_harga" maxlength="80" placeholder="mis. mulai Rp 15 jutaan (perkiraan)"></div></div>
+      </details>
       <div class="field"><label for="rNotes">Catatan</label><textarea id="rNotes" rows="2" maxlength="1000" class="short"></textarea></div>
       <p class="status-line" id="relStatus"></p>
       <div class="dlg-foot">
@@ -307,6 +317,6 @@
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="blog/js/admin-tap.js?v=1"></script>
-<script type="module" src="blog/js/main.js?v=12"></script>
+<script type="module" src="blog/js/main.js?v=13"></script>
 </body>
 </html>
