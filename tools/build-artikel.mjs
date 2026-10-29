@@ -80,7 +80,7 @@ function page(p, all = []) {
 <meta name="theme-color" content="#0a84ff">
 <script>(function(){try{var t=localStorage.getItem('blog-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <link rel="stylesheet" href="/blog/css/blog.css?v=10">
-<link rel="stylesheet" href="/blog/css/blog-polish.css?v=1">
+<link rel="stylesheet" href="/blog/css/blog-polish.css?v=2">
 </head>
 <body>
 <a class="skip" href="#main">Lewati ke konten</a>
@@ -92,7 +92,7 @@ ${siteHeader()}
     <h1>${esc(p.title)}</h1>
     ${p.excerpt ? `<p class="lead">${esc(p.excerpt)}</p>` : ''}
     <div class="meta byline"><span>Ditulis oleh ${esc(p.author || 'admin')}</span><time datetime="${esc(published)}">${esc(fmtDate(published))}</time><span>${readMin(p.body)} menit baca</span></div>
-    ${safeHttps(p.cover_url) ? `<img class="cover" src="${esc(p.cover_url)}" alt="${esc(p.title)}" style="margin-top:20px">` : ''}
+    ${safeHttps(p.cover_url) ? `<img class="cover" src="${esc(p.cover_url)}" alt="${esc(p.title)}" width="1200" height="675" decoding="async" style="margin-top:20px">` : ''}
     <div class="content">${paras.map((s) => `<p>${esc(s).replace(/\n/g, '<br>')}</p>`).join('\n')}</div>
     ${safeHttps(p.source_url) ? `<p class="source">Sumber: <a href="${esc(p.source_url)}" rel="noopener nofollow" target="_blank">${esc(p.source_url)}</a></p>` : ''}
     <div class="share"><span>Bagikan</span>
@@ -142,7 +142,7 @@ function categoryPage(cat, list) {
 <meta name="theme-color" content="#0a84ff">
 <script>(function(){try{var t=localStorage.getItem('blog-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <link rel="stylesheet" href="/blog/css/blog.css?v=10">
-<link rel="stylesheet" href="/blog/css/blog-polish.css?v=1">
+<link rel="stylesheet" href="/blog/css/blog-polish.css?v=2">
 </head>
 <body>
 <a class="skip" href="#main">Lewati ke konten</a>
