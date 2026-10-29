@@ -85,8 +85,23 @@ const fmtDate = (v, dateOnly = false) => {
   const d = dateOnly ? new Date(v + 'T00:00:00+07:00') : new Date(v);
   return d.toLocaleDateString(LANG === 'en' ? 'en-US' : 'id-ID', { day: 'numeric', month: 'long', year: 'numeric', timeZone: TZ });
 };
-const slugify = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-  .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+// Kata sambung yang tidak boleh jadi akhir slug saat judul terpotong (ID dan EN).
+const SLUG_STOP = new Set(['di', 'ke', 'dan', 'yang', 'dengan', 'untuk', 'dari', 'pada', 'dalam', 'atau', 'oleh', 'akan', 'ini', 'itu', 'sebagai', 'the', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'for', 'and', 'or', 'with', 'by', 'from', 'is', 'as']);
+const slugify = (s, max = 80) => {
+  const full = String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  if (full.length <= max) return full;
+  // Terpotong: mundur ke batas kata, lalu buang kata sambung di ujung.
+  let cut = full.slice(0, max);
+  if (full[max] !== '-') {
+    const i = cut.lastIndexOf('-');
+    if (i >= 20) cut = cut.slice(0, i);
+  }
+  let parts = cut.replace(/-+$/g, '').split('-');
+  while (parts.length > 1 && SLUG_STOP.has(parts[parts.length - 1])) parts.pop();
+  const out = parts.join('-');
+  return out.length >= 3 ? out : cut.replace(/-+$/g, '');
+};
 const postDate = (p) => p.published_at || p.created_at;
 const isDarkNow = () => {
   const t = document.documentElement.getAttribute('data-theme');
@@ -697,7 +712,7 @@ $('formPaste').addEventListener('submit', async (e) => {
     let res = await sb.from('blog_posts').insert(payload).select('id,slug').single();
     // Slug bentrok: tambahkan akhiran dan coba sekali lagi.
     if (res.error && /duplicate key|unique/i.test(res.error.message || '')) {
-      payload.slug = payload.slug.slice(0, 70) + '-' + Date.now().toString(36).slice(-4);
+      payload.slug = slugify(payload.slug, 70) + '-' + Date.now().toString(36).slice(-4);
       res = await sb.from('blog_posts').insert(payload).select('id,slug').single();
     }
     if (res.error) throw res.error;
