@@ -148,6 +148,7 @@ async function refreshAuth() {
   }
   $('adminbar').hidden = !state.isAdmin;
   if (state.isAdmin) sb.rpc('blog_stats', { p_days: 1 }).then(({ data }) => { if (data && $('abToday')) $('abToday').textContent = `Hari ini: ${data.today.views} dilihat · ${data.today.visitors} pengunjung`; }, () => {});
+  loadInboxCount();
   $('userChip').hidden = !state.user;
   $('userName').textContent = state.name;
 }
@@ -303,6 +304,7 @@ function showInfo(key) {
     html += `<p class="lead">${esc(pg.lead)}</p>`;
     if (pg.stats) html += '<div class="stats">' + pg.stats.map(([n, l]) => `<div><b>${n}</b><span>${esc(l)}</span></div>`).join('') + '</div>';
     if (pg.mail && CONTACT_EMAIL && !/example\.com$/i.test(CONTACT_EMAIL)) html += `<a class="mail-card" href="mailto:${esc(CONTACT_EMAIL)}"><small>${esc(pg.mail)}</small><strong>${esc(CONTACT_EMAIL)}</strong></a>`;
+    if (key === 'kontak') html += `<p><button class="btn primary" type="button" data-open-tip>${esc(tipT('openBtn'))}</button></p>`;
     html += pg.s.map(([h, ps, us]) => `<h2>${h}</h2>` + (ps || []).map((x) => `<p>${x}</p>`).join('')
       + (us && us.length ? '<ul>' + us.map((x) => `<li>${x}</li>`).join('') + '</ul>' : '')).join('');
   }
@@ -410,6 +412,112 @@ function showList() {
   $('viewList').hidden = false;
   const label = state.cat === 'semua' ? t('nav_home') : CATS[state.cat];
   document.title = `${label} — Smartphone Empire`;
+}
+
+// ---------- formulir "Kirim koreksi atau tips" + kotak masuk admin ----------
+const TIP = {
+  id: { title: 'Kirim koreksi atau tips', lead: 'Temukan kekeliruan atau punya kabar? Tulis di sini. Pesan dibaca redaksi.', kind: 'Jenis', koreksi: 'Koreksi', tips: 'Tips berita',
+    about: 'Tentang artikel', msg: 'Pesan', msgPh: 'Jelaskan bagian yang keliru atau kabar yang ingin disampaikan. Sertakan tautan sumber bila ada.',
+    contact: 'Kontak (opsional)', contactPh: 'Email atau akun, bila ingin dibalas', send: 'Kirim', close: 'Tutup', sending: 'Mengirim…',
+    ok: 'Terima kasih, pesan Anda sudah terkirim ke redaksi.', short: 'Pesan minimal 10 karakter.', often: 'Terlalu sering mengirim. Coba lagi nanti.', fail: 'Gagal mengirim. Coba lagi sebentar lagi.',
+    note: 'Pesan disimpan untuk keperluan redaksi. Kontak hanya dipakai untuk membalas.', openBtn: 'Kirim koreksi atau tips' },
+  en: { title: 'Send a correction or tip', lead: 'Spotted a mistake or have a tip? Write it here. The editors read every message.', kind: 'Type', koreksi: 'Correction', tips: 'News tip',
+    about: 'About the article', msg: 'Message', msgPh: 'Describe what is wrong or what you want to tell us. Include a source link if you have one.',
+    contact: 'Contact (optional)', contactPh: 'Email or handle, if you want a reply', send: 'Send', close: 'Close', sending: 'Sending…',
+    ok: 'Thank you, your message has been sent to the editors.', short: 'Message must be at least 10 characters.', often: 'Too many submissions. Please try again later.', fail: 'Could not send. Please try again shortly.',
+    note: 'Messages are kept for editorial use. Contact details are only used to reply.', openBtn: 'Send a correction or tip' }
+};
+const tipT = (k) => (TIP[LANG] || TIP.id)[k];
+function ensureTipDialogs() {
+  if ($('dlgTip')) return;
+  document.body.insertAdjacentHTML('beforeend',
+    '<dialog id="dlgTip"><form id="formTip"></form></dialog><dialog id="dlgInbox"><div class="dlg-head"><h2>Kotak masuk: koreksi dan tips</h2><button class="btn" type="button" data-close>Tutup</button></div><div class="dlg-body"><div id="inboxList"></div></div></dialog>');
+  document.querySelectorAll('#dlgTip [data-close], #dlgInbox [data-close]').forEach((b) => b.addEventListener('click', (e) => e.target.closest('dialog').close()));
+  $('formTip').addEventListener('submit', submitTip);
+  $('inboxList').addEventListener('click', inboxClick);
+}
+function openTip() {
+  ensureTipDialogs();
+  const m = /^#\/a\/(.+)$/.exec(location.hash);
+  const slug = m ? decodeURIComponent(m[1]) : '';
+  const post = slug ? state.posts.find((x) => x.slug === slug) : null;
+  $('formTip').dataset.slug = post ? post.slug : '';
+  $('formTip').innerHTML = `
+    <div class="dlg-head"><h2>${esc(tipT('title'))}</h2><button class="btn" type="button" data-close>${esc(tipT('close'))}</button></div>
+    <div class="dlg-body">
+      <p class="hint">${esc(tipT('lead'))}</p>
+      <div class="field"><label for="tipKind">${esc(tipT('kind'))}</label><select id="tipKind"><option value="koreksi">${esc(tipT('koreksi'))}</option><option value="tips">${esc(tipT('tips'))}</option></select></div>
+      ${post ? `<p class="hint">${esc(tipT('about'))}: <b>${esc(tx(post, 'title'))}</b></p>` : ''}
+      <div class="field"><label for="tipMsg">${esc(tipT('msg'))}</label><textarea id="tipMsg" required minlength="10" maxlength="2000" placeholder="${esc(tipT('msgPh'))}"></textarea></div>
+      <div class="field"><label for="tipContact">${esc(tipT('contact'))}</label><input id="tipContact" maxlength="120" placeholder="${esc(tipT('contactPh'))}" autocomplete="off"></div>
+      <div style="position:absolute;left:-9999px;height:0;overflow:hidden" aria-hidden="true"><label>Website<input id="tipHp" tabindex="-1" autocomplete="off"></label></div>
+      <p class="hint">${esc(tipT('note'))}</p>
+      <p class="status-line" id="tipStatus" role="status"></p>
+      <div class="dlg-foot"><button class="btn primary" type="submit" id="btnSendTip">${esc(tipT('send'))}</button></div>
+    </div>`;
+  $('formTip').querySelector('[data-close]').addEventListener('click', () => $('dlgTip').close());
+  $('dlgTip').showModal();
+}
+async function submitTip(e) {
+  e.preventDefault();
+  const btn = $('btnSendTip'), line = $('tipStatus');
+  const msg = $('tipMsg').value.trim();
+  if (msg.length < 10) { line.textContent = tipT('short'); return; }
+  btn.disabled = true; line.textContent = tipT('sending');
+  try {
+    let sid = ''; try { sid = localStorage.getItem('blog-sid') || ''; } catch (e2) {}
+    const { data, error } = await sb.rpc('blog_kirim_masukan', {
+      p_kind: $('tipKind').value, p_message: msg, p_slug: $('formTip').dataset.slug || null,
+      p_contact: $('tipContact').value.trim() || null, p_sid: sid || null, p_hp: $('tipHp').value || null
+    });
+    if (error) throw error;
+    if (data && data.ok === false) { line.textContent = data.error === 'terlalu_sering' ? tipT('often') : data.error === 'panjang' ? tipT('short') : tipT('fail'); btn.disabled = false; return; }
+    $('dlgTip').close(); toast(tipT('ok'));
+  } catch (err) { line.textContent = tipT('fail'); btn.disabled = false; }
+}
+// Tautan footer, tombol di halaman Kontak: buka formulir (tanpa JS, tautan tetap menuju halaman Kontak).
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[data-i18n="f_tip"], [data-open-tip]');
+  if (!a) return;
+  e.preventDefault(); openTip();
+});
+
+async function loadInboxCount() {
+  if (!state.isAdmin) return;
+  ensureTipDialogs();
+  let b = $('btnInbox');
+  if (!b) {
+    b = document.createElement('button'); b.className = 'abtn'; b.id = 'btnInbox'; b.type = 'button';
+    $('btnLogout').insertAdjacentElement('beforebegin', b);
+    b.addEventListener('click', openInbox);
+  }
+  const { count, error } = await sb.from('blog_feedback').select('id', { count: 'exact', head: true }).eq('status', 'baru');
+  b.textContent = '📥 Masukan' + (!error && count ? ` (${count})` : '');
+  b.hidden = false;
+}
+async function openInbox() {
+  ensureTipDialogs();
+  $('inboxList').innerHTML = '<p class="hint">Memuat…</p>'; $('dlgInbox').showModal();
+  const { data, error } = await sb.from('blog_feedback').select('*').order('created_at', { ascending: false }).limit(100);
+  if (error) { $('inboxList').innerHTML = '<p class="hint">Gagal memuat. Pastikan 23-blog-masukan.sql sudah dijalankan.</p>'; return; }
+  $('inboxList').innerHTML = data.length ? data.map((r) => `
+    <div class="audit-row${r.status === 'baru' ? ' q-low' : ''}">
+      <div class="audit-top"><b>${r.kind === 'koreksi' ? 'Koreksi' : 'Tips'}</b><small>${esc(fmtDate(r.created_at))}${r.status === 'baru' ? ' · baru' : ' · selesai'}</small></div>
+      <p style="white-space:pre-wrap;margin:6px 0">${esc(r.message)}</p>
+      ${r.article_slug ? `<small>Artikel: <a href="#/a/${esc(r.article_slug)}">${esc(r.article_slug)}</a></small><br>` : ''}
+      ${r.contact ? `<small>Kontak: ${esc(r.contact)}</small><br>` : ''}
+      <button class="btn" type="button" data-fb-done="${esc(r.id)}" data-st="${r.status === 'baru' ? 'selesai' : 'baru'}">${r.status === 'baru' ? 'Tandai selesai' : 'Tandai baru'}</button>
+      <button class="btn danger" type="button" data-fb-del="${esc(r.id)}">Hapus</button>
+    </div>`).join('') : '<p class="hint">Belum ada masukan.</p>';
+}
+async function inboxClick(e) {
+  const d = e.target.closest('[data-fb-done]'), x = e.target.closest('[data-fb-del]');
+  if (!d && !x) return;
+  if (x && !confirm('Hapus masukan ini?')) return;
+  const res = d ? await sb.from('blog_feedback').update({ status: d.dataset.st }).eq('id', d.dataset.fbDone)
+                : await sb.from('blog_feedback').delete().eq('id', x.dataset.fbDel);
+  if (res.error) { toast('Gagal: ' + res.error.message); return; }
+  await openInbox(); loadInboxCount();
 }
 
 // ---------- statistik pengunjung (tanpa IP; admin tidak dihitung) ----------
