@@ -43,7 +43,7 @@ function page(p) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>${esc(p.title)} | Smartphone Empire Berita</title>
+<title>${esc(p.title)} | Smartphone Empire</title>
 <meta name="description" content="${esc(desc)}">
 <link rel="canonical" href="${canonical}">
 <link rel="icon" href="/game/assets/icon/favicon.svg" type="image/svg+xml">
@@ -57,11 +57,11 @@ function page(p) {
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>
 <script>(function(){try{var t=localStorage.getItem('blog-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<link rel="stylesheet" href="/blog/css/blog.css?v=5">
+<link rel="stylesheet" href="/blog/css/blog.css?v=9">
 </head>
 <body>
 <header class="site-header"><div class="bar">
-  <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span><span>Smartphone Empire <small>Berita</small></span></a>
+  <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span><span>Smartphone Empire</span></a>
   <nav class="menu" aria-label="Kategori"><a href="/">Beranda</a><a href="/#/k/rilis">Rilis</a><a href="/#/k/spek">Spek</a><a href="/#/k/rumor">Rumor</a><a href="/#/k/jadwal">Jadwal</a></nav>
   <div class="tools"><a class="cta-game" href="/game/"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span>Main game</span></a></div>
 </div></header>
