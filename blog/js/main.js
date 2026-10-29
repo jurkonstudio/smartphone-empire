@@ -1,6 +1,6 @@
 window.__blogReady = true;  // modul termuat (CDN Supabase berhasil)
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/+esm';
-import { SUPABASE_URL, SUPABASE_KEY, BUCKET, MAX_IMAGE_BYTES, TZ, AUTH_KEY, CONTACT_EMAIL, SOCIAL, SHOW_ADS, LS_LANG } from './config.js';
+import { SUPABASE_URL, SUPABASE_KEY, BUCKET, MAX_IMAGE_BYTES, TZ, AUTH_KEY, CONTACT_EMAIL, SOCIAL, SHOW_ADS, LS_LANG, TRANSLATE_URL } from './config.js';
 import { I18N, CATS_L, DESC_L } from './i18n.js';
 import { PAGES } from './pages.js';
 
@@ -302,6 +302,35 @@ function renderAll(noTrack) {
   route(noTrack);
 }
 
+
+// ---------- terjemahan otomatis ID -> EN (Edge Function blog-translate, admin saja) ----------
+async function translateRemote(src) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) throw new Error('Belum masuk');
+  const r = await fetch(TRANSLATE_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.access_token, apikey: SUPABASE_KEY },
+    body: JSON.stringify({ title: src.title, excerpt: src.excerpt || '', body: src.body })
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
+  return j;
+}
+const trErr = (e) => ({ server_not_configured: 'kunci AI belum dipasang di server', forbidden: 'bukan admin', unauthorized: 'belum masuk' }[e.message] || e.message);
+// Terjemahkan lalu simpan ke kolom *_en. Tidak mengganggu penyimpanan artikel jika gagal.
+async function autoTranslatePost(id, src, quiet) {
+  try {
+    const tr = await translateRemote(src);
+    const { error } = await sb.from('blog_posts').update({ title_en: tr.title_en, excerpt_en: tr.excerpt_en, body_en: tr.body_en }).eq('id', id);
+    if (error) throw error;
+    if (!quiet) toast('Versi English tersimpan.');
+    return true;
+  } catch (e) {
+    if (!quiet) toast('Terjemahan otomatis gagal: ' + trErr(e));
+    return false;
+  }
+}
+
 // ---------- artikel ----------
 function showPost(slug) {
   const p = state.posts.find((x) => x.slug === slug);
@@ -447,12 +476,13 @@ $('formPost').addEventListener('submit', async (e) => {
     }
 
     const res = state.editingPostId
-      ? await sb.from('blog_posts').update(payload).eq('id', state.editingPostId).select('slug').single()
-      : await sb.from('blog_posts').insert(payload).select('slug').single();
+      ? await sb.from('blog_posts').update(payload).eq('id', state.editingPostId).select('id,slug').single()
+      : await sb.from('blog_posts').insert(payload).select('id,slug').single();
     if (res.error) throw res.error;
 
     $('dlgPost').close();
     toast('Artikel tersimpan.');
+    if (!payload.title_en && payload.body) { toast('Menerjemahkan ke English…'); await autoTranslatePost(res.data.id, payload); }
     await loadPosts(); renderAll();
     if (payload.status === 'published') location.hash = '#/a/' + res.data.slug;
   } catch (err) {
@@ -613,17 +643,18 @@ $('formPaste').addEventListener('submit', async (e) => {
       status: $('aiStatus').value
     };
     if (payload.is_featured) await sb.from('blog_posts').update({ is_featured: false }).eq('is_featured', true);
-    let res = await sb.from('blog_posts').insert(payload).select('slug').single();
+    let res = await sb.from('blog_posts').insert(payload).select('id,slug').single();
     // Slug bentrok: tambahkan akhiran dan coba sekali lagi.
     if (res.error && /duplicate key|unique/i.test(res.error.message || '')) {
       payload.slug = payload.slug.slice(0, 70) + '-' + Date.now().toString(36).slice(-4);
-      res = await sb.from('blog_posts').insert(payload).select('slug').single();
+      res = await sb.from('blog_posts').insert(payload).select('id,slug').single();
     }
     if (res.error) throw res.error;
     rememberAuthor(author);
     try { localStorage.removeItem(DRAFT_KEY); } catch (e2) {}
     $('dlgPaste').close();
     toast(payload.status === 'published' ? 'Artikel terbit.' : 'Draf tersimpan.');
+    toast('Menerjemahkan ke English…'); await autoTranslatePost(res.data.id, payload);
     await loadPosts(); renderAll();
     if (payload.status === 'published') location.hash = '#/a/' + res.data.slug;
   } catch (err) {
@@ -816,3 +847,31 @@ function initConfigured() {
   await refreshAuth();
   await loadAll();
 })();
+
+// Tombol di editor: isi kolom English dari teks Indonesia (bisa disunting sebelum disimpan).
+$('btnTranslateFill').addEventListener('click', async () => {
+  const btn = $('btnTranslateFill'), st = $('postStatus');
+  const src = { title: $('pTitle').value.trim(), excerpt: $('pExcerpt').value.trim(), body: $('pBody').value.trim() };
+  if (!src.title || !src.body) { st.textContent = 'Isi judul dan isi artikel Indonesia dulu.'; return; }
+  btn.disabled = true; st.textContent = 'Menerjemahkan…';
+  try {
+    const tr = await translateRemote(src);
+    $('pTitleEn').value = tr.title_en || ''; $('pExcerptEn').value = tr.excerpt_en || ''; $('pBodyEn').value = tr.body_en || '';
+    st.textContent = 'Terjemahan terisi. Periksa lalu klik Simpan.';
+  } catch (e) { st.textContent = 'Gagal menerjemahkan: ' + trErr(e); }
+  finally { btn.disabled = false; }
+});
+
+// Tombol panel admin: terjemahkan semua artikel yang belum punya versi English.
+$('btnTranslateAll').addEventListener('click', async () => {
+  const todo = state.posts.filter((p) => !p.title_en && p.body);
+  if (!todo.length) { toast('Semua artikel sudah punya versi English.'); return; }
+  if (!confirm(`Terjemahkan ${todo.length} artikel ke English dengan AI?`)) return;
+  let ok = 0;
+  for (let i = 0; i < todo.length; i++) {
+    toast(`Menerjemahkan ${i + 1}/${todo.length}…`);
+    if (await autoTranslatePost(todo[i].id, todo[i], true)) ok++;
+  }
+  await loadPosts(); renderAll();
+  toast(`Selesai: ${ok}/${todo.length} artikel diterjemahkan.`);
+});

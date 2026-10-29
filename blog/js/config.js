@@ -11,3 +11,4 @@ export const CONTACT_EMAIL = ''; // email redaksi, mis. 'kalfinsetiawan@icloud.c
 export const SOCIAL = { x: '', instagram: '', youtube: '' }; // URL akun asli, mis. 'https://x.com/calvf1nka'. Kosong = tautan tidak muncul di footer
 export const SHOW_ADS = false; // true bila kotak iklan 300x250 sudah dipakai sungguhan
 export const LS_LANG = 'blog-lang';
+export const TRANSLATE_URL = SUPABASE_URL + '/functions/v1/blog-translate'; // Edge Function terjemahan (admin saja)
