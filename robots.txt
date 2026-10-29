@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /031411/
+
+Sitemap: https://smartphone-empire.my.id/sitemap.xml
