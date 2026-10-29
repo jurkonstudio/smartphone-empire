@@ -74,3 +74,6 @@
   .sk { display: flex; flex-direction: row; gap: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+
+/* Cover artikel: rasio tetap agar halaman tidak bergeser saat gambar dimuat (CLS) */
+.article .cover { aspect-ratio: 16 / 9; height: auto; object-fit: cover; background: var(--surface); }
