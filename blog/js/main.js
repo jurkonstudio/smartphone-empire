@@ -316,7 +316,7 @@ async function translateRemote(src) {
   if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
   return j;
 }
-const trErr = (e) => ({ server_not_configured: 'kunci AI belum dipasang di server', forbidden: 'bukan admin', unauthorized: 'belum masuk' }[e.message] || e.message);
+const trErr = (e) => ({ server_not_configured: 'kunci AI belum dipasang di server', upstream_429: 'kuota gratis sedang penuh, coba lagi beberapa menit lagi', upstream_400: 'model/kunci AI ditolak (cek GEMINI_API_KEY/GEMINI_MODEL)', upstream_403: 'kunci AI ditolak', upstream_404: 'nama model AI tidak ditemukan (cek GEMINI_MODEL)', forbidden: 'bukan admin', unauthorized: 'belum masuk' }[e.message] || e.message);
 // Terjemahkan lalu simpan ke kolom *_en. Tidak mengganggu penyimpanan artikel jika gagal.
 async function autoTranslatePost(id, src, quiet) {
   try {
@@ -871,6 +871,7 @@ $('btnTranslateAll').addEventListener('click', async () => {
   for (let i = 0; i < todo.length; i++) {
     toast(`Menerjemahkan ${i + 1}/${todo.length}…`);
     if (await autoTranslatePost(todo[i].id, todo[i], true)) ok++;
+    if (i < todo.length - 1) await new Promise((r) => setTimeout(r, 6000)); // jaga batas kuota gratis
   }
   await loadPosts(); renderAll();
   toast(`Selesai: ${ok}/${todo.length} artikel diterjemahkan.`);
