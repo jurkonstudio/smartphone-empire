@@ -313,10 +313,10 @@ async function translateRemote(src) {
     body: JSON.stringify({ title: src.title, excerpt: src.excerpt || '', body: src.body })
   });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok || j.error) throw new Error(j.error || ('HTTP ' + r.status));
+  if (!r.ok || j.error) throw new Error(j.error || j.message || j.msg || ('HTTP ' + r.status));
   return j;
 }
-const trErr = (e) => ({ server_not_configured: 'kunci AI belum dipasang di server', upstream_429: 'kuota gratis sedang penuh, coba lagi beberapa menit lagi', upstream_400: 'model/kunci AI ditolak (cek GEMINI_API_KEY/GEMINI_MODEL)', upstream_403: 'kunci AI ditolak', upstream_404: 'nama model AI tidak ditemukan (cek GEMINI_MODEL)', forbidden: 'bukan admin', unauthorized: 'belum masuk' }[e.message] || e.message);
+const trErr = (e) => (/failed to fetch|networkerror|load failed/i.test(e.message || '') ? 'fungsi blog-translate tidak terjangkau (belum di-deploy / nama salah)' : '') || ({ server_not_configured: 'kunci AI belum dipasang di server', upstream_429: 'kuota gratis sedang penuh, coba lagi beberapa menit lagi', upstream_400: 'model/kunci AI ditolak (cek GEMINI_API_KEY/GEMINI_MODEL)', upstream_403: 'kunci AI ditolak', upstream_404: 'nama model AI tidak ditemukan (cek GEMINI_MODEL)', forbidden: 'bukan admin', unauthorized: 'belum masuk' }[e.message] || e.message);
 // Terjemahkan lalu simpan ke kolom *_en. Tidak mengganggu penyimpanan artikel jika gagal.
 async function autoTranslatePost(id, src, quiet) {
   try {
@@ -326,6 +326,7 @@ async function autoTranslatePost(id, src, quiet) {
     if (!quiet) toast('Versi English tersimpan.');
     return true;
   } catch (e) {
+    state.lastTrErr = trErr(e) + ' [' + (e.message || e) + ']';
     if (!quiet) toast('Terjemahan otomatis gagal: ' + trErr(e));
     return false;
   }
@@ -875,4 +876,5 @@ $('btnTranslateAll').addEventListener('click', async () => {
   }
   await loadPosts(); renderAll();
   toast(`Selesai: ${ok}/${todo.length} artikel diterjemahkan.`);
+  if (ok < todo.length) alert(`Berhasil ${ok} dari ${todo.length} artikel.\n\nPenyebab gagal terakhir:\n${state.lastTrErr}`);
 });
