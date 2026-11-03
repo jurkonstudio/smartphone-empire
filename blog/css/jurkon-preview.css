@@ -1,10 +1,54 @@
-/* Pratinjau Jurnal Koneksi di sidebar. Memakai token warna blog (terang/gelap otomatis). */
-.jk-box .jk-sub { margin: -4px 0 10px; font-size: .8rem; color: var(--sub); }
-.jk-box .jk-ajak { margin: 0 0 12px; font-size: .9rem; color: var(--sub); line-height: 1.5; }
-.jk-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
-.jk-note { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); color: var(--text); }
-.jk-note:hover { border-color: var(--accent); }
-.jk-text { font-size: .9rem; line-height: 1.45; overflow-wrap: anywhere; }
-.jk-meta { font-size: .74rem; color: var(--sub); }
-.jk-cta { display: block; text-align: center; padding: 9px 12px; border-radius: 10px; background: var(--accent); color: #fff; font-weight: 600; font-size: .88rem; }
-.jk-cta:hover { background: var(--accent-h); color: #fff; }
+/* Kartu Jurnal Koneksi di slot iklan sidebar beranda. Memakai token warna blog (terang/gelap otomatis). */
+.jk-ad { --jk-paper: #fbf9f4; --jk-warm: #f3ead8; --jk-line: #e7dfd0; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .jk-ad { --jk-paper: #26221f; --jk-warm: #2f2a26; --jk-line: #3a342e; }
+}
+:root[data-theme="dark"] .jk-ad { --jk-paper: #26221f; --jk-warm: #2f2a26; --jk-line: #3a342e; }
+
+.jk-card {
+  position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 12px;
+  padding: 18px; border: 1px solid var(--border); border-radius: 20px;
+  background: linear-gradient(160deg, var(--card) 0%, var(--surface) 100%);
+}
+.jk-card::before {
+  content: ""; position: absolute; top: -70px; right: -70px; width: 200px; height: 200px; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%);
+}
+.jk-top { position: relative; display: flex; justify-content: space-between; align-items: center; }
+.jk-brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: .82rem; color: var(--text); }
+.jk-dot {
+  position: relative; width: 20px; height: 20px; border-radius: 7px; flex: none;
+  background: linear-gradient(135deg, #1c1917, #57534e);
+}
+.jk-dot::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: #fbf9f4; }
+.jk-tag {
+  font-size: .66rem; text-transform: uppercase; letter-spacing: .08em; color: var(--sub);
+  border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px;
+}
+
+.jk-stack { position: relative; display: grid; gap: 10px; padding: 4px 2px 2px; }
+.jk-paper {
+  display: flex; gap: 10px; align-items: flex-start; padding: 12px; border-radius: 14px;
+  background: var(--jk-paper); border: 1px solid var(--jk-line); color: var(--text); text-decoration: none;
+  box-shadow: 0 8px 18px -12px rgba(28, 25, 23, .4); transition: transform .2s ease, border-color .2s ease;
+}
+.jk-p1 { transform: rotate(-1.2deg); }
+.jk-p2 { transform: rotate(.9deg) translateX(10px); background: var(--jk-warm); }
+a.jk-paper:hover { transform: none; border-color: var(--accent); }
+.jk-av {
+  flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: linear-gradient(135deg, #d6c3a0, #a8906a); color: #fff; font-weight: 700; font-size: .8rem;
+}
+.jk-body { display: grid; gap: 4px; min-width: 0; }
+.jk-text { font-size: .86rem; line-height: 1.45; overflow-wrap: anywhere; color: var(--text); }
+.jk-meta { font-size: .72rem; color: var(--sub); }
+
+.jk-h { margin: 2px 0 0; font-family: var(--serif); font-size: 1.15rem; line-height: 1.25; color: var(--text); }
+.jk-sub { margin: -6px 0 0; font-size: .84rem; line-height: 1.5; color: var(--sub); }
+.jk-cta {
+  display: block; text-align: center; padding: 10px 12px; border-radius: 12px;
+  background: var(--text); color: var(--bg); font-weight: 600; font-size: .88rem;
+  transition: background .15s ease;
+}
+.jk-cta:hover { background: var(--accent); color: #fff; }
+.jk-fine { margin: 0; font-size: .72rem; color: var(--sub); text-align: center; }
