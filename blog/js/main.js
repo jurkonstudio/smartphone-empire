@@ -982,7 +982,32 @@ $('formLogin').addEventListener('submit', async (e) => {
   } catch (err) { st.textContent = authMsg(err); }
   finally { btn.disabled = false; }
 });
-$('btnLogout2').addEventListener('click', async () => { await sb.auth.signOut(); toast('Sudah keluar.'); });
+// Keluar. signOut ke server bisa gagal (sinyal putus, VPN, galat 5xx). Saat gagal, supabase-js TIDAK menghapus
+// sesi lokal dan tidak memicu SIGNED_OUT, jadi panel admin tetap tampil walau toast "Sudah keluar" muncul.
+// Karena itu sesi lokal selalu dibersihkan paksa dan tampilan langsung disegarkan.
+let sedangKeluar = false;
+async function keluar() {
+  if (sedangKeluar) return;
+  sedangKeluar = true;
+  const tombol = document.querySelectorAll('#btnLogout, #btnLogout2');
+  tombol.forEach((b) => { b.disabled = true; });
+  let gagalServer = false;
+  try {
+    const hasil = await Promise.race([
+      sb.auth.signOut(),
+      new Promise((_, tolak) => setTimeout(() => tolak(new Error('timeout')), 6000))
+    ]);
+    if (hasil && hasil.error) gagalServer = true;
+  } catch (e) { gagalServer = true; }
+  try { localStorage.removeItem(AUTH_KEY); localStorage.removeItem(AUTH_KEY + '-code-verifier'); } catch (e) {}
+  state.user = null; state.isAdmin = false; state.name = '';
+  $('adminbar').hidden = true; $('userChip').hidden = true;
+  try { await refreshAuth(); await loadAll(); } catch (e) {}
+  tombol.forEach((b) => { b.disabled = false; });
+  sedangKeluar = false;
+  toast(gagalServer ? 'Sudah keluar di perangkat ini (server tidak terjangkau).' : 'Sudah keluar.');
+}
+$('btnLogout2').addEventListener('click', keluar);
 
 document.addEventListener('click', async (e) => {
   if (e.target.closest('#btnLoginC')) { openLogin(); return; }
@@ -1007,7 +1032,7 @@ document.addEventListener('submit', async (e) => {
   if (error) { toast('Gagal mengirim komentar.'); return; }
   toast('Komentar terkirim.'); loadComments(state.postId);
 });
-$('btnLogout').addEventListener('click', async () => { await sb.auth.signOut(); toast('Sudah keluar.'); });
+$('btnLogout').addEventListener('click', keluar);
 
 // Penting: jangan memanggil Supabase (getSession, rpc, from) langsung di dalam callback ini.
 // Callback berjalan di dalam kunci auth, jadi signInWithPassword bisa macet selamanya
