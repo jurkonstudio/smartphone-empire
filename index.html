@@ -39,6 +39,8 @@
 <link rel="stylesheet" href="/blog/css/adminbar.css?v=1">
 <link rel="stylesheet" href="/blog/css/blog-polish.css?v=2">
 <link rel="stylesheet" href="/blog/css/jadwal.css?v=1">
+<link rel="stylesheet" href="/blog/css/jurkon-preview.css?v=1">
+<link rel="stylesheet" href="/blog/css/editor.css?v=1">
 </head>
 <body>
 <a class="skip" href="#main">Lewati ke konten</a>
@@ -120,6 +122,7 @@
             <p class="fine" data-i18n="gc_fine">Gratis, langsung di browser, tanpa instal. Dibuat oleh Jurkon Studio, penerbit blog ini.</p>
           </div>
         </section>
+        <section class="widget jk-box" id="jkBox" hidden aria-label="Jurnal Koneksi"></section>
         <div class="ad" id="adBox" hidden aria-label="Ruang iklan" data-i18n="ad">Ruang iklan 300×250</div>
       </aside>
     </div>
@@ -199,46 +202,91 @@
 </dialog>
 
 <!-- ====== DIALOG ARTIKEL MANUAL ====== -->
-<dialog id="dlgPost">
+<dialog id="dlgPost" class="dlg-editor">
   <form id="formPost">
     <div class="dlg-head"><h2 id="postDlgTitle">Tulis artikel</h2><button class="btn" type="button" data-close>Tutup</button></div>
     <div class="dlg-body">
-      <div class="field"><label for="pTitle">Judul</label><input id="pTitle" required maxlength="200"></div>
-      <div class="two">
-        <div class="field"><label for="pSlug">Slug (alamat artikel)</label><input id="pSlug" maxlength="80" pattern="[a-z0-9][a-z0-9-]{2,79}" placeholder="otomatis dari judul"><span class="hint">Huruf kecil, angka, dan tanda hubung.</span></div>
-        <div class="field"><label for="pCat">Kategori</label>
-          <select id="pCat">
-            <option value="rilis">Rilis</option>
-            <option value="spek">Spek</option>
-            <option value="rumor">Rumor</option>
-            <option value="jadwal">Jadwal</option>
-          </select>
+
+      <section class="ed-sec">
+        <h3 class="ed-h"><span class="ed-n">1</span>Informasi dasar</h3>
+        <div class="field"><label for="pTitle">Judul</label><input id="pTitle" required maxlength="200"></div>
+        <div class="two">
+          <div class="field"><label for="pSlug">Slug (alamat artikel)</label><input id="pSlug" maxlength="80" pattern="[a-z0-9][a-z0-9-]{2,79}" placeholder="otomatis dari judul"><span class="hint">Huruf kecil, angka, dan tanda hubung.</span></div>
+          <div class="field"><label for="pCat">Kategori</label>
+            <select id="pCat">
+              <option value="rilis">Rilis</option>
+              <option value="spek">Spek</option>
+              <option value="rumor">Rumor</option>
+              <option value="jadwal">Jadwal</option>
+            </select>
+          </div>
         </div>
-      </div>
-      <div class="field"><label for="pAuthor">Nama penulis</label><input id="pAuthor" maxlength="60" autocomplete="off" placeholder="mis. Rina Putri"><div class="chips" id="pAuthorChips"></div></div>
-      <div class="field"><label for="pExcerpt">Ringkasan</label><textarea id="pExcerpt" rows="2" maxlength="300" class="short"></textarea></div>
-      <div class="field"><label for="pBody">Isi artikel</label><textarea id="pBody" maxlength="30000"></textarea><span class="hint">Pisahkan paragraf dengan satu baris kosong.</span></div>
-      <details id="pEnBox" class="en-box">
-        <summary>Versi English (opsional)</summary>
-        <p class="hint">Dibuat otomatis dengan AI saat artikel disimpan (jika kosong). Bisa disunting manual.</p>
-        <button class="btn" type="button" id="btnTranslateFill">🌐 Terjemahkan dari Indonesia (AI)</button>
-        <div class="field"><label for="pTitleEn">Title</label><input id="pTitleEn" maxlength="200"></div>
-        <div class="field"><label for="pExcerptEn">Summary</label><textarea id="pExcerptEn" rows="2" maxlength="300" class="short"></textarea></div>
-        <div class="field"><label for="pBodyEn">Article body</label><textarea id="pBodyEn" maxlength="30000"></textarea></div>
-      </details>
-      <div class="two">
-        <div class="field"><label for="pCover">Gambar sampul (opsional, maks. 5 MB)</label><input id="pCover" type="file" accept="image/*"></div>
-        <div class="field"><label for="pSource">Link sumber (opsional)</label><input id="pSource" type="url" placeholder="https://…"></div>
-      </div>
-      <div class="two">
-        <label class="check"><input type="checkbox" id="pFeatured"> Jadikan artikel utama</label>
-        <div class="field"><label for="pStatus">Status</label>
-          <select id="pStatus"><option value="published">Terbitkan</option><option value="draft">Simpan sebagai draf</option></select>
+        <div class="field"><label for="pAuthor">Nama penulis</label><input id="pAuthor" maxlength="60" autocomplete="off" placeholder="mis. Rina Putri"><div class="chips" id="pAuthorChips"></div></div>
+      </section>
+
+      <section class="ed-sec">
+        <h3 class="ed-h"><span class="ed-n">2</span>Isi tulisan</h3>
+        <div class="field"><label for="pExcerpt">Ringkasan</label><textarea id="pExcerpt" rows="2" maxlength="300" class="short"></textarea><span class="hint" id="pExcerptCount"></span></div>
+        <div class="field"><label for="pBody">Isi artikel</label><textarea id="pBody" maxlength="30000"></textarea><span class="hint" id="pBodyCount">Pisahkan paragraf dengan satu baris kosong.</span></div>
+        <details id="pEnBox" class="en-box">
+          <summary>Versi English (opsional)</summary>
+          <p class="hint">Dibuat otomatis dengan AI saat artikel disimpan (jika kosong). Bisa disunting manual.</p>
+          <button class="btn" type="button" id="btnTranslateFill">🌐 Terjemahkan dari Indonesia (AI)</button>
+          <div class="field"><label for="pTitleEn">Title</label><input id="pTitleEn" maxlength="200"></div>
+          <div class="field"><label for="pExcerptEn">Summary</label><textarea id="pExcerptEn" rows="2" maxlength="300" class="short"></textarea></div>
+          <div class="field"><label for="pBodyEn">Article body</label><textarea id="pBodyEn" maxlength="30000"></textarea></div>
+        </details>
+      </section>
+
+      <section class="ed-sec">
+        <h3 class="ed-h"><span class="ed-n">3</span>Media &amp; sumber</h3>
+
+        <div class="field">
+          <label>Gambar sampul</label>
+          <div class="cover-box">
+            <div class="cover-prev" id="pCoverPrev"><span>Belum ada sampul</span></div>
+            <div class="cover-side">
+              <div class="row-btns">
+                <label class="btn" for="pCover">Pilih gambar</label>
+                <button class="btn danger" type="button" id="btnCoverClear" hidden>Hapus</button>
+              </div>
+              <input id="pCover" type="file" accept="image/*" hidden>
+              <span class="hint" id="pCoverName">Maks. 5 MB. Rasio 16:9 disarankan.</span>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="qbox" id="pQuality" hidden></div>
-      <p class="status-line" id="postStatus"></p>
-      <div class="dlg-foot">
+
+        <div class="field">
+          <label>Foto &amp; video pendukung <span class="badge" id="pMediaCount">0</span></label>
+          <div class="row-btns">
+            <label class="btn" for="pMediaFiles">＋ Unggah foto/video</label>
+            <button class="btn" type="button" id="btnAddMediaLink">🔗 Dari link</button>
+          </div>
+          <input id="pMediaFiles" type="file" accept="image/*,video/mp4,video/webm,video/quicktime" multiple hidden>
+          <div class="media-linkbar" id="pMediaLinkBar" hidden>
+            <input id="pMediaLink" type="url" placeholder="Tempel link foto, video (.mp4/.webm), atau YouTube">
+            <button class="btn primary" type="button" id="btnMediaLinkOk">Tambah</button>
+          </div>
+          <div class="media-list" id="pMediaList"></div>
+          <span class="hint">Foto maks. 5 MB, video maks. 50 MB (MP4/WebM). Tiap media punya keterangan dan kolom sumber sendiri.</span>
+        </div>
+
+        <div class="field"><label for="pSource">Link sumber artikel (opsional)</label><input id="pSource" type="url" placeholder="https://…"></div>
+      </section>
+
+      <section class="ed-sec">
+        <h3 class="ed-h"><span class="ed-n">4</span>Publikasi</h3>
+        <div class="two">
+          <label class="check"><input type="checkbox" id="pFeatured"> Jadikan artikel utama</label>
+          <div class="field"><label for="pStatus">Status</label>
+            <select id="pStatus"><option value="published">Terbitkan</option><option value="draft">Simpan sebagai draf</option></select>
+          </div>
+        </div>
+        <div class="qbox" id="pQuality" hidden></div>
+      </section>
+
+      <div class="dlg-foot ed-foot">
+        <p class="status-line" id="postStatus"></p>
         <button class="btn danger" type="button" id="btnDeletePost" hidden>Hapus</button>
         <button class="btn primary" type="submit" id="btnSavePost">Simpan</button>
       </div>
@@ -328,6 +376,7 @@
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="/blog/js/admin-tap.js?v=1"></script>
-<script type="module" src="/blog/js/main.js?v=14"></script>
+<script type="module" src="/blog/js/main.js?v=15"></script>
+<script type="module" src="/blog/js/jurkon-preview.js?v=1"></script>
 </body>
 </html>
