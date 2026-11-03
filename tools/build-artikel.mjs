@@ -38,11 +38,27 @@ const siteHeader = () => `<header class="site-header"><div class="bar">
 const siteFooter = () => `<footer class="site-footer"><div class="copy"><span>© ${new Date().getFullYear()} Jurkon Studio</span><span class="flinks"><a href="/i/tentang/">Tentang Kami</a><a href="/i/redaksi/">Redaksi</a><a href="/i/etik/">Kode Etik</a><a href="/i/privasi/">Privasi</a><a href="/i/kontak/">Kontak</a><a href="https://jurkon.my.id/">Journal Connection</a><a href="https://boombastis.my.id/">Boombastis</a></span></div></footer>`;
 const PAGE_JS = `<script>(function(){var b=document.getElementById('themeToggle');if(b)b.addEventListener('click',function(){var r=document.documentElement,d=r.getAttribute('data-theme')?r.getAttribute('data-theme')==='dark':matchMedia('(prefers-color-scheme: dark)').matches,n=d?'light':'dark';r.setAttribute('data-theme',n);try{localStorage.setItem('blog-theme',n)}catch(e){}});var c=document.getElementById('copyLink');if(c)c.addEventListener('click',function(){var u=c.dataset.url,t=c.textContent;function ok(){c.textContent='Tautan disalin';setTimeout(function(){c.textContent=t},1800)}if(navigator.clipboard)navigator.clipboard.writeText(u).then(ok,function(){prompt('Salin tautan:',u)});else prompt('Salin tautan:',u)})})();</script>`;
 
+// Deskripsi meta: huruf awal kapital, dipotong di batas kata (maks 155), dan memakai paragraf pertama bila ringkasan terlalu pendek.
+function rapikanDesc(excerpt, para, title) {
+  let t = String(excerpt || '').replace(/\s+/g, ' ').trim();
+  if (t.length < 70 && para) t = (t ? t + '. ' : '') + String(para).replace(/\s+/g, ' ').trim();
+  t = t || title;
+  t = t.charAt(0).toUpperCase() + t.slice(1);
+  if (t.length > 155) t = t.slice(0, 154).replace(/\s+\S*$/, '').replace(/[,;:\-–]$/, '') + '…';
+  return t;
+}
+const EXTRA_META = (title, desc, img) => `<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">
+<meta property="og:locale" content="id_ID">
+<meta name="twitter:title" content="${esc(title)}">
+<meta name="twitter:description" content="${esc(desc)}">
+<meta name="twitter:image" content="${esc(img)}">
+<link rel="stylesheet" href="/blog/css/blog-seo-ui.css?v=1">`;
+
 function page(p, all = []) {
   const canonical = `${SITE}/${OUT}/${p.slug}/`;
   const published = p.published_at || p.created_at;
   const paras = (p.body || '').split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean);
-  const desc = (p.excerpt || paras[0] || p.title).replace(/\s+/g, ' ').slice(0, 155);
+  const desc = rapikanDesc(p.excerpt, paras[0], p.title);
   const img = safeHttps(p.cover_url) || `${SITE}/game/assets/img/landing/pasar.jpg`;
   const ld = {
     '@context': 'https://schema.org', '@type': 'NewsArticle', headline: p.title.slice(0, 110), description: desc,
@@ -74,6 +90,10 @@ function page(p, all = []) {
 <meta property="og:url" content="${canonical}">
 <meta property="og:image" content="${esc(img)}">
 <meta property="article:published_time" content="${esc(published)}">
+<meta property="article:modified_time" content="${esc(p.updated_at || published)}">
+<meta property="article:section" content="${esc(cat)}">
+<meta property="og:image:alt" content="${esc(p.title)}">
+${EXTRA_META(p.title, desc, img)}
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>
 <script type="application/ld+json">${JSON.stringify(crumbLd).replace(/</g, '\\u003c')}</script>
@@ -137,6 +157,7 @@ function categoryPage(cat, list) {
 <meta property="og:url" content="${canonical}">
 <meta property="og:image" content="${esc(img)}">
 <meta name="twitter:card" content="summary_large_image">
+${EXTRA_META(name + ' | Smartphone Empire', desc, img)}
 <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>
 <script type="application/ld+json">${JSON.stringify(crumbLd).replace(/</g, '\\u003c')}</script>
 <meta name="theme-color" content="#0a84ff">
@@ -186,9 +207,11 @@ try {
 } catch (e) { console.warn('Lewati arsip beranda:', e.message); }
 
 const day = (d) => new Date(d).toISOString().slice(0, 10);
-const urls = [`  <url><loc>${SITE}/</loc></url>`, `  <url><loc>${SITE}/game/</loc></url>`,
-  ...[...KATEGORI_ADA].map((c) => `  <url><loc>${SITE}/${KOUT}/${c}/</loc></url>`),
-  ...posts.map((p) => `  <url><loc>${SITE}/${OUT}/${p.slug}/</loc><lastmod>${day(p.updated_at || p.published_at || p.created_at)}</lastmod></url>`)];
+const terbaru = (list) => (list.length ? day(list[0].updated_at || list[0].published_at || list[0].created_at) : day(new Date()));
+const urls = [`  <url><loc>${SITE}/</loc><lastmod>${terbaru(posts)}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>`,
+  `  <url><loc>${SITE}/game/</loc><lastmod>${day(new Date())}</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>`,
+  ...[...KATEGORI_ADA].map((c) => `  <url><loc>${SITE}/${KOUT}/${c}/</loc><lastmod>${terbaru(posts.filter((x) => x.category === c))}</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>`),
+  ...posts.map((p) => `  <url><loc>${SITE}/${OUT}/${p.slug}/</loc><lastmod>${day(p.updated_at || p.published_at || p.created_at)}</lastmod><priority>0.8</priority></url>`)];
 await writeFile('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`);
 await writeFile('robots.txt', `User-agent: *\nAllow: /\nDisallow: /031411/\nDisallow: /admin/\n\nSitemap: ${SITE}/sitemap.xml\n`);
 console.log(`Selesai: ${posts.length} artikel, sitemap.xml, robots.txt`);

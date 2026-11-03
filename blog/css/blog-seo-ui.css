@@ -1,0 +1,21 @@
+/* Penyempurnaan tampilan blog (tambahan; aman dihapus). Memakai token warna blog, terang/gelap otomatis. */
+.sr-only { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.page-title { font-family: var(--serif); font-size: clamp(1.4rem, 1.1rem + 1.2vw, 2rem); line-height: 1.2; margin: 8px 0 18px; letter-spacing: -.01em; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body { text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+.site-header { box-shadow: 0 1px 0 var(--border), 0 8px 24px -16px rgba(0, 0, 0, .25); }
+.card, .widget, .game-card { border-radius: 18px; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.card:hover, .game-card:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -18px rgba(0, 0, 0, .35); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.card .cover img, .article .cover { object-fit: cover; }
+.tag { letter-spacing: .04em; font-weight: 600; }
+.article { max-width: 720px; margin-inline: auto; }
+.article h1 { font-size: clamp(1.7rem, 1.2rem + 2.2vw, 2.6rem); line-height: 1.15; letter-spacing: -.02em; }
+.article .lead { font-size: 1.12rem; color: var(--sub); }
+.article .content { font-size: 1.06rem; line-height: 1.8; }
+.article .content h2, .article .content h3 { margin: 1.8em 0 .5em; line-height: 1.25; }
+.article .content img { max-width: 100%; height: auto; border-radius: 14px; }
+.article .byline { gap: 10px 14px; flex-wrap: wrap; color: var(--sub); font-size: .85rem; }
+.crumbs { font-size: .82rem; color: var(--sub); }
+a, button { -webkit-tap-highlight-color: transparent; }
+@media (max-width: 900px) { aside { position: static; } .layout { gap: 24px; } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .card, .widget, .game-card { transition: none; } .card:hover, .game-card:hover { transform: none; } }
