@@ -2,6 +2,7 @@ window.__blogReady = true;  // modul termuat (CDN Supabase berhasil)
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/+esm';
 import { SUPABASE_URL, SUPABASE_KEY, BUCKET, MAX_IMAGE_BYTES, TZ, AUTH_KEY, CONTACT_EMAIL, SOCIAL, SHOW_ADS, LS_LANG, TRANSLATE_URL } from './config.js';
 import { assessPost, autoClean } from './quality.js';
+import { mdToHtml, mdToText, firstProse, attachSmartPaste } from './richtext.js';
 import { I18N, CATS_L, DESC_L } from './i18n.js';
 import { PAGES } from './pages.js?v=2';
 import { renderSchedule, SPEC_KEYS } from './jadwal.js?v=1';
@@ -393,8 +394,7 @@ function showPost(slug) {
     article.innerHTML = `<p class="empty">${t('notfound')}</p>`;
     document.title = 'Artikel tidak ditemukan — Smartphone Empire';
   } else {
-    const paragraphs = (tx(p, 'body') || '').split(/\n\s*\n/).filter((s) => s.trim())
-      .map((s) => `<p>${esc(s.trim()).replace(/\n/g, '<br>')}</p>`).join('');
+    const paragraphs = mdToHtml(tx(p, 'body') || '');
     const src = safeUrl(p.source_url);
     article.innerHTML = `
       <div class="meta"><span class="tag t-${esc(p.category)}">${esc(CATS[p.category])}</span>
@@ -679,7 +679,7 @@ function parseAiArticle(raw) {
   let text = (raw || '').replace(/\r\n?/g, '\n').trim();
   text = text.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```$/, '').trim();
   const lines = text.split('\n');
-  const plain = (s) => s.replace(/\*\*/g, '').replace(/__/g, '').trim();
+  const plain = (s) => mdToText(s).replace(/\s+/g, ' ').trim();
   let i = 0;
   // Lewati baris kosong dan pemisah (---).
   while (i < lines.length && (!lines[i].trim() || /^(-{3,}|\*{3,})$/.test(lines[i].trim()))) i++;
@@ -699,21 +699,12 @@ function parseAiArticle(raw) {
     if (m) { excerpt = m[1].trim(); lines.splice(k, 1); break; }
   }
 
-  // Bersihkan markdown dari isi.
-  let body = lines.slice(i).map((ln) => {
-    let s = ln.replace(/^\s*#{1,6}\s*/, '')
-              .replace(/^\s*[-*+]\s+/, '• ')
-              .replace(/\*\*(.+?)\*\*/g, '$1')
-              .replace(/__(.+?)__/g, '$1')
-              .replace(/\*(\S(?:.*?\S)?)\*/g, '$1')
-              .replace(/`([^`]+)`/g, '$1');
-    if (/^\s*(-{3,}|\*{3,})\s*$/.test(s)) s = '';
-    return s.replace(/\s+$/, '');
-  }).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  // Isi disimpan sebagai Markdown (tabel, judul, daftar, tebal, tautan tetap utuh); dirender oleh richtext.js.
+  const body = lines.slice(i).join('\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 
-  // Ringkasan otomatis: paragraf pertama, dipotong di batas kata.
+  // Ringkasan otomatis: paragraf prosa pertama (bukan judul/tabel/daftar), dipotong di batas kata.
   if (!excerpt && body) {
-    const first = body.split(/\n\s*\n/)[0].replace(/\n/g, ' ').trim();
+    const first = firstProse(body);
     excerpt = first.length > 180 ? first.slice(0, 180).replace(/\s+\S*$/, '') + '…' : first;
   }
   return { title, excerpt, body };
@@ -747,10 +738,13 @@ function refreshAiPreview() {
   if (!aiTouched.excerpt) $('aiExcerpt').value = aiParsed.excerpt;
   $('aiTitleCount').textContent = $('aiTitle').value.length + '/200';
   $('aiExcerptCount').textContent = $('aiExcerpt').value.length + '/300';
-  const words = aiParsed.body ? aiParsed.body.split(/\s+/).length : 0;
+  const plainBody = mdToText(aiParsed.body);
+  const words = plainBody ? plainBody.split(/\s+/).length : 0;
   const paras = aiParsed.body ? aiParsed.body.split(/\n\s*\n/).length : 0;
+  const nTbl = (aiParsed.body.match(/^\s*\|?\s*:?-{2,}:?\s*\|/gm) || []).length;
+  $('aiRender').innerHTML = aiParsed.body ? mdToHtml(aiParsed.body) : '<p class="muted">Pratinjau tampil di sini.</p>';
   $('aiPreview').textContent = words
-    ? `Terdeteksi: ${paras} paragraf, ${words} kata (±${Math.max(1, Math.round(words / 200))} menit baca), penulis ${cleanAuthor($('aiAuthor').value)}.`
+    ? `Terdeteksi: ${paras} blok, ${words} kata (±${Math.max(1, Math.round(words / 200))} menit baca)${nTbl ? `, ${nTbl} tabel` : ''}, penulis ${cleanAuthor($('aiAuthor').value)}.`
     : 'Belum ada teks.';
   aiQualRes = words ? assessPost({
     title: $('aiTitle').value, excerpt: $('aiExcerpt').value, body: aiParsed.body, category: $('aiCat').value,
@@ -759,6 +753,8 @@ function refreshAiPreview() {
   renderQuality($('aiQuality'), aiQualRes);
 }
 function syncAiStatus() { $('btnSavePaste').textContent = $('aiStatus').value === 'published' ? 'Terbitkan artikel' : 'Simpan draf'; }
+attachSmartPaste($('aiRaw'), (k) => { $('aiStatusLine').textContent = `Format ${k} dari clipboard diubah ke Markdown (tabel, judul, daftar, tautan terjaga).`; });
+attachSmartPaste($('pBody'), (k) => { toast(`Format ${k} diubah ke Markdown.`); });
 $('aiRaw').addEventListener('input', () => { aiQualAck = false; refreshAiPreview(); try { localStorage.setItem(DRAFT_KEY, $('aiRaw').value); } catch (e) {} });
 $('aiTitle').addEventListener('input', () => { aiTouched.title = true; refreshAiPreview(); });
 $('aiExcerpt').addEventListener('input', () => { aiTouched.excerpt = true; refreshAiPreview(); });

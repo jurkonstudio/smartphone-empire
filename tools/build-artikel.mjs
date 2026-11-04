@@ -5,6 +5,9 @@
 import { readFile, writeFile, mkdir, rm, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
+// Renderer isi artikel dipakai bersama blog (browser) dan build ini. Dimuat lewat data: URL agar tidak perlu package.json "type":"module".
+const { mdToHtml, mdToText, firstProse } = await import('data:text/javascript;base64,' + Buffer.from(await readFile('blog/js/richtext.js', 'utf8')).toString('base64'));
+
 const SITE = 'https://smartphone-empire.my.id';
 const OUT = 'a';
 const KOUT = 'k';
@@ -18,7 +21,7 @@ const SUPABASE_URL = pick('SUPABASE_URL'), SUPABASE_KEY = pick('SUPABASE_KEY'), 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const safeHttps = (u) => (/^https:\/\//.test(u || '') ? u : '');
 const CATS = { rilis: 'Rilis', spek: 'Spek', rumor: 'Rumor', jadwal: 'Jadwal' };
-const readMin = (t) => Math.max(1, Math.round(String(t || '').split(/\s+/).filter(Boolean).length / 200));
+const readMin = (t) => Math.max(1, Math.round(mdToText(t).split(/\s+/).filter(Boolean).length / 200));
 const fmtDate = (d) => new Date(d).toLocaleDateString('id-ID', { timeZone: TZ, day: 'numeric', month: 'long', year: 'numeric' });
 
 async function loadPosts() {
@@ -57,8 +60,7 @@ const EXTRA_META = (title, desc, img) => `<meta name="robots" content="index,fol
 function page(p, all = []) {
   const canonical = `${SITE}/${OUT}/${p.slug}/`;
   const published = p.published_at || p.created_at;
-  const paras = (p.body || '').split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean);
-  const desc = rapikanDesc(p.excerpt, paras[0], p.title);
+  const desc = rapikanDesc(p.excerpt, firstProse(p.body), p.title);
   const img = safeHttps(p.cover_url) || `${SITE}/game/assets/img/landing/pasar.jpg`;
   const ld = {
     '@context': 'https://schema.org', '@type': 'NewsArticle', headline: p.title.slice(0, 110), description: desc,
@@ -101,6 +103,7 @@ ${EXTRA_META(p.title, desc, img)}
 <script>(function(){try{var t=localStorage.getItem('blog-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <link rel="stylesheet" href="/blog/css/blog.css?v=10">
 <link rel="stylesheet" href="/blog/css/blog-polish.css?v=2">
+<link rel="stylesheet" href="/blog/css/richtext.css?v=1">
 </head>
 <body>
 <a class="skip" href="#main">Lewati ke konten</a>
@@ -113,7 +116,7 @@ ${siteHeader()}
     ${p.excerpt ? `<p class="lead">${esc(p.excerpt)}</p>` : ''}
     <div class="meta byline"><span>Ditulis oleh ${esc(p.author || 'admin')}</span><time datetime="${esc(published)}">${esc(fmtDate(published))}</time><span>${readMin(p.body)} menit baca</span></div>
     ${safeHttps(p.cover_url) ? `<img class="cover" src="${esc(p.cover_url)}" alt="${esc(p.title)}" width="1200" height="675" decoding="async" style="margin-top:20px">` : ''}
-    <div class="content">${paras.map((s) => `<p>${esc(s).replace(/\n/g, '<br>')}</p>`).join('\n')}</div>
+    <div class="content">${mdToHtml(p.body)}</div>
     ${safeHttps(p.source_url) ? `<p class="source">Sumber: <a href="${esc(p.source_url)}" rel="noopener nofollow" target="_blank">${esc(p.source_url)}</a></p>` : ''}
     <div class="share"><span>Bagikan</span>
       <a class="btn" href="https://wa.me/?text=${shareTxt}%20${shareUrl}" target="_blank" rel="noopener">WhatsApp</a>

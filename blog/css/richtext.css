@@ -1,0 +1,31 @@
+/* richtext.css — gaya isi artikel hasil Markdown (judul, daftar, tabel, kutipan, kode). Dimuat setelah blog-polish.css. */
+.article .content > :last-child { margin-bottom: 0; }
+.article .content h2, .article .content h3, .article .content h4 { font-family: var(--serif); line-height: 1.25; letter-spacing: -.01em; margin: 1.9em 0 .6em; text-wrap: balance; }
+.article .content h2 { font-size: 1.55rem; }
+.article .content h3 { font-size: 1.28rem; }
+.article .content h4 { font-size: 1.1rem; }
+.article .content ul, .article .content ol { font-family: var(--serif); font-size: 1.12rem; line-height: 1.75; padding-left: 1.5em; margin: 0 0 1.25em; }
+.article .content li { margin: .35em 0; }
+.article .content li > ul, .article .content li > ol { margin: .3em 0 .2em; font-size: 1em; }
+.article .content li::marker { color: var(--accent); }
+.article .content blockquote { margin: 0 0 1.3em; padding: .15em 0 .15em 1.1em; border-left: 4px solid var(--accent); color: var(--sub); }
+.article .content blockquote p { margin: 0 0 .6em; }
+.article .content code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: .1em .35em; }
+.article .content pre { overflow-x: auto; margin: 0 0 1.3em; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; line-height: 1.55; -webkit-overflow-scrolling: touch; }
+.article .content pre code { background: none; border: 0; padding: 0; font-size: .88rem; }
+.article .content hr { border: 0; border-top: 1px solid var(--border); margin: 2em 0; }
+.article .content img { max-width: 100%; height: auto; border-radius: 12px; display: block; margin: .4em auto; }
+.article .content a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; word-break: break-word; }
+.article .content del { opacity: .65; }
+
+/* Tabel: bisa digeser ke samping di layar sempit, tidak melebarkan halaman */
+.article .content .tbl-wrap { overflow-x: auto; margin: 0 0 1.5em; border: 1px solid var(--border); border-radius: 12px; -webkit-overflow-scrolling: touch; }
+.article .content table { border-collapse: collapse; width: 100%; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: .94rem; line-height: 1.5; }
+.article .content th, .article .content td { padding: 9px 13px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); min-width: 6.5em; }
+.article .content th { background: var(--surface); font-weight: 700; white-space: nowrap; }
+.article .content tbody tr:last-child td { border-bottom: 0; }
+.article .content tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--surface) 55%, transparent); }
+
+/* Pratinjau di dialog admin */
+.rt-preview { max-height: 340px; overflow: auto; padding: 4px 2px; }
+.rt-preview p, .rt-preview li { font-size: 1rem; }

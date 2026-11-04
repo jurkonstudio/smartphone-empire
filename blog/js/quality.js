@@ -1,3 +1,4 @@
+import { mdToText } from './richtext.js';
 // Penilai kualitas artikel (berjalan di browser, tanpa AI, tanpa biaya).
 // assessPost(post, semuaPost) -> { score, level, issues: [{ sev, text }] }
 //   sev: 'bad' (serius), 'warn' (sebaiknya diperbaiki), 'info' (saran)
@@ -37,7 +38,8 @@ export function assessPost(p, all = []) {
   let score = 100;
   const hit = (sev, pts, text) => { score -= pts; issues.push({ sev, text }); };
 
-  const wc = words(body).length;
+  const plain = mdToText(body);
+  const wc = words(plain).length;
   if (wc < 200) hit('bad', 35, `Terlalu pendek (${wc} kata). Artikel yang bernilai biasanya ±350 kata atau lebih.`);
   else if (wc < 350) hit('warn', 15, `Agak pendek (${wc} kata). Tambahkan konteks, data, atau analisis.`);
 
@@ -61,7 +63,7 @@ export function assessPost(p, all = []) {
   const paras = body.split(/\n\s*\n/).filter((x) => x.trim());
   if (paras.length < 3 && wc >= 120) hit('warn', 10, 'Hanya sedikit paragraf. Pecah menjadi paragraf pendek agar mudah dibaca di HP.');
   if (paras.length && wc / paras.length > 140) hit('warn', 8, 'Paragraf terlalu panjang (tembok teks).');
-  const subheads = paras.filter((x) => !/\n/.test(x.trim()) && x.trim().length < 70 && !/[.!?:]$/.test(x.trim())).length;
+  const subheads = paras.filter((x) => /^#{1,6}\s/.test(x.trim()) || (!/\n/.test(x.trim()) && x.trim().length < 70 && !/[.!?:]$/.test(x.trim()) && !/^\|/.test(x.trim()))).length;
   if (wc > 500 && subheads === 0) hit('info', 5, 'Artikel panjang tanpa subjudul. Tambahkan subjudul agar mudah dipindai.');
 
   if (AI_CHATTER.test(body.split('\n')[0] || '') || AI_CHATTER.test(title)) hit('bad', 20, 'Ada kalimat pembuka khas AI ("Tentu, berikut artikel…"). Hapus.');
@@ -69,12 +71,12 @@ export function assessPost(p, all = []) {
   const lastLine = body.split('\n').filter((l) => l.trim()).slice(-1)[0] || '';
   if (AI_TAIL.test(lastLine)) hit('warn', 8, 'Ada kalimat penutup khas AI ("Semoga bermanfaat…"). Hapus.');
 
-  const ss = sentences(body);
+  const ss = sentences(plain);
   if (ss.length > 6) {
     const uniq = new Set(ss).size / ss.length;
     if (uniq < 0.85) hit('warn', 10, 'Ada kalimat yang berulang. Ringkas bagian yang mengulang.');
   }
-  const low = body.toLowerCase();
+  const low = plain.toLowerCase();
   const fillerHits = FILLER.filter((f) => low.includes(f)).length;
   if (fillerHits) hit('info', Math.min(9, fillerHits * 3), `Ada ${fillerHits} frasa klise/basa-basi. Ganti dengan fakta yang spesifik.`);
 
@@ -122,13 +124,18 @@ export function autoClean(raw) {
   const seen = new Set(); const kept = []; let dups = 0;
   text.split(/\n\s*\n/).forEach((par) => {
     const k = norm(par);
-    if (k.length > 40 && seen.has(k)) { dups++; return; }
+    if (k.length > 40 && seen.has(k) && !/\||```/.test(par)) { dups++; return; }
     seen.add(k); kept.push(par);
   });
   if (dups) { changes.push(`${dups} paragraf ganda dihapus`); text = kept.join('\n\n'); }
 
   // 5) Rapikan spasi dan tanda baca berlebihan.
-  const tidy = text.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').replace(/([!?])\1{1,}/g, '$1').replace(/ {2,}/g, ' ').trim();
+  // (indentasi daftar bersarang dan isi blok kode ``` dibiarkan; hanya spasi ganda di tengah kalimat yang dirapikan)
+  let inCode = false;
+  const tidy = text.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').split('\n').map((ln) => {
+    if (/^\s*(```|~~~)/.test(ln)) { inCode = !inCode; return ln; }
+    return inCode ? ln : ln.replace(/([!?])\1{1,}/g, '$1').replace(/(\S) {2,}/g, '$1 ');
+  }).join('\n').trim();
   if (tidy !== text) { changes.push('Spasi dan tanda baca dirapikan'); text = tidy; }
 
   return { text, changes };

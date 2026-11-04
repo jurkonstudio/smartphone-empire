@@ -44,6 +44,7 @@
 <link rel="stylesheet" href="/blog/css/blog.css?v=10">
 <link rel="stylesheet" href="/blog/css/adminbar.css?v=1">
 <link rel="stylesheet" href="/blog/css/blog-polish.css?v=2">
+<link rel="stylesheet" href="/blog/css/richtext.css?v=1">
 <link rel="stylesheet" href="/blog/css/jadwal.css?v=1">
 <link rel="stylesheet" href="/blog/css/editor.css?v=1">
 <link rel="stylesheet" href="/blog/css/blog-seo-ui.css?v=1">
@@ -234,7 +235,7 @@
       <section class="ed-sec">
         <h3 class="ed-h"><span class="ed-n">2</span>Isi tulisan</h3>
         <div class="field"><label for="pExcerpt">Ringkasan</label><textarea id="pExcerpt" rows="2" maxlength="300" class="short"></textarea><span class="hint" id="pExcerptCount"></span></div>
-        <div class="field"><label for="pBody">Isi artikel</label><textarea id="pBody" maxlength="30000"></textarea><span class="hint" id="pBodyCount">Pisahkan paragraf dengan satu baris kosong.</span></div>
+        <div class="field"><label for="pBody">Isi artikel</label><textarea id="pBody" maxlength="30000"></textarea><span class="hint" id="pBodyCount">Pisahkan paragraf dengan satu baris kosong. Mendukung Markdown dan tabel (tempel dari Word/Excel/Docs akan otomatis diubah).</span></div>
         <details id="pEnBox" class="en-box">
           <summary>Versi English (opsional)</summary>
           <p class="hint">Dibuat otomatis dengan AI saat artikel disimpan (jika kosong). Bisa disunting manual.</p>
@@ -309,10 +310,12 @@
       <div class="field">
         <label for="aiRaw">Tempel seluruh artikel di sini</label>
         <textarea id="aiRaw" class="paste" placeholder="Baris pertama otomatis jadi judul. Baris 'Ringkasan: ...' jadi ringkasan (opsional)."></textarea>
-        <span class="hint">Tanda markdown (#, **, -) dibersihkan otomatis. Teks tersimpan sebagai draf di perangkat ini sampai artikel disimpan.</span>
+        <span class="hint">Mendukung Markdown (# judul, **tebal**, daftar, tabel | a | b |, tautan, kutipan, kode). Salinan dari Word, Google Docs, Excel/Sheets, web, atau chat AI (termasuk tabel) otomatis diubah ke Markdown. Draf tersimpan di perangkat ini sampai artikel disimpan.</span>
       </div>
       <div class="field"><label for="aiAuthor">Nama penulis</label><input id="aiAuthor" maxlength="60" autocomplete="off" placeholder="mis. Rina Putri"><div class="chips" id="aiAuthorChips"></div></div>
       <div class="parsed" id="aiPreview">Belum ada teks.</div>
+      <details class="field" open><summary>Pratinjau tampilan di blog</summary>
+        <div class="article"><div class="content rt-preview" id="aiRender"></div></div></details>
       <div class="qbox" id="aiQuality" hidden></div>
       <div class="field"><label for="aiTitle">Judul (otomatis, bisa diubah)</label><input id="aiTitle" required maxlength="200"><span class="count" id="aiTitleCount"></span></div>
       <div class="field"><label for="aiExcerpt">Ringkasan (otomatis, bisa diubah)</label><textarea id="aiExcerpt" rows="2" maxlength="300" class="short"></textarea><span class="count" id="aiExcerptCount"></span></div>
@@ -383,7 +386,7 @@
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="/blog/js/admin-tap.js?v=1"></script>
-<script type="module" src="/blog/js/main.js?v=16"></script>
+<script type="module" src="/blog/js/main.js?v=17"></script>
 <script src="/blog/js/jurkon-preview.js?v=3" defer></script>
 </body>
 </html>
