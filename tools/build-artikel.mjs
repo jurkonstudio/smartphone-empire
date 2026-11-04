@@ -6,15 +6,15 @@ import { readFile, writeFile, mkdir, rm, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
 // Renderer isi artikel dipakai bersama blog (browser) dan build ini. Dimuat lewat data: URL agar tidak perlu package.json "type":"module".
-const { mdToHtml, mdToText, firstProse } = await import('data:text/javascript;base64,' + Buffer.from(await readFile('blog/js/richtext.js', 'utf8')).toString('base64'));
+const { mdToHtml, mdToText, firstProse } = await import('data:text/javascript;base64,' + Buffer.from(await readFile('assets/blog/js/richtext.js', 'utf8')).toString('base64'));
 
 const SITE = 'https://smartphone-empire.my.id';
 const OUT = 'a';
 const KOUT = 'k';
 let KATEGORI_ADA = new Set(); // kategori yang punya halaman statis /k/<kat>/ (diisi setelah artikel dimuat)
 const catHref = (c) => (KATEGORI_ADA.has(c) ? `/${KOUT}/${c}/` : `/${KOUT}/${c}/`);
-const menuHtml = () => `<a href="/">Beranda</a>${Object.entries(CATS).map(([k, v]) => `<a href="${catHref(k)}">${v}</a>`).join('')}`;
-const cfg = await readFile('blog/js/config.js', 'utf8');
+const menuHtml = () => `<a href="/blog">Beranda</a>${Object.entries(CATS).map(([k, v]) => `<a href="${catHref(k)}">${v}</a>`).join('')}`;
+const cfg = await readFile('assets/blog/js/config.js', 'utf8');
 const pick = (k) => (cfg.match(new RegExp(`export const ${k}\\s*=\\s*'([^']*)'`)) || [])[1] || '';
 const SUPABASE_URL = pick('SUPABASE_URL'), SUPABASE_KEY = pick('SUPABASE_KEY'), TZ = pick('TZ') || 'Asia/Jakarta';
 
@@ -34,7 +34,7 @@ async function loadPosts() {
 }
 
 const siteHeader = () => `<header class="site-header"><div class="bar">
-  <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span><span>Smartphone Empire</span></a>
+  <a class="brand" href="/blog"><span class="brand-mark" aria-hidden="true"></span><span>Smartphone Empire</span></a>
   <nav class="menu" aria-label="Kategori">${menuHtml()}</nav>
   <div class="tools"><button class="icon-btn" id="themeToggle" type="button" aria-label="Ganti tema terang/gelap" title="Ganti tema"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button><a class="cta-game" href="/game/"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span>Main game</span></a></div>
 </div></header>`;
@@ -55,7 +55,7 @@ const EXTRA_META = (title, desc, img) => `<meta name="robots" content="index,fol
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(desc)}">
 <meta name="twitter:image" content="${esc(img)}">
-<link rel="stylesheet" href="/blog/css/blog-seo-ui.css?v=1">`;
+<link rel="stylesheet" href="/assets/blog/css/blog-seo-ui.css?v=1">`;
 
 function page(p, all = []) {
   const canonical = `${SITE}/${OUT}/${p.slug}/`;
@@ -66,7 +66,7 @@ function page(p, all = []) {
     '@context': 'https://schema.org', '@type': 'NewsArticle', headline: p.title.slice(0, 110), description: desc,
     image: [img], datePublished: published, dateModified: p.updated_at || published, mainEntityOfPage: canonical,
     author: { '@type': 'Person', name: p.author || 'Redaksi' },
-    publisher: { '@type': 'Organization', name: 'Smartphone Empire Berita', logo: { '@type': 'ImageObject', url: `${SITE}/blog/img/logo.svg` } }
+    publisher: { '@type': 'Organization', name: 'Smartphone Empire Berita', logo: { '@type': 'ImageObject', url: `${SITE}/assets/blog/img/logo.svg` } }
   };
   const cat = CATS[p.category] || p.category;
   const crumbLd = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
@@ -101,15 +101,15 @@ ${EXTRA_META(p.title, desc, img)}
 <script type="application/ld+json">${JSON.stringify(crumbLd).replace(/</g, '\\u003c')}</script>
 <meta name="theme-color" content="#0a84ff">
 <script>(function(){try{var t=localStorage.getItem('blog-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<link rel="stylesheet" href="/blog/css/blog.css?v=10">
-<link rel="stylesheet" href="/blog/css/blog-polish.css?v=2">
-<link rel="stylesheet" href="/blog/css/richtext.css?v=1">
+<link rel="stylesheet" href="/assets/blog/css/blog.css?v=10">
+<link rel="stylesheet" href="/assets/blog/css/blog-polish.css?v=2">
+<link rel="stylesheet" href="/assets/blog/css/richtext.css?v=1">
 </head>
 <body>
 <a class="skip" href="#main">Lewati ke konten</a>
 ${siteHeader()}
 <main id="main">
-  <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Beranda</a><span aria-hidden="true">/</span><a href="${catHref(p.category)}">${esc(cat)}</a></nav>
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog">Beranda</a><span aria-hidden="true">/</span><a href="${catHref(p.category)}">${esc(cat)}</a></nav>
   <article class="article">
     <div class="meta"><span class="tag t-${esc(p.category)}">${esc(cat)}</span></div>
     <h1>${esc(p.title)}</h1>
@@ -165,14 +165,14 @@ ${EXTRA_META(name + ' | Smartphone Empire', desc, img)}
 <script type="application/ld+json">${JSON.stringify(crumbLd).replace(/</g, '\\u003c')}</script>
 <meta name="theme-color" content="#0a84ff">
 <script>(function(){try{var t=localStorage.getItem('blog-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<link rel="stylesheet" href="/blog/css/blog.css?v=10">
-<link rel="stylesheet" href="/blog/css/blog-polish.css?v=2">
+<link rel="stylesheet" href="/assets/blog/css/blog.css?v=10">
+<link rel="stylesheet" href="/assets/blog/css/blog-polish.css?v=2">
 </head>
 <body>
 <a class="skip" href="#main">Lewati ke konten</a>
 ${siteHeader()}
 <main id="main">
-  <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Beranda</a><span aria-hidden="true">/</span><span aria-current="page">${esc(name)}</span></nav>
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog">Beranda</a><span aria-hidden="true">/</span><span aria-current="page">${esc(name)}</span></nav>
   <h1 class="section-h">${esc(name)}</h1>
   <p class="lead">${esc(desc)}</p>
   <ul class="cat-list" style="list-style:none;padding:0;margin:20px 0;display:grid;gap:14px">
@@ -192,7 +192,7 @@ ${PAGE_JS}
 // (tanpa ini /i/… dilayani 404.html lalu dialihkan lewat JavaScript).
 const INFO = 'i';
 const CONTACT_EMAIL = pick('CONTACT_EMAIL');
-const { PAGES } = await import('data:text/javascript;base64,' + Buffer.from(await readFile('blog/js/pages.js', 'utf8')).toString('base64'));
+const { PAGES } = await import('data:text/javascript;base64,' + Buffer.from(await readFile('assets/blog/js/pages.js', 'utf8')).toString('base64'));
 const INFO_LD = { tentang: 'AboutPage', kontak: 'ContactPage' };
 function infoPage(key, pg) {
   const canonical = `${SITE}/${INFO}/${key}/`;
@@ -231,9 +231,9 @@ ${EXTRA_META(pg.t + ' | Smartphone Empire', desc, img)}
 <script type="application/ld+json">${JSON.stringify(crumbLd).replace(/</g, '\\u003c')}</script>
 <meta name="theme-color" content="#0a84ff">
 <script>(function(){try{var t=localStorage.getItem('blog-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<link rel="stylesheet" href="/blog/css/blog.css?v=10">
-<link rel="stylesheet" href="/blog/css/blog-polish.css?v=2">
-<link rel="stylesheet" href="/blog/css/richtext.css?v=1">
+<link rel="stylesheet" href="/assets/blog/css/blog.css?v=10">
+<link rel="stylesheet" href="/assets/blog/css/blog-polish.css?v=2">
+<link rel="stylesheet" href="/assets/blog/css/richtext.css?v=1">
 </head>
 <body>
 <a class="skip" href="#main">Lewati ke konten</a>
@@ -278,21 +278,22 @@ for (const p of posts) { await mkdir(path.join(OUT, p.slug), { recursive: true }
 
 // Daftar tautan asli (bisa dirayapi) di beranda: isi di antara penanda <!--ARSIP:MULAI--> dan <!--ARSIP:SELESAI-->
 try {
-  const idx = await readFile('index.html', 'utf8');
+  const idx = await readFile('blog.html', 'utf8');
   const re = /<!--ARSIP:MULAI-->[\s\S]*?<!--ARSIP:SELESAI-->/;
   if (re.test(idx)) {
     const items = posts.slice(0, 12).map((p) => `<li><a href="/${OUT}/${esc(p.slug)}/">${esc(p.title)}</a></li>`).join('');
-    await writeFile('index.html', idx.replace(re, () => `<!--ARSIP:MULAI--><p class="arsip-kat">${[...KATEGORI_ADA].map((c) => `<a href="/${KOUT}/${c}/">${esc(CATS[c])}</a>`).join(' · ')}</p><ul>${items}</ul><!--ARSIP:SELESAI-->`));
+    await writeFile('blog.html', idx.replace(re, () => `<!--ARSIP:MULAI--><p class="arsip-kat">${[...KATEGORI_ADA].map((c) => `<a href="/${KOUT}/${c}/">${esc(CATS[c])}</a>`).join(' · ')}</p><ul>${items}</ul><!--ARSIP:SELESAI-->`));
   }
 } catch (e) { console.warn('Lewati arsip beranda:', e.message); }
 
 const day = (d) => new Date(d).toISOString().slice(0, 10);
 const terbaru = (list) => (list.length ? day(list[0].updated_at || list[0].published_at || list[0].created_at) : day(new Date()));
-const urls = [`  <url><loc>${SITE}/</loc><lastmod>${terbaru(posts)}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>`,
+const urls = [`  <url><loc>${SITE}/</loc><lastmod>${day(new Date())}</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
+  `  <url><loc>${SITE}/blog</loc><lastmod>${terbaru(posts)}</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>`,
   `  <url><loc>${SITE}/game/</loc><lastmod>${day(new Date())}</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>`,
   ...[...KATEGORI_ADA].map((c) => `  <url><loc>${SITE}/${KOUT}/${c}/</loc><lastmod>${terbaru(posts.filter((x) => x.category === c))}</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>`),
   ...INFO_KEYS.map((k) => `  <url><loc>${SITE}/${INFO}/${k}/</loc><lastmod>${day(new Date())}</lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>`),
   ...posts.map((p) => `  <url><loc>${SITE}/${OUT}/${p.slug}/</loc><lastmod>${day(p.updated_at || p.published_at || p.created_at)}</lastmod><priority>0.8</priority></url>`)];
 await writeFile('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`);
-await writeFile('robots.txt', `User-agent: *\nAllow: /\nDisallow: /031411/\nDisallow: /admin/\n\nSitemap: ${SITE}/sitemap.xml\n`);
+await writeFile('robots.txt', `User-agent: *\nAllow: /\nDisallow: /031411/\nDisallow: /admin/\nDisallow: /dev/\n\nSitemap: ${SITE}/sitemap.xml\n`);
 console.log(`Selesai: ${posts.length} artikel, ${INFO_KEYS.length} halaman info, sitemap.xml, robots.txt`);

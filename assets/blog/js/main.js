@@ -542,7 +542,7 @@ function track(slug, path) {
   } catch (e) {}
 }
 
-// Rute (tanpa tanda #): / (beranda), /k/<kategori>/, /i/<halaman>/, /baca/<slug>/
+// Rute (tanpa tanda #): /blog (beranda blog), /k/<kategori>/, /i/<halaman>/, /baca/<slug>/
 function currentRoute() {
   const p = location.pathname;
   let m;
@@ -569,7 +569,7 @@ function route(noTrack) {
 // ---------- pencarian ----------
 $('search').addEventListener('input', (e) => {
   state.query = e.target.value;
-  if ($('viewList').hidden) go('/');  // mengetik di halaman artikel kembali ke daftar
+  if ($('viewList').hidden) go('/blog');  // mengetik di halaman artikel kembali ke daftar
   renderList();
 });
 
@@ -670,7 +670,7 @@ $('btnDeletePost').addEventListener('click', async () => {
   $('dlgPost').close();
   toast('Artikel dihapus.');
   await loadPosts(); renderAll();
-  go('/');
+  go('/blog');
 });
 
 // ---------- tempel artikel dari AI ----------
@@ -948,7 +948,7 @@ document.querySelectorAll('#formLogin [data-mode]').forEach((b) => b.addEventLis
 $('formLogin').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = $('loginEmail').value.trim(), pass = $('loginPass').value, st = $('loginStatus'), btn = $('btnDoLogin');
-  const back = location.origin + '/';
+  const back = location.origin + '/blog';
   btn.disabled = true; st.textContent = 'Memeriksa…';
   try {
     if (authMode === 'reset') {
@@ -1049,7 +1049,7 @@ document.addEventListener('click', (e) => {
   if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
   const a = e.target.closest('a[href]');
   if (!a || a.target === '_blank' || a.origin !== location.origin) return;
-  if (!/^\/(?:$|k\/|i\/|baca\/)/.test(a.pathname)) return;
+  if (!/^\/(?:blog(?:\.html)?\/?$|k\/|i\/|baca\/)/.test(a.pathname)) return;
   e.preventDefault();
   go(a.pathname + a.search);
 });

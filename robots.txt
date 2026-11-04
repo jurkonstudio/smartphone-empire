@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /031411/
 Disallow: /admin/
+Disallow: /dev/
 
 Sitemap: https://smartphone-empire.my.id/sitemap.xml

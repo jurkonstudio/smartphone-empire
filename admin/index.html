@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <title>Dasbor Admin · Smartphone Empire Berita</title>
-<link rel="icon" href="/blog/img/logo.svg">
+<link rel="icon" href="/assets/blog/img/logo.svg">
 <style>
 :root{--bg:#f4f5fb;--card:#fff;--text:#14142b;--sub:#6b6f8a;--bd:#e3e5f0;--ac:#5b5bf0;--ac2:#8b5cf6;--ok:#16a34a;--warn:#d97706}
 @media(prefers-color-scheme:dark){:root{--bg:#0e0f1c;--card:#171930;--text:#eceefc;--sub:#9396b5;--bd:#2a2d4a;--ac:#8284ff;--ac2:#a78bfa}}
@@ -51,7 +51,7 @@ svg.chart{width:100%;height:auto;display:block}
 </div>
 <div id="app" class="hide">
   <header>
-    <h1><img src="/blog/img/logo.svg" alt="">Dasbor Admin</h1>
+    <h1><img src="/assets/blog/img/logo.svg" alt="">Dasbor Admin</h1>
     <a class="btn" href="/" target="_blank" rel="noopener">Lihat blog ↗</a>
     <button class="btn" id="reload" type="button">⟳ Muat ulang</button>
     <button class="btn" id="out" type="button">Keluar</button>
@@ -77,7 +77,7 @@ svg.chart{width:100%;height:auto;display:block}
 </div>
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/+esm';
-import { SUPABASE_URL, SUPABASE_KEY, AUTH_KEY } from '/blog/js/config.js';
+import { SUPABASE_URL, SUPABASE_KEY, AUTH_KEY } from '/assets/blog/js/config.js';
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { storageKey: AUTH_KEY, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

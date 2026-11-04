@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://smartphone-empire.my.id/</loc><lastmod>2026-11-04</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://smartphone-empire.my.id/</loc><lastmod>2026-11-05</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://smartphone-empire.my.id/blog</loc><lastmod>2026-11-04</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
   <url><loc>https://smartphone-empire.my.id/game/</loc><lastmod>2026-11-04</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://smartphone-empire.my.id/k/rilis/</loc><lastmod>2026-11-04</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
   <url><loc>https://smartphone-empire.my.id/k/rumor/</loc><lastmod>2026-11-04</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
@@ -10,6 +11,7 @@
   <url><loc>https://smartphone-empire.my.id/i/siber/</loc><lastmod>2026-11-04</lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>
   <url><loc>https://smartphone-empire.my.id/i/privasi/</loc><lastmod>2026-11-04</lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>
   <url><loc>https://smartphone-empire.my.id/i/kontak/</loc><lastmod>2026-11-04</lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://smartphone-empire.my.id/a/redmagic-12-pro-vs-11-pro/</loc><lastmod>2026-11-04</lastmod><priority>0.8</priority></url>
   <url><loc>https://smartphone-empire.my.id/a/jurnal-koneksi-menguji-klaim-media-sosial-250-karakter-yang-menolak-gulir-tanpa/</loc><lastmod>2026-11-04</lastmod><priority>0.8</priority></url>
   <url><loc>https://smartphone-empire.my.id/a/motorola-signature-27-akhir-dari-monopoli-pixel-bagi-para-pencinta-privasi/</loc><lastmod>2026-11-04</lastmod><priority>0.8</priority></url>
   <url><loc>https://smartphone-empire.my.id/a/hisense-a10-ponsel-e-ink-dengan-layar-warna-yang-bisa-dilepas-pasang-sebuah/</loc><lastmod>2026-11-04</lastmod><priority>0.8</priority></url>
@@ -30,5 +32,4 @@
   <url><loc>https://smartphone-empire.my.id/a/sejarah-lengkap-claude-ai-dari-sekolah-yang-berbeda-hingga-ipo-triliunan-dolar/</loc><lastmod>2026-10-29</lastmod><priority>0.8</priority></url>
   <url><loc>https://smartphone-empire.my.id/a/bisnis-teknologi-2026-tahun-ai-berhenti-jadi-proyek-percobaan-dan-mulai-dituntut/</loc><lastmod>2026-10-29</lastmod><priority>0.8</priority></url>
   <url><loc>https://smartphone-empire.my.id/a/smartphone-2nm-pertama-di-dunia-daftar-lengkap-dan-perbandingan-chipsetnya/</loc><lastmod>2026-10-27</lastmod><priority>0.8</priority></url>
-  <url><loc>https://smartphone-empire.my.id/a/iphone-16-duo-vs-kompetitor-siapa-yang-layak-masuk-kantong-anda-di-2026/</loc><lastmod>2026-10-29</lastmod><priority>0.8</priority></url>
 </urlset>
