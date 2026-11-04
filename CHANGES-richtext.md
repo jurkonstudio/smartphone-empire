@@ -10,3 +10,11 @@
 
 File baru: `blog/js/richtext.js`, `blog/css/richtext.css`.
 Diubah: `blog/js/main.js` (v=17), `blog/js/quality.js`, `index.html`, `tools/build-artikel.mjs`, `supabase/function/blog-translate/index.ts`.
+
+## Halaman Tentang Kami, Kebijakan Privasi, Kontak (dan 3 halaman info lain)
+
+- Halaman asli (file statis, bisa dirayapi Google/AdSense) dibuat di `i/tentang/`, `i/redaksi/`, `i/etik/`, `i/siber/`, `i/privasi/`, `i/kontak/`.
+- Isi bersumber dari `blog/js/pages.js`; email redaksi dari `blog/js/config.js` (`calvfinka@yahoo.com`). Halaman Kontak menampilkan kartu email, 1–3 hari kerja untuk balasan, dan tautan X/Instagram/YouTube.
+- Kebijakan Privasi: ditambah bagian "Hosting dan log server" dan "Iklan" (saat ini tanpa iklan; diperbarui bila kelak memasang AdSense), kontak email privasi, tanggal 4 November 2026.
+- `tools/build-artikel.mjs` kini ikut membangun halaman `/i/…` dan memasukkannya ke sitemap; workflow menambahkan folder `i`.
+- Setelah mengubah `pages.js` atau `config.js`, bangun ulang manual: `node tools/build-artikel.mjs --hanya-info`.

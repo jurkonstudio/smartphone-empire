@@ -37,15 +37,19 @@ export const PAGES = {
         ['Cookie dan penyimpanan lokal', ['Situs ini tidak memakai cookie iklan atau pelacak pihak ketiga. Yang kami simpan di peramban hanyalah preferensi tema dan bahasa, sesi masuk Anda, serta kode statistik acak tersebut. Anda dapat menghapusnya kapan saja lewat pengaturan peramban; fitur tetap berjalan, hanya preferensi Anda yang kembali ke bawaan.']],
         ['Penggunaan data', ['Email dipakai hanya untuk masuk, konfirmasi, dan pemulihan akun. Akun pembaca memakai sistem login yang sama dengan game Smartphone Empire. Statistik kunjungan dipakai hanya untuk memahami artikel mana yang dibaca dan memperbaiki situs, bukan untuk mengenali Anda secara pribadi. Kami tidak menjual data Anda.']],
         ['Penyimpanan dan keamanan', ['Data akun dan komentar disimpan pada layanan basis data pihak ketiga (Supabase) dengan pembatasan akses. Tidak ada sistem yang sepenuhnya kebal, namun kami berupaya menjaganya. Data akun disimpan selama akun aktif dan dihapus atas permintaan Anda.']],
+        ['Hosting dan log server', ['Situs ini dihosting di GitHub Pages. Penyedia hosting dapat mencatat data teknis kunjungan (misalnya alamat IP) sebagai bagian dari log server mereka; hal ini berada di luar kendali kami dan tunduk pada kebijakan penyedia tersebut.']],
+        ['Iklan', ['Saat ini situs ini tidak menampilkan iklan. Bila kelak kami memasang iklan pihak ketiga (misalnya Google AdSense), mitra iklan dapat memakai cookie untuk menayangkan dan mengukur iklan. Saat itu terjadi, halaman ini akan diperbarui lebih dulu dan Anda dapat menolak iklan yang dipersonalisasi melalui pengaturan iklan penyedia tersebut atau pengaturan peramban Anda.']],
         ['Tautan ke situs lain', ['Artikel dapat memuat tautan sumber ke situs lain. Kebijakan privasi situs tersebut berada di luar kendali kami.']],
         ['Anak-anak', ['Situs ini ditujukan untuk pembaca umum dan tidak dirancang untuk anak di bawah 13 tahun. Bila Anda orang tua dan mengetahui anak Anda membuat akun, hubungi kami agar akunnya dihapus.']],
-        ['Hak Anda', ['Anda dapat meminta akses, koreksi, atau penghapusan akun dan data Anda melalui <a href="/i/kontak/">halaman Kontak</a>. Kebijakan ini dapat diperbarui; versi terbaru selalu tampil di halaman ini.']],
-        ['Pembaruan terakhir', ['Kebijakan ini terakhir diperbarui pada 29 Oktober 2026.']]
+        ['Hak Anda', ['Anda dapat meminta akses, koreksi, atau penghapusan akun dan data Anda melalui <a href="/i/kontak/">halaman Kontak</a> atau langsung ke <a href="mailto:calvfinka@yahoo.com">calvfinka@yahoo.com</a>. Kebijakan ini dapat diperbarui; versi terbaru selalu tampil di halaman ini.']],
+        ['Pembaruan terakhir', ['Kebijakan ini terakhir diperbarui pada 4 November 2026.']]
       ] },
     kontak: { t: 'Kontak', lead: 'Kami senang mendengar dari Anda: koreksi, tips berita, hak jawab, atau ajakan kerja sama.', mail: 'Email redaksi',
       s: [
         ['Sampaikan apa', [], ['<b>Koreksi dan hak jawab</b>: sertakan tautan artikel dan bagian yang dimaksud.', '<b>Tips berita</b>: sertakan sumber atau bukti pendukung.', '<b>Kerja sama dan iklan</b>: jelaskan singkat maksud dan jangkauan Anda.', '<b>Privasi dan akun</b>: sebutkan email akun yang terkait.']],
-        ['Waktu respons', ['Kami berusaha membalas secepatnya. Mohon bersabar bila pesan Anda belum dijawab pada waktu sibuk.']]
+        ['Waktu respons', ['Kami berusaha membalas dalam 1–3 hari kerja. Mohon bersabar bila pesan Anda belum dijawab pada waktu sibuk.']],
+        ['Pengelola', ['Smartphone Empire Berita dikelola oleh Jurkon Studio, Indonesia. Surel redaksi di atas adalah jalur resmi untuk semua keperluan: koreksi, hak jawab, tips berita, kerja sama, dan permintaan terkait data pribadi.']],
+        ['Media sosial', [], ['<a href="https://x.com/calvfinka" target="_blank" rel="noopener">X (Twitter)</a>', '<a href="https://instagram.com/calvf1nka" target="_blank" rel="noopener">Instagram</a>', '<a href="https://youtube.com/@calvfinka" target="_blank" rel="noopener">YouTube</a>']]
       ] }
   },
   en: {
@@ -85,15 +89,19 @@ export const PAGES = {
         ['Cookies and local storage', ['This site uses no advertising or third-party tracking cookies. All we keep in your browser is your theme and language preferences, your login session, and the random statistics code above. You can clear them at any time in your browser settings; features keep working, only your preferences return to defaults.']],
         ['How we use it', ['Your email is used only for login, confirmation, and account recovery. Reader accounts use the same login system as the Smartphone Empire game. Visit statistics are used only to understand which articles are read and to improve the site, not to identify you personally. We do not sell your data.']],
         ['Storage and security', ['Account and comment data are stored on a third-party database service (Supabase) with access restrictions. No system is completely immune, but we work to protect yours. Account data is kept while your account is active and deleted on request.']],
+        ['Hosting and server logs', ['This site is hosted on GitHub Pages. The hosting provider may record technical visit data (such as IP addresses) in its own server logs; this is outside our control and governed by that provider’s policy.']],
+        ['Advertising', ['This site currently shows no ads. If we later add third-party advertising (for example Google AdSense), ad partners may use cookies to serve and measure ads. If that happens, this page will be updated first, and you can opt out of personalized ads through the provider’s ad settings or your browser settings.']],
         ['Links to other sites', ['Articles may link to sources on other sites. Those sites’ privacy policies are outside our control.']],
         ['Children', ['This site is intended for a general audience and is not designed for children under 13. If you are a parent and know your child has created an account, contact us so we can delete it.']],
-        ['Your rights', ['You can request access, correction, or deletion of your account and data via the <a href="/i/kontak/">Contact page</a>. This policy may be updated; the latest version is always shown here.']],
-        ['Last updated', ['This policy was last updated on 29 October 2026.']]
+        ['Your rights', ['You can request access, correction, or deletion of your account and data via the <a href="/i/kontak/">Contact page</a> or directly at <a href="mailto:calvfinka@yahoo.com">calvfinka@yahoo.com</a>. This policy may be updated; the latest version is always shown here.']],
+        ['Last updated', ['This policy was last updated on 4 November 2026.']]
       ] },
     kontak: { t: 'Contact', lead: 'We would love to hear from you: corrections, news tips, right of reply, or partnership ideas.', mail: 'Editorial email',
       s: [
         ['What to send', [], ['<b>Corrections and right of reply</b>: include the article link and the passage in question.', '<b>News tips</b>: include a source or supporting evidence.', '<b>Partnerships and ads</b>: briefly describe your proposal and reach.', '<b>Privacy and accounts</b>: mention the email tied to your account.']],
-        ['Response time', ['We try to reply as soon as possible. Please be patient if we are slow during busy periods.']]
+        ['Response time', ['We aim to reply within 1–3 business days. Please be patient if we are slow during busy periods.']],
+        ['Publisher', ['Smartphone Empire News is run by Jurkon Studio, Indonesia. The editorial email above is the official channel for everything: corrections, right of reply, news tips, partnerships, and personal-data requests.']],
+        ['Social media', [], ['<a href="https://x.com/calvfinka" target="_blank" rel="noopener">X (Twitter)</a>', '<a href="https://instagram.com/calvf1nka" target="_blank" rel="noopener">Instagram</a>', '<a href="https://youtube.com/@calvfinka" target="_blank" rel="noopener">YouTube</a>']]
       ] }
   }
 };

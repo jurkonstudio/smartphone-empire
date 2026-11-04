@@ -187,6 +187,83 @@ ${PAGE_JS}
 `;
 }
 
+// ---------- Halaman info statis (/i/<kunci>/): Tentang Kami, Redaksi, Kode Etik, Pedoman Siber, Privasi, Kontak ----------
+// Isi dari blog/js/pages.js (bahasa Indonesia) dan email dari blog/js/config.js. Dibuat sebagai file asli agar bisa dirayapi mesin pencari
+// (tanpa ini /i/… dilayani 404.html lalu dialihkan lewat JavaScript).
+const INFO = 'i';
+const CONTACT_EMAIL = pick('CONTACT_EMAIL');
+const { PAGES } = await import('data:text/javascript;base64,' + Buffer.from(await readFile('blog/js/pages.js', 'utf8')).toString('base64'));
+const INFO_LD = { tentang: 'AboutPage', kontak: 'ContactPage' };
+function infoPage(key, pg) {
+  const canonical = `${SITE}/${INFO}/${key}/`;
+  const desc = pg.lead;
+  const nav = '<nav class="subnav" aria-label="Halaman informasi">' + Object.keys(PAGES.id).map((k) =>
+    `<a href="/${INFO}/${k}/"${k === key ? ' class="on" aria-current="page"' : ''}>${esc(PAGES.id[k].t)}</a>`).join('') + '</nav>';
+  const stats = pg.stats ? '<div class="stats">' + pg.stats.map(([n, l]) => `<div><b>${esc(n)}</b><span>${esc(l)}</span></div>`).join('') + '</div>' : '';
+  const mail = pg.mail && CONTACT_EMAIL ? `<a class="mail-card" href="mailto:${esc(CONTACT_EMAIL)}"><small>${esc(pg.mail)}</small><strong>${esc(CONTACT_EMAIL)}</strong></a>` : '';
+  const sections = pg.s.map(([h, ps, us]) => `<h2>${h}</h2>` + (ps || []).map((x) => `<p>${x}</p>`).join('')
+    + (us && us.length ? '<ul>' + us.map((x) => `<li>${x}</li>`).join('') + '</ul>' : '')).join('\n');
+  const ld = { '@context': 'https://schema.org', '@type': INFO_LD[key] || 'WebPage', name: `${pg.t} | Smartphone Empire`, url: canonical, description: desc,
+    isPartOf: { '@type': 'WebSite', name: 'Smartphone Empire Berita', url: `${SITE}/` },
+    publisher: { '@type': 'Organization', name: 'Jurkon Studio', url: `${SITE}/`, ...(CONTACT_EMAIL ? { email: CONTACT_EMAIL } : {}) } };
+  const crumbLd = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Beranda', item: `${SITE}/` },
+    { '@type': 'ListItem', position: 2, name: pg.t, item: canonical }] };
+  const img = `${SITE}/game/assets/img/landing/pasar.jpg`;
+  return `<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>${esc(pg.t)} | Smartphone Empire</title>
+<meta name="description" content="${esc(desc)}">
+<link rel="canonical" href="${canonical}">
+<link rel="icon" href="/game/assets/icon/favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Smartphone Empire Berita">
+<meta property="og:title" content="${esc(pg.t)} | Smartphone Empire">
+<meta property="og:description" content="${esc(desc)}">
+<meta property="og:url" content="${canonical}">
+<meta property="og:image" content="${esc(img)}">
+<meta name="twitter:card" content="summary_large_image">
+${EXTRA_META(pg.t + ' | Smartphone Empire', desc, img)}
+<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>
+<script type="application/ld+json">${JSON.stringify(crumbLd).replace(/</g, '\\u003c')}</script>
+<meta name="theme-color" content="#0a84ff">
+<script>(function(){try{var t=localStorage.getItem('blog-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+<link rel="stylesheet" href="/blog/css/blog.css?v=10">
+<link rel="stylesheet" href="/blog/css/blog-polish.css?v=2">
+<link rel="stylesheet" href="/blog/css/richtext.css?v=1">
+</head>
+<body>
+<a class="skip" href="#main">Lewati ke konten</a>
+${siteHeader()}
+<main id="main">
+  <article class="article info">
+    ${nav}
+    <h1>${esc(pg.t)}</h1>
+    <p class="lead">${esc(pg.lead)}</p>
+    ${stats}
+    ${mail}
+    ${sections}
+  </article>
+</main>
+${siteFooter()}
+${PAGE_JS}
+</body>
+</html>
+`;
+}
+async function buildInfo() {
+  for (const [key, pg] of Object.entries(PAGES.id)) {
+    await mkdir(path.join(INFO, key), { recursive: true });
+    await writeFile(path.join(INFO, key, 'index.html'), infoPage(key, pg));
+  }
+  return Object.keys(PAGES.id);
+}
+const INFO_KEYS = await buildInfo();
+if (process.argv.includes('--hanya-info')) { console.log(`Selesai: ${INFO_KEYS.length} halaman info (${INFO_KEYS.join(', ')})`); process.exit(0); }
+
 const posts = (await loadPosts()).filter((p) => p && /^[a-z0-9][a-z0-9-]{2,79}$/.test(p.slug || '') && p.title);
 await mkdir(OUT, { recursive: true });
 const keep = new Set(posts.map((p) => p.slug));
@@ -214,7 +291,8 @@ const terbaru = (list) => (list.length ? day(list[0].updated_at || list[0].publi
 const urls = [`  <url><loc>${SITE}/</loc><lastmod>${terbaru(posts)}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>`,
   `  <url><loc>${SITE}/game/</loc><lastmod>${day(new Date())}</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>`,
   ...[...KATEGORI_ADA].map((c) => `  <url><loc>${SITE}/${KOUT}/${c}/</loc><lastmod>${terbaru(posts.filter((x) => x.category === c))}</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>`),
+  ...INFO_KEYS.map((k) => `  <url><loc>${SITE}/${INFO}/${k}/</loc><lastmod>${day(new Date())}</lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>`),
   ...posts.map((p) => `  <url><loc>${SITE}/${OUT}/${p.slug}/</loc><lastmod>${day(p.updated_at || p.published_at || p.created_at)}</lastmod><priority>0.8</priority></url>`)];
 await writeFile('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`);
 await writeFile('robots.txt', `User-agent: *\nAllow: /\nDisallow: /031411/\nDisallow: /admin/\n\nSitemap: ${SITE}/sitemap.xml\n`);
-console.log(`Selesai: ${posts.length} artikel, sitemap.xml, robots.txt`);
+console.log(`Selesai: ${posts.length} artikel, ${INFO_KEYS.length} halaman info, sitemap.xml, robots.txt`);
