@@ -293,6 +293,41 @@ try {
   }
 } catch (e) { console.warn('Lewati arsip beranda:', e.message); }
 
+// ---------- /baca/<slug>/ : alamat interaktif (SPA) sebagai file asli ----------
+// Tanpa file ini, GitHub Pages menjawab /baca/... dengan status 404 (lalu 404.html mengalihkan lewat JavaScript), sehingga mesin
+// pencari, pratinjau tautan, dan alat tanpa JavaScript melihat "halaman tidak ditemukan". Di sini /baca/<slug>/ dibuat dari
+// index.html (aplikasi blog tetap berjalan: komentar, jajak pendapat), dengan meta artikel, canonical ke /a/<slug>/, dan
+// salinan isi artikel di <noscript> untuk pembaca tanpa JavaScript.
+const BACA = 'baca';
+try {
+  const shell = await readFile('index.html', 'utf8');
+  const bacaPage = (p) => {
+    const canonical = `${SITE}/${OUT}/${p.slug}/`;
+    const desc = rapikanDesc(p.excerpt, firstProse(p.body), p.title);
+    const img = safeHttps(p.cover_url) || `${SITE}/game/assets/img/landing/pasar.jpg`;
+    const title = `${p.title} — Smartphone Empire`;
+    const art = (page(p, posts).match(/<article class="article">[\s\S]*?<\/article>/) || [''])[0];
+    let h = shell;
+    const swap = (re, val) => { h = h.replace(re, () => val); };
+    swap(/<title>[\s\S]*?<\/title>/, `<title>${esc(title)}</title>`);
+    swap(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${esc(desc)}">`);
+    swap(/<link rel="canonical" href="[^"]*">/, `<link rel="canonical" href="${canonical}">`);
+    swap(/<meta property="og:title" content="[^"]*">/, `<meta property="og:title" content="${esc(title)}">`);
+    swap(/<meta property="og:description" content="[^"]*">/, `<meta property="og:description" content="${esc(desc)}">`);
+    swap(/<meta property="og:url" content="[^"]*">/, `<meta property="og:url" content="${canonical}">`);
+    swap(/<meta property="og:image" content="[^"]*">/, `<meta property="og:image" content="${esc(img)}">`);
+    swap(/<meta name="twitter:title" content="[^"]*">/, `<meta name="twitter:title" content="${esc(title)}">`);
+    swap(/<meta name="twitter:description" content="[^"]*">/, `<meta name="twitter:description" content="${esc(desc)}">`);
+    swap(/<meta name="twitter:image" content="[^"]*">/, `<meta name="twitter:image" content="${esc(img)}">`);
+    swap(/<meta property="og:image:(?:width|height|alt)" content="[^"]*">\n?/g, '');
+    if (art) swap(/<body>/, `<body>\n<noscript><main>${art}</main></noscript>`);
+    return h;
+  };
+  await mkdir(BACA, { recursive: true });
+  for (const d of await readdir(BACA)) if (!keep.has(d)) await rm(path.join(BACA, d), { recursive: true, force: true });
+  for (const p of posts) { await mkdir(path.join(BACA, p.slug), { recursive: true }); await writeFile(path.join(BACA, p.slug, 'index.html'), bacaPage(p)); }
+} catch (e) { console.warn('Lewati halaman /baca/:', e.message); }
+
 const day = (d) => new Date(d).toISOString().slice(0, 10);
 const terbaru = (list) => (list.length ? day(list[0].updated_at || list[0].published_at || list[0].created_at) : day(new Date()));
 const urls = [`  <url><loc>${SITE}/</loc><lastmod>${terbaru(posts)}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>`,
