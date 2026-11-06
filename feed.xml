@@ -6,7 +6,16 @@
     <atom:link href="https://smartphone-empire.my.id/feed.xml" rel="self" type="application/rss+xml"/>
     <description>Kabar, spesifikasi, rumor, dan jadwal rilis smartphone dan gadget dalam bahasa Indonesia.</description>
     <language>id-ID</language>
-    <lastBuildDate>Fri, 06 Nov 2026 05:07:24 GMT</lastBuildDate>
+    <lastBuildDate>Fri, 06 Nov 2026 05:37:00 GMT</lastBuildDate>
+    <item>
+      <title><![CDATA[Bukan Ponsel untuk Tahun Ini: Qualcomm Pamerkan Prototipe 6G Pertama Dunia di Shanghai]]></title>
+      <link>https://smartphone-empire.my.id/a/bukan-ponsel-untuk-tahun-ini-qualcomm-pamerkan-prototipe-6g-pertama-dunia/</link>
+      <guid isPermaLink="true">https://smartphone-empire.my.id/a/bukan-ponsel-untuk-tahun-ini-qualcomm-pamerkan-prototipe-6g-pertama-dunia/</guid>
+      <pubDate>Fri, 06 Nov 2026 05:37:00 GMT</pubDate>
+      <category>Rilis</category>
+      <description><![CDATA[Qualcomm menargetkan komersialisasi 6G pada 2029, dengan validasi perangkat pra-komersial pada 2028 dan demo teknologi saat Olimpiade Los Angeles 2028.…]]></description>
+      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793943416911-491337.png" type="image/jpeg" length="0"/>
+    </item>
     <item>
       <title><![CDATA[Memecoin yang Ramai di X: Mengapa Mayoritas Berakhir Nol dan Cara Mengecek Hype-nya]]></title>
       <link>https://smartphone-empire.my.id/a/memecoin-yang-ramai-di-x-mengapa-mayoritas-berakhir-nol-dan-cara-mengecek-hype/</link>
@@ -177,15 +186,6 @@
       <category>Rilis</category>
       <description><![CDATA[Purwakarta, 28 Oktober 2026 — Di tengah geliat pembangunan infrastruktur kecerdasan buatan (AI) di Indonesia, sebuah proyek ambisius senilai Rp3,5…]]></description>
       <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793270844284-471646.jpg" type="image/jpeg" length="0"/>
-    </item>
-    <item>
-      <title><![CDATA[Oracle Guncang Pasar Cloud: Pasarkan Chip Google TPU, Perluas Kemitraan NVIDIA hingga Skala Multi-Gigawatt]]></title>
-      <link>https://smartphone-empire.my.id/a/oracle-guncang-pasar-cloud-pasarkan-chip-google-tpu-perluas-kemitraan-nvidia-hin/</link>
-      <guid isPermaLink="true">https://smartphone-empire.my.id/a/oracle-guncang-pasar-cloud-pasarkan-chip-google-tpu-perluas-kemitraan-nvidia-hin/</guid>
-      <pubDate>Wed, 28 Oct 2026 00:10:54 GMT</pubDate>
-      <category>Rilis</category>
-      <description><![CDATA[SAN FRANCISCO, 28 Oktober 2026 — Oracle Corp. mengambil langkah strategis yang signifikan dalam persaingan infrastruktur kecerdasan buatan (AI) global.…]]></description>
-      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793271034298-471649.jpg" type="image/jpeg" length="0"/>
     </item>
   </channel>
 </rss>
