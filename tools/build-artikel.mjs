@@ -56,7 +56,8 @@ const EXTRA_META = (title, desc, img) => `<meta name="robots" content="index,fol
 <meta name="twitter:description" content="${esc(desc)}">
 <meta name="twitter:image" content="${esc(img)}">
 <link rel="alternate" type="application/rss+xml" title="Smartphone Empire Berita" href="/feed.xml">
-<link rel="stylesheet" href="/blog/css/blog-seo-ui.css?v=1">`;
+<link rel="stylesheet" href="/blog/css/blog-seo-ui.css?v=1">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4061736664415123" crossorigin="anonymous"></script>`;
 
 // Byline: hanya nama asli yang tampil sebagai orang; selain itu dipakai byline kolektif "Redaksi Smartphone Empire".
 const AUTHOR_REAL = { 'kalfinsetiawan': 'Kalfin Agus Setiawan', 'kalfin agus setiawan': 'Kalfin Agus Setiawan', 'kalfin': 'Kalfin Agus Setiawan' };
