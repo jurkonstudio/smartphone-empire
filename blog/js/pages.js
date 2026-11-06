@@ -14,9 +14,16 @@ export const PAGES = {
       ] },
     redaksi: { t: 'Redaksi', lead: 'Redaksi bertanggung jawab atas seluruh konten yang terbit di Smartphone Empire Berita.',
       s: [
-        ['Struktur redaksi', [], ['<b>Penanggung jawab</b>: Kalfin Agus Setiawan, pembuat game Smartphone Empire di bawah naungan Jurkon Studio.', '<b>Editor</b>: menyunting, memverifikasi, dan menentukan kelayakan terbit.', '<b>Penulis</b>: menyusun artikel dan mencantumkan sumber. Nama penulis tercantum di setiap artikel.']],
-        ['Alur penerbitan', [], ['Artikel disusun dan dilengkapi sumber.', 'Editor memeriksa fakta, label rumor, dan bahasa.', 'Artikel terbit; pembaca dapat mengirim koreksi kapan saja.']],
+        ['Siapa di balik redaksi', ['Smartphone Empire Berita dikelola oleh Jurkon Studio. Penanggung jawab sekaligus editor adalah Kalfin Agus Setiawan, pembuat game Smartphone Empire. Profil singkatnya ada di <a href="/i/penulis/">halaman Penulis</a>.']],
+        ['Cara kami menulis', ['Artikel disusun oleh redaksi dengan bantuan alat berbasis AI untuk draf dan perapian bahasa. Draf tidak terbit begitu saja: penanggung jawab memeriksa fakta, mengecek sumber, memberi label rumor, lalu menyunting sebelum terbit. Tanggung jawab isi tetap pada redaksi, bukan pada alat.', 'Artikel yang tidak ditulis oleh satu orang tertentu diberi byline <b>Redaksi Smartphone Empire</b>.']],
+        ['Alur penerbitan', [], ['Topik dipilih dari pengumuman resmi, sertifikasi, dan laporan media tepercaya.', 'Draf disusun, sumber dicantumkan, dan klaim yang belum terbukti diberi label rumor.', 'Penanggung jawab memeriksa fakta, label rumor, dan bahasa.', 'Artikel terbit; pembaca dapat mengirim koreksi kapan saja.']],
         ['Koreksi dan hak jawab', ['Bila ada informasi yang keliru atau merugikan, kirimkan keterangan melalui <a href="/i/kontak/">halaman Kontak</a>. Kami akan menelaahnya dan, bila terbukti, memperbaiki artikel serta mencatat perubahannya.']]
+      ] },
+    penulis: { t: 'Penulis', lead: 'Siapa yang menulis dan bertanggung jawab atas artikel di Smartphone Empire Berita.',
+      s: [
+        ['Kalfin Agus Setiawan', ['Penanggung jawab dan editor Smartphone Empire Berita. Kalfin adalah pembuat game <a href="/game/">Smartphone Empire</a> dan pengelola Jurkon Studio di Indonesia. Ia menulis dan menyunting liputan seputar rilis, spesifikasi, rumor, dan jadwal peluncuran smartphone.', 'Kontak langsung untuk koreksi, tips, atau kerja sama: lihat <a href="/i/kontak/">halaman Kontak</a>.']],
+        ['Redaksi Smartphone Empire', ['Byline ini dipakai untuk artikel yang disusun oleh redaksi secara bersama, dengan bantuan alat berbasis AI untuk draf dan diperiksa serta disunting oleh penanggung jawab sebelum terbit. Ini bukan nama orang, melainkan penanda bahwa artikel tersebut tanggung jawab redaksi.']],
+        ['Prinsip kami', [], ['Rumor selalu diberi label dan sumber.', 'Kekeliruan diperbaiki dan dicatat.', 'Penggunaan AI diungkapkan secara terbuka di <a href="/i/redaksi/">halaman Redaksi</a>.']]
       ] },
     etik: { t: 'Kode Etik Jurnalistik', lead: 'Kami berpegang pada prinsip jurnalistik: akurat, berimbang, dan jujur kepada pembaca.',
       s: [
@@ -67,9 +74,16 @@ export const PAGES = {
       ] },
     redaksi: { t: 'Editorial Team', lead: 'The editorial team is responsible for all content published on Smartphone Empire News.',
       s: [
-        ['Editorial structure', [], ['<b>Publisher</b>: Kalfin Agus Setiawan, creator of the Smartphone Empire game under Jurkon Studio.', '<b>Editors</b>: edit, verify, and decide what is fit to publish.', '<b>Writers</b>: draft articles and cite their sources. The author’s name appears on every article.']],
-        ['Publishing workflow', [], ['An article is drafted and sourced.', 'An editor checks the facts, rumor labels, and language.', 'The article goes live; readers can send corrections at any time.']],
+        ['Who is behind the newsroom', ['Smartphone Empire News is run by Jurkon Studio. The publisher and editor is Kalfin Agus Setiawan, creator of the Smartphone Empire game. A short profile is on the <a href="/i/penulis/">Authors page</a>.']],
+        ['How we write', ['Articles are produced by the editorial team with the help of AI tools for drafting and language polish. Drafts are not published as-is: the publisher checks facts, verifies sources, labels rumors, and edits before publication. Responsibility for the content stays with the editorial team, not the tool.', 'Articles not written by one specific person carry the byline <b>Smartphone Empire Editorial</b>.']],
+        ['Publishing workflow', [], ['Topics are picked from official announcements, certifications, and reliable media reports.', 'A draft is prepared, sources are cited, and unproven claims are labeled as rumors.', 'The publisher checks facts, rumor labels, and language.', 'The article goes live; readers can send corrections at any time.']],
         ['Corrections and right of reply', ['If something is wrong or harmful, send details via the <a href="/i/kontak/">Contact page</a>. We will review it and, if verified, correct the article and note the change.']]
+      ] },
+    penulis: { t: 'Authors', lead: 'Who writes and is accountable for articles on Smartphone Empire News.',
+      s: [
+        ['Kalfin Agus Setiawan', ['Publisher and editor of Smartphone Empire News. Kalfin is the creator of the <a href="/game/">Smartphone Empire</a> game and runs Jurkon Studio in Indonesia. He writes and edits coverage of smartphone releases, specs, rumors, and launch schedules.', 'For corrections, tips, or partnerships, see the <a href="/i/kontak/">Contact page</a>.']],
+        ['Smartphone Empire Editorial', ['This byline is used for articles prepared by the newsroom collectively, with AI tools assisting the draft, and checked and edited by the publisher before publication. It is not a person’s name; it marks the article as the newsroom’s responsibility.']],
+        ['Our principles', [], ['Rumors are always labeled and sourced.', 'Errors are corrected and noted.', 'Use of AI is disclosed openly on the <a href="/i/redaksi/">Editorial Team page</a>.']]
       ] },
     etik: { t: 'Journalistic Code of Ethics', lead: 'We hold to journalistic principles: accurate, balanced, and honest with our readers.',
       s: [

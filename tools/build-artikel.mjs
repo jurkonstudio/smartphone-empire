@@ -58,6 +58,12 @@ const EXTRA_META = (title, desc, img) => `<meta name="robots" content="index,fol
 <link rel="alternate" type="application/rss+xml" title="Smartphone Empire Berita" href="/feed.xml">
 <link rel="stylesheet" href="/blog/css/blog-seo-ui.css?v=1">`;
 
+// Byline: hanya nama asli yang tampil sebagai orang; selain itu dipakai byline kolektif "Redaksi Smartphone Empire".
+const AUTHOR_REAL = { 'kalfinsetiawan': 'Kalfin Agus Setiawan', 'kalfin agus setiawan': 'Kalfin Agus Setiawan', 'kalfin': 'Kalfin Agus Setiawan' };
+const AUTHOR_TEAM = 'Redaksi Smartphone Empire';
+const authorName = (a) => AUTHOR_REAL[String(a || '').trim().toLowerCase()] || AUTHOR_TEAM;
+const authorLd = (a) => { const n = authorName(a); return n === AUTHOR_TEAM ? { '@type': 'Organization', name: n, url: `${SITE}/i/penulis/` } : { '@type': 'Person', name: n, url: `${SITE}/i/penulis/` }; };
+
 function page(p, all = []) {
   const canonical = `${SITE}/${OUT}/${p.slug}/`;
   const published = p.published_at || p.created_at;
@@ -66,7 +72,7 @@ function page(p, all = []) {
   const ld = {
     '@context': 'https://schema.org', '@type': 'NewsArticle', headline: p.title.slice(0, 110), description: desc,
     image: [img], datePublished: published, dateModified: p.updated_at || published, mainEntityOfPage: canonical,
-    author: { '@type': 'Person', name: p.author || 'Redaksi' },
+    author: authorLd(p.author),
     publisher: { '@type': 'Organization', name: 'Smartphone Empire Berita', logo: { '@type': 'ImageObject', url: `${SITE}/blog/img/logo.svg` } }
   };
   const cat = CATS[p.category] || p.category;
@@ -115,7 +121,7 @@ ${siteHeader()}
     <div class="meta"><span class="tag t-${esc(p.category)}">${esc(cat)}</span></div>
     <h1>${esc(p.title)}</h1>
     ${p.excerpt ? `<p class="lead">${esc(p.excerpt)}</p>` : ''}
-    <div class="meta byline"><span>Ditulis oleh ${esc(p.author || 'admin')}</span><time datetime="${esc(published)}">${esc(fmtDate(published))}</time><span>${readMin(p.body)} menit baca</span></div>
+    <div class="meta byline"><span>Ditulis oleh <a href=\"/i/penulis/\">${esc(authorName(p.author))}</a></span><time datetime="${esc(published)}">${esc(fmtDate(published))}</time><span>${readMin(p.body)} menit baca</span></div>
     ${safeHttps(p.cover_url) ? `<img class="cover" src="${esc(p.cover_url)}" alt="${esc(p.title)}" width="1200" height="675" decoding="async" style="margin-top:20px">` : ''}
     <div class="content">${mdToHtml(p.body)}</div>
     ${safeHttps(p.source_url) ? `<p class="source">Sumber: <a href="${esc(p.source_url)}" rel="noopener nofollow" target="_blank">${esc(p.source_url)}</a></p>` : ''}

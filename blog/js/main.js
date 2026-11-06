@@ -402,7 +402,7 @@ function showPost(slug) {
       ${LANG === 'en' && !hasEn(p) ? `<p class="lang-note">${t('only_id')}</p>` : ''}
       <h1>${esc(tx(p, 'title'))}</h1>
       ${tx(p, 'excerpt') ? `<p class="lead">${esc(tx(p, 'excerpt'))}</p>` : ''}
-      <div class="meta byline"><span>${t('by')} ${esc(p.author || 'admin')}</span><span>·</span><span>${esc(fmtDate(postDate(p)))}</span></div>
+      <div class="meta byline"><span>${t('by')} <a href="/i/penulis/">${esc(authorLabel(p.author))}</a></span><span>·</span><span>${esc(fmtDate(postDate(p)))}</span></div>
       ${safeUrl(p.cover_url) ? `<img class="cover" src="${esc(safeUrl(p.cover_url))}" alt="" width="1200" height="675" decoding="async" style="margin-top:24px">` : ''}
       <div class="content">${paragraphs}</div>
       ${src ? `<p class="source">${t('source')} <a href="${esc(src)}" target="_blank" rel="noopener nofollow">${esc(src)}</a></p>` : ''}
@@ -710,6 +710,7 @@ function parseAiArticle(raw) {
   return { title, excerpt, body };
 }
 
+function authorLabel(a) { return ({ kalfinsetiawan: 'Kalfin Agus Setiawan', 'kalfin agus setiawan': 'Kalfin Agus Setiawan', kalfin: 'Kalfin Agus Setiawan' }[String(a || '').trim().toLowerCase()] || (LANG === 'en' ? 'Smartphone Empire Editorial' : 'Redaksi Smartphone Empire')); }
 const AUTHOR_KEY = 'blog-authors', DRAFT_KEY = 'blog-ai-draft';
 function loadAuthors() { try { const a = JSON.parse(localStorage.getItem(AUTHOR_KEY) || '[]'); return Array.isArray(a) ? a.filter((x) => typeof x === 'string' && x) : []; } catch (e) { return []; } }
 function rememberAuthor(n) { if (!n || n === 'admin') return; try { localStorage.setItem(AUTHOR_KEY, JSON.stringify([n, ...loadAuthors().filter((x) => x !== n)].slice(0, 8))); } catch (e) {} }
