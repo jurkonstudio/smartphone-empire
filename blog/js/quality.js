@@ -12,7 +12,7 @@ const FILLER = [
   'di dunia yang terus berkembang', 'tidak bisa dipungkiri', 'mari kita bahas', 'dengan demikian'
 ];
 const SENSASI = /\b(guncang|menggegerkan|gempar|mimpi buruk|terbongkar|dibongkar|menggebrak|kiamat|habisi|tamat|menghancurkan|drama)\b/i;
-const NICHE = /(ponsel|\bhp\b|smartphone|gadget|handphone|android|ios|iphone|ipad|samsung|xiaomi|redmi|poco|oppo|vivo|realme|infinix|tecno|huawei|honor|pixel|motorola|nokia|oneplus|redmagic|asus|rog|snapdragon|dimensity|exynos|chipset|baterai|kamera|layar|foldable|lipat|wearable|smartwatch|earbuds|tablet|one ui|hyperos|coloros|\bnfc\b|\b5g\b)/i;
+const NICHE = /\b(ponsel|hp|smartphone|gadget|handphone|android|ios|iphone|ipad|samsung|galaxy|xiaomi|redmi|poco|oppo|vivo|realme|infinix|tecno|huawei|honor|pixel|motorola|nokia|oneplus|redmagic|rog|snapdragon|dimensity|exynos|chipset|baterai|kamera|foldable|ponsel lipat|wearable|smartwatch|earbuds|tablet|one ui|hyperos|coloros|nfc|5g)\b/i;
 const INDONESIA = /(indonesia|\brp\.?\s?\d|rupiah|\bidr\b|shopee|tokopedia|lazada|blibli|erafone|ibox|resmi di ri|tkdn|nasional)/i;
 const VERDICT = /(layak|rekomendasi|kesimpulan|mana yang (lebih )?(baik|cocok|pilih)|cocok untuk|sebaiknya|pilih (yang|mana)|worth|verdict|siapa yang)/i;
 const CLICKBAIT = /(\bwow\b|\bheboh\b|\bviral\b|\bshocking\b|\bmengejutkan\b|\bgak nyangka\b|\bnggak nyangka\b|\bternyata begini\b|!!+|\?\?+)/i;
