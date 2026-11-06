@@ -1,0 +1,4 @@
+# ads.txt untuk smartphone-empire.my.id
+# Setelah AdSense menyetujui situs, ganti baris di bawah dengan ID penerbit Anda
+# (AdSense menampilkan baris lengkapnya di menu Situs > ads.txt), lalu hapus tanda "#".
+# Format: google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
