@@ -6,7 +6,16 @@
     <atom:link href="https://smartphone-empire.my.id/feed.xml" rel="self" type="application/rss+xml"/>
     <description>Kabar, spesifikasi, rumor, dan jadwal rilis smartphone dan gadget dalam bahasa Indonesia.</description>
     <language>id-ID</language>
-    <lastBuildDate>Fri, 06 Nov 2026 05:37:00 GMT</lastBuildDate>
+    <lastBuildDate>Fri, 06 Nov 2026 07:03:25 GMT</lastBuildDate>
+    <item>
+      <title><![CDATA[Akhir dari Cekikan "Centang Biru": WhatsApp Android Versi 2.26.44.12 Segera Tiru Fitur Ngintip Pesan ala iOS]]></title>
+      <link>https://smartphone-empire.my.id/a/akhir-dari-cekikan-centang-biru-whatsapp-android-versi-2-26-44-12-segera-tiru/</link>
+      <guid isPermaLink="true">https://smartphone-empire.my.id/a/akhir-dari-cekikan-centang-biru-whatsapp-android-versi-2-26-44-12-segera-tiru/</guid>
+      <pubDate>Fri, 06 Nov 2026 07:03:25 GMT</pubDate>
+      <category>Rilis</category>
+      <description><![CDATA[WhatsApp Android akan segera hadirkan fitur pratinjau chat tanpa memicu centang biru. Simak analisis, dampak untuk pengguna, dan opini redaksi.]]></description>
+      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793948604265-491387.jpg" type="image/jpeg" length="0"/>
+    </item>
     <item>
       <title><![CDATA[Bukan Ponsel untuk Tahun Ini: Qualcomm Pamerkan Prototipe 6G Pertama Dunia di Shanghai]]></title>
       <link>https://smartphone-empire.my.id/a/bukan-ponsel-untuk-tahun-ini-qualcomm-pamerkan-prototipe-6g-pertama-dunia/</link>
@@ -177,15 +186,6 @@
       <category>Rilis</category>
       <description><![CDATA[Dalam rangkuman berita teknologi dunia hari ini, Kamis, 29 Oktober 2026, lanskap industri kembali bergerak cepat di tiga lapisan sekaligus—komputasi AI…]]></description>
       <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793280781673-473283.jpg" type="image/jpeg" length="0"/>
-    </item>
-    <item>
-      <title><![CDATA[Di Balik Layar Penghentian Proyek Server AI Raksasa di Jatiluhur: Ambisi Teknologi vs. Ketersediaan Air]]></title>
-      <link>https://smartphone-empire.my.id/a/di-balik-layar-penghentian-proyek-server-ai-raksasa-di-jatiluhur-ambisi-teknolog/</link>
-      <guid isPermaLink="true">https://smartphone-empire.my.id/a/di-balik-layar-penghentian-proyek-server-ai-raksasa-di-jatiluhur-ambisi-teknolog/</guid>
-      <pubDate>Wed, 28 Oct 2026 00:13:25 GMT</pubDate>
-      <category>Rilis</category>
-      <description><![CDATA[Purwakarta, 28 Oktober 2026 — Di tengah geliat pembangunan infrastruktur kecerdasan buatan (AI) di Indonesia, sebuah proyek ambisius senilai Rp3,5…]]></description>
-      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793270844284-471646.jpg" type="image/jpeg" length="0"/>
     </item>
   </channel>
 </rss>
