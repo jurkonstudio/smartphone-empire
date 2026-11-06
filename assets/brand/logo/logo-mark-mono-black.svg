@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="t"><title id="t">Smartphone Empire</title><rect x="146" y="64" width="220" height="384" rx="54" fill="none" stroke="#111" stroke-width="22"/>
+<rect x="228" y="100" width="56" height="12" rx="6" fill="#111"/>
+<path d="M192 338 L186 220 L231 268 L256 200 L281 268 L326 220 L320 338 Z" fill="#111" stroke="#111" stroke-width="10" stroke-linejoin="round"/>
+<circle cx="186" cy="212" r="10" fill="#111"/><circle cx="256" cy="190" r="11" fill="#111"/><circle cx="326" cy="212" r="10" fill="#111"/>
+<rect x="192" y="356" width="128" height="16" rx="5" fill="#111"/></svg>
