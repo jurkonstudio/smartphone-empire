@@ -55,6 +55,7 @@ const EXTRA_META = (title, desc, img) => `<meta name="robots" content="index,fol
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(desc)}">
 <meta name="twitter:image" content="${esc(img)}">
+<link rel="alternate" type="application/rss+xml" title="Smartphone Empire Berita" href="/feed.xml">
 <link rel="stylesheet" href="/blog/css/blog-seo-ui.css?v=1">`;
 
 function page(p, all = []) {
@@ -289,10 +290,40 @@ try {
 const day = (d) => new Date(d).toISOString().slice(0, 10);
 const terbaru = (list) => (list.length ? day(list[0].updated_at || list[0].published_at || list[0].created_at) : day(new Date()));
 const urls = [`  <url><loc>${SITE}/</loc><lastmod>${terbaru(posts)}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>`,
-  `  <url><loc>${SITE}/game/</loc><lastmod>${day(new Date())}</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>`,
+  `  <url><loc>${SITE}/game/</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>`,
   ...[...KATEGORI_ADA].map((c) => `  <url><loc>${SITE}/${KOUT}/${c}/</loc><lastmod>${terbaru(posts.filter((x) => x.category === c))}</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>`),
   ...INFO_KEYS.map((k) => `  <url><loc>${SITE}/${INFO}/${k}/</loc><lastmod>${day(new Date())}</lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>`),
-  ...posts.map((p) => `  <url><loc>${SITE}/${OUT}/${p.slug}/</loc><lastmod>${day(p.updated_at || p.published_at || p.created_at)}</lastmod><priority>0.8</priority></url>`)];
-await writeFile('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`);
+  ...posts.map((p) => `  <url><loc>${SITE}/${OUT}/${p.slug}/</loc><lastmod>${day(p.updated_at || p.published_at || p.created_at)}</lastmod><priority>0.8</priority>${safeHttps(p.cover_url) ? `<image:image><image:loc>${esc(safeHttps(p.cover_url))}</image:loc></image:image>` : ''}</url>`)];
+await writeFile('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${urls.join('\n')}\n</urlset>\n`);
+
+// Umpan RSS (20 artikel terbaru): membantu agregator, pembaca RSS, dan Google menemukan artikel baru lebih cepat.
+const rfc822 = (d) => new Date(d).toUTCString();
+const cdata = (t) => `<![CDATA[${String(t ?? '').replace(/\]\]>/g, ']]]]><![CDATA[>')}]]>`;
+const feedItems = posts.slice(0, 20).map((p) => {
+  const link = `${SITE}/${OUT}/${p.slug}/`;
+  const desc = rapikanDesc(p.excerpt, firstProse(p.body), p.title);
+  const img = safeHttps(p.cover_url);
+  return `    <item>
+      <title>${cdata(p.title)}</title>
+      <link>${link}</link>
+      <guid isPermaLink="true">${link}</guid>
+      <pubDate>${rfc822(p.published_at || p.created_at)}</pubDate>
+      <category>${esc(CATS[p.category] || p.category || '')}</category>
+      <description>${cdata(desc)}</description>${img ? `\n      <enclosure url="${esc(img)}" type="image/jpeg" length="0"/>` : ''}
+    </item>`;
+}).join('\n');
+await writeFile('feed.xml', `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Smartphone Empire Berita</title>
+    <link>${SITE}/</link>
+    <atom:link href="${SITE}/feed.xml" rel="self" type="application/rss+xml"/>
+    <description>Kabar, spesifikasi, rumor, dan jadwal rilis smartphone dan gadget dalam bahasa Indonesia.</description>
+    <language>id-ID</language>
+    <lastBuildDate>${rfc822(posts.length ? (posts[0].updated_at || posts[0].published_at || posts[0].created_at) : new Date())}</lastBuildDate>
+${feedItems}
+  </channel>
+</rss>
+`);
 await writeFile('robots.txt', `User-agent: *\nAllow: /\nDisallow: /031411/\nDisallow: /admin/\n\nSitemap: ${SITE}/sitemap.xml\n`);
-console.log(`Selesai: ${posts.length} artikel, ${INFO_KEYS.length} halaman info, sitemap.xml, robots.txt`);
+console.log(`Selesai: ${posts.length} artikel, ${INFO_KEYS.length} halaman info, sitemap.xml, feed.xml, robots.txt`);
