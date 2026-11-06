@@ -6,16 +6,7 @@
     <atom:link href="https://smartphone-empire.my.id/feed.xml" rel="self" type="application/rss+xml"/>
     <description>Kabar, spesifikasi, rumor, dan jadwal rilis smartphone dan gadget dalam bahasa Indonesia.</description>
     <language>id-ID</language>
-    <lastBuildDate>Fri, 06 Nov 2026 12:52:20 GMT</lastBuildDate>
-    <item>
-      <title><![CDATA[Misteri Trump Mobile T1: Ponsel Emas Rp11 Juta yang Diklaim Buatan Amerika, tapi Ternyata...]]></title>
-      <link>https://smartphone-empire.my.id/a/misteri-trump-mobile-t1-ponsel-emas-rp11-juta-yang-diklaim-buatan-amerika-tapi/</link>
-      <guid isPermaLink="true">https://smartphone-empire.my.id/a/misteri-trump-mobile-t1-ponsel-emas-rp11-juta-yang-diklaim-buatan-amerika-tapi/</guid>
-      <pubDate>Fri, 06 Nov 2026 12:52:20 GMT</pubDate>
-      <category>Rilis</category>
-      <description><![CDATA[Janji manisnya sangat menggoda: sebuah ponsel yang 100% dirancang dan dirakit di Amerika Serikat, sebagai bentuk perlawanan terhadap dominasi teknologi…]]></description>
-      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793969537806-492411.png" type="image/jpeg" length="0"/>
-    </item>
+    <lastBuildDate>Fri, 06 Nov 2026 07:03:25 GMT</lastBuildDate>
     <item>
       <title><![CDATA[Akhir dari Cekikan "Centang Biru": WhatsApp Android Versi 2.26.44.12 Segera Tiru Fitur Ngintip Pesan ala iOS]]></title>
       <link>https://smartphone-empire.my.id/a/akhir-dari-cekikan-centang-biru-whatsapp-android-versi-2-26-44-12-segera-tiru/</link>
@@ -186,6 +177,15 @@
       <category>Rilis</category>
       <description><![CDATA[Pekan terakhir Oktober 2026 menjadi saksi bisu betapa sengitnya persaingan di segmen ponsel lipat. Jika besok, Jumat (30/10/2026), publik Indonesia…]]></description>
       <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793265215477-471423.jpg" type="image/jpeg" length="0"/>
+    </item>
+    <item>
+      <title><![CDATA[Balik Layar Hari Ini: Ketika AI Berhenti Jadi Alat, Ponsel Lipat Apple, dan Satelit Menjadi Nyata]]></title>
+      <link>https://smartphone-empire.my.id/a/radar-teknologi-global-hari-ini-ai-perangkat-pintar-dan-konektivitas-berubah-ber/</link>
+      <guid isPermaLink="true">https://smartphone-empire.my.id/a/radar-teknologi-global-hari-ini-ai-perangkat-pintar-dan-konektivitas-berubah-ber/</guid>
+      <pubDate>Thu, 29 Oct 2026 08:50:01 GMT</pubDate>
+      <category>Rilis</category>
+      <description><![CDATA[Dalam rangkuman berita teknologi dunia hari ini, Kamis, 29 Oktober 2026, lanskap industri kembali bergerak cepat di tiga lapisan sekaligus—komputasi AI…]]></description>
+      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793280781673-473283.jpg" type="image/jpeg" length="0"/>
     </item>
   </channel>
 </rss>
