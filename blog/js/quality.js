@@ -7,8 +7,14 @@ import { mdToText } from './richtext.js';
 const FILLER = [
   'di era digital', 'tidak dapat dipungkiri', 'seiring berkembangnya zaman', 'seiring perkembangan zaman',
   'dalam dunia yang semakin', 'di tengah pesatnya', 'tak bisa dipungkiri', 'perlu diingat bahwa',
-  'dapat disimpulkan bahwa', 'in today\'s digital age', 'it goes without saying'
+  'dapat disimpulkan bahwa', 'in today\'s digital age', 'it goes without saying',
+  'tidak diragukan lagi', 'tak hanya itu', 'lebih dari itu', 'menjadi bukti bahwa', 'game changer', 'dalam lanskap',
+  'di dunia yang terus berkembang', 'tidak bisa dipungkiri', 'mari kita bahas', 'dengan demikian'
 ];
+const SENSASI = /\b(guncang|menggegerkan|gempar|mimpi buruk|terbongkar|dibongkar|menggebrak|kiamat|habisi|tamat|menghancurkan|drama)\b/i;
+const NICHE = /(ponsel|\bhp\b|smartphone|gadget|handphone|android|ios|iphone|ipad|samsung|xiaomi|redmi|poco|oppo|vivo|realme|infinix|tecno|huawei|honor|pixel|motorola|nokia|oneplus|redmagic|asus|rog|snapdragon|dimensity|exynos|chipset|baterai|kamera|layar|foldable|lipat|wearable|smartwatch|earbuds|tablet|one ui|hyperos|coloros|\bnfc\b|\b5g\b)/i;
+const INDONESIA = /(indonesia|\brp\.?\s?\d|rupiah|\bidr\b|shopee|tokopedia|lazada|blibli|erafone|ibox|resmi di ri|tkdn|nasional)/i;
+const VERDICT = /(layak|rekomendasi|kesimpulan|mana yang (lebih )?(baik|cocok|pilih)|cocok untuk|sebaiknya|pilih (yang|mana)|worth|verdict|siapa yang)/i;
 const CLICKBAIT = /(\bwow\b|\bheboh\b|\bviral\b|\bshocking\b|\bmengejutkan\b|\bgak nyangka\b|\bnggak nyangka\b|\bternyata begini\b|!!+|\?\?+)/i;
 const AI_CHATTER = /^(tentu|baik[,.! ]|berikut( ini)?( adalah)?( sebuah)?( draf| draft)?( artikel)?|ini (adalah )?artikel|sure|certainly|here is|here's|as an ai|sebagai (model|ai|asisten))/i;
 const AI_TAIL = /^(semoga (artikel|tulisan) ini|semoga bermanfaat|jika (anda|kamu) (ingin|mau|butuh)|apakah (anda|kamu) (ingin|mau)|let me know|i hope this)/i;
@@ -82,6 +88,33 @@ export function assessPost(p, all = []) {
 
   if (['rilis', 'spek', 'jadwal'].includes(cat) && wc > 80 && !/\d/.test(body)) hit('warn', 5, 'Belum ada angka atau data spesifik (spesifikasi, tanggal, harga).');
   if (!p.author || /^(admin|redaksi|test)$/i.test(p.author)) hit('info', 3, 'Pakai nama penulis yang nyata dan konsisten.');
+
+  // ---- Pemeriksaan nilai artikel (bukan sekadar bentuk) ----
+  const firstPara = (paras[0] || '').trim();
+  const lastPara = (paras[paras.length - 1] || '').trim();
+  const isTableOrHead = (t) => /^(\||#{1,6}\s)/.test(t);
+  if (paras.length && isTableOrHead(firstPara)) hit('warn', 8, 'Artikel langsung dimulai dengan tabel/subjudul. Tambahkan 2-3 kalimat pembuka yang menjawab inti pertanyaan pembaca (juga dipakai Google sebagai cuplikan).');
+  const lastLine2 = lastPara.split('\n').slice(-1)[0].trim();
+  const endsWithSources = /^(\*\*)?(sumber|sources?)\b/i.test(lastPara) || /^(https?:\/\/\S+|\[[^\]]*\]\(https?:\/\/[^)]*\)|[-*•]\s*\S*https?:\/\/\S+)$/i.test(lastLine2);
+  if (wc >= 150 && lastLine2 && !endsWithSources && !isTableOrHead(lastLine2) && !/^([-*•]|\d+[.)])\s/.test(lastLine2) && !/[.!?…"”')\]]$/.test(lastLine2)) hit('warn', 8, 'Akhir artikel terlihat terpotong (tidak berakhir dengan tanda baca). Tambahkan paragraf penutup.');
+  const smartTopic = ['rilis', 'spek', 'rumor', 'jadwal'].includes(cat);
+  if (smartTopic && !NICHE.test(title + ' ' + excerpt) && (plain.match(new RegExp(NICHE.source, 'gi')) || []).length < 4) hit('bad', 20, 'Topik tampak di luar niche smartphone/gadget. Artikel di luar niche melemahkan fokus situs; pertimbangkan tidak diterbitkan atau kaitkan jelas dengan ponsel.');
+  if (SENSASI.test(title)) hit('warn', 6, 'Judul memakai kata bombastis (mis. "guncang", "mimpi buruk", "terbongkar"). Ganti dengan judul yang lugas dan informatif.');
+  if (smartTopic && wc > 250 && !INDONESIA.test(body)) hit('info', 6, 'Belum ada konteks Indonesia (harga rupiah, ketersediaan resmi, TKDN, atau toko lokal). Ini nilai tambah terbesar untuk pembaca dan SEO lokal.');
+  const hasLink = /\]\(https?:\/\//.test(body) || /https?:\/\//.test(body) || !!p.source_url;
+  if (smartTopic && wc > 250 && !hasLink) hit('warn', 8, 'Sumber disebut tanpa tautan. Beri tautan ke sumber asli agar bisa dicek pembaca (dan menambah kepercayaan).');
+  if (['rilis', 'spek'].includes(cat) && wc > 400 && !VERDICT.test(body)) hit('info', 5, 'Belum ada kesimpulan/rekomendasi ("layak dibeli untuk siapa"). Opini yang jelas adalah nilai tambah yang tidak bisa disalin mesin.');
+  const hasOriginal = /(\bkami (uji|coba|tes|pakai|cek|bandingkan)|\bsaya (uji|coba|tes|pakai|cek)|hasil (uji|tes|pengujian) (kami|sendiri|redaksi)|pengalaman (kami|saya)|di tangan kami|foto (oleh|milik) (kami|redaksi)|!\[)/i.test(body);
+  if (smartTopic && wc > 400 && !hasOriginal) hit('info', 4, 'Belum ada elemen orisinal (uji/pengalaman sendiri, foto atau tangkapan layar sendiri, atau analisis yang tidak ada di sumber).');
+  const numbers = (plain.match(/\d[\d.,]*/g) || []).length;
+  if (['rilis', 'spek', 'jadwal'].includes(cat) && wc > 300 && numbers < 5) hit('info', 4, 'Sedikit angka/data (hanya ' + numbers + '). Artikel spek yang bernilai biasanya memuat banyak angka yang bisa diverifikasi.');
+  if (excerpt.length > 170) hit('info', 3, 'Ringkasan terlalu panjang (' + excerpt.length + ' karakter); ideal 100-160 agar tidak terpotong di Google.');
+  const openers = sentences(plain).map((x) => x.split(' ').slice(0, 2).join(' '));
+  if (openers.length > 10) {
+    const freq = {}; openers.forEach((o) => { freq[o] = (freq[o] || 0) + 1; });
+    const top = Object.entries(freq).sort((a, b) => b[1] - a[1])[0];
+    if (top && top[1] / openers.length > 0.25 && top[1] >= 4) hit('info', 4, `Terlalu banyak kalimat diawali "${top[0]}" (${top[1]}x). Variasikan pembuka kalimat agar tidak terasa otomatis.`);
+  }
 
   const others = all.filter((o) => o && o.id !== p.id && o.status !== 'draft');
   const dup = others.find((o) => similarity(o.title, title) > 0.7);
