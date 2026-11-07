@@ -6,7 +6,25 @@
     <atom:link href="https://smartphone-empire.my.id/feed.xml" rel="self" type="application/rss+xml"/>
     <description>Kabar, spesifikasi, rumor, dan jadwal rilis smartphone dan gadget dalam bahasa Indonesia.</description>
     <language>id-ID</language>
-    <lastBuildDate>Sat, 07 Nov 2026 14:50:45 GMT</lastBuildDate>
+    <lastBuildDate>Sat, 07 Nov 2026 15:16:50 GMT</lastBuildDate>
+    <item>
+      <title><![CDATA[Android 17 update is now available for Sony Xperia 1 VIII, Xperia 1 VII, Xperia 10 VIII, and Xperia 10 VII]]></title>
+      <link>https://smartphone-empire.my.id/a/android-17-update-is-now-available-for-sony-xperia-1-viii-xperia-1-vii-xperia-10/</link>
+      <guid isPermaLink="true">https://smartphone-empire.my.id/a/android-17-update-is-now-available-for-sony-xperia-1-viii-xperia-1-vii-xperia-10/</guid>
+      <pubDate>Sat, 07 Nov 2026 15:14:19 GMT</pubDate>
+      <category>Rilis</category>
+      <description><![CDATA[Pembaruan ini memang membawa penyegaran. Ikon kini bisa dikustomisasi, panel pengaturan cepat bisa diatur ulang, dan perekaman layar ( screen recording )…]]></description>
+      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1794064458719-493272.png" type="image/jpeg" length="0"/>
+    </item>
+    <item>
+      <title><![CDATA[Android, iOS, dan HarmonyOS di Tahun 2026: Tiga Sistem yang Semakin Mirip, tapi Berangkat dari Filosofi yang Bertolak Belakang]]></title>
+      <link>https://smartphone-empire.my.id/a/android-ios-dan-harmonyos-di-tahun-2026-tiga-sistem-yang-semakin-mirip-tapi/</link>
+      <guid isPermaLink="true">https://smartphone-empire.my.id/a/android-ios-dan-harmonyos-di-tahun-2026-tiga-sistem-yang-semakin-mirip-tapi/</guid>
+      <pubDate>Sat, 07 Nov 2026 15:01:00 GMT</pubDate>
+      <category>Rilis</category>
+      <description><![CDATA[Jika Anda memindahkan pengguna Android ke iPhone, atau sebaliknya, kejutan terbesarnya hari ini bukan lagi soal “sistem mana yang lebih mulus”. Yang…]]></description>
+      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1794063659020-493264.png" type="image/jpeg" length="0"/>
+    </item>
     <item>
       <title><![CDATA[Jangan Salah Beli! Daftar 6 HP Terbaik yang Rilis Akhir 2026 di Indonesia]]></title>
       <link>https://smartphone-empire.my.id/a/jangan-salah-beli-daftar-6-hp-terbaik-yang-rilis-akhir-2026-di-indonesia/</link>
@@ -168,24 +186,6 @@
       <category>Rilis</category>
       <description><![CDATA[Pasar ponsel gaming kembali mendapat pemain baru. Setelah sukses dengan seri sebelumnya, RedMagic resmi meluncurkan RedMagic 12 Pro ke pasar global pada…]]></description>
       <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793726314906-487002.png" type="image/jpeg" length="0"/>
-    </item>
-    <item>
-      <title><![CDATA[Brax Wink, Ponsel Anti-Google dengan Keyboard Fisik yang Bisa Dilepas-Pasang]]></title>
-      <link>https://smartphone-empire.my.id/a/brax-wink-ponsel-anti-google-dengan-keyboard-fisik-yang-bisa-dilepas-pasang/</link>
-      <guid isPermaLink="true">https://smartphone-empire.my.id/a/brax-wink-ponsel-anti-google-dengan-keyboard-fisik-yang-bisa-dilepas-pasang/</guid>
-      <pubDate>Tue, 03 Nov 2026 15:47:53 GMT</pubDate>
-      <category>Rilis</category>
-      <description><![CDATA[Ponsel ini mengandalkan chipset MediaTek MT8875, RAM 8GB, penyimpanan 128GB, dan kamera belakang 50MP. Brax menjanjikan pembaruan perangkat lunak hingga…]]></description>
-      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793720871640-486914.jpg" type="image/jpeg" length="0"/>
-    </item>
-    <item>
-      <title><![CDATA[Cyclon dan Mimpi Buruk Apple: Ponsel Tanpa Aplikasi yang Siap Mengubur iPhone]]></title>
-      <link>https://smartphone-empire.my.id/a/cyclon-dan-mimpi-buruk-apple-ponsel-tanpa-aplikasi-yang-siap-mengubur-iphone/</link>
-      <guid isPermaLink="true">https://smartphone-empire.my.id/a/cyclon-dan-mimpi-buruk-apple-ponsel-tanpa-aplikasi-yang-siap-mengubur-iphone/</guid>
-      <pubDate>Tue, 03 Nov 2026 15:42:56 GMT</pubDate>
-      <category>Rilis</category>
-      <description><![CDATA[Didirikan pada tahun 2026 oleh Thomas Kiefer, mantan insinyur Android, dan Adam Zinebi, spesialis miniaturisasi perangkat keras, Cyclon membangun sebuah…]]></description>
-      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793720575313-486912.png" type="image/jpeg" length="0"/>
     </item>
   </channel>
 </rss>
