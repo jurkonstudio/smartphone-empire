@@ -6,7 +6,16 @@
     <atom:link href="https://smartphone-empire.my.id/feed.xml" rel="self" type="application/rss+xml"/>
     <description>Kabar, spesifikasi, rumor, dan jadwal rilis smartphone dan gadget dalam bahasa Indonesia.</description>
     <language>id-ID</language>
-    <lastBuildDate>Sat, 07 Nov 2026 16:39:47 GMT</lastBuildDate>
+    <lastBuildDate>Sat, 07 Nov 2026 17:05:35 GMT</lastBuildDate>
+    <item>
+      <title><![CDATA[Update TKDN November 2026: Sederet Flagship Anyar Siap Meluncur, Siapa Paling Cepat Masuk Indonesia?]]></title>
+      <link>https://smartphone-empire.my.id/a/update-tkdn-november-2026-sederet-flagship-anyar-siap-meluncur-siapa-paling/</link>
+      <guid isPermaLink="true">https://smartphone-empire.my.id/a/update-tkdn-november-2026-sederet-flagship-anyar-siap-meluncur-siapa-paling/</guid>
+      <pubDate>Sat, 07 Nov 2026 17:05:35 GMT</pubDate>
+      <category>Rilis</category>
+      <description><![CDATA[Peta persaingan smartphone di Indonesia kembali menunjukkan pergerakan signifikan. Memasuki November 2026, gelombang sertifikasi Tingkat Komponen Dalam…]]></description>
+      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1794071133830-493302.png" type="image/jpeg" length="0"/>
+    </item>
     <item>
       <title><![CDATA[Infinix Smart 20 "Membantai" Pasar Rp1 Jutaan: Bawa Layar 120Hz dan Baterai Jumbo]]></title>
       <link>https://smartphone-empire.my.id/a/infinix-smart-20-membantai-pasar-rp1-jutaan-bawa-layar-120hz-dan-baterai-jumbo/</link>
@@ -177,15 +186,6 @@
       <category>Rilis</category>
       <description><![CDATA[Catatan: ketebalan 12 Pro tertulis 8,5 mm di sebagian sumber dan 8,6 mm di lainnya.]]></description>
       <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793795380630-487011.jpg" type="image/jpeg" length="0"/>
-    </item>
-    <item>
-      <title><![CDATA[Jurnal Koneksi: Menguji Klaim Media Sosial 250 Karakter yang Menolak Gulir Tanpa Henti]]></title>
-      <link>https://smartphone-empire.my.id/a/jurnal-koneksi-menguji-klaim-media-sosial-250-karakter-yang-menolak-gulir-tanpa/</link>
-      <guid isPermaLink="true">https://smartphone-empire.my.id/a/jurnal-koneksi-menguji-klaim-media-sosial-250-karakter-yang-menolak-gulir-tanpa/</guid>
-      <pubDate>Wed, 04 Nov 2026 07:50:47 GMT</pubDate>
-      <category>Rilis</category>
-      <description><![CDATA[Membedah Jurnal Koneksi (Jurkon), media sosial catatan 250 karakter buatan Indonesia: desain, privasi, keamanan, dan batasan yang jujur.]]></description>
-      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793778646124-488768.png" type="image/jpeg" length="0"/>
     </item>
   </channel>
 </rss>
