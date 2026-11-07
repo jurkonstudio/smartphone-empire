@@ -6,7 +6,25 @@
     <atom:link href="https://smartphone-empire.my.id/feed.xml" rel="self" type="application/rss+xml"/>
     <description>Kabar, spesifikasi, rumor, dan jadwal rilis smartphone dan gadget dalam bahasa Indonesia.</description>
     <language>id-ID</language>
-    <lastBuildDate>Fri, 06 Nov 2026 13:49:57 GMT</lastBuildDate>
+    <lastBuildDate>Sat, 07 Nov 2026 01:40:39 GMT</lastBuildDate>
+    <item>
+      <title><![CDATA[Era "Raja Baterai" Kembali! Bocoran Redmi Turbo 6 Max vs OnePlus Turbo 7 dengan Baterai 11.000 mAh]]></title>
+      <link>https://smartphone-empire.my.id/a/era-raja-baterai-kembali-bocoran-redmi-turbo-6-max-vs-oneplus-turbo-7/</link>
+      <guid isPermaLink="true">https://smartphone-empire.my.id/a/era-raja-baterai-kembali-bocoran-redmi-turbo-6-max-vs-oneplus-turbo-7/</guid>
+      <pubDate>Sat, 07 Nov 2026 01:40:39 GMT</pubDate>
+      <category>Rumor</category>
+      <description><![CDATA[Dua raksasa teknologi, Redmi dan OnePlus, dikabarkan sedang menyiapkan amunisi rahasia mereka: ponsel dengan layar raksasa 7 inci dan baterai yang…]]></description>
+      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1794015638129-492735.jpg" type="image/jpeg" length="0"/>
+    </item>
+    <item>
+      <title><![CDATA[Bedah Tuntas iPhone Duo vs Huawei Mate X7: Ekosistem Apple atau Kamera Huawei yang Lebih Bernilai?]]></title>
+      <link>https://smartphone-empire.my.id/a/bedah-tuntas-iphone-duo-vs-huawei-mate-x7-ekosistem-apple-atau-kamera-huawei/</link>
+      <guid isPermaLink="true">https://smartphone-empire.my.id/a/bedah-tuntas-iphone-duo-vs-huawei-mate-x7-ekosistem-apple-atau-kamera-huawei/</guid>
+      <pubDate>Sat, 07 Nov 2026 01:27:38 GMT</pubDate>
+      <category>Rilis</category>
+      <description><![CDATA[IPhone Duo, dengan chip A20 Pro 2nm, jelas didesain untuk menjadi smartphone lipat tercepat di dunia saat ini. Apple mengandalkan efisiensi daya dari…]]></description>
+      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1794014856629-492714.jpg" type="image/jpeg" length="0"/>
+    </item>
     <item>
       <title><![CDATA[Selamat Tinggal Layar Tinggi! Tren "Wide-Screen Phone" Mulai Kuasai Ponsel 2027]]></title>
       <link>https://smartphone-empire.my.id/a/selamat-tinggal-layar-tinggi-tren-wide-screen-phone-mulai-kuasai-ponsel-2027/</link>
@@ -168,24 +186,6 @@
       <category>Rumor</category>
       <description><![CDATA[Puluhan bocoran Galaxy S27 Ultra beredar sejak Oktober 2026. Kami memilahnya berdasarkan kekuatan bukti: dari sertifikasi baterai yang cukup solid hingga…]]></description>
       <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793274636679-471701.jpg" type="image/jpeg" length="0"/>
-    </item>
-    <item>
-      <title><![CDATA[Alibaba Qwen Diduga Coba Kirim Data ke Beijing]]></title>
-      <link>https://smartphone-empire.my.id/a/alibaba-qwen-diduga-coba-kirim-data-ke-beijing/</link>
-      <guid isPermaLink="true">https://smartphone-empire.my.id/a/alibaba-qwen-diduga-coba-kirim-data-ke-beijing/</guid>
-      <pubDate>Thu, 29 Oct 2026 10:21:28 GMT</pubDate>
-      <category>Rilis</category>
-      <description><![CDATA[Bayangkan Anda mengunduh model AI open-weight populer untuk dijalankan di server pribadi, percaya bahwa data sensitif perusahaan Anda akan tetap aman di…]]></description>
-      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793269286496-471562.jpg" type="image/jpeg" length="0"/>
-    </item>
-    <item>
-      <title><![CDATA[Dampak dan Bahaya "Sign in with Google": Kenyamanan yang Mengintai Privasi Anda]]></title>
-      <link>https://smartphone-empire.my.id/a/dampak-dan-bahaya-sign-in-with-google-kenyamanan-yang-mengintai-privasi-anda/</link>
-      <guid isPermaLink="true">https://smartphone-empire.my.id/a/dampak-dan-bahaya-sign-in-with-google-kenyamanan-yang-mengintai-privasi-anda/</guid>
-      <pubDate>Thu, 29 Oct 2026 10:01:09 GMT</pubDate>
-      <category>Rilis</category>
-      <description><![CDATA[Tombol "Sign in with Google" memang menggoda. Sekali klik, Anda bisa masuk ke berbagai aplikasi tanpa perlu menghafal banyak kata sandi. Namun, di balik…]]></description>
-      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793268066103-471525.jpg" type="image/jpeg" length="0"/>
     </item>
   </channel>
 </rss>
