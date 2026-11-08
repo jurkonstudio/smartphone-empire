@@ -6,7 +6,16 @@
     <atom:link href="https://smartphone-empire.my.id/feed.xml" rel="self" type="application/rss+xml"/>
     <description>Kabar, spesifikasi, rumor, dan jadwal rilis smartphone dan gadget dalam bahasa Indonesia.</description>
     <language>id-ID</language>
-    <lastBuildDate>Sat, 07 Nov 2026 17:05:35 GMT</lastBuildDate>
+    <lastBuildDate>Sun, 08 Nov 2026 14:36:38 GMT</lastBuildDate>
+    <item>
+      <title><![CDATA[Nomor HP Tiba-tiba Dihujani Ratusan Kode OTP? Waspada Serangan "OTP Bombing" dan Cara Menangkalnya!]]></title>
+      <link>https://smartphone-empire.my.id/a/nomor-hp-tiba-tiba-dihujani-ratusan-kode-otp-waspada-serangan-otp-bombing/</link>
+      <guid isPermaLink="true">https://smartphone-empire.my.id/a/nomor-hp-tiba-tiba-dihujani-ratusan-kode-otp-waspada-serangan-otp-bombing/</guid>
+      <pubDate>Sun, 08 Nov 2026 14:36:38 GMT</pubDate>
+      <category>Rilis</category>
+      <description><![CDATA[Nomor HP tiba-tiba dibanjiri kode OTP dari berbagai aplikasi? Itu serangan OTP Bombing. Simak cara mencegah dan mengatasinya agar tidak jadi korban. (151…]]></description>
+      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1794148595979-494206.png" type="image/jpeg" length="0"/>
+    </item>
     <item>
       <title><![CDATA[Update TKDN November 2026: Sederet Flagship Anyar Siap Meluncur, Siapa Paling Cepat Masuk Indonesia?]]></title>
       <link>https://smartphone-empire.my.id/a/update-tkdn-november-2026-sederet-flagship-anyar-siap-meluncur-siapa-paling/</link>
@@ -177,15 +186,6 @@
       <category>Rilis</category>
       <description><![CDATA[Data dari Counterpoint Research menunjukkan sebuah anomali yang mengerikan: pengiriman chipset smartphone global (SoC) pada kuartal III 2026 anjlok 21%]]></description>
       <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793940676298-491278.png" type="image/jpeg" length="0"/>
-    </item>
-    <item>
-      <title><![CDATA[RedMagic 12 Pro vs 11 Pro]]></title>
-      <link>https://smartphone-empire.my.id/a/redmagic-12-pro-vs-11-pro/</link>
-      <guid isPermaLink="true">https://smartphone-empire.my.id/a/redmagic-12-pro-vs-11-pro/</guid>
-      <pubDate>Wed, 04 Nov 2026 12:29:41 GMT</pubDate>
-      <category>Rilis</category>
-      <description><![CDATA[Catatan: ketebalan 12 Pro tertulis 8,5 mm di sebagian sumber dan 8,6 mm di lainnya.]]></description>
-      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793795380630-487011.jpg" type="image/jpeg" length="0"/>
     </item>
   </channel>
 </rss>
