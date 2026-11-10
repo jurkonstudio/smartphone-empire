@@ -6,7 +6,16 @@
     <atom:link href="https://smartphone-empire.my.id/feed.xml" rel="self" type="application/rss+xml"/>
     <description>Kabar, spesifikasi, rumor, dan jadwal rilis smartphone dan gadget dalam bahasa Indonesia.</description>
     <language>id-ID</language>
-    <lastBuildDate>Sun, 08 Nov 2026 14:36:38 GMT</lastBuildDate>
+    <lastBuildDate>Tue, 10 Nov 2026 17:17:45 GMT</lastBuildDate>
+    <item>
+      <title><![CDATA[Samsung Galaxy A57 5G Menyetuh Harga Hampir 10 Juta Pada Bulan November 2026]]></title>
+      <link>https://smartphone-empire.my.id/a/samsung-galaxy-a57-5g-menyetuh-harga-hampir-10-juta-pada-bulan-november-2026/</link>
+      <guid isPermaLink="true">https://smartphone-empire.my.id/a/samsung-galaxy-a57-5g-menyetuh-harga-hampir-10-juta-pada-bulan-november-2026/</guid>
+      <pubDate>Tue, 10 Nov 2026 17:17:45 GMT</pubDate>
+      <category>Rilis</category>
+      <description><![CDATA[Pertanyaannya, apakah kenaikan harga ini sebanding dengan spesifikasi yang ditawarkan? Berikut ringkasan peningkatan utama Galaxy A57 5G dibandingkan…]]></description>
+      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1794331064753-496377.jpg" type="image/jpeg" length="0"/>
+    </item>
     <item>
       <title><![CDATA[Nomor HP Tiba-tiba Dihujani Ratusan Kode OTP? Waspada Serangan "OTP Bombing" dan Cara Menangkalnya!]]></title>
       <link>https://smartphone-empire.my.id/a/nomor-hp-tiba-tiba-dihujani-ratusan-kode-otp-waspada-serangan-otp-bombing/</link>
@@ -177,15 +186,6 @@
       <category>Rilis</category>
       <description><![CDATA[Yang dipamerkan di media sosial hanyalah token yang naik. Ribuan token lain yang jatuh ke nol tidak pernah diunggah siapa pun. Inilah yang disebut bias…]]></description>
       <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793941643073-491315.jpg" type="image/jpeg" length="0"/>
-    </item>
-    <item>
-      <title><![CDATA[Ironi Akhir 2026: Kita Sedang di Ambang Krisis HP Termahal, Tapi Bukan Karena Kameranya]]></title>
-      <link>https://smartphone-empire.my.id/a/ironi-akhir-2026-kita-sedang-di-ambang-krisis-hp-termahal-tapi-bukan-karena/</link>
-      <guid isPermaLink="true">https://smartphone-empire.my.id/a/ironi-akhir-2026-kita-sedang-di-ambang-krisis-hp-termahal-tapi-bukan-karena/</guid>
-      <pubDate>Fri, 06 Nov 2026 04:51:18 GMT</pubDate>
-      <category>Rilis</category>
-      <description><![CDATA[Data dari Counterpoint Research menunjukkan sebuah anomali yang mengerikan: pengiriman chipset smartphone global (SoC) pada kuartal III 2026 anjlok 21%]]></description>
-      <enclosure url="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1793940676298-491278.png" type="image/jpeg" length="0"/>
     </item>
   </channel>
 </rss>
