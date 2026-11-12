@@ -8,6 +8,11 @@ import { describeUserControl, USER_CONTROL_CONFIG, USER_CONTROL_POLICY_ORDER, AL
 import { computeOsAdoption, formatUsers } from '../../systems/OsAdoptionModel.js';
 import { SEGMENTS } from '../../data/market-nav.data.js';
 import { describeMonetization, REGULATION_LEVELS, MONETIZE_CONFIG } from '../../systems/UserControlSystem.js';
+import {
+    describeRegistrar, getRequirements, getOutlook, canSubmit, isRegistrarOpen,
+    isResellerOpen, ensureRegistrarState
+} from '../../systems/RegistrarSystem.js';
+import { REGISTRAR_CONFIG, REGISTRIES } from '../../data/registrar.data.js';
 import { futureName, futureDesc, futureSystemLabel, nodeNameById } from '../../data/i18n/research-localize.js';
 import {
     FUTURE_PANELS, FUTURE_SYSTEM_LABELS,
@@ -58,6 +63,7 @@ export function renderFuturePanel() {
             '<div class="fp-links">' + links + '</div>' +
             '<div class="fp-status">' + esc(_statusText(p, st)) + '</div>' +
             ((p.id === 'user_control' && st.unlocked) ? _renderUserControl(data) : '') +
+            ((p.id === 'registrar' && st.unlocked) ? _renderRegistrar(data) : '') +
             '</div>';
     }).join('');
 
@@ -238,6 +244,142 @@ function _renderRegulation(data) {
         '</div></div>';
 }
 
+
+// ---- Registrar: reseller -> akreditasi ICANN -> registry -> penjualan ----
+// Pilihan asuransi di berkas pengajuan (hanya state tampilan; dibaca main.js saat tombol Kirim ditekan).
+var _rgInsurance = false;
+export function getRegistrarInsurance() { return _rgInsurance; }
+export function toggleRegistrarInsurance() { _rgInsurance = !_rgInsurance; return _rgInsurance; }
+
+function _usd2(n) { return '$' + (Math.round((n || 0) * 100) / 100).toFixed(2); }
+function _rgRow(label, val, cls) { return '<div class="uc-row"><span>' + esc(label) + '</span><b class="' + (cls || '') + '">' + esc(val) + '</b></div>'; }
+
+function _renderRegistrar(data) {
+    var r = ensureRegistrarState(data);
+    var d = describeRegistrar(data);
+    var stageKey = 'registrar.stage.none';
+    if (r.acc && r.acc.status === 'revoked') stageKey = 'registrar.stage.revoked';
+    else if (r.acc) stageKey = r.acc.status === 'warning' ? 'registrar.stage.warning' : 'registrar.stage.active';
+    else if (r.app) stageKey = 'registrar.stage.' + (r.app.phase === 'review' ? 'review' : r.app.phase);
+    else if (r.reseller) stageKey = 'registrar.stage.reseller';
+    var badgeCls = (r.acc && r.acc.status === 'revoked') ? 'bad' : (r.acc && r.acc.status === 'warning' ? 'warn' : (r.acc ? 'good' : ''));
+    var head = '<div class="uc-box"><div class="uc-title">' + esc(t('registrar.title')) + '</div>' +
+        '<div class="uc-row" style="border-top:0"><span>' + esc(t(stageKey)) + '</span><b class="' + badgeCls + '">' + esc(r.acc && r.acc.status !== 'revoked' ? t('registrar.acc.term', { y: Math.floor((r.acc.expiresAbs - 1) / 12) }) : '') + '</b></div></div>';
+
+    return head + _renderRgReseller(data, r) + _renderRgApply(data, r) + _renderRgAccreditation(data, r) + _renderRgRegistries(data, r) + _renderRgSales(data, r, d);
+}
+
+function _renderRgReseller(data, r) {
+    if (r.reseller || r.stage !== 'none' || !isResellerOpen(data)) return '';
+    return '<div class="uc-box"><div class="uc-title">' + esc(t('registrar.reseller.title')) + '</div>' +
+        '<div class="uc-desc">' + esc(t('registrar.reseller.desc')) + '</div>' +
+        '<button class="uc-btn uc-wide" data-rg="reseller">' + esc(t('registrar.reseller.join')) + '</button></div>';
+}
+
+function _renderRgApply(data, r) {
+    var C = REGISTRAR_CONFIG;
+    if (r.acc && r.acc.status !== 'revoked') return '';
+    var title = '<div class="uc-title">' + esc(t('registrar.apply.title')) + '</div>';
+    if (!isRegistrarOpen(data)) {
+        return '<div class="uc-box">' + title + '<div class="uc-note warn">' + esc(t('registrar.apply.locked')) + '</div></div>';
+    }
+    // Berkas sedang diproses
+    if (r.app) {
+        if (r.app.phase === 'review') return '<div class="uc-box">' + title + '<div class="uc-note ok">' + esc(t('registrar.apply.waiting')) + '</div></div>';
+        if (r.app.phase === 'revise') {
+            return '<div class="uc-box">' + title + '<div class="uc-note warn">' + esc(t('registrar.apply.revise', { n: r.app.daysLeft })) + '</div>' +
+                '<button class="uc-btn uc-wide" style="margin-top:8px" data-rg="supplement">' + esc(t('registrar.apply.send_docs')) + '</button></div>';
+        }
+        if (r.app.phase === 'offer') {
+            return '<div class="uc-box">' + title + '<div class="uc-note ok">' + esc(t('registrar.apply.offer', { n: r.app.daysLeft })) + '</div>' +
+                '<button class="uc-btn uc-wide active" style="margin-top:8px" data-rg="contract">' + esc(t('registrar.apply.open_contract')) + '</button></div>';
+        }
+    }
+    // Berkas baru: daftar syarat + penasihat + tombol kirim
+    var ins = _rgInsurance;
+    var req = getRequirements(data, ins);
+    var chk = canSubmit(data, ins);
+    var o = getOutlook(data);
+    var why = o.reasons.map(function (k) { return t('registrar.advisor.why.' + k); }).join(' ');
+    var advisor = '<div class="uc-note ' + (o.level === 'high' ? 'ok' : 'warn') + '">' + esc(t('registrar.advisor.label')) + ': ' +
+        esc(t('registrar.advisor.' + o.level)) + (why ? ' ' + esc(why) : '') + '</div>';
+    var rows = _rgRow(t('registrar.apply.legal'), t('registrar.apply.ready'), 'good') +
+        _rgRow(t('registrar.apply.fee'), _money(C.applicationFee), '') +
+        _rgRow(t('registrar.apply.capital'), _money(C.workingCapital), req.cash >= C.workingCapital + C.applicationFee ? '' : 'bad') +
+        '<div class="uc-row"><span>' + esc(t('registrar.apply.insurance')) + '</span><b><button class="uc-btn ' + (ins ? 'active' : '') + '" style="flex:none;padding:0 10px;min-height:26px" data-rg="insurance" aria-pressed="' + ins + '">' + esc(_money(C.insurancePremium)) + '</button></b></div>';
+    var msg = '';
+    if (!chk.ok) {
+        if (chk.reason === 'cooldown') msg = t('registrar.apply.cooldown', { n: chk.months });
+        else if (chk.reason === 'insurance') msg = t('registrar.apply.need_insurance');
+        else if (chk.reason === 'cash') msg = t('registrar.apply.need_cash');
+    }
+    return '<div class="uc-box">' + title + '<div class="uc-desc">' + esc(t('registrar.apply.desc')) + '</div>' +
+        '<div class="uc-rows">' + rows + '</div>' + advisor +
+        (msg ? '<div class="uc-seginfo" style="margin-top:6px">' + esc(msg) + '</div>' : '') +
+        '<button class="uc-btn uc-wide" style="margin-top:8px"' + (chk.ok ? '' : ' disabled') + ' data-rg="submit">' + esc(t('registrar.apply.submit')) + '</button></div>';
+}
+
+function _renderRgAccreditation(data, r) {
+    var C = REGISTRAR_CONFIG, a = r.acc;
+    if (!a) return '';
+    var title = '<div class="uc-title">' + esc(t('registrar.acc.title')) + '</div>';
+    if (a.status === 'revoked') return '<div class="uc-box">' + title + '<div class="uc-note warn">' + esc(t('registrar.acc.revoked')) + '</div></div>';
+    var pts = Math.floor(a.points || 0);
+    var scoreCls = pts >= C.pointsAudit ? 'bad' : (pts > 0 ? '' : 'good');
+    var staffBtns = [0, 1, 2].map(function (n) {
+        return '<button class="uc-btn ' + ((a.staff || 0) === n ? 'active' : '') + '" data-rg="staff" data-rg-n="' + n + '" aria-pressed="' + ((a.staff || 0) === n) + '">' + n + '</button>';
+    }).join('');
+    var handle = a.openAbuse > 0
+        ? '<button class="uc-btn uc-wide" style="margin-top:6px" data-rg="abuse">' + esc(t('registrar.acc.handle', { cost: _money(a.openAbuse * C.abuseHandleCost) })) + '</button>' : '';
+    return '<div class="uc-box">' + title + '<div class="uc-rows">' +
+        _rgRow(t('registrar.acc.score'), pts + ' / ' + C.pointsRevoke, scoreCls) +
+        _rgRow(t('registrar.acc.abuse'), String(a.openAbuse || 0), a.openAbuse > 0 ? 'bad' : '') + '</div>' + handle +
+        '<div class="uc-seginfo" style="margin-top:4px">' + esc(t('registrar.acc.score_hint')) + '</div>' +
+        '<div class="uc-slrow" style="margin-top:8px"><span>' + esc(t('registrar.acc.staff')) + '</span></div>' +
+        '<div class="uc-seg" role="group">' + staffBtns + '</div>' +
+        '<div class="uc-seginfo">' + esc(t('registrar.acc.staff_hint')) + '</div></div>';
+}
+
+function _renderRgRegistries(data, r) {
+    var C = REGISTRAR_CONFIG;
+    if (!r.acc || r.acc.status === 'revoked') return '';
+    var rows = REGISTRIES.map(function (g) {
+        var x = r.registries[g.id], right;
+        if (x.state === 'active') right = '<b class="good">' + esc(t('registrar.reg.active')) + '</b>';
+        else if (x.state === 'onboarding') right = '<b>' + esc(t('registrar.reg.onboarding')) + '</b>';
+        else {
+            var can = (data.cash || 0) >= (describeRegistrar(data).held + C.registryDeposit);
+            right = '<button class="uc-btn" style="flex:none;padding:0 10px;min-height:28px"' + (can ? '' : ' disabled') + ' data-rg="registry" data-rg-id="' + esc(g.id) + '">' + esc(t('registrar.reg.join', { deposit: _money(C.registryDeposit) })) + '</button>';
+        }
+        return '<div class="uc-row"><span>' + esc(g.ext) + '</span>' + right + '</div>';
+    }).join('');
+    return '<div class="uc-box"><div class="uc-title">' + esc(t('registrar.reg.title')) + '</div><div class="uc-rows">' + rows + '</div></div>';
+}
+
+function _renderRgSales(data, r, d) {
+    var C = REGISTRAR_CONFIG;
+    if (!d.mode) {
+        return (r.reseller || r.acc) ? '<div class="uc-box"><div class="uc-title">' + esc(t('registrar.sales.title')) + '</div><div class="uc-desc">' + esc(t('registrar.sales.idle')) + '</div></div>' : '';
+    }
+    var cd = r.priceChangedAbs ? (r.priceChangedAbs + C.priceCooldownMonths) - ((data.time.currentYear || 0) * 12 + (data.time.currentMonth || 1)) : 0;
+    var locked = cd > 0;
+    var pct = Math.round(r.priceMult * 100);
+    var thin = d.marginPct < 0.1;
+    var rows = _rgRow(t('registrar.sales.domains'), formatUsers(d.domains), '') +
+        _rgRow(t('registrar.sales.share'), (Math.round(d.share * 1000) / 10) + '%', '') +
+        _rgRow(t('registrar.sales.wholesale'), _usd2(d.wholesale), '') +
+        _rgRow(t('registrar.sales.retail'), _usd2(d.retail), '') +
+        _rgRow(t('registrar.sales.margin'), _usd2(d.margin), d.margin <= 0 ? 'bad' : (thin ? '' : 'good')) +
+        _rgRow(t('registrar.sales.revenue'), _money(d.gross), '') +
+        _rgRow(t('registrar.sales.profit'), _money(d.net), d.net < 0 ? 'bad' : 'good');
+    var slider = '<div class="uc-slider"><div class="uc-slrow"><span>' + esc(t('registrar.sales.price')) + '</span><b data-rg-price-val>' + pct + '%</b></div>' +
+        '<input type="range" min="50" max="200" step="10" value="' + pct + '" data-rg-price aria-label="' + esc(t('registrar.sales.price')) + '"' + (locked ? ' disabled' : '') + '>' +
+        '<div class="uc-seginfo">' + esc(locked ? t('registrar.sales.cooldown', { n: cd }) : t('registrar.sales.price_hint')) + '</div></div>';
+    var thinNote = thin ? '<div class="uc-note warn">' + esc(t('registrar.sales.thin')) + '</div>' : '';
+    return '<div class="uc-box"><div class="uc-title">' + esc(t('registrar.sales.title')) + '</div>' + '<div class="uc-rows">' + rows + '</div>' + slider +
+        '<button class="uc-btn uc-wide" data-rg="price-refresh"' + (locked ? ' disabled' : '') + '>' + esc(t('registrar.sales.apply_price')) + '</button>' + thinNote + '</div>';
+}
+
 function _ensureStyles() {
     if (_stylesInjected || typeof document === 'undefined') return;
     _stylesInjected = true;
@@ -267,7 +409,7 @@ function _ensureStyles() {
         '.uc-rows { display: flex; flex-direction: column; }',
         '.uc-row { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-top: 1px solid var(--border, rgba(255,255,255,.07)); font-size: 12px; color: var(--text-secondary, inherit); }',
         '.uc-row b { font-variant-numeric: tabular-nums; white-space: nowrap; }',
-        '.uc-row b.good { color: var(--success, #10b981); } .uc-row b.bad { color: var(--danger, #ef4444); }',
+        '.uc-row b.good { color: var(--success, #10b981); } .uc-row b.bad { color: var(--danger, #ef4444); } .uc-row b.warn { color: var(--warn, #f59e0b); }',
         '.uc-wide { width: 100%; background: rgba(0,0,0,.25); }',
         '.uc-btn[disabled] { opacity: .4; cursor: not-allowed; }',
         '.uc-stack { display: flex; height: 10px; border-radius: 6px; overflow: hidden; gap: 1px; margin: 4px 0 8px; }',

@@ -10,6 +10,7 @@ import { InboxService } from '../../services/InboxService.js';
 import { CloudService } from '../../services/CloudService.js';
 import { ToastService } from '../../core/ToastService.js';
 import { formatCurrency } from '../../utils/format.js';
+import { t } from '../../core/LanguageService.js';
 
 var MODAL_ID = 'inbox-modal';
 var _open = {};                                   // id pesan yang sedang dibuka
@@ -37,6 +38,7 @@ var KIND = {
     system: { rgb: '255,159,10', label: 'Sistem', ico: '<path d="M12 4l9 16H3z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/>' },
     player: { rgb: '168,85,247', label: 'Pemain', ico: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>' },
     survey: { rgb: '94,92,230', label: 'Survei', ico: '<path d="M5 20V10M12 20V4M19 20v-7"/>' },
+    icann:  { rgb: '10,132,255', label: 'ICANN', ico: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>' },
     reward: { rgb: '255,204,0', label: 'Hadiah', ico: '<path d="M12 3l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.5 6.8 19l1-5.8-4.2-4.1 5.8-.8z"/>' }
 };
 
@@ -101,6 +103,21 @@ function rewardHtml(m) {
         '<button type="button" class="ib-btn ib-pri" data-ib-claim="' + m.id + '">Klaim</button></div>';
 }
 
+// Tombol aksi pada surat ICANN. Hanya tampil bila masih relevan (mis. tawaran kontrak belum kedaluwarsa).
+function icannActHtml(m) {
+    if (m.kind !== 'icann' || !m.act) return '';
+    var rg = null;
+    try { rg = window.__game.state.get().registrar; } catch (e) {}
+    var phase = rg && rg.app && rg.app.phase;
+    if (m.act === 'contract' && phase === 'offer') {
+        return '<div class="ib-acts"><button type="button" class="ib-btn ib-pri" data-ib-rg="contract">' + esc(t('registrar.letter.open_contract')) + '</button></div>';
+    }
+    if (m.act === 'revise' && phase === 'revise') {
+        return '<div class="ib-acts"><button type="button" class="ib-btn ib-pri" data-ib-rg="panel">' + esc(t('registrar.letter.open_registrar')) + '</button></div>';
+    }
+    return '';
+}
+
 function itemsHtml() {
     var items = InboxService.getItems();
     if (!items.length) {
@@ -116,7 +133,7 @@ function itemsHtml() {
             '<div class="ib-m">' + esc(m.body) + '</div>' +
             '<div class="ib-meta"><b>' + k.label + '</b><span>·</span><span>' + esc(ago(m.created_at)) + '</span>' +
             (m.kind === 'player' && m.sender_public_id ? '<span>·</span><span>ID ' + esc(m.sender_public_id) + '</span>' : '') + '</div>' +
-            (m.reward_cash ? rewardHtml(m) : '') +
+            (m.reward_cash ? rewardHtml(m) : '') + icannActHtml(m) +
             (canAct ? '<div class="ib-acts">' +
                 '<button type="button" class="ib-btn" data-ib-reply="' + esc(m.sender_public_id) + '" data-name="' + esc(m.sender_name || m.title) + '">Balas</button>' +
                 '<button type="button" class="ib-btn ib-dng" data-ib-block="' + esc(m.sender_public_id) + '" data-name="' + esc(m.sender_name || m.title) + '">Blokir</button>' +
@@ -282,6 +299,12 @@ function onClick(e) {
             _note = r.ok ? 'Hadiah masuk ke kas perusahaan.' : (r.reason || 'Gagal mengklaim.');
             if (root()) render();
         });
+        return;
+    }
+    if ((b = q('[data-ib-rg]'))) {
+        var act = b.getAttribute('data-ib-rg');
+        Modal.close(MODAL_ID);
+        bus.emit(act === 'contract' ? 'registrar:open-contract' : 'registrar:open-panel', {});
         return;
     }
     if ((b = q('[data-ib-del]'))) { InboxService.remove(Number(b.getAttribute('data-ib-del'))); return; }
