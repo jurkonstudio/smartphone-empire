@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Konfirmasi Email - Smartphone Empire</title>
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#000;color:#f5f5f7;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:16px;box-sizing:border-box}
+  .card{background:#1c1c1e;border-radius:18px;padding:28px 24px;max-width:420px;width:100%;text-align:center}
+  h1{font-size:20px;margin:0 0 10px}
+  p{font-size:14px;line-height:1.6;color:#98989d;margin:0}
+  .brand{font-size:18px;font-weight:700;margin-bottom:18px}
+  .brand span{color:#2997ff}
+  .spinner{width:32px;height:32px;border:3px solid #333;border-top-color:#2997ff;border-radius:50%;margin:0 auto 16px;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  a.btn{display:inline-block;margin-top:18px;padding:12px 24px;background:#2997ff;color:#fff;text-decoration:none;border-radius:12px;font-weight:600;font-size:15px}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">Smartphone <span>Empire</span></div>
+  <div id="loading">
+    <div class="spinner"></div>
+    <h1>Memverifikasi email kamu...</h1>
+    <p>Mohon tunggu sebentar.</p>
+  </div>
+  <div id="success" class="hidden">
+    <h1>Email terverifikasi!</h1>
+    <p>Mengarahkan kamu ke game...</p>
+    <a class="btn" href="/game">Masuk ke Game</a>
+  </div>
+  <div id="error" class="hidden">
+    <h1>Verifikasi gagal</h1>
+    <p id="error-msg">Link tidak valid atau sudah kedaluwarsa.</p>
+    <a class="btn" href="/game">Kembali ke Game</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://iyuleatpewampdjeuzrb.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_HZUb3YP1Ztz57cV6EGHBPQ_obiCJ3L7';
+  const GAME_URL = '/game';
+
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const $ = (id) => document.getElementById(id);
+
+  function show(id) {
+    ['loading', 'success', 'error'].forEach((x) => $(x).classList.toggle('hidden', x !== id));
+  }
+
+  function fail(msg) {
+    if (msg) $('error-msg').textContent = msg;
+    show('error');
+  }
+
+  async function run() {
+    const params = new URLSearchParams(window.location.search);
+    const token_hash = params.get('token_hash');
+    const type = params.get('type') || 'email';
+
+    if (!token_hash) {
+      // Mungkin sudah punya sesi (mis. buka ulang halaman)
+      const { data } = await sb.auth.getSession();
+      if (data.session) {
+        window.location.replace(GAME_URL);
+        return;
+      }
+      return fail('Link tidak lengkap. Silakan buka ulang link dari email.');
+    }
+
+    let { error } = await sb.auth.verifyOtp({ token_hash, type });
+
+    // Cadangan untuk versi Supabase yang masih memakai type "signup"
+    if (error && type === 'email') {
+      ({ error } = await sb.auth.verifyOtp({ token_hash, type: 'signup' }));
+    }
+
+    if (error) {
+      // Bisa jadi link sudah terpakai tapi sesi sudah ada
+      const { data } = await sb.auth.getSession();
+      if (data.session) {
+        window.location.replace(GAME_URL);
+        return;
+      }
+      return fail('Link tidak valid atau sudah kedaluwarsa. Coba daftar ulang atau minta email konfirmasi baru.');
+    }
+
+    show('success');
+    setTimeout(() => window.location.replace(GAME_URL), 800);
+  }
+
+  run().catch((e) => fail('Terjadi kesalahan: ' + (e && e.message ? e.message : e)));
+</script>
+</body>
+</html>
