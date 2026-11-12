@@ -2,7 +2,7 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Smartphone Empire Berita</title>
-    <link>https://smartphone-empire.my.id/</link>
+    <link>https://smartphone-empire.my.id/blog/</link>
     <atom:link href="https://smartphone-empire.my.id/feed.xml" rel="self" type="application/rss+xml"/>
     <description>Kabar, spesifikasi, rumor, dan jadwal rilis smartphone dan gadget dalam bahasa Indonesia.</description>
     <language>id-ID</language>

@@ -20,7 +20,7 @@
 <meta name="twitter:description" content="Selama beberapa tahun terakhir, industri smartphone seakan berlomba menciptakan ponsel sebesar tablet. Layar 6,8 inci hingga 6,9 inci kini menjadi…">
 <meta name="twitter:image" content="https://iyuleatpewampdjeuzrb.supabase.co/storage/v1/object/public/blog-media/1794061156594-493231.png">
 <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Smartphone Empire Berita","url":"https://smartphone-empire.my.id/","inLanguage":["id","en"],"publisher":{"@type":"Organization","name":"Jurkon Studio","logo":{"@type":"ImageObject","url":"https://smartphone-empire.my.id/blog/img/logo.svg"}}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Smartphone Empire Berita","url":"https://smartphone-empire.my.id/blog/","inLanguage":["id","en"],"publisher":{"@type":"Organization","name":"Jurkon Studio","logo":{"@type":"ImageObject","url":"https://smartphone-empire.my.id/blog/img/logo.svg"}}}</script>
 <link rel="icon" href="/game/assets/icon/favicon.svg" type="image/svg+xml">
 <script>
   // Tautan lama (#/a/..., #/k/..., #/i/...) dan arahan dari 404.html diubah menjadi alamat bersih.
@@ -28,7 +28,7 @@
     var l = location, m, r = new URLSearchParams(l.search).get('r');
     if (r && r.charAt(0) === '/' && r.charAt(1) !== '/') { history.replaceState(null, '', r); return; }
     if ((m = /^#\/(a|k|i)\/(.+)$/.exec(l.hash))) history.replaceState(null, '', (m[1] === 'a' ? '/baca/' : '/' + m[1] + '/') + m[2].replace(/\/$/, '') + '/');
-    else if (l.hash === '#/') history.replaceState(null, '', '/');
+    else if (l.hash === '#/') history.replaceState(null, '', '/blog/');
   })();
 </script>
 <script>
@@ -94,12 +94,12 @@
 
 <header class="site-header">
   <div class="bar">
-    <a class="brand" id="brand" href="/" aria-label="Smartphone Empire Berita">
+    <a class="brand" id="brand" href="/blog/" aria-label="Smartphone Empire Berita">
       <span class="brand-mark" aria-hidden="true"></span>
       <span>Smartphone Empire</span>
     </a>
     <nav class="menu" id="menu" aria-label="Kategori">
-      <a href="/" data-nav="semua" data-i18n="nav_home">Beranda</a>
+      <a href="/blog/" data-nav="semua" data-i18n="nav_home">Beranda</a>
       <a href="/k/rilis/" data-nav="rilis" data-i18n="nav_rilis">Rilis</a>
       <a href="/k/spek/" data-nav="spek" data-i18n="nav_spek">Spek</a>
       <a href="/k/rumor/" data-nav="rumor" data-i18n="nav_rumor">Rumor</a>
@@ -190,7 +190,7 @@
 
   <!-- ====== ARTIKEL ====== -->
   <section id="viewPost" hidden>
-    <a class="back" href="/" data-i18n="back">← Kembali</a>
+    <a class="back" href="/blog/" data-i18n="back">← Kembali</a>
     <article class="article" id="postArticle"></article>
     <section class="comments" id="comments"></section>
   </section>
@@ -425,7 +425,7 @@
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="/blog/js/admin-tap.js?v=1"></script>
-<script type="module" src="/blog/js/main.js?v=17"></script>
+<script type="module" src="/blog/js/main.js?v=18"></script>
 <script src="/blog/js/jurkon-preview.js?v=3" defer></script>
 </body>
 </html>
