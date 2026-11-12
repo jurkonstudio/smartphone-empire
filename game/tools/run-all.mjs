@@ -20,6 +20,7 @@ const TESTS = [
   { file: 'tools/notif-default.test.mjs', src: true },
   // Tanpa argumen
   { file: 'tools/civic-test.mjs' },
+  { file: 'tools/accounting-test.mjs', src: true },
   { file: 'tools/world-map-test.mjs' },
   { file: 'tools/campus-expansion-smoke.mjs' },
   { file: 'tools/hype-cycle-test.mjs' },
