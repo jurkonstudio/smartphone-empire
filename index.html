@@ -145,6 +145,17 @@ footer nav{display:flex;flex-wrap:wrap;gap:6px 20px}footer a{color:var(--on2);te
 @media (max-width:640px){.links a:not(.play){display:none}.brand span{display:none}.nv{gap:10px;justify-content:space-between}.links{margin-left:0}}
 @media (max-width:520px){.wrap{width:calc(100% - 32px)}.btn{flex:1 1 100%}.more{flex:1 1 100%;justify-content:center}.gate.game{padding-right:26px;padding-bottom:230px;min-height:0}.gate.game img{right:auto;left:50%;transform:translateX(-50%);width:min(220px,70%);height:190px;bottom:0}.steps{grid-template-columns:1fr}.facts{grid-template-columns:1fr 1fr}.facts div{grid-template-columns:1fr;row-gap:10px}.facts .tile{grid-row:auto}}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.screen img,.gate,.btn{transition:none}.fl{animation:none}}
+
+/* ===== penyesuaian: seragam dengan /web ===== */
+.hl{background:var(--sf);border-bottom:1px solid var(--ln)}
+.hl .wrap{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 34px;padding:16px 0}
+.hi{display:inline-flex;align-items:center;gap:9px;font-weight:600;font-size:.92rem;color:var(--mu)}.hi .ic{font-size:19px;color:var(--lk)}
+.hero{padding-bottom:clamp(56px,7vw,100px)}
+.lead{color:#c3cee3}
+footer .fr{display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-between;align-items:center}
+footer .legal{margin:16px 0 0;max-width:70ch;font-size:.8rem;line-height:1.6;color:var(--on2)}
+footer a{display:inline-block;padding:4px 0}
+@media (max-width:520px){.hl .wrap{justify-content:flex-start;gap:8px 22px}}
 </style>
 </head>
 <body>
@@ -219,7 +230,12 @@ footer nav{display:flex;flex-wrap:wrap;gap:6px 20px}footer a{color:var(--on2);te
   </div>
 </header>
 
-<div class="tick" aria-hidden="true"><div class="tk"><div class="tg"><span class="ti"><svg class="ic"><use href="#i-crown"/></svg><span data-i18n="tk1">32 kompetitor</span></span><span class="ti"><svg class="ic"><use href="#i-node"/></svg><span data-i18n="tk2">134 node teknologi</span></span><span class="ti"><svg class="ic"><use href="#i-chip"/></svg><span data-i18n="tk3">141 komponen ponsel</span></span><span class="ti"><svg class="ic"><use href="#i-stock"/></svg><span data-i18n="tk4">84 saham di bursa</span></span><span class="ti"><svg class="ic"><use href="#i-globe"/></svg><span data-i18n="tk5">12 bahasa</span></span><span class="ti"><svg class="ic"><use href="#i-game"/></svg><span data-i18n="tk6">Gratis di browser</span></span><span class="ti"><svg class="ic"><use href="#i-cloud"/></svg><span data-i18n="tk7">Cloud save</span></span><span class="ti"><svg class="ic"><use href="#i-phone"/></svg><span data-i18n="tk8">Bisa dipasang sebagai PWA</span></span><span class="ti"><svg class="ic"><use href="#i-chart"/></svg><span data-i18n="tk9">Dari 2000 sampai era AI</span></span></div><div class="tg"><span class="ti"><svg class="ic"><use href="#i-crown"/></svg><span data-i18n="tk1">32 kompetitor</span></span><span class="ti"><svg class="ic"><use href="#i-node"/></svg><span data-i18n="tk2">134 node teknologi</span></span><span class="ti"><svg class="ic"><use href="#i-chip"/></svg><span data-i18n="tk3">141 komponen ponsel</span></span><span class="ti"><svg class="ic"><use href="#i-stock"/></svg><span data-i18n="tk4">84 saham di bursa</span></span><span class="ti"><svg class="ic"><use href="#i-globe"/></svg><span data-i18n="tk5">12 bahasa</span></span><span class="ti"><svg class="ic"><use href="#i-game"/></svg><span data-i18n="tk6">Gratis di browser</span></span><span class="ti"><svg class="ic"><use href="#i-cloud"/></svg><span data-i18n="tk7">Cloud save</span></span><span class="ti"><svg class="ic"><use href="#i-phone"/></svg><span data-i18n="tk8">Bisa dipasang sebagai PWA</span></span><span class="ti"><svg class="ic"><use href="#i-chart"/></svg><span data-i18n="tk9">Dari 2000 sampai era AI</span></span></div></div></div>
+<div class="hl"><div class="wrap" role="list">
+  <span class="hi" role="listitem"><svg class="ic" aria-hidden="true"><use href="#i-game"/></svg><span data-i18n="tk6">Gratis di browser</span></span>
+  <span class="hi" role="listitem"><svg class="ic" aria-hidden="true"><use href="#i-cloud"/></svg><span data-i18n="tk7">Cloud save</span></span>
+  <span class="hi" role="listitem"><svg class="ic" aria-hidden="true"><use href="#i-globe"/></svg><span data-i18n="tk5">12 bahasa</span></span>
+  <span class="hi" role="listitem"><svg class="ic" aria-hidden="true"><use href="#i-phone"/></svg><span data-i18n="tk8">Bisa dipasang sebagai PWA</span></span>
+</div></div>
 
 <main>
   <section>
@@ -281,11 +297,14 @@ footer nav{display:flex;flex-wrap:wrap;gap:6px 20px}footer a{color:var(--on2);te
 
 <footer>
   <div class="wrap">
-    <span>© Jurkon Studio</span>
-    <nav aria-label="Tautan bawah">
-      <a href="/game/">Game</a><a href="/web">Web</a><a href="/blog/">Blog</a>
-      <a href="/i/tentang/" data-i18n="f_about">Tentang</a><a href="/i/syarat/" data-i18n="f_terms">Syarat</a><a href="/i/privasi/" data-i18n="f_priv">Privasi</a><a href="/i/kontak/" data-i18n="f_contact">Kontak</a><a href="/feed.xml">RSS</a>
-    </nav>
+    <div class="fr">
+      <span>© 2026 Jurkon Studio</span>
+      <nav aria-label="Tautan bawah">
+        <a href="/game/">Game</a><a href="/web">Web</a><a href="/blog/">Blog</a>
+        <a href="/i/tentang/" data-i18n="f_about">Tentang</a><a href="/i/syarat/" data-i18n="f_terms">Syarat</a><a href="/i/privasi/" data-i18n="f_priv">Privasi</a><a href="/i/kontak/" data-i18n="f_contact">Kontak</a><a href="/feed.xml">RSS</a>
+      </nav>
+    </div>
+    <p class="legal" data-i18n="f_disc">Smartphone Empire adalah fan project, bukan produk komersial, dan tidak berafiliasi dengan Nokia, Apple, Samsung, atau perusahaan lain. Nama dan merek dipakai untuk tujuan edukasi dan hiburan; hak ciptanya milik masing-masing pemilik. Data historis disederhanakan untuk kebutuhan gameplay.</p>
   </div>
 </footer>
 
@@ -317,7 +336,7 @@ footer nav{display:flex;flex-wrap:wrap;gap:6px 20px}footer a{color:var(--on2);te
     note:'Figures come from game data version 0.2.14.',
     end_h:'Ready to be CEO?', end_s:'Your cash is small and the year has just begun.',
     tk1:'32 rival companies', tk2:'134 tech nodes', tk3:'141 phone components', tk4:'84 listed stocks', tk5:'12 languages', tk6:'Free in your browser', tk7:'Cloud save', tk8:'Installable as a PWA', tk9:'From 2000 to the AI era',
-    f_about:'About', f_terms:'Terms', f_priv:'Privacy', f_contact:'Contact'
+    f_disc:"Smartphone Empire is a fan project, not a commercial product, and is not affiliated with Nokia, Apple, Samsung, or any other company. Names and brands are used for educational and entertainment purposes; rights belong to their respective owners. Historical data is simplified for gameplay.", f_about:'About', f_terms:'Terms', f_priv:'Privacy', f_contact:'Contact'
   };
   var SHOTS = {
     id: [

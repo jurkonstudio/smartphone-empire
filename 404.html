@@ -1,13 +1,192 @@
 <!doctype html>
-<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Halaman tidak ditemukan — Smartphone Empire</title><meta name="robots" content="noindex">
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Halaman tidak ditemukan — Smartphone Empire</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0a1120">
+<link rel="icon" href="/game/assets/icon/favicon.svg" type="image/svg+xml">
 <script>
   // GitHub Pages memakai file ini untuk alamat yang tidak punya file fisik.
   // Alamat milik blog (/k/, /i/, /baca/) diteruskan ke /blog/ yang membacanya sebagai rute.
   (function () {
     var p = location.pathname;
     if (/^\/(k|i|baca)\/[^/]+\/?$/.test(p)) location.replace('/blog/?r=' + encodeURIComponent(p + location.search));
+    try { if (localStorage.getItem('se-landing:lang') === 'en') document.documentElement.setAttribute('lang', 'en'); } catch (e) {}
   })();
 </script>
-<style>body{font:16px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center}a{color:#0a84ff}</style>
-</head><body><div><h1>404</h1><p>Halaman tidak ditemukan.</p><p><a href="/">Kembali ke beranda</a></p></div></body></html>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0a1120;--on:#eef3fc;--on2:#a9b6cf;--blue:#3d94ff;--vio:#8b7bff;--lcd:#c9e07c;--f:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--ink);color:var(--on);font:400 1rem/1.6 var(--f);-webkit-font-smoothing:antialiased;overflow-x:hidden;position:relative;display:flex;flex-direction:column;min-height:100dvh}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(520px 420px at 82% 14%,rgba(61,148,255,.30),transparent 70%),radial-gradient(460px 380px at 8% 92%,rgba(139,123,255,.24),transparent 70%)}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(60% 60% at 50% 42%,#000,transparent);mask-image:radial-gradient(60% 60% at 50% 42%,#000,transparent)}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px;border-radius:10px}
+main{position:relative;z-index:1;flex:1;display:grid;place-items:center;text-align:center;padding:calc(28px + env(safe-area-inset-top)) 20px 20px}
+.scene{width:min(640px,100%)}
+.num{display:flex;align-items:flex-end;justify-content:center;gap:clamp(4px,3vw,22px);height:clamp(190px,40vw,270px)}
+.num>b{font:800 clamp(5.4rem,22vw,10rem)/1 var(--f);letter-spacing:-.06em;background:linear-gradient(180deg,#fff 20%,#6f8fd0);-webkit-background-clip:text;background-clip:text;color:transparent;padding-bottom:6px;animation:bob 5s ease-in-out infinite}
+.num>b:last-child{animation-delay:-2.5s}
+@keyframes bob{50%{transform:translateY(-8px)}}
+#pona{width:clamp(110px,26vw,150px);height:auto;overflow:visible;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;flex:none}
+#pona .all{transform-box:fill-box;transform-origin:50% 100%;animation:float 3.2s ease-in-out infinite}
+#pona.jump .all{animation:jump .7s cubic-bezier(.3,1.6,.5,1)}
+@keyframes float{50%{transform:translateY(-9px)}}
+@keyframes jump{0%{transform:scale(1.12,.86)}35%{transform:translateY(-46px) scale(.92,1.1)}70%{transform:translateY(0) scale(1.1,.88)}100%{transform:none}}
+#pona .lean{transition:transform .25s ease-out;transform-box:fill-box;transform-origin:50% 100%}
+#pona .arm-l{transform-box:fill-box;transform-origin:90% 20%;animation:wave 1.6s ease-in-out infinite}
+@keyframes wave{0%,100%{transform:rotate(8deg)}50%{transform:rotate(-34deg)}}
+#pona .arm-r{transform-box:fill-box;transform-origin:10% 20%;transform:rotate(-10deg)}
+#pona .lid{transform-box:fill-box;transform-origin:50% 0;transform:scaleY(0);transition:transform .08s}
+#pona.blink .lid{transform:scaleY(1)}
+#pona .mouth{transform-box:fill-box;transform-origin:50% 50%;animation:talk 2.4s ease-in-out infinite}
+@keyframes talk{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.55)}}
+#pona .sig path{opacity:.15;animation:sig 1.8s infinite}
+#pona .sig path:nth-child(2){animation-delay:.3s}#pona .sig path:nth-child(3){animation-delay:.6s}
+@keyframes sig{0%,100%{opacity:.15}40%{opacity:1}}
+#pona .sh{transform-box:fill-box;transform-origin:center;animation:shadow 3.2s ease-in-out infinite}
+@keyframes shadow{50%{transform:scale(.82);opacity:.5}}
+#pona .q{font:800 26px var(--f);fill:var(--lcd);animation:q 3.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+#pona .q.b{animation-delay:-1.7s}
+@keyframes q{0%,100%{opacity:0;transform:translateY(8px) rotate(-8deg)}30%,70%{opacity:1;transform:translateY(-6px) rotate(8deg)}}
+.say{position:relative;display:inline-block;min-height:2.6em;margin:18px 0 0;padding:10px 16px;border-radius:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:var(--on);font-weight:600;font-size:.95rem;max-width:26em}
+.say::before{content:"";position:absolute;left:50%;top:-7px;width:12px;height:12px;background:inherit;border-left:1px solid rgba(255,255,255,.12);border-top:1px solid rgba(255,255,255,.12);transform:translateX(-50%) rotate(45deg)}
+h1{margin:22px 0 0;font:800 clamp(1.6rem,4.6vw,2.3rem)/1.15 var(--f);letter-spacing:-.025em;text-wrap:balance}
+.lead{margin:12px auto 0;max-width:30em;color:var(--on2)}
+.lead code{font:600 .88em ui-monospace,Menlo,monospace;background:rgba(255,255,255,.09);padding:2px 8px;border-radius:8px;color:var(--on);overflow-wrap:anywhere}
+.cta{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:26px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 24px;border-radius:999px;font-weight:700;text-decoration:none;border:1.5px solid transparent;transition:transform .2s,box-shadow .2s,background .2s}
+.btn:active{transform:scale(.97)}
+.btn.main{background:linear-gradient(135deg,#4da0ff,#3d7dff);color:#fff;box-shadow:0 12px 28px -10px rgba(61,148,255,.9)}
+.btn.main:hover{transform:translateY(-1px)}
+.btn.ghost{border-color:rgba(255,255,255,.3);color:var(--on);background:rgba(255,255,255,.04)}
+.btn.ghost:hover{background:rgba(255,255,255,.1)}
+.quick{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 18px;margin-top:20px}
+.quick a{color:var(--on2);text-decoration:none;font-weight:600;font-size:.94rem;padding:6px 2px}
+.quick a:hover{color:#fff;text-decoration:underline}
+footer{position:relative;z-index:1;padding:18px 20px calc(18px + env(safe-area-inset-bottom));text-align:center;color:var(--on2);font-size:.85rem;border-top:1px solid rgba(255,255,255,.08)}
+footer nav{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 18px;margin-bottom:6px}
+footer a{color:var(--on2);text-decoration:none}footer a:hover{color:#fff;text-decoration:underline}
+@media (max-width:520px){.btn{flex:1 1 100%}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}#pona .sig path{opacity:.8}}
+</style>
+</head>
+<body>
+<main>
+  <div class="scene">
+    <div class="num">
+      <b aria-hidden="true">4</b>
+      <svg id="pona" viewBox="0 0 160 250" role="img" aria-label="Pona, maskot ponsel yang kehilangan sinyal. Ketuk untuk membuatnya melompat.">
+        <defs>
+          <linearGradient id="gb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4da0ff"/><stop offset="1" stop-color="#7a63ff"/></linearGradient>
+          <linearGradient id="gs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16213a"/><stop offset="1" stop-color="#0a1120"/></linearGradient>
+        </defs>
+        <ellipse class="sh" cx="80" cy="238" rx="46" ry="7" fill="#000" opacity=".4"/>
+        <g class="all"><g class="lean" id="lean">
+          <!-- antena sinyal -->
+          <line x1="80" y1="22" x2="80" y2="6" stroke="#a9b6cf" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="80" cy="5" r="5" fill="#c9e07c"/>
+          <g class="sig" fill="none" stroke="#c9e07c" stroke-width="3.5" stroke-linecap="round">
+            <path d="M68 -2a16 16 0 0 1 0 14" transform="translate(-6 0)"/><path d="M60 -8a26 26 0 0 1 0 26" transform="translate(-6 0)"/>
+            <path d="M92 -2a16 16 0 0 0 0 14" transform="translate(6 0)"/>
+          </g>
+          <!-- kaki -->
+          <rect x="52" y="214" width="16" height="22" rx="8" fill="#2a3858"/><rect x="92" y="214" width="16" height="22" rx="8" fill="#2a3858"/>
+          <!-- lengan -->
+          <g class="arm-r"><rect x="130" y="108" width="12" height="52" rx="6" fill="url(#gb)"/><circle cx="136" cy="162" r="9" fill="#eef3fc"/></g>
+          <g class="arm-l"><rect x="18" y="96" width="12" height="52" rx="6" fill="url(#gb)"/><circle cx="24" cy="94" r="9" fill="#eef3fc"/></g>
+          <!-- badan -->
+          <rect x="22" y="22" width="116" height="200" rx="30" fill="url(#gb)"/>
+          <rect x="22" y="22" width="116" height="200" rx="30" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="2"/>
+          <rect x="32" y="34" width="96" height="176" rx="22" fill="url(#gs)"/>
+          <rect x="62" y="40" width="36" height="7" rx="3.5" fill="#05080f"/>
+          <!-- wajah -->
+          <g id="eyes">
+            <circle cx="58" cy="108" r="18" fill="#fff"/><circle cx="102" cy="108" r="18" fill="#fff"/>
+            <circle id="pl" cx="58" cy="108" r="8" fill="#0a1120"/><circle id="pr" cx="102" cy="108" r="8" fill="#0a1120"/>
+            <circle cx="55" cy="104" r="2.6" fill="#fff"/><circle cx="99" cy="104" r="2.6" fill="#fff"/>
+            <rect class="lid" x="38" y="88" width="40" height="40" rx="18" fill="#16213a"/><rect class="lid" x="82" y="88" width="40" height="40" rx="18" fill="#16213a"/>
+          </g>
+          <path class="mouth" d="M62 156q18 16 36 0" fill="none" stroke="#c9e07c" stroke-width="5" stroke-linecap="round"/>
+          <g fill="#c9e07c" opacity=".9"><rect x="44" y="188" width="6" height="8" rx="2"/><rect x="54" y="184" width="6" height="12" rx="2" opacity=".5"/><rect x="64" y="180" width="6" height="16" rx="2" opacity=".25"/><text x="78" y="196" font-size="11" font-family="Inter,sans-serif" font-weight="700" fill="#c9e07c">tidak ada sinyal</text></g>
+        </g></g>
+        <text class="q" x="6" y="64">?</text><text class="q b" x="136" y="52">?</text>
+      </svg>
+      <b aria-hidden="true">4</b>
+    </div>
+    <p class="say" id="say" role="status" aria-live="polite"></p>
+    <h1 id="h">Halaman tidak ditemukan</h1>
+    <p class="lead" id="lead">Alamat <code id="path"></code> tidak ada di situs ini. Mungkin tautannya salah ketik atau halamannya sudah dipindah.</p>
+    <div class="cta">
+      <a class="btn main" href="/" id="home">Kembali ke beranda</a>
+      <a class="btn ghost" href="/game/" id="play">Mainkan game</a>
+    </div>
+    <div class="quick"><a href="/web" id="qw">Web</a><a href="/blog/" id="qb">Blog</a></div>
+  </div>
+</main>
+<footer>
+  <nav aria-label="Tautan bawah"><a href="/i/tentang/" data-k="about">Tentang</a><a href="/i/syarat/" data-k="terms">Syarat</a><a href="/i/privasi/" data-k="priv">Privasi</a><a href="/i/kontak/" data-k="contact">Kontak</a></nav>
+  <span>© 2026 Jurkon Studio</span>
+</footer>
+<script>
+(function () {
+  var en = document.documentElement.lang === 'en';
+  var L = en ? {
+    t: 'Page not found', home: 'Back to home', play: 'Play the game',
+    lead: ' isn’t on this site. The link may be mistyped or the page may have moved.',
+    msgs: ['No signal here. Let me look around.', 'I searched every menu. Nothing.', 'Tap me again, I can jump higher.', 'Try the home page. I’ll wave you there.', 'This page went offline.'],
+    about: 'About', terms: 'Terms', priv: 'Privacy', contact: 'Contact', title: 'Page not found — Smartphone Empire'
+  } : {
+    t: 'Halaman tidak ditemukan', home: 'Kembali ke beranda', play: 'Mainkan game',
+    lead: ' tidak ada di situs ini. Mungkin tautannya salah ketik atau halamannya sudah dipindah.',
+    msgs: ['Tidak ada sinyal di sini. Aku cari dulu.', 'Semua menu sudah kuperiksa. Kosong.', 'Ketuk lagi, aku bisa lompat lebih tinggi.', 'Coba ke beranda. Aku antar sambil melambai.', 'Halaman ini sedang offline.'],
+    about: 'Tentang', terms: 'Syarat', priv: 'Privasi', contact: 'Kontak', title: 'Halaman tidak ditemukan — Smartphone Empire'
+  };
+  var $ = function (id) { return document.getElementById(id); };
+  document.title = L.title;
+  $('h').textContent = L.t; $('home').textContent = L.home; $('play').textContent = L.play;
+  var lead = $('lead'); lead.innerHTML = '<code id="path"></code>'; lead.appendChild(document.createTextNode(L.lead));
+  var p = location.pathname + location.search; $('path').textContent = p.length > 48 ? p.slice(0, 45) + '…' : p;
+  [].forEach.call(document.querySelectorAll('footer [data-k]'), function (a) { a.textContent = L[a.dataset.k]; });
+
+  var say = $('say'), mi = 0;
+  function talk(i) { say.textContent = L.msgs[i % L.msgs.length]; }
+  talk(0);
+
+  var pona = $('pona'), lean = $('lean'), pl = $('pl'), pr = $('pr');
+  var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Mata mengikuti kursor atau jari; badan sedikit condong ke arah yang sama.
+  function look(x, y) {
+    var r = pona.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height * .43;
+    var dx = x - cx, dy = y - cy, d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 240);
+    var mx = dx / d * 8 * k, my = dy / d * 7 * k;
+    pl.setAttribute('cx', 58 + mx); pl.setAttribute('cy', 108 + my);
+    pr.setAttribute('cx', 102 + mx); pr.setAttribute('cy', 108 + my);
+    lean.style.transform = 'rotate(' + (Math.max(-1, Math.min(1, dx / 420)) * 7).toFixed(1) + 'deg)';
+  }
+  if (!still) {
+    addEventListener('pointermove', function (e) { look(e.clientX, e.clientY); }, { passive: true });
+    addEventListener('touchstart', function (e) { var t = e.touches[0]; look(t.clientX, t.clientY); }, { passive: true });
+    (function blink() { pona.classList.add('blink'); setTimeout(function () { pona.classList.remove('blink'); }, 120); setTimeout(blink, 1800 + Math.random() * 3200); })();
+  }
+
+  // Ketuk atau tekan Enter: Pona melompat dan berganti ucapan.
+  function hop() {
+    mi++; talk(mi);
+    if (still) return;
+    pona.classList.remove('jump'); void pona.getBoundingClientRect(); pona.classList.add('jump');
+  }
+  pona.setAttribute('tabindex', '0'); pona.setAttribute('role', 'button');
+  pona.addEventListener('click', hop);
+  pona.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); hop(); } });
+  pona.addEventListener('animationend', function (e) { if (e.animationName === 'jump') pona.classList.remove('jump'); });
+})();
+</script>
+</body>
+</html>
