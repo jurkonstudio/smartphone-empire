@@ -10,6 +10,7 @@ import { existsSync } from 'node:fs';
 const TESTS = [
   // Tes dari Tahap 2 dan 3A (tanpa argumen, tanpa dependensi)
   { file: 'tools/modal-a11y.test.mjs' },
+  { file: 'tools/logic-fixes.test.mjs' },
   // sw.test.mjs berasal dari patch Tahap 3A. Zip yang dipakai saat Tahap 4 ditulis belum memuatnya,
   // jadi dilewati dengan peringatan. Hapus `optional` begitu berkasnya masuk repo.
   { file: 'tools/sw.test.mjs', optional: true },

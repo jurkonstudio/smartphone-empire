@@ -15,7 +15,7 @@ const ok = (c, m) => { if (!c) { fail++; console.log('GAGAL:', m); } else consol
 
 // 1) data
 ok(R.validateResearchData().length === 0, 'validateResearchData kosong (termasuk fitur)');
-ok(R.RESEARCH_CATEGORIES.length === 9 && R.RESEARCH_NODES.length === 134, '9 kategori, 134 node');
+ok(R.RESEARCH_CATEGORIES.length === 9 && R.RESEARCH_NODES.length === 135, '9 kategori, 135 node');
 ok(F.validateFeatureData(R.RESEARCH_NODES.filter(n => n.category !== 'feature').map(n => n.id)).length === 0, 'validateFeatureData kosong');
 
 // 2) produk lama netral
