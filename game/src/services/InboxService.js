@@ -11,6 +11,7 @@ import { CloudService } from './CloudService.js';
 import { SupabaseAdapter } from './cloud/SupabaseAdapter.js';
 import { state } from '../core/GameState.js';
 import { formatCurrency } from '../utils/format.js';
+import { t } from '../core/LanguageService.js';
 
 var POLL_MS = 300000;      // cadangan saja; pesan utama datang lewat Realtime
 var LIMIT = 60;
@@ -22,12 +23,27 @@ var _running = false;
 var _credited = {};   // id hadiah yang sudah dikreditkan ke kas di sesi ini
 var _hello = false;      // ringkasan "pesan belum dibaca" cukup sekali per sesi
 
-// Pesan lokal (survei Kontrol Pengguna): disimpan di save game (data.userControl.surveys), id negatif, tanpa server.
+// Pesan lokal, disimpan di save game, id negatif, tanpa server:
+//  - survei Kontrol Pengguna: data.userControl.surveys
+//  - surat ICANN (Registrar): data.registrar.letters (teks dibuat saat ditampilkan dari key i18n, jadi ikut bahasa terpilih)
 function _localList() {
+    var out = [];
     try {
-        var uc = state.get().userControl;
-        return (uc && Array.isArray(uc.surveys)) ? uc.surveys : [];
-    } catch (e) { return []; }
+        var d = state.get();
+        if (d.userControl && Array.isArray(d.userControl.surveys)) out = out.concat(d.userControl.surveys);
+        if (d.registrar && Array.isArray(d.registrar.letters)) out = out.concat(d.registrar.letters);
+    } catch (e) {}
+    return out;
+}
+
+// Salinan pesan dengan title/body sudah diterjemahkan (surat ICANN). Pesan lain dikembalikan apa adanya.
+function _resolve(m) {
+    if (!m || m.kind !== 'icann' || !m.code) return m;
+    var c = {};
+    for (var k in m) c[k] = m[k];
+    c.title = t('registrar.letter.' + m.code + '.title', m.vars || {});
+    c.body = t('registrar.letter.' + m.code + '.body', m.vars || {});
+    return c;
 }
 
 function _unread() {
@@ -54,7 +70,8 @@ function _has(id) {
 }
 
 function _toast(m) {
-    var type = (m.kind === 'sil' || m.kind === 'reward') ? 'success' : (m.kind === 'system' ? 'warning' : 'info');
+    var bad = m.kind === 'icann' && /rejected|revoked|denied|audit|expired|lapsed/.test(m.code || '');
+    var type = (m.kind === 'sil' || m.kind === 'reward') ? 'success' : ((m.kind === 'system' || bad) ? 'warning' : 'info');
     var text = String(m.title || '') + (m.body ? ' — ' + m.body : '');
     // Langsung ke bus: pesan admin & SIL masuk tidak boleh tersembunyi oleh saklar notifikasi.
     bus.emit('toast:show', {
@@ -145,7 +162,7 @@ export var InboxService = {
         _start();
     },
     getItems: function () {
-        var loc = _localList();
+        var loc = _localList().map(_resolve);
         if (!loc.length) return _items.slice();
         return _items.concat(loc).sort(function (a, b) { return String(b.created_at || '').localeCompare(String(a.created_at || '')); });
     },
@@ -163,6 +180,11 @@ export var InboxService = {
         _toast(item);
         _changed();
         return true;
+    },
+    // Pesan lokal yang dibuat sistem lain (surat ICANN): hanya tampilkan toast + perbarui lencana. Datanya sudah ada di save.
+    notifyLocal: function (item) {
+        if (item) _toast(_resolve(item));
+        _changed();
     },
     getUnread: function () { return _unread(); },
     refresh: function () { return _running ? _load(false) : Promise.resolve(false); },
@@ -193,8 +215,10 @@ export var InboxService = {
     },
     remove: function (id) {
         if (id < 0) {
-            var uc = null; try { uc = state.get().userControl; } catch (e) {}
+            var d0 = null; try { d0 = state.get(); } catch (e) {}
+            var uc = d0 && d0.userControl, rg = d0 && d0.registrar;
             if (uc && Array.isArray(uc.surveys)) uc.surveys = uc.surveys.filter(function (m) { return m.id !== id; });
+            if (rg && Array.isArray(rg.letters)) rg.letters = rg.letters.filter(function (m) { return m.id !== id; });
             _changed();
             return;
         }
@@ -272,6 +296,7 @@ export var InboxService = {
         // Hadiah yang belum diklaim tidak ikut dihapus (server juga menolaknya).
         _items = _items.filter(function (m) { return m.reward_cash && !m.reward_claimed_at; });
         try { var uc = state.get().userControl; if (uc && Array.isArray(uc.surveys)) uc.surveys = []; } catch (e) {}
+        try { var rg = state.get().registrar; if (rg && Array.isArray(rg.letters)) rg.letters = []; } catch (e) {}
         _changed();
         if (_running) SupabaseAdapter.inboxDelete(null).catch(function () {});
     }
