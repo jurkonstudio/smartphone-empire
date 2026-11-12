@@ -4723,19 +4723,9 @@ html[data-perf="lite"] body { background-attachment: scroll !important; }
 .onb-google:hover:not(:disabled) { background: var(--bg-4); }
 .onb-google:disabled { opacity: 0.6; cursor: default; }
 .onb-google__g { flex: none; }
-
-/* Tombol "Lanjutkan dengan Discord" (warna blurple resmi Discord) */
-.onb-discord {
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    width: 100%; min-height: 44px; margin: 8px 0 4px; padding: 0 14px;
-    background: #5865F2; color: #fff;
-    border: 1px solid #5865F2; border-radius: var(--r-lg); cursor: pointer;
-    font: inherit; font-size: var(--fs-base); font-weight: var(--fw-semibold);
-    transition: background 0.15s, border-color 0.15s;
-}
-.onb-discord:hover:not(:disabled) { background: #4752C4; border-color: #4752C4; }
-.onb-discord:disabled { opacity: 0.6; cursor: default; }
-.onb-discord__d { flex: none; }
+.onb-oauth-list { display: flex; flex-direction: column; gap: 8px; }
+.onb-oauth-list .onb-google { margin: 0; }
+.onb-oauth__ico { flex: none; }
 .onb-or { display: flex; align-items: center; gap: 10px; margin: 12px 0; color: var(--text-secondary); font-size: var(--fs-sm); }
 .onb-or::before, .onb-or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
