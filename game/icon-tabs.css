@@ -1,0 +1,31 @@
+/* icon-tabs.css — tab/filter/pengurut berikon; hanya yang aktif berlabel (aditif, aman dihapus). */
+.ti-tab { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.ti-tab > * { pointer-events: none; }              /* klik selalu jatuh ke tombol asli */
+.ti-tab svg { flex: 0 0 auto; display: block; }
+.ti-ico { width: 19px; height: 19px; }
+.ti-tab .d { fill: currentColor; fill-opacity: .18; stroke: none; }
+.ti-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ti-tab:not(.active):not([aria-selected="true"]) .ti-label { display: none; }
+.ti-tab:not(.active):not([aria-selected="true"]) { min-width: 42px; }
+
+/* Lencana hitungan (mis. ulasan App Store yang menunggu) */
+.ti-badge {
+  position: absolute; top: 2px; right: 3px; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px;
+  background: var(--accent, #0a84ff); color: #fff; font-size: 9.5px; font-weight: 800; line-height: 15px; text-align: center;
+}
+
+/* Bar tab: bagi rata supaya tidak perlu digeser */
+html:root .subtab-bar .subtab-btn.ti-tab, html:root .os-subtabs .os-subtab-btn.ti-tab { min-height: 40px; padding-left: 10px; padding-right: 10px; }
+html:root .subtab-bar .subtab-btn.ti-tab:not(.active), html:root .os-subtabs .os-subtab-btn.ti-tab:not(.active) { flex: 1 1 0; }
+html:root .subtab-bar .subtab-btn.ti-tab.active, html:root .os-subtabs .os-subtab-btn.ti-tab.active { flex: 0 0 auto; }
+html:root .settings-tab.ti-tab, html:root .chip.ti-tab, html:root .cat2-seg-btn.ti-tab, html:root .rs-sort-btn.ti-tab, html:root .home-tab.ti-tab { padding-left: 11px; padding-right: 11px; }
+html:root .settings-tab.ti-tab .ti-ico, html:root .chip.ti-tab .ti-ico { width: 17px; height: 17px; }
+/* Chip riset: ikon + hitungan, nama kategori hanya di chip aktif */
+.chip.ti-tab:not(.active) .rs-chip-count { opacity: .75; }
+
+/* Tombol berikon bawaan (Kampus/Manufaktur, tab Profil): label hanya saat aktif */
+.home-switch-btn:not(.active):not([aria-selected="true"]) > span:not(.icon-wrap),
+.pf-tabs .settings-tab:not(.active) > span:not(.icon-wrap) { display: none; }
+
+/* Tab inaktif dirapatkan agar 9 tab Pasar muat tanpa digeser di layar HP */
+html:root .subtab-bar .subtab-btn.ti-tab:not(.active) { min-width: 0; padding-left: 6px !important; padding-right: 6px !important; }

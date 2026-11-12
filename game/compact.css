@@ -1,0 +1,31 @@
+/* compact.css — mode teks ringkas (aditif, aman dihapus).
+   Teks penjelas/hint dipotong jadi 1-2 baris; ketuk teks untuk membuka lengkap.
+   Semua fitur & isi tetap ada. Matikan: tambah ?text=full pada URL (disimpan), atau ?text=compact untuk menyalakan lagi. */
+html:not([data-text="full"]) :is(
+  .tl-text, .node-row-desc, .tech-node-desc, .gen-note, .rg-row-meta, .se-st-tag,
+  .settings-row-hint, .settings-hint, .settings-picker-hint, .settings-lang-hint,
+  .pf-hint, .onb-hint, .map-hint, .mf-desc, .sil-row-desc, .sil-hint,
+  .quest-desc, .focus-quest-desc, .focus-empty-desc, .guide-sys-desc, .fab-tier-desc,
+  .empty-desc, .empty-hint, .diff-desc, .wiz-era-desc, .wiz-autofill-hint,
+  .campus-row-desc, .asm-note, .asm2-note, .asm2-help-b, .recruit-need-hint,
+  .cat2-hidden-note, .slot-strip-hint, .news-subheadline, .tl-subtitle,
+  .ov-hero-sub, .gen-hero-sub, .mf-hero-sub, .asm2-hero-sub, .chip-wiz-sub,
+  .cand-modal-trait-desc, .campus-row-meta, .auto-restock-sub
+):not(.se-open) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+/* Catatan di modal: 2 baris supaya peringatan tidak terlalu terpotong */
+html:not([data-text="full"]) :is(.cand-modal-note, .modal-sub, .gen-hero-meta):not(.se-open) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  cursor: pointer;
+}
