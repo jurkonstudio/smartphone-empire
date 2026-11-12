@@ -145,23 +145,14 @@ export const CloudService = {
 
     // Mulai login Google. Bila berhasil, browser langsung dialihkan ke Google (hasil { ok: true, redirecting: true });
     // sesi baru terbentuk setelah halaman dimuat ulang dan dipulihkan lewat restoreSession().
-    async signInWithGoogle() {
-        if (!_adapter) return NOT_CONFIGURED;
-        if (typeof _adapter.signInWithGoogle !== 'function') return { ok: false, reason: 'Login Google tidak didukung.', code: 'unknown' };
-        try {
-            const res = await _adapter.signInWithGoogle();
-            return { ok: true, redirecting: !!(res && res.redirecting) };
-        } catch (err) {
-            return _fail(err);
-        }
-    },
+    async signInWithGoogle() { return this.signInWithProvider('google'); },
 
-    // Login Discord: sama seperti signInWithGoogle (browser dialihkan ke Discord, sesi dipulihkan setelah kembali).
-    async signInWithDiscord() {
+    // Login OAuth generik: provider = 'google' | 'discord' | 'github'.
+    async signInWithProvider(provider) {
         if (!_adapter) return NOT_CONFIGURED;
-        if (typeof _adapter.signInWithDiscord !== 'function') return { ok: false, reason: 'Login Discord tidak didukung.', code: 'unknown' };
+        if (typeof _adapter.signInWithProvider !== 'function') return { ok: false, reason: 'Login ' + provider + ' tidak didukung.', code: 'unknown' };
         try {
-            const res = await _adapter.signInWithDiscord();
+            const res = await _adapter.signInWithProvider(provider);
             return { ok: true, redirecting: !!(res && res.redirecting) };
         } catch (err) {
             return _fail(err);
