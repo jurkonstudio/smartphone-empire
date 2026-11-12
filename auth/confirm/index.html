@@ -43,7 +43,18 @@
   const SUPABASE_KEY = 'sb_publishable_HZUb3YP1Ztz57cV6EGHBPQ_obiCJ3L7';
   const GAME_URL = '/game';
 
-  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  // WAJIB sama dengan CLOUD.authStorageKey di game (supabase.config.js),
+  // supaya sesi hasil konfirmasi terbaca oleh game.
+  const AUTH_STORAGE_KEY = 'smartphone-empire:supabase-auth:iyuleatpewampdjeuzrb';
+
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
+      storageKey: AUTH_STORAGE_KEY
+    }
+  });
   const $ = (id) => document.getElementById(id);
 
   function show(id) {
