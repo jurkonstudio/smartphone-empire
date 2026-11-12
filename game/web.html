@@ -11,8 +11,10 @@
 <meta property="og:title" content="Smartphone Empire — Bangun kerajaan ponselmu">
 <meta property="og:description" content="Mulai 1 Januari 2000, lawan Nokia, Apple, Samsung dan 29 kompetitor lain. Gratis di browser dan Android.">
 <meta property="og:image" content="https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/assets/img/loading-screen.jpg">
-<link rel="icon" type="image/png" sizes="32x32" href="./assets/icon/favicon-32.png">
-<link rel="apple-touch-icon" href="./assets/icon/apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="./assets/brand/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="./assets/brand/favicon-32.png">
+<link rel="icon" type="image/x-icon" sizes="48x48" href="./assets/brand/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="./assets/brand/apple-touch-icon.png">
 <script>
 /* Tema + bahasa dipasang sebelum halaman digambar, supaya tidak berkedip.
    Kunjungan pertama = mode terang + Bahasa Indonesia. */
@@ -26,6 +28,9 @@
   var m = document.getElementById('metaTheme'); if (m) m.setAttribute('content', th === 'dark' ? '#000000' : '#fbfbfd');
 })();
 </script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   color-scheme:light;
@@ -76,14 +81,20 @@ main,header,footer{position:relative;z-index:1}
 .nav{position:sticky;top:0;z-index:50;background:var(--nav);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--line)}
 .nav-in{display:flex;align-items:center;gap:10px;height:56px}
 .brand{display:flex;align-items:center;gap:9px;text-decoration:none;font-weight:700;letter-spacing:-.03em;font-size:1.02rem;white-space:nowrap}
-.brand img{width:28px;height:28px;border-radius:8px}
+.brand .bm{width:28px;height:28px;flex:none;display:block;transition:transform .35s var(--ease)}
+.brand:hover .bm{transform:rotate(-6deg) scale(1.06)}
+.bm .se-gem{transform-box:fill-box;transform-origin:center}
+@media(prefers-reduced-motion:no-preference){.brand:hover .se-gem{animation:segem .8s var(--ease)}}
+@keyframes segem{0%{transform:scale(1)}40%{transform:scale(1.9)}100%{transform:scale(1)}}
+.foot-brand{display:flex;justify-content:flex-start;margin:0 0 28px}.foot-brand img{height:46px;width:auto}
+.fb-dark{display:none}:root[data-theme="dark"] .fb-light{display:none}:root[data-theme="dark"] .fb-dark{display:block}
 .nav-links{display:none;gap:2px;margin-left:14px}
 .nav-links a{text-decoration:none;color:var(--text2);font-size:.84rem;font-weight:500;padding:7px 12px;border-radius:999px;transition:.2s}
 .nav-links a:hover{color:var(--text);background:var(--fill)}
 .nav-sp{flex:1}
 @media(min-width:880px){.nav-links{display:flex}}
 @media(max-width:399px){.brand-tx{display:none}}
-@media(max-width:480px){.nav-in{gap:6px}.nav .btn-sm{padding:0 12px}.brand img{width:26px;height:26px}}
+@media(max-width:480px){.nav-in{gap:6px}.nav .btn-sm{padding:0 12px}.brand .bm{width:26px;height:26px}}
 
 .lang{display:inline-flex;padding:3px;border-radius:999px;background:var(--fill);flex:none}
 .lang button{min-width:34px;height:30px;padding:0 9px;border-radius:999px;font-size:.78rem;font-weight:700;color:var(--text3);transition:.2s}
@@ -138,7 +149,7 @@ h1.title em{font-style:normal;background:linear-gradient(95deg,#0a84ff 0%,#32ade
 @media(min-width:760px){.stats{grid-template-columns:repeat(5,1fr)}}
 
 /* SECTIONS */
-section{padding:96px 0 0}
+section{padding:72px 0 0}
 .kicker{font-size:.84rem;font-weight:600;color:var(--blue);letter-spacing:.01em;margin-bottom:10px;text-align:center}
 h2.h{font-size:clamp(2rem,5.4vw,3.2rem);font-weight:700;letter-spacing:-.052em;line-height:1.06;max-width:17em;margin-inline:auto;text-align:center}
 .sub{margin:16px auto 0;color:var(--text2);font-size:1.08rem;max-width:40em;font-weight:400;text-align:center}
@@ -163,7 +174,7 @@ h2.h{font-size:clamp(2rem,5.4vw,3.2rem);font-weight:700;letter-spacing:-.052em;l
 .c-cyan{--c:#32ade6}.c-cyan .ic{background:linear-gradient(180deg,#5ac8fa,#1b86c2)}
 .tile.hl{background:radial-gradient(120% 90% at 0% 0%,rgba(10,132,255,.13),transparent 60%),var(--card)}
 :root[data-theme="dark"] .tile.hl{background:radial-gradient(120% 90% at 0% 0%,rgba(10,132,255,.22),transparent 60%),var(--card)}
-@media(min-width:720px){.bento{grid-template-columns:repeat(2,minmax(0,1fr))}.tile.hl,.tile:last-child{grid-column:1/-1}}
+@media(min-width:720px){.bento{grid-template-columns:repeat(2,minmax(0,1fr))}.tile.hl,.tile.w6{grid-column:1/-1}}
 @media(min-width:1000px){.bento{grid-template-columns:repeat(6,minmax(0,1fr))}.tile{grid-column:span 2}.tile.w3{grid-column:span 3}.tile.w4{grid-column:span 4}.tile.w6{grid-column:span 6}}
 
 /* SHOWCASE */
@@ -341,7 +352,7 @@ details[open] summary::after{transform:rotate(45deg)}
 details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch}
 
 /* FOOTER (abu-abu lembut seperti footer Apple) */
-.foot{margin-top:96px;padding:40px 0 44px;background:var(--bg2);border-top:1px solid var(--line)}
+.foot{margin-top:64px;padding:40px 0 44px;background:var(--bg2);border-top:1px solid var(--line)}
 .foot .kicker{text-align:left;color:var(--text3)}
 .contact{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 28px}
 .ci{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 6px 16px rgba(0,0,0,.16)}
@@ -388,6 +399,86 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
 .rv.in{opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.rv{opacity:1;transform:none}html{scroll-behavior:auto}}
 @media(max-width:480px){.cta .btn{flex:1 1 100%}}
+
+/* ===== RINGKAS: prioritas konten, tab, dan lipat-buka ===== */
+section{scroll-margin-top:64px}
+@media(max-width:600px){section{padding-top:52px}.hero{padding-top:44px}.eyebrow{margin-bottom:16px}.cta{margin-top:22px}.stats{margin-top:28px}.foot{margin-top:48px}}
+/* hero lebih pendek */
+.phones{margin-top:20px}
+@media(max-width:560px){.phones{height:320px}.phone{width:150px;margin-left:-75px}.phone.p1,.phones:hover .p1{transform:translateX(-40px) rotate(-7deg) scale(.88)}.phone.p3,.phones:hover .p3{transform:translateX(40px) rotate(7deg) scale(.88)}}
+@media(min-width:561px) and (max-width:899px){.phones{height:400px}}
+@media(min-width:900px){.hero{padding-top:72px}.phones{height:520px}.phone{width:230px;margin-left:-115px}.phone.p1{transform:translateX(-170px) rotate(-8deg) scale(.86)}.phone.p3{transform:translateX(170px) rotate(8deg) scale(.86)}.phones:hover .p1{transform:translateX(-184px) rotate(-10deg) scale(.88)}.phones:hover .p3{transform:translateX(184px) rotate(10deg) scale(.88)}}
+
+/* tombol lipat-buka */
+.more-wrap{display:flex;justify-content:center;margin-top:22px}
+.more-btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 20px;border-radius:999px;background:var(--fill);font-weight:600;font-size:.9rem;color:var(--text);transition:background .2s,transform .2s var(--ease)}
+.more-btn:hover{background:var(--fill2)}.more-btn:active{transform:scale(.96)}
+.more-btn::after{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .25s var(--ease)}
+.more-btn[aria-expanded=true]::after{transform:rotate(-135deg) translateY(-2px)}
+.more-btn[aria-expanded=true] .m,.more-btn[aria-expanded=false] .l{display:none}
+.bento:not(.open) .adv{display:none}
+.road:not(.all) .rd-done{display:none}
+.road .rd-done{order:2}
+#rels.cut:not(.all) .rel:nth-child(n+3){display:none}
+
+/* pusat info bertab */
+.hub-head{text-align:center}
+.hub-tabs{margin-top:24px}
+.panel{padding-top:4px;min-width:0}
+.panel:not([hidden]){animation:fade .28s}
+.panel .kicker{display:none}
+.panel h2.h{font-size:clamp(1.5rem,3.8vw,2.2rem);margin-top:30px;letter-spacing:-.045em}
+.panel .sub{font-size:1rem;margin-top:12px}
+.panel .sil{margin-top:28px}
+.panel .sil h2.h{margin-top:0}
+.panel .bento,.panel .eras,.panel .duo,.panel .steps,.panel .road,.panel .rels,.panel .faq{margin-top:26px}
+
+@media(max-width:759px){.panel .steps{grid-template-columns:1fr 1fr;gap:10px}.panel .step{padding:16px}.panel .step h3{font-size:1rem}.panel .step p{font-size:.86rem}}
+/* tombol Mainkan menempel di bawah (mobile) */
+.dock{display:none}
+@media(max-width:759px){
+  .dock{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:55;padding:10px 16px max(10px,env(safe-area-inset-bottom));background:var(--nav);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-top:1px solid var(--line);transform:translateY(110%);visibility:hidden;transition:transform .3s var(--ease),visibility 0s .3s}
+  .dock .btn{flex:1}
+  body.has-dock .dock{transform:none;visibility:visible;transition:transform .3s var(--ease)}
+  body.has-dock{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+  body.has-dock .toast{bottom:calc(84px + env(safe-area-inset-bottom))}
+}
+
+/* ===== PENYELARASAN: tampilan dan istilah seragam dengan beranda ===== */
+:root{--ink:#0a1120;--font:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;--blue:#1f6feb;--blue-h:#3d84ff;--link:#0b62d6;--r:20px}
+:root[data-theme="dark"]{--blue:#3d94ff;--blue-h:#68aaff;--link:#7db4ff}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+h1.title,h2.h,.tile h3,.show-copy h3{letter-spacing:-.035em}
+.nav{--text:#eef3fc;--text2:#a9b6cf;--text3:#a9b6cf;--fill:rgba(255,255,255,.09);--fill2:rgba(255,255,255,.17);--seg-on:#fff;--seg-sh:none;background:rgba(10,17,32,.78);border-bottom:1px solid rgba(255,255,255,.08)}
+.nav .lang button[aria-pressed=true]{color:#0a1120}
+.nav .btn-blue{background:#3d94ff;color:#06101f}.nav .btn-blue:hover{background:#68aaff}
+.top{--text:#eef3fc;--text2:#c3cee3;--text3:#a9b6cf;--fill:rgba(255,255,255,.1);--fill2:rgba(255,255,255,.18);--card:rgba(255,255,255,.08);--line:rgba(255,255,255,.14);--shadow:none;position:relative;overflow:hidden;background:var(--ink);color:var(--text);padding-bottom:64px}
+.top::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(520px 420px at 82% 18%,rgba(61,148,255,.34),transparent 70%),radial-gradient(460px 380px at 8% 90%,rgba(139,123,255,.26),transparent 70%)}
+.top::after{content:"";position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(70% 70% at 55% 40%,#000,transparent);mask-image:radial-gradient(70% 70% at 55% 40%,#000,transparent)}
+.top .hero{position:relative;z-index:1}
+h1.title{color:#fff;font-weight:800}
+h1.title em{background:linear-gradient(95deg,#6db3ff,#9d8bff);-webkit-background-clip:text;background-clip:text}
+.top .btn-blue{background:linear-gradient(135deg,#4da0ff,#3d7dff);box-shadow:0 12px 28px -10px rgba(61,148,255,.9)}
+.top .btn-ghost{color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.3);background:rgba(255,255,255,.04)}
+.top .eyebrow b{background:#c9e07c;color:#1d2a0a}
+.qs{position:relative;z-index:3;margin-top:-34px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.qs a{display:flex;flex-direction:column;gap:2px;padding:16px 18px;border-radius:var(--r);background:var(--card);color:var(--text);text-decoration:none;box-shadow:var(--shadow-h),inset 0 0 0 1px var(--line);transition:transform .25s var(--ease),box-shadow .25s}
+.qs a:hover{transform:translateY(-2px);box-shadow:var(--shadow-h),inset 0 0 0 2px var(--blue)}
+.qs b{font-size:1rem;font-weight:700;letter-spacing:-.02em}.qs span{font-size:.84rem;color:var(--text3);line-height:1.4}
+@media(min-width:760px){.qs{grid-template-columns:repeat(4,minmax(0,1fr))}}
+:root[data-theme="dark"] .qs a{box-shadow:inset 0 0 0 1px var(--line2)}
+.stats{margin-top:28px}
+.grp{grid-column:1/-1;margin-top:18px;padding-top:18px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
+.grp:first-child{margin-top:0;padding-top:0;border:0}
+.grp h3{font-size:1.15rem;font-weight:700;letter-spacing:-.02em}.grp p{font-size:.92rem;color:var(--text3)}
+.bento{margin-top:32px}
+#cuplikan{background:var(--bg2);margin-top:72px;padding-bottom:72px}
+section.hub,#panduan{scroll-margin-top:70px}
+.foot-nav{display:flex;flex-wrap:wrap;gap:2px 20px;margin:0 0 26px}
+.foot-nav a{color:var(--text2);text-decoration:none;font-weight:500;font-size:.92rem;padding:6px 0}.foot-nav a:hover{color:var(--text);text-decoration:underline}
+.consent{margin-top:12px;font-size:.78rem;line-height:1.5;color:var(--text3)}
+.consent a{color:var(--link);font-weight:600}
+@media(max-width:600px){.top{padding-bottom:52px}.qs{margin-top:-28px}#cuplikan{margin-top:52px;padding-bottom:52px}}
 </style>
 </head>
 <body>
@@ -396,9 +487,9 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
 <!-- NAV -->
 <nav class="nav" aria-label="Utama" data-en-aria="Main">
   <div class="wrap nav-in">
-    <a class="brand" href="#top" aria-label="Smartphone Empire"><img src="./assets/icon/icon-192.png" alt="" width="28" height="28"><span class="brand-tx">Smartphone Empire</span></a>
+    <a class="brand" href="#top" aria-label="Smartphone Empire"><svg viewBox="0 0 512 512" class="bm" aria-hidden="true" focusable="false"><defs><linearGradient id="bmbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1c1f4d"/><stop offset="1" stop-color="#0b0d22"/></linearGradient><radialGradient id="bmgl" cx=".5" cy=".5" r=".55"><stop offset="0" stop-color="#14b8a6" stop-opacity=".42"/><stop offset="1" stop-color="#2563eb" stop-opacity="0"/></radialGradient><linearGradient id="bmb" x1="14" y1="3" x2="50" y2="61" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2dd4bf"/><stop offset=".55" stop-color="#2563eb"/><stop offset="1" stop-color="#4f46e5"/></linearGradient><linearGradient id="bms" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#171d57"/><stop offset="1" stop-color="#0a0d2b"/></linearGradient><linearGradient id="bmg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde047"/><stop offset="1" stop-color="#f59e0b"/></linearGradient><linearGradient id="bmh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#bmbg)"/><rect width="512" height="512" rx="112" fill="url(#bmgl)"/><g transform="translate(57.6 57.6) scale(6.2)"><rect x="14" y="3" width="36" height="58" rx="9" fill="url(#bmb)"/><rect x="18.5" y="7.5" width="27" height="49" rx="5.5" fill="url(#bms)"/><rect x="18.5" y="7.5" width="27" height="49" rx="5.5" fill="url(#bmh)"/><rect x="27.5" y="10.4" width="9" height="2.3" rx="1.15" fill="#05071c"/><rect x="50" y="17" width="1.6" height="7" rx=".8" fill="#2563eb"/><rect x="50" y="27" width="1.6" height="11" rx=".8" fill="#2563eb"/><path class="se-crown" d="M22.6 43.5 21.8 28.2 27.6 34.4 32 25.2 36.4 34.4 42.2 28.2 41.4 43.5Z" fill="url(#bmg)" stroke="url(#bmg)" stroke-width="2.2" stroke-linejoin="round"/><rect x="22.2" y="46.2" width="19.6" height="3.4" rx="1.7" fill="#f59e0b"/><circle class="se-gem" cx="32" cy="22.6" r="2.7" fill="#fff"/><circle cx="21.8" cy="26.3" r="1.5" fill="#fff" opacity=".9"/><circle cx="42.2" cy="26.3" r="1.5" fill="#fff" opacity=".9"/></g></svg><span class="brand-tx">Smartphone Empire</span></a>
     <div class="nav-links">
-      <a href="#fitur" data-en="Features">Fitur</a><a href="#cuplikan" data-en="Screenshots">Cuplikan</a><a href="#era" data-en="Eras">Era</a><a href="#bahasa" data-en="Language">Bahasa</a><a href="#silicon">Silicon</a><a href="#apa-baru" id="navNew" hidden data-en="What’s new">Apa yang baru</a><a href="#pembaruan" data-en="Updates">Pembaruan</a><a href="#studio">Studio</a>
+      <a href="#fitur" data-en="Features">Fitur</a><a href="#cuplikan" data-en="Screenshots">Cuplikan</a><a href="#cara" data-en="How to play">Cara main</a><a href="#silicon">Silicon</a><a href="#apa-baru" id="navNew" hidden data-en="What’s new">Apa yang baru</a><a href="#studio">Studio</a><a href="/blog/">Blog</a>
     </div>
     <span class="nav-sp"></span>
     <div class="lang" role="group" aria-label="Bahasa" data-en-aria="Language">
@@ -414,8 +505,8 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
   </div>
 </nav>
 
-<header id="top" class="wrap hero">
-  <div class="eyebrow"><b id="verChip">v0.2.14</b> <span data-en="Jurkon Studio · Independent simulation game">Jurkon Studio · Game simulasi independen</span></div>
+<header id="top" class="top"><div class="wrap hero">
+  <div class="eyebrow"><b id="verChip">v0.2.15</b> <span data-en="Jurkon Studio · Independent simulation game">Jurkon Studio · Game simulasi independen</span></div>
   <h1 class="title" data-en="Build your <em>phone</em> empire.<br>From 2000 to the AI era.">Bangun kerajaan <em>ponselmu</em>.<br>Dari 2000 sampai era AI.</h1>
   <p class="lede" data-en="You’re the CEO of a phone company founded on January 1, 2000. Hire a team, research technology, design phones, then take on Nokia, Apple, Samsung, and 29 other competitors all the way to the foldable era and beyond.">Kamu CEO perusahaan ponsel yang baru berdiri pada 1 Januari 2000. Rekrut tim, riset teknologi, rancang ponsel, lalu lawan Nokia, Apple, Samsung, dan 29 kompetitor lain sampai era foldable dan sesudahnya.</p>
   <div class="cta">
@@ -433,9 +524,15 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
     <div class="phone p2"><img src="./assets/img/landing/desain.jpg" alt=""></div>
     <div class="phone p3"><img src="./assets/img/landing/pasar.jpg" alt="" loading="lazy"></div>
   </div>
-</header>
+</div></header>
 
 <main>
+<div class="wrap qs rv">
+  <a href="https://smartphone-empire.my.id/game/"><b data-en="Play now">Main sekarang</b><span data-en="Free in your browser, no install">Gratis di browser, tanpa instal</span></a>
+  <a href="#cara"><b data-en="How to play">Cara main</b><span data-en="Four steps and the basic rules">Empat langkah dan aturan dasar</span></a>
+  <a href="#silicon"><b data-en="Account and Silicon">Akun dan Silicon</b><span data-en="Sign in, check balance, top up">Masuk, cek saldo, top up</span></a>
+  <a href="#faq"><b>FAQ</b><span data-en="Quick answers">Jawaban singkat</span></a>
+</div>
 <div class="wrap">
   <div class="stats rv" role="list">
     <div class="stat" role="listitem"><b>32</b><span data-en="Competitor companies">Perusahaan kompetitor</span></div>
@@ -450,8 +547,9 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
 <section id="fitur"><div class="wrap">
   <div class="kicker" data-en="What’s inside">Isi game</div>
   <h2 class="h" data-en="One company, many connected systems.">Satu perusahaan, banyak sistem yang saling terhubung.</h2>
-  <p class="sub" data-en="Every feature below is in the game. The numbers are counted from the game’s data files, version 0.2.14.">Setiap fitur di bawah ini ada di dalam game. Angkanya dihitung dari file data game versi 0.2.14.</p>
+  <p class="sub" data-en="Every feature below is in the game. The numbers are counted from the game’s data files, version 0.2.15.">Setiap fitur di bawah ini ada di dalam game. Angkanya dihitung dari file data game versi 0.2.15.</p>
   <div class="bento">
+    <div class="grp"><h3 data-en="The core loop">Inti permainan</h3><p data-en="Build a team, research, design phones, then win the market.">Bangun tim, riset, rancang ponsel, lalu rebut pasar.</p></div>
     <article class="tile hl w4 c-blue rv">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg></div>
       <h3 data-en="3D Campus, Office, and Team">Kampus 3D, Kantor, dan Tim</h3>
@@ -483,47 +581,24 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
       <h3 data-en="32 living competitors">32 kompetitor hidup</h3>
       <p data-en="Nokia, Motorola, Samsung, Apple, Xiaomi, and more each have a personality, iconic products, and historical life events. Real-name or parody-name mode. Market share runs to 2030 as a speculative scenario, with one fictional AI-native newcomer.">Nokia, Motorola, Samsung, Apple, Xiaomi dan lainnya punya kepribadian, produk ikonik, serta life event historis. Mode nama asli atau parodi. Pangsa pasar berlanjut sampai 2030 sebagai skenario spekulatif, dengan satu pendatang fiktif AI-native.</p>
     </article>
-    <article class="tile w3 c-cyan rv">
-      <div class="ic"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg></div>
-      <h3 data-en="Chips and Fabs">Chip dan Fab</h3>
-      <p data-en="Research 52 chip nodes, design your own chip from 8 architectures and 14 process nodes. 4 Fab tiers, from the Small Fab at 5,000 chips a month to the Mega Fab at 5 million.">Riset 52 node chip, rancang chip sendiri dari 8 arsitektur dan 14 process node. Fab 4 tingkat, dari Small Fab 5.000 chip per bulan sampai Mega Fab 5 juta chip per bulan.</p>
-    </article>
-    <article class="tile w3 c-orange rv">
+    <div class="grp adv"><h3 data-en="Finance">Keuangan</h3><p data-en="Money, banks, and the stock exchange.">Uang, bank, dan bursa saham.</p></div>
+    <article class="tile adv w3 c-orange rv">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 9l9-6 9 6M5 9v10M19 9v10M9 19v-6M15 19v-6M3 21h18"/></svg></div>
       <h3 data-en="Finance and stock exchange">Keuangan dan bursa</h3>
       <p data-en="Three banks with loans, deposits, and credit ratings from AAA to D. An exchange with 84 stocks in 12 categories, 9 world indices, and 5 currencies with historical rates, where your own trades move prices. Two months of negative cash in a row means game over.">Tiga bank dengan pinjaman, deposito, dan credit rating AAA sampai D. Bursa dengan 84 saham di 12 kategori, 9 indeks dunia, dan 5 mata uang dengan kurs historis, tempat transaksimu ikut menggerakkan harga. Kas negatif 2 bulan berturut-turut berarti game over.</p>
     </article>
-    <article class="tile w3 c-blue rv">
-      <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H4zM8 21h8M12 16v5"/></svg></div>
-      <h3 data-en="Public opinion and news">Opini publik dan berita</h3>
-      <p data-en="Sentiment across 11 aspects, a review feed, and 26 viral events you can respond to: apologize, recall, clarify, or ignore. Automatic news from 20 outlets.">Sentimen per 11 aspek, feed ulasan, dan 26 viral event yang bisa kamu tanggapi: minta maaf, recall, klarifikasi, atau diabaikan. Berita otomatis dari 20 media.</p>
-    </article>
-    <article class="tile w3 c-violet rv">
+    <article class="tile adv w3 c-violet rv">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.4 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/></svg></div>
       <h3 data-en="Universal Wallet">Dompet Universal</h3>
       <p data-en="Money ($) and Silicon (SIL) can cover each other for almost any cost. Pick a pay mode: Automatic, Money first, SIL first, or Separate.">Uang ($) dan Silicon (SIL) bisa saling menutup untuk hampir semua biaya. Pilih mode bayar: Otomatis, Uang dulu, SIL dulu, atau Terpisah.</p>
     </article>
-    <article class="tile w3 c-cyan rv">
-      <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg></div>
-      <h3 data-en="Ecosystem and services">Ekosistem dan layanan</h3>
-      <p data-en="Sell more than phones. Accessories and services follow your active phone base, and owning them raises phone demand and eases competitor pressure.">Jual lebih dari sekadar ponsel. Aksesori dan layanan mengikuti basis ponsel aktifmu, dan memilikinya menaikkan permintaan ponsel serta meredam tekanan kompetitor.</p>
-      <ul>
-        <li data-en="Chargers (2000), wireless earbuds (2004), and smartwatches (2014), each with Basic, Mid, and Premium tiers">Charger (2000), earbuds nirkabel (2004), dan jam pintar (2014), masing-masing dengan tier Dasar, Menengah, dan Premium</li>
-        <li data-en="App Store commission of 15–30% that you set, once your OS has the feature">Komisi App Store 15–30% yang kamu atur, setelah OS-mu punya fiturnya</li>
-        <li data-en="Cloud (from 2012) and an AI assistant (from 2023) as Free, Standard, or Premium subscriptions">Cloud (sejak 2012) dan asisten AI (sejak 2023) sebagai langganan Gratis, Standar, atau Premium</li>
-      </ul>
+    <div class="grp adv"><h3 data-en="Production">Produksi</h3><p data-en="Chips, factories, and supply.">Chip, pabrik, dan rantai pasok.</p></div>
+    <article class="tile adv w3 c-cyan rv">
+      <div class="ic"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg></div>
+      <h3 data-en="Chips and Fabs">Chip dan Fab</h3>
+      <p data-en="Research 52 chip nodes, design your own chip from 8 architectures and 14 process nodes. 4 Fab tiers, from the Small Fab at 5,000 chips a month to the Mega Fab at 5 million.">Riset 52 node chip, rancang chip sendiri dari 8 arsitektur dan 14 process node. Fab 4 tingkat, dari Small Fab 5.000 chip per bulan sampai Mega Fab 5 juta chip per bulan.</p>
     </article>
-    <article class="tile w3 c-red rv">
-      <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.4-3.4 8-8 9-4.6-1-8-4.6-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
-      <h3 data-en="After-sales and sales channels">Purna jual dan kanal penjualan</h3>
-      <p data-en="Long warranties lift sales, but every claim costs money. When a mass defect hits, you decide: recall, a free service campaign, or ignore it.">Garansi panjang menaikkan penjualan, tetapi setiap klaim ada biayanya. Saat cacat massal muncul, kamu yang memutuskan: recall, kampanye servis gratis, atau diabaikan.</p>
-      <ul>
-        <li data-en="Warranty of 6, 12, or 24 months, 3 service-center tiers, and 1–5 years of OS updates">Garansi 6, 12, atau 24 bulan, 3 tingkat pusat servis, dan update OS 1–5 tahun</li>
-        <li data-en="Carriers, an online store, and your own stores widen reach, at the cost of margin">Operator seluler, toko online, dan toko sendiri memperluas jangkauan, dengan margin yang terpotong</li>
-        <li data-en="Random incidents from 2000 to 2050 with risky choices">Insiden acak dari 2000 sampai 2050 dengan pilihan berisiko</li>
-      </ul>
-    </article>
-    <article class="tile w6 c-green rv">
+    <article class="tile adv w3 c-green rv">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 21V10l6 3V9l6 3V6h6v15zM7 21v-3M12 21v-3M17 21v-3"/></svg></div>
       <h3 data-en="Manufacturing and investment">Manufaktur dan investasi</h3>
       <p data-en="Build your own component plants on the Manufacturing island, connected to the campus by a bridge. Spend spare cash where it counts, because costs rise with volume and the market has a ceiling.">Bangun pabrik komponen sendiri di Pulau Manufaktur yang terhubung ke kampus lewat jembatan. Belanjakan kas berlebih dengan tepat, karena biaya naik seiring volume dan pasar punya plafon.</p>
@@ -535,7 +610,34 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
         <li data-en="HQ Investment tab: factory efficiency upgrades and acquisitions of rival brands">Tab Investasi di HQ: peningkatan efisiensi pabrik dan akuisisi merek rival</li>
       </ul>
     </article>
+    <div class="grp adv"><h3 data-en="Market and reputation">Pasar dan reputasi</h3><p data-en="Services, after-sales, and public opinion.">Layanan, purna jual, dan opini publik.</p></div>
+    <article class="tile adv w3 c-cyan rv">
+      <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg></div>
+      <h3 data-en="Ecosystem and services">Ekosistem dan layanan</h3>
+      <p data-en="Sell more than phones. Accessories and services follow your active phone base, and owning them raises phone demand and eases competitor pressure.">Jual lebih dari sekadar ponsel. Aksesori dan layanan mengikuti basis ponsel aktifmu, dan memilikinya menaikkan permintaan ponsel serta meredam tekanan kompetitor.</p>
+      <ul>
+        <li data-en="Chargers (2000), wireless earbuds (2004), and smartwatches (2014), each with Basic, Mid, and Premium tiers">Charger (2000), earbuds nirkabel (2004), dan jam pintar (2014), masing-masing dengan tier Dasar, Menengah, dan Premium</li>
+        <li data-en="App Store commission of 15–30% that you set, once your OS has the feature">Komisi App Store 15–30% yang kamu atur, setelah OS-mu punya fiturnya</li>
+        <li data-en="Cloud (from 2012) and an AI assistant (from 2023) as Free, Standard, or Premium subscriptions">Cloud (sejak 2012) dan asisten AI (sejak 2023) sebagai langganan Gratis, Standar, atau Premium</li>
+      </ul>
+    </article>
+    <article class="tile adv w3 c-red rv">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.4-3.4 8-8 9-4.6-1-8-4.6-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+      <h3 data-en="After-sales and sales channels">Purna jual dan kanal penjualan</h3>
+      <p data-en="Long warranties lift sales, but every claim costs money. When a mass defect hits, you decide: recall, a free service campaign, or ignore it.">Garansi panjang menaikkan penjualan, tetapi setiap klaim ada biayanya. Saat cacat massal muncul, kamu yang memutuskan: recall, kampanye servis gratis, atau diabaikan.</p>
+      <ul>
+        <li data-en="Warranty of 6, 12, or 24 months, 3 service-center tiers, and 1–5 years of OS updates">Garansi 6, 12, atau 24 bulan, 3 tingkat pusat servis, dan update OS 1–5 tahun</li>
+        <li data-en="Carriers, an online store, and your own stores widen reach, at the cost of margin">Operator seluler, toko online, dan toko sendiri memperluas jangkauan, dengan margin yang terpotong</li>
+        <li data-en="Random incidents from 2000 to 2050 with risky choices">Insiden acak dari 2000 sampai 2050 dengan pilihan berisiko</li>
+      </ul>
+    </article>
+    <article class="tile adv w6 c-blue rv">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H4zM8 21h8M12 16v5"/></svg></div>
+      <h3 data-en="Public opinion and news">Opini publik dan berita</h3>
+      <p data-en="Sentiment across 11 aspects, a review feed, and 26 viral events you can respond to: apologize, recall, clarify, or ignore. Automatic news from 20 outlets.">Sentimen per 11 aspek, feed ulasan, dan 26 viral event yang bisa kamu tanggapi: minta maaf, recall, klarifikasi, atau diabaikan. Berita otomatis dari 20 media.</p>
+    </article>
   </div>
+  <div class="more-wrap"><button class="more-btn" type="button" data-toggle=".bento" data-cls="open" aria-expanded="false"><span class="m" data-en="See advanced systems (7)">Lihat sistem lanjutan (7)</span><span class="l" data-en="Show fewer">Tampilkan lebih sedikit</span></button></div>
 </div></section>
 
 <!-- CUPLIKAN -->
@@ -549,36 +651,14 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
   </div>
 </div></section>
 
-<!-- ERA -->
-<section id="era"><div class="wrap">
-  <div class="kicker" data-en="Evolution">Evolusi</div>
-  <h2 class="h" data-en="Seven design eras. One journey.">Tujuh era desain. Satu perjalanan.</h2>
-  <p class="sub" data-en="Phone mockups, screens, and notifications change with the era, from monochrome candybars to foldables.">Mockup ponsel, layar, dan notifikasi berubah mengikuti era, dari candybar monokrom sampai ponsel lipat.</p>
-  <div class="eras" id="eras"></div>
-</div></section>
-
-<!-- BAHASA & TEMA -->
-<section id="bahasa"><div class="wrap">
-  <div class="kicker" data-en="Language and appearance">Bahasa dan tampilan</div>
-  <h2 class="h" data-en="Play in your language, in your light.">Mainkan dalam bahasamu, dalam cahayamu.</h2>
-  <p class="sub" data-en="The game supports 12 languages you can switch anytime in Settings. Bahasa Indonesia and English are complete; the other 10 use a core dictionary and fall back to English for text that isn’t translated yet.">Game mendukung 12 bahasa yang bisa diganti kapan saja di Setelan. Bahasa Indonesia dan English tersedia penuh; 10 bahasa lainnya memakai kamus inti dan kembali ke English untuk teks yang belum diterjemahkan.</p>
-  <div class="duo">
-    <article class="tile c-blue rv">
-      <h3 data-en="12 languages in the game">12 bahasa di dalam game</h3>
-      <p data-en="Pick one in Settings. Without a saved choice, the game follows your phone or browser language.">Pilih di Setelan. Tanpa pilihan tersimpan, game mengikuti bahasa ponsel atau browsermu.</p>
-      <div class="chips" id="langChips"></div>
-    </article>
-    <article class="tile c-violet rv">
-      <h3 data-en="Light and dark theme">Tema terang dan gelap</h3>
-      <p data-en="Switch theme and choose from 6 accent colors in Settings. This page has its own theme and language buttons in the top bar.">Ganti tema dan pilih 6 warna aksen di Setelan. Halaman ini juga punya tombol tema dan bahasa di bilah atas.</p>
-      <div class="tmini" aria-hidden="true"><div class="l"><span data-en="Light">Terang</span></div><div class="d"><span data-en="Dark">Gelap</span></div></div>
-      <div class="swatches" id="swatches"></div>
-    </article>
+<!-- PUSAT INFO (bertab: satu panel terlihat, sisanya tersembunyi supaya halaman tidak panjang) -->
+<section id="panduan"><div class="wrap">
+  <div class="hub-head">
+    <div class="kicker" data-en="Info center">Pusat info</div>
+    <h2 class="h" data-en="Everything else, one tap away.">Sisanya, cukup satu ketukan.</h2>
   </div>
-</div></section>
-
-<!-- CARA MAIN -->
-<section id="cara"><div class="wrap">
+  <div class="tabs hub-tabs" role="tablist" aria-label="Pusat info" data-en-aria="Info center" id="hubTabs"><button class="tab" type="button" role="tab" id="ptab-cara" aria-controls="cara" aria-selected="true" tabindex="0" data-panel="cara" data-en="How to play">Cara main</button><button class="tab" type="button" role="tab" id="ptab-faq" aria-controls="faq" aria-selected="false" tabindex="-1" data-panel="faq">FAQ</button><button class="tab" type="button" role="tab" id="ptab-silicon" aria-controls="silicon" aria-selected="false" tabindex="-1" data-panel="silicon">Silicon</button><button class="tab" type="button" role="tab" id="ptab-pembaruan" aria-controls="pembaruan" aria-selected="false" tabindex="-1" data-panel="pembaruan" data-en="Updates">Pembaruan</button><button class="tab" type="button" role="tab" id="ptab-roadmap" aria-controls="roadmap" aria-selected="false" tabindex="-1" data-panel="roadmap">Roadmap</button><button class="tab" type="button" role="tab" id="ptab-era" aria-controls="era" aria-selected="false" tabindex="-1" data-panel="era" data-en="Eras">Era</button><button class="tab" type="button" role="tab" id="ptab-bahasa" aria-controls="bahasa" aria-selected="false" tabindex="-1" data-panel="bahasa" data-en="Language &amp; theme">Bahasa &amp; tema</button></div>
+  <div class="panel" id="cara" role="tabpanel" aria-labelledby="ptab-cara">
   <div class="kicker" data-en="How to play">Cara main</div>
   <h2 class="h" data-en="Four steps from the garage to the top of the market.">Empat langkah dari garasi ke puncak pasar.</h2>
   <div class="steps">
@@ -594,10 +674,8 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
     <span class="pill" data-en="Tax <b>12% / 15% / 20%</b>">Pajak <b>12% / 15% / 20%</b></span>
     <span class="pill" data-en="Automatic lite mode on low-end phones">Mode hemat otomatis di HP kelas bawah</span>
   </div>
-</div></section>
-
-<!-- SILICON & TOP UP -->
-<section id="silicon"><div class="wrap">
+  </div>
+  <div class="panel" id="silicon" role="tabpanel" aria-labelledby="ptab-silicon" hidden>
   <div class="sil">
     <div class="kicker">Silicon (SIL)</div>
     <h2 class="h" data-en="Account, balance, and Silicon.">Akun, saldo, dan Silicon.</h2>
@@ -625,9 +703,80 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
           <button class="btn btn-blue" type="button" id="coBtn" disabled>Top up sekarang</button>
         </div>
         <p class="fine" data-en="Payments are made through GoPay and confirmed manually by an admin, so SIL is not added instantly. Put the Order ID in the payment note. You can have at most 5 orders awaiting approval.">Pembayaran dilakukan lewat GoPay dan dikonfirmasi manual oleh admin, jadi SIL tidak masuk seketika. Sertakan Order ID pada catatan pembayaran. Maksimal 5 pesanan yang menunggu persetujuan.</p>
+        <p class="consent" data-en="Top-ups follow the <a href='/i/syarat/'>Terms</a>. How we handle your data is in the <a href='/i/privasi/'>Privacy Policy</a>.">Top up mengikuti <a href="/i/syarat/">Syarat</a>. Cara kami memakai datamu ada di <a href="/i/privasi/">Kebijakan Privasi</a>.</p>
         <div class="orders" id="orders" hidden><h4 data-en="Recent orders">Pesanan terakhir</h4><div id="ordList"></div></div>
       </div>
     </div>
+  </div>
+  </div>
+  <div class="panel" id="faq" role="tabpanel" aria-labelledby="ptab-faq" hidden>
+  <div class="kicker">FAQ</div>
+  <h2 class="h" data-en="Frequently asked questions.">Pertanyaan yang sering muncul.</h2>
+  <div class="faq">
+    <details><summary data-en="Is the game free?">Apakah game ini gratis?</summary><p data-en="Yes. You can play for free in your browser. Silicon is an optional premium currency.">Ya. Game bisa dimainkan gratis di browser. Silicon adalah mata uang premium opsional.</p></details>
+    <details><summary data-en="Do I need an account to play?">Perlu akun untuk bermain?</summary><p data-en="No. Local saves are automatic. An account is needed for cloud save (1 slot), the player profile and Player ID, the leaderboard, messages, and a server-side SIL balance.">Tidak. Save lokal otomatis. Akun dibutuhkan untuk cloud save (1 slot), profil pemain dan ID Pemain, leaderboard, pesan, dan saldo SIL yang tersimpan di server.</p></details>
+    <details><summary data-en="Which languages are supported?">Bahasa apa saja yang didukung?</summary><p data-en="12 languages: English, Bahasa Indonesia, Chinese (Simplified), Korean, Japanese, French, German, Spanish, Italian, Russian, Polish, and Hindi. Indonesian and English are complete; the rest use a core dictionary and fall back to English for untranslated text. Change it anytime in Settings.">12 bahasa: English, Bahasa Indonesia, Mandarin (Sederhana), Korea, Jepang, Prancis, Jerman, Spanyol, Italia, Rusia, Polandia, dan Hindi. Indonesia dan English tersedia penuh; sisanya memakai kamus inti dan kembali ke English untuk teks yang belum diterjemahkan. Bisa diganti kapan saja di Setelan.</p></details>
+    <details><summary data-en="Can I top up Silicon right now?">Bisa top up Silicon sekarang?</summary><p data-en="Yes, through GoPay only. QRIS is locked for now. Orders are confirmed manually by an admin until an automatic payment provider is connected, so SIL is not added instantly.">Bisa, hanya lewat GoPay. QRIS dikunci sementara. Pesanan dikonfirmasi manual oleh admin sampai provider pembayaran otomatis terhubung, jadi SIL tidak masuk seketika.</p></details>
+    <details><summary data-en="Is the leaderboard official yet?">Apakah leaderboard sudah resmi?</summary><p data-en="Not yet. Leaderboard stats are still reported from the player’s device. The server limits how often they sync, rejects impossible numbers, and calculates levels and scores itself, but believable numbers can still be faked, so they can’t be treated as official rankings.">Belum. Statistik leaderboard masih dikirim dari perangkat pemain. Server membatasi frekuensi sinkron, menolak angka yang mustahil, dan menghitung level serta skor sendiri, tetapi angka yang masuk akal tetap bisa dipalsukan, jadi belum bisa dianggap peringkat resmi.</p></details>
+    <details><summary data-en="Where can I read the patch notes?">Di mana catatan pembaruan (patch notes)?</summary><p data-en="Ask the in-game Business Advisor “is there a new patch?”, or open the Versions section of the README on GitHub. The version shown at the top of this page is read from the same patches.json the game uses.">Tanya Asisten Bisnis di dalam game “ada patch baru?”, atau buka bagian Versions di README di GitHub. Versi yang tampil di bagian atas halaman ini dibaca dari patches.json yang sama dengan yang dipakai game.</p></details>
+    <details><summary data-en="Can I play on a PC as well as a phone?">Bisa dimainkan di PC dan HP?</summary><p data-en="Yes. The game runs in phone and PC browsers, with its own desktop layout. You can also install it as a PWA from your browser menu, so updates arrive automatically.">Bisa. Game berjalan di browser HP maupun PC dengan tata letak desktop tersendiri. Kamu juga bisa memasangnya sebagai PWA lewat menu browser, jadi pembaruan masuk otomatis.</p></details>
+    <!-- FAQ APK ditutup sementara:
+    <details><summary data-en="How do I install the Android app?">Bagaimana cara install app Android?</summary><p data-en="Tap Download Android APK, open the file, and allow installs from unknown sources if prompted. The app is a PWA, so it opens fullscreen with no address bar or status bar. Swipe from the top edge to show the status bar briefly. Internet is needed for the first load. You can also install from Chrome via the menu → Install app.">Ketuk Download APK Android, buka file-nya, lalu izinkan instal dari sumber tidak dikenal bila diminta. App ini adalah PWA, jadi terbuka fullscreen tanpa address bar dan status bar. Swipe dari tepi atas untuk menampilkan status bar sementara. Butuh internet saat load pertama. Kamu juga bisa memasang lewat Chrome: menu → Install app.</p></details>
+    -->
+    <details><summary data-en="Is this an official Nokia, Apple, or Samsung product?">Apakah ini produk resmi Nokia, Apple, atau Samsung?</summary><p data-en="No. This is a fan project with no affiliation to any company. Names and brands are used for educational and entertainment purposes, and there’s a parody-name mode.">Bukan. Ini fan project tanpa afiliasi dengan perusahaan mana pun. Nama dan merek dipakai untuk tujuan edukasi dan hiburan, dan ada mode nama parodi.</p></details>
+  </div>
+  </div>
+  <div class="panel" id="era" role="tabpanel" aria-labelledby="ptab-era" hidden>
+  <div class="kicker" data-en="Evolution">Evolusi</div>
+  <h2 class="h" data-en="Seven design eras. One journey.">Tujuh era desain. Satu perjalanan.</h2>
+  <p class="sub" data-en="Phone mockups, screens, and notifications change with the era, from monochrome candybars to foldables.">Mockup ponsel, layar, dan notifikasi berubah mengikuti era, dari candybar monokrom sampai ponsel lipat.</p>
+  <div class="eras" id="eras"></div>
+  </div>
+  <div class="panel" id="bahasa" role="tabpanel" aria-labelledby="ptab-bahasa" hidden>
+  <div class="kicker" data-en="Language and appearance">Bahasa dan tampilan</div>
+  <h2 class="h" data-en="Play in your language, in your light.">Mainkan dalam bahasamu, dalam cahayamu.</h2>
+  <p class="sub" data-en="The game supports 12 languages you can switch anytime in Settings. Bahasa Indonesia and English are complete; the other 10 use a core dictionary and fall back to English for text that isn’t translated yet.">Game mendukung 12 bahasa yang bisa diganti kapan saja di Setelan. Bahasa Indonesia dan English tersedia penuh; 10 bahasa lainnya memakai kamus inti dan kembali ke English untuk teks yang belum diterjemahkan.</p>
+  <div class="duo">
+    <article class="tile c-blue rv">
+      <h3 data-en="12 languages in the game">12 bahasa di dalam game</h3>
+      <p data-en="Pick one in Settings. Without a saved choice, the game follows your phone or browser language.">Pilih di Setelan. Tanpa pilihan tersimpan, game mengikuti bahasa ponsel atau browsermu.</p>
+      <div class="chips" id="langChips"></div>
+    </article>
+    <article class="tile c-violet rv">
+      <h3 data-en="Light and dark theme">Tema terang dan gelap</h3>
+      <p data-en="Switch theme and choose from 6 accent colors in Settings. This page has its own theme and language buttons in the top bar.">Ganti tema dan pilih 6 warna aksen di Setelan. Halaman ini juga punya tombol tema dan bahasa di bilah atas.</p>
+      <div class="tmini" aria-hidden="true"><div class="l"><span data-en="Light">Terang</span></div><div class="d"><span data-en="Dark">Gelap</span></div></div>
+      <div class="swatches" id="swatches"></div>
+    </article>
+  </div>
+  </div>
+  <div class="panel" id="pembaruan" role="tabpanel" aria-labelledby="ptab-pembaruan" hidden>
+  <div class="kicker" data-en="Update history">Riwayat pembaruan</div>
+  <h2 class="h" data-en="What changed in each version.">Apa yang berubah di tiap versi.</h2>
+  <p class="sub" data-en="Read straight from the same patches.json the game uses, so this list always matches the version you play.">Dibaca langsung dari patches.json yang sama dengan yang dipakai game, jadi daftar ini selalu cocok dengan versi yang kamu mainkan.</p>
+  <div class="rels cut" id="rels" aria-live="polite"></div>
+  <div class="more-wrap"><button class="more-btn" id="relMore" type="button" hidden data-toggle="#rels" data-cls="all" aria-expanded="false"><span class="m" data-en="See older versions">Lihat versi lama</span><span class="l" data-en="Show fewer">Tampilkan lebih sedikit</span></button></div>
+  <p class="rels-note"><a href="https://github.com/jurkonstudio/smartphone-empire#versions" target="_blank" rel="noopener" data-en="Full history in the README (Versions)">Riwayat lengkap ada di README (bagian Versions)</a></p>
+  </div>
+  <div class="panel" id="roadmap" role="tabpanel" aria-labelledby="ptab-roadmap" hidden>
+  <div class="kicker">Roadmap</div>
+  <h2 class="h" data-en="What’s done and what’s in progress.">Yang sudah jalan dan yang sedang dikerjakan.</h2>
+  <div class="road" id="roadList">
+    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Office 3D Map and Team integration">Office 3D Map dan integrasi Tim</b><span data-en="Build a Fab and train staff from the map, open staff details, and use “View in office”.">Bangun Fab dan latih staf dari peta, buka detail staf, dan “Lihat di kantor”.</span></div></div>
+    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Market Navigation panel">Panel Navigasi Pasar</b><span data-en="Segment, region, opportunity, and trend-wave cards in the Market tab.">Kartu segmen, wilayah, peluang, dan gelombang tren di tab Pasar.</span></div></div>
+    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="2027–2030 scenario (speculative)">Skenario 2027–2030 (spekulatif)</b><span data-en="Memory crunch and RAM price index, Agentic AI OS features, a fictional newcomer, and brands that can exit the market. A game scenario, not a prediction.">Krisis memori dan indeks harga RAM, fitur OS Agentic AI, pendatang fiktif, dan merek yang bisa keluar pasar. Skenario permainan, bukan prediksi.</span></div></div>
+    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Manufacturing, investment, and stock exchange v2">Manufaktur, investasi, dan bursa v2</b><span data-en="Component plants, economic brakes, rival-brand acquisitions, and stocks that react to your trades.">Pabrik komponen, penahan ekonomi, akuisisi merek rival, dan saham yang bereaksi pada transaksimu.</span></div></div>
+    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Wholesale contracts">Kontrak grosir</b><span data-en="Rival brands bid for part of your finished-phone stock. Prices stay above production cost, and accepted deals strengthen the buyer.">Merek rival menawar sebagian stok ponsel jadimu. Harga tetap di atas biaya produksi, dan kontrak yang diterima memperkuat pembeli.</span></div></div>
+    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Ecosystem and after-sales">Ekosistem dan purna jual</b><span data-en="Accessories, App Store, Cloud and AI subscriptions, warranties, service centers, and recall decisions.">Aksesori, App Store, langganan Cloud dan AI, garansi, pusat servis, dan keputusan recall.</span></div></div>
+    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Assembly factory and sales channels">Pabrik perakitan dan kanal penjualan</b><span data-en="A 4-level assembly plant on the Manufacturing island, plus carriers, an online store, and own stores.">Pabrik perakitan 4 level di Pulau Manufaktur, plus operator seluler, toko online, dan toko sendiri.</span></div></div>
+    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="12 languages">12 bahasa</b><span data-en="Indonesian and English are complete; 10 more use a core dictionary.">Indonesia dan English penuh; 10 bahasa lain memakai kamus inti.</span></div></div>
+    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Translation polish">Penyempurnaan terjemahan</b><span data-en="Replace the last hardcoded texts and translate component names and descriptions.">Mengganti sisa teks hardcoded dan menerjemahkan nama serta deskripsi komponen.</span></div></div>
+    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="More random events">Lebih banyak event acak</b><span data-en="5 incident events with choices are in. Next: more incidents, per-era screen transitions, and UI polish.">5 event insiden dengan pilihan sudah ada. Berikutnya: lebih banyak insiden, transisi layar per era, dan polish UI.</span></div></div>
+    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Chip designs in products">Desain chip di produk</b><span data-en="Let products and SoC plants use chips from the Chip Designer, and draw their stock from Fab output.">Produk dan pabrik SoC memakai chip dari Desainer Chip, dan stoknya berasal dari hasil Fab.</span></div></div>
+    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Reopen QRIS and automatic payments">Membuka kembali QRIS dan pembayaran otomatis</b><span data-en="Top-up is open through GoPay; QRIS is still locked. A server-side top-up switch is ready in the database scripts. Next: automatic payments.">Top up sudah dibuka lewat GoPay; QRIS masih dikunci. Sakelar top up di sisi server sudah tersedia di skrip database. Berikutnya: pembayaran otomatis.</span></div></div>
+    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Fully bilingual news">Berita bilingual penuh</b><span data-en="English headlines are in; some review templates are still Indonesian.">Headline English sudah ada; sebagian template ulasan masih berbahasa Indonesia.</span></div></div>
+  </div>
+  <div class="more-wrap"><button class="more-btn" type="button" data-toggle="#roadList" data-cls="all" aria-expanded="false"><span class="m" data-en="Show completed items">Tampilkan yang sudah selesai</span><span class="l" data-en="Hide completed items">Sembunyikan yang selesai</span></button></div>
   </div>
 </div></section>
 
@@ -661,57 +810,11 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
   <div class="rels" id="newList" aria-live="polite"></div>
 </div></section>
 
-<!-- RIWAYAT PEMBARUAN (dibaca dari patches.json) -->
-<section id="pembaruan"><div class="wrap">
-  <div class="kicker" data-en="Update history">Riwayat pembaruan</div>
-  <h2 class="h" data-en="What changed in each version.">Apa yang berubah di tiap versi.</h2>
-  <p class="sub" data-en="Read straight from the same patches.json the game uses, so this list always matches the version you play.">Dibaca langsung dari patches.json yang sama dengan yang dipakai game, jadi daftar ini selalu cocok dengan versi yang kamu mainkan.</p>
-  <div class="rels" id="rels" aria-live="polite"></div>
-  <p class="rels-note"><a href="https://github.com/jurkonstudio/smartphone-empire#versions" target="_blank" rel="noopener" data-en="Full history in the README (Versions)">Riwayat lengkap ada di README (bagian Versions)</a></p>
-</div></section>
-
-<!-- ROADMAP -->
-<section id="roadmap"><div class="wrap">
-  <div class="kicker">Roadmap</div>
-  <h2 class="h" data-en="What’s done and what’s in progress.">Yang sudah jalan dan yang sedang dikerjakan.</h2>
-  <div class="road">
-    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Office 3D Map and Team integration">Office 3D Map dan integrasi Tim</b><span data-en="Build a Fab and train staff from the map, open staff details, and use “View in office”.">Bangun Fab dan latih staf dari peta, buka detail staf, dan “Lihat di kantor”.</span></div></div>
-    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Market Navigation panel">Panel Navigasi Pasar</b><span data-en="Segment, region, opportunity, and trend-wave cards in the Market tab.">Kartu segmen, wilayah, peluang, dan gelombang tren di tab Pasar.</span></div></div>
-    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="2027–2030 scenario (speculative)">Skenario 2027–2030 (spekulatif)</b><span data-en="Memory crunch and RAM price index, Agentic AI OS features, a fictional newcomer, and brands that can exit the market. A game scenario, not a prediction.">Krisis memori dan indeks harga RAM, fitur OS Agentic AI, pendatang fiktif, dan merek yang bisa keluar pasar. Skenario permainan, bukan prediksi.</span></div></div>
-    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Manufacturing, investment, and stock exchange v2">Manufaktur, investasi, dan bursa v2</b><span data-en="Component plants, economic brakes, rival-brand acquisitions, and stocks that react to your trades.">Pabrik komponen, penahan ekonomi, akuisisi merek rival, dan saham yang bereaksi pada transaksimu.</span></div></div>
-    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Wholesale contracts">Kontrak grosir</b><span data-en="Rival brands bid for part of your finished-phone stock. Prices stay above production cost, and accepted deals strengthen the buyer.">Merek rival menawar sebagian stok ponsel jadimu. Harga tetap di atas biaya produksi, dan kontrak yang diterima memperkuat pembeli.</span></div></div>
-    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Ecosystem and after-sales">Ekosistem dan purna jual</b><span data-en="Accessories, App Store, Cloud and AI subscriptions, warranties, service centers, and recall decisions.">Aksesori, App Store, langganan Cloud dan AI, garansi, pusat servis, dan keputusan recall.</span></div></div>
-    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="Assembly factory and sales channels">Pabrik perakitan dan kanal penjualan</b><span data-en="A 4-level assembly plant on the Manufacturing island, plus carriers, an online store, and own stores.">Pabrik perakitan 4 level di Pulau Manufaktur, plus operator seluler, toko online, dan toko sendiri.</span></div></div>
-    <div class="rd"><span class="tag ok" data-en="Done">Selesai</span><div><b data-en="12 languages">12 bahasa</b><span data-en="Indonesian and English are complete; 10 more use a core dictionary.">Indonesia dan English penuh; 10 bahasa lain memakai kamus inti.</span></div></div>
-    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Translation polish">Penyempurnaan terjemahan</b><span data-en="Replace the last hardcoded texts and translate component names and descriptions.">Mengganti sisa teks hardcoded dan menerjemahkan nama serta deskripsi komponen.</span></div></div>
-    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="More random events">Lebih banyak event acak</b><span data-en="5 incident events with choices are in. Next: more incidents, per-era screen transitions, and UI polish.">5 event insiden dengan pilihan sudah ada. Berikutnya: lebih banyak insiden, transisi layar per era, dan polish UI.</span></div></div>
-    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Chip designs in products">Desain chip di produk</b><span data-en="Let products and SoC plants use chips from the Chip Designer, and draw their stock from Fab output.">Produk dan pabrik SoC memakai chip dari Desainer Chip, dan stoknya berasal dari hasil Fab.</span></div></div>
-    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Reopen QRIS and automatic payments">Membuka kembali QRIS dan pembayaran otomatis</b><span data-en="Top-up is open through GoPay; QRIS is still locked. A server-side top-up switch is ready in the database scripts. Next: automatic payments.">Top up sudah dibuka lewat GoPay; QRIS masih dikunci. Sakelar top up di sisi server sudah tersedia di skrip database. Berikutnya: pembayaran otomatis.</span></div></div>
-    <div class="rd"><span class="tag next" data-en="Next">Berikutnya</span><div><b data-en="Fully bilingual news">Berita bilingual penuh</b><span data-en="English headlines are in; some review templates are still Indonesian.">Headline English sudah ada; sebagian template ulasan masih berbahasa Indonesia.</span></div></div>
-  </div>
-</div></section>
-
-<!-- FAQ -->
-<section id="faq"><div class="wrap">
-  <div class="kicker">FAQ</div>
-  <h2 class="h" data-en="Frequently asked questions.">Pertanyaan yang sering muncul.</h2>
-  <div class="faq">
-    <details><summary data-en="Is the game free?">Apakah game ini gratis?</summary><p data-en="Yes. You can play for free in your browser. Silicon is an optional premium currency.">Ya. Game bisa dimainkan gratis di browser. Silicon adalah mata uang premium opsional.</p></details>
-    <details><summary data-en="Do I need an account to play?">Perlu akun untuk bermain?</summary><p data-en="No. Local saves are automatic. An account is needed for cloud save (1 slot), the player profile and Player ID, the leaderboard, messages, and a server-side SIL balance.">Tidak. Save lokal otomatis. Akun dibutuhkan untuk cloud save (1 slot), profil pemain dan ID Pemain, leaderboard, pesan, dan saldo SIL yang tersimpan di server.</p></details>
-    <details><summary data-en="Which languages are supported?">Bahasa apa saja yang didukung?</summary><p data-en="12 languages: English, Bahasa Indonesia, Chinese (Simplified), Korean, Japanese, French, German, Spanish, Italian, Russian, Polish, and Hindi. Indonesian and English are complete; the rest use a core dictionary and fall back to English for untranslated text. Change it anytime in Settings.">12 bahasa: English, Bahasa Indonesia, Mandarin (Sederhana), Korea, Jepang, Prancis, Jerman, Spanyol, Italia, Rusia, Polandia, dan Hindi. Indonesia dan English tersedia penuh; sisanya memakai kamus inti dan kembali ke English untuk teks yang belum diterjemahkan. Bisa diganti kapan saja di Setelan.</p></details>
-    <details><summary data-en="Can I top up Silicon right now?">Bisa top up Silicon sekarang?</summary><p data-en="Yes, through GoPay only. QRIS is locked for now. Orders are confirmed manually by an admin until an automatic payment provider is connected, so SIL is not added instantly.">Bisa, hanya lewat GoPay. QRIS dikunci sementara. Pesanan dikonfirmasi manual oleh admin sampai provider pembayaran otomatis terhubung, jadi SIL tidak masuk seketika.</p></details>
-    <details><summary data-en="Is the leaderboard official yet?">Apakah leaderboard sudah resmi?</summary><p data-en="Not yet. Leaderboard stats are still reported from the player’s device. The server limits how often they sync, rejects impossible numbers, and calculates levels and scores itself, but believable numbers can still be faked, so they can’t be treated as official rankings.">Belum. Statistik leaderboard masih dikirim dari perangkat pemain. Server membatasi frekuensi sinkron, menolak angka yang mustahil, dan menghitung level serta skor sendiri, tetapi angka yang masuk akal tetap bisa dipalsukan, jadi belum bisa dianggap peringkat resmi.</p></details>
-    <details><summary data-en="Where can I read the patch notes?">Di mana catatan pembaruan (patch notes)?</summary><p data-en="Ask the in-game Business Advisor “is there a new patch?”, or open the Versions section of the README on GitHub. The version shown at the top of this page is read from the same patches.json the game uses.">Tanya Asisten Bisnis di dalam game “ada patch baru?”, atau buka bagian Versions di README di GitHub. Versi yang tampil di bagian atas halaman ini dibaca dari patches.json yang sama dengan yang dipakai game.</p></details>
-    <details><summary data-en="Can I play on a PC as well as a phone?">Bisa dimainkan di PC dan HP?</summary><p data-en="Yes. The game runs in phone and PC browsers, with its own desktop layout. You can also install it as a PWA from your browser menu, so updates arrive automatically.">Bisa. Game berjalan di browser HP maupun PC dengan tata letak desktop tersendiri. Kamu juga bisa memasangnya sebagai PWA lewat menu browser, jadi pembaruan masuk otomatis.</p></details>
-    <!-- FAQ APK ditutup sementara:
-    <details><summary data-en="How do I install the Android app?">Bagaimana cara install app Android?</summary><p data-en="Tap Download Android APK, open the file, and allow installs from unknown sources if prompted. The app is a PWA, so it opens fullscreen with no address bar or status bar. Swipe from the top edge to show the status bar briefly. Internet is needed for the first load. You can also install from Chrome via the menu → Install app.">Ketuk Download APK Android, buka file-nya, lalu izinkan instal dari sumber tidak dikenal bila diminta. App ini adalah PWA, jadi terbuka fullscreen tanpa address bar dan status bar. Swipe dari tepi atas untuk menampilkan status bar sementara. Butuh internet saat load pertama. Kamu juga bisa memasang lewat Chrome: menu → Install app.</p></details>
-    -->
-    <details><summary data-en="Is this an official Nokia, Apple, or Samsung product?">Apakah ini produk resmi Nokia, Apple, atau Samsung?</summary><p data-en="No. This is a fan project with no affiliation to any company. Names and brands are used for educational and entertainment purposes, and there’s a parody-name mode.">Bukan. Ini fan project tanpa afiliasi dengan perusahaan mana pun. Nama dan merek dipakai untuk tujuan edukasi dan hiburan, dan ada mode nama parodi.</p></details>
-  </div>
-</div></section>
 </main>
 
 <footer class="foot"><div class="wrap">
+  <div class="foot-brand"><img class="fb-light" src="./assets/brand/logo-horizontal.svg" alt="Smartphone Empire — Jurkon Studio" width="214" height="46" loading="lazy"><img class="fb-dark" src="./assets/brand/logo-horizontal-dark.svg" alt="" width="214" height="46" loading="lazy"></div>
+  <nav class="foot-nav" aria-label="Tautan bawah" data-en-aria="Footer links"><a href="/game/">Game</a><a href="/web">Web</a><a href="/blog/">Blog</a><a href="/i/tentang/" data-en="About">Tentang</a><a href="/i/syarat/" data-en="Terms">Syarat</a><a href="/i/privasi/" data-en="Privacy">Privasi</a><a href="/i/kontak/" data-en="Contact">Kontak</a><a href="/feed.xml">RSS</a></nav>
   <span class="kicker" data-en="Get in touch">Hubungi langsung</span>
   <div class="contact">
     <a class="ci c-wa" href="https://wa.me/6282243562960" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>WhatsApp</a>
@@ -719,8 +822,10 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
     <a class="ci c-em" href="mailto:calvfinka@yahoo.com"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Email</a>
   </div>
   <p class="legal" data-en="Smartphone Empire is a fan project, not a commercial product, and is not affiliated with Nokia, Apple, Samsung, or any other company. Names and brands are used for educational and entertainment purposes; rights belong to their respective owners. Historical data is simplified for gameplay.">Smartphone Empire adalah fan project, bukan produk komersial, dan tidak berafiliasi dengan Nokia, Apple, Samsung, atau perusahaan lain. Nama dan merek dipakai untuk tujuan edukasi dan hiburan; hak ciptanya milik masing-masing pemilik. Data historis disederhanakan untuk kebutuhan gameplay.</p>
-  <p class="legal" style="margin-top:10px">&copy; 2026 Jurkon Studio. All rights reserved.</p>
+  <p class="legal" style="margin-top:10px">© 2026 Jurkon Studio</p>
 </div></footer>
+
+<div class="dock" id="dock"><a class="btn btn-blue" href="https://smartphone-empire.my.id/game/"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span data-en="Play for free">Mainkan gratis</span></a></div>
 
 <!-- MODAL: AUTH -->
 <div class="ovl" id="authOvl" role="dialog" aria-modal="true" aria-labelledby="authTitle">
@@ -735,6 +840,7 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
         <label class="fl" for="aPass" data-en="Password">Kata sandi</label>
         <div class="pw"><input class="in" id="aPass" type="password" autocomplete="current-password" placeholder="Minimal 6 karakter" data-en-ph="At least 6 characters" required><button type="button" id="aShow">Lihat</button></div>
       </div>
+      <p class="consent" data-en="By continuing, you agree to the <a href='/i/syarat/'>Terms</a> and the <a href='/i/privasi/'>Privacy Policy</a>.">Dengan melanjutkan, kamu menyetujui <a href="/i/syarat/">Syarat</a> dan <a href="/i/privasi/">Kebijakan Privasi</a>.</p>
       <div class="msg" id="aMsg" role="status"></div>
       <button class="btn btn-blue" id="aSubmit" type="submit" style="width:100%;margin-top:18px">Masuk</button>
       <div style="display:flex;justify-content:space-between;margin-top:8px"><button type="button" class="lnk-b" id="aForgot" data-en="Forgot password?">Lupa kata sandi?</button><button type="button" class="lnk-b" id="aBack" data-en="Back" hidden>Kembali</button></div>
@@ -968,6 +1074,7 @@ function renderPatches() {
     const k = PT_LABEL[it.type] ? it.type : 'change';
     return `<li><span class="pt ${k}">${PT_LABEL[k][lang]}</span><span>${esc(it.text[lang] || it.text.id || it.text.en)}</span></li>`;
   }).join('')}</ul></article>`).join('');
+  { const rm = $('#relMore'); if (rm) rm.hidden = box.children.length <= 2; }
   renderWhatsNew();
 }
 function cleanPatches(d) {
@@ -1214,7 +1321,7 @@ document.addEventListener('click', e => {
   if (b) { e.preventDefault(); openAuth(b.dataset.openAuth === 'up' ? 'up' : 'in'); return; }
   if (e.target.closest('#logout')) doLogout();
 });
-$('#navAuth').addEventListener('click', () => { if (user) $('#silicon').scrollIntoView({ behavior: 'smooth' }); else openAuth('in'); });
+$('#navAuth').addEventListener('click', () => { if (user) goPanel('silicon'); else openAuth('in'); });
 $$('.seg button').forEach(b => b.addEventListener('click', () => setAuthMode(b.dataset.mode)));
 $('#aForgot').addEventListener('click', () => setAuthMode('reset'));
 $('#aBack').addEventListener('click', () => setAuthMode('in'));
@@ -1355,6 +1462,61 @@ function setTheme(th, persist) {
   clearTimeout(setTheme._t); setTheme._t = setTimeout(() => root.classList.remove('tt'), 450);
 }
 $('#themeBtn').addEventListener('click', () => setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark', true));
+
+/* ---------- pusat info bertab + lipat-buka + tombol Mainkan menempel ---------- */
+const HUB = $('#panduan'), HTABS = $('#hubTabs');
+const PANEL_IDS = $$('.panel', HUB).map(p => p.id);
+function openPanel(id, focus) {
+  if (!PANEL_IDS.includes(id)) return false;
+  $$('.tab', HTABS).forEach(b => { const on = b.dataset.panel === id; b.setAttribute('aria-selected', on); b.tabIndex = on ? 0 : -1; if (on) { HTABS.scrollTo({ left: b.offsetLeft - (HTABS.clientWidth - b.offsetWidth) / 2, behavior: 'smooth' }); if (focus) b.focus({ preventScroll: true }); } });
+  $$('.panel', HUB).forEach(p => { const on = p.id === id; p.hidden = !on; if (on) $$('.rv', p).forEach(el => el.classList.add('in')); });
+  return true;
+}
+function goPanel(id) {
+  if (!openPanel(id)) return;
+  try { history.replaceState(null, '', '#' + id); } catch (e) {}
+  HUB.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+HTABS.addEventListener('click', e => {
+  const b = e.target.closest('.tab'); if (!b) return;
+  openPanel(b.dataset.panel);
+  try { history.replaceState(null, '', '#' + b.dataset.panel); } catch (e2) {}
+});
+HTABS.addEventListener('keydown', e => {
+  const k = e.key; if (k !== 'ArrowRight' && k !== 'ArrowLeft' && k !== 'Home' && k !== 'End') return;
+  const bs = $$('.tab', HTABS), i = bs.findIndex(b => b.getAttribute('aria-selected') === 'true');
+  const n = k === 'Home' ? 0 : k === 'End' ? bs.length - 1 : (i + (k === 'ArrowRight' ? 1 : -1) + bs.length) % bs.length;
+  e.preventDefault(); openPanel(bs[n].dataset.panel, true);
+});
+// tautan #cara, #silicon, #faq dst. (di nav atau di mana pun) membuka panelnya
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[href^="#"]'); if (!a) return;
+  const id = a.getAttribute('href').slice(1);
+  if (PANEL_IDS.includes(id)) { e.preventDefault(); goPanel(id); }
+});
+function routeHash() { const id = location.hash.slice(1); if (PANEL_IDS.includes(id)) { openPanel(id); setTimeout(() => HUB.scrollIntoView({ block: 'start' }), 60); } }
+window.addEventListener('hashchange', routeHash);
+routeHash();
+
+// tombol lipat-buka generik
+document.addEventListener('click', e => {
+  const b = e.target.closest('.more-btn[data-toggle]'); if (!b) return;
+  const t = $(b.dataset.toggle); if (!t) return;
+  const on = b.getAttribute('aria-expanded') !== 'true';
+  t.classList.toggle(b.dataset.cls, on); b.setAttribute('aria-expanded', on);
+  if (on) $$('.rv', t).forEach(el => el.classList.add('in'));
+});
+// roadmap: yang sudah selesai disembunyikan, yang sedang dikerjakan tampil dulu
+$$('#roadList .rd').forEach(r => { if (r.querySelector('.tag.ok')) r.classList.add('rd-done'); });
+
+// tombol Mainkan menempel muncul setelah tombol di hero lewat dari layar
+(function () {
+  const cta = $('.hero .cta'), dock = $('#dock'); if (!cta || !dock || !('IntersectionObserver' in window)) return;
+  new IntersectionObserver(es => es.forEach(e => {
+    const show = !e.isIntersecting && e.boundingClientRect.top < 0;
+    document.body.classList.toggle('has-dock', show); dock.setAttribute('aria-hidden', !show);
+  })).observe(cta);
+})();
 
 /* ---------- init ---------- */
 setLang(lang, false);
