@@ -212,7 +212,8 @@ export const RESEARCH_DATA_EN = {
         f_ai: { name: 'F-AI', description: 'The next generation of AI models for the whole company: a sharper business advisor, design suggestions, and AI-based OS features.' },
         dev_tools: { name: 'Developer Tools', description: 'SDK and toolkit for third-party app developers. Connects the OS to its app ecosystem.' },
         game_engine: { name: 'Game Engine', description: 'Graphics and performance engine for games on phones. Depends on chip quality and the app ecosystem.' },
-        user_control: { name: 'User Control', description: 'Privacy settings, usage limits, and controls held by the user. Affects public opinion and the market.' }
+        user_control: { name: 'User Control', description: 'Privacy settings, usage limits, and controls held by the user. Affects public opinion and the market.' },
+        registrar: { name: 'Registrar', description: 'Sell domain names: start as a reseller, then become an ICANN-accredited registrar. Deal with ICANN letters, contracts, and compliance.' }
     },
 
     futureSystems: {
@@ -223,6 +224,7 @@ export const RESEARCH_DATA_EN = {
         chip: 'Chip',
         opinion: 'Public Opinion',
         market: 'Market',
-        team: 'Team'
+        team: 'Team',
+        registrar: 'Registrar'
     }
 };
