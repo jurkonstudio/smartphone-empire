@@ -163,6 +163,20 @@ function _viewStart(cloudOk, form) {
         '</div>';
 }
 
+// Tombol login sosial (Google, Discord, GitHub). Akun baru otomatis dapat nama perusahaan acak (lihat _autoStartNewAccount).
+var _OAUTH_PROVIDERS = [
+    { id: 'google', svg: '<svg class="onb-oauth__ico" viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>' },
+    { id: 'discord', svg: '<svg class="onb-oauth__ico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="#5865F2" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.292a.074.074 0 0 1 .077-.01c3.927 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>' },
+    { id: 'github', svg: '<svg class="onb-oauth__ico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.18-3.08-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.11 3.04.74.8 1.18 1.83 1.18 3.08 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>' }
+];
+
+function _oauthButtons() {
+    return '<div class="onb-oauth-list">' + _OAUTH_PROVIDERS.map(function (p) {
+        return '<button type="button" class="onb-google onb-oauth" data-onb-oauth="' + p.id + '">' + p.svg +
+            '<span>' + esc(t('onb.auth.' + p.id)) + '</span></button>';
+    }).join('') + '</div>';
+}
+
 function _viewAuth(auth) {
     var isReg = auth.mode === 'register';
     return '' +
@@ -174,8 +188,7 @@ function _viewAuth(auth) {
                 '<button type="button" role="tab" class="' + (isReg ? '' : 'active') + '" data-onb-tab="login">' + esc(t('cloud.auth.tab_login')) + '</button>' +
                 '<button type="button" role="tab" class="' + (isReg ? 'active' : '') + '" data-onb-tab="register">' + esc(t('cloud.auth.tab_register')) + '</button>' +
             '</div>' +
-            '<button type="button" class="onb-google" data-onb-google>' + '<svg class="onb-google__g" viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>' + '<span>' + esc(t('onb.auth.google')) + '</span></button>' +
-            '<button type=\"button\" class=\"onb-discord\" data-onb-discord>' + '<svg class=\"onb-discord__d\" viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" aria-hidden=\"true\" fill=\"currentColor\"><path d=\"M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z\"/></svg>' + '<span>' + esc(t('onb.auth.discord')) + '</span></button>' +
+            _oauthButtons() +
             '<div class="onb-or" aria-hidden="true"><span>' + esc(t('onb.auth.or')) + '</span></div>' +
             '<form data-onb-authform novalidate>' +
                 '<label class="field-label">' + esc(t('cloud.auth.email')) + '</label>' +
@@ -552,41 +565,27 @@ export function showOnboarding() {
                 return;
             }
 
-            if ((el = e.target.closest('[data-onb-google]'))) {
+            if ((el = e.target.closest('[data-onb-oauth]'))) {
                 if (auth.busy || el.disabled) return;
-                // Login Google: browser dialihkan ke Google dan kembali ke halaman ini; sesi dipulihkan oleh pemeriksaan di bawah
-                // (restoreSession), lalu alurnya sama dengan login email (cek save cloud, atau form perusahaan baru).
-                el.disabled = true;
+                // Login sosial (Google / Discord / GitHub): browser dialihkan ke provider lalu kembali ke halaman ini;
+                // sesi dipulihkan oleh pemeriksaan di bawah (restoreSession), lalu alurnya sama dengan login email:
+                // cek save cloud, dan bila akun baru -> otomatis masuk game dengan nama perusahaan acak.
+                var prov = el.getAttribute('data-onb-oauth');
+                var allBtns = host.querySelectorAll('[data-onb-oauth]');
+                allBtns.forEach(function (b) { b.disabled = true; });
                 var lbl = el.querySelector('span'), lblAwal = lbl ? lbl.textContent : '';
-                if (lbl) lbl.textContent = t('onb.auth.google_go');
-                var gr = await _withTimeout(CloudService.signInWithGoogle(), 15000);
+                if (lbl) lbl.textContent = t('onb.auth.redirecting', { provider: prov.charAt(0).toUpperCase() + prov.slice(1) });
+                var gr = await _withTimeout(CloudService.signInWithProvider(prov), 15000);
                 if (finished || current !== 'auth') return;
+                var _reset = function () { allBtns.forEach(function (b) { if (b.isConnected) b.disabled = false; }); if (lbl && el.isConnected) lbl.textContent = lblAwal; };
                 if (gr && gr.ok) {
-                    // Halaman sedang pindah ke Google. Bila pengguna menekan Back (halaman dipulihkan dari cache), tombol aktif lagi.
-                    setTimeout(function () { if (!finished && el.isConnected) { el.disabled = false; if (lbl) lbl.textContent = lblAwal; } }, 10000);
+                    // Halaman sedang pindah ke provider. Bila pengguna menekan Back (halaman dipulihkan dari cache), tombol aktif lagi.
+                    setTimeout(function () { if (!finished) _reset(); }, 10000);
                     return;
                 }
-                console.warn('[Onboarding] Login Google gagal:', gr && (gr.code || gr.reason), gr && gr.reason);
-                el.disabled = false; if (lbl) lbl.textContent = lblAwal;
-                _msg(t('onb.auth.google_fail'), 'err');
-                return;
-            }
-
-            if ((el = e.target.closest('[data-onb-discord]'))) {
-                if (auth.busy || el.disabled) return;
-                // Login Discord: sama seperti Google (browser dialihkan ke Discord lalu kembali; sesi dipulihkan oleh restoreSession).
-                el.disabled = true;
-                var dlbl = el.querySelector('span'), dlblAwal = dlbl ? dlbl.textContent : '';
-                if (dlbl) dlbl.textContent = t('onb.auth.discord_go');
-                var dr = await _withTimeout(CloudService.signInWithDiscord(), 15000);
-                if (finished || current !== 'auth') return;
-                if (dr && dr.ok) {
-                    setTimeout(function () { if (!finished && el.isConnected) { el.disabled = false; if (dlbl) dlbl.textContent = dlblAwal; } }, 10000);
-                    return;
-                }
-                console.warn('[Onboarding] Login Discord gagal:', dr && (dr.code || dr.reason), dr && dr.reason);
-                el.disabled = false; if (dlbl) dlbl.textContent = dlblAwal;
-                _msg(t('onb.auth.discord_fail'), 'err');
+                console.warn('[Onboarding] Login ' + prov + ' gagal:', gr && (gr.code || gr.reason), gr && gr.reason);
+                _reset();
+                _msg(t('onb.auth.oauth_fail', { provider: prov.charAt(0).toUpperCase() + prov.slice(1) }), 'err');
                 return;
             }
 
