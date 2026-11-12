@@ -199,6 +199,19 @@ export const SupabaseAdapter = {
         return { redirecting: true };
     },
 
+    // Login Discord (OAuth). Alurnya sama dengan Google. Provider Discord harus diaktifkan di Supabase
+    // (Authentication > Providers > Discord, isi Client ID + Client Secret dari Discord Developer Portal)
+    // dan Redirect URI Discord diisi: https://<project-ref>.supabase.co/auth/v1/callback
+    signInWithDiscord: async function () {
+        var c = await getClient();
+        var res = await c.auth.signInWithOAuth({
+            provider: 'discord',
+            options: { redirectTo: location.origin + location.pathname, scopes: 'identify email' }
+        });
+        if (res.error) throw mk(res.error);
+        return { redirecting: true };
+    },
+
     signOut: async function () {
         var c = await getClient();
         var res = await c.auth.signOut();
