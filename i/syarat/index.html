@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>
+  // Tema dan bahasa pilihan pengunjung dipasang sebelum halaman tampil (kunci sama dengan halaman utama).
+  (function () {
+    try {
+      var t = localStorage.getItem('se-landing:theme');
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+      if (localStorage.getItem('se-landing:lang') === 'en') document.documentElement.setAttribute('lang', 'en');
+    } catch (e) {}
+  })();
+</script>
+<title>Syarat dan Ketentuan — Smartphone Empire</title>
+<meta id="metaDesc" name="description" content="Syarat dan Ketentuan Layanan Smartphone Empire: akun, Silicon (SIL), top-up, aturan bermain, dan konten pemain.">
+<link rel="canonical" href="https://smartphone-empire.my.id/i/syarat/">
+<meta name="theme-color" content="#0c1424">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="index,follow">
+<link rel="icon" href="/game/assets/icon/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/game/assets/icon/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light dark;--ink:#0a1120;--on:#eef3fc;--on2:#a9b6cf;--blue:#3d94ff;--bg:#f4f6fb;--sf:#fff;--tx:#0f1728;--mu:#4a566c;--ln:rgba(15,23,40,.1);--lk:#0b62d6;--f:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#080d18;--sf:#111a2d;--tx:#eaf0fb;--mu:#9eaac2;--ln:rgba(234,240,251,.12);--lk:#7db4ff}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#080d18;--sf:#111a2d;--tx:#eaf0fb;--mu:#9eaac2;--ln:rgba(234,240,251,.12);--lk:#7db4ff}
+:root[data-theme="light"]{color-scheme:light}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:84px}
+body{margin:0;background:var(--bg);color:var(--tx);font:400 1rem/1.7 var(--f);-webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom)}
+img{display:block;max-width:100%}a{color:var(--lk)}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px;border-radius:8px}
+.wrap{width:min(820px,100% - 40px);margin-inline:auto}
+.skip{position:absolute;left:-999px;top:8px;background:#fff;color:#000;padding:8px 14px;border-radius:8px;z-index:60}.skip:focus{left:8px}
+.ic{width:1em;height:1em;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav{position:sticky;top:0;z-index:40;background:rgba(10,17,32,.72);-webkit-backdrop-filter:blur(16px) saturate(160%);backdrop-filter:blur(16px) saturate(160%);border-bottom:1px solid rgba(255,255,255,.08);padding-top:env(safe-area-inset-top)}
+.nv{display:flex;align-items:center;gap:14px;height:62px;width:min(1120px,100% - 40px);margin-inline:auto}
+.brand{display:flex;align-items:center;gap:10px;color:var(--on);text-decoration:none;font-weight:700;font-size:1.05rem;white-space:nowrap}.brand img{width:32px;height:32px}
+.links{margin-left:auto;display:flex;align-items:center;gap:2px}
+.links a{color:var(--on2);text-decoration:none;padding:8px 13px;border-radius:999px;font-weight:600;font-size:.94rem}
+.links a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.links a.play{background:var(--blue);color:#06101f;margin-left:6px}.links a.play:hover{background:#68aaff}
+.tools{display:flex;align-items:center;gap:8px}
+.lang{display:flex;background:rgba(255,255,255,.09);border-radius:999px;padding:3px}
+.lang button{font:600 .8rem/1 var(--f);color:var(--on2);background:none;border:0;border-radius:999px;padding:8px 10px;cursor:pointer}
+.lang button[aria-pressed="true"]{background:#fff;color:#0a1120}
+.theme{display:grid;place-items:center;width:38px;height:38px;border:0;border-radius:50%;background:rgba(255,255,255,.09);color:var(--on);cursor:pointer;font-size:19px}
+.theme .sun{display:none}:root[data-theme="dark"] .theme .sun{display:block}:root[data-theme="dark"] .theme .moon{display:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme]) .theme .sun{display:block}:root:not([data-theme]) .theme .moon{display:none}}
+header.top{background:linear-gradient(160deg,#0a1120,#142447);color:var(--on);padding:48px 0 40px}
+header.top h1{margin:0 0 8px;font-size:clamp(1.8rem,5vw,2.6rem);line-height:1.15;letter-spacing:-.02em}
+header.top p{margin:0;color:var(--on2)}
+.upd{display:inline-block;margin-top:14px;font-size:.85rem;font-weight:600;color:#06101f;background:#c9e07c;border-radius:999px;padding:4px 12px}
+main{padding:32px 0 56px}
+.intro{background:var(--sf);border:1px solid var(--ln);border-radius:16px;padding:18px 20px;color:var(--mu);margin:0 0 20px}
+.toc{background:var(--sf);border:1px solid var(--ln);border-radius:16px;padding:18px 20px 18px 40px;margin:0 0 28px}
+.toc ol{margin:0;padding-left:0;columns:2;column-gap:28px;list-style-position:inside}
+.toc li{break-inside:avoid;padding:3px 0}
+.toc a{text-decoration:none}.toc a:hover{text-decoration:underline}
+section{background:var(--sf);border:1px solid var(--ln);border-radius:16px;padding:22px 22px 8px;margin:0 0 16px}
+section h2{margin:0 0 10px;font-size:1.2rem;line-height:1.3}
+section p,section ul{margin:0 0 14px}
+section ul{padding-left:1.2em}section li{margin:0 0 7px}
+.t-en{display:none}html[lang="en"] .t-en{display:revert}html[lang="en"] .t-id{display:none}
+.back{display:inline-flex;margin-top:8px;font-weight:600}
+footer{background:var(--ink);color:var(--on2);border-top:1px solid rgba(255,255,255,.1);padding:28px 0 calc(28px + env(safe-area-inset-bottom));font-size:.92rem}
+footer .wrap2{display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-between;align-items:center;width:min(1120px,100% - 40px);margin-inline:auto}
+footer nav{display:flex;flex-wrap:wrap;gap:6px 20px}footer a{color:var(--on2);text-decoration:none}footer a:hover{color:#fff;text-decoration:underline}
+@media (max-width:640px){.links a:not(.play){display:none}.brand span{display:none}.nv{gap:10px;justify-content:space-between}.links{margin-left:0}.toc ol{columns:1}}
+@media (max-width:520px){.wrap{width:calc(100% - 32px)}section{padding:18px 16px 4px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.800A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.800z"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.500v2M12 19.500v2M2.5 12h2M19.5 12h2M5.3 5.300l1.4 1.400M17.3 17.300l1.4 1.400M5.3 18.700l1.4-1.400M17.3 6.700l1.4-1.4"/></symbol>
+</defs></svg>
+<a class="skip" href="#isi"><span class="t-id">Lewati ke konten</span><span class="t-en">Skip to content</span></a>
+
+<nav class="nav" aria-label="Utama"><div class="nv">
+  <a class="brand" href="/"><img src="/assets/brand/logo/logo-mark.svg" alt="" width="32" height="32"><span>Smartphone Empire</span></a>
+  <div class="links">
+    <a href="/web">Web</a>
+    <a href="/blog/">Blog</a>
+    <a class="play" href="/game/"><span class="t-id">Main game</span><span class="t-en">Play game</span></a>
+  </div>
+  <div class="tools">
+    <div class="lang" role="group" aria-label="Bahasa / Language"><button type="button" data-lang="id" aria-pressed="true">ID</button><button type="button" data-lang="en" aria-pressed="false">EN</button></div>
+    <button class="theme" type="button" id="theme" aria-label="Ganti tema terang/gelap" title="Ganti tema"><svg class="ic moon" aria-hidden="true"><use href="#i-moon"/></svg><svg class="ic sun" aria-hidden="true"><use href="#i-sun"/></svg></button>
+  </div>
+</div></nav>
+
+<header class="top"><div class="wrap">
+  <h1><span class="t-id">Syarat dan Ketentuan</span><span class="t-en">Terms of Service</span></h1>
+  <p><span class="t-id">Aturan main untuk game, web, dan blog Smartphone Empire.</span><span class="t-en">The rules for the Smartphone Empire game, website, and blog.</span></p>
+  <span class="upd"><span class="t-id">Diperbarui 13 November 2026 · game v0.2.14</span><span class="t-en">Updated November 13, 2026 · game v0.2.14</span></span>
+</div></header>
+
+<main id="isi"><div class="wrap">
+  <p class="intro"><span class="t-id">Ringkasnya: game ini gratis dimainkan; Silicon (SIL) adalah mata uang virtual tanpa nilai tunai; jangan curang; dan hormati pemain lain. Rinciannya ada di bawah.</span><span class="t-en">In short: the game is free to play; Silicon (SIL) is a virtual currency with no cash value; don’t cheat; and respect other players. Details are below.</span></p>
+  <nav class="toc" aria-label="Daftar isi"><ol class="t-id"><li><a href="#s1">Penerimaan ketentuan</a></li><li><a href="#s2">Tentang layanan</a></li><li><a href="#s3">Usia dan kelayakan</a></li><li><a href="#s4">Akun dan cloud save</a></li><li><a href="#s5">Silicon (SIL)</a></li><li><a href="#s6">Top-up dan pembayaran</a></li><li><a href="#s7">Aturan penggunaan</a></li><li><a href="#s8">Nama, foto profil, dan konten pemain</a></li><li><a href="#s9">Isi game bersifat simulasi</a></li><li><a href="#s10">Kekayaan intelektual</a></li><li><a href="#s11">Game over, musim, dan pembaruan</a></li><li><a href="#s12">Ketersediaan layanan</a></li><li><a href="#s13">Penangguhan dan penghentian</a></li><li><a href="#s14">Batasan tanggung jawab</a></li><li><a href="#s15">Perubahan, hukum, dan kontak</a></li></ol><ol class="t-en"><li><a href="#s1">Acceptance of terms</a></li><li><a href="#s2">About the Service</a></li><li><a href="#s3">Age and eligibility</a></li><li><a href="#s4">Accounts and cloud save</a></li><li><a href="#s5">Silicon (SIL)</a></li><li><a href="#s6">Top-ups and payments</a></li><li><a href="#s7">Acceptable use</a></li><li><a href="#s8">Names, profile photos, and player content</a></li><li><a href="#s9">Game content is a simulation</a></li><li><a href="#s10">Intellectual property</a></li><li><a href="#s11">Game over, seasons, and updates</a></li><li><a href="#s12">Availability</a></li><li><a href="#s13">Suspension and termination</a></li><li><a href="#s14">Limitation of liability</a></li><li><a href="#s15">Changes, governing law, and contact</a></li></ol></nav>
+<section id="s1"><h2><span class="t-id">1. Penerimaan ketentuan</span><span class="t-en">1. Acceptance of terms</span></h2><div class="t-id"><p>Dengan membuka, memainkan, atau membuat akun di Smartphone Empire (game, web, dan blog di <b>smartphone-empire.my.id</b>, selanjutnya “Layanan”), kamu menyetujui Ketentuan Layanan ini dan <a href="/i/privasi/">Kebijakan Privasi</a>. Jika tidak setuju, mohon jangan gunakan Layanan.</p><p>Layanan diselenggarakan oleh Jurkon Studio (“kami”).</p></div><div class="t-en"><p>By opening, playing, or creating an account on Smartphone Empire (the game, website, and blog at <b>smartphone-empire.my.id</b>, the “Service”), you agree to these Terms of Service and the <a href="/i/privasi/">Privacy Policy</a>. If you do not agree, please do not use the Service.</p><p>The Service is operated by Jurkon Studio (“we”).</p></div></section>
+<section id="s2"><h2><span class="t-id">2. Tentang layanan</span><span class="t-en">2. About the Service</span></h2><div class="t-id"><p>Smartphone Empire adalah game simulasi bisnis ponsel dari 1 Januari 2000 sampai era AI. Kamu merekrut tim, meriset teknologi, merancang ponsel dari berbagai komponen, menjual produk, mengatur bank dan promosi, berinvestasi di bursa, dan bersaing dengan perusahaan kompetitor.</p><p>Game dapat dimainkan gratis di browser dan dapat dipasang sebagai PWA. Blog memuat kabar, spesifikasi, rumor, dan jadwal rilis smartphone. Fitur dapat ditambah, diubah, atau dihentikan seiring pembaruan game.</p></div><div class="t-en"><p>Smartphone Empire is a phone-business simulation game that runs from January 1, 2000 to the AI era. You hire a team, research technology, design phones from many components, sell products, manage banks and promotions, invest on the stock exchange, and compete against rival companies.</p><p>The game is free to play in the browser and can be installed as a PWA. The blog covers smartphone news, specs, rumors, and release schedules. Features may be added, changed, or discontinued as the game is updated.</p></div></section>
+<section id="s3"><h2><span class="t-id">3. Usia dan kelayakan</span><span class="t-en">3. Age and eligibility</span></h2><div class="t-id"><p>Kamu harus berusia minimal 13 tahun. Jika usiamu di bawah 18 tahun (atau belum dewasa menurut hukum di tempatmu), kamu perlu izin orang tua atau wali, terutama sebelum melakukan top-up Silicon.</p></div><div class="t-en"><p>You must be at least 13 years old. If you are under 18 (or not yet an adult where you live), you need permission from a parent or guardian, especially before topping up Silicon.</p></div></section>
+<section id="s4"><h2><span class="t-id">4. Akun dan cloud save</span><span class="t-en">4. Accounts and cloud save</span></h2><div class="t-id"><ul><li>Game bisa dimainkan tanpa akun; data tersimpan di perangkatmu dan bisa hilang jika data browser dibersihkan.</li><li>Akun cloud (e-mail dan kata sandi, atau login Google) dipakai untuk cloud save, profil, leaderboard, dan Silicon.</li><li>Kamu bertanggung jawab menjaga kerahasiaan kata sandi dan semua aktivitas di akunmu.</li><li>Satu orang satu akun. Akun tidak boleh dijual, dipinjamkan, atau dipindahtangankan.</li><li>Cloud save membantu mencadangkan progres, tetapi kami tidak menjamin data selalu tersimpan atau tersinkron tanpa gangguan.</li></ul></div><div class="t-en"><ul><li>You can play without an account; data is stored on your device and may be lost if you clear your browser data.</li><li>A cloud account (e-mail and password, or Google sign-in) is used for cloud save, your profile, the leaderboard, and Silicon.</li><li>You are responsible for keeping your password secret and for all activity on your account.</li><li>One person, one account. Accounts may not be sold, lent, or transferred.</li><li>Cloud save helps back up your progress, but we do not guarantee that data is always saved or synced without interruption.</li></ul></div></section>
+<section id="s5"><h2><span class="t-id">5. Silicon (SIL)</span><span class="t-en">5. Silicon (SIL)</span></h2><div class="t-id"><p>Silicon (SIL) adalah mata uang premium virtual di dalam game.</p><ul><li><b>Cara mendapatkan:</b> top-up, hadiah login harian, quest, dan pengembalian otomatis bila sebuah aksi gagal.</li><li><b>Kegunaan:</b> percepatan waktu 2x/5x/10x (ada jatah gratis terbatas per 24 jam; setelahnya tiap pembelian memberi waktu percepatan yang terbatas), membuka, mempercepat, atau menyelesaikan riset dan OS, aksi instan, mengganti nama perusahaan (2 kali gratis, berikutnya 150 SIL), dan mengirim SIL ke pemain lain.</li><li><b>Sifat:</b> SIL bukan uang sungguhan, tidak punya nilai tunai, dan tidak dapat ditukar menjadi uang nyata. Kamu hanya mendapat lisensi terbatas untuk memakainya di dalam game, bukan hak milik.</li><li><b>Uang ($) di game</b> bersifat fiktif. Biaya berupa uang boleh dibayar dengan SIL dan sebaliknya sesuai kurs dalam game, yang dapat berubah menurut tahun game dan pembaruan.</li><li><b>Saldo</b> dipegang server dan SIL hanya aktif saat kamu login ke akun cloud. Angka yang tampil bisa sesaat berbeda sampai sinkron.</li><li>SIL dari sumber yang tidak sah (cheat, manipulasi, atau bug yang disalahgunakan) dapat dibatalkan tanpa pemberitahuan.</li></ul></div><div class="t-en"><p>Silicon (SIL) is the game’s virtual premium currency.</p><ul><li><b>How to get it:</b> top-ups, daily login rewards, quests, and automatic refunds when an action fails.</li><li><b>What it is used for:</b> time speed 2x/5x/10x (there is a limited free allowance per 24 hours; after that each purchase gives a limited amount of boost time), unlocking, boosting, or finishing research and OS work, instant actions, renaming your company (2 free changes, then 150 SIL), and sending SIL to other players.</li><li><b>Nature:</b> SIL is not real money, has no cash value, and cannot be exchanged for real money. You only get a limited license to use it inside the game, not ownership.</li><li><b>In-game money ($)</b> is fictional. Cash costs may be paid with SIL and the other way around, at an in-game rate that can change with the game year and updates.</li><li><b>Balances</b> are held by the server and SIL is only active while you are signed in to a cloud account. Displayed numbers may briefly differ until synced.</li><li>SIL from illegitimate sources (cheats, manipulation, or abused bugs) may be revoked without notice.</li></ul></div></section>
+<section id="s6"><h2><span class="t-id">6. Top-up dan pembayaran</span><span class="t-en">6. Top-ups and payments</span></h2><div class="t-id"><ul><li>Paket Silicon dijual dalam rupiah dengan harga yang tampil di halaman Top Up. Pembayaran diproses oleh penyedia pihak ketiga (saat ini GoPay). Metode bisa ditambah, dikunci, atau dihentikan sewaktu-waktu, dan penyedia punya ketentuan sendiri.</li><li>SIL dikreditkan setelah pembayaran diverifikasi server. Jika SIL belum masuk, cek status pesananmu di riwayat top-up, lalu hubungi kami dengan ID pesanan.</li><li>Pembelian bersifat final dan SIL yang sudah masuk tidak dapat dikembalikan, kecuali untuk pembayaran ganda, gagal kredit, atau kesalahan teknis dari pihak kami. Ajukan lewat e-mail dengan bukti pembayaran paling lambat 14 hari sejak transaksi.</li><li>Harga, isi paket, dan bonus dapat berubah sewaktu-waktu.</li><li>Chargeback tanpa alasan sah atau penipuan pembayaran dapat membuat akun ditangguhkan.</li><li>Ketentuan ini tidak mengurangi hak konsumenmu menurut hukum yang berlaku.</li></ul></div><div class="t-en"><ul><li>Silicon packages are sold in Indonesian rupiah at the prices shown on the Top Up page. Payments are processed by third-party providers (currently GoPay). Methods may be added, locked, or discontinued at any time, and each provider has its own terms.</li><li>SIL is credited after the server verifies the payment. If your SIL has not arrived, check your order status in the top-up history, then contact us with the order ID.</li><li>Purchases are final and SIL already credited cannot be refunded, except for duplicate payments, failed crediting, or technical errors on our side. Request this by e-mail with proof of payment within 14 days of the transaction.</li><li>Prices, package contents, and bonuses may change at any time.</li><li>Chargebacks without a valid reason or payment fraud may lead to account suspension.</li><li>These terms do not reduce your consumer rights under applicable law.</li></ul></div></section>
+<section id="s7"><h2><span class="t-id">7. Aturan penggunaan</span><span class="t-en">7. Acceptable use</span></h2><div class="t-id"><p>Kamu setuju untuk tidak:</p><ul><li>memakai cheat, memodifikasi client, memanipulasi data save atau permintaan ke server demi mendapat SIL, uang, atau peringkat;</li><li>memakai bot atau otomatisasi untuk bermain;</li><li>menyalahgunakan bug. Jika menemukan bug, mohon laporkan lewat e-mail;</li><li>membuat banyak akun untuk mengumpulkan hadiah atau SIL;</li><li>mengganggu, membebani, atau menyerang server dan layanan pihak ketiga;</li><li>melakukan penipuan pembayaran atau melanggar hukum yang berlaku;</li><li>melecehkan pemain lain lewat nama, profil, atau fitur kirim SIL.</li></ul></div><div class="t-en"><p>You agree not to:</p><ul><li>use cheats, modify the client, or tamper with save data or server requests to gain SIL, money, or rank;</li><li>use bots or automation to play;</li><li>abuse bugs. If you find one, please report it by e-mail;</li><li>create multiple accounts to collect rewards or SIL;</li><li>disrupt, overload, or attack our servers or third-party services;</li><li>commit payment fraud or break applicable law;</li><li>harass other players through names, profiles, or the send-SIL feature.</li></ul></div></section>
+<section id="s8"><h2><span class="t-id">8. Nama, foto profil, dan konten pemain</span><span class="t-en">8. Names, profile photos, and player content</span></h2><div class="t-id"><ul><li>Nama perusahaan, nama pemain, foto profil, dan statistik perusahaanmu dapat tampil di profil dan leaderboard yang bisa dilihat pemain lain.</li><li>Dilarang memakai nama atau foto yang kasar, bermuatan SARA, pornografi, meniru orang lain, atau melanggar hak pihak lain. Nama merek dan kompetitor di dalam game (misalnya Nokia atau Samsung) tidak boleh dipakai sebagai nama perusahaan. Nama perusahaan harus unik.</li><li>Kami dapat mengubah, menghapus, atau mereset nama dan foto yang melanggar tanpa pemberitahuan.</li><li>Kamu menjamin berhak memakai foto yang kamu unggah, dan memberi kami lisensi non-eksklusif untuk menampilkannya di dalam Layanan.</li></ul></div><div class="t-en"><ul><li>Your company name, player name, profile photo, and company statistics may appear on profiles and leaderboards visible to other players.</li><li>Names or photos that are offensive, hateful, pornographic, impersonate others, or infringe others’ rights are not allowed. In-game brand and rival names (for example Nokia or Samsung) may not be used as a company name. Company names must be unique.</li><li>We may change, remove, or reset violating names and photos without notice.</li><li>You confirm that you have the right to use any photo you upload, and you give us a non-exclusive license to display it within the Service.</li></ul></div></section>
+<section id="s9"><h2><span class="t-id">9. Isi game bersifat simulasi</span><span class="t-en">9. Game content is a simulation</span></h2><div class="t-id"><p>Peristiwa, berita, harga saham, bursa, bank, dan perilaku kompetitor di dalam game adalah simulasi dan sebagian fiksi. Semua itu tidak mewakili kondisi sebenarnya dan <b>bukan saran investasi, keuangan, atau bisnis</b>.</p><p>Nama dan merek perusahaan atau produk (seperti Nokia, Samsung, dan Motorola) adalah milik pemiliknya masing-masing. Kami tidak berafiliasi dengan atau didukung oleh mereka. Di blog, rumor diberi label dan sumber, namun keakuratannya tidak dijamin.</p></div><div class="t-en"><p>Events, news, stock prices, the exchange, banks, and rival behavior inside the game are simulated and partly fictional. They do not represent real conditions and are <b>not investment, financial, or business advice</b>.</p><p>Company and product names and brands (such as Nokia, Samsung, and Motorola) belong to their respective owners. We are not affiliated with or endorsed by them. On the blog, rumors are labeled and sourced, but their accuracy is not guaranteed.</p></div></section>
+<section id="s10"><h2><span class="t-id">10. Kekayaan intelektual</span><span class="t-en">10. Intellectual property</span></h2><div class="t-id"><p>Kode, desain, ilustrasi, peta 3D, teks, logo, dan konten lain di Layanan adalah milik Jurkon Studio atau dilisensikan kepada kami. Kami memberimu lisensi pribadi, non-eksklusif, dan dapat dicabut untuk bermain dan membaca blog.</p><p>Kamu tidak boleh menyalin, menjual, mendistribusikan ulang, atau melakukan rekayasa balik, kecuali diizinkan hukum. Tangkapan layar dan video gameplay untuk ulasan atau konten pribadi boleh dibagikan dengan menyebut Smartphone Empire.</p></div><div class="t-en"><p>The code, designs, illustrations, 3D maps, text, logos, and other content in the Service belong to Jurkon Studio or are licensed to us. We grant you a personal, non-exclusive, revocable license to play the game and read the blog.</p><p>You may not copy, sell, redistribute, or reverse engineer it, except where the law allows. Screenshots and gameplay videos for reviews or personal content may be shared if you credit Smartphone Empire.</p></div></section>
+<section id="s11"><h2><span class="t-id">11. Game over, musim, dan pembaruan</span><span class="t-en">11. Game over, seasons, and updates</span></h2><div class="t-id"><p>Kas yang negatif dua bulan berturut-turut berarti game over, dan game punya akhir musim. Keduanya bagian dari permainan dan bukan pelanggaran layanan.</p><p>Pembaruan dapat mengubah keseimbangan game, angka, harga, atau fitur, termasuk harga SIL suatu fitur. Kami berusaha agar perubahan adil, tetapi tidak menjamin progres, peringkat, atau fitur tertentu akan tetap sama.</p></div><div class="t-en"><p>Negative cash for two months in a row means game over, and the game has a season end. Both are part of gameplay, not a breach of service.</p><p>Updates may change game balance, numbers, prices, or features, including the SIL price of a feature. We aim to keep changes fair, but we do not guarantee that progress, rankings, or any particular feature will stay the same.</p></div></section>
+<section id="s12"><h2><span class="t-id">12. Ketersediaan layanan</span><span class="t-en">12. Availability</span></h2><div class="t-id"><p>Layanan disediakan “sebagaimana adanya” dan “sebagaimana tersedia”. Bug, pemeliharaan, atau gangguan dapat terjadi. Layanan juga bergantung pada pihak ketiga seperti penyedia basis data, hosting, login Google, dan pembayaran, yang di luar kendali kami.</p></div><div class="t-en"><p>The Service is provided “as is” and “as available”. Bugs, maintenance, or outages may occur. The Service also relies on third parties such as database, hosting, Google sign-in, and payment providers, which are outside our control.</p></div></section>
+<section id="s13"><h2><span class="t-id">13. Penangguhan dan penghentian</span><span class="t-en">13. Suspension and termination</span></h2><div class="t-id"><p>Jika melanggar ketentuan ini, kami dapat memberi peringatan, mereset progres, membatalkan SIL yang tidak sah, menangguhkan, atau menghapus akunmu. SIL pada akun yang ditutup karena pelanggaran tidak dikembalikan.</p><p>Kamu boleh berhenti kapan saja. Untuk meminta penghapusan akun, hubungi kami lewat e-mail.</p></div><div class="t-en"><p>If you breach these terms, we may warn you, reset your progress, revoke illegitimate SIL, suspend, or delete your account. SIL on an account closed for violations is not refunded.</p><p>You may stop using the Service at any time. To request account deletion, contact us by e-mail.</p></div></section>
+<section id="s14"><h2><span class="t-id">14. Batasan tanggung jawab</span><span class="t-en">14. Limitation of liability</span></h2><div class="t-id"><p>Sejauh diizinkan hukum, kami tidak bertanggung jawab atas kerugian tidak langsung, hilangnya data atau progres, atau kerugian akibat gangguan layanan pihak ketiga. Total tanggung jawab kami terbatas pada jumlah yang kamu bayarkan kepada kami dalam 12 bulan terakhir. Ketentuan ini tidak membatasi hak yang menurut hukum tidak dapat dikesampingkan.</p></div><div class="t-en"><p>To the extent permitted by law, we are not liable for indirect losses, loss of data or progress, or losses caused by third-party service outages. Our total liability is limited to the amount you paid us in the past 12 months. These terms do not limit rights that cannot be waived under law.</p></div></section>
+<section id="s15"><h2><span class="t-id">15. Perubahan, hukum, dan kontak</span><span class="t-en">15. Changes, governing law, and contact</span></h2><div class="t-id"><p>Kami dapat memperbarui ketentuan ini; tanggal pembaruan tertera di bagian atas. Perubahan penting akan diumumkan di game, web, atau blog. Dengan terus memakai Layanan, kamu menyetujui versi terbaru.</p><p>Ketentuan ini tunduk pada hukum Republik Indonesia. Sengketa diupayakan diselesaikan lewat musyawarah terlebih dahulu.</p><p>Pertanyaan, laporan bug, atau permintaan pengembalian: <a href="mailto:calvfinka@yahoo.com">calvfinka@yahoo.com</a></p></div><div class="t-en"><p>We may update these terms; the update date is shown at the top. Important changes will be announced in the game, website, or blog. By continuing to use the Service you accept the latest version.</p><p>These terms are governed by the laws of the Republic of Indonesia. We will first try to resolve disputes through discussion.</p><p>Questions, bug reports, or refund requests: <a href="mailto:calvfinka@yahoo.com">calvfinka@yahoo.com</a></p></div></section>
+
+  <a class="back" href="/"><span class="t-id">← Kembali ke beranda</span><span class="t-en">← Back to home</span></a>
+</div></main>
+
+<footer>
+  <div class="wrap2">
+    <span>© Jurkon Studio</span>
+    <nav aria-label="Tautan bawah">
+      <a href="/game/">Game</a><a href="/web">Web</a><a href="/blog/">Blog</a>
+      <a href="/i/tentang/"><span class="t-id">Tentang</span><span class="t-en">About</span></a><a href="/i/syarat/"><span class="t-id">Syarat</span><span class="t-en">Terms</span></a><a href="/i/privasi/"><span class="t-id">Privasi</span><span class="t-en">Privacy</span></a><a href="/i/kontak/"><span class="t-id">Kontak</span><span class="t-en">Contact</span></a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var root = document.documentElement, store = {};
+  try { store = localStorage; } catch (e) {}
+  function save(k, v) { try { store.setItem('se-landing:' + k, v); } catch (e) {} }
+  var META = {
+    id: { title:'Syarat dan Ketentuan — Smartphone Empire', desc:'Syarat dan Ketentuan Layanan Smartphone Empire: akun, Silicon (SIL), top-up, aturan bermain, dan konten pemain.', theme:'Ganti tema terang/gelap', langs:'Bahasa / Language' },
+    en: { title:'Terms of Service — Smartphone Empire', desc:'Smartphone Empire Terms of Service: accounts, Silicon (SIL), top-ups, rules of play, and player content.', theme:'Switch light/dark theme', langs:'Language / Bahasa' }
+  };
+  var langBtns = document.querySelectorAll('.lang button'), themeBtn = document.getElementById('theme');
+  function setLang(l, persist) {
+    root.setAttribute('lang', l);
+    langBtns.forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.lang === l ? 'true' : 'false'); });
+    document.title = META[l].title;
+    document.getElementById('metaDesc').setAttribute('content', META[l].desc);
+    themeBtn.setAttribute('aria-label', META[l].theme); themeBtn.title = META[l].theme;
+    document.querySelector('.lang').setAttribute('aria-label', META[l].langs);
+    if (persist) save('lang', l);
+  }
+  var mq = window.matchMedia('(prefers-color-scheme: dark)');
+  function isDark() { var t = root.getAttribute('data-theme'); return t ? t === 'dark' : mq.matches; }
+  themeBtn.addEventListener('click', function () {
+    var next = isDark() ? 'light' : 'dark';
+    root.setAttribute('data-theme', next); save('theme', next);
+  });
+  langBtns.forEach(function (b) { b.addEventListener('click', function () { setLang(b.dataset.lang, true); }); });
+  setLang(root.getAttribute('lang') === 'en' ? 'en' : 'id', false);
+})();
+</script>
+</body>
+</html>
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>
+  // Tema dan bahasa pilihan pengunjung dipasang sebelum halaman tampil (kunci sama dengan halaman utama).
+  (function () {
+    try {
+      var t = localStorage.getItem('se-landing:theme');
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+      if (localStorage.getItem('se-landing:lang') === 'en') document.documentElement.setAttribute('lang', 'en');
+    } catch (e) {}
+  })();
+</script>
+<title>Syarat dan Ketentuan — Smartphone Empire</title>
+<meta id="metaDesc" name="description" content="Syarat dan Ketentuan Layanan Smartphone Empire: akun, Silicon (SIL), top-up, aturan bermain, dan konten pemain.">
+<link rel="canonical" href="https://smartphone-empire.my.id/i/syarat/">
+<meta name="theme-color" content="#0c1424">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="index,follow">
+<link rel="icon" href="/game/assets/icon/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/game/assets/icon/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light dark;--ink:#0a1120;--on:#eef3fc;--on2:#a9b6cf;--blue:#3d94ff;--bg:#f4f6fb;--sf:#fff;--tx:#0f1728;--mu:#4a566c;--ln:rgba(15,23,40,.1);--lk:#0b62d6;--f:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#080d18;--sf:#111a2d;--tx:#eaf0fb;--mu:#9eaac2;--ln:rgba(234,240,251,.12);--lk:#7db4ff}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#080d18;--sf:#111a2d;--tx:#eaf0fb;--mu:#9eaac2;--ln:rgba(234,240,251,.12);--lk:#7db4ff}
+:root[data-theme="light"]{color-scheme:light}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:84px}
+body{margin:0;background:var(--bg);color:var(--tx);font:400 1rem/1.7 var(--f);-webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom)}
+img{display:block;max-width:100%}a{color:var(--lk)}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px;border-radius:8px}
+.wrap{width:min(820px,100% - 40px);margin-inline:auto}
+.skip{position:absolute;left:-999px;top:8px;background:#fff;color:#000;padding:8px 14px;border-radius:8px;z-index:60}.skip:focus{left:8px}
+.ic{width:1em;height:1em;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav{position:sticky;top:0;z-index:40;background:rgba(10,17,32,.72);-webkit-backdrop-filter:blur(16px) saturate(160%);backdrop-filter:blur(16px) saturate(160%);border-bottom:1px solid rgba(255,255,255,.08);padding-top:env(safe-area-inset-top)}
+.nv{display:flex;align-items:center;gap:14px;height:62px;width:min(1120px,100% - 40px);margin-inline:auto}
+.brand{display:flex;align-items:center;gap:10px;color:var(--on);text-decoration:none;font-weight:700;font-size:1.05rem;white-space:nowrap}.brand img{width:32px;height:32px}
+.links{margin-left:auto;display:flex;align-items:center;gap:2px}
+.links a{color:var(--on2);text-decoration:none;padding:8px 13px;border-radius:999px;font-weight:600;font-size:.94rem}
+.links a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.links a.play{background:var(--blue);color:#06101f;margin-left:6px}.links a.play:hover{background:#68aaff}
+.tools{display:flex;align-items:center;gap:8px}
+.lang{display:flex;background:rgba(255,255,255,.09);border-radius:999px;padding:3px}
+.lang button{font:600 .8rem/1 var(--f);color:var(--on2);background:none;border:0;border-radius:999px;padding:8px 10px;cursor:pointer}
+.lang button[aria-pressed="true"]{background:#fff;color:#0a1120}
+.theme{display:grid;place-items:center;width:38px;height:38px;border:0;border-radius:50%;background:rgba(255,255,255,.09);color:var(--on);cursor:pointer;font-size:19px}
+.theme .sun{display:none}:root[data-theme="dark"] .theme .sun{display:block}:root[data-theme="dark"] .theme .moon{display:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme]) .theme .sun{display:block}:root:not([data-theme]) .theme .moon{display:none}}
+header.top{background:linear-gradient(160deg,#0a1120,#142447);color:var(--on);padding:48px 0 40px}
+header.top h1{margin:0 0 8px;font-size:clamp(1.8rem,5vw,2.6rem);line-height:1.15;letter-spacing:-.02em}
+header.top p{margin:0;color:var(--on2)}
+.upd{display:inline-block;margin-top:14px;font-size:.85rem;font-weight:600;color:#06101f;background:#c9e07c;border-radius:999px;padding:4px 12px}
+main{padding:32px 0 56px}
+.intro{background:var(--sf);border:1px solid var(--ln);border-radius:16px;padding:18px 20px;color:var(--mu);margin:0 0 20px}
+.toc{background:var(--sf);border:1px solid var(--ln);border-radius:16px;padding:18px 20px 18px 40px;margin:0 0 28px}
+.toc ol{margin:0;padding-left:0;columns:2;column-gap:28px;list-style-position:inside}
+.toc li{break-inside:avoid;padding:3px 0}
+.toc a{text-decoration:none}.toc a:hover{text-decoration:underline}
+section{background:var(--sf);border:1px solid var(--ln);border-radius:16px;padding:22px 22px 8px;margin:0 0 16px}
+section h2{margin:0 0 10px;font-size:1.2rem;line-height:1.3}
+section p,section ul{margin:0 0 14px}
+section ul{padding-left:1.2em}section li{margin:0 0 7px}
+.t-en{display:none}html[lang="en"] .t-en{display:revert}html[lang="en"] .t-id{display:none}
+.back{display:inline-flex;margin-top:8px;font-weight:600}
+footer{background:var(--ink);color:var(--on2);border-top:1px solid rgba(255,255,255,.1);padding:28px 0 calc(28px + env(safe-area-inset-bottom));font-size:.92rem}
+footer .wrap2{display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-between;align-items:center;width:min(1120px,100% - 40px);margin-inline:auto}
+footer nav{display:flex;flex-wrap:wrap;gap:6px 20px}footer a{color:var(--on2);text-decoration:none}footer a:hover{color:#fff;text-decoration:underline}
+@media (max-width:640px){.links a:not(.play){display:none}.brand span{display:none}.nv{gap:10px;justify-content:space-between}.links{margin-left:0}.toc ol{columns:1}}
+@media (max-width:520px){.wrap{width:calc(100% - 32px)}section{padding:18px 16px 4px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.800A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.800z"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.500v2M12 19.500v2M2.5 12h2M19.5 12h2M5.3 5.300l1.4 1.400M17.3 17.300l1.4 1.400M5.3 18.700l1.4-1.400M17.3 6.700l1.4-1.4"/></symbol>
+</defs></svg>
+<a class="skip" href="#isi"><span class="t-id">Lewati ke konten</span><span class="t-en">Skip to content</span></a>
+
+<nav class="nav" aria-label="Utama"><div class="nv">
+  <a class="brand" href="/"><img src="/assets/brand/logo/logo-mark.svg" alt="" width="32" height="32"><span>Smartphone Empire</span></a>
+  <div class="links">
+    <a href="/web">Web</a>
+    <a href="/blog/">Blog</a>
+    <a class="play" href="/game/"><span class="t-id">Main game</span><span class="t-en">Play game</span></a>
+  </div>
+  <div class="tools">
+    <div class="lang" role="group" aria-label="Bahasa / Language"><button type="button" data-lang="id" aria-pressed="true">ID</button><button type="button" data-lang="en" aria-pressed="false">EN</button></div>
+    <button class="theme" type="button" id="theme" aria-label="Ganti tema terang/gelap" title="Ganti tema"><svg class="ic moon" aria-hidden="true"><use href="#i-moon"/></svg><svg class="ic sun" aria-hidden="true"><use href="#i-sun"/></svg></button>
+  </div>
+</div></nav>
+
+<header class="top"><div class="wrap">
+  <h1><span class="t-id">Syarat dan Ketentuan</span><span class="t-en">Terms of Service</span></h1>
+  <p><span class="t-id">Aturan main untuk game, web, dan blog Smartphone Empire.</span><span class="t-en">The rules for the Smartphone Empire game, website, and blog.</span></p>
+  <span class="upd"><span class="t-id">Diperbarui 13 November 2026 · game v0.2.14</span><span class="t-en">Updated November 13, 2026 · game v0.2.14</span></span>
+</div></header>
+
+<main id="isi"><div class="wrap">
+  <p class="intro"><span class="t-id">Ringkasnya: game ini gratis dimainkan; Silicon (SIL) adalah mata uang virtual tanpa nilai tunai; jangan curang; dan hormati pemain lain. Rinciannya ada di bawah.</span><span class="t-en">In short: the game is free to play; Silicon (SIL) is a virtual currency with no cash value; don’t cheat; and respect other players. Details are below.</span></p>
+  <nav class="toc" aria-label="Daftar isi"><ol class="t-id"><li><a href="#s1">Penerimaan ketentuan</a></li><li><a href="#s2">Tentang layanan</a></li><li><a href="#s3">Usia dan kelayakan</a></li><li><a href="#s4">Akun dan cloud save</a></li><li><a href="#s5">Silicon (SIL)</a></li><li><a href="#s6">Top-up dan pembayaran</a></li><li><a href="#s7">Aturan penggunaan</a></li><li><a href="#s8">Nama, foto profil, dan konten pemain</a></li><li><a href="#s9">Isi game bersifat simulasi</a></li><li><a href="#s10">Kekayaan intelektual</a></li><li><a href="#s11">Game over, musim, dan pembaruan</a></li><li><a href="#s12">Ketersediaan layanan</a></li><li><a href="#s13">Penangguhan dan penghentian</a></li><li><a href="#s14">Batasan tanggung jawab</a></li><li><a href="#s15">Perubahan, hukum, dan kontak</a></li></ol><ol class="t-en"><li><a href="#s1">Acceptance of terms</a></li><li><a href="#s2">About the Service</a></li><li><a href="#s3">Age and eligibility</a></li><li><a href="#s4">Accounts and cloud save</a></li><li><a href="#s5">Silicon (SIL)</a></li><li><a href="#s6">Top-ups and payments</a></li><li><a href="#s7">Acceptable use</a></li><li><a href="#s8">Names, profile photos, and player content</a></li><li><a href="#s9">Game content is a simulation</a></li><li><a href="#s10">Intellectual property</a></li><li><a href="#s11">Game over, seasons, and updates</a></li><li><a href="#s12">Availability</a></li><li><a href="#s13">Suspension and termination</a></li><li><a href="#s14">Limitation of liability</a></li><li><a href="#s15">Changes, governing law, and contact</a></li></ol></nav>
+<section id="s1"><h2><span class="t-id">1. Penerimaan ketentuan</span><span class="t-en">1. Acceptance of terms</span></h2><div class="t-id"><p>Dengan membuka, memainkan, atau membuat akun di Smartphone Empire (game, web, dan blog di <b>smartphone-empire.my.id</b>, selanjutnya “Layanan”), kamu menyetujui Ketentuan Layanan ini dan <a href="/i/privasi/">Kebijakan Privasi</a>. Jika tidak setuju, mohon jangan gunakan Layanan.</p><p>Layanan diselenggarakan oleh Jurkon Studio (“kami”).</p></div><div class="t-en"><p>By opening, playing, or creating an account on Smartphone Empire (the game, website, and blog at <b>smartphone-empire.my.id</b>, the “Service”), you agree to these Terms of Service and the <a href="/i/privasi/">Privacy Policy</a>. If you do not agree, please do not use the Service.</p><p>The Service is operated by Jurkon Studio (“we”).</p></div></section>
+<section id="s2"><h2><span class="t-id">2. Tentang layanan</span><span class="t-en">2. About the Service</span></h2><div class="t-id"><p>Smartphone Empire adalah game simulasi bisnis ponsel dari 1 Januari 2000 sampai era AI. Kamu merekrut tim, meriset teknologi, merancang ponsel dari berbagai komponen, menjual produk, mengatur bank dan promosi, berinvestasi di bursa, dan bersaing dengan perusahaan kompetitor.</p><p>Game dapat dimainkan gratis di browser dan dapat dipasang sebagai PWA. Blog memuat kabar, spesifikasi, rumor, dan jadwal rilis smartphone. Fitur dapat ditambah, diubah, atau dihentikan seiring pembaruan game.</p></div><div class="t-en"><p>Smartphone Empire is a phone-business simulation game that runs from January 1, 2000 to the AI era. You hire a team, research technology, design phones from many components, sell products, manage banks and promotions, invest on the stock exchange, and compete against rival companies.</p><p>The game is free to play in the browser and can be installed as a PWA. The blog covers smartphone news, specs, rumors, and release schedules. Features may be added, changed, or discontinued as the game is updated.</p></div></section>
+<section id="s3"><h2><span class="t-id">3. Usia dan kelayakan</span><span class="t-en">3. Age and eligibility</span></h2><div class="t-id"><p>Kamu harus berusia minimal 13 tahun. Jika usiamu di bawah 18 tahun (atau belum dewasa menurut hukum di tempatmu), kamu perlu izin orang tua atau wali, terutama sebelum melakukan top-up Silicon.</p></div><div class="t-en"><p>You must be at least 13 years old. If you are under 18 (or not yet an adult where you live), you need permission from a parent or guardian, especially before topping up Silicon.</p></div></section>
+<section id="s4"><h2><span class="t-id">4. Akun dan cloud save</span><span class="t-en">4. Accounts and cloud save</span></h2><div class="t-id"><ul><li>Game bisa dimainkan tanpa akun; data tersimpan di perangkatmu dan bisa hilang jika data browser dibersihkan.</li><li>Akun cloud (e-mail dan kata sandi, atau login Google) dipakai untuk cloud save, profil, leaderboard, dan Silicon.</li><li>Kamu bertanggung jawab menjaga kerahasiaan kata sandi dan semua aktivitas di akunmu.</li><li>Satu orang satu akun. Akun tidak boleh dijual, dipinjamkan, atau dipindahtangankan.</li><li>Cloud save membantu mencadangkan progres, tetapi kami tidak menjamin data selalu tersimpan atau tersinkron tanpa gangguan.</li></ul></div><div class="t-en"><ul><li>You can play without an account; data is stored on your device and may be lost if you clear your browser data.</li><li>A cloud account (e-mail and password, or Google sign-in) is used for cloud save, your profile, the leaderboard, and Silicon.</li><li>You are responsible for keeping your password secret and for all activity on your account.</li><li>One person, one account. Accounts may not be sold, lent, or transferred.</li><li>Cloud save helps back up your progress, but we do not guarantee that data is always saved or synced without interruption.</li></ul></div></section>
+<section id="s5"><h2><span class="t-id">5. Silicon (SIL)</span><span class="t-en">5. Silicon (SIL)</span></h2><div class="t-id"><p>Silicon (SIL) adalah mata uang premium virtual di dalam game.</p><ul><li><b>Cara mendapatkan:</b> top-up, hadiah login harian, quest, dan pengembalian otomatis bila sebuah aksi gagal.</li><li><b>Kegunaan:</b> percepatan waktu 2x/5x/10x (ada jatah gratis terbatas per 24 jam; setelahnya tiap pembelian memberi waktu percepatan yang terbatas), membuka, mempercepat, atau menyelesaikan riset dan OS, aksi instan, mengganti nama perusahaan (2 kali gratis, berikutnya 150 SIL), dan mengirim SIL ke pemain lain.</li><li><b>Sifat:</b> SIL bukan uang sungguhan, tidak punya nilai tunai, dan tidak dapat ditukar menjadi uang nyata. Kamu hanya mendapat lisensi terbatas untuk memakainya di dalam game, bukan hak milik.</li><li><b>Uang ($) di game</b> bersifat fiktif. Biaya berupa uang boleh dibayar dengan SIL dan sebaliknya sesuai kurs dalam game, yang dapat berubah menurut tahun game dan pembaruan.</li><li><b>Saldo</b> dipegang server dan SIL hanya aktif saat kamu login ke akun cloud. Angka yang tampil bisa sesaat berbeda sampai sinkron.</li><li>SIL dari sumber yang tidak sah (cheat, manipulasi, atau bug yang disalahgunakan) dapat dibatalkan tanpa pemberitahuan.</li></ul></div><div class="t-en"><p>Silicon (SIL) is the game’s virtual premium currency.</p><ul><li><b>How to get it:</b> top-ups, daily login rewards, quests, and automatic refunds when an action fails.</li><li><b>What it is used for:</b> time speed 2x/5x/10x (there is a limited free allowance per 24 hours; after that each purchase gives a limited amount of boost time), unlocking, boosting, or finishing research and OS work, instant actions, renaming your company (2 free changes, then 150 SIL), and sending SIL to other players.</li><li><b>Nature:</b> SIL is not real money, has no cash value, and cannot be exchanged for real money. You only get a limited license to use it inside the game, not ownership.</li><li><b>In-game money ($)</b> is fictional. Cash costs may be paid with SIL and the other way around, at an in-game rate that can change with the game year and updates.</li><li><b>Balances</b> are held by the server and SIL is only active while you are signed in to a cloud account. Displayed numbers may briefly differ until synced.</li><li>SIL from illegitimate sources (cheats, manipulation, or abused bugs) may be revoked without notice.</li></ul></div></section>
+<section id="s6"><h2><span class="t-id">6. Top-up dan pembayaran</span><span class="t-en">6. Top-ups and payments</span></h2><div class="t-id"><ul><li>Paket Silicon dijual dalam rupiah dengan harga yang tampil di halaman Top Up. Pembayaran diproses oleh penyedia pihak ketiga (saat ini GoPay). Metode bisa ditambah, dikunci, atau dihentikan sewaktu-waktu, dan penyedia punya ketentuan sendiri.</li><li>SIL dikreditkan setelah pembayaran diverifikasi server. Jika SIL belum masuk, cek status pesananmu di riwayat top-up, lalu hubungi kami dengan ID pesanan.</li><li>Pembelian bersifat final dan SIL yang sudah masuk tidak dapat dikembalikan, kecuali untuk pembayaran ganda, gagal kredit, atau kesalahan teknis dari pihak kami. Ajukan lewat e-mail dengan bukti pembayaran paling lambat 14 hari sejak transaksi.</li><li>Harga, isi paket, dan bonus dapat berubah sewaktu-waktu.</li><li>Chargeback tanpa alasan sah atau penipuan pembayaran dapat membuat akun ditangguhkan.</li><li>Ketentuan ini tidak mengurangi hak konsumenmu menurut hukum yang berlaku.</li></ul></div><div class="t-en"><ul><li>Silicon packages are sold in Indonesian rupiah at the prices shown on the Top Up page. Payments are processed by third-party providers (currently GoPay). Methods may be added, locked, or discontinued at any time, and each provider has its own terms.</li><li>SIL is credited after the server verifies the payment. If your SIL has not arrived, check your order status in the top-up history, then contact us with the order ID.</li><li>Purchases are final and SIL already credited cannot be refunded, except for duplicate payments, failed crediting, or technical errors on our side. Request this by e-mail with proof of payment within 14 days of the transaction.</li><li>Prices, package contents, and bonuses may change at any time.</li><li>Chargebacks without a valid reason or payment fraud may lead to account suspension.</li><li>These terms do not reduce your consumer rights under applicable law.</li></ul></div></section>
+<section id="s7"><h2><span class="t-id">7. Aturan penggunaan</span><span class="t-en">7. Acceptable use</span></h2><div class="t-id"><p>Kamu setuju untuk tidak:</p><ul><li>memakai cheat, memodifikasi client, memanipulasi data save atau permintaan ke server demi mendapat SIL, uang, atau peringkat;</li><li>memakai bot atau otomatisasi untuk bermain;</li><li>menyalahgunakan bug. Jika menemukan bug, mohon laporkan lewat e-mail;</li><li>membuat banyak akun untuk mengumpulkan hadiah atau SIL;</li><li>mengganggu, membebani, atau menyerang server dan layanan pihak ketiga;</li><li>melakukan penipuan pembayaran atau melanggar hukum yang berlaku;</li><li>melecehkan pemain lain lewat nama, profil, atau fitur kirim SIL.</li></ul></div><div class="t-en"><p>You agree not to:</p><ul><li>use cheats, modify the client, or tamper with save data or server requests to gain SIL, money, or rank;</li><li>use bots or automation to play;</li><li>abuse bugs. If you find one, please report it by e-mail;</li><li>create multiple accounts to collect rewards or SIL;</li><li>disrupt, overload, or attack our servers or third-party services;</li><li>commit payment fraud or break applicable law;</li><li>harass other players through names, profiles, or the send-SIL feature.</li></ul></div></section>
+<section id="s8"><h2><span class="t-id">8. Nama, foto profil, dan konten pemain</span><span class="t-en">8. Names, profile photos, and player content</span></h2><div class="t-id"><ul><li>Nama perusahaan, nama pemain, foto profil, dan statistik perusahaanmu dapat tampil di profil dan leaderboard yang bisa dilihat pemain lain.</li><li>Dilarang memakai nama atau foto yang kasar, bermuatan SARA, pornografi, meniru orang lain, atau melanggar hak pihak lain. Nama merek dan kompetitor di dalam game (misalnya Nokia atau Samsung) tidak boleh dipakai sebagai nama perusahaan. Nama perusahaan harus unik.</li><li>Kami dapat mengubah, menghapus, atau mereset nama dan foto yang melanggar tanpa pemberitahuan.</li><li>Kamu menjamin berhak memakai foto yang kamu unggah, dan memberi kami lisensi non-eksklusif untuk menampilkannya di dalam Layanan.</li></ul></div><div class="t-en"><ul><li>Your company name, player name, profile photo, and company statistics may appear on profiles and leaderboards visible to other players.</li><li>Names or photos that are offensive, hateful, pornographic, impersonate others, or infringe others’ rights are not allowed. In-game brand and rival names (for example Nokia or Samsung) may not be used as a company name. Company names must be unique.</li><li>We may change, remove, or reset violating names and photos without notice.</li><li>You confirm that you have the right to use any photo you upload, and you give us a non-exclusive license to display it within the Service.</li></ul></div></section>
+<section id="s9"><h2><span class="t-id">9. Isi game bersifat simulasi</span><span class="t-en">9. Game content is a simulation</span></h2><div class="t-id"><p>Peristiwa, berita, harga saham, bursa, bank, dan perilaku kompetitor di dalam game adalah simulasi dan sebagian fiksi. Semua itu tidak mewakili kondisi sebenarnya dan <b>bukan saran investasi, keuangan, atau bisnis</b>.</p><p>Nama dan merek perusahaan atau produk (seperti Nokia, Samsung, dan Motorola) adalah milik pemiliknya masing-masing. Kami tidak berafiliasi dengan atau didukung oleh mereka. Di blog, rumor diberi label dan sumber, namun keakuratannya tidak dijamin.</p></div><div class="t-en"><p>Events, news, stock prices, the exchange, banks, and rival behavior inside the game are simulated and partly fictional. They do not represent real conditions and are <b>not investment, financial, or business advice</b>.</p><p>Company and product names and brands (such as Nokia, Samsung, and Motorola) belong to their respective owners. We are not affiliated with or endorsed by them. On the blog, rumors are labeled and sourced, but their accuracy is not guaranteed.</p></div></section>
+<section id="s10"><h2><span class="t-id">10. Kekayaan intelektual</span><span class="t-en">10. Intellectual property</span></h2><div class="t-id"><p>Kode, desain, ilustrasi, peta 3D, teks, logo, dan konten lain di Layanan adalah milik Jurkon Studio atau dilisensikan kepada kami. Kami memberimu lisensi pribadi, non-eksklusif, dan dapat dicabut untuk bermain dan membaca blog.</p><p>Kamu tidak boleh menyalin, menjual, mendistribusikan ulang, atau melakukan rekayasa balik, kecuali diizinkan hukum. Tangkapan layar dan video gameplay untuk ulasan atau konten pribadi boleh dibagikan dengan menyebut Smartphone Empire.</p></div><div class="t-en"><p>The code, designs, illustrations, 3D maps, text, logos, and other content in the Service belong to Jurkon Studio or are licensed to us. We grant you a personal, non-exclusive, revocable license to play the game and read the blog.</p><p>You may not copy, sell, redistribute, or reverse engineer it, except where the law allows. Screenshots and gameplay videos for reviews or personal content may be shared if you credit Smartphone Empire.</p></div></section>
+<section id="s11"><h2><span class="t-id">11. Game over, musim, dan pembaruan</span><span class="t-en">11. Game over, seasons, and updates</span></h2><div class="t-id"><p>Kas yang negatif dua bulan berturut-turut berarti game over, dan game punya akhir musim. Keduanya bagian dari permainan dan bukan pelanggaran layanan.</p><p>Pembaruan dapat mengubah keseimbangan game, angka, harga, atau fitur, termasuk harga SIL suatu fitur. Kami berusaha agar perubahan adil, tetapi tidak menjamin progres, peringkat, atau fitur tertentu akan tetap sama.</p></div><div class="t-en"><p>Negative cash for two months in a row means game over, and the game has a season end. Both are part of gameplay, not a breach of service.</p><p>Updates may change game balance, numbers, prices, or features, including the SIL price of a feature. We aim to keep changes fair, but we do not guarantee that progress, rankings, or any particular feature will stay the same.</p></div></section>
+<section id="s12"><h2><span class="t-id">12. Ketersediaan layanan</span><span class="t-en">12. Availability</span></h2><div class="t-id"><p>Layanan disediakan “sebagaimana adanya” dan “sebagaimana tersedia”. Bug, pemeliharaan, atau gangguan dapat terjadi. Layanan juga bergantung pada pihak ketiga seperti penyedia basis data, hosting, login Google, dan pembayaran, yang di luar kendali kami.</p></div><div class="t-en"><p>The Service is provided “as is” and “as available”. Bugs, maintenance, or outages may occur. The Service also relies on third parties such as database, hosting, Google sign-in, and payment providers, which are outside our control.</p></div></section>
+<section id="s13"><h2><span class="t-id">13. Penangguhan dan penghentian</span><span class="t-en">13. Suspension and termination</span></h2><div class="t-id"><p>Jika melanggar ketentuan ini, kami dapat memberi peringatan, mereset progres, membatalkan SIL yang tidak sah, menangguhkan, atau menghapus akunmu. SIL pada akun yang ditutup karena pelanggaran tidak dikembalikan.</p><p>Kamu boleh berhenti kapan saja. Untuk meminta penghapusan akun, hubungi kami lewat e-mail.</p></div><div class="t-en"><p>If you breach these terms, we may warn you, reset your progress, revoke illegitimate SIL, suspend, or delete your account. SIL on an account closed for violations is not refunded.</p><p>You may stop using the Service at any time. To request account deletion, contact us by e-mail.</p></div></section>
+<section id="s14"><h2><span class="t-id">14. Batasan tanggung jawab</span><span class="t-en">14. Limitation of liability</span></h2><div class="t-id"><p>Sejauh diizinkan hukum, kami tidak bertanggung jawab atas kerugian tidak langsung, hilangnya data atau progres, atau kerugian akibat gangguan layanan pihak ketiga. Total tanggung jawab kami terbatas pada jumlah yang kamu bayarkan kepada kami dalam 12 bulan terakhir. Ketentuan ini tidak membatasi hak yang menurut hukum tidak dapat dikesampingkan.</p></div><div class="t-en"><p>To the extent permitted by law, we are not liable for indirect losses, loss of data or progress, or losses caused by third-party service outages. Our total liability is limited to the amount you paid us in the past 12 months. These terms do not limit rights that cannot be waived under law.</p></div></section>
+<section id="s15"><h2><span class="t-id">15. Perubahan, hukum, dan kontak</span><span class="t-en">15. Changes, governing law, and contact</span></h2><div class="t-id"><p>Kami dapat memperbarui ketentuan ini; tanggal pembaruan tertera di bagian atas. Perubahan penting akan diumumkan di game, web, atau blog. Dengan terus memakai Layanan, kamu menyetujui versi terbaru.</p><p>Ketentuan ini tunduk pada hukum Republik Indonesia. Sengketa diupayakan diselesaikan lewat musyawarah terlebih dahulu.</p><p>Pertanyaan, laporan bug, atau permintaan pengembalian: <a href="mailto:calvfinka@yahoo.com">calvfinka@yahoo.com</a></p></div><div class="t-en"><p>We may update these terms; the update date is shown at the top. Important changes will be announced in the game, website, or blog. By continuing to use the Service you accept the latest version.</p><p>These terms are governed by the laws of the Republic of Indonesia. We will first try to resolve disputes through discussion.</p><p>Questions, bug reports, or refund requests: <a href="mailto:calvfinka@yahoo.com">calvfinka@yahoo.com</a></p></div></section>
+
+  <a class="back" href="/"><span class="t-id">← Kembali ke beranda</span><span class="t-en">← Back to home</span></a>
+</div></main>
+
+<footer>
+  <div class="wrap2">
+    <span>© Jurkon Studio</span>
+    <nav aria-label="Tautan bawah">
+      <a href="/game/">Game</a><a href="/web">Web</a><a href="/blog/">Blog</a>
+      <a href="/i/tentang/"><span class="t-id">Tentang</span><span class="t-en">About</span></a><a href="/i/syarat/"><span class="t-id">Syarat</span><span class="t-en">Terms</span></a><a href="/i/privasi/"><span class="t-id">Privasi</span><span class="t-en">Privacy</span></a><a href="/i/kontak/"><span class="t-id">Kontak</span><span class="t-en">Contact</span></a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var root = document.documentElement, store = {};
+  try { store = localStorage; } catch (e) {}
+  function save(k, v) { try { store.setItem('se-landing:' + k, v); } catch (e) {} }
+  var META = {
+    id: { title:'Syarat dan Ketentuan — Smartphone Empire', desc:'Syarat dan Ketentuan Layanan Smartphone Empire: akun, Silicon (SIL), top-up, aturan bermain, dan konten pemain.', theme:'Ganti tema terang/gelap', langs:'Bahasa / Language' },
+    en: { title:'Terms of Service — Smartphone Empire', desc:'Smartphone Empire Terms of Service: accounts, Silicon (SIL), top-ups, rules of play, and player content.', theme:'Switch light/dark theme', langs:'Language / Bahasa' }
+  };
+  var langBtns = document.querySelectorAll('.lang button'), themeBtn = document.getElementById('theme');
+  function setLang(l, persist) {
+    root.setAttribute('lang', l);
+    langBtns.forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.lang === l ? 'true' : 'false'); });
+    document.title = META[l].title;
+    document.getElementById('metaDesc').setAttribute('content', META[l].desc);
+    themeBtn.setAttribute('aria-label', META[l].theme); themeBtn.title = META[l].theme;
+    document.querySelector('.lang').setAttribute('aria-label', META[l].langs);
+    if (persist) save('lang', l);
+  }
+  var mq = window.matchMedia('(prefers-color-scheme: dark)');
+  function isDark() { var t = root.getAttribute('data-theme'); return t ? t === 'dark' : mq.matches; }
+  themeBtn.addEventListener('click', function () {
+    var next = isDark() ? 'light' : 'dark';
+    root.setAttribute('data-theme', next); save('theme', next);
+  });
+  langBtns.forEach(function (b) { b.addEventListener('click', function () { setLang(b.dataset.lang, true); }); });
+  setLang(root.getAttribute('lang') === 'en' ? 'en' : 'id', false);
+})();
+</script>
+</body>
+</html>
