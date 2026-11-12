@@ -1,6 +1,82 @@
 {
-  "latest": "0.2.15",
+  "latest": "0.2.16",
   "releases": [
+    {
+      "version": "0.2.16",
+      "date": "2026-11-12",
+      "items": [
+        {
+          "type": "fix",
+          "text": {
+            "id": "Harga pokok penjualan (HPP) kini masuk laba-rugi dan pajak. Sebelumnya biaya produksi dibayar langsung dari kas tanpa dicatat, sehingga net bulanan melebihi kas riil (uji 2007 sampai 2008: net dilaporkan $59,4jt, kas hanya naik $25,6jt) dan pajak 15% dihitung dari angka yang salah. ProductSystem kini memancarkan economy:add-cogs saat unit terjual, lalu EconomySystem mengurangkannya dari laba kena pajak tanpa memotong kas dua kali. Setelah perbaikan: net $32,9jt, kas naik $30,6jt.",
+            "en": "Cost of goods sold (COGS) now counts in profit and loss and in tax. Before, production costs were paid straight from cash without being recorded, so the monthly net exceeded real cash (2007 to 2008 test: reported net $59.4M while cash rose only $25.6M) and the 15% tax was computed from a wrong number. ProductSystem now emits economy:add-cogs when a unit sells, and EconomySystem subtracts it from taxable profit without deducting cash twice. After the fix: net $32.9M, cash up $30.6M."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Pajak kini punya pengalihan rugi (finance.taxLossCarry): rugi bulan sebelumnya mengurangi laba kena pajak bulan berikutnya, jadi bulan rugi tidak lagi dipajaki secara tidak adil.",
+            "en": "Tax now carries losses forward (finance.taxLossCarry): a previous month's loss reduces the next month's taxable profit, so loss months are no longer taxed unfairly."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Bunga pinjaman tidak lagi dikali pengali tingkat kesulitan. Bank memang mencatat bunga asli, jadi sekarang hanya biaya operasi yang dikali pengali.",
+            "en": "Loan interest is no longer multiplied by the difficulty multiplier. The bank records the real interest, so now only operating costs are multiplied."
+          }
+        },
+        {
+          "type": "balance",
+          "text": {
+            "id": "Setelah perbaikan akuntansi, pajak efektif turun dan laba bulanan tampak lebih jujur. Cek ulang tingkat kesulitan bila terasa terlalu mudah.",
+            "en": "After the accounting fixes, the effective tax rate drops and monthly profit looks more honest. Re-check difficulty if the game feels too easy."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Kendaraan di Peta Kampus 3D jauh lebih detail: roda berputar sesuai jarak tempuh, kaca, lampu depan dan belakang (menyala saat malam), tiga model mobil (sedan, SUV, hatchback), bus berjendela dengan papan tujuan dan garis, serta motor dengan pengendara berhelm. Kendaraan punya bayangan kontak di jalan dan miring mengikuti tanjakan jembatan. Tier low (tanpa shadow map) memakai model yang lebih ringan.",
+            "en": "Vehicles on the 3D Campus Map are much more detailed: wheels turn with distance travelled, windows, headlights and tail lights (lit at night), three car models (sedan, SUV, hatchback), a bus with windows, a destination sign and a stripe, and a motorbike with a helmeted rider. Vehicles have contact shadows on the road and tilt with the bridge slope. The low tier (no shadow map) uses lighter models."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Awan di Peta Kampus kini mengikuti kondisi langit: mendung atau hujan membuat awan abu gelap dan rendah, senja membuat awan jingga muda.",
+            "en": "Clouds on the Campus Map now follow the sky condition: overcast or rain gives dark, low grey clouds, and sunset gives light orange clouds."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Produk → Desain → Ponsel → Galeri Generasi kini punya galeri sampel layar lipat dan dual: Dual (2020), Lipat (2019), Flip (2020), Tri-fold (2024), Tri-fold C (2025), Lipat Lebar (2026), dan Lipat tanpa lipatan (2026). Kartu redup sampai tahun dan riset layar lipat terpenuhi, lalu menyala otomatis.",
+            "en": "Product → Design → Phone → Generation Gallery now has a gallery of foldable and dual-screen samples: Dual (2020), Fold (2019), Flip (2020), Tri-fold (2024), Tri-fold C (2025), Wide Fold (2026), and Crease-free Fold (2026). Cards stay dimmed until the year and foldable-screen research are met, then light up automatically."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Panduan di dalam game disesuaikan dengan isi game sekarang: ada bagian baru Manufaktur, Pasar dan Kompetitor, serta Progres dan Akun. Bagian sistem, glosarium, dan tips juga diperluas.",
+            "en": "The in-game Guide now matches the current game: new sections for Manufacturing, Market and Competitors, and Progress and Account. The systems, glossary, and tips sections were also expanded."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Field baru finance.monthCogs dan finance.taxLossCarry aman untuk save lama (nilai awal 0). Tes baru tools/accounting-test.mjs (11 cek) terdaftar di npm test. Patch ini mengubah logika game pada item akuntansi (HPP, pajak, bunga); item lain hanya tampilan dan teks.",
+            "en": "The new fields finance.monthCogs and finance.taxLossCarry are safe for old saves (default 0). New test tools/accounting-test.mjs (11 checks) is registered in npm test. This patch changes game logic for the accounting items (COGS, tax, interest); the other items are visual and text only."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Versi game dinaikkan ke 0.2.16 di src/config/app.config.js, package.json, patches.json (root dan src), dan web.html.",
+            "en": "Game version raised to 0.2.16 in src/config/app.config.js, package.json, patches.json (root and src), and web.html."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.15",
       "date": "2026-11-12",
