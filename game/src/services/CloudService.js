@@ -156,6 +156,18 @@ export const CloudService = {
         }
     },
 
+    // Login Discord: sama seperti signInWithGoogle (browser dialihkan ke Discord, sesi dipulihkan setelah kembali).
+    async signInWithDiscord() {
+        if (!_adapter) return NOT_CONFIGURED;
+        if (typeof _adapter.signInWithDiscord !== 'function') return { ok: false, reason: 'Login Discord tidak didukung.', code: 'unknown' };
+        try {
+            const res = await _adapter.signInWithDiscord();
+            return { ok: true, redirecting: !!(res && res.redirecting) };
+        } catch (err) {
+            return _fail(err);
+        }
+    },
+
     async signOut() {
         if (!_adapter) return NOT_CONFIGURED;
         try {
