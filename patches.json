@@ -3,7 +3,7 @@
   "releases": [
     {
       "version": "0.2.16",
-      "date": "2026-11-12",
+      "date": "2026-11-13",
       "items": [
         {
           "type": "feature",
@@ -101,6 +101,41 @@
           "text": {
             "id": "Field baru finance.monthCogs dan finance.taxLossCarry aman untuk save lama (nilai awal 0). Tes baru tools/accounting-test.mjs (11 cek) terdaftar di npm test. Patch ini mengubah logika game pada item akuntansi (HPP, pajak, bunga) dan fitur Registrar (kas, reputasi, pendapatan domain); item lain hanya tampilan, login, dan teks. Data Registrar di save (data.registrar, data.registry) punya nilai bawaan, jadi save lama aman.",
             "en": "The new fields finance.monthCogs and finance.taxLossCarry are safe for old saves (default 0). New test tools/accounting-test.mjs (11 checks) is registered in npm test. This patch changes game logic for the accounting items (COGS, tax, interest) and the Registrar feature (cash, reputation, domain revenue); the other items are visual, sign-in, and text only. Registrar save data (data.registrar, data.registry) has defaults, so old saves are safe."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Halaman 404 baru dengan maskot Pona, ponsel kecil yang kehilangan sinyal. Matanya mengikuti kursor atau jari, ia berkedip, melambai, dan melompat saat diketuk. Tersedia dalam Indonesia dan English, dan animasinya mati otomatis jika perangkat memakai pengaturan kurangi gerakan.",
+            "en": "New 404 page with Pona, a little phone mascot that lost its signal. Its eyes follow your cursor or finger, it blinks, waves, and jumps when tapped. Available in Indonesian and English, and the animation turns off automatically when the device uses the reduce-motion setting."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Halaman web diperbarui: hero dan navigasi bertema gelap seragam dengan beranda, kartu jalan pintas (Main sekarang, Cara main, Akun dan Silicon, FAQ), fitur dikelompokkan per topik (Inti permainan, Keuangan, Produksi, Pasar dan reputasi), dan tab Pusat info diurutkan dari yang paling dicari.",
+            "en": "Web page refreshed: dark hero and navigation matching the home page, shortcut cards (Play now, How to play, Account and Silicon, FAQ), features grouped by topic (The core loop, Finance, Production, Market and reputation), and the Info center tabs ordered by what people look for most."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Beranda diperbarui: ticker berjalan diganti bar info akses (gratis di browser, cloud save, 12 bahasa, PWA) agar tidak mengulang angka yang sudah ada di bagian fakta.",
+            "en": "Home page updated: the scrolling ticker is replaced by a static access-info bar (free in the browser, cloud save, 12 languages, PWA) so it no longer repeats the numbers already shown in the facts section."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Tautan Syarat, Privasi, Tentang, dan Kontak kini seragam di beranda, halaman web, dan 404. Disclaimer fan project memakai teks yang sama, dan modal masuk serta bagian top up menautkan Syarat dan Kebijakan Privasi.",
+            "en": "Terms, Privacy, About, and Contact links are now consistent across the home page, the web page, and the 404 page. The fan-project disclaimer uses the same text, and the sign-in dialog and top-up section link to the Terms and Privacy Policy."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Layar game tidak lagi terkunci dalam keadaan ter-zoom setelah login di Chrome Android. Kolom isian di layar sentuh kini berfont 16px, kolom email tidak lagi memunculkan keyboard otomatis di layar sentuh, dan zoom halaman yang masih membesar dipulihkan otomatis setelah keyboard ditutup atau login selesai.",
+            "en": "The game screen no longer stays stuck zoomed in after sign-in on Chrome for Android. Input fields on touch screens now use 16px text, the email field no longer opens the keyboard automatically on touch screens, and a page that is still zoomed in is restored automatically after the keyboard closes or sign-in finishes."
           }
         },
         {
