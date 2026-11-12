@@ -143,6 +143,19 @@ export const CloudService = {
         }
     },
 
+    // Mulai login Google. Bila berhasil, browser langsung dialihkan ke Google (hasil { ok: true, redirecting: true });
+    // sesi baru terbentuk setelah halaman dimuat ulang dan dipulihkan lewat restoreSession().
+    async signInWithGoogle() {
+        if (!_adapter) return NOT_CONFIGURED;
+        if (typeof _adapter.signInWithGoogle !== 'function') return { ok: false, reason: 'Login Google tidak didukung.', code: 'unknown' };
+        try {
+            const res = await _adapter.signInWithGoogle();
+            return { ok: true, redirecting: !!(res && res.redirecting) };
+        } catch (err) {
+            return _fail(err);
+        }
+    },
+
     async signOut() {
         if (!_adapter) return NOT_CONFIGURED;
         try {
