@@ -1,7 +1,7 @@
 // FILE: src/core/AmbienceService.js
 // v2028.40 — Audio ambien adaptif untuk peta 3D: Kampus, Manufaktur, Kantor, Server (bawah laut).
 //
-// Semua suara DISINTESIS langsung lewat Web Audio (tanpa file mp3, tanpa unduhan, tanpa jaringan) sehingga:
+// Kampus, Kantor, dan Server DISINTESIS langsung lewat Web Audio (tanpa file mp3, tanpa unduhan, tanpa jaringan) sehingga:
 //   - bisa mengikuti kondisi peta secara langsung (siang/malam, cuaca, aktivitas pabrik, jumlah staf, beban server),
 //   - loop tidak pernah terdengar berulang (noise acak + kejadian acak),
 //   - ukuran aplikasi tidak bertambah.
@@ -14,6 +14,10 @@
 //   AmbienceService.setParams({ activity, crowd, load, peak, construction, night, weather })
 //   AmbienceService.setVolume(0..1)
 //
+// MANUFAKTUR memakai rekaman sendiri: assets/audio/manufacture.mp3 (loop mulus). Jika file gagal dimuat,
+// otomatis kembali ke suara sintetis lama (buildManufactureSynth) agar peta tidak sunyi.
+//   Atur keras-pelan rekaman lewat MF_LEVEL di bawah.
+//
 // Matikan hanya ambien (efek suara tetap): localStorage.setItem('se.ambience','0') atau ?ambience=off
 // Uji: ?hour=22 (malam), ?weather=rain|snow|sunny|overcast|clear  (sama dengan peta 3D).
 
@@ -21,6 +25,10 @@ import { createDayClock } from '../ui/campus/DayCycle.js';
 import { weatherForBlock, blockOf, readOverride } from '../ui/campus/CampusWeather.js';
 
 var VOLUME_KEY = 'se.ambienceVol';
+var MF_URL = './assets/audio/manufacture.mp3';   // rekaman peta Manufaktur
+var MF_LEVEL = 0.35;                              // keras-pelan rekaman (1 = asli, rekaman aslinya cukup keras ~ -21 LUFS)
+var MF_XFADE = 1.5;                               // detik: ujung rekaman dicampur ke awal supaya loop tidak terdengar putus
+var mfBuf = null, mfPromise = null, mfFailed = false;
 var OFF_KEY = 'se.ambience';
 var MASTER = 0.9;            // pengali akhir (sebelum kompresor)
 
@@ -265,8 +273,65 @@ function buildCampus() {
     };
 }
 
-// ---------- ADEGAN: MANUFAKTUR ----------
+
+// ---------- rekaman Manufaktur: muat sekali, jadikan loop mulus ----------
+// Ujung buffer dicampur (equal-power) ke awal, sama seperti loopable() untuk noise.
+function seamless(buf, sec) {
+    var sr = buf.sampleRate, f = Math.min(Math.floor(sr * sec), Math.floor(buf.length / 3)), n = buf.length - f;
+    var out = ctx.createBuffer(buf.numberOfChannels, n, sr);
+    for (var ch = 0; ch < buf.numberOfChannels; ch++) {
+        var src = buf.getChannelData(ch), dst = out.getChannelData(ch);
+        dst.set(src.subarray(0, n));
+        for (var i = 0; i < f; i++) {
+            var w = i / f;
+            dst[i] = src[i] * Math.sin(w * Math.PI / 2) + src[n + i] * Math.cos(w * Math.PI / 2);
+        }
+    }
+    return out;
+}
+function loadMfBuffer() {
+    if (mfBuf) return Promise.resolve(mfBuf);
+    if (mfFailed) return Promise.reject(new Error('rekaman manufaktur tidak tersedia'));
+    if (mfPromise) return mfPromise;
+    mfPromise = fetch(MF_URL)
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+        .then(function (ab) {
+            return new Promise(function (res, rej) {
+                var p = ctx.decodeAudioData(ab, res, rej);      // Safari lama: callback; browser modern: promise
+                if (p && p.then) p.then(res, rej);
+            });
+        })
+        .then(function (b) { mfBuf = seamless(b, MF_XFADE); return mfBuf; })
+        .catch(function (e) {
+            mfFailed = true; mfPromise = null;
+            console.warn('[AmbienceService] Rekaman manufaktur gagal dimuat, memakai suara sintetis:', e && e.message);
+            throw e;
+        });
+    return mfPromise;
+}
+
+// ---------- ADEGAN: MANUFAKTUR (rekaman) ----------
 function buildManufacture() {
+    if (mfFailed) return buildManufactureSynth();
+    var S = makeScene('manufacture');
+    var level = gainN(MF_LEVEL); level.connect(S.dest);
+    loadMfBuffer().then(function (buf) {
+        if (S.dead || !ctx) return;                       // pemain sudah pergi dari peta sebelum selesai dimuat
+        var src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+        src.connect(level);
+        src.start(0, Math.random() * buf.duration); S.srcs.push(src);
+    }).catch(function () {
+        // Gagal memuat/menguraikan file -> ganti ke suara sintetis lama.
+        if (S.dead || !cur || cur.S !== S) return;
+        var old = cur; cur = buildManufactureSynth(); cur.apply(P);
+        cur.S.out.gain.setTargetAtTime(1, ctx.currentTime + 0.05, 0.55);
+        stopScene(old, 400);
+    });
+    return { S: S, apply: function () {} };
+}
+
+// ---------- ADEGAN: MANUFAKTUR (sintetis lama, cadangan) ----------
+function buildManufactureSynth() {
     var S = makeScene('manufacture');
     var weatherApply = weatherBeds(S, 0.8, 9000);
     seaBeds(S, 0.75);
