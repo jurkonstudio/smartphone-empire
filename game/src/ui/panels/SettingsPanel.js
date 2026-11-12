@@ -184,8 +184,7 @@ function _tabUmum(s) {
         _row({ icon: 'globe', label: t('pp.settings.row_players'), hint: t('pp.settings.row_players_hint'), action: true, attrs: 'data-set="player-list"', chevron: true })
     ) +
     _section('question', t('settings.section.help'),
-        _row({ label: t('settings.row.guide'), hint: t('settings.row.guide_hint'), action: true, attrs: 'data-set="guide"', chevron: true }) +
-        _row({ label: t('settings.row.tutorial'), hint: t('settings.row.tutorial_hint'), action: true, attrs: 'data-set="tutorial"', chevron: true })
+        _row({ label: t('settings.row.guide'), hint: t('settings.row.guide_hint'), action: true, attrs: 'data-set="guide"', chevron: true })
     ) +
     _studioPanel(s);
 }
@@ -614,7 +613,6 @@ function _handleSet(action) {
         case 'import':      _openImport(); break;
         case 'reset':       _confirmReset(); break;
         case 'guide':       bus.emit('view:changed', { id: 'guide' }); window.__game.navigate('guide'); break;
-        case 'tutorial':    bus.emit('tutorial:restart'); break;
         case 'edit-name':   openEditCompanyNameModal(); break;
         case 'player-list': openPlayerListModal(); break;
         case 'leaderboard': openPlayerListModal('revenue'); break;
