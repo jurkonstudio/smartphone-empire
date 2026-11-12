@@ -8,6 +8,7 @@ import { ToastService } from '../../core/ToastService.js';
 import { icon } from '../icons.js';
 import { validateCompanyName } from '../../data/name-blocklist.data.js';
 import { checkCompanyNameAvailable } from '../../services/cloud/CompanyNameCheck.js';
+import { generateCompanyName, withNumericSuffix } from '../../data/random-company-names.data.js';
 import { CloudService } from '../../services/CloudService.js';
 import { SupabaseAdapter } from '../../services/cloud/SupabaseAdapter.js';
 import { isCloudConfigured } from '../../services/cloud/supabase.config.js';
@@ -413,8 +414,28 @@ export function showOnboarding() {
                 return;
             }
 
-            console.info('[Onboarding] Sesi valid, tidak ada save di cloud: akun baru.');
-            render('start');
+            console.info('[Onboarding] Sesi valid, tidak ada save di cloud: akun baru -> mulai otomatis.');
+            await _autoStartNewAccount();
+        }
+
+        // Akun baru (mis. baru konfirmasi email): langsung masuk game dengan nama acak + kesulitan Normal.
+        // Nama bisa diganti nanti lewat pengaturan. Bila gagal, tampilkan form setup biasa.
+        async function _autoStartNewAccount() {
+            try {
+                var name = '';
+                for (var i = 0; i < 6; i++) {
+                    var cand = generateCompanyName();
+                    var av = await _withTimeout(checkCompanyNameAvailable(cand), 4000);
+                    if (finished) return;
+                    if (av !== false) { name = cand; break; }
+                }
+                if (!name) name = withNumericSuffix(generateCompanyName());
+                ToastService.success(t('onb.auto.welcome', { name: name }));
+                _finish({ companyName: name, difficulty: DIFFICULTY.normal, autoCreated: true });
+            } catch (err) {
+                console.warn('[Onboarding] Auto-start gagal, pakai form manual:', err);
+                if (!finished) render('start');
+            }
         }
 
         var _loadingCloud = false;
