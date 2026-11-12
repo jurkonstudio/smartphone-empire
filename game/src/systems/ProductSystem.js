@@ -788,6 +788,25 @@ export class ProductSystem {
     // ============================================================
     // PENJUALAN HARIAN
     // ============================================================
+    // [akuntansi] HPP per unit untuk laporan laba-rugi & pajak (cache per produk per bulan).
+    // Memakai penaksir produksi yang sama dengan biaya yang benar-benar dibayar pemain (tanpa biaya setup tetap).
+    _cogsPerUnit(p) {
+        var t = this.state.data.time, key = t.currentYear * 12 + t.currentMonth;
+        if (!this._cogsCache) this._cogsCache = new Map();
+        var c = this._cogsCache.get(p.id);
+        if (c && c.key === key) return c.unit;
+        var unit = 0;
+        try {
+            // Jumlah acuan = ukuran batch produk itu sendiri, supaya diskon volume mendekati biaya yang dibayar.
+            var qty = Math.max(1000, Number(p.baseCapacity) || Number(p.totalProduced) || 1000);
+            var q = this.quoteProduction(p.config, qty);
+            unit = Math.max(0, (q.total - (BALANCE.products.productionSetupCost || 0)) / qty);
+        } catch (e) { unit = 0; }
+        if (!Number.isFinite(unit) || unit <= 0) unit = Number(p.unitCost) || 0;
+        this._cogsCache.set(p.id, { key: key, unit: unit });
+        return unit;
+    }
+
     _processDailySales() {
         var data = this.state.data;
         if (!data.products.catalog.length) return;
@@ -804,7 +823,7 @@ export class ProductSystem {
         // Plafon pasar: total permintaan jenuh (semua produk berbagi pasar yang sama).
         var capFactor = this._econ ? this._econ.applyDemandCap(rawTotal) : 1;
 
-        var totalDailyRevenue = 0;
+        var totalDailyRevenue = 0, totalDailyCogs = 0;
         for (var r = 0; r < rows.length; r++) {
             var p = rows[r].p;
             if (p.stock <= 0) continue;
@@ -821,6 +840,7 @@ export class ProductSystem {
             p.totalSold += sold;
             p.totalRevenue += revenue;
             totalDailyRevenue += revenue;
+            totalDailyCogs += sold * this._cogsPerUnit(p);
 
             bus.emit('product:sale', { productId: p.id, sold: sold, revenue: revenue });
 
@@ -836,6 +856,7 @@ export class ProductSystem {
             }
         }
 
+        if (totalDailyCogs > 0) bus.emit('economy:add-cogs', { amount: totalDailyCogs });
         if (totalDailyRevenue > 0) {
             this.state.addCash(totalDailyRevenue);
             bus.emit('economy:add-revenue', { amount: totalDailyRevenue });
