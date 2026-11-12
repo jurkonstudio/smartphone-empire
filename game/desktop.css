@@ -1,15 +1,17 @@
 /* ============================================================================
    DESKTOP SHELL — dimuat setelah style.css & profile-ui.css
-   Semua aturan ada di dalam media query >=768px DAN (any-pointer: fine), jadi HP tetap
-   memakai layout mobile walaupun Chrome berjalan dalam mode "Desktop site" (lebar virtual ~980px).
-   Layout desktop hanya aktif di perangkat yang punya mouse atau trackpad.
+   Semua aturan ada di dalam media query >=768px DAN (any-pointer: fine) DAN layar fisik >=700px
+   (min-device-width/height), jadi HP tetap memakai layout mobile walaupun browser berjalan dalam mode
+   "Desktop site" (lebar virtual ~980px). Samsung Internet mode desktop meniru mouse (pointer: fine),
+   sehingga pointer saja tidak cukup; ukuran layar fisik HP (<700px) yang menjadi penentu.
+   Layout desktop hanya aktif di komputer/tablet besar yang punya mouse atau trackpad.
    Prefiks class: dk-
    - 768-1099px : rail ikon (68px)
    - >=1100px   : sidebar penuh (224px)
    Konten dibatasi lebar maksimum --dk-max dan dipusatkan.
    ============================================================================ */
 
-@media (min-width: 768px) and (any-pointer: fine) {
+@media (min-width: 768px) and (any-pointer: fine) and (min-device-width: 700px) and (min-device-height: 700px) {
     :root {
         --dk-side-w: 68px;
         --dk-max: 1360px;
@@ -99,7 +101,7 @@
 }
 
 /* ---------- Layar lebar: sidebar penuh dengan label ---------- */
-@media (min-width: 1100px) and (any-pointer: fine) {
+@media (min-width: 1100px) and (any-pointer: fine) and (min-device-width: 700px) and (min-device-height: 700px) {
     :root { --dk-side-w: 224px; }
 
     #app > #sidebar { padding: 14px 12px; }
@@ -136,6 +138,6 @@
 }
 
 /* Wizard desain: di layar lebar, cukup lebar untuk label langkah dan pratinjau. */
-@media (min-width: 1100px) and (any-pointer: fine) {
+@media (min-width: 1100px) and (any-pointer: fine) and (min-device-width: 700px) and (min-device-height: 700px) {
     [data-modal-id="design-wizard"] .modal-card { max-width: 760px; }
 }
