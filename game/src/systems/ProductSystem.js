@@ -1205,7 +1205,8 @@ export class ProductSystem {
         var p = data.products.catalog.find(function (x) { return x.id === productId; });
         if (!p) return { ok: false, reason: 'Produk tidak ditemukan.' };
         if (p.status !== 'selling') return { ok: false, reason: 'Produk sudah tidak dijual.' };
-        if (qty < 100) return { ok: false, reason: 'Minimal 100 unit.' };
+        qty = Math.floor(Number(qty));
+        if (!Number.isFinite(qty) || qty < 100) return { ok: false, reason: 'Minimal 100 unit.' };
         var totalCost = this.quoteProduction(p.config, qty, gradeId).total;
         if (!WalletService.canAfford(totalCost)) return { ok: false, reason: 'Uang tidak cukup.' };
 
@@ -1284,11 +1285,17 @@ export class ProductSystem {
         if (p.status !== 'selling') return { ok: false, reason: 'Produk sudah tidak aktif.' };
 
         var discountPrice = Math.round(p.price * (1 - BALANCE.products.discontinueDiscountPercent));
-        var fireSale = p.stock * discountPrice;
+        // [fix] Batasi hasil per unit terhadap biaya produksi supaya rilis -> hentikan tidak bisa jadi mesin uang.
+        var unitCost = (typeof p.unitCost === 'number' && p.unitCost > 0) ? p.unitCost : this.computeUnitCost(p.config);
+        var maxPerUnit = Math.round(unitCost * (BALANCE.products.discontinueMaxCostRatio != null ? BALANCE.products.discontinueMaxCostRatio : 0.5));
+        discountPrice = Math.min(discountPrice, maxPerUnit);
+        var fireSale = Math.max(0, Math.floor(p.stock)) * discountPrice;
         p.status = 'discontinued';
         if (fireSale > 0) this.state.addCash(fireSale);
         p.stock = 0;
+        var lostOrders = Array.isArray(p.pendingProduction) ? p.pendingProduction.length : 0;
         p.pendingProduction = [];
+        if (lostOrders > 0) this.state.addLog('Peringatan: ' + lostOrders + ' pesanan produksi "' + p.name + '" yang belum tiba dibatalkan tanpa pengembalian dana.', LOG_TYPES.warning);
 
         this.state.addLog('"' + p.name + '" dihentikan. Sisa stok dijual $' + fireSale.toLocaleString('en-US') + '.', LOG_TYPES.warning);
         ToastService.info(p.name + ' dihentikan.');

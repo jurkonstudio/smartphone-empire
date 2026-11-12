@@ -23,7 +23,7 @@ export class EconomySystem {
     constructor(gameState) {
         this.state = gameState;
         this._unsubMonth = null;
-        this._monthRevenue = 0;
+        this._unsubs = [];
         this.bank = null;
         this._runwayLevel = null; // [v2030] level runway terakhir (null = belum dicek)
     }
@@ -36,16 +36,33 @@ export class EconomySystem {
     setEcosystem(eco) { this.ecosystem = eco; }
 
     start() {
+        this.stop();
         this._unsubMonth = bus.on('time:month-changed', (snapshot) => {
             this._processMonth(snapshot);
         });
-        bus.on('economy:add-revenue', ({ amount }) => {
-            if (typeof amount === 'number') this._monthRevenue += amount;
-        });
+        // [fix] Pendapatan bulan berjalan disimpan di state (finance.monthRevenue), bukan di memori,
+        // supaya reload/simpan-muat di tengah bulan tidak menghapus pemasukan (dan pajaknya).
+        this._unsubs.push(bus.on('economy:add-revenue', (e) => {
+            if (e && Number.isFinite(e.amount)) this._addMonthRevenue(e.amount);
+        }));
+        // [fix] Pembayaran kontrak grosir juga pemasukan (sebelumnya lolos dari laporan & pajak).
+        this._unsubs.push(bus.on('wholesale:delivered', (e) => {
+            if (e && Number.isFinite(e.total)) this._addMonthRevenue(e.total);
+        }));
         // [v2030] Runway dicek tiap hari agar peringatan muncul saat ambang terlewati.
-        bus.on('time:day-changed', () => this._checkRunway());
+        this._unsubs.push(bus.on('time:day-changed', () => this._checkRunway()));
         // Kenaikan gaji tahunan mengikuti inflasi & pertumbuhan upah dunia nyata.
-        bus.on('time:year-changed', (snap) => this._applyAnnualRaise(snap));
+        this._unsubs.push(bus.on('time:year-changed', (snap) => this._applyAnnualRaise(snap)));
+    }
+
+    _addMonthRevenue(amount) {
+        const f = this.state.data.finance;
+        f.monthRevenue = (Number.isFinite(f.monthRevenue) ? f.monthRevenue : 0) + amount;
+    }
+
+    _getMonthRevenue() {
+        const v = this.state.data.finance.monthRevenue;
+        return Number.isFinite(v) ? v : 0;
     }
 
     _applyAnnualRaise(snap) {
@@ -65,6 +82,8 @@ export class EconomySystem {
 
     stop() {
         if (this._unsubMonth) { this._unsubMonth(); this._unsubMonth = null; }
+        this._unsubs.forEach((u) => { try { u(); } catch (e) { /* abaikan */ } });
+        this._unsubs = [];
     }
 
     _processMonth(snapshot) {
@@ -115,7 +134,7 @@ export class EconomySystem {
         const plantRevenue = this.plants ? this.plants.takeMonthlyRevenue() : 0;
         // [Ekosistem] pendapatan aksesori & komisi App Store bulan ini (kas ditambah di sini).
         const ecoRevenue = this.ecosystem ? this.ecosystem.takeMonthlyRevenue() : 0;
-        const income = Math.round(this._monthRevenue + plantRevenue + ecoRevenue);
+        const income = Math.round(this._getMonthRevenue() + plantRevenue + ecoRevenue);
 
         // ---- Laba sebelum pajak ----
         const preTax = income - expense;
@@ -156,7 +175,7 @@ export class EconomySystem {
         if (data.finance.history.length > 24) data.finance.history.length = 24;
         data.finance.lastProcessed = { year: snapshot.currentYear, month: snapshot.currentMonth };
 
-        this._monthRevenue = 0;
+        data.finance.monthRevenue = 0;
 
         // ---- Game over check ----
         if (cashAfter < 0) data.finance.negativeMonths += 1;
@@ -321,7 +340,11 @@ export class EconomySystem {
         if (this.bank) debtService = this.bank.previewMonthly().total;
         else debtService = this._calcMonthlyLoanInterest();
         const upkeep = this.econ ? this.econ.getMonthlyUpkeep() : 0;
-        const base = this.state.getMonthlySalary() + this.state.getMonthlyFixedCost() + debtService + upkeep;
+        // [fix] Samakan dengan _processMonth: pajak infrastruktur & biaya tetap kanal juga dihitung,
+        // kalau tidak runway terlalu optimis (peringatan "kas aman" muncul padahal bulan depan defisit).
+        const infraTax = this.plants && this.plants.getMonthlyInfraTax ? (this.plants.getMonthlyInfraTax() || 0) : 0;
+        const channelFixed = this.channels && this.channels.getMonthlyFixedCost ? (this.channels.getMonthlyFixedCost() || 0) : 0;
+        const base = this.state.getMonthlySalary() + this.state.getMonthlyFixedCost() + debtService + upkeep + infraTax + channelFixed;
         return Math.round(base * diff.expense);
     }
 }

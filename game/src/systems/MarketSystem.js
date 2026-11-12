@@ -12,8 +12,11 @@ export class MarketSystem {
         this.state = gameState;
         this._unsubs = [];
         this._competitorSystem = null;
-        this._monthRevenueAccum = 0;
     }
+
+    // [fix] Disimpan di state (market.monthRevenue) agar tidak hilang saat reload di tengah bulan.
+    get _monthRevenueAccum() { const v = this.state.data.market.monthRevenue; return Number.isFinite(v) ? v : 0; }
+    set _monthRevenueAccum(v) { this.state.data.market.monthRevenue = Number.isFinite(v) ? v : 0; }
 
     setCompetitorSystem(cs) { this._competitorSystem = cs; }
     setEconBrakes(eb) { this._econ = eb; }
