@@ -1,14 +1,15 @@
-// FILE: src/systems/RegistrySystem.js  (BARU)
+// FILE: src/systems/RegistrySystem.js  (DIUBAH: putaran per tahun + sponsor kompetitor)
 // ============================================================
-// Registry (tahap 2): pemain melamar ekstensi domain sendiri.
-// Alur: lamar (+ sponsor) -> evaluasi 12 bln -> [keberatan] -> [kontensi: lelang / mundur] -> kontrak -> uji teknis
-//       -> sunrise -> landrush -> pendaftaran umum. Semua angka di src/data/registry.data.js, teks di i18n (registry.*, registrar.letter.tld_*).
-// State baru (otomatis, save lama aman): data.registry. Pemain TIDAK melihat persen; getRegistryOutlook() hanya tingkat + alasan.
+// Registry: pemain melamar ekstensi domain sendiri.
+// Alur: lamar (+ sponsor kompetitor) -> evaluasi 12 bln -> [keberatan dari pesaing] -> [kontensi: lelang / mundur]
+//       -> kontrak -> uji teknis -> sunrise -> landrush -> pendaftaran umum.
+// Angka di src/data/registry.data.js, teks di i18n (registry.*, registrar.letter.tld_*).
+// State: data.registry (save lama aman). Pemain TIDAK melihat persen; getRegistryOutlook() hanya tingkat + alasan.
 // ============================================================
 import { bus } from '../core/EventBus.js';
-import { LOG_TYPES } from '../config/constants.js';
-import { REGISTRY_CONFIG as C, REGISTRY_EXTENSIONS } from '../data/registry.data.js';
+import { REGISTRY_CONFIG as C, REGISTRY_EXTENSIONS, REGISTRY_ROUNDS, REGISTRY_NPC_APPLICANTS } from '../data/registry.data.js';
 import { getTotalDomainsMillions } from '../data/registrar.data.js';
+import { getActiveCompetitors, getCompetitorById, getHistoricalShare } from '../data/competitors.data.js';
 import { ensureRegistrarState, absMonth, sendIcannLetter } from './RegistrarSystem.js';
 
 function _clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -21,6 +22,21 @@ function _dayNow(data) {
     return (tm.currentYear || 0) * 372 + ((tm.currentMonth || 1) - 1) * 31 + (tm.currentDay || 1);
 }
 function _ext(id) { return REGISTRY_EXTENSIONS.find(function (e) { return e.id === id; }) || null; }
+function _pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+// ---------- Putaran ----------
+// Putaran aktif = tahun paling baru yang sudah dibuka. null bila belum ada putaran.
+export function getActiveRound(year) {
+    var r = null;
+    REGISTRY_ROUNDS.forEach(function (x) { if (year >= x.year && (!r || x.year > r.year)) r = x; });
+    return r;
+}
+export function getNextRoundYear(year) {
+    var next = null;
+    REGISTRY_ROUNDS.forEach(function (x) { if (x.year > year && (next === null || x.year < next)) next = x.year; });
+    return next;
+}
+export function getRoundFee(year) { var r = getActiveRound(year); return r ? r.applicationFee : 0; }
 
 export function ensureRegistryState(data) {
     if (!data.registry || typeof data.registry !== 'object') data.registry = {};
@@ -32,48 +48,101 @@ export function ensureRegistryState(data) {
     g.last = g.last && typeof g.last === 'object' ? g.last : { revenue: 0, profit: 0, domains: 0 };
     if (!g.draft || typeof g.draft !== 'object') g.draft = {};
     g.draft.ext = _ext(g.draft.ext) ? g.draft.ext : null;
-    g.draft.sponsors = _clamp(Math.round(_num(g.draft.sponsors)), 0, C.sponsorMax);
+    // Sponsor sekarang daftar id kompetitor (save lama berbentuk angka -> dikosongkan).
+    if (!Array.isArray(g.draft.sponsorIds)) g.draft.sponsorIds = [];
+    g.draft.sponsorIds = g.draft.sponsorIds.filter(function (id, i, a) { return typeof id === 'string' && a.indexOf(id) === i; }).slice(0, C.sponsorMax);
+    delete g.draft.sponsors;
     return g;
 }
 
-export function isRegistryOpen(data) { return _year(data) >= C.unlockYear; }
+export function isRegistryOpen(data) { return !!getActiveRound(_year(data)); }
+
+// ---------- Kompetitor sebagai sponsor / pesaing ----------
+function _withdrawn(data, id) { return !!(data.competitorState && data.competitorState.withdrawn && data.competitorState.withdrawn[id]); }
+
+function _shareOf(data, c) {
+    var ent = data.competitorState && data.competitorState.entities && data.competitorState.entities[c.id];
+    if (ent && isFinite(ent.currentShare)) return ent.currentShare;
+    var h = getHistoricalShare(c.id, _year(data));
+    return isFinite(h) && h !== null ? h : (c.startShare || 0);
+}
+
+// Kandidat sponsor/pesaing: kompetitor aktif yang belum menarik diri, diurutkan dari pangsa terbesar.
+export function getCompetitorCandidates(data) {
+    var year = _year(data);
+    return getActiveCompetitors(year)
+        .filter(function (c) { return !_withdrawn(data, c.id); })
+        .map(function (c) { return { id: c.id, name: c.name, share: _shareOf(data, c) }; })
+        .sort(function (a, b) { return b.share - a.share; });
+}
+
+function _validSponsors(data, ids) {
+    var ok = {};
+    getCompetitorCandidates(data).forEach(function (c) { ok[c.id] = true; });
+    return (ids || []).filter(function (id, i, a) { return ok[id] && a.indexOf(id) === i; }).slice(0, C.sponsorMax);
+}
+
+function _weight(share) { return _clamp(share / C.sponsorShareRef, C.sponsorWeightMin, C.sponsorWeightMax); }
+
+// Pesaing besar yang TIDAK menjadi sponsor: mereka bisa keberatan atau ikut menawar.
+export function getRivals(data, sponsorIds) {
+    var sp = sponsorIds || [];
+    return getCompetitorCandidates(data).filter(function (c) {
+        return c.share >= C.rivalMinShare && sp.indexOf(c.id) === -1;
+    });
+}
 
 // ---------- Peluang (disembunyikan) ----------
-export function computeEvalChance(data, sponsors) {
-    var p = Math.min(C.evalSponsorCap, C.evalBase + C.evalPerSponsor * _clamp(sponsors || 0, 0, C.sponsorMax));
-    if (_num(data.cash) >= C.evalCashMult * C.applicationFee) p += C.evalCashBonus;
+export function computeEvalChance(data, sponsorIds) {
+    var sp = _validSponsors(data, sponsorIds), cands = getCompetitorCandidates(data), p = C.evalBase;
+    sp.forEach(function (id) {
+        var c = cands.find(function (x) { return x.id === id; });
+        p += C.evalPerSponsor * _weight(c ? c.share : 0);
+    });
+    p = Math.min(C.evalSponsorCap, p);
+    var round = getActiveRound(_year(data)), fee = round ? round.applicationFee : 0;
+    if (_num(data.cash) >= C.evalCashMult * fee) p += C.evalCashBonus;
     var acc = ensureRegistrarState(data).acc;
     if (acc && acc.status !== 'revoked' && absMonth(data) - acc.sinceAbs >= C.evalExpYears * 12) p += C.evalExpBonus;
     return Math.min(C.evalCap, p);
 }
-export function computeObjectChance(sponsors) { return Math.max(0, C.objectBase - C.objectPerSponsor * (sponsors || 0)); }
+export function computeObjectChance(data, sponsorIds) {
+    var n = getRivals(data, sponsorIds).length;
+    return _clamp(C.objectBase + C.objectPerRival * n, 0, C.objectCap);
+}
 
 // Perkiraan peluang sampai peluncuran (lelang dianggap menang ~50%). Hanya untuk Asisten Bisnis.
-export function estimateLaunchChance(data, extId, sponsors) {
+export function estimateLaunchChance(data, extId, sponsorIds) {
     var e = _ext(extId); if (!e) return 0;
-    var pe = computeEvalChance(data, sponsors), po = computeObjectChance(sponsors), pc = C.contention[e.type] || 0;
+    var pe = computeEvalChance(data, sponsorIds), po = computeObjectChance(data, sponsorIds), pc = C.contention[e.type] || 0;
     return pe * (1 - po * (1 - C.objectWin)) * (1 - pc * 0.5);
 }
-export function getRegistryOutlook(data, extId, sponsors) {
-    var p = estimateLaunchChance(data, extId, sponsors), e = _ext(extId), reasons = [];
-    if ((sponsors || 0) < 2) reasons.push('sponsors');
-    if (_num(data.cash) < C.evalCashMult * C.applicationFee) reasons.push('cash');
+export function getRegistryOutlook(data, extId, sponsorIds) {
+    var sp = _validSponsors(data, sponsorIds);
+    var p = estimateLaunchChance(data, extId, sp), e = _ext(extId), reasons = [];
+    var round = getActiveRound(_year(data)), fee = round ? round.applicationFee : 0;
+    if (sp.length < 2) reasons.push('sponsors');
+    if (getRivals(data, sp).length) reasons.push('rival');
+    if (_num(data.cash) < C.evalCashMult * fee) reasons.push('cash');
     if (e && (C.contention[e.type] || 0) >= 0.3) reasons.push('contest');
     var acc = ensureRegistrarState(data).acc;
     if (!(acc && acc.status !== 'revoked' && absMonth(data) - acc.sinceAbs >= C.evalExpYears * 12)) reasons.push('exp');
     return { level: p >= 0.75 ? 'high' : (p >= 0.55 ? 'medium' : 'low'), reasons: reasons };
 }
 
-export function getRegistryCost(sponsors) { return C.applicationFee + C.sponsorCost * (sponsors || 0); }
+export function getRegistryCost(sponsorCount, fee) {
+    if (fee === undefined) { var r = getActiveRound(0); fee = r ? r.applicationFee : 0; }
+    return fee + C.sponsorCost * (sponsorCount || 0);
+}
 
 export function canStartRegistry(data) {
-    var g = ensureRegistryState(data);
-    if (!isRegistryOpen(data)) return { ok: false, reason: 'locked' };
+    var g = ensureRegistryState(data), year = _year(data), round = getActiveRound(year);
+    if (!round) return { ok: false, reason: 'locked' };
     if (g.app) return { ok: false, reason: 'busy' };
     if (!g.draft.ext) return { ok: false, reason: 'pick' };
     if (g.live.some(function (x) { return x.id === g.draft.ext; })) return { ok: false, reason: 'owned' };
     if (absMonth(data) < g.cooldownUntil) return { ok: false, reason: 'cooldown', months: g.cooldownUntil - absMonth(data) };
-    var need = getRegistryCost(g.draft.sponsors) + C.annualFee;
+    var need = getRegistryCost(g.draft.sponsorIds.length, round.applicationFee) + C.annualFee;
     if (_num(data.cash) < need) return { ok: false, reason: 'cash', need: need };
     return { ok: true };
 }
@@ -84,10 +153,16 @@ export function pickExtension(state, id) {
     if (!_ext(id) || g.app) return { ok: false, reason: 'unavailable' };
     g.draft.ext = id; return { ok: true };
 }
-export function setSponsors(state, n) {
-    var g = ensureRegistryState(state.data);
+
+// Pilih / lepas satu kompetitor sebagai sponsor.
+export function toggleSponsor(state, competitorId) {
+    var data = state.data, g = ensureRegistryState(data);
     if (g.app) return { ok: false, reason: 'unavailable' };
-    g.draft.sponsors = _clamp(Math.round(_num(n)), 0, C.sponsorMax); return { ok: true };
+    var list = g.draft.sponsorIds, at = list.indexOf(competitorId);
+    if (at !== -1) { list.splice(at, 1); return { ok: true }; }
+    if (!_validSponsors(data, [competitorId]).length) return { ok: false, reason: 'unavailable' };
+    if (list.length >= C.sponsorMax) return { ok: false, reason: 'max' };
+    list.push(competitorId); return { ok: true };
 }
 
 function _addPre(app, n) {   // tambah bulan pra-kontrak, dibatasi maksimal 36
@@ -98,12 +173,15 @@ function _addPre(app, n) {   // tambah bulan pra-kontrak, dibatasi maksimal 36
 export function submitRegistry(state) {
     var data = state.data, g = ensureRegistryState(data), chk = canStartRegistry(data);
     if (!chk.ok) return chk;
-    var e = _ext(g.draft.ext), n = g.draft.sponsors;
-    state.addCash(-getRegistryCost(n));
-    var app = { id: e.id, ext: e.ext, type: e.type, sponsors: n, phase: 'eval', monthsLeft: C.evalMonths, pre: C.evalMonths, objected: false,
-        revised: false, techRetried: false, npcBid: 0, deadline: 0, daysLeft: 0 };
+    var e = _ext(g.draft.ext), year = _year(data), round = getActiveRound(year);
+    var sp = _validSponsors(data, g.draft.sponsorIds), fee = round.applicationFee;
+    state.addCash(-getRegistryCost(sp.length, fee));
+    var app = { id: e.id, ext: e.ext, type: e.type, sponsorIds: sp, fee: fee, round: round.year,
+        phase: 'eval', monthsLeft: C.evalMonths, pre: C.evalMonths, objected: false, objector: null,
+        revised: false, techRetried: false, npcBid: 0, bidder: null, deadline: 0, daysLeft: 0 };
     if (Math.random() < C.reviseChance) { app.revised = true; app.monthsLeft += _addPre(app, C.reviseMonths); }
     g.app = app;
+    g.draft.sponsorIds = [];
     return { ok: true };
 }
 
@@ -127,7 +205,7 @@ export function auctionBid(state, amount) {
 export function withdrawRegistry(state) {
     var data = state.data, g = ensureRegistryState(data), a = g.app;
     if (!a || a.phase !== 'contest') return { ok: false, reason: 'unavailable' };
-    var back = Math.round(C.applicationFee * C.withdrawRefund);
+    var back = Math.round(a.fee * C.withdrawRefund);
     state.addCash(back); g.app = null; g.cooldownUntil = absMonth(data) + C.reapplyAfterMonths;
     sendIcannLetter(data, 'tld_withdrawn', { ext: a.ext, refund: _usd(back) }, null);
     return { ok: true, refund: back };
@@ -161,17 +239,17 @@ export class RegistrySystem {
     destroy() { this._unsubs.forEach(function (u) { try { u(); } catch (e) {} }); this._unsubs = []; }
 
     pick(id) { return pickExtension(this.state, id); }
-    sponsors(n) { return setSponsors(this.state, n); }
+    sponsor(id) { return toggleSponsor(this.state, id); }
     submit() { return submitRegistry(this.state); }
     bid(amount) { return auctionBid(this.state, amount); }
     withdraw() { return withdrawRegistry(this.state); }
     sign() { return signRegistry(this.state); }
 
-    // Satu pintu untuk tombol UI (data-rg="tld-...").
+    // Satu pintu untuk tombol UI (data-rg="tld-..."). Sponsor memakai data-rg-id = id kompetitor.
     act(action, ds) {
         ds = ds || {};
         if (action === 'tld-pick') return this.pick(ds.rgId);
-        if (action === 'tld-sponsors') return this.sponsors(parseInt(ds.rgN, 10) || 0);
+        if (action === 'tld-sponsor') return this.sponsor(ds.rgId);
         if (action === 'tld-submit') return this.submit();
         if (action === 'tld-bid') return this.bid(parseInt(ds.rgN, 10) || 0);
         if (action === 'tld-withdraw') return this.withdraw();
@@ -208,9 +286,12 @@ export class RegistrySystem {
     _toContestOrOffer(data) {
         var g = data.registry, a = g.app, pc = C.contention[a.type] || 0;
         if (Math.random() < pc) {
+            // Penawar: pesaing besar yang tidak jadi sponsor; kalau tidak ada, pelamar NPC.
+            var rivals = getRivals(data, a.sponsorIds);
+            a.bidder = rivals.length ? _pickRandom(rivals).name : _pickRandom(REGISTRY_NPC_APPLICANTS);
             a.phase = 'contest'; a.monthsLeft = 0; a.deadline = _dayNow(data) + C.decideDays; a.daysLeft = C.decideDays;
             a.npcBid = Math.round(C.npcBidMin + Math.random() * (C.npcBidMax - C.npcBidMin));
-            sendIcannLetter(data, 'tld_contention', { ext: a.ext, days: C.decideDays, refund: _usd(C.applicationFee * C.withdrawRefund) }, 'tld_contest');
+            sendIcannLetter(data, 'tld_contention', { ext: a.ext, by: a.bidder, days: C.decideDays, refund: _usd(a.fee * C.withdrawRefund) }, 'tld_contest');
         } else this._toOffer(data);
     }
 
@@ -226,16 +307,19 @@ export class RegistrySystem {
         a.monthsLeft -= 1;
         if (a.monthsLeft > 0) return;
         if (a.phase === 'eval') {
-            if (Math.random() >= computeEvalChance(data, a.sponsors)) return this._reject(data, 'tld_eval_rejected');
-            if (Math.random() < computeObjectChance(a.sponsors)) {
-                a.objected = true; a.phase = 'objection'; a.monthsLeft = _addPre(a, C.objectMonths) || 1;
-                sendIcannLetter(data, 'tld_objection', { ext: a.ext, months: C.objectMonths }, null);
+            if (Math.random() >= computeEvalChance(data, a.sponsorIds)) return this._reject(data, 'tld_eval_rejected');
+            if (Math.random() < computeObjectChance(data, a.sponsorIds)) {
+                // Keberatan dari pesaing besar yang bukan sponsor (atau pihak NPC bila tidak ada pesaing).
+                var rivals = getRivals(data, a.sponsorIds);
+                a.objected = true; a.objector = rivals.length ? _pickRandom(rivals).name : _pickRandom(REGISTRY_NPC_APPLICANTS);
+                a.phase = 'objection'; a.monthsLeft = _addPre(a, C.objectMonths) || 1;
+                sendIcannLetter(data, 'tld_objection', { ext: a.ext, by: a.objector, months: C.objectMonths }, null);
                 return;
             }
             return this._toContestOrOffer(data);
         }
         if (a.phase === 'objection') {
-            if (Math.random() >= C.objectWin) return this._reject(data, 'tld_objection_rejected');
+            if (Math.random() >= C.objectWin) return this._reject(data, 'tld_objection_rejected', { ext: a.ext, by: a.objector, months: C.reapplyAfterMonths });
             return this._toContestOrOffer(data);
         }
         if (a.phase === 'auction') return this._toOffer(data);
