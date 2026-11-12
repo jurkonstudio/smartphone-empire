@@ -3,10 +3,10 @@
 <title>Halaman tidak ditemukan — Smartphone Empire</title><meta name="robots" content="noindex">
 <script>
   // GitHub Pages memakai file ini untuk alamat yang tidak punya file fisik.
-  // Alamat milik blog (/k/, /i/, /baca/) diteruskan ke index.html yang membacanya sebagai rute.
+  // Alamat milik blog (/k/, /i/, /baca/) diteruskan ke /blog/ yang membacanya sebagai rute.
   (function () {
     var p = location.pathname;
-    if (/^\/(k|i|baca)\/[^/]+\/?$/.test(p)) location.replace('/?r=' + encodeURIComponent(p + location.search));
+    if (/^\/(k|i|baca)\/[^/]+\/?$/.test(p)) location.replace('/blog/?r=' + encodeURIComponent(p + location.search));
   })();
 </script>
 <style>body{font:16px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center}a{color:#0a84ff}</style>
