@@ -11,6 +11,7 @@ import { ToastService } from './core/ToastService.js';
 import { setUserControlPolicy, setUserControlAlgo } from './systems/FutureEffects.js';
 import { UserControlSystem, setDataMonetization } from './systems/UserControlSystem.js';
 import { RegistrarSystem } from './systems/RegistrarSystem.js';
+import { RegistrySystem } from './systems/RegistrySystem.js';
 import { getRegistrarInsurance, toggleRegistrarInsurance } from './ui/panels/FuturePanel.js';
 import { openRegistrarContract } from './ui/panels/RegistrarContract.js';
 import { NotificationPrefs } from './core/NotificationPrefs.js';
@@ -159,6 +160,7 @@ var appReview = new AppStoreReviewSystem(state);   // [Peninjauan App Store] dev
 var bank              = new BankSystem(state);
 var econBrakes        = new EconBrakeSystem(state);
 var userControlSystem = new UserControlSystem(state);   // Kontrol Pengguna: monetisasi data, regulasi, survei
+var registrySystem    = new RegistrySystem(state);      // Registry: ekstensi domain sendiri (evaluasi, kontensi, lelang, peluncuran)
 var registrarSystem   = new RegistrarSystem(state);     // Registrar: reseller, akreditasi ICANN, registry, penjualan domain
 var _rgPricePending = null;                            // harga yang digeser di slider tapi belum diterapkan
 bus.on('registrar:open-contract', function () { openRegistrarContract(registrarSystem, function () { renderAll(); }); });
@@ -713,6 +715,7 @@ function bindGlobalClicks() {
             else if (rgAct === 'registry') rgRes = registrarSystem.joinRegistry(rgBtn.dataset.rgId);
             else if (rgAct === 'staff') rgRes = registrarSystem.setStaff(parseInt(rgBtn.dataset.rgN, 10) || 0);
             else if (rgAct === 'abuse') rgRes = registrarSystem.handleAbuse();
+            else if (rgAct.indexOf('tld-') === 0) rgRes = registrySystem.act(rgAct, rgBtn.dataset);
             else if (rgAct === 'price-refresh') {
                 rgRes = registrarSystem.setPrice(_rgPricePending != null ? _rgPricePending : (state.get().registrar && state.get().registrar.priceMult) || 1);
                 _rgPricePending = null;
