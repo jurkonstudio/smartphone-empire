@@ -10,6 +10,9 @@ import { DEV_BUILD } from './config/dev.config.js';
 import { ToastService } from './core/ToastService.js';
 import { setUserControlPolicy, setUserControlAlgo } from './systems/FutureEffects.js';
 import { UserControlSystem, setDataMonetization } from './systems/UserControlSystem.js';
+import { RegistrarSystem } from './systems/RegistrarSystem.js';
+import { getRegistrarInsurance, toggleRegistrarInsurance } from './ui/panels/FuturePanel.js';
+import { openRegistrarContract } from './ui/panels/RegistrarContract.js';
 import { NotificationPrefs } from './core/NotificationPrefs.js';
 import { ThemeService } from './core/ThemeService.js';
 import { LanguageService } from './core/LanguageService.js';
@@ -156,6 +159,10 @@ var appReview = new AppStoreReviewSystem(state);   // [Peninjauan App Store] dev
 var bank              = new BankSystem(state);
 var econBrakes        = new EconBrakeSystem(state);
 var userControlSystem = new UserControlSystem(state);   // Kontrol Pengguna: monetisasi data, regulasi, survei
+var registrarSystem   = new RegistrarSystem(state);     // Registrar: reseller, akreditasi ICANN, registry, penjualan domain
+var _rgPricePending = null;                            // harga yang digeser di slider tapi belum diterapkan
+bus.on('registrar:open-contract', function () { openRegistrarContract(registrarSystem, function () { renderAll(); }); });
+bus.on('registrar:open-panel', function () { activeSubtab = 'future'; if (activeView !== 'research') navigate('research'); else renderAll(); });
 
 market.setCompetitorSystem(competitors);
 products.setPromotionSystem(promotion);
@@ -645,6 +652,12 @@ function bindGlobalClicks() {
         if (setUserControlAlgo(sl.dataset.ucAlgo, sl.value, state.get())) renderAll();
     });
     document.body.addEventListener('input', function (e) {
+        if (e.target.matches && e.target.matches('[data-rg-price]')) {
+            _rgPricePending = (parseInt(e.target.value, 10) || 100) / 100;
+            var pl = document.querySelector('[data-rg-price-val]');
+            if (pl) pl.textContent = Math.round(_rgPricePending * 100) + '%';
+            return;
+        }
         if (e.target.matches && e.target.matches('[data-uc-algo]')) {
             var lbl = document.querySelector('[data-uc-algo-val="' + e.target.dataset.ucAlgo + '"]');
             if (lbl) lbl.textContent = e.target.value;
@@ -688,6 +701,26 @@ function bindGlobalClicks() {
         }
         var autoThresh = e.target.closest('[data-auto-threshold]');
         if (autoThresh) { e.preventDefault(); vibrate(6); products.setAutoRestockThreshold(autoThresh.dataset.prodId, parseInt(autoThresh.dataset.autoThreshold, 10) || 20); _refreshProductUi(autoThresh.dataset.prodId); return; }
+        var rgBtn = e.target.closest('[data-rg]');
+        if (rgBtn) {
+            e.preventDefault(); vibrate(8);
+            var rgAct = rgBtn.dataset.rg, rgRes = null;
+            if (rgAct === 'insurance') { toggleRegistrarInsurance(); renderAll(); return; }
+            if (rgAct === 'reseller') rgRes = registrarSystem.joinReseller();
+            else if (rgAct === 'submit') rgRes = registrarSystem.submit(getRegistrarInsurance());
+            else if (rgAct === 'supplement') rgRes = registrarSystem.supplement();
+            else if (rgAct === 'contract') { bus.emit('registrar:open-contract', {}); return; }
+            else if (rgAct === 'registry') rgRes = registrarSystem.joinRegistry(rgBtn.dataset.rgId);
+            else if (rgAct === 'staff') rgRes = registrarSystem.setStaff(parseInt(rgBtn.dataset.rgN, 10) || 0);
+            else if (rgAct === 'abuse') rgRes = registrarSystem.handleAbuse();
+            else if (rgAct === 'price-refresh') {
+                rgRes = registrarSystem.setPrice(_rgPricePending != null ? _rgPricePending : (state.get().registrar && state.get().registrar.priceMult) || 1);
+                _rgPricePending = null;
+            }
+            if (rgRes && rgRes.ok) { try { AudioService.play('select'); } catch (err) {} }
+            renderAll();
+            return;
+        }
         var ucPol = e.target.closest('[data-uc-policy]');
         if (ucPol) {
             e.preventDefault(); vibrate(8);
