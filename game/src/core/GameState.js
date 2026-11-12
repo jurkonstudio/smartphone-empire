@@ -35,7 +35,9 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             negativeMonths: 0,
             loans: [],
             lastProcessed: null,
-            monthRevenue: 0   // pemasukan bulan berjalan (dipersist agar tidak hilang saat reload)
+            monthRevenue: 0,  // pemasukan bulan berjalan (dipersist agar tidak hilang saat reload)
+            monthCogs: 0,     // [akuntansi] HPP unit terjual bulan berjalan (kas sudah keluar saat produksi)
+            taxLossCarry: 0   // [akuntansi] rugi fiskal yang boleh mengurangi laba kena pajak bulan berikutnya
         },
 
         team: { engineers: 0, designers: 0, marketers: 0 },
