@@ -223,6 +223,9 @@ export const BALANCE = {
         manualRestock: { baseDays: 2, unitsPerExtraDay: 2500, maxDays: 10 },
         dailyNoise: 0.09,
         discontinueDiscountPercent: 0.6,
+        // Hasil jual-habis per unit tidak boleh melebihi porsi ini dari biaya produksi (selalu rugi).
+        // Tanpa batas ini: harga maks 4x biaya, jual-habis 40% harga = 1,6x biaya -> rilis lalu hentikan = untung gratis.
+        discontinueMaxCostRatio: 0.5,
         reviewThresholds: { excellent: 85, good: 70, average: 50, poor: 30, bad: 0 },
         reputationPerReviewPoint: 0.4,
         maxActiveProducts: 5,
