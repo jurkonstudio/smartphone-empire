@@ -104,6 +104,15 @@ h1{margin:0;font:800 clamp(2.2rem,5.2vw,3.8rem)/1.1 var(--f);letter-spacing:-.03
 .tabs button{font:600 .88rem/1 var(--f);color:var(--on2);background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08);padding:11px 15px;border-radius:999px;cursor:pointer}
 .tabs button:hover{color:#fff}.tabs button[aria-selected="true"]{background:#fff;color:#0a1120}
 .cap{min-height:5.2em;max-width:25em;margin:0;text-align:center;color:var(--on2);font-size:.97rem}.cap b{display:block;color:#fff;font-size:1.05rem;margin-bottom:2px}
+/* ticker */
+.tick{position:relative;overflow:hidden;background:#0e1830;border-block:1px solid rgba(255,255,255,.08);padding:14px 0;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.tk{display:flex;width:max-content;animation:tk 46s linear infinite}.tick:hover .tk{animation-play-state:paused}
+.tg{display:flex;flex:none}
+.ti{display:inline-flex;align-items:center;gap:10px;color:var(--on2);font-weight:600;font-size:.92rem;white-space:nowrap}
+.ti .ic{color:var(--blue);font-size:18px}
+.ti::after{content:"";width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.25);margin:0 28px 0 28px}
+@keyframes tk{to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.tk{animation:none;width:auto;flex-wrap:wrap;justify-content:center;row-gap:8px}.tg+.tg{display:none}.tick{-webkit-mask-image:none;mask-image:none}}
 /* konten */
 section{padding:clamp(52px,8vw,100px) 0}
 h2{margin:0 0 8px;font:800 clamp(1.6rem,3vw,2.2rem)/1.2 var(--f);letter-spacing:-.02em;text-wrap:balance}
@@ -155,6 +164,7 @@ footer nav{display:flex;flex-wrap:wrap;gap:6px 20px}footer a{color:var(--on2);te
 <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.500v13l11-6.500z" fill="currentColor"/></symbol>
 <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.800A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.800z"/></symbol>
 <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.500v2M12 19.500v2M2.5 12h2M19.5 12h2M5.3 5.300l1.4 1.400M17.3 17.300l1.4 1.400M5.3 18.700l1.4-1.400M17.3 6.700l1.4-1.4"/></symbol>
+<symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-7.96A5.5 5.5 0 0 1 17 8.6 4.7 4.7 0 0 1 17 18z"/><path d="M12 11v5M9.8 13.800 12 16l2.2-2.2"/></symbol>
 </defs></svg>
 <a class="skip" href="#isi" data-i18n="skip">Lewati ke konten</a>
 
@@ -175,7 +185,7 @@ footer nav{display:flex;flex-wrap:wrap;gap:6px 20px}footer a{color:var(--on2);te
   <div class="wrap hero" id="isi">
     <div>
       <h1 data-i18n="h1">Mulai dari satu kantor kecil, 1 Januari 2000.</h1>
-      <p class="lead" data-i18n="lead">Kamu CEO perusahaan ponsel yang baru berdiri. Rekrut tim, riset teknologi, rancang ponsel, lalu rebut pasar dari Nokia, Apple, dan Samsung sampai era AI.</p>
+      <p class="lead" data-i18n="lead">Pimpin perusahaan ponselmu dari tahun 2000 sampai era AI. Rekrut tim, riset 134 teknologi, rancang ponsel dari 141 komponen, lalu bersaing dengan 32 kompetitor di pasar yang berubah tiap era.</p>
       <div class="cta">
         <a class="btn main" href="/game/"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg><span data-i18n="play">Mainkan gratis</span></a>
         <a class="btn ghost" href="/blog/"><svg class="ic" aria-hidden="true"><use href="#i-news"/></svg><span data-i18n="read">Baca blog</span></a>
@@ -208,6 +218,8 @@ footer nav{display:flex;flex-wrap:wrap;gap:6px 20px}footer a{color:var(--on2);te
     </div>
   </div>
 </header>
+
+<div class="tick" aria-hidden="true"><div class="tk"><div class="tg"><span class="ti"><svg class="ic"><use href="#i-crown"/></svg><span data-i18n="tk1">32 kompetitor</span></span><span class="ti"><svg class="ic"><use href="#i-node"/></svg><span data-i18n="tk2">134 node teknologi</span></span><span class="ti"><svg class="ic"><use href="#i-chip"/></svg><span data-i18n="tk3">141 komponen ponsel</span></span><span class="ti"><svg class="ic"><use href="#i-stock"/></svg><span data-i18n="tk4">84 saham di bursa</span></span><span class="ti"><svg class="ic"><use href="#i-globe"/></svg><span data-i18n="tk5">12 bahasa</span></span><span class="ti"><svg class="ic"><use href="#i-game"/></svg><span data-i18n="tk6">Gratis di browser</span></span><span class="ti"><svg class="ic"><use href="#i-cloud"/></svg><span data-i18n="tk7">Cloud save</span></span><span class="ti"><svg class="ic"><use href="#i-phone"/></svg><span data-i18n="tk8">Bisa dipasang sebagai PWA</span></span><span class="ti"><svg class="ic"><use href="#i-chart"/></svg><span data-i18n="tk9">Dari 2000 sampai era AI</span></span></div><div class="tg"><span class="ti"><svg class="ic"><use href="#i-crown"/></svg><span data-i18n="tk1">32 kompetitor</span></span><span class="ti"><svg class="ic"><use href="#i-node"/></svg><span data-i18n="tk2">134 node teknologi</span></span><span class="ti"><svg class="ic"><use href="#i-chip"/></svg><span data-i18n="tk3">141 komponen ponsel</span></span><span class="ti"><svg class="ic"><use href="#i-stock"/></svg><span data-i18n="tk4">84 saham di bursa</span></span><span class="ti"><svg class="ic"><use href="#i-globe"/></svg><span data-i18n="tk5">12 bahasa</span></span><span class="ti"><svg class="ic"><use href="#i-game"/></svg><span data-i18n="tk6">Gratis di browser</span></span><span class="ti"><svg class="ic"><use href="#i-cloud"/></svg><span data-i18n="tk7">Cloud save</span></span><span class="ti"><svg class="ic"><use href="#i-phone"/></svg><span data-i18n="tk8">Bisa dipasang sebagai PWA</span></span><span class="ti"><svg class="ic"><use href="#i-chart"/></svg><span data-i18n="tk9">Dari 2000 sampai era AI</span></span></div></div></div>
 
 <main>
   <section>
@@ -282,7 +294,7 @@ footer nav{display:flex;flex-wrap:wrap;gap:6px 20px}footer a{color:var(--on2);te
   var EN = {
     nav_web:'Web', nav_blog:'Blog', nav_play:'Play game', skip:'Skip to content',
     h1:'Start with one small office, January 1, 2000.',
-    lead:'You are the CEO of a brand-new phone company. Hire a team, research technology, design phones, then take on Nokia, Apple, and Samsung all the way to the AI era.',
+    lead:'Run your phone company from 2000 to the AI era. Hire a team, research 134 technologies, design phones from 141 components, and compete against 32 rivals in a market that changes with every era.',
     play:'Play for free', read:'Read the blog', features:'See all features',
     free:'Play right in your phone or PC browser, no install.',
     t0:'Campus', t1:'Research', t2:'Phone design', t3:'Market', t4:'Overview', t5:'Office',
@@ -304,6 +316,7 @@ footer nav{display:flex;flex-wrap:wrap;gap:6px 20px}footer a{color:var(--on2);te
     f1:'competitor companies', f2:'tech nodes', f3:'phone components', f4:'listed stocks',
     note:'Figures come from game data version 0.2.14.',
     end_h:'Ready to be CEO?', end_s:'Your cash is small and the year has just begun.',
+    tk1:'32 rival companies', tk2:'134 tech nodes', tk3:'141 phone components', tk4:'84 listed stocks', tk5:'12 languages', tk6:'Free in your browser', tk7:'Cloud save', tk8:'Installable as a PWA', tk9:'From 2000 to the AI era',
     f_about:'About', f_priv:'Privacy', f_contact:'Contact'
   };
   var SHOTS = {
