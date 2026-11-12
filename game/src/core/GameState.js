@@ -34,7 +34,8 @@ function createInitialState(difficulty = DIFFICULTY.normal) {
             history: [],
             negativeMonths: 0,
             loans: [],
-            lastProcessed: null
+            lastProcessed: null,
+            monthRevenue: 0   // pemasukan bulan berjalan (dipersist agar tidak hilang saat reload)
         },
 
         team: { engineers: 0, designers: 0, marketers: 0 },
@@ -316,6 +317,11 @@ class GameState {
     }
 
     setCash(newCash) {
+        // [fix] Tolak NaN/Infinity: satu nilai rusak akan meracuni seluruh save (kas selamanya NaN).
+        if (!Number.isFinite(newCash)) {
+            console.warn('[GameState] setCash diabaikan (nilai tidak valid):', newCash);
+            return;
+        }
         const prev = this.data.cash;
         if (prev === newCash) return;
         this.data.cash = newCash;

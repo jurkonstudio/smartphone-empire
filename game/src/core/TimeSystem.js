@@ -237,8 +237,11 @@ export class TimeSystem {
     // Untuk testing manual via console:
     //   __game.cheat.skipDays(30)
     fastForwardDays(days) {
-        const mins = days * TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
-        this._advance(mins);
+        // [fix] Maju satu hari per langkah: _advance hanya memancarkan SATU event meski banyak hari
+        // terlewati, sehingga gaji bulanan, penjualan harian, dan pergantian tahun terlewat saat skip.
+        const dayMins = TIME_CONFIG.hoursPerDay * TIME_CONFIG.minutesPerHour;
+        const n = Math.max(0, Math.floor(Number(days) || 0));
+        for (let i = 0; i < n; i++) this._advance(dayMins);
         return this.snapshot();
     }
 }
