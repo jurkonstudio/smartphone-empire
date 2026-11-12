@@ -93,7 +93,7 @@ function ensureStyles() {
     st.textContent =
         // --- kepala & kesehatan ---
         '.adv-head{display:flex;align-items:center;gap:10px;}' +
-        '.adv-avatar{width:36px;height:36px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;}' +
+        '.adv-avatar{width:36px;height:36px;border-radius:50%;background:transparent;display:flex;align-items:center;justify-content:center;flex-shrink:0;}' +
         '.adv-hd-txt{min-width:0;flex:1;}' +
         '.adv-sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
         '.adv-health{margin-left:auto;min-height:32px;padding:3px 12px;border-radius:var(--r-pill);background:var(--accent-soft);border:none;font-family:inherit;cursor:pointer;color:var(--accent);font-size:var(--fs-xs);font-weight:var(--fw-bold);white-space:nowrap;}' +
@@ -364,7 +364,7 @@ export function openAdvisor(advisor) {
 
     var html = '' +
         '<div class="adv-head">' +
-            '<div class="adv-avatar">' + gIcon('spark', 18) + '</div>' +
+            '<div class="adv-avatar">' + advisorLogo(34) + '</div>' +
             '<div class="adv-hd-txt"><div class="modal-title" style="margin:0">' + esc(tx('ui.title')) + '</div>' +
             '<div class="modal-sub adv-sub" data-adv-summary style="margin:0"></div></div>' +
             '<button type="button" class="adv-health" data-adv-health aria-expanded="false"></button>' +
@@ -637,7 +637,26 @@ export function openAdvisor(advisor) {
     });
 }
 
-// Tombol melayang. Disembunyikan selama tutorial berjalan.
+// Logo asisten: maskot Smartphone Empire bermahkota (sama dengan assets/icon/advisor-logo.svg).
+// id gradien dibuat unik per pemakaian supaya aman dipasang lebih dari satu kali di halaman.
+var _logoSeq = 0;
+function advisorLogo(size) {
+    var u = 'advl' + (++_logoSeq);
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="' + size + '" height="' + size + '" aria-hidden="true" focusable="false">' +
+        '<defs><linearGradient id="' + u + 'g" x1="8" y1="6" x2="56" y2="60" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#14b8a6"/><stop offset="1" stop-color="#2563eb"/></linearGradient>' +
+        '<linearGradient id="' + u + 'c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>' +
+        '<linearGradient id="' + u + 'h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>' +
+        '<circle cx="32" cy="32" r="32" fill="url(#' + u + 'g)"/><circle cx="32" cy="32" r="32" fill="url(#' + u + 'h)"/>' +
+        '<path d="M19.5 24.5 21.5 11.5 28.2 17.6 32 8.5 35.8 17.6 42.5 11.5 44.5 24.5Z" fill="url(#' + u + 'c)" stroke="#b45309" stroke-width="1.4" stroke-linejoin="round"/>' +
+        '<rect x="19.5" y="22.6" width="25" height="3.6" rx="1.8" fill="#f59e0b" stroke="#b45309" stroke-width="1.2"/>' +
+        '<circle cx="21.5" cy="11" r="1.9" fill="#fff7d1"/><circle cx="32" cy="8" r="2.1" fill="#fff7d1"/><circle cx="42.5" cy="11" r="1.9" fill="#fff7d1"/>' +
+        '<rect x="11" y="28" width="42" height="25" rx="12.5" fill="#0f1020"/><rect x="11.4" y="28.4" width="41.2" height="24.2" rx="12.1" fill="none" stroke="#fff" stroke-opacity=".14"/>' +
+        '<ellipse cx="23.5" cy="38" rx="3.3" ry="4.6" fill="#fff"/><ellipse cx="40.5" cy="38" rx="3.3" ry="4.6" fill="#fff"/>' +
+        '<path d="M28 45.6Q32 49.4 36 45.6" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>' +
+        '<ellipse cx="17.6" cy="45" rx="2.6" ry="1.6" fill="#ff6fae" opacity=".8"/><ellipse cx="46.4" cy="45" rx="2.6" ry="1.6" fill="#ff6fae" opacity=".8"/></svg>';
+}
+
+// Tombol melayang.
 export function mountAdvisorButton(advisor) {
     if (document.getElementById('advisor-fab')) return;
     ensureStyles();
@@ -646,7 +665,7 @@ export function mountAdvisorButton(advisor) {
     btn.id = 'advisor-fab';
     btn.className = 'advisor-fab';
     btn.type = 'button';
-    btn.innerHTML = gIcon('spark', 22) + '<span class="advisor-badge" hidden></span>';
+    btn.innerHTML = advisorLogo(46) + '<span class="advisor-badge" hidden></span>';
     var badge = btn.querySelector('.advisor-badge');
     document.body.appendChild(btn);
 
@@ -659,8 +678,7 @@ export function mountAdvisorButton(advisor) {
     }
     function setHidden(h) { btn.classList.toggle('is-hidden', !!h); }
 
-    var tut = (advisor.state.data && advisor.state.data.tutorial) || {};
-    setHidden(!(tut.completed || tut.skipped));
+    setHidden(false);
 
     // ---- geser bebas: tarik tombol ke mana saja, lepas -> menempel ke tepi kiri/kanan ----
     var POS_KEY = 'advisor-fab-pos';
@@ -727,7 +745,5 @@ export function mountAdvisorButton(advisor) {
     btn.addEventListener('click', function () { if (!dragged) openAdvisor(advisor); });
     bus.on('advisor:updated', paint);
     bus.on('lang:changed', paint);
-    bus.on('tutorial:step-changed', function () { setHidden(true); });
-    bus.on('tutorial:completed', function () { setHidden(false); });
     paint();
 }
