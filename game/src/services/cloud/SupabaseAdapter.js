@@ -177,13 +177,26 @@ export const SupabaseAdapter = {
 
     signUp: async function (email, password) {
         var c = await getClient();
-        var res = await c.auth.signUp({ email: email, password: password, options: { emailRedirectTo: location.origin + '/game/' } });
+        var res = await c.auth.signUp({ email: email, password: password, options: { emailRedirectTo: location.origin + '/' } });
         if (res.error) throw mk(res.error);
         var u = res.data.user;
         if (u && Array.isArray(u.identities) && u.identities.length === 0) throw mk(null, 'email_exists');
         var out = userOf(u) || {};
         out.needsConfirm = !(res.data.session);
         return out;
+    },
+
+    // Login Google (OAuth). Browser dialihkan ke Google lalu kembali ke halaman ini; sesi dipulihkan oleh
+    // detectSessionInUrl + hasStoredSession/restoreSession. Provider Google harus diaktifkan di Supabase
+    // (Authentication > Providers > Google) dan alamat game didaftarkan di Authentication > URL Configuration.
+    signInWithGoogle: async function () {
+        var c = await getClient();
+        var res = await c.auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo: location.origin + location.pathname, queryParams: { prompt: 'select_account' } }
+        });
+        if (res.error) throw mk(res.error);
+        return { redirecting: true };
     },
 
     signOut: async function () {
@@ -194,7 +207,7 @@ export const SupabaseAdapter = {
 
     resetPassword: async function (email) {
         var c = await getClient();
-        var res = await c.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/game/' });
+        var res = await c.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/' });
         if (res.error) throw mk(res.error);
     },
 
