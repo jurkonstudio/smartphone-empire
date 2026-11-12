@@ -24,7 +24,8 @@ export const FUTURE_SYSTEM_LABELS = {
     chip:      'Chip',
     opinion:   'Opini Publik',
     market:    'Pasar',
-    team:      'Tim'
+    team:      'Tim',
+    registrar: 'Registrar'
 };
 
 export const FUTURE_PANELS = [
@@ -67,6 +68,16 @@ export const FUTURE_PANELS = [
         connected: ['opinion', 'market', 'os'],   // opinion: peluang event privasi; market: permintaan pro/premium & keluarga; os: diskon F-AI/Alat Pengembang berubah sesuai kebijakan (FutureEffects.js).
         // Terbuka: tahun 2019 ke atas DAN riset Face ID 3D (sensor_face3d) selesai. Efek perlindungan baru aktif bila OS milik pemain punya fitur Pusat Privasi.
         unlock: { enabled: true, year: 2019, research: 'sensor_face3d' }
+    },
+    {
+        id: 'registrar',
+        name: 'Registrar',
+        icon: 'globe',
+        description: 'Jual nama domain: mulai sebagai reseller, lalu jadi registrar terakreditasi ICANN. Berurusan dengan surat ICANN, kontrak, dan kepatuhan.',
+        linksTo: ['advisor', 'market', 'opinion'],
+        connected: ['advisor', 'market', 'opinion'],   // advisor: tingkat peluang pengajuan; market: pendapatan domain; opinion: reputasi & sentimen saat penyalahgunaan/audit (RegistrarSystem.js).
+        // Terbuka: tahun 2000 ke atas (reseller). Akreditasi registrar sendiri butuh 2003 + riset 3G (lihat registrar.data.js).
+        unlock: { enabled: true, year: 2000, research: null }
     }
 ];
 
