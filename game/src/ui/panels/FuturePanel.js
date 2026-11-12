@@ -13,6 +13,7 @@ import {
     isResellerOpen, ensureRegistrarState
 } from '../../systems/RegistrarSystem.js';
 import { REGISTRAR_CONFIG, REGISTRIES } from '../../data/registrar.data.js';
+import { renderRegistryBox } from './RegistryPanel.js';
 import { futureName, futureDesc, futureSystemLabel, nodeNameById } from '../../data/i18n/research-localize.js';
 import {
     FUTURE_PANELS, FUTURE_SYSTEM_LABELS,
@@ -266,7 +267,7 @@ function _renderRegistrar(data) {
     var head = '<div class="uc-box"><div class="uc-title">' + esc(t('registrar.title')) + '</div>' +
         '<div class="uc-row" style="border-top:0"><span>' + esc(t(stageKey)) + '</span><b class="' + badgeCls + '">' + esc(r.acc && r.acc.status !== 'revoked' ? t('registrar.acc.term', { y: Math.floor((r.acc.expiresAbs - 1) / 12) }) : '') + '</b></div></div>';
 
-    return head + _renderRgReseller(data, r) + _renderRgApply(data, r) + _renderRgAccreditation(data, r) + _renderRgRegistries(data, r) + _renderRgSales(data, r, d);
+    return head + _renderRgReseller(data, r) + _renderRgApply(data, r) + _renderRgAccreditation(data, r) + _renderRgRegistries(data, r) + _renderRgSales(data, r, d) + renderRegistryBox(data);
 }
 
 function _renderRgReseller(data, r) {

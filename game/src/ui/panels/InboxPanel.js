@@ -112,6 +112,12 @@ function icannActHtml(m) {
     if (m.act === 'contract' && phase === 'offer') {
         return '<div class="ib-acts"><button type="button" class="ib-btn ib-pri" data-ib-rg="contract">' + esc(t('registrar.letter.open_contract')) + '</button></div>';
     }
+    var tp = null;
+    try { tp = window.__game.state.get().registry; } catch (e) {}
+    tp = tp && tp.app && tp.app.phase;
+    if ((m.act === 'tld_contest' && tp === 'contest') || (m.act === 'tld_offer' && tp === 'offer')) {
+        return '<div class="ib-acts"><button type="button" class="ib-btn ib-pri" data-ib-rg="panel">' + esc(t('registry.letter.open')) + '</button></div>';
+    }
     if (m.act === 'revise' && phase === 'revise') {
         return '<div class="ib-acts"><button type="button" class="ib-btn ib-pri" data-ib-rg="panel">' + esc(t('registrar.letter.open_registrar')) + '</button></div>';
     }
