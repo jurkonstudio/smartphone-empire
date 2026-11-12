@@ -175,6 +175,7 @@ function _viewAuth(auth) {
                 '<button type="button" role="tab" class="' + (isReg ? 'active' : '') + '" data-onb-tab="register">' + esc(t('cloud.auth.tab_register')) + '</button>' +
             '</div>' +
             '<button type="button" class="onb-google" data-onb-google>' + '<svg class="onb-google__g" viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>' + '<span>' + esc(t('onb.auth.google')) + '</span></button>' +
+            '<button type=\"button\" class=\"onb-discord\" data-onb-discord>' + '<svg class=\"onb-discord__d\" viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" aria-hidden=\"true\" fill=\"currentColor\"><path d=\"M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z\"/></svg>' + '<span>' + esc(t('onb.auth.discord')) + '</span></button>' +
             '<div class="onb-or" aria-hidden="true"><span>' + esc(t('onb.auth.or')) + '</span></div>' +
             '<form data-onb-authform novalidate>' +
                 '<label class="field-label">' + esc(t('cloud.auth.email')) + '</label>' +
@@ -568,6 +569,24 @@ export function showOnboarding() {
                 console.warn('[Onboarding] Login Google gagal:', gr && (gr.code || gr.reason), gr && gr.reason);
                 el.disabled = false; if (lbl) lbl.textContent = lblAwal;
                 _msg(t('onb.auth.google_fail'), 'err');
+                return;
+            }
+
+            if ((el = e.target.closest('[data-onb-discord]'))) {
+                if (auth.busy || el.disabled) return;
+                // Login Discord: sama seperti Google (browser dialihkan ke Discord lalu kembali; sesi dipulihkan oleh restoreSession).
+                el.disabled = true;
+                var dlbl = el.querySelector('span'), dlblAwal = dlbl ? dlbl.textContent : '';
+                if (dlbl) dlbl.textContent = t('onb.auth.discord_go');
+                var dr = await _withTimeout(CloudService.signInWithDiscord(), 15000);
+                if (finished || current !== 'auth') return;
+                if (dr && dr.ok) {
+                    setTimeout(function () { if (!finished && el.isConnected) { el.disabled = false; if (dlbl) dlbl.textContent = dlblAwal; } }, 10000);
+                    return;
+                }
+                console.warn('[Onboarding] Login Discord gagal:', dr && (dr.code || dr.reason), dr && dr.reason);
+                el.disabled = false; if (dlbl) dlbl.textContent = dlblAwal;
+                _msg(t('onb.auth.discord_fail'), 'err');
                 return;
             }
 
