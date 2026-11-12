@@ -93,6 +93,26 @@ function _reasonToKey(reason) {
     }
 }
 
+// [FIX DISCORD] Baca hasil redirect OAuth dari URL SEBELUM klien Supabase membersihkannya.
+// Dulu error dari provider (mis. "Database error saving new user", email Discord tidak terverifikasi)
+// diabaikan sehingga pemain baru tertahan di layar login tanpa pesan apa pun.
+function _readOAuthCallback() {
+    var out = { isCallback: false, error: '' };
+    try {
+        var q = new URLSearchParams(location.search || '');
+        var h = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+        var err = q.get('error_description') || h.get('error_description') || q.get('error') || h.get('error') || '';
+        if (err) { out.error = String(err).replace(/\+/g, ' ').slice(0, 160); out.isCallback = true; }
+        else if (q.get('code') || h.get('access_token')) out.isCallback = true;
+        if (out.isCallback && window.history && history.replaceState) {
+            // Bersihkan parameter error supaya refresh tidak menampilkan error yang sama; code/token dibiarkan
+            // untuk klien Supabase (ia membersihkannya sendiri setelah menukar sesi).
+            if (out.error) history.replaceState(null, '', location.pathname);
+        }
+    } catch (e) {}
+    return out;
+}
+
 function _ensureCloud() {
     try {
         if (!isCloudConfigured()) return false;
@@ -240,6 +260,7 @@ function _viewFound(row) {
 
 export function showOnboarding() {
     return new Promise(function (resolve) {
+        var oauthCb = _readOAuthCallback();   // [FIX DISCORD] hasil redirect OAuth (dibaca sebelum URL dibersihkan)
         var cloudOk = _ensureCloud();
         var form = { name: '', diff: DIFFICULTY.normal };
         var auth = { mode: 'login', email: '', busy: false, notice: '' };
@@ -347,7 +368,12 @@ export function showOnboarding() {
             await afterSignedIn();
         }
 
+        var _afterBusy = false;
         async function afterSignedIn() {
+            // [FIX DISCORD] Cegah dua pemeriksaan berjalan bersamaan (jalur sesi tersimpan + pemulihan OAuth),
+            // yang bisa saling menimpa tampilan dan melempar pemain kembali ke layar login.
+            if (_afterBusy || finished) return;
+            _afterBusy = true;
             render('checking');
             try {
                 await _afterSignedInInner();
@@ -357,6 +383,8 @@ export function showOnboarding() {
                 if (finished) return;
                 ToastService.error(t('cloud.err.unknown'));
                 render('start');
+            } finally {
+                _afterBusy = false;
             }
         }
 
@@ -374,8 +402,14 @@ export function showOnboarding() {
 
         async function _afterSignedInInner() {
             var slot = CloudService.getSlot();
-            var list = await _withTimeout(CloudService.listSavesStrict(), 5000);
+            var list = await _withTimeout(CloudService.listSavesStrict(), 8000);
             if (finished) return;
+            // [FIX DISCORD] Akun baru sering kena permintaan pertama yang lambat (cold start / token baru).
+            // Coba sekali lagi sebelum menyerah dan melempar pemain ke layar login.
+            if (!list || !list.ok) {
+                list = await _withTimeout(CloudService.listSavesStrict(), 10000);
+                if (finished) return;
+            }
 
             if (!list || !list.ok) {
                 ToastService.error(t('cloud.err.network') || 'Koneksi ke server gagal. Coba lagi.');
@@ -641,18 +675,37 @@ export function showOnboarding() {
 
         render('start');
 
+        // [FIX DISCORD] Kembali dari provider OAuth dengan error: tampilkan alasannya di layar login.
+        if (oauthCb.error) {
+            auth.mode = 'login';
+            render('auth');
+            _msg(t('onb.auth.oauth_error', { detail: oauthCb.error }), 'err');
+            return;
+        }
+
         // [FIX] Sudah login saat layar ini dibuka (sesi tersimpan / baru login): cek progres cloud sekarang.
         // Dulu hanya dicek pada alur login manual atau pemulihan sesi, sehingga form "perusahaan baru" muncul
         // meski akun sudah punya save.
         if (cloudOk && _isSignedIn()) {
             afterSignedIn().catch(function () { if (!finished && current === 'checking') render('start'); });
-        }
-
-        if (cloudOk && !_isSignedIn() && typeof SupabaseAdapter.hasStoredSession === 'function' && SupabaseAdapter.hasStoredSession()) {
-            CloudService.restoreSession().then(function (r) {
-                if (finished || !(r && r.ok)) return;
-                if (current === 'start') afterSignedIn();
-            }).catch(function () {});
+        } else if (cloudOk && (oauthCb.isCallback ||
+                (typeof SupabaseAdapter.hasStoredSession === 'function' && SupabaseAdapter.hasStoredSession()))) {
+            // [FIX DISCORD] Baru kembali dari OAuth: langsung tampilkan "memeriksa" (bukan form login), beri waktu
+            // cukup untuk pertukaran kode -> sesi, dan JANGAN diam bila gagal.
+            var fromOAuth = oauthCb.isCallback;
+            if (fromOAuth) render('checking');
+            _withTimeout(CloudService.restoreSession(), fromOAuth ? 15000 : 8000).then(function (r) {
+                if (finished) return;
+                if (r && r.ok) {
+                    if (current === 'start' || current === 'checking') afterSignedIn();
+                    return;
+                }
+                if (fromOAuth && (current === 'checking' || current === 'start')) {
+                    auth.mode = 'login';
+                    render('auth');
+                    _msg(r && r.code === 'timeout' ? t('onb.auth.timeout') : t('onb.auth.oauth_nosession'), 'err');
+                }
+            }).catch(function () { if (!finished && current === 'checking') render('start'); });
         }
     });
     }
