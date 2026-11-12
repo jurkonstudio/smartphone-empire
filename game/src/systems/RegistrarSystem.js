@@ -186,6 +186,9 @@ function _sendLetter(data, code, vars, act) {
     return item;
 }
 
+// Dipakai RegistrySystem: kirim surat ICANN ke Pesan.
+export function sendIcannLetter(data, code, vars, act) { return _sendLetter(data, code, vars, act); }
+
 export function joinReseller(state) {
     var data = state.data, r = ensureRegistrarState(data);
     if (!isResellerOpen(data) || r.reseller || r.stage !== 'none') return { ok: false, reason: 'unavailable' };
