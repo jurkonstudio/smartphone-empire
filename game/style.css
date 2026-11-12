@@ -4710,6 +4710,21 @@ html[data-perf="lite"] body { background-attachment: scroll !important; }
 .onb-switch { display: block; width: 100%; margin-top: 10px; text-align: center; color: var(--text-secondary); }
 .onb-switch:hover { color: var(--accent); }
 
+/* Tombol "Lanjutkan dengan Google" + pemisah "atau" */
+.onb-google {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; min-height: 44px; margin: 0 0 4px; padding: 0 14px;
+    background: var(--bg-3); color: var(--text-primary);
+    border: 1px solid var(--border-strong); border-radius: var(--r-lg); cursor: pointer;
+    font: inherit; font-size: var(--fs-base); font-weight: var(--fw-semibold);
+    transition: background 0.15s, border-color 0.15s;
+}
+.onb-google:hover:not(:disabled) { background: var(--bg-4); }
+.onb-google:disabled { opacity: 0.6; cursor: default; }
+.onb-google__g { flex: none; }
+.onb-or { display: flex; align-items: center; gap: 10px; margin: 12px 0; color: var(--text-secondary); font-size: var(--fs-sm); }
+.onb-or::before, .onb-or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
 .onb-back {
     display: inline-flex; align-items: center; gap: 4px;
     margin: -4px 0 8px -4px; padding: 6px 8px; border: 0; border-radius: var(--r);
