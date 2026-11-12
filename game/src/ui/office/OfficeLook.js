@@ -18,7 +18,7 @@ export function createOfficeLook(THREE, renderer, container, look) {
     var night = 0;
 
     // Pasca-proses hanya di tier high. ?officepost=0 mematikannya untuk QA.
-    if (tier === 'high' && !/[?&]officepost=0/.test(location.search)) {
+    if (tier === 'high' && !(typeof location !== 'undefined' && /[?&]officepost=0/.test(location.search))) {
         try { post = createCampusPost(THREE, renderer, { samples: 4 }); }
         catch (e) { console.warn('[OfficeLook] pasca-proses dilewati:', e); post = null; }
     }
