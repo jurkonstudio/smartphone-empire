@@ -9,11 +9,12 @@ import path from 'node:path';
 const { mdToHtml, mdToText, firstProse } = await import('data:text/javascript;base64,' + Buffer.from(await readFile('blog/js/richtext.js', 'utf8')).toString('base64'));
 
 const SITE = 'https://smartphone-empire.my.id';
+const BLOG_SHELL = 'blog/index.html';   // aplikasi blog (beranda blog = /blog/); / adalah halaman depan statis
 const OUT = 'a';
 const KOUT = 'k';
 let KATEGORI_ADA = new Set(); // kategori yang punya halaman statis /k/<kat>/ (diisi setelah artikel dimuat)
 const catHref = (c) => (KATEGORI_ADA.has(c) ? `/${KOUT}/${c}/` : `/${KOUT}/${c}/`);
-const menuHtml = () => `<a href="/">Beranda</a>${Object.entries(CATS).map(([k, v]) => `<a href="${catHref(k)}">${v}</a>`).join('')}`;
+const menuHtml = () => `<a href="/blog/">Beranda</a>${Object.entries(CATS).map(([k, v]) => `<a href="${catHref(k)}">${v}</a>`).join('')}`;
 const cfg = await readFile('blog/js/config.js', 'utf8');
 const pick = (k) => (cfg.match(new RegExp(`export const ${k}\\s*=\\s*'([^']*)'`)) || [])[1] || '';
 const SUPABASE_URL = pick('SUPABASE_URL'), SUPABASE_KEY = pick('SUPABASE_KEY'), TZ = pick('TZ') || 'Asia/Jakarta';
@@ -34,7 +35,7 @@ async function loadPosts() {
 }
 
 const siteHeader = () => `<header class="site-header"><div class="bar">
-  <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span><span>Smartphone Empire</span></a>
+  <a class="brand" href="/blog/"><span class="brand-mark" aria-hidden="true"></span><span>Smartphone Empire</span></a>
   <nav class="menu" aria-label="Kategori">${menuHtml()}</nav>
   <div class="tools"><button class="icon-btn" id="themeToggle" type="button" aria-label="Ganti tema terang/gelap" title="Ganti tema"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button><a class="cta-game" href="/game/"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span>Main game</span></a></div>
 </div></header>`;
@@ -78,7 +79,7 @@ function page(p, all = []) {
   };
   const cat = CATS[p.category] || p.category;
   const crumbLd = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Beranda', item: `${SITE}/` },
+    { '@type': 'ListItem', position: 1, name: 'Beranda', item: `${SITE}/blog/` },
     { '@type': 'ListItem', position: 2, name: cat, item: KATEGORI_ADA.has(p.category) ? `${SITE}/${KOUT}/${p.category}/` : `${SITE}/${KOUT}/${p.category}/` },
     { '@type': 'ListItem', position: 3, name: p.title.slice(0, 110), item: canonical }] };
   const others = all.filter((x) => x.slug !== p.slug);
@@ -117,7 +118,7 @@ ${EXTRA_META(p.title, desc, img)}
 <a class="skip" href="#main">Lewati ke konten</a>
 ${siteHeader()}
 <main id="main">
-  <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Beranda</a><span aria-hidden="true">/</span><a href="${catHref(p.category)}">${esc(cat)}</a></nav>
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">Beranda</a><span aria-hidden="true">/</span><a href="${catHref(p.category)}">${esc(cat)}</a></nav>
   <article class="article">
     <div class="meta"><span class="tag t-${esc(p.category)}">${esc(cat)}</span></div>
     <h1>${esc(p.title)}</h1>
@@ -146,10 +147,10 @@ function categoryPage(cat, list) {
   const name = CATS[cat], canonical = `${SITE}/${KOUT}/${cat}/`;
   const desc = `${name}: ${list.length} artikel smartphone dan gadget terbaru dari Smartphone Empire Berita.`;
   const ld = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${name} | Smartphone Empire`, url: canonical, description: desc,
-    isPartOf: { '@type': 'WebSite', name: 'Smartphone Empire Berita', url: `${SITE}/` },
+    isPartOf: { '@type': 'WebSite', name: 'Smartphone Empire Berita', url: `${SITE}/blog/` },
     mainEntity: { '@type': 'ItemList', itemListElement: list.slice(0, 50).map((p, i) => ({ '@type': 'ListItem', position: i + 1, url: `${SITE}/${OUT}/${p.slug}/`, name: p.title })) } };
   const crumbLd = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Beranda', item: `${SITE}/` },
+    { '@type': 'ListItem', position: 1, name: 'Beranda', item: `${SITE}/blog/` },
     { '@type': 'ListItem', position: 2, name, item: canonical }] };
   const img = safeHttps(list.find((p) => safeHttps(p.cover_url))?.cover_url) || `${SITE}/game/assets/img/landing/pasar.jpg`;
   return `<!doctype html>
@@ -180,7 +181,7 @@ ${EXTRA_META(name + ' | Smartphone Empire', desc, img)}
 <a class="skip" href="#main">Lewati ke konten</a>
 ${siteHeader()}
 <main id="main">
-  <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Beranda</a><span aria-hidden="true">/</span><span aria-current="page">${esc(name)}</span></nav>
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">Beranda</a><span aria-hidden="true">/</span><span aria-current="page">${esc(name)}</span></nav>
   <h1 class="section-h">${esc(name)}</h1>
   <p class="lead">${esc(desc)}</p>
   <ul class="cat-list" style="list-style:none;padding:0;margin:20px 0;display:grid;gap:14px">
@@ -212,10 +213,10 @@ function infoPage(key, pg) {
   const sections = pg.s.map(([h, ps, us]) => `<h2>${h}</h2>` + (ps || []).map((x) => `<p>${x}</p>`).join('')
     + (us && us.length ? '<ul>' + us.map((x) => `<li>${x}</li>`).join('') + '</ul>' : '')).join('\n');
   const ld = { '@context': 'https://schema.org', '@type': INFO_LD[key] || 'WebPage', name: `${pg.t} | Smartphone Empire`, url: canonical, description: desc,
-    isPartOf: { '@type': 'WebSite', name: 'Smartphone Empire Berita', url: `${SITE}/` },
+    isPartOf: { '@type': 'WebSite', name: 'Smartphone Empire Berita', url: `${SITE}/blog/` },
     publisher: { '@type': 'Organization', name: 'Jurkon Studio', url: `${SITE}/`, ...(CONTACT_EMAIL ? { email: CONTACT_EMAIL } : {}) } };
   const crumbLd = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Beranda', item: `${SITE}/` },
+    { '@type': 'ListItem', position: 1, name: 'Beranda', item: `${SITE}/blog/` },
     { '@type': 'ListItem', position: 2, name: pg.t, item: canonical }] };
   const img = `${SITE}/game/assets/img/landing/pasar.jpg`;
   return `<!doctype html>
@@ -286,11 +287,11 @@ for (const p of posts) { await mkdir(path.join(OUT, p.slug), { recursive: true }
 
 // Daftar tautan asli (bisa dirayapi) di beranda: isi di antara penanda <!--ARSIP:MULAI--> dan <!--ARSIP:SELESAI-->
 try {
-  const idx = await readFile('index.html', 'utf8');
+  const idx = await readFile(BLOG_SHELL, 'utf8');
   const re = /<!--ARSIP:MULAI-->[\s\S]*?<!--ARSIP:SELESAI-->/;
   if (re.test(idx)) {
     const items = posts.slice(0, 12).map((p) => `<li><a href="/${OUT}/${esc(p.slug)}/">${esc(p.title)}</a></li>`).join('');
-    await writeFile('index.html', idx.replace(re, () => `<!--ARSIP:MULAI--><p class="arsip-kat">${[...KATEGORI_ADA].map((c) => `<a href="/${KOUT}/${c}/">${esc(CATS[c])}</a>`).join(' · ')}</p><ul>${items}</ul><!--ARSIP:SELESAI-->`));
+    await writeFile(BLOG_SHELL, idx.replace(re, () => `<!--ARSIP:MULAI--><p class="arsip-kat">${[...KATEGORI_ADA].map((c) => `<a href="/${KOUT}/${c}/">${esc(CATS[c])}</a>`).join(' · ')}</p><ul>${items}</ul><!--ARSIP:SELESAI-->`));
   }
 } catch (e) { console.warn('Lewati arsip beranda:', e.message); }
 
@@ -301,7 +302,7 @@ try {
 // salinan isi artikel di <noscript> untuk pembaca tanpa JavaScript.
 const BACA = 'baca';
 try {
-  const shell = await readFile('index.html', 'utf8');
+  const shell = await readFile(BLOG_SHELL, 'utf8');
   const bacaPage = (p) => {
     const canonical = `${SITE}/${OUT}/${p.slug}/`;
     const desc = rapikanDesc(p.excerpt, firstProse(p.body), p.title);
@@ -331,8 +332,10 @@ try {
 
 const day = (d) => new Date(d).toISOString().slice(0, 10);
 const terbaru = (list) => (list.length ? day(list[0].updated_at || list[0].published_at || list[0].created_at) : day(new Date()));
-const urls = [`  <url><loc>${SITE}/</loc><lastmod>${terbaru(posts)}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>`,
+const urls = [`  <url><loc>${SITE}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
+  `  <url><loc>${SITE}/blog/</loc><lastmod>${terbaru(posts)}</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>`,
   `  <url><loc>${SITE}/game/</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>`,
+  `  <url><loc>${SITE}/web</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>`,
   ...[...KATEGORI_ADA].map((c) => `  <url><loc>${SITE}/${KOUT}/${c}/</loc><lastmod>${terbaru(posts.filter((x) => x.category === c))}</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>`),
   ...INFO_KEYS.map((k) => `  <url><loc>${SITE}/${INFO}/${k}/</loc><lastmod>${day(new Date())}</lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>`),
   ...posts.map((p) => `  <url><loc>${SITE}/${OUT}/${p.slug}/</loc><lastmod>${day(p.updated_at || p.published_at || p.created_at)}</lastmod><priority>0.8</priority>${safeHttps(p.cover_url) ? `<image:image><image:loc>${esc(safeHttps(p.cover_url))}</image:loc></image:image>` : ''}</url>`)];
@@ -358,7 +361,7 @@ await writeFile('feed.xml', `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Smartphone Empire Berita</title>
-    <link>${SITE}/</link>
+    <link>${SITE}/blog/</link>
     <atom:link href="${SITE}/feed.xml" rel="self" type="application/rss+xml"/>
     <description>Kabar, spesifikasi, rumor, dan jadwal rilis smartphone dan gadget dalam bahasa Indonesia.</description>
     <language>id-ID</language>
