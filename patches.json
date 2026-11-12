@@ -1,6 +1,68 @@
 {
-  "latest": "0.2.14",
+  "latest": "0.2.15",
   "releases": [
+    {
+      "version": "0.2.15",
+      "date": "2026-11-12",
+      "items": [
+        {
+          "type": "fix",
+          "text": {
+            "id": "Celah uang gratis ditutup: harga maksimum ponsel 4x biaya produksi, sedangkan jual-habis saat produk dihentikan membayar 40% harga (1,6x biaya), jadi rilis lalu hentikan langsung untung 60% tanpa menjual satu unit. Hasil jual-habis kini dibatasi 0,5x biaya produksi per unit (BALANCE.products.discontinueMaxCostRatio), selalu rugi.",
+            "en": "Free-money loophole closed: the maximum phone price is 4x production cost, but the clearance sale on discontinue paid 40% of the price (1.6x cost), so releasing then discontinuing gave an instant 60% profit without selling a single unit. Clearance proceeds are now capped at 0.5x production cost per unit (BALANCE.products.discontinueMaxCostRatio), always a loss."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Pemasukan bulan berjalan kini tersimpan di save (finance.monthRevenue dan market.monthRevenue). Sebelumnya hanya di memori, sehingga memuat ulang game di tengah bulan menghapusnya: pajak lebih kecil, laporan bulanan dan pangsa pasar salah. Save lama aman, nilai awalnya 0.",
+            "en": "Current-month income is now stored in the save (finance.monthRevenue and market.monthRevenue). Before, it lived only in memory, so reloading mid-month erased it: lower tax, and wrong monthly report and market share. Old saves are safe, the default is 0."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Pembayaran kontrak grosir kini masuk laporan bulanan dan kena pajak. Sebelumnya lolos dari keduanya. Listener EconomySystem juga dilepas dengan benar di stop() sehingga start() berulang tidak menggandakan penghitungan.",
+            "en": "Wholesale contract payments now count in the monthly report and are taxed. Before, they escaped both. EconomySystem listeners are also released properly in stop(), so repeated start() calls no longer double-count."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Perkiraan runway kini memasukkan pajak infrastruktur dan biaya tetap kanal distribusi, yang memang dipotong tiap bulan. Sebelumnya runway terlalu optimis.",
+            "en": "The runway estimate now includes infrastructure tax and distribution channel fixed costs, which are deducted every month. Before, runway was too optimistic."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Lompat waktu (cheat skipDays) kini maju satu hari per langkah. Sebelumnya melompati banyak hari hanya memicu satu event hari, bulan, dan tahun, sehingga gaji, penjualan harian, dan pergantian tahun terlewat.",
+            "en": "Time skip (the skipDays cheat) now advances one day per step. Before, skipping many days fired only one day, month, and year event, so salaries, daily sales, and year rollovers were missed."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Kas tidak bisa lagi menjadi NaN atau Infinity: setCash menolak nilai tidak valid. Jumlah produksi tambahan kini dibulatkan dan divalidasi. Menghentikan produk yang masih punya pesanan produksi tertunda mencatat peringatan di log bahwa pesanan itu hangus tanpa pengembalian dana.",
+            "en": "Cash can no longer become NaN or Infinity: setCash rejects invalid values. Extra production quantities are now rounded and validated. Discontinuing a product that still has pending production orders writes a log warning that those orders are lost without a refund."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Patch ini mengubah logika game: jual-habis produk, pajak dan laporan bulanan, runway, dan lompat waktu. Tes baru: tools/logic-fixes.test.mjs (terdaftar di tools/run-all.mjs). Tes riset dan OfficeLook diperbaiki (jumlah node 135; location diberi guard di luar browser).",
+            "en": "This patch changes game logic: product clearance, monthly tax and report, runway, and time skip. New test: tools/logic-fixes.test.mjs (registered in tools/run-all.mjs). The research test and OfficeLook were fixed (135 nodes; location guarded outside a browser)."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Versi game dinaikkan ke 0.2.15 di src/config/app.config.js, package.json, patches.json (root dan src), dan web.html.",
+            "en": "Game version raised to 0.2.15 in src/config/app.config.js, package.json, patches.json (root and src), and web.html."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.14",
       "date": "2026-10-27",
