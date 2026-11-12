@@ -155,6 +155,14 @@ export class TutorialSystem {
     start() {
         this._bindGoalWatcher();
         const tut = this.state.data.tutorial;
+        // Mode tutorial dimatikan: pemain langsung bermain. Save baru maupun lama (yang belum selesai) ditandai selesai.
+        // Kartu "Target pertama: jual 1.000 ponsel" dan notifikasi targetnya tetap jalan (tidak bergantung pada tutorial).
+        if (!tut.completed && !tut.skipped) {
+            tut.skipped = true;
+            tut.completed = true;
+            tut.v = TUTORIAL_VERSION;
+            bus.emit('tutorial:completed', { skipped: true });
+        }
         if (tut.completed || tut.skipped) return;
 
         this._migrate();
