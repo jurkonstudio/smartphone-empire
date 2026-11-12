@@ -44,6 +44,7 @@ import { createCampusPost } from './CampusPost.js';
 import { buildExpansion } from './CampusExpansion.js';
 
 var BASE_VIEW = 22;
+var MIN_ASPECT = 1;               // kontainer lebih sempit dari ini (mis. dock Home masih kosong): lebar pandang dikunci, tinggi menyesuaikan -> tidak 'ter-zoom'
 // DPR maksimum sekarang adaptif per tier kualitas (lihat detectQuality di CampusLook.js).
 var MIN_RESIZE_DELTA = 2;       // piksel — skip resize kalau perubahan < 2px
 var GROW_MS = 650;              // durasi animasi bangunan tumbuh
@@ -179,9 +180,17 @@ export function createCampusScene(THREE, container, gameState) {
     var raycaster = new THREE.Raycaster();
     var ndc = new THREE.Vector2();
 
+    // Tinggi pandang (satuan dunia). Dulu tetap BASE_VIEW/zoom, sehingga kontainer tinggi & sempit (pemain baru,
+    // dock Home kosong) hanya menampilkan sepotong sempit peta dan tampak ter-zoom. Kini lebar minimal
+    // BASE_VIEW*MIN_ASPECT selalu terlihat; kontainer lebar/normal tidak berubah.
+    function viewH(zoom) {
+        var h = BASE_VIEW / zoom;
+        return aspect < MIN_ASPECT ? h * MIN_ASPECT / Math.max(0.01, aspect) : h;
+    }
+
     function applyCamera() {
         var v = controls.view;
-        var h = BASE_VIEW / v.zoom, w = h * aspect;
+        var h = viewH(v.zoom), w = h * aspect;
         camera.left = -w / 2; camera.right = w / 2; camera.top = h / 2; camera.bottom = -h / 2;
         camera.position.set(v.x + 20, 20, v.z + 20);
         camera.lookAt(v.x, 0, v.z);
@@ -404,7 +413,7 @@ export function createCampusScene(THREE, container, gameState) {
     // Terbang ke bangunan; titik fokus digeser agar bangunan tampil di atas kartu.
     function focusOn(cx, cz) {
         var zoom = Math.max(controls.view.zoom, FOCUS_ZOOM);
-        var h = BASE_VIEW / zoom;
+        var h = viewH(zoom);
         var k = FOCUS_SHIFT * h * Math.sqrt(3) * Math.SQRT1_2;    // ke bawah layar = (+S, +S)
         controls.flyTo(cx + k, cz + k, zoom);
     }
@@ -516,7 +525,7 @@ export function createCampusScene(THREE, container, gameState) {
     }
 
     var controls = createCampusControls(canvas, {
-        unitsPerPixel: function (zoom) { return (BASE_VIEW / zoom) / Math.max(1, container.clientHeight); },
+        unitsPerPixel: function (zoom) { return viewH(zoom) / Math.max(1, container.clientHeight); },
         maxZoom: 3.2,                // detail halus untuk zoom dekat
         minZoom: 0.5,                // zoom-out cukup jauh untuk melihat seluruh pulau 30x30
         // batas geser: pulau kampus + jembatan + sisi dekat Pulau Manufaktur di barat (tak simetris)
