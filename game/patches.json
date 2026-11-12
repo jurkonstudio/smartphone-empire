@@ -1,6 +1,179 @@
 {
-  "latest": "0.2.14",
+  "latest": "0.2.16",
   "releases": [
+    {
+      "version": "0.2.16",
+      "date": "2026-11-12",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Fitur Registrar di panel Future: mulai 2000 sebagai reseller domain (tanpa biaya, margin tipis, pangsa maksimal 2%), lalu ajukan akreditasi ICANN (butuh tahun 2003 dan riset 3G). ICANN meninjau berkas dan membalas lewat surat di Pesan: diterima, diminta melengkapi dokumen, atau ditolak. Setelah diterima, tanda tangani kontrak RAA dan escrow data di halaman Terima Kontrak lalu bayar biaya tahunan. Pemain hanya melihat penilaian peluang dari Asisten Bisnis, bukan persentase.",
+            "en": "Registrar feature in the Future panel: starting in 2000 you can be a domain reseller (no fees, thin margin, share capped at 2%), then apply for ICANN accreditation (needs the year 2003 and 3G research). ICANN reviews your file and replies by letter in Messages: accepted, more documents needed, or rejected. Once accepted, sign the RAA contract and data escrow on the Accept Contract page and pay the annual fee. Players only see the Business Advisor's chance assessment, not a percentage."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Registrar yang aktif bisa menjual domain lewat registry .com (onboarding 1 bulan, deposit grosir tertahan) dengan harga jual yang diatur 50% sampai 200% dari harga grosir. Laporan penyalahgunaan yang dibiarkan menambah poin kepatuhan: 3 poin memicu audit (Peringatan), 6 poin mencabut akreditasi. Staf kepatuhan memangkas poin baru. Tahap Registry juga memungkinkan melamar ekstensi domain sendiri pada putaran tertentu, dengan sponsor kompetitor, evaluasi, keberatan, kontensi, dan masa sunrise sebelum terbuka umum.",
+            "en": "An active registrar can sell domains through the .com registry (1-month onboarding, held wholesale deposit) at a retail price you set between 50% and 200% of wholesale. Unhandled abuse reports add compliance points: 3 points trigger an audit (Warning), 6 points revoke accreditation. Compliance staff cut new points. The Registry stage also lets you apply for your own domain extension in specific rounds, with competitor sponsors, evaluation, objections, contention, and a sunrise period before general availability."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Login dengan 3 provider sosial: Google, Discord, dan GitHub, di layar awal selain email dan password. Pemain baru yang belum punya save cloud otomatis masuk game dengan nama perusahaan acak dan kesulitan Normal (nama bisa diganti di Pengaturan), sedangkan akun lama langsung memuat progres cloud-nya.",
+            "en": "Sign in with 3 social providers: Google, Discord, and GitHub, on the start screen alongside email and password. New players with no cloud save enter the game automatically with a random company name and Normal difficulty (the name can be changed in Settings), while existing accounts load their cloud progress directly."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Pemain baru yang login lewat Discord (atau provider lain) tidak lagi tertahan di layar login. Error dari provider (misalnya akun gagal dibuat atau email belum terverifikasi) sekarang ditampilkan sebagai pesan, layar langsung beralih ke \"memeriksa progres\" setelah kembali dari provider, pengecekan save cloud diulang sekali bila timeout, dan dua pengecekan tidak lagi berjalan bersamaan.",
+            "en": "New players signing in with Discord (or another provider) no longer get stuck on the login screen. Provider errors (for example account creation failing or an unverified email) are now shown as a message, the screen switches straight to \"checking progress\" after returning from the provider, the cloud save check is retried once on timeout, and two checks no longer run at the same time."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Chrome mode Desktop site di HP kini menampilkan layout desktop (sidebar) sama seperti Samsung Internet. Sebelumnya Chrome tetap memakai layout mobile dengan navigasi bawah karena melaporkan pointer sentuh. Layout desktop kini aktif bila (lebar >= 768px dan ada mouse) atau lebar >= 960px; HP biasa tetap memakai layout mobile (style.css, desktop.css, density.css).",
+            "en": "Chrome's Desktop site mode on phones now shows the desktop layout (sidebar), the same as Samsung Internet. Before, Chrome kept the mobile layout with the bottom navigation because it reports a touch pointer. The desktop layout now applies when (width >= 768px and a mouse is present) or width >= 960px; normal phones keep the mobile layout (style.css, desktop.css, density.css)."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Harga pokok penjualan (HPP) kini masuk laba-rugi dan pajak. Sebelumnya biaya produksi dibayar langsung dari kas tanpa dicatat, sehingga net bulanan melebihi kas riil (uji 2007 sampai 2008: net dilaporkan $59,4jt, kas hanya naik $25,6jt) dan pajak 15% dihitung dari angka yang salah. ProductSystem kini memancarkan economy:add-cogs saat unit terjual, lalu EconomySystem mengurangkannya dari laba kena pajak tanpa memotong kas dua kali. Setelah perbaikan: net $32,9jt, kas naik $30,6jt.",
+            "en": "Cost of goods sold (COGS) now counts in profit and loss and in tax. Before, production costs were paid straight from cash without being recorded, so the monthly net exceeded real cash (2007 to 2008 test: reported net $59.4M while cash rose only $25.6M) and the 15% tax was computed from a wrong number. ProductSystem now emits economy:add-cogs when a unit sells, and EconomySystem subtracts it from taxable profit without deducting cash twice. After the fix: net $32.9M, cash up $30.6M."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Pajak kini punya pengalihan rugi (finance.taxLossCarry): rugi bulan sebelumnya mengurangi laba kena pajak bulan berikutnya, jadi bulan rugi tidak lagi dipajaki secara tidak adil.",
+            "en": "Tax now carries losses forward (finance.taxLossCarry): a previous month's loss reduces the next month's taxable profit, so loss months are no longer taxed unfairly."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Bunga pinjaman tidak lagi dikali pengali tingkat kesulitan. Bank memang mencatat bunga asli, jadi sekarang hanya biaya operasi yang dikali pengali.",
+            "en": "Loan interest is no longer multiplied by the difficulty multiplier. The bank records the real interest, so now only operating costs are multiplied."
+          }
+        },
+        {
+          "type": "balance",
+          "text": {
+            "id": "Setelah perbaikan akuntansi, pajak efektif turun dan laba bulanan tampak lebih jujur. Cek ulang tingkat kesulitan bila terasa terlalu mudah.",
+            "en": "After the accounting fixes, the effective tax rate drops and monthly profit looks more honest. Re-check difficulty if the game feels too easy."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Kendaraan di Peta Kampus 3D jauh lebih detail: roda berputar sesuai jarak tempuh, kaca, lampu depan dan belakang (menyala saat malam), tiga model mobil (sedan, SUV, hatchback), bus berjendela dengan papan tujuan dan garis, serta motor dengan pengendara berhelm. Kendaraan punya bayangan kontak di jalan dan miring mengikuti tanjakan jembatan. Tier low (tanpa shadow map) memakai model yang lebih ringan.",
+            "en": "Vehicles on the 3D Campus Map are much more detailed: wheels turn with distance travelled, windows, headlights and tail lights (lit at night), three car models (sedan, SUV, hatchback), a bus with windows, a destination sign and a stripe, and a motorbike with a helmeted rider. Vehicles have contact shadows on the road and tilt with the bridge slope. The low tier (no shadow map) uses lighter models."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Awan di Peta Kampus kini mengikuti kondisi langit: mendung atau hujan membuat awan abu gelap dan rendah, senja membuat awan jingga muda.",
+            "en": "Clouds on the Campus Map now follow the sky condition: overcast or rain gives dark, low grey clouds, and sunset gives light orange clouds."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Produk → Desain → Ponsel → Galeri Generasi kini punya galeri sampel layar lipat dan dual: Dual (2020), Lipat (2019), Flip (2020), Tri-fold (2024), Tri-fold C (2025), Lipat Lebar (2026), dan Lipat tanpa lipatan (2026). Kartu redup sampai tahun dan riset layar lipat terpenuhi, lalu menyala otomatis.",
+            "en": "Product → Design → Phone → Generation Gallery now has a gallery of foldable and dual-screen samples: Dual (2020), Fold (2019), Flip (2020), Tri-fold (2024), Tri-fold C (2025), Wide Fold (2026), and Crease-free Fold (2026). Cards stay dimmed until the year and foldable-screen research are met, then light up automatically."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Panduan di dalam game disesuaikan dengan isi game sekarang: ada bagian baru Manufaktur, Pasar dan Kompetitor, serta Progres dan Akun. Bagian sistem, glosarium, dan tips juga diperluas.",
+            "en": "The in-game Guide now matches the current game: new sections for Manufacturing, Market and Competitors, and Progress and Account. The systems, glossary, and tips sections were also expanded."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Field baru finance.monthCogs dan finance.taxLossCarry aman untuk save lama (nilai awal 0). Tes baru tools/accounting-test.mjs (11 cek) terdaftar di npm test. Patch ini mengubah logika game pada item akuntansi (HPP, pajak, bunga) dan fitur Registrar (kas, reputasi, pendapatan domain); item lain hanya tampilan, login, dan teks. Data Registrar di save (data.registrar, data.registry) punya nilai bawaan, jadi save lama aman.",
+            "en": "The new fields finance.monthCogs and finance.taxLossCarry are safe for old saves (default 0). New test tools/accounting-test.mjs (11 checks) is registered in npm test. This patch changes game logic for the accounting items (COGS, tax, interest) and the Registrar feature (cash, reputation, domain revenue); the other items are visual, sign-in, and text only. Registrar save data (data.registrar, data.registry) has defaults, so old saves are safe."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Versi game dinaikkan ke 0.2.16 di src/config/app.config.js, package.json, patches.json (root dan src), dan web.html.",
+            "en": "Game version raised to 0.2.16 in src/config/app.config.js, package.json, patches.json (root and src), and web.html."
+          }
+        }
+      ]
+    },
+    {
+      "version": "0.2.15",
+      "date": "2026-11-12",
+      "items": [
+        {
+          "type": "fix",
+          "text": {
+            "id": "Celah uang gratis ditutup: harga maksimum ponsel 4x biaya produksi, sedangkan jual-habis saat produk dihentikan membayar 40% harga (1,6x biaya), jadi rilis lalu hentikan langsung untung 60% tanpa menjual satu unit. Hasil jual-habis kini dibatasi 0,5x biaya produksi per unit (BALANCE.products.discontinueMaxCostRatio), selalu rugi.",
+            "en": "Free-money loophole closed: the maximum phone price is 4x production cost, but the clearance sale on discontinue paid 40% of the price (1.6x cost), so releasing then discontinuing gave an instant 60% profit without selling a single unit. Clearance proceeds are now capped at 0.5x production cost per unit (BALANCE.products.discontinueMaxCostRatio), always a loss."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Pemasukan bulan berjalan kini tersimpan di save (finance.monthRevenue dan market.monthRevenue). Sebelumnya hanya di memori, sehingga memuat ulang game di tengah bulan menghapusnya: pajak lebih kecil, laporan bulanan dan pangsa pasar salah. Save lama aman, nilai awalnya 0.",
+            "en": "Current-month income is now stored in the save (finance.monthRevenue and market.monthRevenue). Before, it lived only in memory, so reloading mid-month erased it: lower tax, and wrong monthly report and market share. Old saves are safe, the default is 0."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Pembayaran kontrak grosir kini masuk laporan bulanan dan kena pajak. Sebelumnya lolos dari keduanya. Listener EconomySystem juga dilepas dengan benar di stop() sehingga start() berulang tidak menggandakan penghitungan.",
+            "en": "Wholesale contract payments now count in the monthly report and are taxed. Before, they escaped both. EconomySystem listeners are also released properly in stop(), so repeated start() calls no longer double-count."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Perkiraan runway kini memasukkan pajak infrastruktur dan biaya tetap kanal distribusi, yang memang dipotong tiap bulan. Sebelumnya runway terlalu optimis.",
+            "en": "The runway estimate now includes infrastructure tax and distribution channel fixed costs, which are deducted every month. Before, runway was too optimistic."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Lompat waktu (cheat skipDays) kini maju satu hari per langkah. Sebelumnya melompati banyak hari hanya memicu satu event hari, bulan, dan tahun, sehingga gaji, penjualan harian, dan pergantian tahun terlewat.",
+            "en": "Time skip (the skipDays cheat) now advances one day per step. Before, skipping many days fired only one day, month, and year event, so salaries, daily sales, and year rollovers were missed."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Kas tidak bisa lagi menjadi NaN atau Infinity: setCash menolak nilai tidak valid. Jumlah produksi tambahan kini dibulatkan dan divalidasi. Menghentikan produk yang masih punya pesanan produksi tertunda mencatat peringatan di log bahwa pesanan itu hangus tanpa pengembalian dana.",
+            "en": "Cash can no longer become NaN or Infinity: setCash rejects invalid values. Extra production quantities are now rounded and validated. Discontinuing a product that still has pending production orders writes a log warning that those orders are lost without a refund."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Patch ini mengubah logika game: jual-habis produk, pajak dan laporan bulanan, runway, dan lompat waktu. Tes baru: tools/logic-fixes.test.mjs (terdaftar di tools/run-all.mjs). Tes riset dan OfficeLook diperbaiki (jumlah node 135; location diberi guard di luar browser).",
+            "en": "This patch changes game logic: product clearance, monthly tax and report, runway, and time skip. New test: tools/logic-fixes.test.mjs (registered in tools/run-all.mjs). The research test and OfficeLook were fixed (135 nodes; location guarded outside a browser)."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Versi game dinaikkan ke 0.2.15 di src/config/app.config.js, package.json, patches.json (root dan src), dan web.html.",
+            "en": "Game version raised to 0.2.15 in src/config/app.config.js, package.json, patches.json (root and src), and web.html."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.14",
       "date": "2026-10-27",

@@ -3003,7 +3003,7 @@ body {
 /* ============================================================================
    58. RESPONSIVE
    ============================================================================ */
-@media (min-width: 768px) and (any-pointer: fine) and (min-device-width: 700px) and (min-device-height: 700px) {
+@media (min-width: 768px) and (any-pointer: fine), (min-width: 960px) {
     .mobile-nav { display: none; }
     .app-view { padding: 18px 18px 0; padding-bottom: 18px; }
     .kpi-grid { grid-template-columns: repeat(4, 1fr); }
@@ -3500,7 +3500,7 @@ body.is-home.home-dock-collapsed .advisor-fab {
 }
 
 /* ---------- Layar lebar & layar pendek ---------- */
-@media (min-width: 768px) and (any-pointer: fine) and (min-device-width: 700px) and (min-device-height: 700px) {
+@media (min-width: 768px) and (any-pointer: fine), (min-width: 960px) {
     .app-view.view-home { padding: 18px; }
     body.is-home .advisor-fab {
         bottom: calc(18px + var(--home-tabs-h) + var(--home-slide-h) + (var(--home-gap) * 2) + 10px);
@@ -3542,7 +3542,7 @@ body.is-home.home-dock-collapsed .advisor-fab {
 .advisor-badge[hidden] { display: none; }
 .advisor-fab.critical .advisor-badge { background: #fff; color: var(--danger); }
 @keyframes advisorPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
-@media (min-width: 768px) and (any-pointer: fine) and (min-device-width: 700px) and (min-device-height: 700px) { .advisor-fab { bottom: 18px; right: 18px; } }
+@media (min-width: 768px) and (any-pointer: fine), (min-width: 960px) { .advisor-fab { bottom: 18px; right: 18px; } }
 @media (prefers-reduced-motion: reduce) { .advisor-fab.critical { animation: none; } }
 
 .advisor-list { display: flex; flex-direction: column; gap: 8px; }
@@ -4373,7 +4373,7 @@ body {
 .nav-btn .nav-ico { transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), color 0.15s; }
 
 /* ---------- 11. Desktop ---------- */
-@media (min-width: 768px) and (any-pointer: fine) and (min-device-width: 700px) and (min-device-height: 700px) {
+@media (min-width: 768px) and (any-pointer: fine), (min-width: 960px) {
     .app-view { padding: 12px 12px 0; padding-bottom: 12px; }
 }
 
@@ -4566,7 +4566,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
     .mobile-nav .nav-slider, .mobile-nav .nav-slider::before, .mobile-nav .nav-btn { transition: none !important; }
 }
-@media (min-width: 768px) and (any-pointer: fine) and (min-device-width: 700px) and (min-device-height: 700px) { .mobile-nav { display: none !important; } }
+@media (min-width: 768px) and (any-pointer: fine), (min-width: 960px) { .mobile-nav { display: none !important; } }
 
 
 /* ============================================================================
@@ -5569,7 +5569,7 @@ body.modal-open { overflow: hidden; }
    dock diciutkan. Angkanya sama dengan yang dipakai posisi tombol Asisten (FAB).
    Desktop (tanpa bar nav bawah) tidak terpengaruh.
    ============================================================================ */
-@media not all and (min-width: 768px) and (any-pointer: fine) and (min-device-width: 700px) and (min-device-height: 700px) {
+@media (max-width: 767px), (max-width: 959px) and (any-pointer: coarse) {
     .app-view.view-home {
         padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 10px);
     }
