@@ -45,6 +45,13 @@ export class EconomySystem {
         this._unsubs.push(bus.on('economy:add-revenue', (e) => {
             if (e && Number.isFinite(e.amount)) this._addMonthRevenue(e.amount);
         }));
+        // [akuntansi] HPP unit terjual (dicatat ProductSystem saat penjualan harian). Hanya mengurangi laba kena pajak.
+        this._unsubs.push(bus.on('economy:add-cogs', (e) => {
+            if (e && Number.isFinite(e.amount) && e.amount > 0) {
+                const f = this.state.data.finance;
+                f.monthCogs = (Number.isFinite(f.monthCogs) ? f.monthCogs : 0) + e.amount;
+            }
+        }));
         // [fix] Pembayaran kontrak grosir juga pemasukan (sebelumnya lolos dari laporan & pajak).
         this._unsubs.push(bus.on('wholesale:delivered', (e) => {
             if (e && Number.isFinite(e.total)) this._addMonthRevenue(e.total);
@@ -128,7 +135,9 @@ export class EconomySystem {
         // [Ekosistem] HPP & biaya tetap aksesori, biaya operasi App Store (dihitung sekali per bulan).
         const ecoCost = this.ecosystem ? this.ecosystem.processMonth() : 0;
         const expenseBase = salary + fixed + loanInterest + upkeep + infraTax + channelFixed + afterSalesCost + ecoCost;
-        const expense = Math.round(expenseBase * mul);
+        // [fix] Pengali kesulitan hanya untuk biaya operasi. Bunga/denda pinjaman sudah ditetapkan bank
+        // (dan dicatat bank apa adanya), jadi tidak boleh ikut dikali agar buku kas = buku bank.
+        const expense = Math.round((expenseBase - loanInterest) * mul + loanInterest);
 
         // ---- Pemasukan (info saja, sudah masuk cash via harian) ----
         const plantRevenue = this.plants ? this.plants.takeMonthlyRevenue() : 0;
@@ -137,11 +146,24 @@ export class EconomySystem {
         const income = Math.round(this._getMonthRevenue() + plantRevenue + ecoRevenue);
 
         // ---- Laba sebelum pajak ----
-        const preTax = income - expense;
+        // [fix] HPP unit terjual ikut dikurangkan. Kas sudah keluar saat produksi/restock, jadi tidak dipotong lagi.
+        const cogs = Math.round(Number.isFinite(data.finance.monthCogs) ? data.finance.monthCogs : 0);
+        const preTax = income - expense - cogs;
 
-        // ---- Pajak ----
+        // ---- Pajak (dengan pengalihan rugi fiskal) ----
+        // [fix] Rugi bulan lalu mengurangi laba kena pajak berikutnya; sebelumnya bulan rugi hangus
+        // sehingga tarif efektif tahunan melebihi tarif nominal.
         const taxRate = diff.taxRate ?? BALANCE.taxRate;
-        const tax = preTax > 0 ? Math.round(preTax * taxRate) : 0;
+        let carry = Number.isFinite(data.finance.taxLossCarry) ? data.finance.taxLossCarry : 0;
+        let tax = 0;
+        if (preTax < 0) {
+            carry += -preTax;
+        } else if (preTax > 0) {
+            const used = Math.min(carry, preTax);
+            carry -= used;
+            tax = Math.round((preTax - used) * taxRate);
+        }
+        data.finance.taxLossCarry = Math.round(carry);
 
         // ---- Net (info saja) ----
         const net = preTax - tax;
@@ -168,6 +190,8 @@ export class EconomySystem {
             breakdown: {
                 salary, fixed, loanInterest, loanPrincipal, depositInterest, upkeep, infraTax, plantRevenue, afterSales: afterSalesCost, ecosystem: ecoCost, ecosystemRevenue: ecoRevenue,
                 tax,
+                cogs,
+                taxLossCarry: data.finance.taxLossCarry,
                 expenseRaw: expenseBase
             }
         };
@@ -176,6 +200,7 @@ export class EconomySystem {
         data.finance.lastProcessed = { year: snapshot.currentYear, month: snapshot.currentMonth };
 
         data.finance.monthRevenue = 0;
+        data.finance.monthCogs = 0;
 
         // ---- Game over check ----
         if (cashAfter < 0) data.finance.negativeMonths += 1;
