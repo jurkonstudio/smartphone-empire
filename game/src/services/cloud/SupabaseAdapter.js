@@ -189,25 +189,19 @@ export const SupabaseAdapter = {
     // Login Google (OAuth). Browser dialihkan ke Google lalu kembali ke halaman ini; sesi dipulihkan oleh
     // detectSessionInUrl + hasStoredSession/restoreSession. Provider Google harus diaktifkan di Supabase
     // (Authentication > Providers > Google) dan alamat game didaftarkan di Authentication > URL Configuration.
-    signInWithGoogle: async function () {
-        var c = await getClient();
-        var res = await c.auth.signInWithOAuth({
-            provider: 'google',
-            options: { redirectTo: location.origin + location.pathname, queryParams: { prompt: 'select_account' } }
-        });
-        if (res.error) throw mk(res.error);
-        return { redirecting: true };
-    },
+    signInWithGoogle: async function () { return this.signInWithProvider('google'); },
 
-    // Login Discord (OAuth). Alurnya sama dengan Google. Provider Discord harus diaktifkan di Supabase
-    // (Authentication > Providers > Discord, isi Client ID + Client Secret dari Discord Developer Portal)
-    // dan Redirect URI Discord diisi: https://<project-ref>.supabase.co/auth/v1/callback
-    signInWithDiscord: async function () {
+    // Login OAuth generik (google | discord | github). Semua provider harus diaktifkan di Supabase
+    // (Authentication > Providers), dan callback Supabase didaftarkan di sisi provider-nya masing-masing.
+    signInWithProvider: async function (provider) {
+        var ALLOWED = { google: 1, discord: 1, github: 1 };
+        if (!ALLOWED[provider]) throw mk(null, 'unknown');
         var c = await getClient();
-        var res = await c.auth.signInWithOAuth({
-            provider: 'discord',
-            options: { redirectTo: location.origin + location.pathname, scopes: 'identify email' }
-        });
+        var options = { redirectTo: location.origin + location.pathname };
+        if (provider === 'google') options.queryParams = { prompt: 'select_account' };
+        if (provider === 'discord') options.scopes = 'identify email';
+        if (provider === 'github') options.scopes = 'read:user user:email';
+        var res = await c.auth.signInWithOAuth({ provider: provider, options: options });
         if (res.error) throw mk(res.error);
         return { redirecting: true };
     },
