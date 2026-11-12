@@ -6,6 +6,41 @@
       "date": "2026-11-12",
       "items": [
         {
+          "type": "feature",
+          "text": {
+            "id": "Fitur Registrar di panel Future: mulai 2000 sebagai reseller domain (tanpa biaya, margin tipis, pangsa maksimal 2%), lalu ajukan akreditasi ICANN (butuh tahun 2003 dan riset 3G). ICANN meninjau berkas dan membalas lewat surat di Pesan: diterima, diminta melengkapi dokumen, atau ditolak. Setelah diterima, tanda tangani kontrak RAA dan escrow data di halaman Terima Kontrak lalu bayar biaya tahunan. Pemain hanya melihat penilaian peluang dari Asisten Bisnis, bukan persentase.",
+            "en": "Registrar feature in the Future panel: starting in 2000 you can be a domain reseller (no fees, thin margin, share capped at 2%), then apply for ICANN accreditation (needs the year 2003 and 3G research). ICANN reviews your file and replies by letter in Messages: accepted, more documents needed, or rejected. Once accepted, sign the RAA contract and data escrow on the Accept Contract page and pay the annual fee. Players only see the Business Advisor's chance assessment, not a percentage."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Registrar yang aktif bisa menjual domain lewat registry .com (onboarding 1 bulan, deposit grosir tertahan) dengan harga jual yang diatur 50% sampai 200% dari harga grosir. Laporan penyalahgunaan yang dibiarkan menambah poin kepatuhan: 3 poin memicu audit (Peringatan), 6 poin mencabut akreditasi. Staf kepatuhan memangkas poin baru. Tahap Registry juga memungkinkan melamar ekstensi domain sendiri pada putaran tertentu, dengan sponsor kompetitor, evaluasi, keberatan, kontensi, dan masa sunrise sebelum terbuka umum.",
+            "en": "An active registrar can sell domains through the .com registry (1-month onboarding, held wholesale deposit) at a retail price you set between 50% and 200% of wholesale. Unhandled abuse reports add compliance points: 3 points trigger an audit (Warning), 6 points revoke accreditation. Compliance staff cut new points. The Registry stage also lets you apply for your own domain extension in specific rounds, with competitor sponsors, evaluation, objections, contention, and a sunrise period before general availability."
+          }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Login dengan 3 provider sosial: Google, Discord, dan GitHub, di layar awal selain email dan password. Pemain baru yang belum punya save cloud otomatis masuk game dengan nama perusahaan acak dan kesulitan Normal (nama bisa diganti di Pengaturan), sedangkan akun lama langsung memuat progres cloud-nya.",
+            "en": "Sign in with 3 social providers: Google, Discord, and GitHub, on the start screen alongside email and password. New players with no cloud save enter the game automatically with a random company name and Normal difficulty (the name can be changed in Settings), while existing accounts load their cloud progress directly."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Pemain baru yang login lewat Discord (atau provider lain) tidak lagi tertahan di layar login. Error dari provider (misalnya akun gagal dibuat atau email belum terverifikasi) sekarang ditampilkan sebagai pesan, layar langsung beralih ke \"memeriksa progres\" setelah kembali dari provider, pengecekan save cloud diulang sekali bila timeout, dan dua pengecekan tidak lagi berjalan bersamaan.",
+            "en": "New players signing in with Discord (or another provider) no longer get stuck on the login screen. Provider errors (for example account creation failing or an unverified email) are now shown as a message, the screen switches straight to \"checking progress\" after returning from the provider, the cloud save check is retried once on timeout, and two checks no longer run at the same time."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Chrome mode Desktop site di HP kini menampilkan layout desktop (sidebar) sama seperti Samsung Internet. Sebelumnya Chrome tetap memakai layout mobile dengan navigasi bawah karena melaporkan pointer sentuh. Layout desktop kini aktif bila (lebar >= 768px dan ada mouse) atau lebar >= 960px; HP biasa tetap memakai layout mobile (style.css, desktop.css, density.css).",
+            "en": "Chrome's Desktop site mode on phones now shows the desktop layout (sidebar), the same as Samsung Internet. Before, Chrome kept the mobile layout with the bottom navigation because it reports a touch pointer. The desktop layout now applies when (width >= 768px and a mouse is present) or width >= 960px; normal phones keep the mobile layout (style.css, desktop.css, density.css)."
+          }
+        },
+        {
           "type": "fix",
           "text": {
             "id": "Harga pokok penjualan (HPP) kini masuk laba-rugi dan pajak. Sebelumnya biaya produksi dibayar langsung dari kas tanpa dicatat, sehingga net bulanan melebihi kas riil (uji 2007 sampai 2008: net dilaporkan $59,4jt, kas hanya naik $25,6jt) dan pajak 15% dihitung dari angka yang salah. ProductSystem kini memancarkan economy:add-cogs saat unit terjual, lalu EconomySystem mengurangkannya dari laba kena pajak tanpa memotong kas dua kali. Setelah perbaikan: net $32,9jt, kas naik $30,6jt.",
@@ -64,8 +99,8 @@
         {
           "type": "change",
           "text": {
-            "id": "Field baru finance.monthCogs dan finance.taxLossCarry aman untuk save lama (nilai awal 0). Tes baru tools/accounting-test.mjs (11 cek) terdaftar di npm test. Patch ini mengubah logika game pada item akuntansi (HPP, pajak, bunga); item lain hanya tampilan dan teks.",
-            "en": "The new fields finance.monthCogs and finance.taxLossCarry are safe for old saves (default 0). New test tools/accounting-test.mjs (11 checks) is registered in npm test. This patch changes game logic for the accounting items (COGS, tax, interest); the other items are visual and text only."
+            "id": "Field baru finance.monthCogs dan finance.taxLossCarry aman untuk save lama (nilai awal 0). Tes baru tools/accounting-test.mjs (11 cek) terdaftar di npm test. Patch ini mengubah logika game pada item akuntansi (HPP, pajak, bunga) dan fitur Registrar (kas, reputasi, pendapatan domain); item lain hanya tampilan, login, dan teks. Data Registrar di save (data.registrar, data.registry) punya nilai bawaan, jadi save lama aman.",
+            "en": "The new fields finance.monthCogs and finance.taxLossCarry are safe for old saves (default 0). New test tools/accounting-test.mjs (11 checks) is registered in npm test. This patch changes game logic for the accounting items (COGS, tax, interest) and the Registrar feature (cash, reputation, domain revenue); the other items are visual, sign-in, and text only. Registrar save data (data.registrar, data.registry) has defaults, so old saves are safe."
           }
         },
         {
