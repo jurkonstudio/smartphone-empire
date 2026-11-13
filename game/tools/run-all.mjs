@@ -58,6 +58,7 @@ const TESTS = [
   { file: 'tools/road-graph-test.mjs', src: true },
   { file: 'tools/runway.mjs', src: true },
   { file: 'tools/scene-smoke.mjs', src: true },
+  { file: 'tools/era-test.mjs', src: true },
   { file: 'tools/office-smoke.mjs', src: true }, // tiruan THREE/canvas diperbarui di P3
   // Skrip simulasi/kalibrasi: tidak punya assertion, hanya memastikan berjalan tanpa error (smoke).
   { file: 'tools/asm-balance.mjs', src: true },
