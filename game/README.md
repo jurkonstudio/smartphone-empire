@@ -1,0 +1,480 @@
+> **Repo layout:** the home page (`/`) is the news blog (`index.html`). The game lives in `game/` (`/game/`), the game landing page is `/game/web.html`, and the game admin dashboard is `/031411/`.
+> Dev commands (`npm test`, `npm run lint`, `npm run check`) run from inside `game/`. The root `sw.js` only cleans up old service workers and can be deleted after a few weeks.
+
+<div align="center">
+
+# JURKON STUDIO
+
+### Smartphone Empire
+
+**Build a phone company from scratch. Start on January 1, 2000, take on Nokia, Apple, Samsung, and 29 other rivals, ride the industry through the touchscreen, AI, and foldable eras, and carry on into a speculative 2027–2030 scenario.**
+
+Created by **Kalfin Agus Setiawan** under the **Jurkon Studio** banner.
+
+[🎮 Play the game](https://smartphone-empire.my.id/game/) · [📰 News blog](https://smartphone-empire.my.id/) · [🐛 Report a bug](https://github.com/jurkonstudio/smartphone-empire/issues) · [🔒 Security policy](SECURITY.md)
+
+</div>
+
+---
+
+## Why this game exists
+
+I love simulation games, but I couldn't find one that really tells the story of **how the mobile phone evolved from the beginning until today**. It felt like it would be great to start as a tiny company in 2000, compete with Nokia at the height of its power, and slowly climb while watching the whole industry change, from monochrome candybars to foldables.
+
+This is a fan project, not a commercial product. It has no affiliation with Nokia, Apple, Samsung, or any other company.
+
+---
+
+## Gameplay
+
+You are the CEO of a phone company founded on January 1, 2000. Starting cash is limited: **$200K / $100K / $50K** on Easy (Santai) / Normal / Hard (Sulit).
+
+Your job:
+
+- Hire engineers, designers, and marketers
+- Research technology so you don't fall behind
+- Build your own OS, or license a third-party one (more expensive)
+- Design phones, manufacture them (with your own component plants and assembly factory if you want), release them, then read the reviews and public reaction
+- Manage money: salaries, rent, tax, loans, deposits, stocks, and plant investment
+- Don't go bankrupt. Negative cash for **2 months in a row** means game over
+
+Time runs in real time: **1 game day = 60 seconds**. You can pause or speed up to 2x, 5x, or 10x. While you work, competitors move too: they release products, climb research tiers, and take market share. **Historical life events** also shape the run. In 2007 the iPhone arrives and Nokia starts to wobble. If you were in Nokia's seat, what would you do?
+
+The real-world timeline in the game stops at 2026. After that (2027–2030) the game uses a **speculative scenario**: a memory crisis and price hikes, Agentic AI phones, EU battery rules, and a fictional newcomer. All scenario content is tagged `speculative` in the data and is not fact or an official forecast.
+
+A season ends when the game date enters **2051** (the `endYear` limit of 2050 in `src/config/endgame.config.js`). The final score is calculated from milestones, products in your catalog, completed research, active staff, and net worth.
+
+---
+
+## What's in the game
+
+The numbers below were counted directly from the data files in this repo (v0.2.8; the subscription services added no new counted items).
+
+### 🧭 Navigation
+
+Bottom bar: **Home · HQ · Research · Products · Market · Settings**.
+
+- **Home** has a **Campus | Office** switch (3D campus map or 3D office map).
+- **HQ** has 6 sub-tabs: **Overview, Team, Exchange, Bank, Invest, History**.
+- **Research** has 4 sub-tabs: **Tech, OS, Manufacturing, Chip**. **Products** has 5: **Design, Catalog, Accessories, Sales, Chip** (Chip appears only once the Chip Lab is unlocked). **Market** has 8: **Share, Competitors, Trends, Promo, Channels, Service, Ecosystem, Public**.
+- The desktop layout has its own styling (`desktop.css`), so the game is comfortable on wide screens, not only on phones.
+
+### 🏢 Campus, Office, and Team
+
+- **3D Campus map** on Home: buildings grow and level up as you progress (HQ, R&D Lab, Chip Plant, Flagship Store, OS Center, Billboard, Monument, and more). Building style follows the era, there is a day and night cycle that follows the theme, and the city is animated.
+  - Since 0.2.14 the island is **expanded** with decorative districts (sports complex, beach café and pier, lighthouse, botanical garden, solar field, roundabout, parking, amphitheater).
+  - The **Manufacturing Island** is linked to the campus by a bridge. Trucks cross between the two islands, and the camera can pan over to it.
+- **3D Office map** (Home → Office): an isometric office interior with **9 rooms** connected to game data.
+  - Staff sit at desks. Color shows their role and a small orb shows morale.
+  - The lab shows active research, the server rack shows OS version and bugs, and the showroom shows the products on sale.
+  - Rooms whose requirements aren't met appear locked.
+  - Tap a room for an info card and shortcuts to the related panel. From that card you can build or upgrade a Fab (the construction grows in 3D as it progresses) and train staff without switching panels.
+  - Tap a staff member for a detail card with "Manage Team" and training buttons.
+  - The Work room has a **Recruit** button that opens recruit mode in the Team panel.
+- **Team**: 3 roles (Engineer, Designer, Marketer), 5 skill tiers (Junior to Principal), 8 traits, and candidates from **9 regions** (US, Europe, Japan, Korea, China, India, Indonesia, Russia, Latin America). Up to 20 people per role. Skills grow over time, and morale and salary change with them.
+  - New hires need **24 game hours** to onboard before they join.
+  - The staff detail card has a **View in office** button that jumps to the office map and highlights that person.
+  - A headhunter can replace the whole candidate pool for a fee and a cooldown. Salary negotiation (up to 15% off) has a success chance that depends on the candidate's traits.
+- **HQ → Overview** (mobile-first): main finance card, 2x2 metrics (reputation, sentiment, team, era), live activity, 24-month chart, quick actions, then collapsible public highlights and timeline.
+
+### 🔬 Research and OS
+
+- **Tech tree**: **135 nodes** in **9 categories** (display, camera, battery, chip, network, sensor, body, audio, features), from 2000 to 2027. The last node, AI Agent Runtime, is part of the speculative scenario. The research queue runs in parallel, and more engineers means more slots. Early-2000s content includes infrared, MMS, Wi-Fi, e-mail, FM radio, MP3, memory cards, video recording, basic GPS, and USB Type-C.
+- **Your own OS**: **50 OS features** across **5 eras** (Basic Firmware, Touchscreen Era, Modern Smartphone, AI & Ecosystem, On-Device AI). Three Agentic features (Agentic OS, Agent Guard, Agent Store) unlock from 2027 through the AI Agent Runtime research. There are OS versions, random bugs (**51 bug templates**, each with a patch), **7 built-in apps**, a third-party app ecosystem, and OS update cards organized into 9 tracks.
+- **OS licensing**: **5 packages** if you'd rather not build your own OS.
+- **Phone features**: **59 features** in 10 groups (connectivity, security, audio, extra camera, endurance, power, sensors, UX, storage, AI). Features are researched in the **Features** category, picked in the design wizard (step 3), and change stats, unit cost, demand (missing standard features, regional rules such as EU USB-C 2025), reviews, and advisor alerts. Phones without a feature list (old saves) stay neutral.
+- **Future panels**: tech-preview panels (F-AI, Dev Tools, Game Engine) that unlock from research or year conditions and affect OS feature discounts and design suggestions. **User Control** (from 2019, after the 3D Face ID research) sets a data policy and adds User Insights, Algorithm Steering, Data Monetisation, per-country regulation, and a survey every 3 months in Messages (since 0.2.14).
+
+### 📱 Products and Sales
+
+- **Phone design wizard** with a real-time preview. There are **144 components** in **11 categories** (display, camera, battery, chip, RAM, storage, network, body, sensor, audio, form factor) and **18 body colors** that unlock progressively by era. Choices follow the year, so there's no OLED screen in 2001. RAM and storage are optional (default "Standard RAM", no cost). From 2027, LPDDR6 24GB is available, and the RAM market price follows the memory-crisis index (×1.35 in 2027, ×1.5 in 2028, ×1.2 in 2029, ×1.05 in 2030), which affects design cost, production bills, and the sale price from your own RAM plant.
+- **Three-view phone mockup**: front, back, and **retail packaging** (an era-appropriate box with contents such as cable, charger, and earphones). The back view shows an **In-house** badge for components from your own plants.
+- **4-phase development**: Design → Prototype → Production → Release.
+- **Transparent demand formula**: quality × price × reputation × marketing × OS × trend × competitors × lifecycle × macro conditions.
+- **Product lifecycle**: rising → peak → declining → dead. There is warehouse stock, automatic restock, and a maximum of **5 active products**.
+- **Ecosystem** (Market → Ecosystem): three accessory lines (wireless earbuds from 2004, smartwatches from 2014, chargers from 2000). Each line has a Basic, Mid, or Premium tier and an adjustable price. Sales follow your active phone base, and each line has a fixed monthly cost and a setup cost. Once your OS has the App Store feature, you earn a monthly commission (15–30%, adjustable) on app spending by active OS users. A high commission lowers developer appeal, so the catalog shrinks. Owning accessories and an App Store raises phone demand by up to 6% and eases competitor pressure. Tier and price changes are locked for 3 months, and a line can't be closed for 6 months after it opens. Below the App Store card, two subscription services sit side by side: **Cloud** (from 2012, needs the Cloud Sync OS feature, subscribers follow your active phone base) and an **AI assistant** (from 2023, needs the AI On-Device OS feature, subscribers follow active OS users). Each has Free, Standard, or Premium tiers, a setup cost, and a monthly fixed cost. See `src/systems/EcosystemSystem.js`.
+- **Sales channels** (Market → Channels): Mobile Carriers (2000), Online Store (2003), and Own Stores (2004) expand demand with era-based reach, but units sold through them are margin-cut and carry fixed costs. Production cost per unit does not change, so thin-margin phones lose money through carriers. See `docs/CHANGES-channels.md`.
+- **Marketing**: **5 campaign types** (Online Ads, Event Sponsorship, Product Launch, City Billboard, Influencer Campaign).
+- **Promotions**: **18 packages**: 12 regional (Global, Asia, Europe, Americas & Rest, 3 each) and 6 per consumer segment. There are **12 seasonal events** such as Lunar New Year, 618, Singles' Day 11.11, Golden Week/Diwali, Carnival, Back to School, Summer Sales, Black Friday, and Christmas. At most 3 active promotion campaigns per product.
+- **Market Navigation**: the market is read by **8 consumer segments** (value, mainstream, premium, gamer, creator, pro, youth, senior) and **8 sub-regions**. There are **19 trend waves** (16 historical plus 3 scenario waves for 2027–2029: Memory Crisis, AI Agent Phones, EU Battery Rules) and 4 extra trends, all feeding into the demand formula. The **Market** tab shows cards for Best Opportunities, Segments, Sub-Regions, Trend Waves, Reactions per segment, and Viral History. The data can also be read through `window.__game.marketNav`.
+
+### 🧠 Chips, Fabs, and Manufacturing
+
+- **Chip research**: **52 nodes** in **6 categories** (design, architecture, process, graphics, power, business).
+- **Custom chip design**: **8 architectures**, **14 process nodes**, and **24 chip features** in 7 categories.
+- **Fab** with 4 tiers, from Small Fab (5,000 chips/month, $5M) to Mega Fab (5 million chips/month, $600M). Build times, upgrades, a production queue, and yield all apply.
+- **Component plants** (Manufacturing panel): **5 plant types** (Battery, Display, SoC, Camera, RAM) with 4 levels each. Every level adds a price discount, capacity, yield, and a spec bonus (for example SoC adds performance, Camera adds photo quality). Display, SoC, and RAM plants require a Fab. Plants unlock over time (Battery 2002, Display 2003, SoC and RAM 2004, Camera 2005), and the Manufacturing tab opens from 2003.
+  - Plant stock is used at release and restock. Any shortfall is bought at market price.
+  - There is a monthly **maintenance cost** and a 0.2% monthly **infrastructure tax** on installed capital.
+  - Surplus stock can be **sold wholesale** (market price × 0.92, monthly quota of 40% of capacity). Low-level plants can lose money on wholesale, high-level plants profit.
+- **Wholesale contracts** (Manufacturing overview, *Kontrak grosir* button): rival brands bid for part of your finished-phone stock. Each month a product that is selling and has at least 100 units in stock can get an offer for 8–35% of its stock (at least 100 units). Offers stay open for 20–60 days, and at most 12 are open at once (2 per product).
+  - Offers appear more often for higher-quality products. The price depends on the buyer's personality: aggressive and declining buyers pay about 50–70% of retail, premium buyers 85–98%, and higher quality raises the price.
+  - Prices never fall below the unit production cost. An offer that can't meet that floor under the retail cap is not made.
+  - Accepting ships the units right away and pays 3–10 days later. Discontinuing a product cancels its open contracts and returns the stock.
+  - Wholesale does not change market share, reputation, or retail sales data. Each accepted contract gives the buyer a temporary share boost (about 3 months, decaying and capped), so selling to a rival has a strategic cost.
+  - Only brands that are active in the current year and haven't withdrawn can buy.
+- **Assembly factory** (Manufacturing tab and 3D island): a final-assembly plant with 4 levels (Manual Line, Semi-Automatic Line, Automated Factory, Robotic Smart Factory). You can start building from 2001, and it starts producing from 2002. Before it operates, production runs through contract manufacturing with no penalty.
+  - Workers are modeled as headcount groups per role (operator, QC, technician, supervisor), roughly 120 people at level 1 up to about 1,500 at level 4, with a 14-day training period.
+  - Once operating, it cuts restock cost by 5 / 9 / 13 / 17% (scaled by staffing), and production lag depends on queue versus capacity, operator and technician staffing, morale, and overtime. QC keeps the defect rate down (2–6%).
+  - Wages and maintenance are charged daily, and unpaid wages hurt morale. Wage and maintenance costs follow a year-based index.
+
+### 🌍 Competitors and the Market
+
+- **32 companies** with personalities (dominant, aggressive, premium, follower, innovator, declining). They include Nokia, Motorola, Sony Ericsson, Siemens, Sagem, Alcatel, Palm, BlackBerry, Samsung, LG, HTC, Apple, Android, Huawei, Oppo, Vivo, Microsoft Lumia, Honor, OnePlus, Nothing, Asus, Sony Mobile, Realme, Meizu, Lenovo, Tecno, ZTE, Xiaomi, Sharp, NEC, and Panasonic, plus **Novamind**, a fictional AI-native newcomer that enters the market in 2028 (scenario).
+  - Each brand's market share is carried forward to 2030 as a scenario direction: Samsung and Apple edge up, Chinese brands dip then partly recover, and small brands roughly halve by 2028.
+  - Every company has active years, historical market share per year, signature products, milestones, and life events.
+  - Factuality labels and source notes show what is fact and what was simplified.
+- **Wholesale buyers**: rival brands that buy your wholesale contracts get a temporary share boost (see Manufacturing).
+- **Name mode**: use real names or fictional parody names (for example "Nokio", "Apel", "Samsul").
+- **Dynamic competitor actions**: they can be aggressive, cut prices, or fade, depending on personality and difficulty. While the memory crisis is active, brands cut prices less often and small brands are quieter.
+- **Emergent brand withdrawal** (from 2027): non-ecosystem brands exit the simulation if their share stays below 0.3% for 2 years in a row. This is the result of a data threshold, not a script. In test simulations the brands that left were Meizu (2028), Lenovo (2029), and Asus (2030). The thresholds can be tuned in `src/data/competitor-actions.data.js`.
+- **Market share** is computed monthly with a 24-month history. A macro model (GDP, inflation, interest rates, 2000–2026) affects demand. Market-size and average-price anchors continue to 2030 (dipping at the 2028 memory-crisis peak, then recovering).
+- **Public opinion**: sentiment across **11 aspects** (design, camera, battery, performance, price, reliability, OS, support, display, connectivity, usability), a review feed that gets more varied from era to era, and **26 viral events** you can respond to (apologize, recall, clarify, or ignore; "Ignore" can be used only once per event). Viral effects change daily sales.
+- **News**: automatic headlines from **20 outlets**, with journalists and datelines per country. There are **96 monthly headlines** (2000–2007), 6 pre-history headlines, **33 headlines** for 2018–2026, **9 scenario stories** for 2027–2029 (labeled speculative, generic sources), **263 competitor release stories**, and templates that highlight product releases, milestones, and industry events.
+
+### 💰 Finance
+
+- **Economy**: salaries, rent, tax (12% / 15% / 20% by difficulty), burn-rate warnings, and a cash history.
+- **Economy brakes** (so cash can't pile up forever):
+  - Component cost rises with production volume (max ×2.2).
+  - Demand is capped by a market ceiling that depends on difficulty.
+  - Competitor pressure rises when utilization is high.
+  - Places to spend cash in **HQ → Invest**: Plant Investment (L1–L5, which flattens the cost curve) and **rival brand acquisition** (from 2003, max 5, 6-month gap).
+- **Bank**: **3 banks** (Global, Asia, Euro), loans with interest and term, flexible and fixed-term deposits, and an **8-tier credit rating (AAA to D)**. Late payments incur penalties and can block loan access.
+- **Stock exchange** (HQ → Exchange): **84 stocks** in **12 categories** (Phone, Chip, Software, Social Media, Streaming, E-commerce, Finance, Energy & Mining, Consumer, Telecom, Other, and Your Company), **9 indices** (NASDAQ, Dow, S&P 500, IHSG, Nikkei, FTSE, DAX, Hang Seng, KOSPI), and **5 currencies** (USD, KRW, TWD, HKD, IDR) with historical rates.
+  - The list of listed companies follows the game year: 43 are active in 2000 and 78 in 2026. Categories like Social Media and Streaming fill up only after those companies exist in the real world.
+  - **Your buys and sells move prices.** A single trade shifts a price by at most 3%, the impact decays each month, and mega-tier stocks are harder to move.
+  - Prices between two data years are interpolated, and after the last data year they are projected.
+  - Each stock carries a data-confidence tag (`verified`, `trend`, `fictional`).
+
+### 🎯 Help and Progression
+
+- **Business Advisor**: rule-based advice ordered from critical to info, snoozable, with local Q&A. It also tells you when a new patch is out. A hook for AI is prepared.
+- **Tutorial** (8 steps), starter **quests**, contextual tips, and a log with milestones.
+- **Guide** and a history **Timeline** panel (23 iconic phones, 14 OS milestones, 5 eras).
+- **Player level** (1–50), **company level**, and **credibility** (reputation, credit score, sentiment, payment integrity). Levels and leaderboard scores are computed on the server. Reaching levels and credibility tiers grants rewards that you claim through Messages.
+
+### 🎨 Look and Language
+
+- **Era-aware visuals**: **7 design eras** (Monochrome LCD → Color TFT → Touchscreen Revolution → Mature Smartphone → Premium & Bezel-less → AI & Notch → Foldable & Ultra). Phone mockups, screens, and notifications change by era.
+- **Dark and light themes** with **6 accent colors** (blue, emerald, violet, amber, rose, cyan).
+- **12 languages**: English, Bahasa Indonesia, Chinese (Simplified), Korean, Japanese, French, German, Spanish, Italian, Russian, Polish, and Hindi. Switch any time in Settings.
+  - **Indonesian and English are full**, with roughly **2,900 and 3,000 keys** respectively (main dictionary plus per-feature dictionaries).
+  - The **10 other languages** use a core dictionary (about 235 keys) and **fall back to English** for untranslated text.
+  - Phone component names and descriptions are still in Indonesian (translation is on the roadmap).
+- **Audio**: synthesized tap sounds (Web Audio API), plus vibration on supported devices.
+- **Lite mode** turns on automatically on low-end phones (RAM, CPU, Data Saver, and battery are detected at startup). You can force it with `?perf=lite`, `?perf=full`, or `?perf=auto`. The game time loop stops entirely when the tab is hidden, and the 3D loops no longer wake on every vsync.
+- **Language-aware loading screen**: Indonesian cover (`assets/img/loading-id.webp`) or English cover (`assets/img/loading-en.webp`), chosen before the page renders. The percentage under the image is real progress (JS modules downloaded plus boot stages). If the image fails to load, `assets/img/loading-screen.jpg` is used. Other languages use the English cover.
+- Mobile-first layout with swipe between sub-tabs. The game can also be installed as a **PWA** (`manifest.webmanifest`), and the Android APK is just a wrapper (WebAPK) around the web version.
+
+### ☁️ Cloud, Account, and Saves
+
+- **Local save** runs automatically (when the browser is idle), plus save-file export and import.
+- **Cloud save** through Supabase: login, **1 slot** (stores the latest save), player profile (display name and avatar), unique company-name check, and a leaderboard.
+- **Player Profile**: an **8-digit Player ID** is shown in the Player Profile panel and **can be seen by other players**. Don't treat it as a secret. Settings now contain only settings, separate from the profile.
+- **Messages**: an inbox for system notifications and rewards, player-to-player messages (with blocking), and SIL transfers between players (max 5,000 SIL per 24 hours). Since 0.2.14 it also holds local user-survey messages (stored in the save, not on the server).
+- **Universal Wallet**: money ($) and Silicon (SIL) can be used for almost everything. Cash costs can be covered with SIL and vice versa. The rate follows inflation (year 2000: 1 SIL = $2,500, rising 15% per year). SIL is never minted from money. Pay modes (Auto, Cash first, SIL first, Strict) and the SIL Emergency Fund are in Settings → Finance.
+- **Silicon (SIL)**: a premium currency for speeding up time and research, with a daily login bonus and quest rewards. It can also be exchanged into in-game cash (requires `supabase/10-tukar-sil.sql`).
+  - **Top-up is open through GoPay only.** QRIS is locked (`locked: true` on the `qris` method in `src/data/silicon.data.js`). The Buy-tab switch is the `TOPUP_LOCKED` flag in `src/ui/panels/SiliconStorePanel.js` (currently `false`), mirrored by `STUDIO_TOPUP_LOCKED` in `src/ui/panels/SettingsPanel.js` and `TOPUP_LOCKED` in `web.html`. Balance, daily bonus, rewards, and SIL spending work either way.
+  - Top-up is still manual and approved by an admin through the `/031411/` panel. No automatic payment provider is connected yet.
+  - A server-side switch exists in `supabase/19-kunci-topup-server.sql` (flag `topup_open`, open by default). The game and the landing page do not read it yet. Details are in Known issues and [`SECURITY.md`](SECURITY.md).
+- **Security**: saves carry an integrity signature (a barrier against manual editing, not encryption). SIL balances and the ledger are protected on the server through Row Level Security and server-only functions. The full security policy and how to report issues are in [`SECURITY.md`](SECURITY.md).
+
+### ⚠️ Known issues
+
+- **The leaderboard is only partly validated by the server.** Stats are still sent from the player's device. The server limits sync frequency, checks invariants, and hides suspicious profiles (`supabase/11`), and it computes level and score itself (`supabase/12` and `15`). Values that stay within plausible bounds can still be faked, so this isn't an official ranking.
+- **The top-up switch is only half wired.** The client flags (`TOPUP_LOCKED`, `STUDIO_TOPUP_LOCKED`, `web.html`) just hide or disable the buttons, and the QRIS lock is client-only. `supabase/19` adds a server flag that makes `create_payment_order` raise `topup_closed`, but it is optional (run it, then close with `update public.app_flags set value = false where key = 'topup_open';`), and the UI does not read `topup_is_open()`. With the flag closed, players still see the buttons and get an error toast after trying.
+- **Ecosystem balance is measured in one scenario.** The 0.2.8 recalibration used a browser run with real phone sales (one $250 phone a year, all three accessory lines, the App Store and both services open): ecosystem revenue was about 10–17% of phone revenue (17.3% in 2026) at about 50% gross margin. Several phones at once and $600+ prices are not measured, and `tools/eco-calib.mjs` still uses a flat phone revenue of 333,333 a month. The Business Advisor was not updated for the ecosystem.
+- **Subscription services were checked in 0.2.7, in one scenario.** Subscribers matched `getServicePreview` (for example 583 Cloud and 438 AI subscribers in 2023), and the click flow and Indonesian labels work in the browser at 390×844. In 0.2.8 the AI assistant moved to 2023 and the `fw_ai_on_device` OS feature. The Cloud choices (`fw_cloud_sync`, 2012) are still a first-pass choice to confirm. Not tested on a real mobile device.
+- **Accessory visuals are fixed designs.** The mockups follow the tier and the open/closed state only. The player cannot yet choose color, material, or shape for accessories, and they are not shown in Market → Ecosystem (only linked).
+- **Raw text in some places.** Four translation keys are used without fallback text and aren't in the dictionaries yet: `main.toast.fab_unlocked`, `wiz.warn.volume_cost`, `wiz.preview.unit_design`, `wiz.preview.unit_parts`. Many other keys (for example `team.recruit.*`, `team.nego.*`, `silstore.locked.*`) still rely on fallback text and haven't been merged into `src/data/i18n/en.js` and `id.js`.
+- **SIL → money exchange** needs `supabase/10-tukar-sil.sql`. Without it the call fails and no SIL is deducted.
+- **Chip designs don't reach products or SoC plants.** The Chip Designer feeds `data.chips.catalog`, and the Fab builds those chips into `data.fab.inventory`, but nothing consumes that inventory. The product wizard picks from the static chip list in `components.data.js`, and SoC plants use static component IDs.
+- **Wholesale text is partly untranslated.** The `wh.*` keys used by the Wholesale panel and its notifications aren't in `src/data/i18n/en.js` or `id.js` yet, so the fallback text is shown. The panel's CSS classes (`wh-card`, `wh-compare`, `wh-under`, and others) have no styles, so the panel looks plain.
+- **Wholesale balance is only simulated.** Offer frequency, price bands, and the buyer share boost (`relEffect` 0.04 for about 3 months) come from simulation scripts. They haven't been checked in a browser run with real play.
+- **Business Advisor Edge Function (AI)** has no per-user rate limit and its CORS is open (`*`). Don't enable it for a wide public before that is added. Details in `SECURITY.md`.
+- **Release notes are incomplete.** `src/patches.json` covers 0.2.1 to 0.2.14, but several earlier changes are still missing from it (listed under 0.2.4 in Versions). The version must match in four places: `src/config/app.config.js`, `package.json`, `patches.json`, and `src/patches.json`. If the game version is lower than `latest`, the Business Advisor tells every player there is a new patch.
+- **Landing-page screenshots** (`assets/img/landing/`) need to be retaken. The HQ image still shows the old Office tab and the old Overview layout.
+- **Blog:** saving an article to the real database has only been tested against a mock Supabase. Article text and titles are still partly mixed ID/EN, and per-article SEO tags (`og:image`, JSON-LD `NewsArticle`), a sitemap, and `robots.txt` do not exist yet. `blog/js/config.js` still needs the real `CONTACT_EMAIL` and social URLs.
+- **The client-side admin gate is cosmetic only.** Real admin status is verified on the server through `is_admin()`.
+- **2027–2030 content is speculative.** Prices, the RAM index, brand shares, and withdrawal thresholds are game scenarios that still need calibration through play. The details of EU battery rules are not modeled (only the trend effect and news). Real brand names can "withdraw" in the simulation through the share threshold, and that is not a claim about real companies.
+- **Component names and descriptions** (including the newer LPDDR6 entries) are still in Indonesian, like the other components.
+- **The Office 3D Map** doesn't yet show recruit impact and trait bonuses from `TeamSystem`. The map's summary is still computed separately.
+- **The Assembly 3D scene hasn't been tested in a real browser/WebGL** (only syntax checks and builder simulation with a mock THREE, per `docs/CHANGES-assembly.md`).
+
+---
+
+## How to play
+
+Open https://smartphone-empire.my.id/game/ (or https://jurkonstudio.github.io/smartphone-empire/game/) on a phone or desktop. You need an internet connection for the first load, because the 3D and cloud libraries come from a CDN. The game's intro (landing) page is `game/web.html`. The old address `/web.html` no longer exists.
+
+### Run locally
+
+Because the project uses ES Modules, you need a local server (browsers block `file://`). Serve the **repo root** so the blog and the game both work:
+
+```bash
+python3 -m http.server 8000
+# or
+npx serve .
+```
+
+Then open `http://localhost:8000/` (blog) or `http://localhost:8000/game/` (game). There is no build step and no `npm install` for running either one.
+
+---
+
+
+## Tech
+
+- **Plain JavaScript (ES Modules)**, HTML, and CSS. No framework and no bundler.
+- **Three.js 0.160.0** (pinned, lazy-loaded from a CDN) for the Campus Map, Office 3D Map, and Manufacturing map. If WebGL or the CDN fails, the game still runs with a fallback view.
+- **Supabase** (`supabase-js` 2.49.4 from a CDN) for auth, cloud save, profiles, messages, and avatar storage.
+- Systems communicate through an **event bus** (`src/core/EventBus.js`). The event list is in `src/config/event.md`.
+- Code size: **332 JS files** with about **94 thousand lines** in `src/`.
+- `package.json` holds dev tooling only (no runtime dependencies; the game still runs without a build step). `npm test` runs the standalone scripts in `tools/` through `tools/run-all.mjs`, `npm run check` runs `node --check` on `src/` and `sw.js`, and `npm run lint` runs a loose ESLint config. The `tools/` folder holds **46 Node scripts** (ES Modules; three of them, `boot.mjs`, `run-all.mjs` and `check-syntax.mjs`, are helpers rather than tests) for calibration, demand simulation, economy brakes, promotions, panel rendering, the 2027–2030 package, and the Manufacturing and Assembly scenes (ships, cranes, trucks, road graph, weather, workers). These scripts are not loaded by the game. See `tools/README.md` for the ones that need a probe or a reference copy. Examples: `node tools/sim.mjs src` and `node tools/paket2027.mjs src`.
+
+### Development
+
+Run these from inside `game/` (`cd game`). Requires Node 20 or newer. Running the game itself does not need Node or `npm install` (see "Run locally").
+
+```
+npm install       # dev tools only (ESLint)
+npm test          # tools/run-all.mjs: table of pass/fail, exit code 1 on failure
+npm run check     # node --check on src/**/*.js and sw.js
+npm run lint      # ESLint (loose: only real bugs are errors)
+```
+
+Scripts that need a probe or `../proj-orig` (for example `tools/boot.mjs`) are not part of `npm test`; the reasons are listed as comments in `tools/run-all.mjs`.
+
+### Folder structure
+
+```
+smartphone-empire/
+├─ index.html           news blog (home page, HTML shell only)
+├─ blog/
+│  ├─ css/blog.css      all blog styling (light/dark, mobile and desktop)
+│  └─ js/               main.js (articles, login, admin panel, paste-AI-article), config.js (Supabase, contact e-mail, social links, ads switch),
+│                       i18n.js (ID/EN text), pages.js (About, Editorial, Ethics, Cyber media, Privacy, Contact), admin-tap.js (tap the logo 7x to log in as admin)
+├─ game/                the whole game, served at /game/
+│  ├─ index.html        game (+ style.css · density.css · profile-ui.css · desktop.css · ux-polish.css · mfx-overview.css)
+│  ├─ web.html          game landing page (ID/EN, login, account status, and Silicon page)
+│  ├─ src/              game code (see below)
+│  ├─ assets/ · tools/ · verifikasi/ · sw.js · manifest.webmanifest · patches.json · package.json · eslint.config.js
+│  └─ campus-verify.html · ambience-test.html   supporting pages
+├─ 031411/              game admin dashboard (player data, SIL approvals), noindex, absolute paths (/031411/...)
+├─ supabase/            SQL schema 01–20 (20-blog.sql is the blog), Advisor Edge Function (function/), guide (BACA-DULU.md)
+├─ Welcome.html         page shown after sign-up, links to /game/
+├─ sw.js                CLEANUP service worker for old players (scope /); delete after a few weeks
+├─ docs/ · _diff/ · *.patch   change notes and old diffs for reference
+├─ .well-known/assetlinks.json   Android (TWA) digital asset links, must stay at the root
+└─ CNAME · .nojekyll · README.md · SECURITY.md   hosting (GitHub Pages, custom domain) and policies
+```
+
+Inside `game/src/`:
+
+```
+src/
+├─ main.js           boot, tab routing, event binding
+├─ config/           constants, time, endgame, dev flag, event documentation
+├─ core/             state, time, save, event bus, theme, language, audio, integrity, macro model
+├─ data/             pure data: research, OS, components, competitors, stocks, bank, news, assembly, i18n/
+├─ systems/          game logic: research, OS, products, market, team, bank, stocks, fab, chip, plants, assembly, news, advisor, economy brakes
+├─ services/         cloud (Supabase), cloud i18n, patch checker
+├─ diagnostics/      diagnostic report for debugging
+└─ ui/               panels, layout, modals, charts, icons, avatars, social, campus map (campus/), office (office/), manufacturing (manufacture/), phone mockups (phone/)
+```
+
+Data is separate from logic. To add a component, stock, competitor, or headline, just edit the files in `src/data/`.
+
+---
+
+## Supabase setup (cloud save, SIL, and admin panel)
+
+The game runs without Supabase, but cloud save, SIL, and the admin panel need it. Run the files in `supabase/` **in order** in the SQL Editor (see `supabase/BACA-DULU.md`):
+
+- **Required:** `01` → `05`, then `08` (change the e-mail in `08-jadikan-admin.sql` first), `14` after `03` (unique company name on the save path), `15` after `12` (company level on the server), and `18` (table grants; required on a new Supabase project, otherwise cloud save fails with "permission denied").
+- **Recommended:** `19` after `04` and `05` (server-side top-up switch, open by default, so it changes nothing until you close it).
+- **Blog:** `20-blog.sql` (articles, release schedule, comments, polls, and the `blog-media` storage bucket). It needs `08` first so there is an admin account. Run it again on an older project: it adds the `author` column if it is missing.
+- **Optional:** `06`–`07` (full admin panel), `09` (player messages), `10-pesan-antar-pemain` and `10-tukar-sil` (player-to-player messages and SIL exchange), `11` (leaderboard validation), `12` (credibility levels and rewards), `13` (leaderboard diagnostics, check-only), `15b` (company-level formula parity test, read-only), `16` (schema diagnostics, read-only), and `17` (rebuilds the `public_profiles` view; run it after 11, 12, and 15 if `16` reports missing view columns).
+- **Order notes:** `12` needs `09`, `10`, and `11`, and `15` needs `12`. If you want levels and rewards, run that chain in full. Don't re-run `03` or `11` after `17` without running `17` again.
+- **Optional, AI:** `function/advisor-chat/` (Business Advisor Edge Function). It needs the `ANTHROPIC_API_KEY` secret in Supabase, never in client code.
+- The Supabase URL and *publishable key* in `game/src/services/cloud/supabase.config.js` and `blog/js/config.js` are meant to be public. If you run your own project, replace both in both files. In the Supabase dashboard (Authentication → URL Configuration) add `https://smartphone-empire.my.id/game/` and `https://smartphone-empire.my.id/` to the Redirect URLs, then test sign-up, password reset, and login. Never put a `service_role` key in the repo.
+
+All files are safe to re-run. For an existing project, just run the files you haven't run yet, in the same order.
+
+
+---
+
+## News blog (`/`)
+
+A one-page news site for gadget news, specs, rumors, and a release schedule, published by Jurkon Studio. It is plain HTML, CSS, and JavaScript (ES Modules, no build step) and uses Supabase for articles, comments, reader polls, and the admin panel.
+
+- **Languages:** Indonesian and English (`blog/js/i18n.js`, `blog/js/pages.js`). Light and dark theme, mobile and desktop layouts.
+- **Login:** the blog and the game share one session (`AUTH_KEY` in `blog/js/config.js`), so you sign in once for both. To open the admin panel, tap the logo 7 times (`blog/js/admin-tap.js`), then log in with the admin account (see `supabase/08-jadikan-admin.sql`).
+- **Admin panel:** paste an article from an AI (the first line becomes the title, a `Ringkasan:` line becomes the summary), write one manually, add release-schedule entries, set the author name, cover image, and source link, and save as draft or publish. The paste dialog keeps an automatic local draft.
+- **Before going public**, fill in `blog/js/config.js`. Anything left empty is hidden, so no placeholder text reaches readers:
+  - `CONTACT_EMAIL`: the editorial e-mail shown on the Contact page.
+  - `SOCIAL`: real account URLs (`x`, `instagram`, `youtube`). They appear in the footer only when set.
+  - `SHOW_ADS`: set to `true` once the 300×250 ad slot is really used.
+- **Cache busting:** `index.html` loads CSS and JS with `?v=N`. Raise the number whenever you change `blog/css/blog.css`, `blog/js/main.js`, or `blog/js/admin-tap.js`.
+
+---
+
+## Deploy (GitHub Pages)
+
+The repo is `jurkonstudio/smartphone-empire`, branch `main`, served by GitHub Pages with the custom domain in `CNAME`. Pushing to `main` deploys. Do not delete `.git`, `CNAME`, or `.nojekyll`.
+
+```bash
+unzip -o update.zip && rm update.zip
+git add -A
+git commit -m "message"
+git push
+```
+
+If the push is rejected (`fetch first`), run `git pull --rebase`, resolve any conflict, then `git rebase --continue` and push again. After a deploy, open `/`, `/game/`, `/game/web.html`, `/031411/`, and `/blog/css/blog.css` in a private tab (each should return 200).
+
+**Android app (TWA):** `.well-known/assetlinks.json` stays at the root. The app's start URL must be `/game/`; if it is still `/`, the app opens the blog.
+
+---
+
+## What's not done yet
+
+The project is still in progress. Roadmap notes:
+
+- ✅ **Office 3D Map stage 3**: build or upgrade Fabs and train staff straight from the map, 3D Fab construction, livelier staff activity, and a tidier mobile layout
+- ✅ **Office ↔ Team integration**: staff cards open staff details, staff details can jump to the office, and the Work room has a recruit shortcut
+- ✅ **Market Navigation** (data, demand, opinion, Americas & Rest promotions, per-segment promotions, and UI panels in the Market tab)
+- ✅ **Manufacturing**: component plants (Battery, Display, SoC, Camera, RAM), wholesale, finished-product wholesale contracts, infrastructure tax, and the Campus ↔ Manufacturing Island bridge
+- ✅ **User Control v2 (0.2.14)**: user insights, algorithm steering, data monetisation, per-country regulation, and user surveys in Messages
+- ✅ **3D maps visual refresh (0.2.14)**: expanded Campus island with 8 new districts, plus detail passes on the Server, Manufacturing, and Office maps (visual only)
+- ✅ **Assembly factory**: 4 levels, headcount-based workforce, restock discounts, and a 3D plant on the Manufacturing Island
+- ✅ **Economy brakes and the Invest tab**
+- ✅ **Stock market v2**: player trade impact, more listed companies, world/IDX indices, and company tiers
+- ✅ **2027–2030 package (speculative scenario)**: market anchors, RAM cost index, trends, news, Agentic AI OS features, the fictional newcomer Novamind, and emergent brand withdrawal
+- ✅ **Early-2000s content**: infrared, MMS, Wi-Fi, e-mail, FM radio, MP3, memory cards (new storage component category), video, and basic GPS
+- ✅ **Ecosystem**: accessories, App Store, and Cloud and AI assistant subscriptions (0.2.4–0.2.8)
+- ✅ **After-sales**: warranty, service centers, recalls, and OS update support (0.2.3)
+- ✅ **Retail packaging in the mockup** and USB Type-C research
+- ✅ **12 languages** (Indonesian and English in full, 10 others with a core dictionary)
+- ✅ **Player and company levels on the server**, Messages, and rewards
+- ✅ **Lite mode** for low-end phones and lower battery use
+- ⏳ **Translation fixes (i18n)**: replace the remaining hardcoded text with keys, merge new keys into `en.js` and `id.js`, then translate the names and descriptions of the 141 components
+- ⏳ **Office map reads TeamSystem**: recruit impact, trait bonuses, and the team summary computed from one source
+- ✅ **Random events with choices** (5 dynamic incidents, 2000–2050, risky choices, cost scaled to company size; see `docs/CHANGES-dynamic-events.md`)
+- ✅ **Sales channels**: carriers, online store, and own stores (`docs/CHANGES-channels.md`)
+- ⏳ More incidents, per-era screen transitions, and UI polish
+- ⏳ **UI Evolution patch**: notification styling that changes per era (monochrome → glossy → flat → Dynamic Island)
+- ⏳ **Bilingual news**: English headlines exist, but some review templates are still Indonesian-only
+- ⏳ **Silicon payments**: reopening top-up with a production payment provider and server-side verification (the server-side switch exists in `supabase/19`, but the UI is not wired to it yet)
+- ⏳ **Chip designs in products**: let the product wizard and SoC plants use chips from the Chip Designer, and draw their stock from Fab output
+- ⏳ **Fixing the known issues** above
+
+---
+
+## Versions
+
+Latest recorded version: **0.2.14** (October 27, 2026). Official change lists are in `src/patches.json` and `docs/PERF-CHANGES.md`. The root `patches.json` is kept identical to `src/patches.json`, and `APP_CONFIG.version` in `src/config/app.config.js` must equal `latest`.
+
+### Repo restructure (October 29, 2026, no game version change)
+- The blog became the home page (`index.html`, with `blog/css` and `blog/js`). The whole game moved to `game/` and is served at `/game/`. Paths inside the game use `./`, so the game moved intact.
+- Updated for the move: the admin dashboard config (`031411/dashboard/config.js`), `Welcome.html`, Supabase redirect URLs (`location.origin + '/game/'`), and the canonical, `og:url`, and JSON-LD URLs of the game.
+- The root `sw.js` is now a cleanup worker (clears old `se-v*` caches, unregisters itself, reloads the tab) because returning players had a service worker at scope `/`. The game's own worker is `game/sw.js` (scope `./`).
+- The blog got a "Play" button and a game card, a responsive header fix for phones, a compact article list on mobile, and config-driven placeholders (`CONTACT_EMAIL`, `SOCIAL`, `SHOW_ADS` in `blog/js/config.js`).
+
+### 0.2.14 — Expanded 3D Campus, a visual refresh of the 3D maps, and User Control v2
+- Feature: **User Insights** in the User Control card (`computeUsageMix` in `src/systems/FutureEffects.js`): 8 usage categories weighted by market segment and OS active users. Depth follows the data policy (`insight` 2 / 1 / 0 for Open / Balanced / Strict).
+- Feature: **Algorithm Steering.** Three 0–100 sliders (`ALGO_CONFIG`, neutral 50) stored in `data.userControl.algo`. They change App Store gross spending (`getAlgoStoreMult`, used in `EcosystemSystem` for both the monthly run and `getStorePreview`), product demand (`getAlgoDemandBonus`, inside `getUserControlDemandMult`), and privacy-scare chance (`getAlgoScareMult`, inside `getPrivacyScareMult`).
+- Feature: **Data Monetisation** (`src/systems/UserControlSystem.js`, `MONETIZE_CONFIG`). Revenue = active users × ARPU × regulation factor × policy factor, credited monthly. Each month a regulator-action roll can fine you (capped at 25% of cash) and lower reputation and sentiment. Unavailable under Strict Privacy and below 1,000 users.
+- Feature: **Regulation by country** (`REGULATION_TIMELINE`, `computeRegulationExposure`): 29 countries with a rule level 0–3 that rises with the year, weighted by your OS users per country (`computeOsCountryUsage`). The levels are game estimates, not legal data.
+- Feature: **User surveys in Messages.** Every 3 months `UserControlSystem` adds a local message through `InboxService.addLocal` (negative ids, saved in `data.userControl.surveys`, max 12). `InboxService` merges them with cloud messages, and `InboxPanel` shows a Survey kind and opens without a Cloud login when local messages exist.
+- Files (User Control): `src/systems/UserControlSystem.js` (new), `src/systems/FutureEffects.js`, `src/systems/EcosystemSystem.js`, `src/ui/panels/FuturePanel.js`, `src/services/InboxService.js`, `src/ui/panels/InboxPanel.js`, `src/main.js`, `tools/user-control-test.mjs` (new, also in `tools/run-all.mjs`), `docs/CHANGES-kontrol-pengguna.md` (new).
+- Tests (User Control): `node tools/user-control-test.mjs` passes (regulation over time, usage shares sum to 1, neutral sliders, policy rules, 12-month run with revenue and 4 surveys). A 12-month simulation with 288K users under the Open policy and a Privacy Center OS earned about $876K, and with the earlier 4-month fine multiplier the fines almost matched that, so `fineMonths` was lowered to 2. `check-syntax` passes. `run-all` shows 3 failures (`people-test`, `features-test`, `office-smoke`: `location is not defined` outside a browser) that also fail on the previous zip.
+- Not yet checked (User Control): **the panel has not been opened in a real browser or on a phone**, so the layout, the slider drag, and the Messages screen are untested visually. Fine size, ARPU (0.45 USD), and risk numbers are first-pass guesses and not balanced against a full playthrough. Survey and panel text is written in code for Indonesian and English and is not in the i18n dictionary yet.
+- Feature: **Campus island expanded.** `islandRadius` now widens the coastline to the east (radius 22 to 30.4), north (26.2), and south (24.8). The west side is unchanged, so the bridge to the Manufacturing Island does not move. The camera pan limits and the shadow range (`quality.shadowHalf = 34`) grew with it.
+- Feature: **Eight decorative Campus districts** in `src/ui/campus/CampusExpansion.js`, with footprints in `src/data/campus-expansion.data.js`: Sports Complex, Beach Café with a pier and three sailboats, Lighthouse (rotating beam at night), Botanical Garden with a glasshouse, Solar Field, South Roundabout, Parking Lot, and Amphitheater. They have no level, slot, or info card and cannot be tapped. Trees, hills, shrubs, lamps, and grass patches avoid them, and 9 small groves fill the new land.
+- Feature: **Server 3D map (v2027.74).** Seabed caustics, sand ripples, shadows, PMREM environment, kelp, coral, fish schools, jellyfish, an ROV drone, detailed pods and hub, tap-to-focus with a status card, and three quality tiers. Fix: Exp2 fog hid about 96% of the map center and bubble particles were under one pixel. Notes: `src/docs/SERVER-VISUAL-CHANGES-v74.md`.
+- Feature: **Manufacturing 3D map (v2027.80).** `src/ui/manufacture/ManufactureDetail.js` adds pilasters, plinths, parapets, spinning HVAC units, skylights, door canopies, utility pipes, and yard details. Notes: `docs/CHANGES-manufacture-v3.md`.
+- Feature: **Office 3D map (v2027.80 to 2027.83).** Anatomical staff with IK poses, textured monitors, procedural floors, `OfficeExterior.js` (yard and surrounding buildings), and `OfficeLook.js` (bloom, tone mapping, vignette on the high tier). Fix: the theme state (`VS.era`, dark, accent) was never filled in, so old-era monitor screens never showed.
+- Files: `src/ui/campus/CampusExpansion.js` (new), `src/data/campus-expansion.data.js` (new), `src/ui/campus/CampusBuildings.js`, `src/ui/campus/CampusScene.js`, `src/ui/campus/CampusLook.js`, `src/ui/server/ServerScene.js`, `src/ui/server/ServerMap.js`, `src/ui/manufacture/ManufactureDetail.js` (new), `src/ui/manufacture/ManufactureScene.js`, `src/ui/office/OfficeExterior.js` (new), `src/ui/office/OfficeLook.js` (new), `src/ui/office/OfficeScene.js`, `tools/campus-expansion-smoke.mjs` (new), `src/docs/CAMPUS-VISUAL-CHANGES-v73.md` (new).
+- Change: **The 3D map changes do not touch game logic, but User Control v2 does** (App Store spending, demand, privacy events, cash, reputation, sentiment; only after the panel unlocks). Version 0.2.14 is set in `APP_CONFIG.version`, `package.json`, `patches.json`, `src/patches.json`, and `web.html`.
+- Tests: `node tools/campus-expansion-smoke.mjs` passes (west coast unchanged, every district inside the coastline and clear of buildings, no trees inside districts, build and dispose). `tools/check-syntax.mjs` passes. The scene was also built end to end with a mock THREE.
+- Not yet checked: **none of the four maps has been checked in a real browser with WebGL, and not on a real phone.** The Campus district positions and sizes come from calculation, not from looking at the screen. The Server, Manufacturing, and Office notes come from their own change files and were not re-tested here. The shadow range was widened, so shadows may look slightly softer on the high tier (raise `shadowMap` in `CampusLook.js` if so).
+
+### 0.2.13 — Flagship cycle, hype, world map, and manufacturing overview
+- Feature: **One flagship per calendar year.** `ProductSystem.confirmTierFamily` refuses a new series when this year's flagship has already shipped (`HypeCycleSystem.checkFlagshipSlot`). Basic, Pro, and Pro Max stay inside one series.
+- Feature: **Hype cycle.** Anticipation rises on launch (25 points, scaled 0.4x to 1.5x by product quality), a teaser appears at month 6 (6 points, weaker without a design in development or with third-party OS or chip), a random leak appears at month 9 (50/50 positive or negative, shifted by your own chip and open OS bugs), and anticipation decays 0.93 per month. It adds up to +25% demand through `_getTechFactor`. Numbers are in `src/data/hype.data.js`.
+- Feature: **Product quality sets the launch spike.** Own OS stability (basis 50, up to ±15%), open OS bugs (-6% each, up to 3), own chip edge from `computeTechEdge` (up to ±20%), and a +10% synergy when both OS and chip are your own. A third-party OS or chip costs -10% each.
+- Feature: **World map** on OS → Users (above the top 5 countries) and in Countries to be supplied. Markers are sized by users or share, with World, Americas, Europe & Africa, and Asia-Pacific zooms. Tap a marker for details. Files: `src/ui/components/WorldMap.js`, `src/data/world-map.data.js`, `assets/geo/`.
+- Change: Manufacturing → Overview chain uses per-stage accents, progress bars, and inline SVG icons (`src/ui/manufacture/MfIcons.js`). The emoji and the external icon font are gone. `mfx-overview.css` is linked from `index.html`.
+- Files: `src/systems/HypeCycleSystem.js` (new), `src/data/hype.data.js` (new), `src/systems/ProductSystem.js`, `src/main.js`, `src/ui/panels/CountryPanels.js`, `src/ui/panels/ManufacturePanel.js`, `src/ui/components/WorldMap.js`, `src/data/world-map.data.js`, `src/ui/manufacture/MfIcons.js` (new), `mfx-overview.css` (new), `index.html`, `tools/hype-cycle-test.mjs` (new), `tools/run-all.mjs`.
+- Change: **This patch changes game logic.** The flagship rule and the hype demand factor affect releases and sales. Version 0.2.13 is set in `APP_CONFIG.version`, `package.json`, `patches.json`, `src/patches.json`, and `web.html`.
+- Tests: `tools/hype-cycle-test.mjs` and `tools/world-map-test.mjs` pass, and `tools/run-all.mjs` runs both.
+- Not yet checked: the hype numbers are a starting point and are not calibrated by simulation. The world map outlines are hand-drawn, so coastlines and borders are approximate. The map and the manufacturing overview have not been checked in a browser or on a real phone. The Mini variant does not exist yet: the product tiers are Basic, Pro, and Pro Max.
+
+### 0.2.12 — Generation Gallery for phone design
+- Feature: Product → Design → Phone has a Generation Gallery above the "Start design" card. The hero shows your latest phone (or a sample design) on a stage tinted by its era, with spec chips for era, rear lenses, and material. Below it, a timeline shows all 17 milestones from `src/data/phone-specs.data.js`, each rendered with its own spec. Status (Live, Passed, Opens in year, Needs research) follows the game year and completed research.
+- Files: `src/ui/phone/PhoneGenerations.js` (new), `src/data/i18n/phone-gen.i18n.js` (new, registered in `src/data/i18n/index.js`), `src/ui/panels/ProductPanel.js`, `src/ui/phone/PhoneMockup.js` (optional `opts.spec`), `style.css` (section 48).
+- Change: `APP_CONFIG.version`, `package.json`, and `web.html` are 0.2.12. This patch does not change game logic.
+- Tests: a render check was run in id and en at several years and research states (17 cards, the live card matches `resolveSpec`, no NaN, undefined, or raw keys). Not yet checked on a real phone.
+
+### 0.2.11 — Design categories, catalog, and "What's new" on the landing page
+- Feature: Product → Design has categories (Phone, Tablet, Wireless earbuds, Smartwatch, Charger). Each shows a mockup, the year it opens, and popularity computed from the game year. Tablet design is coming soon. Files: `src/data/design-tracks.data.js`, `src/data/i18n/design-tracks.i18n.js`, `src/ui/panels/DesignTracksPanel.js`, `src/ui/phone/TabletMockup.js`.
+- Change: accessory line controls (tier, price, open/close) moved from Market → Ecosystem to Product → Design through `renderEcoLineCard` in `src/ui/panels/EcosystemPanel.js`. The Accessories sub-tab is removed, and `src/ui/panels/AccessoriesTab.js` and `tools/accessories-mockup-check.mjs` are deleted.
+- Feature: the catalog has a category filter (All / Phones / Accessories). Accessory lines appear as cards with status, price, tier, units, revenue, and popularity. Files: `src/ui/panels/ProductPanel.js`, `src/main.js` (`data-catalog-cat`).
+- Feature: the landing page (`web.html`) has an "What's new" section built from the latest release in `patches.json`. It is hidden by default. Set `SHOW_WHATS_NEW` to `true` in the script to show it and its nav link.
+- Change: `APP_CONFIG.version` and `package.json` are 0.2.11. This patch does not change game logic.
+- Fix: `src/patches.json` lacked 0.2.10 and differed from the root `patches.json`. Both are now identical.
+- Tests: `tools/design-tracks-check.mjs` and `tools/product-tabs-check.mjs` are added to `tools/run-all.mjs`.
+
+### 0.2.10 — Livelier Overview and animated accessories
+- Feature: accessory visuals (earbuds, smartwatch, charger) are animated with LEDs, sound waves, watch hands, and power flow. Premium tier uses gold accents. File: `src/ui/phone/AccessoryMockup.js`.
+- Feature: the Overview (HQ) has a cash sparkline on the main card, a runway bar, and an attention strip that appears when something needs action (critical runway, empty team, low reputation, no product selling). Files: `src/ui/panels/OverviewLive.js`, `OverviewSignals.js`, `KpiCards.js`, `OverviewStyle.js`.
+- Feature: the Hire and Release quick actions highlight automatically when relevant, and runway figures update live as cash changes. Files: `src/ui/panels/DashboardPanel.js`, `OverviewLive.js`.
+
+### 0.2.9 — Finished-product wholesale contracts
+- Feature: rival brands make monthly offers for part of your finished-phone stock, shown in the Wholesale panel from the Manufacturing overview. Files: `src/systems/WholesaleContractSystem.js`, `src/data/wholesale.data.js`, `src/ui/panels/WholesalePanel.js`.
+- Balance: prices never fall below unit production cost (`costFloorMult`). Buyers are only brands active in the current year that haven't withdrawn. Each accepted contract boosts the buyer's share through `CompetitorActionSystem.applyWholesaleSupply` (`buyerBoost`).
+- Panel: each offer shows retail value and margin over production cost. Accept and decline are in the panel.
+- Notifications: competitor offers, expired offers, payments, and cancellations are written to the game log. Toasts appear only when notifications are on.
+- Unchanged: market share, reputation, and retail sales data. The version is 0.2.9 in `src/config/app.config.js`, and `src/patches.json` and the root `patches.json` are identical.
+
+### 0.2.8 — Ecosystem economy recalibrated
+- Balance: measured in the browser on real phone sales (one $250 phone a year, all lines and services open). Ecosystem revenue went from about 2% to about 10–17% of phone revenue (17.3% in 2026), gross margin about 50%. Levers: `fixedScaleExp` 0.3 (fixed costs only; setup keeps sqrt), `lineAttachScale` 0.18→1.7, `storeSpendBase` 0.3→2.1, `maxAttachShare` 0.05→0.12, Cloud attach 0.02→0.10, AI attach 0.015→0.09.
+- Change: the AI assistant opens from 2023 and requires OS feature `fw_ai_on_device` (`llm_accelerator` is a chip feature, so the OS check cannot use it).
+- Tools: `tools/eco-wiring-check.mjs` restored (it was missing from the repo zip); `tools/eco-services-sim.mjs` updated for the 2023 AI gate.
+- Not done: `tools/eco-calib.mjs` still uses flat 333,333 phone revenue, and other scenarios (several phones, $600+ prices) are unmeasured. Advisor updates are not done.
+- Fix: `APP_CONFIG.version` still said 0.2.7, so `PatchService.updateAvailable()` kept reporting a new patch to players already on 0.2.8, and Settings showed the old version. It is now 0.2.8. README, SECURITY.md, and `web.html` were brought in line with the game (counts, top-up state, SQL 18 and 19), and the landing page now reads its version from `patches.json`.
+
+### 0.2.7 — Subscription service buttons fixed
+- Fix: the Cloud and AI assistant buttons (open, close, tier, price) did nothing, because `src/main.js` had no click handler for `data-eco-svc-*`. The handler is added and uses the existing `eco.svc.toast.*` and `eco.toast.*` keys.
+- Fix: `src/patches.json` was still at 0.2.5 while the root file was at 0.2.6. Both are now identical at 0.2.7.
+- The 0.2.6 note about "about 13% of phone revenue" is reworded: that figure came from the headless harness only (see Known issues).
+- New `tools/eco-wiring-check.mjs`: checks that every `data-eco-*` button in the ecosystem panel has a click handler in `main.js`.
+- No change to the economy formulas or the save format.
+
+### 0.2.6 — Subscription services (Cloud and AI assistant)
+- Cloud and an AI assistant are now subscription services in Market → Ecosystem, below the App Store card. Each has Free, Standard, and Premium tiers; paid tiers have an adjustable price.
+- Cloud opens from 2012 and needs the Cloud Sync OS feature. The AI assistant opened from 2011 and needed the Virtual Assistant OS feature (changed in 0.2.8: 2023, AI On-Device). Both have a setup cost and a monthly fixed cost.
+- Lock-in weights changed to 40% accessory lines, 40% App Store, and 20% subscriptions (was 50/50 lines and App Store). Saves with every accessory line and the App Store open now reach 80% lock-in until a subscription opens.
+- Accessory and App Store balance recalibrated against the game economy with `tools/eco-calib.mjs`: attach rate ×0.18, App Store spend per user 0.3, lower fixed costs. Ecosystem reaches about 13% of phone revenue in 2026.
+- Older saves load with subscriptions closed.
+
+### 0.2.5 — Accessory visuals
+- New sub-tab Products → Accessories: inline SVG mockups for earbuds, smartwatches, and chargers (`src/ui/phone/AccessoryMockup.js`, `src/ui/panels/AccessoriesTab.js`). Shape and color follow the tier. Lines that are not open yet show in gray with a label.
+- Market → Ecosystem has a shortcut button to the new tab. Tier, price, and open/close are still set in Market → Ecosystem.
+- Visual only: no change to the economy formulas or the save format.
+
+### 0.2.4 — Ecosystem (accessories and App Store)
+- Accessory lines: wireless earbuds (2004), smartwatches (2014), and chargers (2000), each with Basic / Mid / Premium tiers and an adjustable price (Market → Ecosystem).
+- App Store commission on app spending by active OS users, available once the OS has the App Store feature, with an adjustable 15–30% rate.
+- Lock-in score: owning accessories and an App Store raises phone demand by up to 6% and eases competitor pressure.
+- Monthly summary shows an Ecosystem cost row. Ecosystem revenue is included in income.
+- Market tab now has 8 sub-tabs (Service and Ecosystem added).
+
+Changes that are already in the code but not yet in `patches.json` (Market Navigation, Office ↔ Team, Manufacturing, the Invest tab, stock market v2, and the 12 languages are already covered by 0.2.2):
+- 2027–2030 speculative scenario (market anchors, RAM cost index, Agentic AI OS features, Novamind, emergent brand withdrawal; see `docs/CHANGES-2027-kompetitor.md`).
+- Assembly factory (see `docs/CHANGES-assembly.md`) and the Campus ↔ Manufacturing Island bridge (`docs/CHANGES-island-link.md`).
+- Sales channels (`docs/CHANGES-channels.md`) and random incidents with choices (`docs/CHANGES-dynamic-events.md`).
+- Retail packaging mockup and USB Type-C research.
+- Early-2000s content: new OS features, research, bugs, and the storage component category (see `docs/CHANGES-2001-2004-konten.md`).
+- 59 phone features (`docs/CHANGES-fitur-ponsel.md`).
+- HQ → Overview overhaul, the Office tab moved to a switch on Home, and Player ID moved to Player Profile.
