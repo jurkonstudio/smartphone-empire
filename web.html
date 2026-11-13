@@ -377,6 +377,14 @@ details p{padding:0 22px 20px;color:var(--text2);font-size:.95rem;max-width:62ch
 .pw button{position:absolute;right:6px;top:6px;height:36px;padding:0 12px;border-radius:10px;font-size:.78rem;font-weight:600;color:var(--text2);background:var(--fill)}
 .msg{display:none;margin-top:14px;padding:11px 14px;border-radius:12px;font-size:.88rem;font-weight:500}
 .msg.show{display:block}.msg.err{background:var(--err-bg);color:var(--err-tx)}.msg.ok{background:var(--ok-bg);color:var(--ok-tx)}.msg.info{background:var(--info-bg);color:var(--info-tx)}
+.oauth{display:grid;gap:10px;margin-top:16px}
+.oauth button{display:flex;align-items:center;justify-content:center;gap:10px;min-height:48px;border-radius:14px;background:var(--fill);color:var(--text);font-weight:600;font-size:.95rem;box-shadow:inset 0 0 0 1px var(--line2);transition:background .2s,transform .2s}
+.oauth button:hover{background:var(--fill2)}
+.oauth button:active{transform:scale(.98)}
+.oauth button[disabled]{opacity:.5;pointer-events:none}
+.oauth svg{width:20px;height:20px;flex:none}
+.or{display:flex;align-items:center;gap:12px;margin-top:16px;font-size:.8rem;font-weight:600;color:var(--text3)}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line2)}
 .lnk-b{background:none;color:var(--link);font-weight:600;font-size:.86rem;padding:8px 0}
 .qrbox{background:#fff;border-radius:18px;padding:10px;margin:14px 0;box-shadow:inset 0 0 0 1px var(--line)}
 .qrbox img{width:100%;max-width:300px;margin:0 auto;border-radius:10px}
@@ -571,8 +579,8 @@ section.hub,#panduan{scroll-margin-top:70px}
 <div class="wrap">
   <div class="stats rv" role="list">
     <div class="stat" role="listitem"><b>32</b><span data-en="Competitor companies">Perusahaan kompetitor</span></div>
-    <div class="stat" role="listitem"><b>134</b><span data-en="Tech tree nodes">Node tech tree</span></div>
-    <div class="stat" role="listitem"><b>141</b><span data-en="Phone components">Komponen ponsel</span></div>
+    <div class="stat" role="listitem"><b>135</b><span data-en="Tech tree nodes">Node tech tree</span></div>
+    <div class="stat" role="listitem"><b>144</b><span data-en="Phone components">Komponen ponsel</span></div>
     <div class="stat" role="listitem"><b>84</b><span data-en="Stocks on the exchange">Saham di bursa</span></div>
     <div class="stat" role="listitem"><b>12</b><span data-en="Languages · ID and EN complete">Bahasa · ID dan EN penuh</span></div>
   </div>
@@ -597,14 +605,14 @@ section.hub,#panduan{scroll-margin-top:70px}
     </article>
     <article class="tile c-violet rv">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L4 20h16L14 9V3"/></svg></div>
-      <div class="big">134</div>
+      <div class="big">135</div>
       <h3 data-en="Research and OS">Riset dan OS</h3>
-      <p data-en="134 nodes across 9 categories from 2000 to 2027. Build your own OS with 50 features across 5 eras, including Agentic AI features from 2027, or license a third-party OS. From 2019, User Control lets you see what your users do, steer the algorithm, sell data, and face per-country privacy rules.">134 node di 9 kategori dari 2000 sampai 2027. Bangun OS sendiri dengan 50 fitur di 5 era, termasuk fitur Agentic AI sejak 2027, atau lisensi OS pihak ketiga. Sejak 2019, Kontrol Pengguna memungkinkanmu melihat apa yang dilakukan penggunamu, mengatur algoritma, menjual data, dan menghadapi aturan privasi tiap negara.</p>
+      <p data-en="135 nodes across 9 categories from 2000 to 2027. Build your own OS with 50 features across 5 eras, including Agentic AI features from 2027, or license a third-party OS. From 2019, User Control lets you see what your users do, steer the algorithm, sell data, and face per-country privacy rules.">135 node di 9 kategori dari 2000 sampai 2027. Bangun OS sendiri dengan 50 fitur di 5 era, termasuk fitur Agentic AI sejak 2027, atau lisensi OS pihak ketiga. Sejak 2019, Kontrol Pengguna memungkinkanmu melihat apa yang dilakukan penggunamu, mengatur algoritma, menjual data, dan menghadapi aturan privasi tiap negara.</p>
     </article>
     <article class="tile c-orange rv">
       <div class="ic"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg></div>
       <h3 data-en="Phone design wizard">Wizard desain ponsel</h3>
-      <p data-en="Real-time preview with 141 components in 11 categories, 59 phone features, and 18 body colors. See the phone from the front, the back, and in its retail box. Choices follow the year: no OLED screens in 2001.">Preview real-time dengan 141 komponen di 11 kategori, 59 fitur ponsel, dan 18 warna bodi. Lihat ponselmu dari depan, belakang, dan dalam kemasan retail. Pilihan mengikuti tahun: tidak ada layar OLED di 2001.</p>
+      <p data-en="Real-time preview with 144 components in 11 categories, 59 phone features, and 18 body colors. See the phone from the front, the back, and in its retail box. Choices follow the year: no OLED screens in 2001.">Preview real-time dengan 144 komponen di 11 kategori, 59 fitur ponsel, dan 18 warna bodi. Lihat ponselmu dari depan, belakang, dan dalam kemasan retail. Pilihan mengikuti tahun: tidak ada layar OLED di 2001.</p>
     </article>
     <article class="tile c-green rv">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 17l5-5 4 4 8-9"/><path d="M15 7h5v5"/></svg></div>
@@ -888,6 +896,14 @@ section.hub,#panduan{scroll-margin-top:70px}
   <div class="sheet">
     <div class="sh-head"><h3 id="authTitle">Masuk ke akunmu</h3><button class="x" type="button" data-close aria-label="Tutup" data-en-aria="Close">&times;</button></div>
     <p style="color:var(--text2);font-size:.92rem" data-en="Use the same account as in the game so your cloud save and SIL balance stay connected.">Pakai akun yang sama dengan di dalam game, supaya cloud save dan saldo SIL tersambung.</p>
+    <div id="aSocial">
+      <div class="oauth">
+        <button type="button" data-oauth="google"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.46a5.52 5.52 0 0 1-2.4 3.62v3h3.88c2.27-2.09 3.58-5.17 3.58-8.81z"/><path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.94-2.92l-3.88-3c-1.08.72-2.45 1.15-4.06 1.15-3.12 0-5.77-2.11-6.71-4.95H1.28v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.29 14.28A7.2 7.2 0 0 1 4.91 12c0-.79.14-1.56.38-2.28v-3.1H1.28A12 12 0 0 0 0 12c0 1.94.46 3.77 1.28 5.38l4.01-3.1z"/><path fill="#EA4335" d="M12 4.77c1.76 0 3.34.61 4.59 1.8l3.43-3.43C17.95 1.19 15.23 0 12 0A12 12 0 0 0 1.28 6.62l4.01 3.1C6.23 6.88 8.88 4.77 12 4.77z"/></svg><span data-en="Continue with Google">Lanjutkan dengan Google</span></button>
+        <button type="button" data-oauth="discord"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#5865F2" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.292a.074.074 0 0 1 .077-.01c3.927 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg><span data-en="Continue with Discord">Lanjutkan dengan Discord</span></button>
+        <button type="button" data-oauth="github"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.18-3.08-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.11 3.04.74.8 1.18 1.83 1.18 3.08 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg><span data-en="Continue with GitHub">Lanjutkan dengan GitHub</span></button>
+      </div>
+      <div class="or" data-en="or use email">atau pakai email</div>
+    </div>
     <div class="seg" role="tablist"><button type="button" role="tab" aria-selected="true" data-mode="in" data-en="Sign in">Masuk</button><button type="button" role="tab" aria-selected="false" data-mode="up" data-en="Sign up">Daftar</button></div>
     <form id="authForm" novalidate>
       <label class="fl" for="aEmail">Email</label>
@@ -945,6 +961,7 @@ const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&a
 const T = {
   id: {
     signIn: 'Masuk', signUp: 'Daftar', signOut: 'Keluar', pickPkg: 'Pilih paket', topup: 'Top up sekarang', creating: 'Membuat pesanan…',
+    oauthGo: p => `Mengalihkan ke ${p}…`, oauthFail: p => `Login ${p} belum bisa dipakai. Coba lagi atau gunakan email.`, oauthBack: 'Login dibatalkan atau gagal. Coba lagi.',
     popular: 'POPULER', best: 'TERBAIK', bonus: 'bonus', show: 'Lihat', hide: 'Sembunyi',
     accNone: 'Belum masuk', accNoneSub: 'Masuk untuk melihat saldo SIL dan pesananmu', accBal: 'Saldo SIL', accPid: 'ID Pemain', player: 'Pemain',
     cont: 'Lanjut main', start: 'Mulai main', yourCo: 'Perusahaanmu',
@@ -970,6 +987,7 @@ const T = {
   },
   en: {
     signIn: 'Sign in', signUp: 'Sign up', signOut: 'Sign out', pickPkg: 'Choose a package', topup: 'Top up now', creating: 'Creating order…',
+    oauthGo: p => `Redirecting to ${p}…`, oauthFail: p => `${p} sign-in is not available right now. Try again or use email.`, oauthBack: 'Sign-in was cancelled or failed. Please try again.',
     popular: 'POPULAR', best: 'BEST VALUE', bonus: 'bonus', show: 'Show', hide: 'Hide',
     accNone: 'Not signed in', accNoneSub: 'Sign in to see your SIL balance and orders', accBal: 'SIL balance', accPid: 'Player ID', player: 'Player',
     cont: 'Continue playing', start: 'Start playing', yourCo: 'Your company',
@@ -1061,13 +1079,13 @@ const SHOTS = [
     alt: { id: 'Cuplikan layar Riset', en: 'Research screenshot' },
     h: { id: 'Tech tree yang dalam', en: 'A deep tech tree' },
     p: { id: 'Riset teknologi, OS, manufaktur, dan masa depan. Antrian riset berjalan paralel, makin banyak engineer makin banyak slot.', en: 'Research technology, OS, manufacturing, and the future. The research queue runs in parallel, and more engineers means more slots.' },
-    li: { id: ['<b>134 node</b> di 9 kategori', '<b>OS sendiri</b> dengan 50 fitur', '<b>Chip</b> dan Fab untuk tingkat lanjut'], en: ['<b>134 nodes</b> across 9 categories', '<b>Your own OS</b> with 50 features', '<b>Chips</b> and Fabs for the advanced tiers'] } },
+    li: { id: ['<b>135 node</b> di 9 kategori', '<b>OS sendiri</b> dengan 50 fitur', '<b>Chip</b> dan Fab untuk tingkat lanjut'], en: ['<b>135 nodes</b> across 9 categories', '<b>Your own OS</b> with 50 features', '<b>Chips</b> and Fabs for the advanced tiers'] } },
   { id: 'desain', img: 'desain.jpg',
     tab: { id: 'Desain', en: 'Design' },
     alt: { id: 'Cuplikan layar wizard desain ponsel', en: 'Phone design wizard screenshot' },
     h: { id: 'Wizard desain dengan preview real-time', en: 'A design wizard with real-time preview' },
     p: { id: 'Pilih form factor, komponen, warna, dan OS. Pilihan mengikuti tahun, dan mockup (depan, belakang, kemasan) berubah mengikuti era.', en: 'Pick the form factor, components, color, and OS. Choices follow the year, and the mockup (front, back, retail box) changes with the era.' },
-    li: { id: ['<b>141 komponen</b> di 11 kategori', '<b>Auto-fill rekomendasi</b> untuk pemula', '<b>4 fase</b>: desain, prototipe, produksi, rilis'], en: ['<b>141 components</b> in 11 categories', '<b>Recommended auto-fill</b> for beginners', '<b>4 phases</b>: design, prototype, production, release'] } },
+    li: { id: ['<b>144 komponen</b> di 11 kategori', '<b>Auto-fill rekomendasi</b> untuk pemula', '<b>4 fase</b>: desain, prototipe, produksi, rilis'], en: ['<b>144 components</b> in 11 categories', '<b>Recommended auto-fill</b> for beginners', '<b>4 phases</b>: design, prototype, production, release'] } },
   { id: 'pasar', img: 'pasar.jpg',
     tab: { id: 'Pasar', en: 'Market' },
     alt: { id: 'Cuplikan layar Pasar', en: 'Market screenshot' },
@@ -1231,7 +1249,7 @@ async function loadCloud() {
     }
     if (!createClient) throw new Error('lib');
     client = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_KEY, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: cfg.CLOUD.authStorageKey }
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: cfg.CLOUD.authStorageKey }
     });
     bindAuthSync(client);
     return client;
@@ -1365,6 +1383,7 @@ function setAuthMode(m) {
   authMode = m;
   $$('.seg button').forEach(b => b.setAttribute('aria-selected', b.dataset.mode === m));
   $('#aPassWrap').hidden = m === 'reset';
+  $('#aSocial').hidden = m === 'reset';
   $('#aForgot').hidden = m !== 'in'; $('#aBack').hidden = m !== 'reset';
   $('.seg').hidden = m === 'reset';
   $('#aPass').autocomplete = m === 'up' ? 'new-password' : 'current-password';
@@ -1384,6 +1403,34 @@ $('#aBack').addEventListener('click', () => setAuthMode('in'));
 $('#aShow').addEventListener('click', () => {
   const p = $('#aPass'); p.type = p.type === 'password' ? 'text' : 'password'; renderAuthText();
 });
+
+// Login sosial (Google / Discord / GitHub). Browser pindah ke provider lalu kembali ke halaman ini;
+// sesinya ditangkap oleh klien Supabase (detectSessionInUrl) lewat blok init di bagian bawah.
+// Kunci sesi sama dengan game, jadi akun baru yang masuk lewat sini langsung siap dimainkan di game
+// (game otomatis memberi nama perusahaan acak yang bisa diubah nanti).
+const OAUTH = {
+  google:  { label: 'Google',  opts: { queryParams: { prompt: 'select_account' } } },
+  discord: { label: 'Discord', opts: { scopes: 'identify email' } },
+  github:  { label: 'GitHub',  opts: { scopes: 'read:user user:email' } }
+};
+$$('[data-oauth]').forEach(b => b.addEventListener('click', async () => {
+  const def = OAUTH[b.dataset.oauth]; if (!def) return;
+  const all = $$('[data-oauth]'), msg = $('#aMsg');
+  const unlock = () => all.forEach(x => { x.disabled = false; });
+  all.forEach(x => { x.disabled = true; });
+  setMsg(msg, t('oauthGo', def.label), 'info');
+  try {
+    const c = await loadCloud(); if (!c) throw cloudErr || new Error('lib');
+    try { sessionStorage.setItem('se:oauth', '1'); } catch (e) {}
+    const r = await c.auth.signInWithOAuth({ provider: b.dataset.oauth, options: Object.assign({ redirectTo: location.origin + location.pathname }, def.opts) });
+    if (r.error) throw r.error;
+    setTimeout(unlock, 10000); // jika pemain menekan Back dari halaman provider, tombol aktif lagi
+  } catch (err) {
+    unlock();
+    try { sessionStorage.removeItem('se:oauth'); } catch (e) {}
+    setMsg(msg, t('oauthFail', def.label), 'err');
+  }
+}));
 $('#authForm').addEventListener('submit', async e => {
   e.preventDefault();
   const msg = $('#aMsg'), email = $('#aEmail').value.trim(), pass = $('#aPass').value;
@@ -1579,8 +1626,13 @@ setLang(lang, false);
 (async () => {
   syncPackages();
   const hasSess = (() => { try { return Object.keys(localStorage).some(k => k.indexOf('smartphone-empire:supabase-auth') === 0); } catch (e) { return false; } })();
-  if (!hasSess) return;
+  // Kembali dari provider OAuth: token ada di URL (#access_token=... atau ?code=...), belum ada sesi tersimpan.
+  const back = /[#&?](access_token|refresh_token|code|error_description)=/.test(location.hash + location.search);
+  let fromOauth = false;
+  try { fromOauth = sessionStorage.getItem('se:oauth') === '1'; if (fromOauth) sessionStorage.removeItem('se:oauth'); } catch (e) {}
+  if (!hasSess && !back) return;
   const c = await loadCloud(); if (!c) return;
+  if (back && /error_description=/.test(location.hash + location.search)) toast(t('oauthBack'));
   try {
     const r = await c.auth.getSession();
     if (r.data && r.data.session) {
@@ -1594,6 +1646,7 @@ setLang(lang, false);
       } catch (e) {}
       if (!ok) { try { await c.auth.signOut({ scope: 'local' }); } catch (e) {} return; }
       user = { id: r.data.session.user.id, email: r.data.session.user.email || '' }; renderAcct(); loadAccount();
+      if (fromOauth) toast(t('okIn'));
     }
   } catch (e) {}
 })();
