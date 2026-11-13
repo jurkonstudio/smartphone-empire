@@ -9,6 +9,9 @@
 
 import { createCampusPost } from '../campus/CampusPost.js';
 
+// Warna vignette siang per era desain: hangat-kehijauan (LCD monokrom) hingga ungu (foldable). Halus (alpha tetap kecil).
+var ERA_TINT = ['40,52,28', '30,50,70', '34,36,60', '20,28,48', '58,44,18', '10,54,66', '52,30,92'];
+
 export function createOfficeLook(THREE, renderer, container, look) {
     var tier = (look && look.tier) || 'medium';
     var post = null;
@@ -16,6 +19,7 @@ export function createOfficeLook(THREE, renderer, container, look) {
     var size = new THREE.Vector2();
     var lastW = -1, lastH = -1;
     var night = 0;
+    var era = 0;
 
     // Pasca-proses hanya di tier high. ?officepost=0 mematikannya untuk QA.
     if (tier === 'high' && !(typeof location !== 'undefined' && /[?&]officepost=0/.test(location.search))) {
@@ -38,7 +42,7 @@ export function createOfficeLook(THREE, renderer, container, look) {
         if (!vig) return;
         var dark = night > 0.5;
         var a = dark ? 0.36 : 0.12;
-        var rgb = dark ? '2,4,12' : '20,28,48';
+        var rgb = dark ? '2,4,12' : (ERA_TINT[era] || '20,28,48');
         vig.style.background =
             'radial-gradient(ellipse at 50% 46%, rgba(' + rgb + ',0) 52%, rgba(' + rgb + ',' + a + ') 100%)';
     }
@@ -62,6 +66,11 @@ export function createOfficeLook(THREE, renderer, container, look) {
             } else {
                 renderer.render(scene, camera);
             }
+        },
+        // Era desain (0..6) dari tahun game: mengubah nuansa vignette siang. Panggil dari applyTheme().
+        setEra: function (e) {
+            era = Math.max(0, Math.min(ERA_TINT.length - 1, e | 0));
+            applyVignette();
         },
         // Tema siang (0) / malam (1). Panggil dari applyTheme().
         setNight: function (n) {

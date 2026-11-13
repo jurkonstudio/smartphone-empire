@@ -106,6 +106,7 @@ import { activeResearchPct, devPhaseFrac } from './OfficeFx.js';
 import { createOfficeProps } from './OfficeProps.js';
 import { buildOfficeExterior } from './OfficeExterior.js';
 import { createOfficeLook } from './OfficeLook.js';
+import { createOfficeModern } from './OfficeModern.js';
 
 // ============================================================
 // SCENE
@@ -204,6 +205,7 @@ export function createOfficeScene(THREE, container, gameState) {
     var VS = { era: 0, dark: false, accent: 0x2563eb };      // status tema yang dibaca OfficeProps saat membangun
     var props = createOfficeProps(THREE, { look: look, state: VS, M: M, G: G, renderer: renderer, SKIN: SKIN, HAIR: HAIR, tierMat: tierMat });
     props.applyMaps();
+    var modern = createOfficeModern(THREE, { G: G, M: M, props: props, look: look });   // dekorasi bertahap menurut level + era (OfficeProgress.js)
 
     function mesh(parent, geo, mat, sx, sy, sz, x, y, z) {
         var mm = typeof mat === 'string' ? M[mat] : mat;
@@ -1190,6 +1192,8 @@ export function createOfficeScene(THREE, container, gameState) {
         if (st.open) {
             try { BUILD[r.def.id](r, d, p, st, tickers); }
             catch (e) { console.warn('[OfficeScene] gagal bangun ruangan ' + r.def.id, e); }
+            try { modern.decorate(r, d, p, st, eraIdx, tickers, { signTexture: signTexture }); }   // lapisan modern bertahap (level + tahun)
+            catch (e) { console.warn('[OfficeScene] gagal dekorasi modern ' + r.def.id, e); }
         } else {
             // blueprint terkunci: gembok di tengah
             var f = r.furn;
@@ -1232,6 +1236,7 @@ export function createOfficeScene(THREE, container, gameState) {
         rig.applyTheme(dark);          // warna & intensitas cahaya sama dengan Peta Kampus
         exterior.applyTheme(dark, winHex);
         officeLook.setNight(dark ? 1 : 0);
+        officeLook.setEra(eraIdx);
         roomList.forEach(function (r) {
             r.ovMat.color.setHex(accentHex);
             r.patMat.color.setHex(dark ? 0xffffff : 0x000000);
@@ -1908,6 +1913,7 @@ export function createOfficeScene(THREE, container, gameState) {
             Object.keys(bubbleTex).forEach(function (k) { bubbleTex[k].dispose(); });
             hairMat.forEach(function (m) { m.dispose(); });
             officeLook.dispose();
+            modern.dispose();
             exterior.dispose();
             props.dispose();
             Object.keys(tierMat).forEach(function (k) { tierMat[k].dispose(); });
