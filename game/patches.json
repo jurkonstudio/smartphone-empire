@@ -1,6 +1,27 @@
 {
-  "latest": "0.2.17",
+  "latest": "0.2.18",
   "releases": [
+    {
+      "version": "0.2.18",
+      "date": "2026-11-13",
+      "time": "17:00",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Peta Manufaktur kini tumbuh bertahap mengikuti tahun game, level pemain, dan total level pabrik: pagar & pos jaga, lampu sorot, area parkir, menara telekom, ladang surya, panel surya atap, turbin angin, drone gudang, AGV otonom, stasiun cas EV, dan menara kontrol. Lencana era di kiri atas peta menunjukkan fasilitas berikutnya dan syaratnya.",
+            "en": "The Manufacturing map now grows step by step with the game year, player level, and total factory levels: fence & guardhouse, floodlights, car park, telecom mast, solar field, rooftop solar, wind turbines, warehouse drones, autonomous AGVs, EV charging, and a control tower. An era badge at the top-left of the map shows the next facility and what it needs."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Lampu sorot berganti dari natrium oranye (sebelum 2012) ke LED putih, dan mast telekom menjadi 5G dengan cincin sinyal mulai 2024.",
+            "en": "Floodlights switch from orange sodium (before 2012) to white LED, and the telecom mast becomes 5G with pulsing signal rings from 2024."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.17",
       "date": "2026-11-13",
