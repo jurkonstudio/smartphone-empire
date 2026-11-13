@@ -68,9 +68,11 @@ img{display:block;max-width:100%}a{color:var(--lk)}
 .nv{display:flex;align-items:center;gap:14px;height:62px}
 .brand{display:flex;align-items:center;gap:10px;color:var(--on);text-decoration:none;font-weight:700;font-size:1.05rem;white-space:nowrap}.brand img{width:32px;height:32px}
 .links{margin-left:auto;display:flex;align-items:center;gap:2px}
-.links a{color:var(--on2);text-decoration:none;padding:8px 13px;border-radius:999px;font-weight:600;font-size:.94rem}
-.links a:hover{color:#fff;background:rgba(255,255,255,.08)}
-.links a.play{background:var(--blue);color:#06101f;margin-left:6px}.links a.play:hover{background:#68aaff}
+.links a{display:inline-flex;align-items:center;justify-content:center;gap:8px;color:var(--on2);text-decoration:none;height:40px;padding:0 15px 0 12px;border-radius:999px;font-weight:600;font-size:.94rem;transition:background .2s,color .2s,transform .2s,box-shadow .2s}
+.links a .ic{font-size:20px;flex:none}
+.links a:hover{color:#fff;background:rgba(255,255,255,.1)}.links a:active{transform:scale(.95)}
+.links a.play{background:linear-gradient(135deg,#4da0ff,#3d7dff);color:#fff;margin-left:8px;box-shadow:0 8px 20px -8px rgba(61,148,255,.9)}.links a.play:hover{box-shadow:0 10px 24px -8px rgba(61,148,255,1);transform:translateY(-1px)}
+.links a .t{white-space:nowrap}
 .tools{display:flex;align-items:center;gap:8px}
 .lang{display:flex;background:rgba(255,255,255,.09);border-radius:999px;padding:3px}
 .lang button{font:600 .8rem/1 var(--f);color:var(--on2);background:none;border:0;border-radius:999px;padding:8px 10px;cursor:pointer}
@@ -151,7 +153,8 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-bet
 footer nav{display:flex;flex-wrap:wrap;gap:6px 20px}footer a{color:var(--on2);text-decoration:none}footer a:hover{color:#fff;text-decoration:underline}
 @media (max-width:1000px){.gate.game{padding-right:230px}.gate.game img{width:170px}.steps,.facts{grid-template-columns:1fr 1fr}}
 @media (max-width:860px){.hero{grid-template-columns:1fr;gap:38px}.stage{order:2}.date{left:-6px}.fl.a{right:-8px}.fl.b{left:-10px}.gates{grid-template-columns:1fr}.gate.game{grid-row:auto;min-height:300px}}
-@media (max-width:640px){.links a:not(.play){display:none}.brand span{display:none}.nv{gap:10px;justify-content:space-between}.links{margin-left:0}}
+@media (max-width:640px){.brand span{display:none}.nv{gap:8px;justify-content:space-between}.links{margin-left:0;gap:4px}.links a.ib{width:40px;padding:0;background:rgba(255,255,255,.07)}.links a.ib .t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.links a.play{margin-left:2px}}
+@media (max-width:460px){.links a.play{width:40px;padding:0}.links a.play .t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.lang button{padding:8px 8px}.tools{gap:6px}}
 @media (max-width:520px){.wrap{width:calc(100% - 32px)}.btn{flex:1 1 100%}.more{flex:1 1 100%;justify-content:center}.gate.game{padding-right:26px;padding-bottom:230px;min-height:0}.gate.game img{right:auto;left:50%;transform:translateX(-50%);width:min(220px,70%);height:190px;bottom:0}.steps{grid-template-columns:1fr}.facts{grid-template-columns:1fr 1fr}.facts div{grid-template-columns:1fr;row-gap:10px}.facts .tile{grid-row:auto}}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.screen img,.gate,.btn{transition:none}.fl{animation:none}}
 
@@ -191,9 +194,9 @@ footer a{display:inline-block;padding:4px 0}
 <nav class="nav" aria-label="Utama"><div class="wrap nv">
   <a class="brand" href="/"><img src="/assets/brand/logo/logo-mark.svg" alt="" width="32" height="32"><span>Smartphone Empire</span></a>
   <div class="links">
-    <a href="/web" data-i18n="nav_web">Web</a>
-    <a href="/blog/" data-i18n="nav_blog">Blog</a>
-    <a class="play" href="/game/" data-i18n="nav_play">Main game</a>
+    <a class="ib" href="/web"><svg class="ic" aria-hidden="true"><use href="#i-globe"/></svg><span class="t" data-i18n="nav_web">Web</span></a>
+    <a class="ib" href="/blog/"><svg class="ic" aria-hidden="true"><use href="#i-news"/></svg><span class="t" data-i18n="nav_blog">Blog</span></a>
+    <a class="play" href="/game/"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg><span class="t" data-i18n="nav_play">Main game</span></a>
   </div>
   <div class="tools">
     <div class="lang" role="group" aria-label="Bahasa / Language"><button type="button" data-lang="id" aria-pressed="true">ID</button><button type="button" data-lang="en" aria-pressed="false">EN</button></div>
@@ -294,8 +297,8 @@ footer a{display:inline-block;padding:4px 0}
 
   <section style="padding-top:0">
     <div class="wrap">
-      <h2 data-i18n="vid_h">Lihat gamenya beraksi</h2>
-      <p class="sub" data-i18n="vid_s">Tonton trailer dan gameplay aslinya sebelum mendirikan perusahaanmu.</p>
+      <h2 data-i18n="vid_h">Seperti apa rasanya memimpin perusahaan ponsel?</h2>
+      <p class="sub" data-i18n="vid_s">Tonton permainan yang sesungguhnya, dari mendirikan perusahaan sampai merebut pasar.</p>
       <div class="vids">
         <article class="vid">
           <div class="vid-fr"><iframe src="https://www.youtube-nocookie.com/embed/EAUsyESkHY0?rel=0" title="Smartphone Empire: Official Trailer" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
@@ -363,7 +366,7 @@ footer a{display:inline-block;padding:4px 0}
     s4h:'Win the market', s4p:'Sell, protect your reputation, and fight 32 competitors. Two months of negative cash in a row means game over.',
     f1:'competitor companies', f2:'tech nodes', f3:'phone components', f4:'listed stocks',
     note:'Figures come from game data version 0.2.14.',
-    vid_h:'See the game in action', vid_s:'Watch the trailer and real gameplay before you found your company.', vid1_t:'Official trailer', vid1_p:'Found your company, design a phone, and take on the giants.', vid2_t:'Gameplay', vid2_p:'A closer look at how Smartphone Empire plays.', vid_yt:'Visit our YouTube channel',
+    vid_h:'What does it feel like to run a phone company?', vid_s:'Watch real gameplay, from founding your company to taking over the market.', vid1_t:'Official trailer', vid1_p:'Found your company, design a phone, and take on the giants.', vid2_t:'Gameplay', vid2_p:'A closer look at how Smartphone Empire plays.', vid_yt:'Visit our YouTube channel',
     end_h:'Ready to be CEO?', end_s:'Your cash is small and the year has just begun.',
     tk1:'32 rival companies', tk2:'134 tech nodes', tk3:'141 phone components', tk4:'84 listed stocks', tk5:'12 languages', tk6:'Free in your browser', tk7:'Cloud save', tk8:'Installable as a PWA', tk9:'From 2000 to the AI era',
     f_disc:"Smartphone Empire is a fan project, not a commercial product, and is not affiliated with Nokia, Apple, Samsung, or any other company. Names and brands are used for educational and entertainment purposes; rights belong to their respective owners. Historical data is simplified for gameplay.", f_about:'About', f_terms:'Terms', f_priv:'Privacy', f_contact:'Contact'

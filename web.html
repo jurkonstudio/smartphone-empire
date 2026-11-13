@@ -79,7 +79,7 @@ main,header,footer{position:relative;z-index:1}
 
 /* NAV (gaya bilah iCloud: tipis, transparan, tautan kecil) */
 .nav{position:sticky;top:0;z-index:50;background:var(--nav);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--line)}
-.nav-in{display:flex;align-items:center;gap:10px;height:56px}
+.nav-in{display:flex;align-items:center;flex-wrap:wrap;gap:10px;min-height:56px;padding-block:6px}
 .brand{display:flex;align-items:center;gap:9px;text-decoration:none;font-weight:700;letter-spacing:-.03em;font-size:1.02rem;white-space:nowrap}
 .brand .bm{width:28px;height:28px;flex:none;display:block;transition:transform .35s var(--ease)}
 .brand:hover .bm{transform:rotate(-6deg) scale(1.06)}
@@ -88,11 +88,7 @@ main,header,footer{position:relative;z-index:1}
 @keyframes segem{0%{transform:scale(1)}40%{transform:scale(1.9)}100%{transform:scale(1)}}
 .foot-brand{display:flex;justify-content:flex-start;margin:0 0 28px}.foot-brand img{height:46px;width:auto}
 .fb-dark{display:none}:root[data-theme="dark"] .fb-light{display:none}:root[data-theme="dark"] .fb-dark{display:block}
-.nav-links{display:none;gap:2px;margin-left:14px}
-.nav-links a{text-decoration:none;color:var(--text2);font-size:.84rem;font-weight:500;padding:7px 12px;border-radius:999px;transition:.2s}
-.nav-links a:hover{color:var(--text);background:var(--fill)}
 .nav-sp{flex:1}
-@media(min-width:880px){.nav-links{display:flex}}
 @media(max-width:399px){.brand-tx{display:none}}
 @media(max-width:480px){.nav-in{gap:6px}.nav .btn-sm{padding:0 12px}.brand .bm{width:26px;height:26px}}
 
@@ -491,6 +487,26 @@ section.hub,#panduan{scroll-margin-top:70px}
 .consent{margin-top:12px;font-size:.78rem;line-height:1.5;color:var(--text3)}
 .consent a{color:var(--link);font-weight:600}
 @media(max-width:600px){.top{padding-bottom:52px}.qs{margin-top:-28px}#cuplikan{margin-top:52px;padding-bottom:52px}}
+
+/* NAV ICON BAR */
+.nav-links{order:5;flex:1 0 100%;display:flex;justify-content:space-between;gap:2px;padding:4px;margin:0;border-radius:18px;background:var(--fill)}
+.nav-links a{position:relative;flex:1 1 0;min-width:0;height:40px;display:grid;place-items:center;border-radius:14px;color:var(--text3);text-decoration:none;transition:color .2s,background .25s,box-shadow .25s,transform .2s var(--ease)}
+.nav-links a[hidden]{display:none}
+.nav-links a .ni{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;transition:transform .25s var(--ease)}
+.nav-links a .nl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.nav-links a:hover{color:var(--text)}
+.nav-links a:hover .ni{transform:translateY(-1px) scale(1.08)}
+.nav-links a:active{transform:scale(.93)}
+.nav-links a.on{color:var(--blue);background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.08),0 4px 12px rgba(0,0,0,.08),inset 0 0 0 1px var(--line)}
+@media(min-width:880px){
+  .nav-in{flex-wrap:nowrap;min-height:0;height:60px;padding-block:0}
+  .nav-links{order:0;flex:none;justify-content:flex-start;margin-left:14px;padding:3px;border-radius:999px}
+  .nav-links a{flex:none;width:40px;height:36px;border-radius:999px}
+  .nav-links a:hover{background:var(--fill2)}
+  .nav-links a .nl{left:50%;top:calc(100% + 12px);width:auto;height:auto;overflow:visible;clip:auto;transform:translate(-50%,-4px);padding:6px 11px;border-radius:9px;background:var(--inv,#1d1d1f);color:var(--inv-tx,#fff);font-size:.76rem;font-weight:600;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s var(--ease);box-shadow:0 8px 22px rgba(0,0,0,.25)}
+  .nav-links a:hover .nl,.nav-links a:focus-visible .nl{opacity:1;transform:translate(-50%,0)}
+}
+@media(max-width:879px){html{scroll-padding-top:116px}section{scroll-margin-top:112px}section.hub,#panduan{scroll-margin-top:116px}}
 </style>
 </head>
 <body>
@@ -500,8 +516,15 @@ section.hub,#panduan{scroll-margin-top:70px}
 <nav class="nav" aria-label="Utama" data-en-aria="Main">
   <div class="wrap nav-in">
     <a class="brand" href="#top" aria-label="Smartphone Empire"><svg viewBox="0 0 512 512" class="bm" aria-hidden="true" focusable="false"><defs><linearGradient id="bmbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1c1f4d"/><stop offset="1" stop-color="#0b0d22"/></linearGradient><radialGradient id="bmgl" cx=".5" cy=".5" r=".55"><stop offset="0" stop-color="#14b8a6" stop-opacity=".42"/><stop offset="1" stop-color="#2563eb" stop-opacity="0"/></radialGradient><linearGradient id="bmb" x1="14" y1="3" x2="50" y2="61" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2dd4bf"/><stop offset=".55" stop-color="#2563eb"/><stop offset="1" stop-color="#4f46e5"/></linearGradient><linearGradient id="bms" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#171d57"/><stop offset="1" stop-color="#0a0d2b"/></linearGradient><linearGradient id="bmg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde047"/><stop offset="1" stop-color="#f59e0b"/></linearGradient><linearGradient id="bmh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#bmbg)"/><rect width="512" height="512" rx="112" fill="url(#bmgl)"/><g transform="translate(57.6 57.6) scale(6.2)"><rect x="14" y="3" width="36" height="58" rx="9" fill="url(#bmb)"/><rect x="18.5" y="7.5" width="27" height="49" rx="5.5" fill="url(#bms)"/><rect x="18.5" y="7.5" width="27" height="49" rx="5.5" fill="url(#bmh)"/><rect x="27.5" y="10.4" width="9" height="2.3" rx="1.15" fill="#05071c"/><rect x="50" y="17" width="1.6" height="7" rx=".8" fill="#2563eb"/><rect x="50" y="27" width="1.6" height="11" rx=".8" fill="#2563eb"/><path class="se-crown" d="M22.6 43.5 21.8 28.2 27.6 34.4 32 25.2 36.4 34.4 42.2 28.2 41.4 43.5Z" fill="url(#bmg)" stroke="url(#bmg)" stroke-width="2.2" stroke-linejoin="round"/><rect x="22.2" y="46.2" width="19.6" height="3.4" rx="1.7" fill="#f59e0b"/><circle class="se-gem" cx="32" cy="22.6" r="2.7" fill="#fff"/><circle cx="21.8" cy="26.3" r="1.5" fill="#fff" opacity=".9"/><circle cx="42.2" cy="26.3" r="1.5" fill="#fff" opacity=".9"/></g></svg><span class="brand-tx">Smartphone Empire</span></a>
-    <div class="nav-links">
-      <a href="#fitur" data-en="Features">Fitur</a><a href="#cuplikan" data-en="Screenshots">Cuplikan</a><a href="#video" data-en="Video">Video</a><a href="#cara" data-en="How to play">Cara main</a><a href="#silicon">Silicon</a><a href="#apa-baru" id="navNew" hidden data-en="What’s new">Apa yang baru</a><a href="#studio">Studio</a><a href="/blog/">Blog</a>
+    <div class="nav-links" role="navigation" aria-label="Bagian halaman" data-en-aria="Page sections">
+      <a href="#fitur" data-sec="fitur"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4M22 5h-4"/></svg><span class="nl" data-en="Features">Fitur</span></a>
+      <a href="#cuplikan" data-sec="cuplikan"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2.5"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span class="nl" data-en="Screenshots">Cuplikan</span></a>
+      <a href="#video" data-sec="video"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M10 8.5 16 12l-6 3.5z"/></svg><span class="nl" data-en="Video">Video</span></a>
+      <a href="#cara" data-sec="panduan"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg><span class="nl" data-en="How to play">Cara main</span></a>
+      <a href="#silicon"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M11 3 8 9l4 13 4-13-3-6M2 9h20"/></svg><span class="nl">Silicon</span></a>
+      <a href="#apa-baru" id="navNew" hidden data-sec="apa-baru"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="nl" data-en="What’s new">Apa yang baru</span></a>
+      <a href="#studio" data-sec="studio"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.83-.44-1.13a1.6 1.6 0 0 1-.44-1.12 1.64 1.64 0 0 1 1.67-1.67h2c3.05 0 5.55-2.5 5.55-5.55C21.97 6.01 17.46 2 12 2z"/><circle cx="13.5" cy="6.5" r=".6" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".6" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".6" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".6" fill="currentColor"/></svg><span class="nl">Studio</span></a>
+      <a href="/blog/"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5"/><path d="M10 6h8v4h-8z"/></svg><span class="nl">Blog</span></a>
     </div>
     <span class="nav-sp"></span>
     <div class="lang" role="group" aria-label="Bahasa" data-en-aria="Language">
@@ -666,8 +689,8 @@ section.hub,#panduan{scroll-margin-top:70px}
 <!-- VIDEO -->
 <section id="video"><div class="wrap">
   <div class="kicker" data-en="Video">Video</div>
-  <h2 class="h" data-en="See the game in action.">Lihat gamenya beraksi.</h2>
-  <p class="sub" data-en="Watch the trailer and real gameplay before you start your own phone company.">Tonton trailer dan gameplay aslinya sebelum kamu mendirikan perusahaan ponselmu sendiri.</p>
+  <h2 class="h" data-en="What does it feel like to run a phone company?">Seperti apa rasanya memimpin perusahaan ponsel?</h2>
+  <p class="sub" data-en="Watch real gameplay, from founding your company to taking over the market.">Tonton permainan yang sesungguhnya, dari mendirikan perusahaan sampai merebut pasar.</p>
   <div class="vids">
     <article class="tile vid rv">
       <div class="vid-fr"><iframe src="https://www.youtube-nocookie.com/embed/EAUsyESkHY0?rel=0" title="Smartphone Empire: Official Trailer" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
@@ -1573,6 +1596,18 @@ setLang(lang, false);
       user = { id: r.data.session.user.id, email: r.data.session.user.email || '' }; renderAcct(); loadAccount();
     }
   } catch (e) {}
+})();
+</script>
+<script>
+(function(){
+  var links=[].slice.call(document.querySelectorAll('.nav-links a[data-sec]'));
+  if(!links.length||!('IntersectionObserver' in window)) return;
+  var map={}; links.forEach(function(a){map[a.dataset.sec]=a;});
+  var cur=null;
+  function set(id){ if(cur===id) return; cur=id; links.forEach(function(a){ var on=a.dataset.sec===id; a.classList.toggle('on',on); if(on) a.setAttribute('aria-current','true'); else a.removeAttribute('aria-current'); }); }
+  var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting) set(e.target.id); }); },{rootMargin:'-35% 0px -60% 0px'});
+  Object.keys(map).forEach(function(id){ var el=document.getElementById(id); if(el) io.observe(el); });
+  var top=document.getElementById('top'); if(top) new IntersectionObserver(function(es){ if(es[0].isIntersecting) set(null); },{rootMargin:'-20% 0px -60% 0px'}).observe(top);
 })();
 </script>
 </body>
