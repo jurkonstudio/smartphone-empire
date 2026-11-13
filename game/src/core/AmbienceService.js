@@ -1,6 +1,10 @@
 // FILE: src/core/AmbienceService.js
 // v2028.40 — Audio ambien adaptif untuk peta 3D: Kampus, Manufaktur, Kantor, Server (bawah laut).
 //
+// HUJAN di Kampus memakai rekaman: assets/audio/rain.mp3 (loop mulus) + assets/audio/thunder.mp3 (petir acak,
+// hanya saat hujan). Keduanya dimuat malas saat hujan pertama; bila gagal dimuat, suara hujan sintetis tetap dipakai.
+//   Atur keras-pelan lewat RAIN_LEVEL / THUNDER_LEVEL di bawah.
+//
 // Kampus, Kantor, dan Server DISINTESIS langsung lewat Web Audio (tanpa file mp3, tanpa unduhan, tanpa jaringan) sehingga:
 //   - bisa mengikuti kondisi peta secara langsung (siang/malam, cuaca, aktivitas pabrik, jumlah staf, beban server),
 //   - loop tidak pernah terdengar berulang (noise acak + kejadian acak),
@@ -29,6 +33,13 @@ var MF_URL = './assets/audio/manufacture.mp3';   // rekaman peta Manufaktur
 var MF_LEVEL = 0.35;                              // keras-pelan rekaman (1 = asli, rekaman aslinya cukup keras ~ -21 LUFS)
 var MF_XFADE = 1.5;                               // detik: ujung rekaman dicampur ke awal supaya loop tidak terdengar putus
 var mfBuf = null, mfPromise = null, mfFailed = false;
+var RAIN_URL = './assets/audio/rain.mp3';          // hujan ringan (loop), peta Kampus saat cuaca hujan
+var THUNDER_URL = './assets/audio/thunder.mp3';    // gemuruh petir, potongan acak saat hujan
+var RAIN_LEVEL = 0.85;                            // keras-pelan rekaman hujan (1 = asli, sekitar -29 LUFS)
+var RAIN_XFADE = 1.2;                             // detik: ujung rekaman dicampur ke awal supaya loop tidak putus
+var THUNDER_LEVEL = 0.6;                          // puncak petir (1 = asli)
+var THUNDER_CLIPS = [[0, 11, 1], [11, 11, 1], [22, 12, 1.5]];   // [mulai (detik), durasi, pengali volume] di thunder.mp3
+var recBuf = {}, recPromise = {}, recFailed = {};
 var OFF_KEY = 'se.ambience';
 var MASTER = 0.9;            // pengali akhir (sebelum kompresor)
 
@@ -201,7 +212,7 @@ function every(S, minS, maxS, fn, rate) {
 // ---------- lapisan bersama ----------
 var WEATHER_WIND = { clear: 0.10, sunny: 0.07, overcast: 0.22, rain: 0.34, snow: 0.15 };
 // Angin + hujan. scale mengatur keseluruhan (dalam ruangan lebih kecil), muffle = frekuensi lowpass bagian hujan.
-function weatherBeds(S, scale, rainLp) {
+function weatherBeds(S, scale, rainLp, rainMul) {
     var windF = filt('bandpass', 380, 0.45);
     var wind = layer(S, 'pink', [windF], [0.07, 0.35]);
     lfo(S, 0.05, 130, windF.frequency);
@@ -209,11 +220,11 @@ function weatherBeds(S, scale, rainLp) {
     var rainBody = layer(S, 'pink', [filt('bandpass', 2200, 0.5)]);
     var rainLow = layer(S, 'brown', [filt('lowpass', 420, 0.5)]);
     return function (p) {
-        var k = p.weather, raining = k === 'rain' ? 1 : 0;
+        var k = p.weather, raining = k === 'rain' ? 1 : 0, rm = rainMul ? rainMul() : 1;
         setT(wind.gain, (WEATHER_WIND[k] === undefined ? 0.1 : WEATHER_WIND[k]) * scale, 1.2);
-        setT(rainHi.gain, 0.085 * raining * scale, 1.5);
-        setT(rainBody.gain, 0.075 * raining * scale, 1.5);
-        setT(rainLow.gain, 0.05 * raining * scale, 1.5);
+        setT(rainHi.gain, 0.085 * raining * scale * rm, 1.5);
+        setT(rainBody.gain, 0.075 * raining * scale * rm, 1.5);
+        setT(rainLow.gain, 0.05 * raining * scale * rm, 1.5);
     };
 }
 // Ombak pantai (pulau kampus & dermaga).
@@ -227,7 +238,22 @@ function seaBeds(S, scale) {
 // ---------- ADEGAN: KAMPUS ----------
 function buildCampus() {
     var S = makeScene('campus');
-    var weatherApply = weatherBeds(S, 1, 9500);
+    // Hujan rekaman: dimuat saat hujan pertama. Selama belum siap (atau gagal), hujan sintetis tetap berbunyi.
+    var rec = { on: false, pending: false };
+    var weatherApply = weatherBeds(S, 1, 9500, function () { return rec.on ? 0.12 : 1; });
+    var rainRec = gainN(0); rainRec.connect(S.dest);
+    function startRainRec() {
+        if (rec.on || rec.pending || recFailed.rain) return;
+        rec.pending = true;
+        loadRec('rain', RAIN_URL, RAIN_XFADE).then(function (buf) {
+            rec.pending = false;
+            if (S.dead || !ctx) return;
+            var src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+            src.connect(rainRec); src.start(0, Math.random() * buf.duration); S.srcs.push(src);
+            rec.on = true;
+            if (cur && cur.S === S) cur.apply(P);
+        }).catch(function () { rec.pending = false; });
+    }
     seaBeds(S, 1);
     // Jangkrik malam: dua suara, nada & irama berbeda; AM cepat (kepak) x AM lambat (rangkaian).
     function cricket(f, fast, slow) {
@@ -261,10 +287,33 @@ function buildCampus() {
         ring(S, t, [[523.25, 1], [1318.5, 0.3], [1568, 0.18], [2093, 0.1]], 4.8, 0.05, -0.4, 0.9);
     }, function () { return dayF() > 0.5 ? 1 : 0; });
 
+    var thunderUntil = 0;
+    every(S, 8, 14, function () {                          // petir: potongan acak dari rekaman, hanya saat hujan
+        if (P.weather !== 'rain' || Math.random() > 0.3) return;
+        loadRec('thunder', THUNDER_URL, 0).then(function (buf) {
+            if (S.dead || !ctx || P.weather !== 'rain') return;
+            var c = THUNDER_CLIPS[Math.random() * THUNDER_CLIPS.length | 0];
+            var now = ctx.currentTime + 0.05, dur = Math.min(c[1], buf.duration - c[0]);
+            if (dur < 2 || now < thunderUntil) return;     // jangan tumpang tindih
+            thunderUntil = now + dur;
+            var src = ctx.createBufferSource(); src.buffer = buf;
+            var g = ctx.createGain(), peak = THUNDER_LEVEL * c[2] * rnd(0.7, 1);
+            g.gain.setValueAtTime(0.0001, now);
+            g.gain.linearRampToValueAtTime(peak, now + 0.2);
+            g.gain.setValueAtTime(peak, now + Math.max(0.3, dur - 2.2));
+            g.gain.linearRampToValueAtTime(0.0001, now + dur);
+            src.connect(g); route(S, g, rnd(-0.6, 0.6), 0.2);
+            src.onended = function () { var i = S.srcs.indexOf(src); if (i >= 0) S.srcs.splice(i, 1); };
+            src.start(now, c[0], dur); S.srcs.push(src);
+        }).catch(function () { /* tanpa rekaman petir: hujan tetap berbunyi */ });
+    }, function () { return P.weather === 'rain' && !recFailed.thunder ? 1 : 0; });
+
     return {
         S: S,
         apply: function (p) {
             weatherApply(p);
+            if (p.weather === 'rain') startRainRec();
+            setT(rainRec.gain, p.weather === 'rain' && rec.on ? RAIN_LEVEL : 0, 1.5);
             var night = p.night, dry = (p.weather === 'rain' || p.weather === 'snow') ? 0.2 : 1;
             setT(cr1.gain, 0.022 * night * dry, 2.5); setT(cr2.gain, 0.017 * night * dry, 2.5);
             setT(crowd.gain, 0.016 * (1 - night) * dry, 2); setT(crowd2.gain, 0.008 * (1 - night) * dry, 2);
@@ -308,6 +357,28 @@ function loadMfBuffer() {
             throw e;
         });
     return mfPromise;
+}
+
+// Pemuat rekaman umum (hujan, petir): sekali muat, hasil disimpan; gagal -> ditandai agar tidak dicoba terus.
+function loadRec(key, url, xfade) {
+    if (recBuf[key]) return Promise.resolve(recBuf[key]);
+    if (recFailed[key]) return Promise.reject(new Error('rekaman ' + key + ' tidak tersedia'));
+    if (recPromise[key]) return recPromise[key];
+    recPromise[key] = fetch(url)
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+        .then(function (ab) {
+            return new Promise(function (res, rej) {
+                var p = ctx.decodeAudioData(ab, res, rej);
+                if (p && p.then) p.then(res, rej);
+            });
+        })
+        .then(function (b) { recBuf[key] = xfade ? seamless(b, xfade) : b; return recBuf[key]; })
+        .catch(function (e) {
+            recFailed[key] = true; recPromise[key] = null;
+            console.warn('[AmbienceService] Rekaman ' + key + ' gagal dimuat:', e && e.message);
+            throw e;
+        });
+    return recPromise[key];
 }
 
 // ---------- ADEGAN: MANUFAKTUR (rekaman) ----------
