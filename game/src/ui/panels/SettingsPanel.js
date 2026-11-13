@@ -30,6 +30,7 @@ import { formatCurrency } from '../../utils/format.js';
 import { renderDebugSection, bindDebugActions } from './DebugPanel.js';
 import { openPlayerListModal } from '../social/PlayerListPanel.js';
 import { avatarHtml } from '../social/AvatarView.js';
+import { CosmeticService } from '../../systems/CosmeticService.js';
 import { openEditCompanyNameModal } from '../social/ProfileEditModals.js';
 import { setProfileTab } from './CompanyProfilePanel.js';
 import { openCloudPanel } from '../../services/cloud/CloudUI.js';
@@ -110,7 +111,7 @@ function _heroCard(s) {
 
     return '<div class="settings-hero">' +
         '<button class="settings-hero-top settings-hero-link" data-set="player-profile" type="button">' +
-            avatarHtml({ src: player.avatar, name: player.displayName || companyName, size: 52 }) +
+            avatarHtml({ src: player.avatar, name: player.displayName || companyName, size: 52, frame: CosmeticService.equippedId('frame') }) +
             '<div class="settings-hero-info">' +
                 '<div class="settings-hero-name">' + escapeHtml(playerName) + '</div>' +
                 '<div class="settings-hero-company">' + renderIcon('building', 11) + '<span>' + escapeHtml(companyName) + '</span></div>' +

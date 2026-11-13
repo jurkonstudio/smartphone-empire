@@ -7,6 +7,7 @@ import { getCloudSummary, openCloudPanel } from '../../services/cloud/CloudUI.js
 import { isCloudConfigured } from '../../services/cloud/supabase.config.js';
 import { renderIcon } from '../icons/FeatureIcons.js';
 import { avatarHtml, esc } from '../social/AvatarView.js';
+import { CosmeticService } from '../../systems/CosmeticService.js';
 import { openEditCompanyNameModal, openEditPlayerModal } from '../social/ProfileEditModals.js';
 import { openPlayerListModal } from '../social/PlayerListPanel.js';
 import { compactNumber } from '../social/PlayerProfileModal.js';
@@ -175,7 +176,7 @@ function _playerTab(params) {
         '<div class="pf-hero pf-hero-player">' +
             '<div class="pf-avatar-wrap">' +
                 '<button class="pf-avatar-btn" data-pf="edit-player" type="button" aria-label="' + esc(t('pp.player.edit')) + '">' +
-                    avatarHtml({ src: player.avatar, name: player.displayName || data.companyName, size: 88, cls: 'pp-avatar-lg', edit: true }) +
+                    avatarHtml({ src: player.avatar, name: player.displayName || data.companyName, size: 88, cls: 'pp-avatar-lg', edit: true, frame: CosmeticService.equippedId('frame') }) +
                 '</button>' +
                 levelBadgeHtml({ level: pLv.level, kind: 'player', size: 38 }) +
             '</div>' +

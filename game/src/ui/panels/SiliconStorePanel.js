@@ -14,6 +14,7 @@ import { DEV_BUILD } from '../../config/dev.config.js';
 import { state } from '../../core/GameState.js';
 import { CloudService } from '../../services/CloudService.js';
 import { SaveService } from '../../core/SaveService.js';
+import { CosmeticService } from '../../systems/CosmeticService.js';
 
 var MODAL_ID = 'silicon-store';
 // [LOCK] true = Top Up ditutup sementara & belum bisa digunakan.
@@ -22,7 +23,8 @@ var _sel = { pkg: 'pkg_l', method: null, busy: false };
 var _pollingTimer = null;
 var _countdownTimer = null;
 var _adminApprovedUnsub = null;
-var _storeTab = 'buy'; // 'buy' | 'exchange' | 'transfer'
+var _storeTab = 'buy'; // 'buy' | 'exchange' | 'transfer' | 'cos'
+var _cosCat = 'campus'; // kategori aktif di tab Butik
 var _exBusy = false;   // cegah dobel-tap saat penukaran diproses server
 
 var STATIC_QRIS_URL = 'https://raw.githubusercontent.com/jurkonstudio/smartphone-empire/refs/heads/main/qris-gopay.png';
@@ -315,10 +317,74 @@ function _renderOrders() {
 // ============================================================
 // RENDER UTAMA
 // ============================================================
+// ============================================================
+// TAB BUTIK KOSMETIK (v0.2.19): kosmetik dibeli dengan SIL murni, hanya tampilan.
+// ============================================================
+var RARITY_COLOR = { common: '#94a3b8', rare: '#3d94ff', epic: '#a855f7', legendary: '#f59e0b' };
+
+// Pratinjau kecil dari data warna katalog (nilai warna berasal dari katalog, bukan input pengguna).
+function _cosPreview(it) {
+    var a = it.art, base = 'height:64px;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:26px;';
+    if (it.cat === 'campus') return '<div style="' + base + 'background:linear-gradient(180deg,' + a.skyTop + ',' + a.skyBottom + ');">' + it.icon + '</div>';
+    if (it.cat === 'phone') return '<div style="' + base + 'background:var(--bg-3);"><span style="width:30px;height:52px;border-radius:8px;background:linear-gradient(145deg,' + a.a + ',' + a.b + ');box-shadow:inset 0 0 0 2px rgba(255,255,255,' + (a.gloss * 0.6).toFixed(2) + ');"></span></div>';
+    if (it.cat === 'frame') return '<div style="' + base + 'background:var(--bg-3);"><span style="width:42px;height:42px;border-radius:50%;background:var(--bg-2);box-shadow:0 0 0 3px ' + a.ring[0] + ',0 0 0 5px ' + a.ring[1] + ',0 0 ' + Math.round(a.glow * 14) + 'px ' + Math.round(a.glow * 2) + 'px ' + a.ring[0] + ';"></span></div>';
+    if (it.cat === 'fx') return '<div style="' + base + 'background:var(--bg-3);">' + a.colors.map(function (c) { return '<span style="width:12px;height:12px;border-radius:50%;background:' + c + ';"></span>'; }).join('') + '</div>';
+    return '<div style="' + base + 'background:var(--bg-3);"><span style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 2px ' + a.color + ';background:' + a.color + '33;">' + it.icon + '</span></div>';
+}
+
+function _renderCosmeticsTab() {
+    var connected = CloudService.getStatus() === 'connected';
+    var cats = CosmeticService.categories();
+    if (cats.indexOf(_cosCat) < 0) _cosCat = cats[0];
+    var chips = cats.map(function (c) {
+        var on = c === _cosCat;
+        return '<button data-cos-cat="' + c + '" style="flex:none;padding:7px 12px;border-radius:999px;border:none;font-size:12px;font-weight:bold;cursor:pointer;' +
+            (on ? 'background:var(--accent);color:#fff;' : 'background:var(--bg-3);color:var(--text-secondary);') + '">' + _esc(_tf('cos.cat.' + c, c)) + '</button>';
+    }).join('');
+    var cards = CosmeticService.catalog(_cosCat).map(function (it) {
+        var owned = CosmeticService.isOwned(it.id), worn = CosmeticService.equippedId(it.cat) === it.id;
+        var btn;
+        if (!owned) btn = '<button class="btn-primary" data-cos-act="buy" data-cos-id="' + it.id + '"' + (connected ? '' : ' disabled') + ' style="width:100%;padding:8px;font-weight:bold;font-size:12px;">' + _esc(_tf('cos.price', '{n} SIL', { n: it.price })) + '</button>';
+        else if (worn) btn = '<button class="btn-secondary" data-cos-act="unequip" data-cos-id="' + it.id + '" style="width:100%;padding:8px;font-size:12px;">✓ ' + _esc(_tf('cos.equipped', 'Dipakai')) + '</button>';
+        else btn = '<button class="btn-primary" data-cos-act="equip" data-cos-id="' + it.id + '" style="width:100%;padding:8px;font-weight:bold;font-size:12px;">' + _esc(_tf('cos.equip', 'Pakai')) + '</button>';
+        return '<div style="background:var(--bg-3);border:1px solid ' + (worn ? 'var(--accent)' : 'var(--border)') + ';border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;">' +
+            _cosPreview(it) +
+            '<div style="font-weight:bold;font-size:12px;line-height:1.3;">' + _esc(_tf('cos.item.' + it.id, it.id)) + '</div>' +
+            '<div style="font-size:11px;font-weight:bold;color:' + RARITY_COLOR[it.rarity] + ';">' + _esc(_tf('cos.rarity.' + it.rarity, it.rarity)) + (owned && !worn ? ' · ' + _esc(_tf('cos.owned', 'Dimiliki')) : '') + '</div>' +
+            '<div style="margin-top:auto;">' + btn + '</div></div>';
+    }).join('');
+    return '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;text-align:center;">' + _esc(_tf('cos.sub', 'Tampilan saja: tidak mengubah hasil permainan.')) + '</div>' +
+        (connected ? '' : '<div style="font-size:12px;color:var(--text-tertiary);text-align:center;margin-bottom:12px;">☁️ ' + _esc(_tf('cos.cloud', 'Login akun Cloud untuk membeli kosmetik.')) + '</div>') +
+        '<div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px;">' + chips + '</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">' + cards + '</div>';
+}
+
+function _handleCosmetic(act, id) {
+    var it = CosmeticService.get(id);
+    if (!it) return;
+    var name = _tf('cos.item.' + id, id), r;
+    if (act === 'buy') {
+        if (!confirm(_tf('cos.confirm', 'Beli {name} seharga {n} SIL?', { name: name, n: it.price }))) return;
+        r = CosmeticService.buy(id);
+        if (r.ok) ToastService.success(_tf('cos.msg.bought', '{name} dibeli (-{n} SIL).', { name: name, n: it.price }));
+        else if (r.reason === 'owned') ToastService.info(_tf('cos.msg.owned', 'Kamu sudah memiliki {name}.', { name: name }));
+        else if (r.reason === 'insufficient') ToastService.error(_tf('cos.msg.insufficient', 'SIL kurang {n}.', { n: r.need }));
+        else ToastService.error(_tf('cos.msg.failed', 'Pembelian gagal. Coba lagi.'));
+    } else if (act === 'equip') {
+        r = CosmeticService.equip(id);
+        if (r.ok) ToastService.success(_tf('cos.msg.equipped', '{name} dipakai.', { name: name }));
+    } else if (act === 'unequip') {
+        r = CosmeticService.unequip(it.cat);
+        if (r.ok) ToastService.info(_tf('cos.msg.unequipped', '{name} dilepas.', { name: name }));
+    }
+    _render();
+}
+
 function _build() {
     var isBuy = (_storeTab === 'buy');
     var isEx = (_storeTab === 'exchange');
     var isTrf = (_storeTab === 'transfer');
+    var isCos = (_storeTab === 'cos');
 
     var btnStyle = 'flex:1; padding:10px; border-radius:8px; border:none; font-weight:bold; font-size:12px; cursor:pointer;';
     var on = 'background:var(--accent); color:#fff;';
@@ -327,6 +393,7 @@ function _build() {
     var content = '';
     if (isBuy) content = _renderBuyTab();
     else if (isEx) content = _renderExchangeTab();
+    else if (isCos) content = _renderCosmeticsTab();
     else content = _renderTransferTab();
 
     return '<div class="modal-title g-ico-title">' + gIcon('sil', 20) + '<span>' + _tf('silstore.title', 'Silicon Store') + '</span></div>' +
@@ -339,6 +406,7 @@ function _build() {
             '<button id="tab-buy" style="' + btnStyle + (isBuy ? on : off) + '">' + _tf('silstore.tab.buy', 'Beli') + '</button>' +
             '<button id="tab-exchange" style="' + btnStyle + (isEx ? on : off) + '">' + _tf('silstore.tab.exchange', 'Tukar Uang') + '</button>' +
             '<button id="tab-transfer" style="' + btnStyle + (isTrf ? on : off) + '">' + _tf('silstore.tab.transfer', 'Kirim') + '</button>' +
+            '<button id="tab-cos" style="' + btnStyle + (isCos ? on : off) + '">' + _tf('cos.tab', 'Butik') + '</button>' +
         '</div>' +
 
         content +
@@ -353,6 +421,11 @@ function _onClick(e) {
     if (e.target.closest('#tab-buy')) { _storeTab = 'buy'; _render(); return; }
     if (e.target.closest('#tab-exchange')) { _storeTab = 'exchange'; _render(); return; }
     if (e.target.closest('#tab-transfer')) { _storeTab = 'transfer'; _render(); return; }
+    if (e.target.closest('#tab-cos')) { _storeTab = 'cos'; _render(); return; }
+    var cc = e.target.closest('[data-cos-cat]');
+    if (cc) { _cosCat = cc.dataset.cosCat; _render(); return; }
+    var ca = e.target.closest('[data-cos-act]');
+    if (ca && !ca.disabled) { _handleCosmetic(ca.dataset.cosAct, ca.dataset.cosId); return; }
 
     if (e.target.closest('#btn-do-transfer')) { _handleTransfer(); return; }
     if (e.target.closest('#btn-sil-resync')) { _resyncBalance(); return; }
@@ -463,6 +536,7 @@ bus.on('silicon:changed', function (payload) {
     }, 50); 
 });
 
+bus.on('cosmetic:changed', function () { if (Modal.isOpen(MODAL_ID) && _storeTab === 'cos') _render(); });
 bus.on('silicon:display', function () { if (Modal.isOpen(MODAL_ID)) _render(); });
 
 bus.on('lang:changed', function () { 
