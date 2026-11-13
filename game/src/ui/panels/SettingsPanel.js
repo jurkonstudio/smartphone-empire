@@ -255,8 +255,21 @@ function _tabAudio(s) {
 
     return _section('bell', t('settings.section.audio_haptic'),
         _row({ label: t('settings.row.sound'),   hint: snd ? t('settings.sound_on') : t('settings.sound_off'),   switchOn: snd, attrs: 'data-toggle="sound"' }) +
-        _row({ label: t('settings.row.vibrate'), hint: vib ? t('settings.vibrate_on') : t('settings.vibrate_off'), switchOn: vib, attrs: 'data-toggle="vibrate"' })
+        _row({ label: t('settings.row.vibrate'), hint: vib ? t('settings.vibrate_on') : t('settings.vibrate_off'), switchOn: vib, attrs: 'data-toggle="vibrate"' }) +
+        _fullscreenRow()
     );
+}
+
+// Sakelar "Layar penuh" (sembunyikan bar alamat browser). Hanya muncul bila browser mendukung (lihat index.html: window.__fs).
+function _fullscreenRow() {
+    const fs = window.__fs;
+    if (!fs || !fs.supported) return '';
+    const on = !!fs.isOn();
+    return _row({
+        label: _pick('Layar penuh', 'Fullscreen'),
+        hint: on ? _pick('Bar alamat browser disembunyikan', 'Browser address bar hidden') : _pick('Sembunyikan bar alamat browser', 'Hide the browser address bar'),
+        switchOn: on, attrs: 'data-fs-toggle'
+    });
 }
 
 function _tabNotif() {
@@ -578,6 +591,12 @@ export function bindSettingsActions(root) {
         var setBtn = e.target.closest('[data-set]');
         if (setBtn) { e.preventDefault(); _handleSet(setBtn.dataset.set); return; }
 
+        if (e.target.closest('[data-fs-toggle]')) {
+            e.preventDefault();
+            if (window.__fs) window.__fs.toggle();
+            setTimeout(_refresh, 350);   // status layar penuh berubah setelah browser memprosesnya
+            return;
+        }
         var togBtn = e.target.closest('[data-toggle]');
         if (togBtn) { e.preventDefault(); _handleToggle(togBtn.dataset.toggle); return; }
 
