@@ -25,7 +25,8 @@ const TESTS = [
   { file: 'tools/campus-expansion-smoke.mjs' },
   { file: 'tools/hype-cycle-test.mjs' },
   { file: 'tools/user-control-test.mjs' },
-  { file: 'tools/registrar-test.mjs' },
+  { file: 'tools/registrar-test.mjs', optional: true },  // berkas tes belum ada di repo; hapus optional bila sudah masuk
+  { file: 'tools/fullrun-bot.mjs', src: true },          // simulasi penuh 2000-2026 (bot pemain, sistem asli)
   { file: 'tools/registry-test.mjs' },
   { file: 'tools/people-test.mjs' },
   { file: 'tools/weather-test.mjs' },
