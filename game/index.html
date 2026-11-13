@@ -277,12 +277,16 @@ window.addEventListener('unhandledrejection', function (e) {
 
     <div id="toast-container" class="toast-container" aria-live="polite"></div>
     <div id="loading-screen" class="loading-screen" role="progressbar" aria-label="Memuat Smartphone Empire" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="ls-backdrop" id="ls-backdrop" aria-hidden="true"></div>
         <div class="ls-art-wrap">
             <img class="ls-art" id="ls-art" alt="Smartphone Empire by Jurkon Studio" decoding="async" fetchpriority="high" draggable="false">
         </div>
         <div class="ls-meter">
-            <div class="ls-track"><div class="ls-fill" id="ls-fill"></div></div>
-            <span class="ls-pct" id="ls-pct">0%</span>
+            <div class="ls-status" id="ls-status" aria-hidden="true"></div>
+            <div class="ls-bar">
+                <div class="ls-track"><div class="ls-fill" id="ls-fill"></div></div>
+                <span class="ls-pct" id="ls-pct">0%</span>
+            </div>
         </div>
     </div>
 
@@ -303,6 +307,8 @@ window.addEventListener('unhandledrejection', function (e) {
             img.setAttribute('data-fb', '1');
             img.src = './assets/img/loading-screen.jpg';
         });
+        var bd = document.getElementById('ls-backdrop');
+        if (bd) bd.style.backgroundImage = 'url("' + s.src + '")';
         img.src = s.src;
         if (img.complete && img.naturalWidth) img.classList.add('ls-in');
     })();
@@ -326,6 +332,10 @@ window.addEventListener('unhandledrejection', function (e) {
         var el = document.getElementById('loading-screen');
         var fill = document.getElementById('ls-fill');
         var pct = document.getElementById('ls-pct');
+        var stEl = document.getElementById('ls-status');
+        var ST = (window.__splashPick && window.__splashPick.lang === 'id')
+            ? ['Mengunduh aset…', 'Menyiapkan game…', 'Hampir siap…', 'Siap!']
+            : ['Downloading assets…', 'Preparing the game…', 'Almost ready…', 'Ready!'];
         var meta = document.querySelector('meta[name="theme-color"]');
         var origTheme = window.__origTheme || (meta ? meta.getAttribute('content') : null);
         var TOTAL_MODULES = 190, MODULE_CAP = 70;
@@ -339,6 +349,13 @@ window.addEventListener('unhandledrejection', function (e) {
             var n = Math.min(100, Math.floor(v));
             fill.style.transform = 'scaleX(' + (Math.min(100, v) / 100).toFixed(4) + ')';
             if (pct._n !== n) { pct._n = n; pct.textContent = n + '%'; el.setAttribute('aria-valuenow', String(n)); }
+            if (stEl) {
+                var si = n < 35 ? 0 : n < 75 ? 1 : n < 100 ? 2 : 3;
+                if (stEl._i !== si) {
+                    stEl._i = si; stEl.textContent = ST[si];
+                    stEl.classList.remove('ls-swap'); void stEl.offsetWidth; stEl.classList.add('ls-swap');
+                }
+            }
         }
         function close() {
             if (closed) return; closed = true;
