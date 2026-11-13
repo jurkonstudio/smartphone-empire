@@ -36,6 +36,7 @@ class V {
 }
 class Color { constructor(h) { this.hex = typeof h === 'number' ? h : 0; this.r = this.g = this.b = 0; }
   setHex(h) { this.hex = h; return this; } getHex() { return this.hex; } set(v) { if (typeof v === 'number') this.hex = v; return this; }
+  setRGB() { return this; } setHSL() { return this; } lerp() { return this; } multiplyScalar() { return this; }
   copy(c) { this.hex = c.hex; return this; } clone() { return new Color(this.hex); } getStyle() { return '#000'; } }
 function obj3d(self) {
   self.position = new V(); self.rotation = new V(); self.scale = new V(1, 1, 1); self.children = [];
@@ -47,6 +48,8 @@ function obj3d(self) {
   return self;
 }
 class Group { constructor() { stats.groups++; return loose(obj3d(this)); } }
+class Obj3D { constructor() { return loose(obj3d(this)); } }
+class Inst { constructor(g, m, n) { this.geometry = g; this.material = m; this.count = n; this.instanceMatrix = { needsUpdate: false }; this.instanceColor = null; this.setMatrixAt = () => {}; this.setColorAt = () => {}; stats.meshes++; return loose(obj3d(this)); } }
 class Scene { constructor() { return loose(obj3d(this)); } }
 class Mesh { constructor(geometry, material) {
   stats.meshes++; if (material === undefined) stats.undefMat++;
@@ -67,14 +70,14 @@ class Renderer { constructor() {
 class PMREM { constructor() { this.fromScene = () => ({ texture: {}, dispose() {} }); this.dispose = () => {}; this.compileEquirectangularShader = () => {}; return loose(this); } }
 class Ray { constructor() { this.setFromCamera = () => {}; this.intersectObjects = () => []; return loose(this); } }
 const THREE = {
-  Group, Scene, Mesh, Sprite, Vector3: V, Vector2: V, Color,
+  Group, Object3D: Obj3D, InstancedMesh: Inst, ShaderMaterial: Mat, WebGLRenderTarget: class { constructor() { this.texture = {}; this.setSize = () => {}; this.dispose = () => {}; return loose(this); } }, Scene, Mesh, Sprite, Vector3: V, Vector2: V, Color,
   MeshBasicMaterial: Mat, MeshStandardMaterial: Mat, SpriteMaterial: Mat,
   BoxGeometry: Geo, CylinderGeometry: Geo, SphereGeometry: Geo, ConeGeometry: Geo, TorusGeometry: Geo, PlaneGeometry: Geo,
   CircleGeometry: Geo, RingGeometry: Geo, CapsuleGeometry: Geo, IcosahedronGeometry: Geo, ExtrudeGeometry: Geo,
   Shape: class { constructor() { return loose({}); } }, BufferAttribute: class { constructor() { return loose({}); } },
   CanvasTexture: Tex, DirectionalLight: Light, HemisphereLight: Light, OrthographicCamera: Cam, WebGLRenderer: Renderer,
   PMREMGenerator: PMREM, Raycaster: Ray,
-  SRGBColorSpace: 'srgb', RepeatWrapping: 1000, DoubleSide: 2, BackSide: 1, AdditiveBlending: 2, PCFSoftShadowMap: 2, ACESFilmicToneMapping: 4
+  SRGBColorSpace: 'srgb', HalfFloatType: 1, LinearFilter: 1, UnsignedByteType: 1, RepeatWrapping: 1000, DoubleSide: 2, BackSide: 1, AdditiveBlending: 2, PCFSoftShadowMap: 2, ACESFilmicToneMapping: 4
 };
 // ---- DOM tiruan ----
 function el() {
@@ -95,18 +98,20 @@ const container = el();
 let fail = 0; const ok = (c, m) => { if (!c) { fail++; console.log('GAGAL:', m); } else console.log('ok:', m); };
 window.__PERF = {};
 const origWarn = console.warn; const warns = []; console.warn = (...a) => { warns.push(a.map(String).join(' ')); };
-function mkState(n, hq) {
-  const st = { companyName: 'fSociety', staff: [], time: { currentHour: 9, currentMinute: 0, year: 2000 }, cash: 1301337, products: [], campaigns: [], research: {}, os: {} };
+function mkState(n, year) {
+  const st = { companyName: 'fSociety', staff: [], time: { currentHour: 9, currentMinute: 0, year: year || 2000, currentYear: year || 2000 }, cash: 1301337, products: [], campaigns: [], research: {}, os: {} };
   for (let i = 0; i < n; i++) st.staff.push({ id: 's' + i, name: 'Staf ' + i, role: ['engineer', 'designer', 'marketer'][i % 3], skill: 2, morale: 70, country: 'ID', traits: [] });
   return st;
 }
-for (const [n, label] of [[6, 'awal (6 staf)'], [30, 'penuh (30 staf)']]) {
+const meshAt = {};
+for (const [n, year, label] of [[6, 2000, 'awal (6 staf)'], [30, 2000, 'penuh (30 staf)'], [12, 2012, 'menengah (12 staf, 2012)'], [6, 2026, '6 staf, 2026'], [30, 2026, 'penuh modern (30 staf, 2026)']]) {
   stats.meshes = 0; stats.groups = 0; stats.undefMat = 0;
-  const state = mkState(n);
+  const state = mkState(n, year);
   try {
     const api = createOfficeScene(THREE, container, state);
     ok(!!api && typeof api.update === 'function', label + ': adegan kantor terbentuk');
     ok(stats.undefMat === 0, label + ': tidak ada mesh bermaterial undefined (' + stats.undefMat + ')');
+    meshAt[n + '@' + year] = stats.meshes;
     ok(stats.meshes > 300, label + ': jumlah mesh = ' + stats.meshes + ' (grup ' + stats.groups + ')');
     api.update(state); api.refreshTheme(); api.relabel(); api.updateClock && api.updateClock(state);
     ok(true, label + ': update / refreshTheme / relabel berjalan');
@@ -117,6 +122,7 @@ for (const [n, label] of [[6, 'awal (6 staf)'], [30, 'penuh (30 staf)']]) {
   }
 }
 console.warn = origWarn;
+ok(meshAt['6@2026'] > meshAt['6@2000'], 'progresi: tahun 2026 menambah dekorasi dibanding 2000 (' + meshAt['6@2000'] + ' -> ' + meshAt['6@2026'] + ')');
 const bad = warns.filter(w => /gagal/i.test(w));
 ok(bad.length === 0, 'tidak ada peringatan "gagal bangun ruangan" (' + bad.length + ')');
 bad.slice(0, 3).forEach(w => console.log('   ' + w));

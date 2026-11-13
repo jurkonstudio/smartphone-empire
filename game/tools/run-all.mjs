@@ -59,6 +59,7 @@ const TESTS = [
   { file: 'tools/runway.mjs', src: true },
   { file: 'tools/scene-smoke.mjs', src: true },
   { file: 'tools/era-test.mjs', src: true },
+  { file: 'tools/office-progress-test.mjs', src: true }, // aturan progresi level + era (OfficeProgress.js)
   { file: 'tools/office-smoke.mjs', src: true }, // tiruan THREE/canvas diperbarui di P3
   // Skrip simulasi/kalibrasi: tidak punya assertion, hanya memastikan berjalan tanpa error (smoke).
   { file: 'tools/asm-balance.mjs', src: true },
