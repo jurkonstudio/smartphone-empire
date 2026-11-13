@@ -19,6 +19,13 @@
             "id": "Lampu sorot berganti dari natrium oranye (sebelum 2012) ke LED putih, dan mast telekom menjadi 5G dengan cincin sinyal mulai 2024.",
             "en": "Floodlights switch from orange sodium (before 2012) to white LED, and the telecom mast becomes 5G with pulsing signal rings from 2024."
           }
+        },
+        {
+          "type": "feature",
+          "text": {
+            "id": "Peta Kampus kini memakai rekaman suara hujan dan petir saat cuaca hujan. Hujan berupa loop mulus, petir diputar acak dari potongan rekaman dengan sebaran kiri-kanan. Keduanya dimuat saat hujan pertama dan berukuran total sekitar 550 KB. Jika gagal dimuat, suara hujan sintetis lama tetap dipakai.",
+            "en": "The Campus map now plays recorded rain and thunder when the weather is rainy. The rain is a seamless loop and thunder is played at random from clips of the recording, panned left or right. Both load on the first rain and total about 550 KB. If they fail to load, the previous synthesized rain keeps playing."
+          }
         }
       ]
     },
