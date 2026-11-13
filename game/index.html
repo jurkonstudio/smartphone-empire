@@ -420,6 +420,61 @@ window.addEventListener('unhandledrejection', function (e) {
     })();
     </script>
 
+    <script>
+    /* Layar penuh: menyembunyikan bar alamat browser (HP/tablet sentuh, di tab browser biasa).
+       - Browser mewajibkan gestur pengguna, jadi masuk layar penuh pada sentuhan pertama.
+       - Bila pemain keluar (gestur sistem / sakelar di Pengaturan), pilihan disimpan 'off' dan tidak dipaksa lagi.
+       - Tidak aktif bila game sudah dibuka sebagai aplikasi terpasang (PWA/APK sudah layar penuh) atau
+         browser tidak mendukung (mis. iPhone Safari). Sakelar: Pengaturan > Audio. */
+    (function () {
+        var KEY = 'smartphone-empire:fs:v1';   // 'on' (bawaan) | 'off'
+        var de = document.documentElement;
+        var reqFn = de.requestFullscreen || de.webkitRequestFullscreen;
+        var exitFn = document.exitFullscreen || document.webkitExitFullscreen;
+        var coarse = false, installed = false;
+        try {
+            coarse = matchMedia('(pointer: coarse)').matches;
+            installed = matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches || !!navigator.standalone;
+        } catch (e) {}
+        var supported = !!reqFn && coarse && !installed;
+        function isFs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+        function pref() { try { return localStorage.getItem(KEY) !== 'off'; } catch (e) { return true; } }
+        function setPref(on) { try { localStorage.setItem(KEY, on ? 'on' : 'off'); } catch (e) {} }
+        function enter() {
+            if (!supported || isFs()) return;
+            try { var p = reqFn.call(de, { navigationUI: 'hide' }); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+        }
+        function leave() {
+            if (!isFs() || !exitFn) return;
+            try { var p = exitFn.call(document); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+        }
+        window.__fs = {
+            supported: supported,
+            isOn: isFs,
+            toggle: function () { if (isFs()) { setPref(false); leave(); } else { setPref(true); enter(); } }
+        };
+        if (!supported) return;
+        var tries = 0;
+        function onTap() {
+            if (isFs()) { off(); return; }
+            if (!pref()) return;
+            if (++tries > 4) { off(); return; }
+            enter();
+        }
+        function off() {
+            document.removeEventListener('pointerup', onTap, true);
+            document.removeEventListener('touchend', onTap, true);
+        }
+        document.addEventListener('pointerup', onTap, true);
+        document.addEventListener('touchend', onTap, true);
+        function onChange() {
+            if (!isFs()) setPref(false);   // keluar lewat gestur sistem = pilihan pemain
+        }
+        document.addEventListener('fullscreenchange', onChange);
+        document.addEventListener('webkitfullscreenchange', onChange);
+    })();
+    </script>
+
     <div id="error-message" class="error-message" role="alert"></div>
 
     <!-- ============================================================

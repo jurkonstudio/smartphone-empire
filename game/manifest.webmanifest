@@ -11,7 +11,7 @@
     "standalone",
     "minimal-ui"
   ],
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#e9e8e8",
   "theme_color": "#0f0f0f",
   "lang": "id",
