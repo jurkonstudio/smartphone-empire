@@ -43,6 +43,8 @@ import { createDayClock, lerpHex } from '../campus/DayCycle.js';
 import { islandRadius as campusIslandRadius } from '../campus/CampusBuildings.js';
 import { ASSEMBLY_ROLES } from '../../data/assembly.data.js';
 import { buildHallDetail, buildYardDetail } from './ManufactureDetail.js';
+import { computeEra, eraBadgeText, createEraLayer } from './ManufactureEra.js';
+import { PlayerProgression } from '../../systems/PlayerProgression.js';
 
 // [terang, gelap]
 var COLORS = {
@@ -138,6 +140,7 @@ export function createManufactureScene(THREE, container, gameState) {
     Object.keys(COLORS).forEach(function (k) { M[k] = pbr(COLORS[k][0], k); });
     M.glass.transparent = true; M.glass.opacity = 0.55;
     M.win.emissive = new THREE.Color(0x000000);
+    M.solar = new THREE.MeshStandardMaterial({ color: 0x1d3a6e, roughness: 0.32, metalness: 0.55 });     // v2028.43 — panel surya (era)
     M.smoke = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, depthWrite: false });
     M.shade = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.14, depthWrite: false });
     M.lamp = new THREE.MeshBasicMaterial({ color: 0xfff1c4 });
@@ -934,7 +937,7 @@ export function createManufactureScene(THREE, container, gameState) {
         if (def.kind === 'assembly') return { bw: 7 + 1.9 * L, bd: 3.6 + 0.4 * L, bh: 1.3 + 0.2 * L };
         return { bw: 3.4 + 0.38 * L, bd: 2.3 + 0.2 * L, bh: 1.0 + 0.34 * L };
     }
-    var detailKit = { box: box, cyl: cyl, sph: sph, mergedBoxes: mergedBoxes, ACC: ACC, ambient: function () { return ambient; } };
+    var detailKit = { box: box, cyl: cyl, sph: sph, mergedBoxes: mergedBoxes, ACC: ACC, ambient: function () { return ambient; }, era: null };
     function hallDetail(f, id, dm, zc, opt) {
         try { buildHallDetail(detailKit, f, id, dm, zc, opt || {}); } catch (e) { console.warn('[ManufactureScene] detail hall ' + id, e); }
     }
@@ -1845,6 +1848,7 @@ export function createManufactureScene(THREE, container, gameState) {
         var sec = now / 1000;
         for (var i = 0; i < animPlots.length; i++) animPlots[i].tick(sec);
         animateShell(sec);
+        eraLayer.tick(sec, curNight);
         weather.update(sec, ambient);
         sea.update(sec, weather.getKind(), weather.getSunset());
         if (fxList.length) updateFx(sec);
@@ -2134,11 +2138,44 @@ export function createManufactureScene(THREE, container, gameState) {
         });
     }
 
+    // ---------- v2028.43: lapisan era (tahun + level pemain + level pabrik) ----------
+    var eraLayer = createEraLayer({
+        THREE: THREE, parent: scene, M: M, G: G, look: look,
+        mesh: mesh, box: box, cyl: cyl, sph: sph, mergedBoxes: mergedBoxes,
+        clear: function (x, z, r) { return isleClear(x, z, r); },
+        reserve: function (x, z, r) { islePlaced.push([x, z, r]); },
+        ambient: function () { return ambient; },
+        aura: auraTexture
+    });
+    var eraBadge = document.createElement('div');
+    eraBadge.className = 'manu-era map-hint';
+    eraBadge.style.cssText = 'position:absolute;left:8px;top:46px;z-index:2;font-size:10.5px;line-height:1.35;pointer-events:none;max-width:min(78%,340px);';
+    container.appendChild(eraBadge);
+    var eraState = null, eraRoofSolar = false, eraTxtSig = '';
+    function playerLevel() { try { return PlayerProgression.getCached().level; } catch (e) { return 1; } }
+    function syncEra(data, st) {
+        var era = computeEra(data, st, playerLevel());
+        var changed = eraLayer.apply(era);
+        if (era.roofSolar !== eraRoofSolar) {            // atap pabrik ikut berubah -> bangun ulang semua petak
+            eraRoofSolar = era.roofSolar;
+            plotList.forEach(function (r) { r.sig = null; });
+        }
+        detailKit.era = era;
+        eraState = era;
+        var tx = eraBadgeText(era), sig = tx.line1 + '|' + tx.line2;
+        if (sig !== eraTxtSig) {
+            eraTxtSig = sig;
+            eraBadge.innerHTML = '<b>' + tx.line1 + '</b><br>' + tx.line2;
+        }
+        return changed;
+    }
+
     // ---------- sinkron dengan state game ----------
     function update(data) {
         if (disposed || !data) return;
         lastData = data;
         states = allStates(data);
+        syncEra(data, states);
         plotList.forEach(function (r) {
             var st = states[r.def.id], sig = plotSig(st, data);
             if (sig === r.sig) { r.st = st; return; }
@@ -2155,6 +2192,7 @@ export function createManufactureScene(THREE, container, gameState) {
         hint.textContent = ms('hint');
         canvas.setAttribute('aria-label', ms('aria'));
         plotList.forEach(function (r) { rebuildLabel(r); rebuildAlert(r); });
+        eraTxtSig = ''; if (lastData) syncEra(lastData, states);
         if (legendOn) rebuildLegend();
         chipSig = ''; cardSig = '';
         rebuildChips(); refreshCard(); requestRender();
@@ -2203,6 +2241,7 @@ export function createManufactureScene(THREE, container, gameState) {
             if (ro) ro.disconnect(); else window.removeEventListener('resize', resize);
             document.removeEventListener('visibilitychange', onVis);
             clearInterval(dayTimer);
+            eraLayer.dispose();
             canvas.removeEventListener('webglcontextlost', onCtxLost);
             canvas.removeEventListener('webglcontextrestored', onCtxRestored);
             controls.dispose();
@@ -2230,7 +2269,7 @@ export function createManufactureScene(THREE, container, gameState) {
             rig.dispose();
             renderer.dispose();
             try { renderer.forceContextLoss(); } catch (e) {}
-            [chipBar, card, hint, legendBtn, legend, canvas].forEach(function (el) { if (el.parentNode) el.parentNode.removeChild(el); });
+            [chipBar, card, hint, eraBadge, legendBtn, legend, canvas].forEach(function (el) { if (el.parentNode) el.parentNode.removeChild(el); });
         }
     };
 }

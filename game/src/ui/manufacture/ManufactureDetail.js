@@ -6,6 +6,8 @@
 // Semua bentuk statis digabung per material lewat kit.mergedBoxes (hemat draw call); hanya kipas atap yang beranimasi (opsional).
 // `kit` disuplai scene: { box, cyl, sph, mergedBoxes, ACC, ambient() }. Tidak ada import dari scene (tanpa siklus).
 
+import { buildRoofSolar } from './ManufactureEra.js';
+
 function clampN(v, a, b) { return v < a ? a : v > b ? b : v; }
 
 // opt: { roof (default true), skylight (true), door (true), pipes (true), tk: [], on: bool }
@@ -49,6 +51,9 @@ export function buildHallDetail(kit, f, id, dm, zc, opt) {
                 for (var k = 0; k < fans.length; k++) fans[k].rotation.y = sp + k * 0.9;
             });
         }
+
+        // v2028.43 — panel surya atap (era >= 2012, lihat ManufactureEra.js)
+        if (kit.era && kit.era.roofSolar) buildRoofSolar(kit, f, dm, zc, top);
 
         // skylight kaca di sisi depan atap (menghindari kubah/menara di sisi kanan)
         if (opt.skylight !== false) {
