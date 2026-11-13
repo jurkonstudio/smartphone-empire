@@ -39,6 +39,8 @@ import { createSea } from './SeaWater.js';
 import { createCinematic } from './CinematicFx.js';
 import { createBeach } from './Beach.js';
 import { createDayClock, blendObj, lerpHex } from './DayCycle.js';
+import { bus } from '../../core/EventBus.js';
+import { CosmeticService } from '../../systems/CosmeticService.js';
 import { createWeather } from './CampusWeather.js';
 import { createCampusPost } from './CampusPost.js';
 import { buildExpansion } from './CampusExpansion.js';
@@ -559,12 +561,29 @@ export function createCampusScene(THREE, container, gameState) {
     // Tingkat malam 0..1: jam nyata perangkat (DayCycle.js); bila siklus dimatikan, mengikuti tema UI seperti dulu.
     var lastNight = -1;
     function themeIsDark() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
+    // Kosmetik SIL "Tema Kampus": mewarnai cahaya peta. Tidak mengubah isi/isi data peta. Dipanggil dari applyTheme()
+    // setelah applyNight() yang selalu mengembalikan warna & intensitas cahaya ke nilai dasar (jadi tidak menumpuk).
+    function applyCosmeticTint() {
+        var th = CosmeticService.equipped('campus');
+        if (!th || !th.art || !rig.lights) return;
+        var tint = parseInt(String(th.art.tint).replace('#', ''), 16);
+        if (!isFinite(tint)) return;
+        var L = rig.lights;
+        function mix(c, k) { c.setHex(lerpHex(c.getHex(), tint, k)); }
+        mix(L.hemi.color, 0.35); mix(L.hemi.groundColor, 0.2);
+        mix(L.sun.color, 0.5); mix(L.fill.color, 0.4); mix(L.rim.color, 0.4);
+        var k = th.art.light || 1;
+        L.hemi.intensity *= k; L.sun.intensity *= k;
+    }
+    var offCosmetic = bus.on('cosmetic:changed', function (e) { if (e && e.cat === 'campus') { applyTheme(); requestRender(); } });
+
     function applyTheme() {
         var night = clock.night(themeIsDark());
         lastNight = night;
         var dark = night >= 0.5;                          // keputusan diskret (awan, burung, dll)
         var look = rig.applyNight(night);                 // cahaya, exposure, env, dicampur terang<->gelap (CampusLook.js)
         weather.applyLook(look);                          // cuaca/senja menimpa warna & intensitas cahaya
+        applyCosmeticTint();                              // tema kosmetik SIL (hanya tampilan)
         var base = blendObj(PALETTES.light, PALETTES.dark, night);
         var p = Object.assign({}, base, look.colors, { aoOpacity: look.aoOpacity });
         var w = ERA_WINDOWS[Math.max(0, eraIdx)];
@@ -652,6 +671,7 @@ export function createCampusScene(THREE, container, gameState) {
         refreshLang: function () { overlay.setLabels(getUiStrings()); if (lastData) refreshAlerts(lastData, true); syncLabels(); updateAlertBtn(); refreshCard(true); },
         dispose: function () {
             disposed = true;
+            if (offCosmetic) offCosmetic();
             if (raf) cancelAnimationFrame(raf);
             if (loopRaf) cancelAnimationFrame(loopRaf);
             if (loopTimer) { clearTimeout(loopTimer); loopTimer = 0; }
