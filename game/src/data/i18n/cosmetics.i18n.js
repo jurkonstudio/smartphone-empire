@@ -2,6 +2,7 @@
 // Kamus Butik Kosmetik SIL (id + en). Bahasa lain memakai en sebagai cadangan.
 export const COSMETICS_I18N = {
     id: {
+        'cos.tab': 'Butik', 'cos.confirm': 'Beli {name} seharga {n} SIL?', 'cos.cloud': 'Login akun Cloud untuk membeli kosmetik.',
         'cos.title': 'Butik Kosmetik', 'cos.sub': 'Tampilan saja: tidak mengubah hasil permainan.',
         'cos.price': '{n} SIL', 'cos.buy': 'Beli', 'cos.owned': 'Dimiliki', 'cos.equip': 'Pakai', 'cos.equipped': 'Dipakai', 'cos.unequip': 'Lepas',
         'cos.cat.campus': 'Tema Kampus', 'cos.cat.fx': 'Efek Perayaan', 'cos.cat.phone': 'Finishing Ponsel', 'cos.cat.frame': 'Bingkai Avatar', 'cos.cat.badge': 'Lencana',
@@ -15,6 +16,7 @@ export const COSMETICS_I18N = {
         'cos.item.bd_chip': 'Lencana Chip', 'cos.item.bd_rocket': 'Lencana Roket', 'cos.item.bd_crown': 'Lencana Mahkota'
     },
     en: {
+        'cos.tab': 'Boutique', 'cos.confirm': 'Buy {name} for {n} SIL?', 'cos.cloud': 'Sign in to your Cloud account to buy cosmetics.',
         'cos.title': 'Cosmetics Boutique', 'cos.sub': 'Looks only: nothing here changes how the game plays out.',
         'cos.price': '{n} SIL', 'cos.buy': 'Buy', 'cos.owned': 'Owned', 'cos.equip': 'Equip', 'cos.equipped': 'Equipped', 'cos.unequip': 'Unequip',
         'cos.cat.campus': 'Campus Themes', 'cos.cat.fx': 'Celebration Effects', 'cos.cat.phone': 'Phone Finishes', 'cos.cat.frame': 'Avatar Frames', 'cos.cat.badge': 'Badges',
