@@ -11,6 +11,7 @@ import {
     setDisplayName, getDisplayName, getAvatar, processImageFile, commitAvatar, pushToCloud
 } from '../../systems/PlayerProfileService.js';
 import { avatarHtml, esc } from './AvatarView.js';
+import { CosmeticService } from '../../systems/CosmeticService.js';
 
 function _rerender() { try { window.__game.render(); } catch (e) {} }
 
@@ -153,7 +154,7 @@ export function openEditPlayerModal() {
 
     function paint() {
         var label = nameEl.value || getDisplayName() || state.get().companyName;
-        preview.innerHTML = avatarHtml({ src: staged.avatar, name: label, size: 92, cls: 'pp-avatar-lg' });
+        preview.innerHTML = avatarHtml({ src: staged.avatar, name: label, size: 92, cls: 'pp-avatar-lg', frame: CosmeticService.equippedId('frame') });
     }
     function showError(msg) { errEl.textContent = msg; errEl.style.display = 'block'; nameEl.classList.add('is-invalid'); }
     function clearError() { errEl.style.display = 'none'; nameEl.classList.remove('is-invalid'); }
