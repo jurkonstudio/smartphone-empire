@@ -1,6 +1,48 @@
 {
-  "latest": "0.2.16",
+  "latest": "0.2.17",
   "releases": [
+    {
+      "version": "0.2.17",
+      "date": "2026-11-13",
+      "time": "16:01",
+      "items": [
+        {
+          "type": "feature",
+          "text": {
+            "id": "Sakelar Layar penuh di Pengaturan > Audio menyembunyikan bar alamat browser di HP dan tablet. Aktif otomatis saat layar pertama disentuh.",
+            "en": "Fullscreen switch in Settings > Audio hides the browser address bar on phones and tablets. It turns on automatically at the first tap."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Tampilan HP landscape dirapikan: menu di rail kiri, header satu baris, dan Home dibagi dua kolom (peta dan dock) sehingga semua muat tanpa scroll.",
+            "en": "Landscape phone layout reworked: menu on a left rail, one-row header, and Home split into two columns (map and dock) so everything fits without scrolling."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Game terpasang (PWA) tidak lagi terkunci portrait; sekarang boleh diputar ke landscape.",
+            "en": "The installed game (PWA) is no longer locked to portrait and can now rotate to landscape."
+          }
+        },
+        {
+          "type": "change",
+          "text": {
+            "id": "Layar loading di desktop kini berupa poster berbingkai dengan latar blur dan teks status. Di HP landscape, gambar di kiri dan progres di kanan.",
+            "en": "Desktop loading screen is now a framed poster over a blurred backdrop with status text. On landscape phones the art sits left and progress right."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "id": "Bar progres layar loading kini terlihat penuh dengan persen di sebelahnya, sebelumnya hanya garis tipis.",
+            "en": "The loading progress bar now shows fully with the percentage beside it; before, it was only a thin line."
+          }
+        }
+      ]
+    },
     {
       "version": "0.2.16",
       "date": "2026-11-13",
