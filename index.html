@@ -134,6 +134,15 @@ h2{margin:0 0 8px;font:800 clamp(1.6rem,3vw,2.2rem)/1.2 var(--f);letter-spacing:
 .facts .tile{grid-row:span 2;width:44px;height:44px;font-size:22px}
 .facts dd{margin:0;font:800 1.9rem/1.1 var(--f);letter-spacing:-.02em}.facts dt{order:2;color:var(--mu);font-size:.9rem;line-height:1.3}
 .note{margin:14px 0 0;color:var(--mu);font-size:.85rem}
+.vids{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.vid{padding:14px 14px 20px;border-radius:26px;background:var(--sf);border:1px solid var(--ln)}
+.vid-fr{position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;background:#000}
+.vid-fr iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.vid h3{margin:14px 6px 4px;font:700 1.15rem/1.3 var(--f)}.vid p{margin:0 6px;color:var(--mu);font-size:.96rem}
+.vid-cta{display:flex;justify-content:center;margin-top:26px}
+.vid-cta .btn{color:var(--tx);border-color:var(--ln);background:var(--sf)}.vid-cta .btn:hover{border-color:var(--blue)}
+.yt-ic{width:20px;height:20px;fill:#ff0033;flex:none}
+@media (max-width:760px){.vids{grid-template-columns:1fr}}
 .end{position:relative;overflow:hidden;background:var(--ink);color:var(--on);text-align:center}
 .end::before{content:"";position:absolute;inset:0;background:radial-gradient(500px 300px at 50% 0%,rgba(61,148,255,.35),transparent 70%),radial-gradient(400px 260px at 90% 100%,rgba(139,123,255,.28),transparent 70%)}
 .end .wrap{position:relative}.end h2{margin-inline:auto;max-width:16em}.end .cta{justify-content:center}
@@ -283,6 +292,26 @@ footer a{display:inline-block;padding:4px 0}
     </div>
   </section>
 
+  <section style="padding-top:0">
+    <div class="wrap">
+      <h2 data-i18n="vid_h">Lihat gamenya beraksi</h2>
+      <p class="sub" data-i18n="vid_s">Tonton trailer dan gameplay aslinya sebelum mendirikan perusahaanmu.</p>
+      <div class="vids">
+        <article class="vid">
+          <div class="vid-fr"><iframe src="https://www.youtube-nocookie.com/embed/EAUsyESkHY0?rel=0" title="Smartphone Empire: Official Trailer" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+          <h3 data-i18n="vid1_t">Trailer resmi</h3>
+          <p data-i18n="vid1_p">Dirikan perusahaan, rancang ponsel, dan lawan para raksasa.</p>
+        </article>
+        <article class="vid">
+          <div class="vid-fr"><iframe src="https://www.youtube-nocookie.com/embed/Ajg-xxpdCvw?rel=0" title="Smartphone Empire: Gameplay" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+          <h3 data-i18n="vid2_t">Gameplay</h3>
+          <p data-i18n="vid2_p">Melihat lebih dekat cara bermain Smartphone Empire.</p>
+        </article>
+      </div>
+      <div class="vid-cta"><a class="btn" href="https://youtube.com/@smartphoneempire" target="_blank" rel="noopener"><svg class="yt-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg><span data-i18n="vid_yt">Kunjungi channel YouTube</span></a></div>
+    </div>
+  </section>
+
   <section class="end">
     <div class="wrap">
       <h2 data-i18n="end_h">Siap jadi CEO?</h2>
@@ -301,7 +330,7 @@ footer a{display:inline-block;padding:4px 0}
       <span>© 2026 Jurkon Studio</span>
       <nav aria-label="Tautan bawah">
         <a href="/game/">Game</a><a href="/web">Web</a><a href="/blog/">Blog</a>
-        <a href="/i/tentang/" data-i18n="f_about">Tentang</a><a href="/i/syarat/" data-i18n="f_terms">Syarat</a><a href="/i/privasi/" data-i18n="f_priv">Privasi</a><a href="/i/kontak/" data-i18n="f_contact">Kontak</a><a href="/feed.xml">RSS</a>
+        <a href="/i/tentang/" data-i18n="f_about">Tentang</a><a href="/i/syarat/" data-i18n="f_terms">Syarat</a><a href="/i/privasi/" data-i18n="f_priv">Privasi</a><a href="/i/kontak/" data-i18n="f_contact">Kontak</a><a href="https://youtube.com/@smartphoneempire" target="_blank" rel="noopener">YouTube</a><a href="/feed.xml">RSS</a>
       </nav>
     </div>
     <p class="legal" data-i18n="f_disc">Smartphone Empire adalah fan project, bukan produk komersial, dan tidak berafiliasi dengan Nokia, Apple, Samsung, atau perusahaan lain. Nama dan merek dipakai untuk tujuan edukasi dan hiburan; hak ciptanya milik masing-masing pemilik. Data historis disederhanakan untuk kebutuhan gameplay.</p>
@@ -334,6 +363,7 @@ footer a{display:inline-block;padding:4px 0}
     s4h:'Win the market', s4p:'Sell, protect your reputation, and fight 32 competitors. Two months of negative cash in a row means game over.',
     f1:'competitor companies', f2:'tech nodes', f3:'phone components', f4:'listed stocks',
     note:'Figures come from game data version 0.2.14.',
+    vid_h:'See the game in action', vid_s:'Watch the trailer and real gameplay before you found your company.', vid1_t:'Official trailer', vid1_p:'Found your company, design a phone, and take on the giants.', vid2_t:'Gameplay', vid2_p:'A closer look at how Smartphone Empire plays.', vid_yt:'Visit our YouTube channel',
     end_h:'Ready to be CEO?', end_s:'Your cash is small and the year has just begun.',
     tk1:'32 rival companies', tk2:'134 tech nodes', tk3:'141 phone components', tk4:'84 listed stocks', tk5:'12 languages', tk6:'Free in your browser', tk7:'Cloud save', tk8:'Installable as a PWA', tk9:'From 2000 to the AI era',
     f_disc:"Smartphone Empire is a fan project, not a commercial product, and is not affiliated with Nokia, Apple, Samsung, or any other company. Names and brands are used for educational and entertainment purposes; rights belong to their respective owners. Historical data is simplified for gameplay.", f_about:'About', f_terms:'Terms', f_priv:'Privacy', f_contact:'Contact'
